@@ -4,6 +4,7 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import { pool } from './db';
 
 const PostgresSessionStore = connectPg(session);
 
@@ -28,7 +29,8 @@ export class DatabaseStorage implements IStorage {
       conObject: {
         connectionString: process.env.DATABASE_URL
       },
-      createTableIfMissing: true
+      createTableIfMissing: true,
+      tableName: 'session'
     });
   }
 

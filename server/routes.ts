@@ -10,7 +10,7 @@ import generatedDocuments from "./controllers/generatedDocuments";
 import attachments from "./controllers/attachments";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Set up authentication routes
+  // Set up authentication routes first
   setupAuth(app);
 
   // API routes
