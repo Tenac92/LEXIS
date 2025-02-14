@@ -26,57 +26,101 @@ export class DatabaseStorage implements IStorage {
 
   constructor() {
     this.sessionStore = new PostgresSessionStore({ 
-      conObject: {
-        connectionString: process.env.DATABASE_URL
-      },
+      conObject: pool,
       createTableIfMissing: true,
-      tableName: 'session'
+      tableName: 'session',
+      pruneSessionInterval: 60 * 15 // Prune expired sessions every 15 minutes
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      throw error;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    try {
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      return user;
+    } catch (error) {
+      console.error('Error fetching user by username:', error);
+      throw error;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    return user;
+    try {
+      const [user] = await db.insert(users).values(insertUser).returning();
+      return user;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
   }
 
   async getDocument(id: number): Promise<Document | undefined> {
-    const [doc] = await db.select().from(documents).where(eq(documents.id, id));
-    return doc;
+    try {
+      const [doc] = await db.select().from(documents).where(eq(documents.id, id));
+      return doc;
+    } catch (error) {
+      console.error('Error fetching document:', error);
+      throw error;
+    }
   }
 
   async createDocument(doc: InsertDocument): Promise<Document> {
-    const [newDoc] = await db.insert(documents).values(doc).returning();
-    return newDoc;
+    try {
+      const [newDoc] = await db.insert(documents).values(doc).returning();
+      return newDoc;
+    } catch (error) {
+      console.error('Error creating document:', error);
+      throw error;
+    }
   }
 
   async getRecipient(id: number): Promise<Recipient | undefined> {
-    const [recipient] = await db.select().from(recipients).where(eq(recipients.id, id));
-    return recipient;
+    try {
+      const [recipient] = await db.select().from(recipients).where(eq(recipients.id, id));
+      return recipient;
+    } catch (error) {
+      console.error('Error fetching recipient:', error);
+      throw error;
+    }
   }
 
   async createRecipient(recipient: InsertRecipient): Promise<Recipient> {
-    const [newRecipient] = await db.insert(recipients).values(recipient).returning();
-    return newRecipient;
+    try {
+      const [newRecipient] = await db.insert(recipients).values(recipient).returning();
+      return newRecipient;
+    } catch (error) {
+      console.error('Error creating recipient:', error);
+      throw error;
+    }
   }
 
   async getProject(id: number): Promise<Project | undefined> {
-    const [project] = await db.select().from(projects).where(eq(projects.id, id));
-    return project;
+    try {
+      const [project] = await db.select().from(projects).where(eq(projects.id, id));
+      return project;
+    } catch (error) {
+      console.error('Error fetching project:', error);
+      throw error;
+    }
   }
 
   async createProject(project: InsertProject): Promise<Project> {
-    const [newProject] = await db.insert(projects).values(project).returning();
-    return newProject;
+    try {
+      const [newProject] = await db.insert(projects).values(project).returning();
+      return newProject;
+    } catch (error) {
+      console.error('Error creating project:', error);
+      throw error;
+    }
   }
 }
 

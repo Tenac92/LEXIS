@@ -21,11 +21,13 @@ type LoginData = Pick<InsertUser, "username" | "password">;
 function useLoginMutation() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: (credentials: LoginData) =>
-      apiRequest<SelectUser>("/api/login", {
+    mutationFn: async (credentials: LoginData) => {
+      const user = await apiRequest<SelectUser>("/api/login", {
         method: "POST",
         body: JSON.stringify(credentials),
-      }),
+      });
+      return user;
+    },
     onSuccess: (user) => {
       queryClient.setQueryData(["/api/user"], user);
     },
@@ -42,10 +44,11 @@ function useLoginMutation() {
 function useLogoutMutation() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: () =>
-      apiRequest("/api/logout", {
+    mutationFn: async () => {
+      await apiRequest("/api/logout", {
         method: "POST",
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
     },
@@ -62,11 +65,13 @@ function useLogoutMutation() {
 function useRegisterMutation() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: (userData: InsertUser) =>
-      apiRequest<SelectUser>("/api/register", {
+    mutationFn: async (userData: InsertUser) => {
+      const user = await apiRequest<SelectUser>("/api/register", {
         method: "POST",
         body: JSON.stringify(userData),
-      }),
+      });
+      return user;
+    },
     onSuccess: (user) => {
       queryClient.setQueryData(["/api/user"], user);
     },
