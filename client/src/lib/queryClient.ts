@@ -2,11 +2,26 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
+    const contentType = res.headers.get("content-type");
+    let errorMessage = `${res.status}: ${res.statusText}`;
+
+    try {
+      if (contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        errorMessage = data.message || errorMessage;
+      } else {
+        const text = await res.text();
+        errorMessage = text || errorMessage;
+      }
+    } catch (e) {
+      console.error("Error parsing error response:", e);
+    }
+
     if (res.status === 401) {
       throw new Error("Unauthorized. Please log in.");
     }
-    const text = await res.text();
-    throw new Error(`${res.status}: ${text || res.statusText}`);
+
+    throw new Error(errorMessage);
   }
 }
 
@@ -14,6 +29,8 @@ export async function apiRequest<T = unknown>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
+  console.log(`[API] Making request to ${url}`, { method: options.method || 'GET' });
+
   const res = await fetch(url, {
     ...options,
     headers: {
@@ -33,11 +50,14 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    console.log(`[Query] Executing query for key:`, queryKey);
+
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      console.log(`[Query] Returning null for unauthorized request to ${queryKey[0]}`);
       return null;
     }
 
