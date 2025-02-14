@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, numeric, foreignKey, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -72,3 +72,27 @@ export type Recipient = typeof recipients.$inferSelect;
 export type InsertRecipient = z.infer<typeof insertRecipientSchema>;
 export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
+
+// Define the Database type for Supabase
+export type Database = {
+  public: {
+    Tables: {
+      users: {
+        Row: User;
+        Insert: InsertUser;
+      };
+      documents: {
+        Row: Document;
+        Insert: InsertDocument;
+      };
+      recipients: {
+        Row: Recipient;
+        Insert: InsertRecipient;
+      };
+      projects: {
+        Row: Project;
+        Insert: InsertProject;
+      };
+    };
+  };
+};

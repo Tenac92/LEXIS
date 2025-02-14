@@ -2,6 +2,15 @@ import { Router } from "express";
 import { authenticateToken } from "../middleware/authMiddleware";
 import { supabase } from "../config/db";
 import type { Request, Response } from "express";
+import { User } from "@shared/schema";
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
 
 const router = Router();
 
@@ -12,10 +21,10 @@ router.get('/', authenticateToken, async (req: Request, res: Response) => {
 
     // Filter by user's assigned units unless they're admin
     if (req.user?.role !== 'admin') {
-      if (!req.user?.units?.length) {
-        return res.status(403).json({ message: 'No units assigned' });
+      if (!req.user?.unit) {
+        return res.status(403).json({ message: 'No unit assigned' });
       }
-      query = query.in('unit', req.user.units);
+      query = query.eq('unit', req.user.unit);
     }
 
     if (status) {
