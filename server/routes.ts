@@ -6,8 +6,8 @@ import documentsController from "./controllers/documentsController";
 import recipientsController from "./controllers/recipientsController";
 import statsController from "./controllers/statsController";
 import usersController from "./controllers/usersController";
-import generatedDocumentsController from "./controllers/generatedDocumentsController";
-import attachmentsController from "./controllers/attachments";
+import generatedDocuments from "./controllers/generatedDocuments";
+import attachments from "./controllers/attachments";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -18,8 +18,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/recipients', authenticateToken, recipientsController);
   app.use('/api/stats', authenticateToken, statsController);
   app.use('/api/users', authenticateToken, usersController);
-  app.use('/api/generated', authenticateToken, generatedDocumentsController);
-  app.use('/api/attachments', authenticateToken, attachmentsController);
+  app.use('/api/generated', authenticateToken, generatedDocuments);
+  app.use('/api/attachments', authenticateToken, attachments);
 
   const httpServer = createServer(app);
   return httpServer;
