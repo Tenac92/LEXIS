@@ -1,8 +1,9 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { User } from "@shared/schema";
-import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "../lib/queryClient";
 
 type AuthContextType = {
   user: User | null;
@@ -23,43 +24,29 @@ type RegisterData = LoginData & {
   unit?: string;
 };
 
-type AuthResponse = {
-  user: User;
-  token: string;
-};
-
 function useLoginMutation() {
   const { toast } = useToast();
 
-  return useMutation<User, Error, LoginData>({
-    mutationFn: async (credentials) => {
+  return useMutation({
+    mutationFn: async (credentials: LoginData) => {
       console.log('[Auth] Attempting login with:', credentials.email);
 
-      const response = await apiRequest<AuthResponse>("/api/login", {
-        method: "POST",
-        body: JSON.stringify({
-          username: credentials.email,
-          password: credentials.password
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
       });
 
-      if (!response?.token) {
-        throw new Error('Login failed: Invalid response from server');
+      if (error) {
+        console.error('[Auth] Login error:', error);
+        throw error;
       }
 
-      // Store token in localStorage
-      localStorage.setItem('auth_token', response.token);
-      console.log('[Auth] Login successful');
-
-      return response.user;
+      return data.user as unknown as User;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(["/api/user"], user);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('[Auth] Login error:', error);
       toast({
         title: "Login failed",
@@ -73,15 +60,15 @@ function useLoginMutation() {
 function useLogoutMutation() {
   const { toast } = useToast();
 
-  return useMutation<void, Error>({
+  return useMutation({
     mutationFn: async () => {
-      await apiRequest("/api/logout", { method: "POST" });
-      localStorage.removeItem('auth_token');
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Logout failed",
         description: error.message,
@@ -94,31 +81,26 @@ function useLogoutMutation() {
 function useRegisterMutation() {
   const { toast } = useToast();
 
-  return useMutation<User, Error, RegisterData>({
-    mutationFn: async (userData) => {
-      const response = await apiRequest<AuthResponse>("/api/register", {
-        method: "POST",
-        body: JSON.stringify({
-          email: userData.email,
-          password: userData.password,
-          full_name: userData.full_name,
-          unit: userData.unit
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+  return useMutation({
+    mutationFn: async (userData: RegisterData) => {
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            full_name: userData.full_name,
+            unit: userData.unit,
+          },
+        },
       });
 
-      if (response.token) {
-        localStorage.setItem('auth_token', response.token);
-      }
-
-      return response.user;
+      if (error) throw error;
+      return data.user as unknown as User;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(["/api/user"], user);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Registration failed",
         description: error.message,
@@ -131,10 +113,32 @@ function useRegisterMutation() {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { toast } = useToast();
+
   const { data: user, error, isLoading } = useQuery<User | null>({
     queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryFn: async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      return user as unknown as User | null;
+    },
   });
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          queryClient.setQueryData(["/api/user"], session.user);
+        } else {
+          queryClient.setQueryData(["/api/user"], null);
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
