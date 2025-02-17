@@ -25,17 +25,11 @@ type RegisterData = LoginData & {
   full_name: string;
 };
 
-// Supabase auth response types
+// Auth response types
 type AuthResponse = {
-  data: {
-    user: User;
-    session: {
-      access_token: string;
-      refresh_token: string;
-      expires_in: number;
-    };
-  };
-  error: null | {
+  user: User;
+  token: string;
+  error?: {
     message: string;
   };
 };
@@ -44,21 +38,27 @@ function useLoginMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (credentials: LoginData) => {
+      console.log('[Auth] Attempting login:', credentials.email);
       const response = await apiRequest<AuthResponse>("/api/login", {
         method: "POST",
         body: JSON.stringify(credentials),
       });
 
-      if (response.error) throw new Error(response.error.message);
+      if (response.error) {
+        console.error('[Auth] Login error:', response.error);
+        throw new Error(response.error.message);
+      }
 
-      const { user, session } = response.data;
-      localStorage.setItem('authToken', session.access_token);
-      return user;
+      console.log('[Auth] Login successful, storing token');
+      localStorage.setItem('authToken', response.token);
+      return response.user;
     },
     onSuccess: (user) => {
+      console.log('[Auth] Updating user data in query cache');
       queryClient.setQueryData(["/api/user"], user);
     },
     onError: (error: Error) => {
+      console.error('[Auth] Login mutation error:', error);
       toast({
         title: "Login failed",
         description: error.message,
@@ -72,15 +72,19 @@ function useLogoutMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async () => {
+      console.log('[Auth] Attempting logout');
       await apiRequest("/api/logout", {
         method: "POST",
       });
+      console.log('[Auth] Removing auth token');
       localStorage.removeItem('authToken');
     },
     onSuccess: () => {
+      console.log('[Auth] Clearing user data from query cache');
       queryClient.setQueryData(["/api/user"], null);
     },
     onError: (error: Error) => {
+      console.error('[Auth] Logout mutation error:', error);
       toast({
         title: "Logout failed",
         description: error.message,
@@ -94,21 +98,27 @@ function useRegisterMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (userData: RegisterData) => {
+      console.log('[Auth] Attempting registration:', userData.email);
       const response = await apiRequest<AuthResponse>("/api/register", {
         method: "POST",
         body: JSON.stringify(userData),
       });
 
-      if (response.error) throw new Error(response.error.message);
+      if (response.error) {
+        console.error('[Auth] Registration error:', response.error);
+        throw new Error(response.error.message);
+      }
 
-      const { user, session } = response.data;
-      localStorage.setItem('authToken', session.access_token);
-      return user;
+      console.log('[Auth] Registration successful, storing token');
+      localStorage.setItem('authToken', response.token);
+      return response.user;
     },
     onSuccess: (user) => {
+      console.log('[Auth] Updating user data in query cache');
       queryClient.setQueryData(["/api/user"], user);
     },
     onError: (error: Error) => {
+      console.error('[Auth] Registration mutation error:', error);
       toast({
         title: "Registration failed",
         description: error.message,

@@ -6,14 +6,39 @@ import { relations } from "drizzle-orm";
 // Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
   full_name: text("full_name").notNull(),
   role: text("role").default("user").notNull(),
   unit: text("unit"),
   active: boolean("active").default(true),
   created_at: timestamp("created_at").defaultNow(),
+  department: text("department"),
 });
+
+// Login schema for validation
+export const loginSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+// Registration schema
+export const registerSchema = loginSchema.extend({
+  full_name: z.string().min(1, "Full name is required"),
+});
+
+// Create the insert schema from the users table
+export const insertUserSchema = createInsertSchema(users, {
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  full_name: z.string().min(1, "Full name is required"),
+});
+
+// Types
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type LoginCredentials = z.infer<typeof loginSchema>;
+export type RegisterCredentials = z.infer<typeof registerSchema>;
 
 // Documents table
 export const documents = pgTable("documents", {
@@ -58,14 +83,11 @@ export const projects = pgTable("projects", {
 });
 
 // Schemas
-export const insertUserSchema = createInsertSchema(users);
 export const insertDocumentSchema = createInsertSchema(documents);
 export const insertRecipientSchema = createInsertSchema(recipients);
 export const insertProjectSchema = createInsertSchema(projects);
 
 // Types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Document = typeof documents.$inferSelect;
 export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 export type Recipient = typeof recipients.$inferSelect;

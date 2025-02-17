@@ -23,10 +23,7 @@ class User {
     if (!units) return [];
     
     if (Array.isArray(units)) {
-      return units
-        .filter(unit => unit && typeof unit === 'string')
-        .map(u => u.trim())
-        .filter(Boolean);
+      return units.map(u => u.trim()).filter(Boolean);
     }
     
     if (typeof units === 'string') {

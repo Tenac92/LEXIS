@@ -1,111 +1,154 @@
-const express = require('express');
-const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware.js');
-const { supabase } = require('../config/db.js');
+
+const express = require("express");
+const bcrypt = require("bcrypt");
+const User = require("../models/User.js");
+const { authenticateToken, requireAdmin } = require("../middleware/authMiddleware.js");
 const router = express.Router();
 
-router.get('/', authenticateToken, requireAdmin, async (req, res) => {
+// Get users by unit
+router.get("/by-unit/:unit", authenticateToken, async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    res.json(data || []);
+    const users = await User.findByUnit(req.params.unit);
+    res.json(users);
   } catch (error) {
-    console.error('Users fetch error:', error);
-    res.status(500).json({ message: 'Failed to fetch users' });
+    res.status(500).json({ message: "Error fetching users by unit" });
   }
 });
 
-router.get('/profile', authenticateToken, async (req, res) => {
+// Get all users (admin only)
+router.get("/", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', req.user.id)
-      .single();
+    const users = await User.findAll();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching users" });
+  }
+});
 
-    if (error) throw error;
-    if (!data) {
-      return res.status(404).json({ message: 'User not found' });
+// Get user units
+router.get("/units/:userId", authenticateToken, async (req, res) => {
+  try {
+    if (!req.params.userId) {
+      return res.status(400).json({ 
+        status: 'error',
+        message: "User ID is required",
+        code: 'MISSING_USER_ID'
+      });
     }
 
-    res.json(data);
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ 
+        status: 'error',
+        message: "User not found",
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    const parsedUnits = user.units || [];
+    console.log(`Units for user ${req.params.userId}:`, parsedUnits);
+    
+    res.json({ 
+      status: 'success',
+      units: parsedUnits,
+      count: parsedUnits.length
+    });
   } catch (error) {
-    console.error('Profile fetch error:', error);
-    res.status(500).json({ message: 'Failed to fetch profile' });
+    console.error(`Error fetching units for user ${req.params.userId}:`, error);
+    res.status(500).json({ 
+      status: 'error',
+      message: "Failed to fetch user units",
+      code: 'FETCH_UNITS_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
-router.post('/', authenticateToken, requireAdmin, async (req, res) => {
+// Create new user (admin only)
+router.post("/", authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { data, error } = await supabase.auth.admin.createUser({
-      email: req.body.email,
-      password: req.body.password,
-      email_confirm: true
-    });
-
-    if (error) throw error;
-
-    const userData = {
-      id: data.user.id,
-      email: req.body.email,
-      full_name: req.body.full_name,
-      role: req.body.role || 'user',
-      unit: req.body.unit,
-      active: true
-    };
-
-    const { error: userError } = await supabase
-      .from('users')
-      .insert([userData]);
-
-    if (userError) throw userError;
-
-    res.status(201).json({ message: 'User created successfully' });
+    const { name, email, password, role, units, telephone } = req.body;
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({ name, email, password: hashedPassword, role, units, telephone });
+    res.status(201).json({ message: "User created successfully" });
   } catch (error) {
     console.error('User creation error:', error);
-    res.status(500).json({ message: 'Failed to create user' });
+    res.status(500).json({ message: error.message || "Error creating user" });
   }
 });
 
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { data, error } = await supabase
-      .from('users')
-      .update({
-        full_name: req.body.full_name,
-        role: req.body.role,
-        unit: req.body.unit,
-        active: req.body.active,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
+// Update user units
+router.put("/:userId/units", authenticateToken, requireAdmin, async (req, res) => {
 
-    if (error) throw error;
-    res.json(data);
+// Get user department
+router.get("/:userId/department", authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ 
+        status: 'error',
+        message: "User not found",
+        code: 'USER_NOT_FOUND'
+      });
+    }
+    
+    res.json({ 
+      status: 'success',
+      department: user.department
+    });
   } catch (error) {
-    console.error('User update error:', error);
-    res.status(500).json({ message: 'Failed to update user' });
+    console.error(`Error fetching department for user ${req.params.userId}:`, error);
+    res.status(500).json({ 
+      status: 'error',
+      message: "Failed to fetch user department",
+      code: 'FETCH_DEPARTMENT_ERROR'
+    });
   }
 });
 
-router.get('/units', authenticateToken, async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('unit_details')
-      .select('*')
-      .order('unit_name', { ascending: true });
-
-    if (error) throw error;
-    res.json(data || []);
+    const { units } = req.body;
+    await User.updateUnits(req.params.userId, units);
+    res.json({ message: "Units updated successfully" });
   } catch (error) {
-    console.error('Units fetch error:', error);
-    res.status(500).json({ message: 'Failed to fetch units' });
+    res.status(500).json({ message: "Error updating units" });
+  }
+});
+
+// Delete user
+router.delete("/:userId", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    await User.delete(req.params.userId);
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting user" });
+  }
+});
+
+// Get single user
+router.get("/:userId", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching user" });
+  }
+});
+
+// Update user
+router.put("/:userId", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { name, email, role, telephone, units } = req.body;
+    await User.update(req.params.userId, { name, email, role, telephone, units });
+    res.json({ message: "User updated successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message || "Error updating user" });
   }
 });
 
