@@ -1,7 +1,6 @@
+
 import { Router } from 'express';
-import { db } from '../config/db';
-import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { supabase } from '../config/db';
 import { authenticateSession } from '../auth';
 
 const router = Router();
@@ -12,11 +11,12 @@ router.get('/', authenticateSession, async (req, res) => {
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    const allUsers = await db
+    const { data: allUsers, error } = await supabase
+      .from('users')
       .select()
-      .from(users)
-      .orderBy(users.created_at);
+      .order('created_at');
 
+    if (error) throw error;
     res.json(allUsers);
   } catch (error) {
     console.error('Users fetch error:', error);
@@ -30,11 +30,13 @@ router.get('/profile', authenticateSession, async (req, res) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const [user] = await db
+    const { data: user, error } = await supabase
+      .from('users')
       .select()
-      .from(users)
-      .where(eq(users.id, req.user.id));
+      .eq('id', req.user.id)
+      .single();
 
+    if (error) throw error;
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -52,15 +54,17 @@ router.patch('/:id', authenticateSession, async (req, res) => {
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    const [user] = await db
-      .update(users)
-      .set({
+    const { data: user, error } = await supabase
+      .from('users')
+      .update({
         ...req.body,
-        updated_at: new Date(),
+        updated_at: new Date().toISOString()
       })
-      .where(eq(users.id, parseInt(req.params.id)))
-      .returning();
+      .eq('id', parseInt(req.params.id))
+      .select()
+      .single();
 
+    if (error) throw error;
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
