@@ -1,28 +1,27 @@
+
 import { Router } from 'express';
-import { db } from '../config/db';
-import { documents } from '@shared/schema';
-import { sql } from 'drizzle-orm';
+import { supabase } from '../config/db';
+import type { Database } from '@shared/schema';
 
 const router = Router();
 
 router.get('/dashboard', async (req, res) => {
   try {
-    const result = await db.execute(sql`
-      SELECT 
-        COUNT(*) as total_documents,
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_documents,
-        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_documents,
-        COALESCE(SUM(total_amount::numeric), 0) as total_amount
-      FROM ${documents}
-      WHERE created_by = ${req.user!.id}
-    `);
+    const { data, error } = await supabase
+      .from('documents')
+      .select('status, total_amount')
+      .eq('created_by', req.user!.id);
 
-    res.json(result.rows[0] || {
-      total_documents: 0,
-      pending_documents: 0,
-      completed_documents: 0,
-      total_amount: 0
-    });
+    if (error) throw error;
+
+    const stats = {
+      total_documents: data.length,
+      pending_documents: data.filter(doc => doc.status === 'pending').length,
+      completed_documents: data.filter(doc => doc.status === 'completed').length,
+      total_amount: data.reduce((sum, doc) => sum + (Number(doc.total_amount) || 0), 0)
+    };
+
+    res.json(stats);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Failed to fetch dashboard statistics' });
@@ -34,18 +33,17 @@ router.get('/monthly', async (req, res) => {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - 11);
 
-    const data = await db.select({
-      created_at: documents.created_at,
-      status: documents.status,
-      total_amount: documents.total_amount
-    })
-    .from(documents)
-    .where(sql`created_at >= ${startDate.toISOString()}`);
+    const { data, error } = await supabase
+      .from('documents')
+      .select('created_at, status, total_amount')
+      .gte('created_at', startDate.toISOString());
+
+    if (error) throw error;
 
     const monthlyStats: Record<string, { total: number; completed: number; amount: number }> = {};
     
     data.forEach(doc => {
-      const month = doc.created_at!.toISOString().substring(0, 7);
+      const month = doc.created_at.substring(0, 7);
       if (!monthlyStats[month]) {
         monthlyStats[month] = {
           total: 0,
