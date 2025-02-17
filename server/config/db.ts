@@ -7,8 +7,8 @@ if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_KEY) {
 }
 
 export const supabase = createClient<Database>(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_KEY,
+  process.env.SUPABASE_PROJECT_URL,
+  process.env.SUPABASE_SERVICE_KEY,
   {
     auth: {
       persistSession: false
