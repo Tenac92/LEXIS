@@ -21,7 +21,8 @@ export const securityHeaders = helmet({
         "https://esm.sh",
         "https://cdnjs.cloudflare.com",
         "https://fonts.googleapis.com",
-        "https://fonts.gstatic.com"
+        "https://fonts.gstatic.com",
+        "https://*.supabase.co" // Added to allow Supabase connections
       ],
       fontSrc: ["'self'", "https:", "data:"],
       objectSrc: ["'none'"],
