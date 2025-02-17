@@ -2,13 +2,13 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@shared/schema';
 
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_KEY) {
   throw new Error('Missing Supabase environment variables');
 }
 
 export const supabase = createClient<Database>(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY,
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_KEY,
   {
     auth: {
       autoRefreshToken: true,
