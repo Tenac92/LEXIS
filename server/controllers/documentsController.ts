@@ -1,14 +1,18 @@
+
 import { Router } from 'express';
-import { db } from '../config/db';
+import { supabase } from '../config/db';
 import { documents } from '@shared/schema';
-import { eq } from 'drizzle-orm';
 
 const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const docs = await db.select().from(documents);
-    res.json(docs);
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*');
+      
+    if (error) throw error;
+    res.json(data);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Failed to fetch documents' });
@@ -17,16 +21,18 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const [doc] = await db
-      .select()
-      .from(documents)
-      .where(eq(documents.id, parseInt(req.params.id)));
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', parseInt(req.params.id))
+      .single();
 
-    if (!doc) {
+    if (error) throw error;
+    if (!data) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    res.json(doc);
+    res.json(data);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Failed to fetch document' });
@@ -39,16 +45,18 @@ router.post('/', async (req, res) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const [doc] = await db
-      .insert(documents)
-      .values({
+    const { data, error } = await supabase
+      .from('documents')
+      .insert({
         ...req.body,
         created_by: req.user.id,
-        created_at: new Date(),
+        created_at: new Date().toISOString()
       })
-      .returning();
+      .select()
+      .single();
 
-    res.status(201).json(doc);
+    if (error) throw error;
+    res.status(201).json(data);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Failed to create document' });
@@ -57,20 +65,22 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   try {
-    const [doc] = await db
-      .update(documents)
-      .set({
+    const { data, error } = await supabase
+      .from('documents')
+      .update({
         ...req.body,
-        updated_at: new Date(),
+        updated_at: new Date().toISOString()
       })
-      .where(eq(documents.id, parseInt(req.params.id)))
-      .returning();
+      .eq('id', parseInt(req.params.id))
+      .select()
+      .single();
 
-    if (!doc) {
+    if (error) throw error;
+    if (!data) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    res.json(doc);
+    res.json(data);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Failed to update document' });
