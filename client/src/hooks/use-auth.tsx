@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 
 type AuthContextType = {
   user: User | null;
@@ -22,31 +23,15 @@ function useLoginMutation() {
 
   return useMutation({
     mutationFn: async (credentials: LoginData) => {
-      console.log('[Auth] Attempting login:', credentials.email);
-
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(credentials),
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Login failed');
-      }
-
-      const data = await response.json();
-      return data;
+      const { data, error } = await supabase.auth.signInWithPassword(credentials);
+      if (error) throw error;
+      return data.user;
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/user"], data);
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
-      console.error('[Auth] Login error:', error);
       toast({
         title: "Login failed",
         description: error.message,
@@ -61,15 +46,8 @@ function useLogoutMutation() {
 
   return useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Logout failed');
-      }
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
@@ -91,27 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user, error, isLoading } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      try {
-        const response = await fetch('/api/user', {
-          credentials: 'include'
-        });
-
-        if (response.status === 401) {
-          console.log('[Auth] Not authenticated');
-          return null;
-        }
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch user');
-        }
-
-        const userData = await response.json();
-        console.log('[Auth] User data fetched:', userData);
-        return userData;
-      } catch (error) {
-        console.error('[Auth] Get user error:', error);
-        return null;
-      }
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) return null;
+      return user;
     },
     retry: false,
     refetchOnWindowFocus: false,
