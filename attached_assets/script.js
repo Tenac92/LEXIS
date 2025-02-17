@@ -1,107 +1,196 @@
-import { showLoading, hideLoading } from './components/LoadingSpinner.js';
-import { ErrorHandler } from './utils/errorHandler.js';
-import { isValidEmail, isValidPassword } from './utils/validation.js';
-import { StateManager } from './utils/StateManager.js';
-import { initAuth } from './utils/auth.js';
-import { TokenManager } from './utils/tokenManager.js';
+import { createHeader, initializeHeader } from '../components/header.js';
+import { getAuthToken } from '../utils/auth.js';
+import { ErrorHandler } from '../utils/errorHandler.js';
 
-document.addEventListener("DOMContentLoaded", async () => {
-  initAuth();
-  const loginForm = document.getElementById("loginForm");
-  const loginMessage = document.getElementById("loginMessage");
-  const stateManager = new StateManager({ 
-    initialState: {
-      isLoading: false,
-      isAuthenticated: false
+const VALID_UNITS = [
+  'ΓΔΑΕΦΚ',
+  'ΔΑΕΦΚ-ΑΚ', 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ', 'ΔΑΕΦΚ-ΔΕ',
+  'ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ', 'ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ',
+  'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ', 'ΤΑΕΦΚ ΧΑΝΙΩΝ', 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ'
+];
+
+class UserManagement {
+  constructor() {
+    this.addUserForm = document.getElementById('addUserForm');
+    this.usersTable = document.getElementById('usersTable');
+    this.refreshBtn = document.getElementById('refreshBtn');
+    this.unitGrid = document.querySelector('.unit-grid');
+  }
+
+  async init() {
+    try {
+      await initializeHeader();
+      await this.verifyAuth();
+      await this.loadUnits();
+      await this.fetchUsers();
+      this.setupEventListeners();
+    } catch (error) {
+      console.error('Initialization error:', error);
+      ErrorHandler.showError(error.message);
     }
-  });
+  }
 
-  stateManager.subscribe((state) => {
-    const spinner = document.getElementById("loadingSpinner");
-    if (spinner) {
-      spinner.classList.toggle("hidden", !state.isLoading);
+  async verifyAuth() {
+    const token = await getAuthToken();
+    if (!token) {
+      window.location.href = '/index.html';
+      return;
     }
-  });
 
-  loginForm?.addEventListener("submit", async (event) => {
+    const response = await fetch('/auth/verify', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+      throw new Error('Authentication verification failed');
+    }
+
+    const data = await response.json();
+    if (!data?.valid || !data?.user || data.user.role !== 'admin') {
+      window.location.href = '/dashboard/index.html';
+    }
+  }
+
+  async loadUnits() {
+    if (!this.unitGrid) return;
+
+    this.unitGrid.innerHTML = VALID_UNITS.map(unit => `
+      <label class="unit-checkbox">
+        <input type="checkbox" name="units" value="${unit}" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+        <span class="ml-2 text-sm text-gray-700">${unit}</span>
+      </label>
+    `).join('');
+  }
+
+  async fetchUsers() {
+    const token = await getAuthToken();
+    const response = await fetch('/api/users', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch users');
+    }
+
+    const users = await response.json();
+    await this.updateTable(users);
+  }
+
+  async updateTable(users) {
+    const tbody = this.usersTable?.querySelector('tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = users.map(user => `
+      <tr>
+        <td class="px-6 py-4">${user.name}</td>
+        <td class="px-6 py-4">${user.email}</td>
+        <td class="px-6 py-4">${user.role}</td>
+        <td class="px-6 py-4">
+          <div class="flex flex-wrap gap-1 max-w-md">
+            ${Array.isArray(user.units) && user.units.length > 0 
+              ? user.units.map(unit => 
+                  `<span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full whitespace-nowrap">${unit}</span>`
+                ).join('') 
+              : '<span class="text-gray-400 text-sm">No units assigned</span>'}
+          </div>
+        </td>
+        <td class="px-6 py-4 flex space-x-2">
+          <button data-userid="${user.id}" class="edit-btn text-indigo-600 hover:text-indigo-900">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button data-userid="${user.id}" class="delete-btn text-red-600 hover:text-red-900">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  setupEventListeners() {
+    this.addUserForm?.addEventListener('submit', this.handleFormSubmit.bind(this));
+    this.usersTable?.addEventListener('click', this.handleTableActions.bind(this));
+    this.refreshBtn?.addEventListener('click', () => this.fetchUsers());
+  }
+
+  async handleFormSubmit(event) {
     event.preventDefault();
-
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
+    const formData = new FormData(event.target);
 
     try {
-      if (!isValidEmail(email)) {
-        ErrorHandler.showError("Please enter a valid email address");
-        return;
-      }
-      if (!isValidPassword(password)) {
-        ErrorHandler.showError("Password must be at least 6 characters long");
-        return;
-      }
-
-      loginMessage.textContent = "Logging in...";
-      loginMessage.className = "mt-4 text-center text-sm text-blue-600";
-
-      // Display the loading spinner
-      showLoading(document.body);
-
-      const response = await fetch("/auth/login", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Accept": "application/json"
+      const token = await getAuthToken();
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          email: email.trim().toLowerCase(),
-          password: password
-        }),
-        credentials: 'include'
+        body: JSON.stringify({
+          name: formData.get('name'),
+          email: formData.get('email'),
+          password: formData.get('password'),
+          role: formData.get('role'),
+          units: Array.from(formData.getAll('units'))
+        })
       });
 
-      const data = await response.json();
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to add user');
+      }
 
-      // Hide the loading spinner
-      hideLoading();
+      event.target.reset();
+      await this.fetchUsers();
+      ErrorHandler.showSuccess('User added successfully');
+    } catch (error) {
+      console.error('Error adding user:', error);
+      ErrorHandler.showError(error.message);
+    }
+  }
+
+  async handleTableActions(event) {
+    const button = event.target.closest('button');
+    if (!button) return;
+
+    const userId = button.dataset.userid;
+    if (!userId) return;
+
+    if (button.classList.contains('edit-btn')) {
+      window.location.href = `/useradd/edit.html?id=${userId}`;
+    } else if (button.classList.contains('delete-btn')) {
+      await this.handleDeleteUser(userId);
+    }
+  }
+
+  async handleDeleteUser(userId) {
+    if (!confirm('Are you sure you want to delete this user?')) return;
+
+    try {
+      const token = await getAuthToken();
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
       if (!response.ok) {
-        console.error('Login failed:', data);
-        throw new Error(data.message || "Login failed");
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete user');
       }
 
-      if (!data.token || !data.user) {
-        throw new Error("Invalid server response: missing token or user data");
-      }
-
-      const tokenManager = TokenManager.getInstance();
-      await tokenManager.clearToken(); // Clear any existing tokens first
-
-      // Store token first
-      tokenManager.setToken(data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      // Then validate and schedule refresh
-      try {
-        const payload = tokenManager.parseToken(data.token);
-        if (!payload) {
-          throw new Error("Could not parse token");
-        }
-
-        // Default to 1 hour expiration if not present
-        const expiration = payload.exp || Math.floor(Date.now() / 1000) + 3600;
-        tokenManager.scheduleTokenRefresh(expiration);
-      } catch (error) {
-        console.error("Token validation error:", error);
-        tokenManager.clearToken();
-        localStorage.removeItem("user");
-        throw new Error("Invalid authentication token");
-      }
-      window.location.href = "/dashboard/index.html";
+      await this.fetchUsers();
+      ErrorHandler.showSuccess('User deleted successfully');
     } catch (error) {
-      console.error("Login error:", error);
-      loginMessage.textContent = error.message || "Authentication failed";
-      loginMessage.className = "mt-4 text-center text-sm text-red-600";
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("user");
+      console.error('Error deleting user:', error);
+      ErrorHandler.showError(error.message);
     }
-  });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const userManagement = new UserManagement();
+  userManagement.init();
 });

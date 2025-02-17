@@ -1,45 +1,104 @@
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Σύστημα Διαχείρισης Εγγράφων - Σελίδα Σύνδεσης">
-  <meta name="robots" content="noindex, nofollow">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="theme-color" content="#ffffff">
-  <title>Σύνδεση | Σύστημα Διαχείρισης Εγγράφων</title>
+  <title>User Management</title>
   <link rel="stylesheet" href="/dist/output.css">
   <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/assets/styles/card.css">
-  <link rel="icon" type="image/png" href="/generated-icon.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script type="module" src="script.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-  <div id="loginContainer" class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Σύνδεση</h2>
-    <form id="loginForm" class="space-y-4" autocomplete="off">
-      <div>
-        <label for="email" class="block text-sm font-medium text-gray-700">Email:</label>
-        <input type="email" id="email" name="email" required autocomplete="off"
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-        <div id="emailError" class="mt-1 text-sm text-red-600 hidden"></div>
-      </div>
-
-      <div>
-        <label for="password" class="block text-sm font-medium text-gray-700">Κωδικός:</label>
-        <input type="password" id="password" name="password" required 
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-        <div id="passwordError" class="mt-1 text-sm text-red-600 hidden"></div>
-      </div>
-
-      <button type="submit" 
-        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
-        Σύνδεση
-      </button>
-    </form>
-    <div id="loginMessage" class="mt-4 text-center text-sm"></div>
-    <div id="errorMessage" class="mt-4 text-center text-sm text-red-600 hidden"></div>
+<body>
+  <main id="mainContent" class="container">
+    <div id="loadingOverlay" class="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <div class="loading-spinner"></div>
   </div>
 
-  <script type="module" src="script.js"></script>
+  <div class="container mx-auto px-4 py-12 max-w-7xl">
+    <div class="bg-white rounded-xl shadow-lg p-8">
+      <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
+        <div class="flex gap-4">
+          <button id="refreshBtn" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+            <i class="fas fa-sync-alt mr-2"></i>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <form id="addUserForm" class="bg-gray-50 p-8 rounded-xl border border-gray-200 shadow-sm mb-8">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-6">Add New User</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+            <input type="text" id="name" name="name" required 
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+          </div>
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <input type="email" id="email" name="email" required 
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+          </div>
+          <div>
+            <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Role</label>
+            <select id="role" name="role" required 
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label for="telephone" class="block text-sm font-medium text-gray-700 mb-2">Telephone</label>
+            <input type="tel" id="telephone" name="telephone" 
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+          </div>
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <input type="password" id="password" name="password" required 
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+          </div>
+        </div>
+
+        <div class="mt-6">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Units</label>
+          <div class="unit-grid bg-white p-4 rounded-lg border border-gray-200 max-h-48 overflow-y-auto">
+            <!-- Units will be dynamically populated -->
+          </div>
+        </div>
+
+        <div class="mt-8">
+          <button type="submit" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+            <i class="fas fa-user-plus mr-2"></i>
+            Add User
+          </button>
+        </div>
+      </form>
+
+      <div class="overflow-x-auto bg-white rounded-lg border border-gray-200">
+        <div class="flex justify-between items-center p-6 border-b">
+          <h2 class="text-xl font-semibold text-gray-800">Users List</h2>
+          <div class="flex gap-2">
+            <button id="exportBtn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+              <i class="fas fa-download mr-2"></i>Export
+            </button>
+          </div>
+        </div>
+        <table id="usersTable" class="min-w-full divide-y divide-gray-200">
+          <thead>
+            <tr class="bg-gray-50">
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Units</th>
+              <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </main>
 </body>
 </html>

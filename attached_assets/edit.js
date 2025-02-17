@@ -1,100 +1,87 @@
 
-import { getAuthToken } from '../utils/auth.js';
 import { createHeader } from '../components/header.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const token = getAuthToken();
-  if (!token) {
-    window.location.href = '../index.html';
-    return;
-  }
-
   document.body.insertBefore(createHeader(), document.body.firstChild);
-  const params = new URLSearchParams(window.location.search);
-  const projectId = params.get('id');
-  const loadingSpinner = document.getElementById('loadingSpinner');
-  const editForm = document.getElementById('editForm');
-
-  if (!projectId) {
-    alert('No project ID provided');
-    window.location.href = 'index.html';
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    window.location.href = '/index.html';
     return;
   }
 
-  async function loadProject() {
-    try {
-      loadingSpinner.classList.remove('hidden');
-      const token = await getAuthToken();
-      if (!token) throw new Error('Authentication required');
-      
-      const response = await fetch(`/api/catalog/${projectId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
+  const urlParams = new URLSearchParams(window.location.search);
+  const userId = urlParams.get('id');
 
-      if (!response.ok) throw new Error('Failed to fetch project');
-      const project = await response.json();
-
-      Object.keys(project).forEach(key => {
-        const element = document.getElementById(key);
-        if (element) {
-          if (element.type === 'number') {
-            element.value = project[key] || 0;
-          } else if (Array.isArray(project[key])) {
-            element.value = project[key].join(', ');
-          } else {
-            element.value = project[key] || '';
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to load project details');
-    } finally {
-      loadingSpinner.classList.add('hidden');
-    }
+  if (!userId) {
+    window.location.href = '/useradd';
+    return;
   }
 
-  editForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      loadingSpinner.classList.remove('hidden');
-      
-      const formData = new FormData(editForm);
-      const projectData = {};
-      
-      for (const [key, value] of formData.entries()) {
-        if (key === 'implementing_agency') {
-          projectData[key] = value.split(',').map(v => v.trim());
-        } else if (key.startsWith('budget_') || key === 'e069' || key === 'na271' || key === 'na853') {
-          projectData[key] = parseFloat(value) || 0;
-        } else {
-          projectData[key] = value;
-        }
+  try {
+    const response = await fetch(`/api/users/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
+    });
 
-      const response = await fetch(`/api/catalog/${projectId}`, {
+    if (!response.ok) throw new Error('Failed to fetch user');
+
+    const user = await response.json();
+    
+    // Populate form fields
+    document.getElementById('name').value = user.name || '';
+    document.getElementById('email').value = user.email || '';
+    document.getElementById('role').value = user.role || 'user';
+    document.getElementById('telephone').value = user.telephone || '';
+
+    // Handle units selection
+    const units = Array.isArray(user.units) ? user.units : 
+                 (typeof user.units === 'string' ? JSON.parse(user.units) : []);
+    
+    const checkboxes = document.querySelectorAll('input[name="units"]');
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = units.includes(checkbox.value);
+    });
+
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    alert('Failed to fetch user details');
+    window.location.href = '/useradd';
+  }
+
+  document.getElementById('editUserForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    const selectedUnits = Array.from(document.querySelectorAll('input[name="units"]:checked')).map(cb => cb.value);
+    
+    const userData = {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      role: formData.get('role'),
+      telephone: formData.get('telephone'),
+      units: selectedUnits
+    };
+
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(projectData)
+        body: JSON.stringify(userData)
       });
 
-      if (!response.ok) throw new Error('Failed to update project');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update user');
+      }
       
-      alert('Project updated successfully');
-      window.location.href = 'index.html';
+      window.location.href = '/useradd';
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to update project');
-    } finally {
-      loadingSpinner.classList.add('hidden');
+      console.error('Error updating user:', error);
+      alert(error.message || 'Failed to update user');
     }
   });
-
-  await loadProject();
 });
