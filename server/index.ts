@@ -80,8 +80,9 @@ app.use((req, res, next) => {
 
     // Attempt to find an available port
     const tryPort = async (port: number): Promise<number> => {
-      return new Promise((resolve, reject) => {
-        const tempServer = require('http').createServer();
+      return new Promise(async (resolve, reject) => {
+        const { createServer } = await import('http');
+        const tempServer = createServer();
         tempServer.listen(port, HOST);
         tempServer.on('error', () => {
           resolve(tryPort(port + 1));
