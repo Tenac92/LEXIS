@@ -115,7 +115,9 @@ export async function setupAuth(app: Express) {
       const isValidPassword = await bcrypt.compare(password, user.password);
       console.log('[Auth] Password validation:', { 
         email,
-        isValid: isValidPassword
+        isValid: isValidPassword,
+        providedPassword: password,
+        storedPasswordHash: user.password
       });
 
       if (!isValidPassword) {
