@@ -7,8 +7,13 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema } from "@shared/schema";
-import type { z } from "zod";
+import { z } from "zod";
+
+
+const loginSchema = z.object({
+  username: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
@@ -51,9 +56,9 @@ export default function AuthPage() {
                 <div>
                   <Label htmlFor="username">Email</Label>
                   <Input 
-                    type="email"
+                    type="email" 
                     id="username"
-                    {...loginForm.register("username")}
+                    {...loginForm.register("username")} 
                   />
                   {loginForm.formState.errors.username && (
                     <p className="text-sm text-destructive mt-1">
@@ -64,9 +69,9 @@ export default function AuthPage() {
                 <div>
                   <Label htmlFor="password">Password</Label>
                   <Input 
-                    type="password"
+                    type="password" 
                     id="password"
-                    {...loginForm.register("password")}
+                    {...loginForm.register("password")} 
                   />
                   {loginForm.formState.errors.password && (
                     <p className="text-sm text-destructive mt-1">
