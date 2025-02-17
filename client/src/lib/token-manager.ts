@@ -3,6 +3,7 @@ import { User } from "@shared/schema";
 export class TokenManager {
   private static instance: TokenManager | null = null;
   private TOKEN_KEY = 'authToken';
+  private token: string | null = null;
   private refreshTimeout: NodeJS.Timeout | null = null;
   private eventListeners = new Set<(event: TokenEvent) => void>();
 
@@ -14,7 +15,10 @@ export class TokenManager {
     NO_TOKEN: 'No token available'
   };
 
-  private constructor() {}
+  private constructor() {
+    // Try to load token from localStorage on initialization
+    this.token = localStorage.getItem(this.TOKEN_KEY);
+  }
 
   static getInstance(): TokenManager {
     if (!TokenManager.instance) {
@@ -36,15 +40,11 @@ export class TokenManager {
   }
 
   async getToken(): Promise<string | null> {
-    const token = localStorage.getItem(this.TOKEN_KEY);
-    if (!token || token === 'undefined' || token === 'null') {
-      this.clearToken();
-      return null;
-    }
-    return token;
+    return this.token;
   }
 
   setToken(token: string) {
+    this.token = token;
     localStorage.setItem(this.TOKEN_KEY, token);
     this.notifyListeners({ type: 'tokenChanged', token });
 
@@ -56,6 +56,7 @@ export class TokenManager {
   }
 
   clearToken() {
+    this.token = null;
     localStorage.removeItem(this.TOKEN_KEY);
     if (this.refreshTimeout) {
       clearTimeout(this.refreshTimeout);
@@ -137,6 +138,10 @@ export class TokenManager {
 
     const payload = this.parseToken(token);
     return payload?.role === 'admin';
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.token;
   }
 }
 

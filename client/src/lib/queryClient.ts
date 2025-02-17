@@ -7,43 +7,27 @@ export async function apiRequest<T = unknown>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
-  console.log(`[API] Making request to ${url}`, options);
-
-  const token = await tokenManager.getToken();
-  const headers = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
-  };
-
   try {
+    const token = await tokenManager.getToken();
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    };
+
     const res = await fetch(url, {
       ...options,
       headers,
     });
 
     if (!res.ok) {
-      const contentType = res.headers.get("content-type");
-      let errorMessage = `${res.status}: ${res.statusText}`;
-
-      try {
-        if (contentType?.includes("application/json")) {
-          const data = await res.json();
-          errorMessage = data.error?.message || data.message || errorMessage;
-        } else {
-          const text = await res.text();
-          errorMessage = text || errorMessage;
-        }
-      } catch (e) {
-        console.error("[API] Error parsing error response:", e);
-      }
-
       if (res.status === 401) {
         tokenManager.clearToken();
         throw new Error("Unauthorized. Please log in.");
       }
 
-      throw new Error(errorMessage);
+      const errorData = await res.json().catch(() => null);
+      throw new Error(errorData?.error?.message || `HTTP error! status: ${res.status}`);
     }
 
     return res.json();
@@ -55,22 +39,17 @@ export async function apiRequest<T = unknown>(
 
 export const getQueryFn = ({ on401 = "throw" }: { on401?: "returnNull" | "throw" } = {}): QueryFunction => 
   async ({ queryKey }) => {
-    console.log(`[Query] Executing query for key:`, queryKey);
-    const token = await tokenManager.getToken();
-
     try {
+      const token = await tokenManager.getToken();
       const headers: HeadersInit = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
       };
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
 
       const res = await fetch(queryKey[0] as string, { headers });
 
       if (res.status === 401) {
         if (on401 === "returnNull") {
-          console.log(`[Query] Returning null for unauthorized request to ${queryKey[0]}`);
           return null;
         }
         tokenManager.clearToken();
@@ -78,22 +57,8 @@ export const getQueryFn = ({ on401 = "throw" }: { on401?: "returnNull" | "throw"
       }
 
       if (!res.ok) {
-        const contentType = res.headers.get("content-type");
-        let errorMessage = `${res.status}: ${res.statusText}`;
-
-        try {
-          if (contentType?.includes("application/json")) {
-            const data = await res.json();
-            errorMessage = data.error?.message || data.message || errorMessage;
-          } else {
-            const text = await res.text();
-            errorMessage = text || errorMessage;
-          }
-        } catch (e) {
-          console.error("[Query] Error parsing error response:", e);
-        }
-
-        throw new Error(errorMessage);
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error?.message || `HTTP error! status: ${res.status}`);
       }
 
       return res.json();
