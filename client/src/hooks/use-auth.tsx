@@ -3,12 +3,12 @@ import {
   useQuery,
   useMutation,
 } from "@tanstack/react-query";
-import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
+import { User } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 type AuthContextType = {
-  user: SelectUser | null;
+  user: User | null;
   isLoading: boolean;
   error: Error | null;
   loginMutation: ReturnType<typeof useLoginMutation>;
@@ -16,16 +16,43 @@ type AuthContextType = {
   registerMutation: ReturnType<typeof useRegisterMutation>;
 };
 
-type LoginData = Pick<InsertUser, "username" | "password">;
+type LoginData = {
+  email: string;
+  password: string;
+};
+
+type RegisterData = LoginData & {
+  full_name: string;
+};
+
+// Supabase auth response types
+type AuthResponse = {
+  data: {
+    user: User;
+    session: {
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+    };
+  };
+  error: null | {
+    message: string;
+  };
+};
 
 function useLoginMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const user = await apiRequest<SelectUser>("/api/login", {
+      const response = await apiRequest<AuthResponse>("/api/login", {
         method: "POST",
         body: JSON.stringify(credentials),
       });
+
+      if (response.error) throw new Error(response.error.message);
+
+      const { user, session } = response.data;
+      localStorage.setItem('authToken', session.access_token);
       return user;
     },
     onSuccess: (user) => {
@@ -48,6 +75,7 @@ function useLogoutMutation() {
       await apiRequest("/api/logout", {
         method: "POST",
       });
+      localStorage.removeItem('authToken');
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
@@ -65,11 +93,16 @@ function useLogoutMutation() {
 function useRegisterMutation() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async (userData: InsertUser) => {
-      const user = await apiRequest<SelectUser>("/api/register", {
+    mutationFn: async (userData: RegisterData) => {
+      const response = await apiRequest<AuthResponse>("/api/register", {
         method: "POST",
         body: JSON.stringify(userData),
       });
+
+      if (response.error) throw new Error(response.error.message);
+
+      const { user, session } = response.data;
+      localStorage.setItem('authToken', session.access_token);
       return user;
     },
     onSuccess: (user) => {
@@ -92,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery<SelectUser | null>({
+  } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });

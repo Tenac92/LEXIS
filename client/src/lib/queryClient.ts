@@ -18,6 +18,7 @@ async function throwIfResNotOk(res: Response) {
     }
 
     if (res.status === 401) {
+      localStorage.removeItem('authToken');
       throw new Error("Unauthorized. Please log in.");
     }
 
@@ -31,45 +32,51 @@ export async function apiRequest<T = unknown>(
 ): Promise<T> {
   console.log(`[API] Making request to ${url}`, { method: options.method || 'GET' });
 
+  const authToken = localStorage.getItem('authToken');
+  const headers = {
+    "Content-Type": "application/json",
+    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    ...options.headers,
+  };
+
   const res = await fetch(url, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-    credentials: "include",
+    headers,
   });
 
   await throwIfResNotOk(res);
   return res.json();
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
+export const getQueryFn = ({ on401 }: { on401: "returnNull" | "throw" }): QueryFunction => 
   async ({ queryKey }) => {
     console.log(`[Query] Executing query for key:`, queryKey);
 
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
+    try {
+      const authToken = localStorage.getItem('authToken');
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      console.log(`[Query] Returning null for unauthorized request to ${queryKey[0]}`);
-      return null;
+      const res = await fetch(queryKey[0] as string, { headers });
+
+      if (on401 === "returnNull" && res.status === 401) {
+        console.log(`[Query] Returning null for unauthorized request to ${queryKey[0]}`);
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return res.json();
+    } catch (error) {
+      if (on401 === "returnNull" && error instanceof Error && error.message.includes("Unauthorized")) {
+        return null;
+      }
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return res.json();
   };
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
       retry: false,

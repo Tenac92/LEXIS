@@ -1,196 +1,132 @@
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
-import session from "express-session";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
-import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { Request, Response, NextFunction, Express } from "express";
+import { supabase } from "./config/supabase";
+import { User } from "@shared/schema";
 
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface Request {
+      user?: User;
+    }
   }
 }
 
-const scryptAsync = promisify(scrypt);
+export async function setupAuth(app: Express) {
+  // Middleware to check Supabase session
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return next();
 
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
-}
-
-async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
-}
-
-export function setupAuth(app: Express) {
-  if (!process.env.SESSION_SECRET) {
-    throw new Error("SESSION_SECRET environment variable is required");
-  }
-
-  const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: storage.sessionStore,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      httpOnly: true,
-    },
-    name: 'sessionId', // Set a custom cookie name
-  };
-
-  app.set("trust proxy", 1);
-  app.use(session(sessionSettings));
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        console.log(`[Auth] Attempting login for username: ${username}`);
-        const user = await storage.getUserByUsername(username);
-
-        if (!user) {
-          console.log(`[Auth] User not found: ${username}`);
-          return done(null, false, { message: "Invalid username or password" });
-        }
-
-        console.log(`[Auth] User found, verifying password`);
-        const isValid = await comparePasswords(password, user.password);
-
-        if (!isValid) {
-          console.log(`[Auth] Invalid password for user: ${username}`);
-          return done(null, false, { message: "Invalid username or password" });
-        }
-
-        console.log(`[Auth] Login successful for user: ${username}`);
-        return done(null, user);
-      } catch (err) {
-        console.error(`[Auth] Error during login:`, err);
-        return done(err);
-      }
-    }),
-  );
-
-  passport.serializeUser((user, done) => {
-    console.log(`[Auth] Serializing user: ${user.id}`);
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: number, done) => {
     try {
-      console.log(`[Auth] Deserializing user: ${id}`);
-      const user = await storage.getUser(id);
-      if (!user) {
-        console.log(`[Auth] User not found during deserialization: ${id}`);
-        return done(new Error('User not found'));
-      }
-      done(null, user);
-    } catch (err) {
-      console.error(`[Auth] Error during deserialization:`, err);
-      done(err);
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+
+      if (error) throw error;
+      if (user) req.user = user as User;
+
+      next();
+    } catch (error) {
+      console.error('[Auth] Session verification error:', error);
+      next();
     }
   });
 
-  app.post("/api/register", async (req, res, next) => {
+  // Register endpoint
+  app.post("/api/register", async (req, res) => {
     try {
-      console.log(`[Auth] Registration attempt:`, req.body);
-      const { username, password, full_name } = req.body;
+      console.log('[Auth] Registration attempt:', req.body);
+      const { email, password, full_name } = req.body;
 
-      if (!username || !password || !full_name) {
-        console.log(`[Auth] Registration failed: Missing required fields`);
-        return res.status(400).json({ 
-          message: "Username, password, and full name are required" 
+      if (!email || !password || !full_name) {
+        return res.status(400).json({
+          message: "Email, password, and full name are required"
         });
       }
 
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser) {
-        console.log(`[Auth] Registration failed: Username exists: ${username}`);
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      const hashedPassword = await hashPassword(password);
-      const user = await storage.createUser({
-        username,
-        password: hashedPassword,
-        full_name,
-        role: 'user'
-      });
-
-      console.log(`[Auth] User registered successfully: ${username}`);
-      req.login(user, (err) => {
-        if (err) {
-          console.error(`[Auth] Login after registration failed:`, err);
-          return next(err);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name,
+            role: 'user'
+          }
         }
-        return res.status(201).json(user);
       });
-    } catch (err) {
-      console.error(`[Auth] Registration error:`, err);
-      next(err);
+
+      if (error) throw error;
+
+      console.log('[Auth] Registration successful:', email);
+      res.status(201).json({ data: { user: data.user, session: data.session }, error: null });
+    } catch (error: any) {
+      console.error('[Auth] Registration error:', error);
+      res.status(400).json({ data: null, error: { message: error.message } });
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
-    console.log(`[Auth] Login attempt:`, req.body);
+  // Login endpoint
+  app.post("/api/login", async (req, res) => {
+    try {
+      console.log('[Auth] Login attempt:', req.body);
+      const { email, password } = req.body;
 
-    passport.authenticate("local", (err, user, info) => {
-      if (err) {
-        console.error(`[Auth] Login error:`, err);
-        return next(err);
+      if (!email || !password) {
+        return res.status(400).json({
+          message: "Email and password are required"
+        });
       }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      console.log('[Auth] Login successful:', email);
+      res.json({ data: { user: data.user, session: data.session }, error: null });
+    } catch (error: any) {
+      console.error('[Auth] Login error:', error);
+      res.status(401).json({ data: null, error: { message: error.message } });
+    }
+  });
+
+  // Logout endpoint
+  app.post("/api/logout", async (req, res) => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      console.log('[Auth] Logout successful');
+      res.sendStatus(200);
+    } catch (error: any) {
+      console.error('[Auth] Logout error:', error);
+      res.status(500).json({ data: null, error: { message: error.message } });
+    }
+  });
+
+  // Get current user endpoint
+  app.get("/api/user", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        console.log('[Auth] No authorization header');
+        return res.sendStatus(401);
+      }
+
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+
+      if (error) throw error;
       if (!user) {
-        console.log(`[Auth] Authentication failed:`, info?.message);
-        return res.status(401).json({ message: info?.message || "Authentication failed" });
+        console.log('[Auth] No user found');
+        return res.sendStatus(401);
       }
 
-      req.login(user, (err) => {
-        if (err) {
-          console.error(`[Auth] Session creation failed:`, err);
-          return next(err);
-        }
-        console.log(`[Auth] Login successful for user: ${user.username}`);
-        return res.json(user);
-      });
-    })(req, res, next);
-  });
-
-  app.post("/api/logout", (req, res, next) => {
-    const username = req.user?.username;
-    console.log(`[Auth] Logout attempt for user: ${username}`);
-
-    req.logout((err) => {
-      if (err) {
-        console.error(`[Auth] Logout error:`, err);
-        return next(err);
-      }
-      req.session.destroy((err) => {
-        if (err) {
-          console.error(`[Auth] Session destruction error:`, err);
-          return next(err);
-        }
-        console.log(`[Auth] Logout successful for user: ${username}`);
-        res.clearCookie('sessionId');
-        res.sendStatus(200);
-      });
-    });
-  });
-
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      console.log(`[Auth] Unauthenticated request to /api/user`);
-      return res.sendStatus(401);
+      console.log('[Auth] User found:', user.email);
+      res.json(user);
+    } catch (error: any) {
+      console.error('[Auth] Error getting user:', error);
+      res.status(401).json({ message: error.message });
     }
-    console.log(`[Auth] Authenticated user request: ${req.user?.username}`);
-    res.json(req.user);
   });
 }
