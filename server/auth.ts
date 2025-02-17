@@ -58,56 +58,50 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 
 export async function setupAuth(app: Express) {
   app.post("/api/login", async (req, res) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({
-        error: { message: 'Email and password are required' }
-      });
-    }
     try {
-      console.log('[Auth] Login attempt:', { email: username });
-      const result = loginSchema.safeParse({ email: username, password });
+      const { username, password } = req.body;
 
-      if (!result.success) {
-        console.log('[Auth] Schema validation failed:', result.error);
+      if (!username || !password) {
         return res.status(400).json({
-          error: { message: 'Invalid login data' }
+          error: { message: 'Email and password are required' }
         });
       }
 
-      const { email } = result.data;
+      console.log('[Auth] Login attempt:', { email: username });
 
-      const [user] = await db.select().from(users).where(eq(users.username, email)).limit(1);
+      // Find user by email (stored in username field)
+      const [user] = await db.select().from(users).where(eq(users.username, username));
 
       if (!user) {
-        console.log('[Auth] User not found:', email);
+        console.log('[Auth] User not found:', username);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
       }
 
-      console.log('[Auth] Found user, comparing passwords');
+      // Compare passwords
       const isValidPassword = await bcrypt.compare(password, user.password);
       console.log('[Auth] Password validation:', { isValid: isValidPassword });
 
       if (!isValidPassword) {
-        console.log('[Auth] Password validation failed for user:', email);
+        console.log('[Auth] Password validation failed for user:', username);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
       }
 
+      // Generate JWT token
       const token = jwt.sign(
         { userId: user.id },
         SECRET_KEY,
         { expiresIn: '7d' }
       );
 
+      // Send success response
       res.json({
         user: {
           id: user.id,
-          email: user.username, 
+          email: user.username,
           full_name: user.full_name || user.username.split('@')[0],
           role: user.role,
           unit: user.unit
@@ -124,43 +118,42 @@ export async function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res) => {
     try {
-      const result = registerSchema.safeParse(req.body);
+      const { email, password, full_name, unit } = req.body;
 
-      if (!result.success) {
-        return res.status(400).json({
-          error: { message: 'Invalid registration data' }
-        });
-      }
+      // Validate input
+      const [existingUser] = await db.select().from(users).where(eq(users.username, email));
 
-      const { username, password, full_name, unit } = result.data;
-      const existingUser = await db.select().from(users).where(eq(users.username, username));
-
-      if (existingUser.length > 0) {
+      if (existingUser) {
         return res.status(400).json({
           error: { message: 'User already exists' }
         });
       }
 
+      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user
       const [newUser] = await db.insert(users).values({
-        username,
+        username: email, // Store email in username field
         password: hashedPassword,
         full_name,
         unit,
         role: 'user'
       }).returning();
 
+      // Generate token
       const token = jwt.sign(
         { userId: newUser.id },
         SECRET_KEY,
         { expiresIn: '7d' }
       );
 
+      // Send success response
       res.status(201).json({
         user: {
           id: newUser.id,
-          username: newUser.username,
-          full_name: newUser.full_name || username.split('@')[0],
+          email: newUser.username,
+          full_name: newUser.full_name || email.split('@')[0],
           role: newUser.role,
           unit: newUser.unit
         },
@@ -183,7 +176,7 @@ export async function setupAuth(app: Express) {
 
     res.json({
       id: req.user.id,
-      username: req.user.username,
+      email: req.user.username,
       full_name: req.user.full_name || req.user.username.split('@')[0],
       role: req.user.role,
       unit: req.user.unit
