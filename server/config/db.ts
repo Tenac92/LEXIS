@@ -1,30 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { Pool } from 'pg';
+import pg from 'pg';
 import { Database } from '@shared/schema';
 
-// Verify required environment variables
-const requiredEnvVars = {
-  DATABASE_URL: process.env.DATABASE_URL,
-  SUPABASE_URL: process.env.SUPABASE_URL,
-  SUPABASE_KEY: process.env.SUPABASE_KEY
-};
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required');
+}
 
-// Check all required environment variables
-Object.entries(requiredEnvVars).forEach(([name, value]) => {
-  if (!value) {
-    console.error(`[Database] Missing required environment variable: ${name}`);
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-});
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+  throw new Error('Supabase environment variables are required');
+}
 
 console.log('[Database] Environment variables verified');
 
 // Create Supabase client for auth
 export const supabase = createClient<Database>(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY,
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_KEY!,
   {
     auth: {
       persistSession: false
@@ -33,13 +26,13 @@ export const supabase = createClient<Database>(
 );
 
 // Create PostgreSQL pool with error handling
-export let pool: Pool;
+export let pool: pg.Pool;
 export let db: ReturnType<typeof drizzle>;
 
 try {
   console.log('[Database] Initializing PostgreSQL connection pool');
 
-  pool = new Pool({
+  pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
   });
 
@@ -55,7 +48,7 @@ try {
     });
 
   // Create Drizzle instance
-  const queryClient = postgres(process.env.DATABASE_URL);
+  const queryClient = postgres(process.env.DATABASE_URL!);
   db = drizzle(queryClient);
 
   console.log('[Database] Database configuration complete');

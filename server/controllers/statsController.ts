@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db';
+import { db } from '../config/db';
 import { documents } from '@shared/schema';
 import { sql } from 'drizzle-orm';
 
