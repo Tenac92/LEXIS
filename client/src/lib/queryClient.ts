@@ -9,7 +9,7 @@ export async function apiRequest<T = unknown>(
 ): Promise<T> {
   console.log(`[API] Making request to ${url}`, options);
 
-  const token = tokenManager.getToken();
+  const token = await tokenManager.getToken();
   const headers = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -27,7 +27,7 @@ export async function apiRequest<T = unknown>(
       let errorMessage = `${res.status}: ${res.statusText}`;
 
       try {
-        if (contentType && contentType.includes("application/json")) {
+        if (contentType?.includes("application/json")) {
           const data = await res.json();
           errorMessage = data.error?.message || data.message || errorMessage;
         } else {
@@ -35,7 +35,7 @@ export async function apiRequest<T = unknown>(
           errorMessage = text || errorMessage;
         }
       } catch (e) {
-        console.error("Error parsing error response:", e);
+        console.error("[API] Error parsing error response:", e);
       }
 
       if (res.status === 401) {
@@ -56,10 +56,12 @@ export async function apiRequest<T = unknown>(
 export const getQueryFn = ({ on401 = "throw" }: { on401?: "returnNull" | "throw" } = {}): QueryFunction => 
   async ({ queryKey }) => {
     console.log(`[Query] Executing query for key:`, queryKey);
-    const token = tokenManager.getToken();
+    const token = await tokenManager.getToken();
 
     try {
-      const headers: HeadersInit = {};
+      const headers: HeadersInit = {
+        "Content-Type": "application/json"
+      };
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
@@ -80,7 +82,7 @@ export const getQueryFn = ({ on401 = "throw" }: { on401?: "returnNull" | "throw"
         let errorMessage = `${res.status}: ${res.statusText}`;
 
         try {
-          if (contentType && contentType.includes("application/json")) {
+          if (contentType?.includes("application/json")) {
             const data = await res.json();
             errorMessage = data.error?.message || data.message || errorMessage;
           } else {
@@ -88,7 +90,7 @@ export const getQueryFn = ({ on401 = "throw" }: { on401?: "returnNull" | "throw"
             errorMessage = text || errorMessage;
           }
         } catch (e) {
-          console.error("Error parsing error response:", e);
+          console.error("[Query] Error parsing error response:", e);
         }
 
         throw new Error(errorMessage);

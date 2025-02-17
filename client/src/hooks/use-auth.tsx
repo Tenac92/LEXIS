@@ -29,7 +29,6 @@ type RegisterData = LoginData & {
   department?: string;
 };
 
-// Auth response types
 type AuthResponse = {
   user: User;
   token: string;

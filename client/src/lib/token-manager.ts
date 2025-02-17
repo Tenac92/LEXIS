@@ -35,7 +35,7 @@ export class TokenManager {
     this.eventListeners.forEach(listener => listener(event));
   }
 
-  getToken(): string | null {
+  async getToken(): Promise<string | null> {
     const token = localStorage.getItem(this.TOKEN_KEY);
     if (!token || token === 'undefined' || token === 'null') {
       this.clearToken();
@@ -101,7 +101,7 @@ export class TokenManager {
 
   private async refreshToken(): Promise<string | null> {
     try {
-      const currentToken = this.getToken();
+      const currentToken = await this.getToken();
       if (!currentToken) {
         throw new Error(TokenManager.ERROR_MESSAGES.NO_TOKEN);
       }
@@ -132,9 +132,9 @@ export class TokenManager {
   }
 
   isUserAdmin(): boolean {
-    const token = this.getToken();
+    const token = localStorage.getItem(this.TOKEN_KEY);
     if (!token) return false;
-    
+
     const payload = this.parseToken(token);
     return payload?.role === 'admin';
   }
