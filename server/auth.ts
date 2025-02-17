@@ -66,10 +66,10 @@ export async function setupAuth(app: Express) {
       });
     }
     try {
-      console.log('[Auth] Login attempt:', { username });
-      const { username, password } = req.body;
+      const { email, password } = req.body;
+      console.log('[Auth] Login attempt:', { email });
       
-      const result = loginSchema.safeParse({ username, password });
+      const result = loginSchema.safeParse({ email, password });
 
       if (!result.success) {
         console.log('[Auth] Schema validation failed:', result.error);
@@ -78,10 +78,10 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      const user = await db.select().from(users).where(eq(users.username, username.toLowerCase())).limit(1);
+      const user = await db.select().from(users).where(eq(users.username, email.toLowerCase())).limit(1);
 
       if (!user || user.length === 0) {
-        console.log('[Auth] User not found:', username);
+        console.log('[Auth] User not found:', email);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
