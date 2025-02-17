@@ -1,7 +1,6 @@
-import { createContext, ReactNode, useContext, useEffect } from "react";
+import { createContext, ReactNode, useContext } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { User } from "@shared/schema";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "../lib/queryClient";
 
@@ -25,21 +24,22 @@ function useLoginMutation() {
     mutationFn: async (credentials: LoginData) => {
       console.log('[Auth] Attempting login with:', credentials.email);
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: credentials.email,
-        password: credentials.password,
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(credentials),
+        credentials: 'include' // Important for cookies
       });
 
-      if (error) {
-        console.error('[Auth] Login error:', error);
-        throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Login failed');
       }
 
-      if (!data.user) {
-        throw new Error('No user data returned');
-      }
-
-      return data.user as unknown as User;
+      const data = await response.json();
+      return data.user;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -60,8 +60,15 @@ function useLogoutMutation() {
 
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      const response = await fetch('/api/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Logout failed');
+      }
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
@@ -79,38 +86,31 @@ function useLogoutMutation() {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { toast } = useToast();
-
   const { data: user, error, isLoading } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) {
+      try {
+        const response = await fetch('/api/user', {
+          credentials: 'include'
+        });
+
+        if (response.status === 401) {
+          return null;
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user');
+        }
+
+        return response.json();
+      } catch (error) {
         console.error('[Auth] Get user error:', error);
         return null;
       }
-      return user as unknown as User | null;
     },
     retry: false,
     refetchOnWindowFocus: false,
   });
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('[Auth] Auth state change:', event, session?.user?.id);
-        if (session?.user) {
-          queryClient.setQueryData(["/api/user"], session.user);
-        } else {
-          queryClient.setQueryData(["/api/user"], null);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
