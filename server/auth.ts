@@ -67,7 +67,9 @@ export async function setupAuth(app: Express) {
     }
     try {
       console.log('[Auth] Login attempt:', { username });
-      const result = loginSchema.safeParse(req.body);
+      const { username, password } = req.body;
+      
+      const result = loginSchema.safeParse({ username, password });
 
       if (!result.success) {
         console.log('[Auth] Schema validation failed:', result.error);
@@ -75,8 +77,6 @@ export async function setupAuth(app: Express) {
           error: { message: 'Invalid login data' }
         });
       }
-
-      const { username, password } = result.data;
 
       const user = await db.select().from(users).where(eq(users.username, username.toLowerCase())).limit(1);
 
