@@ -77,9 +77,10 @@ export async function setupAuth(app: Express) {
 
       const { username, password } = result.data;
 
-      const user = await db.select().from(users).where(eq(users.username, username)).limit(1);
+      const user = await db.select().from(users).where(eq(users.username, username.toLowerCase())).limit(1);
 
       if (!user || user.length === 0) {
+        console.log('[Auth] User not found:', username);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
