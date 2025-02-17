@@ -39,7 +39,7 @@ function useLoginMutation() {
       const response = await apiRequest<AuthResponse>("/api/login", {
         method: "POST",
         body: JSON.stringify({
-          username: credentials.email, // Map email to username for backend
+          username: credentials.email,
           password: credentials.password
         }),
         headers: {
@@ -102,7 +102,7 @@ function useRegisterMutation() {
       const response = await apiRequest<AuthResponse>("/api/register", {
         method: "POST",
         body: JSON.stringify({
-          username: userData.email, // Map email to username
+          username: userData.email,
           password: userData.password,
           full_name: userData.full_name,
           unit: userData.unit

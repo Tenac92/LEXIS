@@ -34,6 +34,14 @@ export default function AuthPage() {
     },
   });
 
+  const onSubmit = async (data: LoginFormData) => {
+    console.log('[Auth] Submitting login form with:', { email: data.email });
+    loginMutation.mutate({
+      email: data.email,
+      password: data.password
+    });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-4xl grid md:grid-cols-2 gap-6 p-6">
@@ -45,12 +53,7 @@ export default function AuthPage() {
           </CardHeader>
 
           <CardContent>
-            <form
-              onSubmit={loginForm.handleSubmit(data => {
-                console.log('[Auth] Submitting login form with:', data);
-                loginMutation.mutate(data);
-              })}
-            >
+            <form onSubmit={loginForm.handleSubmit(onSubmit)}>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="email">Email</Label>
