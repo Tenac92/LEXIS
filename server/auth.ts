@@ -98,6 +98,11 @@ export async function setupAuth(app: Express) {
 
       // Compare passwords
       const isValidPassword = await bcrypt.compare(password, user.password);
+      console.log('[Auth] Password validation:', { 
+        email,
+        isValid: isValidPassword,
+        storedHash: user.password
+      });
 
       if (!isValidPassword) {
         console.log('[Auth] Invalid password for user:', email);
