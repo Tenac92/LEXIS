@@ -24,6 +24,7 @@ export async function apiRequest<T = unknown>(
     if (!response.ok) {
       if (response.status === 401) {
         tokenManager.clearToken();
+        window.location.href = '/auth'; // Redirect to auth page on 401
         throw new Error("Unauthorized. Please log in.");
       }
 
@@ -58,6 +59,7 @@ export const getQueryFn = ({ on401 = "throw" }: { on401?: "returnNull" | "throw"
             return null;
           }
           tokenManager.clearToken();
+          window.location.href = '/auth'; // Redirect to auth page on 401
           throw new Error("Unauthorized. Please log in.");
         }
 
