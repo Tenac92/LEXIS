@@ -58,6 +58,13 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 
 export async function setupAuth(app: Express) {
   app.post("/api/login", async (req, res) => {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({
+        error: { message: 'Username and password are required' }
+      });
+    }
     try {
       console.log('[Auth] Login attempt:', req.body);
       const result = loginSchema.safeParse(req.body);
