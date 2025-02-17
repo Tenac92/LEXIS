@@ -41,13 +41,19 @@ export default function AuthPage() {
           </CardHeader>
 
           <CardContent>
-            <form onSubmit={loginForm.handleSubmit(data => loginMutation.mutate(data))}>
+            <form
+              onSubmit={loginForm.handleSubmit(data => {
+                console.log('Submitting login form with data:', data);
+                loginMutation.mutate(data);
+              })}
+            >
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username">Email</Label>
                   <Input 
-                    type="text" 
-                    {...loginForm.register("username")} 
+                    type="email"
+                    id="username"
+                    {...loginForm.register("username")}
                   />
                   {loginForm.formState.errors.username && (
                     <p className="text-sm text-destructive mt-1">
@@ -58,8 +64,9 @@ export default function AuthPage() {
                 <div>
                   <Label htmlFor="password">Password</Label>
                   <Input 
-                    type="password" 
-                    {...loginForm.register("password")} 
+                    type="password"
+                    id="password"
+                    {...loginForm.register("password")}
                   />
                   {loginForm.formState.errors.password && (
                     <p className="text-sm text-destructive mt-1">

@@ -68,9 +68,9 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      const { email, password } = result.data;
+      const { username, password } = result.data;
 
-      const user = await db.select().from(users).where(eq(users.username, email)).limit(1);
+      const user = await db.select().from(users).where(eq(users.username, username)).limit(1);
 
       if (!user || user.length === 0) {
         return res.status(401).json({
@@ -95,8 +95,8 @@ export async function setupAuth(app: Express) {
       res.json({
         user: {
           id: user[0].id,
-          email: user[0].username,
-          name: user[0].full_name || user[0].username.split('@')[0],
+          username: user[0].username,
+          full_name: user[0].full_name || user[0].username.split('@')[0],
           role: user[0].role,
           unit: user[0].unit
         },
@@ -120,8 +120,8 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      const { email, password, full_name, unit } = result.data;
-      const existingUser = await db.select().from(users).where(eq(users.username, email));
+      const { username, password, full_name, unit } = result.data;
+      const existingUser = await db.select().from(users).where(eq(users.username, username));
 
       if (existingUser.length > 0) {
         return res.status(400).json({
@@ -131,7 +131,7 @@ export async function setupAuth(app: Express) {
 
       const hashedPassword = await bcrypt.hash(password, 10);
       const [newUser] = await db.insert(users).values({
-        username: email,
+        username,
         password: hashedPassword,
         full_name,
         unit,
@@ -147,8 +147,8 @@ export async function setupAuth(app: Express) {
       res.status(201).json({
         user: {
           id: newUser.id,
-          email: newUser.username,
-          name: newUser.full_name || email.split('@')[0],
+          username: newUser.username,
+          full_name: newUser.full_name || username.split('@')[0],
           role: newUser.role,
           unit: newUser.unit
         },
@@ -171,8 +171,8 @@ export async function setupAuth(app: Express) {
 
     res.json({
       id: req.user.id,
-      email: req.user.username,
-      name: req.user.full_name || req.user.username.split('@')[0],
+      username: req.user.username,
+      full_name: req.user.full_name || req.user.username.split('@')[0],
       role: req.user.role,
       unit: req.user.unit
     });
