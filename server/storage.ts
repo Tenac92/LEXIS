@@ -1,10 +1,9 @@
 import { users, documents, recipients, projects } from "@shared/schema";
 import type { User, InsertUser, Document, InsertDocument, Recipient, InsertRecipient, Project, InsertProject } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { pool } from './db';
 
 const PostgresSessionStore = connectPg(session);
 
@@ -25,11 +24,10 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({ 
-      conObject: pool,
-      createTableIfMissing: true,
+    this.sessionStore = new PostgresSessionStore({
+      pool: pool,
       tableName: 'session',
-      pruneSessionInterval: 60 * 15 // Prune expired sessions every 15 minutes
+      createTableIfMissing: true,
     });
   }
 
@@ -38,7 +36,7 @@ export class DatabaseStorage implements IStorage {
       const [user] = await db.select().from(users).where(eq(users.id, id));
       return user;
     } catch (error) {
-      console.error('Error fetching user:', error);
+      console.error('[Storage] Error fetching user:', error);
       throw error;
     }
   }
@@ -48,7 +46,7 @@ export class DatabaseStorage implements IStorage {
       const [user] = await db.select().from(users).where(eq(users.username, username));
       return user;
     } catch (error) {
-      console.error('Error fetching user by username:', error);
+      console.error('[Storage] Error fetching user by username:', error);
       throw error;
     }
   }
@@ -58,7 +56,7 @@ export class DatabaseStorage implements IStorage {
       const [user] = await db.insert(users).values(insertUser).returning();
       return user;
     } catch (error) {
-      console.error('Error creating user:', error);
+      console.error('[Storage] Error creating user:', error);
       throw error;
     }
   }
@@ -68,7 +66,7 @@ export class DatabaseStorage implements IStorage {
       const [doc] = await db.select().from(documents).where(eq(documents.id, id));
       return doc;
     } catch (error) {
-      console.error('Error fetching document:', error);
+      console.error('[Storage] Error fetching document:', error);
       throw error;
     }
   }
@@ -78,7 +76,7 @@ export class DatabaseStorage implements IStorage {
       const [newDoc] = await db.insert(documents).values(doc).returning();
       return newDoc;
     } catch (error) {
-      console.error('Error creating document:', error);
+      console.error('[Storage] Error creating document:', error);
       throw error;
     }
   }
@@ -88,7 +86,7 @@ export class DatabaseStorage implements IStorage {
       const [recipient] = await db.select().from(recipients).where(eq(recipients.id, id));
       return recipient;
     } catch (error) {
-      console.error('Error fetching recipient:', error);
+      console.error('[Storage] Error fetching recipient:', error);
       throw error;
     }
   }
@@ -98,7 +96,7 @@ export class DatabaseStorage implements IStorage {
       const [newRecipient] = await db.insert(recipients).values(recipient).returning();
       return newRecipient;
     } catch (error) {
-      console.error('Error creating recipient:', error);
+      console.error('[Storage] Error creating recipient:', error);
       throw error;
     }
   }
@@ -108,7 +106,7 @@ export class DatabaseStorage implements IStorage {
       const [project] = await db.select().from(projects).where(eq(projects.id, id));
       return project;
     } catch (error) {
-      console.error('Error fetching project:', error);
+      console.error('[Storage] Error fetching project:', error);
       throw error;
     }
   }
@@ -118,7 +116,7 @@ export class DatabaseStorage implements IStorage {
       const [newProject] = await db.insert(projects).values(project).returning();
       return newProject;
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error('[Storage] Error creating project:', error);
       throw error;
     }
   }

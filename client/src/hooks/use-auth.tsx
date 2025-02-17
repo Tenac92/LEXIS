@@ -1,8 +1,5 @@
 import { createContext, ReactNode, useContext } from "react";
-import {
-  useQuery,
-  useMutation,
-} from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -23,10 +20,8 @@ type LoginData = {
 };
 
 type RegisterData = LoginData & {
-  name: string;
-  units?: string;
-  telephone?: string;
-  department?: string;
+  full_name?: string;
+  unit?: string;
 };
 
 type AuthResponse = {
@@ -110,7 +105,12 @@ function useRegisterMutation() {
       console.log('[Auth] Attempting registration:', userData.email);
       const response = await apiRequest<AuthResponse>("/api/register", {
         method: "POST",
-        body: JSON.stringify(userData),
+        body: JSON.stringify({
+          username: userData.email,  // Map email to username as expected by server
+          password: userData.password,
+          full_name: userData.full_name,
+          unit: userData.unit
+        }),
       });
 
       if (response.error) {
@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user: user ?? null,
         isLoading,
-        error,
+        error: error instanceof Error ? error : null,
         loginMutation,
         logoutMutation,
         registerMutation,
