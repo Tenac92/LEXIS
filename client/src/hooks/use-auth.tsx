@@ -27,9 +27,6 @@ type RegisterData = LoginData & {
 type AuthResponse = {
   user: User;
   token: string;
-  error?: {
-    message: string;
-  };
 };
 
 function useLoginMutation() {
@@ -37,31 +34,26 @@ function useLoginMutation() {
   const tokenManager = TokenManager.getInstance();
 
   return useMutation({
-    mutationFn: async (credentials: LoginData) => {
-      console.log('[Auth] Attempting login:', credentials.email);
+    mutationFn: async (credentials: LoginData): Promise<User> => {
       const response = await apiRequest<AuthResponse>("/api/login", {
         method: "POST",
         body: JSON.stringify({
-          username: credentials.email,
+          email: credentials.email,
           password: credentials.password
         }),
       });
 
-      if (response.error) {
-        console.error('[Auth] Login error:', response.error);
-        throw new Error(response.error.message);
+      if (response.token) {
+        tokenManager.setToken(response.token);
       }
 
-      console.log('[Auth] Login successful, storing token');
-      tokenManager.setToken(response.token);
       return response.user;
     },
     onSuccess: (user) => {
-      console.log('[Auth] Updating user data in query cache');
       queryClient.setQueryData(["/api/user"], user);
     },
     onError: (error: Error) => {
-      console.error('[Auth] Login mutation error:', error);
+      console.error('[Auth] Login error:', error);
       toast({
         title: "Login failed",
         description: error.message,
@@ -77,19 +69,13 @@ function useLogoutMutation() {
 
   return useMutation({
     mutationFn: async () => {
-      console.log('[Auth] Attempting logout');
-      await apiRequest("/api/logout", {
-        method: "POST",
-      });
-      console.log('[Auth] Removing auth token');
+      await apiRequest("/api/logout", { method: "POST" });
       tokenManager.clearToken();
     },
     onSuccess: () => {
-      console.log('[Auth] Clearing user data from query cache');
       queryClient.setQueryData(["/api/user"], null);
     },
     onError: (error: Error) => {
-      console.error('[Auth] Logout mutation error:', error);
       toast({
         title: "Logout failed",
         description: error.message,
@@ -104,33 +90,27 @@ function useRegisterMutation() {
   const tokenManager = TokenManager.getInstance();
 
   return useMutation({
-    mutationFn: async (userData: RegisterData) => {
-      console.log('[Auth] Attempting registration:', userData.email);
+    mutationFn: async (userData: RegisterData): Promise<User> => {
       const response = await apiRequest<AuthResponse>("/api/register", {
         method: "POST",
         body: JSON.stringify({
-          username: userData.email,
+          email: userData.email,
           password: userData.password,
           full_name: userData.full_name,
           unit: userData.unit
         }),
       });
 
-      if (response.error) {
-        console.error('[Auth] Registration error:', response.error);
-        throw new Error(response.error.message);
+      if (response.token) {
+        tokenManager.setToken(response.token);
       }
 
-      console.log('[Auth] Registration successful, storing token');
-      tokenManager.setToken(response.token);
       return response.user;
     },
     onSuccess: (user) => {
-      console.log('[Auth] Updating user data in query cache');
       queryClient.setQueryData(["/api/user"], user);
     },
     onError: (error: Error) => {
-      console.error('[Auth] Registration mutation error:', error);
       toast({
         title: "Registration failed",
         description: error.message,
@@ -143,11 +123,7 @@ function useRegisterMutation() {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const {
-    data: user,
-    error,
-    isLoading,
-  } = useQuery<User | null>({
+  const { data: user, error, isLoading } = useQuery<User>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });

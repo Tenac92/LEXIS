@@ -6,7 +6,11 @@ import { db } from './db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-const SECRET_KEY = process.env.SESSION_SECRET || "your-secret-key";
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET must be set");
+}
+
+const SECRET_KEY = process.env.SESSION_SECRET;
 
 declare global {
   namespace Express {
@@ -18,48 +22,32 @@ declare global {
 
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      console.log('[Auth] No authorization header');
-      return res.status(401).json({
-        status: 'error',
-        message: 'Authorization header missing',
-        code: 'AUTH_HEADER_MISSING'
-      });
-    }
+    const token = req.headers.authorization?.split(' ')[1];
 
-    const token = authHeader.split(' ')[1];
     if (!token) {
-      console.log('[Auth] No token found in header');
+      console.log('[Auth] No token provided');
       return res.status(401).json({
-        status: 'error',
-        message: 'Authentication token required',
-        code: 'TOKEN_MISSING'
+        error: { message: 'No token provided' }
       });
     }
 
     try {
-      console.log('[Auth] Verifying token...');
-      const decoded = jwt.verify(token, SECRET_KEY) as any;
-      console.log('[Auth] Token decoded:', decoded);
-
-      // Find user in database using email
-      const user = await db.select().from(users).where(eq(users.username, decoded.email)).limit(1);
+      const decoded = jwt.verify(token, SECRET_KEY) as { userId: number };
+      const user = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
 
       if (!user || user.length === 0) {
-        console.log('[Auth] User not found in database');
-        throw new Error('User not found');
+        console.log('[Auth] User not found');
+        return res.status(401).json({
+          error: { message: 'User not found' }
+        });
       }
 
       req.user = user[0];
-      console.log('[Auth] User authenticated:', req.user.username);
       next();
-    } catch (error: any) {
+    } catch (error) {
       console.error('[Auth] Token verification error:', error);
       return res.status(401).json({
-        status: 'error',
-        message: error.message || 'Invalid token',
-        code: 'INVALID_TOKEN'
+        error: { message: 'Invalid token' }
       });
     }
   } catch (error) {
@@ -69,126 +57,94 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 };
 
 export async function setupAuth(app: Express) {
-  // Login endpoint
   app.post("/api/login", async (req, res) => {
     try {
       console.log('[Auth] Login attempt:', req.body);
-      const parsed = loginSchema.safeParse(req.body);
+      const result = loginSchema.safeParse(req.body);
 
-      if (!parsed.success) {
-        console.log('[Auth] Login validation failed:', parsed.error);
+      if (!result.success) {
         return res.status(400).json({
-          error: { message: parsed.error.message }
+          error: { message: 'Invalid login data' }
         });
       }
 
-      const { email, password } = parsed.data;
+      const { email, password } = result.data;
 
-      // Find user by email (username in DB)
-      const userResult = await db.select().from(users).where(eq(users.username, email)).limit(1);
-      if (userResult.length === 0) {
+      const user = await db.select().from(users).where(eq(users.username, email)).limit(1);
+
+      if (!user || user.length === 0) {
         return res.status(401).json({
-          error: { message: "Invalid email or password" }
+          error: { message: 'Invalid credentials' }
         });
       }
 
-      const user = userResult[0];
+      const isValidPassword = await bcrypt.compare(password, user[0].password);
 
-      // Verify password using bcrypt
-      const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
         return res.status(401).json({
-          error: { message: "Invalid email or password" }
+          error: { message: 'Invalid credentials' }
         });
       }
 
-      // Generate JWT token
       const token = jwt.sign(
-        { 
-          userId: user.id,
-          email: user.username,
-          name: user.full_name || user.username.split('@')[0],
-          role: user.role,
-          unit: user.unit
-        },
+        { userId: user[0].id },
         SECRET_KEY,
         { expiresIn: '7d' }
       );
 
-      console.log('[Auth] Login successful:', email);
-
-      res.json({ 
+      res.json({
         user: {
-          id: user.id,
-          email: user.username,
-          name: user.full_name || user.username.split('@')[0],
-          role: user.role,
-          unit: user.unit
+          id: user[0].id,
+          email: user[0].username,
+          name: user[0].full_name || user[0].username.split('@')[0],
+          role: user[0].role,
+          unit: user[0].unit
         },
         token
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('[Auth] Login error:', error);
-      res.status(500).json({ 
-        error: { 
-          message: error.message || "Internal server error" 
-        } 
+      res.status(500).json({
+        error: { message: 'Internal server error' }
       });
     }
   });
 
-  // Register endpoint
   app.post("/api/register", async (req, res) => {
     try {
-      console.log('[Auth] Registration attempt:', req.body);
-      const parsed = registerSchema.safeParse(req.body);
+      const result = registerSchema.safeParse(req.body);
 
-      if (!parsed.success) {
-        console.log('[Auth] Registration validation failed:', parsed.error);
+      if (!result.success) {
         return res.status(400).json({
-          error: { message: parsed.error.message }
+          error: { message: 'Invalid registration data' }
         });
       }
 
-      const { email, password, full_name, unit } = parsed.data;
+      const { email, password, full_name, unit } = result.data;
+      const existingUser = await db.select().from(users).where(eq(users.username, email));
 
-      // Check if user already exists
-      const existingUser = await db.select().from(users).where(eq(users.username, email)).limit(1);
       if (existingUser.length > 0) {
         return res.status(400).json({
-          error: { message: "Email already registered" }
+          error: { message: 'User already exists' }
         });
       }
 
-      // Hash password with bcrypt
       const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create user
       const [newUser] = await db.insert(users).values({
         username: email,
         password: hashedPassword,
         full_name,
-        role: 'user',
         unit,
-        active: true
+        role: 'user'
       }).returning();
 
-      // Generate JWT token
       const token = jwt.sign(
-        { 
-          userId: newUser.id,
-          email: newUser.username,
-          name: newUser.full_name || email.split('@')[0],
-          role: newUser.role,
-          unit: newUser.unit
-        },
+        { userId: newUser.id },
         SECRET_KEY,
         { expiresIn: '7d' }
       );
 
-      console.log('[Auth] Registration successful:', email);
-
-      res.status(201).json({ 
+      res.status(201).json({
         user: {
           id: newUser.id,
           email: newUser.username,
@@ -196,14 +152,12 @@ export async function setupAuth(app: Express) {
           role: newUser.role,
           unit: newUser.unit
         },
-        token 
+        token
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('[Auth] Registration error:', error);
-      res.status(500).json({ 
-        error: { 
-          message: error.message || "Internal server error" 
-        } 
+      res.status(500).json({
+        error: { message: 'Internal server error' }
       });
     }
   });
@@ -211,9 +165,10 @@ export async function setupAuth(app: Express) {
   app.get("/api/user", authenticateToken, (req, res) => {
     if (!req.user) {
       return res.status(401).json({
-        error: { message: "Authentication required" }
+        error: { message: 'Not authenticated' }
       });
     }
+
     res.json({
       id: req.user.id,
       email: req.user.username,
