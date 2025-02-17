@@ -51,8 +51,8 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
       const decoded = jwt.verify(token, SECRET_KEY) as any;
       console.log('[Auth] Token decoded:', decoded);
 
-      // Find user in database
-      const user = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
+      // Find user in database using username (email)
+      const user = await db.select().from(users).where(eq(users.username, decoded.email)).limit(1);
 
       if (!user || user.length === 0) {
         console.log('[Auth] User not found in database');
@@ -60,7 +60,7 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
       }
 
       req.user = user[0];
-      console.log('[Auth] User authenticated:', req.user.email);
+      console.log('[Auth] User authenticated:', req.user.username);
       next();
     } catch (error: any) {
       console.error('[Auth] Token verification error:', error);
@@ -92,8 +92,8 @@ export async function setupAuth(app: Express) {
 
       const { email, password } = parsed.data;
 
-      // Find user
-      const userResult = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      // Find user by username (email)
+      const userResult = await db.select().from(users).where(eq(users.username, email)).limit(1);
       if (userResult.length === 0) {
         return res.status(401).json({
           error: { message: "Invalid email or password" }
@@ -114,27 +114,24 @@ export async function setupAuth(app: Express) {
       const token = jwt.sign(
         { 
           userId: user.id,
-          email: user.email,
-          name: user.name || email.split('@')[0], // Fallback to email username if name is null
+          email: user.username, // Use username as email
+          name: user.full_name || user.username.split('@')[0], // Fallback to email username if full_name is null
           role: user.role,
-          units: user.units,
-          department: user.department
+          unit: user.unit
         },
         SECRET_KEY,
         { expiresIn: '7d' }
       );
 
       console.log('[Auth] Login successful:', email);
-      console.log('[Auth] Generated token:', token);
 
       res.json({ 
         user: {
           id: user.id,
-          email: user.email,
-          name: user.name || email.split('@')[0], // Fallback to email username if name is null
+          email: user.username,
+          name: user.full_name || user.username.split('@')[0],
           role: user.role,
-          units: user.units,
-          department: user.department
+          unit: user.unit
         },
         token
       });
@@ -161,10 +158,10 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      const { email, password, name, units, telephone, department } = parsed.data;
+      const { email, password, full_name, unit } = parsed.data;
 
       // Check if user already exists
-      const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      const existingUser = await db.select().from(users).where(eq(users.username, email)).limit(1);
       if (existingUser.length > 0) {
         return res.status(400).json({
           error: { message: "Email already registered" }
@@ -176,40 +173,36 @@ export async function setupAuth(app: Express) {
 
       // Create user
       const [newUser] = await db.insert(users).values({
-        email,
+        username: email,
         password: hashedPassword,
-        name,
+        full_name,
         role: 'user',
-        units,
-        telephone,
-        department
+        unit,
+        active: true
       }).returning();
 
       // Generate JWT token
       const token = jwt.sign(
         { 
           userId: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
+          email: newUser.username,
+          name: newUser.full_name || email.split('@')[0],
           role: newUser.role,
-          units: newUser.units,
-          department: newUser.department
+          unit: newUser.unit
         },
         SECRET_KEY,
         { expiresIn: '7d' }
       );
 
       console.log('[Auth] Registration successful:', email);
-      console.log('[Auth] Generated token:', token);
 
       res.status(201).json({ 
         user: {
           id: newUser.id,
-          email: newUser.email,
-          name: newUser.name,
+          email: newUser.username,
+          name: newUser.full_name || email.split('@')[0],
           role: newUser.role,
-          units: newUser.units,
-          department: newUser.department
+          unit: newUser.unit
         },
         token 
       });
@@ -223,19 +216,6 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Verify token endpoint
-  app.post("/api/verify", authenticateToken, (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({ 
-        status: 'error',
-        message: "Invalid token",
-        code: 'INVALID_TOKEN'
-      });
-    }
-    res.json({ valid: true, user: req.user });
-  });
-
-  // Get current user endpoint
   app.get("/api/user", authenticateToken, (req, res) => {
     if (!req.user) {
       return res.status(401).json({
@@ -244,11 +224,16 @@ export async function setupAuth(app: Express) {
         code: 'AUTH_REQUIRED'
       });
     }
-    res.json(req.user);
+    res.json({
+      id: req.user.id,
+      email: req.user.username,
+      name: req.user.full_name || req.user.username.split('@')[0],
+      role: req.user.role,
+      unit: req.user.unit
+    });
   });
 
-  // Logout endpoint
-  app.post("/api/logout", (req, res) => {
+  app.post("/api/logout", (_req, res) => {
     res.sendStatus(200);
   });
 }

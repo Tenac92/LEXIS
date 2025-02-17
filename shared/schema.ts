@@ -5,34 +5,32 @@ import { z } from "zod";
 // Users table matching existing database structure
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  name: text("name"),
-  email: text("email").notNull().unique(),
-  role: text("role").default("user").notNull(),
+  username: text("username").notNull().unique(), // Changed from email to username to match DB
   password: text("password").notNull(),
-  units: text("units"),
-  telephone: text("telephone"),
-  department: text("department"),
+  full_name: text("full_name"), // Changed from name to full_name
+  role: text("role").default("user").notNull(),
+  unit: text("unit"), // Changed from units to unit
+  active: boolean("active").default(true),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Login schema for validation
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email format"),
+  email: z.string().email("Invalid email format"), // Keep as email in API for consistency
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 // Registration schema
 export const registerSchema = z.object({
-  name: z.string().optional(),
   email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  units: z.string().optional(),
-  telephone: z.string().optional(),
-  department: z.string().optional(),
+  full_name: z.string().optional(),
+  unit: z.string().optional(),
 });
 
 // Create the insert schema from the users table
 export const insertUserSchema = createInsertSchema(users, {
-  email: z.string().email("Invalid email format"),
+  username: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
