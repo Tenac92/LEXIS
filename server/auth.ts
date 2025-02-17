@@ -100,8 +100,7 @@ export async function setupAuth(app: Express) {
       const isValidPassword = await bcrypt.compare(password, user.password);
       console.log('[Auth] Password validation:', { 
         email,
-        isValid: isValidPassword,
-        storedHash: user.password
+        isValid: isValidPassword
       });
 
       if (!isValidPassword) {
@@ -115,6 +114,8 @@ export async function setupAuth(app: Express) {
 
       // Set user session
       req.session.userId = user.id;
+
+      // Wait for session to be saved
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
           if (err) reject(err);
