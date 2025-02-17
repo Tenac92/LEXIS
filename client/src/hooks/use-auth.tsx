@@ -35,18 +35,23 @@ function useLoginMutation() {
 
   return useMutation({
     mutationFn: async (credentials: LoginData): Promise<User> => {
+      console.log('Auth: Attempting login', credentials.email);
       const response = await apiRequest<AuthResponse>("/api/login", {
         method: "POST",
         body: JSON.stringify({
           username: credentials.email,
           password: credentials.password
         }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (!response.token) {
-        throw new Error('No token received from server');
+      if (!response?.token) {
+        console.error('Auth: No token in response');
+        throw new Error('Invalid credentials');
       }
-      
+
       tokenManager.setToken(response.token);
       console.log('Token set after login:', response.token);
 
