@@ -9,6 +9,12 @@ export async function apiRequest<T = unknown>(
 ): Promise<T> {
   try {
     const token = await tokenManager.getToken();
+    if (!token && !url.includes('/login')) {
+      console.log('No auth token found');
+      window.location.href = '/auth';
+      throw new Error('No auth token found');
+    }
+    
     const headers = new Headers({
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

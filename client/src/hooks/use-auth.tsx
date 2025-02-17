@@ -43,9 +43,12 @@ function useLoginMutation() {
         }),
       });
 
-      if (response.token) {
-        tokenManager.setToken(response.token);
+      if (!response.token) {
+        throw new Error('No token received from server');
       }
+      
+      tokenManager.setToken(response.token);
+      console.log('Token set after login:', response.token);
 
       return response.user;
     },
