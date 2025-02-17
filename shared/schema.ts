@@ -16,13 +16,13 @@ export const users = pgTable("users", {
 
 // Login schema for validation - updated to match implementation
 export const loginSchema = z.object({
-  username: z.string().email("Invalid email format"), // Changed to username to match server
+  username: z.string().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 // Registration schema - updated for consistency
 export const registerSchema = z.object({
-  username: z.string().email("Invalid email format"), // Changed to username
+  username: z.string().min(1,"Username is required"), 
   password: z.string().min(6, "Password must be at least 6 characters"),
   full_name: z.string().optional(),
   unit: z.string().optional(),
@@ -30,7 +30,7 @@ export const registerSchema = z.object({
 
 // Create the insert schema from the users table
 export const insertUserSchema = createInsertSchema(users, {
-  username: z.string().email("Invalid email format"),
+  username: z.string().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
