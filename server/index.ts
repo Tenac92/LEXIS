@@ -79,9 +79,9 @@ app.use((req, res, next) => {
     const HOST = '0.0.0.0'; // Bind to all network interfaces
 
     // Attempt to find an available port
-    const tryPort = (port: number): Promise<number> => {
+    const tryPort = async (port: number): Promise<number> => {
       return new Promise((resolve, reject) => {
-        const tempServer = (await import('http')).createServer();
+        const tempServer = require('http').createServer();
         tempServer.listen(port, HOST);
         tempServer.on('error', () => {
           resolve(tryPort(port + 1));
