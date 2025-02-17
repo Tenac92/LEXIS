@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useContext } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { User } from "@shared/schema";
+import { User, loginSchema } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import TokenManager from "@/lib/token-manager";
@@ -41,7 +41,10 @@ function useLoginMutation() {
       console.log('[Auth] Attempting login:', credentials.email);
       const response = await apiRequest<AuthResponse>("/api/login", {
         method: "POST",
-        body: JSON.stringify(credentials),
+        body: JSON.stringify({
+          username: credentials.email,
+          password: credentials.password
+        }),
       });
 
       if (response.error) {
@@ -105,7 +108,12 @@ function useRegisterMutation() {
       console.log('[Auth] Attempting registration:', userData.email);
       const response = await apiRequest<AuthResponse>("/api/register", {
         method: "POST",
-        body: JSON.stringify(userData),
+        body: JSON.stringify({
+          username: userData.email,
+          password: userData.password,
+          full_name: userData.full_name,
+          unit: userData.unit
+        }),
       });
 
       if (response.error) {
