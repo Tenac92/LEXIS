@@ -14,5 +14,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
+  },
+  global: {
+    headers: { 'x-client-info': 'supabase-js' }
   }
 });

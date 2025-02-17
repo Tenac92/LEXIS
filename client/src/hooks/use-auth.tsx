@@ -23,9 +23,15 @@ function useLoginMutation() {
 
   return useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const { data, error } = await supabase.auth.signInWithPassword(credentials);
-      if (error) throw error;
-      return data.user;
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword(credentials);
+        if (error) throw error;
+        if (!data.user) throw new Error('No user returned from authentication');
+        return data.user;
+      } catch (err) {
+        console.error('Authentication error:', err);
+        throw err;
+      }
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/user"], data);
