@@ -27,6 +27,8 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
       });
     }
 
+    console.log('[Auth] Session found:', { userId: req.session.userId });
+
     const [user] = await db
       .select()
       .from(users)
@@ -63,6 +65,7 @@ export async function setupAuth(app: Express) {
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   }));
@@ -72,6 +75,7 @@ export async function setupAuth(app: Express) {
       const { email, password } = req.body;
 
       if (!email || !password) {
+        console.log('[Auth] Missing credentials:', { email: !!email, password: !!password });
         return res.status(400).json({
           error: { message: 'Email and password are required' }
         });
@@ -102,8 +106,16 @@ export async function setupAuth(app: Express) {
         });
       }
 
+      console.log('[Auth] Login successful:', { userId: user.id, email });
+
       // Set user session
       req.session.userId = user.id;
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
 
       res.json({
         user: {
@@ -130,6 +142,7 @@ export async function setupAuth(app: Express) {
           error: { message: 'Logout failed' }
         });
       }
+      res.clearCookie('connect.sid');
       res.sendStatus(200);
     });
   });

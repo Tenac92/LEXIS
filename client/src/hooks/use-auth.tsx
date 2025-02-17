@@ -22,6 +22,8 @@ function useLoginMutation() {
 
   return useMutation({
     mutationFn: async (credentials: LoginData) => {
+      console.log('[Auth] Attempting login:', credentials.email);
+
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
@@ -40,7 +42,9 @@ function useLoginMutation() {
       return data.user;
     },
     onSuccess: (user) => {
+      console.log('[Auth] Login successful:', user);
       queryClient.setQueryData(["/api/user"], user);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
       console.error('[Auth] Login error:', error);
@@ -70,6 +74,7 @@ function useLogoutMutation() {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
       toast({
@@ -93,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (response.status === 401) {
+          console.log('[Auth] Not authenticated');
           return null;
         }
 
@@ -100,7 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error('Failed to fetch user');
         }
 
-        return response.json();
+        const userData = await response.json();
+        console.log('[Auth] User data fetched:', userData);
+        return userData;
       } catch (error) {
         console.error('[Auth] Get user error:', error);
         return null;
