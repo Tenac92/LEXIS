@@ -7,13 +7,22 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertUserSchema } from "@shared/schema";
+import { z } from "zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const registerSchema = loginSchema.extend({
+  full_name: z.string().min(1, "Full name is required"),
+});
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
-  
+
   useEffect(() => {
     if (user) {
       setLocation("/");
@@ -21,11 +30,20 @@ export default function AuthPage() {
   }, [user, setLocation]);
 
   const loginForm = useForm({
-    resolver: zodResolver(insertUserSchema.pick({ username: true, password: true }))
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
 
   const registerForm = useForm({
-    resolver: zodResolver(insertUserSchema)
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      full_name: "",
+    },
   });
 
   return (
@@ -37,31 +55,47 @@ export default function AuthPage() {
               Document Management System
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent>
             <Tabs defaultValue="login">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="login">
                 <form onSubmit={loginForm.handleSubmit(data => loginMutation.mutate(data))}>
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="username">Username</Label>
-                      <Input {...loginForm.register("username")} />
+                      <Label htmlFor="email">Email</Label>
+                      <Input 
+                        type="email" 
+                        {...loginForm.register("email")} 
+                      />
+                      {loginForm.formState.errors.email && (
+                        <p className="text-sm text-destructive mt-1">
+                          {loginForm.formState.errors.email.message}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="password">Password</Label>
-                      <Input type="password" {...loginForm.register("password")} />
+                      <Input 
+                        type="password" 
+                        {...loginForm.register("password")} 
+                      />
+                      {loginForm.formState.errors.password && (
+                        <p className="text-sm text-destructive mt-1">
+                          {loginForm.formState.errors.password.message}
+                        </p>
+                      )}
                     </div>
                     <Button 
                       type="submit" 
                       className="w-full"
                       disabled={loginMutation.isPending}
                     >
-                      Login
+                      {loginMutation.isPending ? "Logging in..." : "Login"}
                     </Button>
                   </div>
                 </form>
@@ -71,23 +105,46 @@ export default function AuthPage() {
                 <form onSubmit={registerForm.handleSubmit(data => registerMutation.mutate(data))}>
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="username">Username</Label>
-                      <Input {...registerForm.register("username")} />
+                      <Label htmlFor="email">Email</Label>
+                      <Input 
+                        type="email" 
+                        {...registerForm.register("email")} 
+                      />
+                      {registerForm.formState.errors.email && (
+                        <p className="text-sm text-destructive mt-1">
+                          {registerForm.formState.errors.email.message}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="password">Password</Label>
-                      <Input type="password" {...registerForm.register("password")} />
+                      <Input 
+                        type="password" 
+                        {...registerForm.register("password")} 
+                      />
+                      {registerForm.formState.errors.password && (
+                        <p className="text-sm text-destructive mt-1">
+                          {registerForm.formState.errors.password.message}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="full_name">Full Name</Label>
-                      <Input {...registerForm.register("full_name")} />
+                      <Input 
+                        {...registerForm.register("full_name")} 
+                      />
+                      {registerForm.formState.errors.full_name && (
+                        <p className="text-sm text-destructive mt-1">
+                          {registerForm.formState.errors.full_name.message}
+                        </p>
+                      )}
                     </div>
                     <Button 
                       type="submit" 
                       className="w-full"
                       disabled={registerMutation.isPending}
                     >
-                      Register
+                      {registerMutation.isPending ? "Creating account..." : "Register"}
                     </Button>
                   </div>
                 </form>
