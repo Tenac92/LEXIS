@@ -9,7 +9,6 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   full_name: text("full_name"),
   role: text("role").default("user").notNull(),
-  unit: text("unit"),
   active: boolean("active").default(true),
   created_at: timestamp("created_at").defaultNow(),
 });
@@ -18,6 +17,11 @@ export const users = pgTable("users", {
 export const loginSchema = z.object({
   email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+// Registration schema extends login schema with additional fields
+export const registrationSchema = loginSchema.extend({
+  full_name: z.string().min(1, "Full name is required"),
 });
 
 // Create the insert schema from the users table
@@ -30,6 +34,7 @@ export const insertUserSchema = createInsertSchema(users, {
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginCredentials = z.infer<typeof loginSchema>;
+export type RegistrationCredentials = z.infer<typeof registrationSchema>;
 
 
 // Documents table

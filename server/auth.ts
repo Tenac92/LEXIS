@@ -127,8 +127,7 @@ export async function setupAuth(app: Express) {
           id: user.id,
           email: user.username,
           full_name: user.full_name || null,
-          role: user.role,
-          unit: user.unit
+          role: user.role
         }
       });
     } catch (error) {
