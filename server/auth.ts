@@ -115,7 +115,7 @@ export async function setupAuth(app: Express) {
         { 
           userId: user.id,
           email: user.email,
-          name: user.name,
+          name: user.name || email.split('@')[0], // Fallback to email username if name is null
           role: user.role,
           units: user.units,
           department: user.department
@@ -131,7 +131,7 @@ export async function setupAuth(app: Express) {
         user: {
           id: user.id,
           email: user.email,
-          name: user.name,
+          name: user.name || email.split('@')[0], // Fallback to email username if name is null
           role: user.role,
           units: user.units,
           department: user.department

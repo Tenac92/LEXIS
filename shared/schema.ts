@@ -5,7 +5,7 @@ import { z } from "zod";
 // Users table matching existing database structure
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
+  name: text("name"),
   email: text("email").notNull().unique(),
   role: text("role").default("user").notNull(),
   password: text("password").notNull(),
@@ -22,7 +22,7 @@ export const loginSchema = z.object({
 
 // Registration schema
 export const registerSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z.string().optional(),
   email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   units: z.string().optional(),
@@ -34,7 +34,6 @@ export const registerSchema = z.object({
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  name: z.string().min(1, "Name is required"),
 });
 
 // Types
