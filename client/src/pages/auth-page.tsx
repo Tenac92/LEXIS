@@ -9,9 +9,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -30,7 +29,7 @@ export default function AuthPage() {
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -49,20 +48,23 @@ export default function AuthPage() {
             <form
               onSubmit={loginForm.handleSubmit(data => {
                 console.log('Submitting login form with data:', data);
-                loginMutation.mutate(data);
+                loginMutation.mutate({
+                  username: data.email, // Map email to username for backend
+                  password: data.password,
+                });
               })}
             >
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input 
-                    type="text"
-                    id="username"
-                    {...loginForm.register("username")}
+                    type="email"
+                    id="email"
+                    {...loginForm.register("email")}
                   />
-                  {loginForm.formState.errors.username && (
+                  {loginForm.formState.errors.email && (
                     <p className="text-sm text-destructive mt-1">
-                      {loginForm.formState.errors.username.message}
+                      {loginForm.formState.errors.email.message}
                     </p>
                   )}
                 </div>

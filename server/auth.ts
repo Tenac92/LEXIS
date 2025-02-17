@@ -62,14 +62,12 @@ export async function setupAuth(app: Express) {
 
     if (!username || !password) {
       return res.status(400).json({
-        error: { message: 'Username and password are required' }
+        error: { message: 'Email and password are required' }
       });
     }
     try {
-      const { email, password } = req.body;
-      console.log('[Auth] Login attempt:', { email });
-      
-      const result = loginSchema.safeParse({ email, password });
+      console.log('[Auth] Login attempt:', { email: username });
+      const result = loginSchema.safeParse({ email: username, password });
 
       if (!result.success) {
         console.log('[Auth] Schema validation failed:', result.error);
@@ -78,9 +76,11 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      const user = await db.select().from(users).where(eq(users.username, email.toLowerCase())).limit(1);
+      const { email } = result.data;
 
-      if (!user || user.length === 0) {
+      const [user] = await db.select().from(users).where(eq(users.username, email)).limit(1);
+
+      if (!user) {
         console.log('[Auth] User not found:', email);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
@@ -88,29 +88,29 @@ export async function setupAuth(app: Express) {
       }
 
       console.log('[Auth] Found user, comparing passwords');
-      const isValidPassword = await bcrypt.compare(password, user[0].password);
+      const isValidPassword = await bcrypt.compare(password, user.password);
       console.log('[Auth] Password validation:', { isValid: isValidPassword });
 
       if (!isValidPassword) {
-        console.log('[Auth] Password validation failed for user:', username);
+        console.log('[Auth] Password validation failed for user:', email);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
       }
 
       const token = jwt.sign(
-        { userId: user[0].id },
+        { userId: user.id },
         SECRET_KEY,
         { expiresIn: '7d' }
       );
 
       res.json({
         user: {
-          id: user[0].id,
-          username: user[0].username,
-          full_name: user[0].full_name || user[0].username.split('@')[0],
-          role: user[0].role,
-          unit: user[0].unit
+          id: user.id,
+          email: user.username, 
+          full_name: user.full_name || user.username.split('@')[0],
+          role: user.role,
+          unit: user.unit
         },
         token
       });
