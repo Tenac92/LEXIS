@@ -16,7 +16,7 @@ declare global {
   }
 }
 
-const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -114,8 +114,8 @@ export async function setupAuth(app: Express) {
       const token = jwt.sign(
         { 
           userId: user.id,
-          email: user.username, // Use username as email
-          name: user.full_name || user.username.split('@')[0], // Fallback to email username if full_name is null
+          email: user.username,
+          name: user.full_name || user.username.split('@')[0],
           role: user.role,
           unit: user.unit
         },

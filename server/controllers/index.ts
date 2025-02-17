@@ -1,10 +1,11 @@
 import express from 'express';
+import { authenticateToken } from '../auth';
 import documentsController from './documentsController';
 import recipientsController from './recipientsController';
 import statsController from './statsController';
 import usersController from './usersController';
-import generatedDocumentsController from './generatedDocumentsController';
-import { authenticateToken } from '../middleware/authMiddleware';
+import generatedDocumentsController from './generatedDocuments';
+import attachmentsController from './attachments';
 
 const router = express.Router();
 
@@ -14,6 +15,7 @@ router.use('/recipients', authenticateToken, recipientsController);
 router.use('/stats', authenticateToken, statsController);
 router.use('/users', authenticateToken, usersController);
 router.use('/generated', authenticateToken, generatedDocumentsController);
+router.use('/attachments', authenticateToken, attachmentsController);
 
 // Healthcheck endpoint
 router.get('/health', (_req, res) => {
@@ -36,7 +38,7 @@ router.use('*', (req, res) => {
 // Global error handler
 router.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('API Error:', err);
-  
+
   res.status(err.status || 500).json({
     error: err.name || 'InternalServerError',
     message: err.message || 'An unexpected error occurred',
