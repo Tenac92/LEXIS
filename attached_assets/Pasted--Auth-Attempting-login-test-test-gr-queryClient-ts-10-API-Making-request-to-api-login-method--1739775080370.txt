@@ -1,0 +1,72 @@
+[Auth] Attempting login: test@test.gr
+queryClient.ts:10 [API] Making request to /api/login {method: 'POST', body: '{"email":"test@test.gr","password":"123456"}'}
+queryClient.ts:20 
+        
+        
+       POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/login 401 (Unauthorized)
+apiRequest @ queryClient.ts:20
+await in apiRequest
+mutationFn @ use-auth.tsx:42
+fn @ @tanstack_react-query.js?v=11c565e2:1189
+run @ @tanstack_react-query.js?v=11c565e2:494
+start @ @tanstack_react-query.js?v=11c565e2:536
+execute @ @tanstack_react-query.js?v=11c565e2:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=11c565e2:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=11c565e2:3295
+(ανώνυμες) @ auth-page.tsx:46
+(ανώνυμες) @ chunk-RBMNEPGM.js?v=11c565e2:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-WERSD76P.js?v=11c565e2:3674
+invokeGuardedCallbackDev @ chunk-WERSD76P.js?v=11c565e2:3699
+invokeGuardedCallback @ chunk-WERSD76P.js?v=11c565e2:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-WERSD76P.js?v=11c565e2:3736
+executeDispatch @ chunk-WERSD76P.js?v=11c565e2:7014
+processDispatchQueueItemsInOrder @ chunk-WERSD76P.js?v=11c565e2:7034
+processDispatchQueue @ chunk-WERSD76P.js?v=11c565e2:7043
+dispatchEventsForPlugins @ chunk-WERSD76P.js?v=11c565e2:7051
+(ανώνυμες) @ chunk-WERSD76P.js?v=11c565e2:7174
+batchedUpdates$1 @ chunk-WERSD76P.js?v=11c565e2:18913
+batchedUpdates @ chunk-WERSD76P.js?v=11c565e2:3579
+dispatchEventForPluginEventSystem @ chunk-WERSD76P.js?v=11c565e2:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-WERSD76P.js?v=11c565e2:5478
+dispatchEvent @ chunk-WERSD76P.js?v=11c565e2:5472
+dispatchDiscreteEvent @ chunk-WERSD76P.js?v=11c565e2:5449
+Εμφάνιση 22 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:51 [API] Request failed: Error: Unauthorized. Please log in.
+    at apiRequest (queryClient.ts:43:15)
+    at async Object.mutationFn (use-auth.tsx:42:24)
+apiRequest @ queryClient.ts:51
+await in apiRequest
+mutationFn @ use-auth.tsx:42
+fn @ @tanstack_react-query.js?v=11c565e2:1189
+run @ @tanstack_react-query.js?v=11c565e2:494
+start @ @tanstack_react-query.js?v=11c565e2:536
+execute @ @tanstack_react-query.js?v=11c565e2:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=11c565e2:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=11c565e2:3295
+(ανώνυμες) @ auth-page.tsx:46
+(ανώνυμες) @ chunk-RBMNEPGM.js?v=11c565e2:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-WERSD76P.js?v=11c565e2:3674
+invokeGuardedCallbackDev @ chunk-WERSD76P.js?v=11c565e2:3699
+invokeGuardedCallback @ chunk-WERSD76P.js?v=11c565e2:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-WERSD76P.js?v=11c565e2:3736
+executeDispatch @ chunk-WERSD76P.js?v=11c565e2:7014
+processDispatchQueueItemsInOrder @ chunk-WERSD76P.js?v=11c565e2:7034
+processDispatchQueue @ chunk-WERSD76P.js?v=11c565e2:7043
+dispatchEventsForPlugins @ chunk-WERSD76P.js?v=11c565e2:7051
+(ανώνυμες) @ chunk-WERSD76P.js?v=11c565e2:7174
+batchedUpdates$1 @ chunk-WERSD76P.js?v=11c565e2:18913
+batchedUpdates @ chunk-WERSD76P.js?v=11c565e2:3579
+dispatchEventForPluginEventSystem @ chunk-WERSD76P.js?v=11c565e2:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-WERSD76P.js?v=11c565e2:5478
+dispatchEvent @ chunk-WERSD76P.js?v=11c565e2:5472
+dispatchDiscreteEvent @ chunk-WERSD76P.js?v=11c565e2:5449
+Εμφάνιση 22 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+use-auth.tsx:61 [Auth] Login mutation error: Error: Unauthorized. Please log in.
+    at apiRequest (queryClient.ts:43:15)
+    at async Object.mutationFn (use-auth.tsx:42:24)

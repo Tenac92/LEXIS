@@ -105,12 +105,7 @@ function useRegisterMutation() {
       console.log('[Auth] Attempting registration:', userData.email);
       const response = await apiRequest<AuthResponse>("/api/register", {
         method: "POST",
-        body: JSON.stringify({
-          username: userData.email,  // Map email to username as expected by server
-          password: userData.password,
-          full_name: userData.full_name,
-          unit: userData.unit
-        }),
+        body: JSON.stringify(userData),
       });
 
       if (response.error) {

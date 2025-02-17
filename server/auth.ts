@@ -28,14 +28,6 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       });
     }
 
-    if (!authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Invalid authorization header format',
-        code: 'INVALID_AUTH_HEADER'
-      });
-    }
-
     const token = authHeader.split(' ')[1];
     if (!token) {
       console.log('[Auth] No token found in header');
@@ -51,7 +43,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       const decoded = jwt.verify(token, SECRET_KEY) as any;
       console.log('[Auth] Token decoded:', decoded);
 
-      // Find user in database using username (email)
+      // Find user in database using email
       const user = await db.select().from(users).where(eq(users.username, decoded.email)).limit(1);
 
       if (!user || user.length === 0) {
@@ -92,7 +84,7 @@ export async function setupAuth(app: Express) {
 
       const { email, password } = parsed.data;
 
-      // Find user by username (email)
+      // Find user by email (username in DB)
       const userResult = await db.select().from(users).where(eq(users.username, email)).limit(1);
       if (userResult.length === 0) {
         return res.status(401).json({
@@ -137,9 +129,9 @@ export async function setupAuth(app: Express) {
       });
     } catch (error: any) {
       console.error('[Auth] Login error:', error);
-      res.status(401).json({ 
+      res.status(500).json({ 
         error: { 
-          message: error.message || "Login failed"
+          message: error.message || "Internal server error" 
         } 
       });
     }
@@ -208,9 +200,9 @@ export async function setupAuth(app: Express) {
       });
     } catch (error: any) {
       console.error('[Auth] Registration error:', error);
-      res.status(400).json({ 
+      res.status(500).json({ 
         error: { 
-          message: error.message || "Registration failed" 
+          message: error.message || "Internal server error" 
         } 
       });
     }
@@ -219,9 +211,7 @@ export async function setupAuth(app: Express) {
   app.get("/api/user", authenticateToken, (req, res) => {
     if (!req.user) {
       return res.status(401).json({
-        status: 'error',
-        message: "Authentication required",
-        code: 'AUTH_REQUIRED'
+        error: { message: "Authentication required" }
       });
     }
     res.json({
