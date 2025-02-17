@@ -43,15 +43,6 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      // Check if user already exists
-      const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({
-          data: null,
-          error: { message: "Email already registered" }
-        });
-      }
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -64,6 +55,8 @@ export async function setupAuth(app: Express) {
       });
 
       if (error) throw error;
+
+      // If email confirmation is required
       if (!data.session) {
         return res.status(400).json({
           data: null,
@@ -83,7 +76,9 @@ export async function setupAuth(app: Express) {
       console.error('[Auth] Registration error:', error);
       res.status(400).json({ 
         data: null, 
-        error: { message: error.message || "Registration failed" } 
+        error: { 
+          message: error.message || "Registration failed" 
+        } 
       });
     }
   });
