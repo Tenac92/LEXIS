@@ -27,8 +27,6 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
       });
     }
 
-    console.log('[Auth] Session found:', { userId: req.session.userId });
-
     const [user] = await db
       .select()
       .from(users)
@@ -52,14 +50,15 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
 };
 
 export async function setupAuth(app: Express) {
-  // Configure session middleware
+  // Configure session middleware with secure settings
   app.use(session({
     store: new PostgresSessionStore({
       pool,
       tableName: 'session',
       createTableIfMissing: true
     }),
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    secret: process.env.SESSION_SECRET || 'development-secret-key',
+    name: 'session_id', // Custom cookie name
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -75,13 +74,10 @@ export async function setupAuth(app: Express) {
       const { email, password } = req.body;
 
       if (!email || !password) {
-        console.log('[Auth] Missing credentials:', { email: !!email, password: !!password });
         return res.status(400).json({
           error: { message: 'Email and password are required' }
         });
       }
-
-      console.log('[Auth] Login attempt:', { email });
 
       // Find user by email (stored in username field)
       const [user] = await db
@@ -90,7 +86,6 @@ export async function setupAuth(app: Express) {
         .where(eq(users.username, email));
 
       if (!user) {
-        console.log('[Auth] User not found:', email);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
@@ -98,24 +93,17 @@ export async function setupAuth(app: Express) {
 
       // Compare passwords
       const isValidPassword = await bcrypt.compare(password, user.password);
-      console.log('[Auth] Password validation:', { 
-        email,
-        isValid: isValidPassword
-      });
 
       if (!isValidPassword) {
-        console.log('[Auth] Invalid password for user:', email);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
       }
 
-      console.log('[Auth] Login successful:', { userId: user.id, email });
-
       // Set user session
       req.session.userId = user.id;
 
-      // Wait for session to be saved
+      // Wait for session to be saved before responding
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
           if (err) reject(err);
@@ -123,13 +111,12 @@ export async function setupAuth(app: Express) {
         });
       });
 
+      // Return user data without sensitive information
       res.json({
-        user: {
-          id: user.id,
-          email: user.username,
-          full_name: user.full_name || null,
-          role: user.role
-        }
+        id: user.id,
+        username: user.username,
+        full_name: user.full_name,
+        role: user.role
       });
     } catch (error) {
       console.error('[Auth] Login error:', error);
@@ -140,25 +127,30 @@ export async function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error('[Auth] Logout error:', err);
-        return res.status(500).json({
-          error: { message: 'Logout failed' }
-        });
-      }
-      res.clearCookie('connect.sid');
+    if (req.session) {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('[Auth] Logout error:', err);
+          return res.status(500).json({
+            error: { message: 'Logout failed' }
+          });
+        }
+        res.clearCookie('session_id');
+        res.sendStatus(200);
+      });
+    } else {
       res.sendStatus(200);
-    });
+    }
   });
 
+  // Protected route to get current user data
   app.get("/api/user", authenticateSession, (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({
-        error: { message: 'Not authenticated' }
-      });
-    }
-
-    res.json(req.user);
+    const user = req.user!;
+    res.json({
+      id: user.id,
+      username: user.username,
+      full_name: user.full_name,
+      role: user.role
+    });
   });
 }

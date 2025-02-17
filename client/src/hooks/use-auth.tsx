@@ -24,32 +24,25 @@ function useLoginMutation() {
     mutationFn: async (credentials: LoginData) => {
       console.log('[Auth] Attempting login:', credentials.email);
 
-      try {
-        const response = await fetch('/api/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(credentials),
-          credentials: 'include' // Important for cookies
-        });
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(credentials),
+        credentials: 'include'
+      });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error?.message || 'Login failed');
-        }
-
-        console.log('[Auth] Login response:', data);
-        return data.user;
-      } catch (error) {
-        console.error('[Auth] Login request failed:', error);
-        throw error;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Login failed');
       }
+
+      const data = await response.json();
+      return data;
     },
-    onSuccess: (user) => {
-      console.log('[Auth] Login successful:', user);
-      queryClient.setQueryData(["/api/user"], user);
+    onSuccess: (data) => {
+      queryClient.setQueryData(["/api/user"], data);
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
