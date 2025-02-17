@@ -1,23 +1,12 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import TokenManager from "./token-manager";
-
-const tokenManager = TokenManager.getInstance();
 
 export async function apiRequest<T = unknown>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
   try {
-    const token = await tokenManager.getToken();
-    if (!token && !url.includes('/login')) {
-      console.log('No auth token found');
-      window.location.href = '/auth';
-      throw new Error('No auth token found');
-    }
-    
     const headers = new Headers({
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     });
 
@@ -29,7 +18,6 @@ export async function apiRequest<T = unknown>(
 
     if (!response.ok) {
       if (response.status === 401) {
-        tokenManager.clearToken();
         window.location.href = '/auth'; // Redirect to auth page on 401
         throw new Error("Unauthorized. Please log in.");
       }
@@ -48,14 +36,7 @@ export async function apiRequest<T = unknown>(
 export const getQueryFn = ({ on401 = "throw" }: { on401?: "returnNull" | "throw" } = {}): QueryFunction => 
   async ({ queryKey }) => {
     try {
-      const token = await tokenManager.getToken();
-      const headers = new Headers({
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      });
-
       const response = await fetch(queryKey[0] as string, { 
-        headers,
         credentials: 'include'
       });
 
@@ -64,7 +45,6 @@ export const getQueryFn = ({ on401 = "throw" }: { on401?: "returnNull" | "throw"
           if (on401 === "returnNull") {
             return null;
           }
-          tokenManager.clearToken();
           window.location.href = '/auth'; // Redirect to auth page on 401
           throw new Error("Unauthorized. Please log in.");
         }

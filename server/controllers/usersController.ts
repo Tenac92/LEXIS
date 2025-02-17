@@ -2,12 +2,16 @@ import { Router } from 'express';
 import { db } from '../db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { requireAdmin } from '../middleware/authMiddleware';
+import { authenticateSession } from '../auth';
 
 const router = Router();
 
-router.get('/', requireAdmin, async (req, res) => {
+router.get('/', authenticateSession, async (req, res) => {
   try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
     const allUsers = await db
       .select()
       .from(users)
@@ -20,7 +24,7 @@ router.get('/', requireAdmin, async (req, res) => {
   }
 });
 
-router.get('/profile', async (req, res) => {
+router.get('/profile', authenticateSession, async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -42,8 +46,12 @@ router.get('/profile', async (req, res) => {
   }
 });
 
-router.patch('/:id', requireAdmin, async (req, res) => {
+router.patch('/:id', authenticateSession, async (req, res) => {
   try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
     const [user] = await db
       .update(users)
       .set({

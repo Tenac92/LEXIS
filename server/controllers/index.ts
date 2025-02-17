@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../auth';
+import { authenticateSession } from '../auth';
 import documentsController from './documentsController';
 import recipientsController from './recipientsController';
 import statsController from './statsController';
@@ -10,12 +10,12 @@ import attachmentsController from './attachments';
 const router = express.Router();
 
 // Mount controllers with authentication middleware
-router.use('/documents', authenticateToken, documentsController);
-router.use('/recipients', authenticateToken, recipientsController);
-router.use('/stats', authenticateToken, statsController);
-router.use('/users', authenticateToken, usersController);
-router.use('/generated', authenticateToken, generatedDocumentsController);
-router.use('/attachments', authenticateToken, attachmentsController);
+router.use('/documents', authenticateSession, documentsController);
+router.use('/recipients', authenticateSession, recipientsController);
+router.use('/stats', authenticateSession, statsController);
+router.use('/users', authenticateSession, usersController);
+router.use('/generated', authenticateSession, generatedDocumentsController);
+router.use('/attachments', authenticateSession, attachmentsController);
 
 // Healthcheck endpoint
 router.get('/health', (_req, res) => {

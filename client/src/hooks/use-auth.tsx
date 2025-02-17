@@ -2,7 +2,7 @@ import { createContext, ReactNode, useContext } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "../lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 
 type AuthContextType = {
   user: User | null;
@@ -22,8 +22,6 @@ function useLoginMutation() {
 
   return useMutation({
     mutationFn: async (credentials: LoginData) => {
-      console.log('[Auth] Attempting login with:', credentials.email);
-
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: {

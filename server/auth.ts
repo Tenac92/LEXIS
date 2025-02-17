@@ -77,7 +77,7 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      console.log('[Auth] Login attempt:', email);
+      console.log('[Auth] Login attempt:', { email });
 
       // Find user by email (stored in username field)
       const [user] = await db
@@ -109,7 +109,7 @@ export async function setupAuth(app: Express) {
         user: {
           id: user.id,
           email: user.username,
-          full_name: user.full_name || user.username.split('@')[0],
+          full_name: user.full_name || null,
           role: user.role,
           unit: user.unit
         }

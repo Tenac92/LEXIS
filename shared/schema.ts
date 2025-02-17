@@ -1,8 +1,8 @@
-import { pgTable, text, serial, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users table matching existing database structure
+// Users table
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(), // This is actually storing email
@@ -20,14 +20,6 @@ export const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-// Registration schema
-export const registerSchema = z.object({
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  full_name: z.string().optional(),
-  unit: z.string().optional(),
-});
-
 // Create the insert schema from the users table
 export const insertUserSchema = createInsertSchema(users, {
   username: z.string().email("Invalid email format"), // This field stores email
@@ -38,7 +30,7 @@ export const insertUserSchema = createInsertSchema(users, {
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginCredentials = z.infer<typeof loginSchema>;
-export type RegisterCredentials = z.infer<typeof registerSchema>;
+
 
 // Documents table
 export const documents = pgTable("documents", {
@@ -118,3 +110,4 @@ export type Database = {
     };
   };
 };
+import { integer, numeric } from "drizzle-orm/pg-core";
