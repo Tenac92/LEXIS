@@ -10,7 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email format"),
+  username: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -29,7 +29,7 @@ export default function AuthPage() {
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -53,15 +53,15 @@ export default function AuthPage() {
             <form onSubmit={loginForm.handleSubmit(onSubmit)}>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="username">Email</Label>
                   <Input 
                     type="email"
-                    id="email"
-                    {...loginForm.register("email")}
+                    id="username"
+                    {...loginForm.register("username")}
                   />
-                  {loginForm.formState.errors.email && (
+                  {loginForm.formState.errors.username && (
                     <p className="text-sm text-destructive mt-1">
-                      {loginForm.formState.errors.email.message}
+                      {loginForm.formState.errors.username.message}
                     </p>
                   )}
                 </div>
