@@ -59,17 +59,18 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 export async function setupAuth(app: Express) {
   app.post("/api/login", async (req, res) => {
     const { username, password } = req.body;
-    
+
     if (!username || !password) {
       return res.status(400).json({
         error: { message: 'Username and password are required' }
       });
     }
     try {
-      console.log('[Auth] Login attempt:', req.body);
+      console.log('[Auth] Login attempt:', { username });
       const result = loginSchema.safeParse(req.body);
 
       if (!result.success) {
+        console.log('[Auth] Schema validation failed:', result.error);
         return res.status(400).json({
           error: { message: 'Invalid login data' }
         });
@@ -86,6 +87,7 @@ export async function setupAuth(app: Express) {
         });
       }
 
+      console.log('[Auth] Found user, comparing passwords');
       const isValidPassword = await bcrypt.compare(password, user[0].password);
       console.log('[Auth] Password validation:', { isValid: isValidPassword });
 
