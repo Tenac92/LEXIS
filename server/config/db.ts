@@ -5,16 +5,17 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_KEY) {
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient<Database>(
-  process.env.VITE_SUPABASE_URL,
-  process.env.VITE_SUPABASE_KEY,
-  {
-    auth: {
-      persistSession: false
-    }
+export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
   }
-);
+});
