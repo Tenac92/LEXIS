@@ -1,28 +1,28 @@
 import { Router } from 'express';
-import { db } from '../config/db';
+import { supabase } from '../config/db';
 import { recipients } from '@shared/schema';
-import { eq } from 'drizzle-orm';
 
 const router = Router();
 
 router.get('/', async (req, res) => {
   try {
     const { unit, status = 'pending', project_id } = req.query;
-    let query = db.select().from(recipients);
+    let query = supabase.from('recipients').select('*');
 
     if (status) {
-      query = query.where(eq(recipients.status, status as string));
+      query = query.eq('status', status as string);
     }
 
     if (unit) {
-      query = query.where(eq(recipients.unit, unit as string));
+      query = query.eq('unit', unit as string);
     }
 
     if (project_id) {
-      query = query.where(eq(recipients.project_id, project_id as string));
+      query = query.eq('project_id', project_id as string);
     }
 
-    const data = await query;
+    const { data, error } = await query;
+    if (error) throw error;
     res.json(data);
   } catch (error) {
     console.error('Error:', error);
@@ -36,16 +36,18 @@ router.post('/', async (req, res) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const [recipient] = await db
-      .insert(recipients)
-      .values({
+    const { data, error } = await supabase
+      .from('recipients')
+      .insert({
         ...req.body,
         created_by: req.user.id,
-        created_at: new Date(),
+        created_at: new Date().toISOString(),
       })
-      .returning();
+      .select()
+      .single();
 
-    res.status(201).json(recipient);
+    if (error) throw error;
+    res.status(201).json(data);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Failed to create recipient' });
@@ -54,20 +56,22 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   try {
-    const [recipient] = await db
-      .update(recipients)
-      .set({
+    const { data, error } = await supabase
+      .from('recipients')
+      .update({
         ...req.body,
-        updated_at: new Date(),
+        updated_at: new Date().toISOString(),
       })
-      .where(eq(recipients.id, parseInt(req.params.id)))
-      .returning();
+      .eq('id', parseInt(req.params.id))
+      .select()
+      .single();
 
-    if (!recipient) {
+    if (error) throw error;
+    if (!data) {
       return res.status(404).json({ message: 'Recipient not found' });
     }
 
-    res.json(recipient);
+    res.json(data);
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: 'Failed to update recipient' });
@@ -76,12 +80,15 @@ router.patch('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const [recipient] = await db
-      .delete(recipients)
-      .where(eq(recipients.id, parseInt(req.params.id)))
-      .returning();
+    const { data, error } = await supabase
+      .from('recipients')
+      .delete()
+      .eq('id', parseInt(req.params.id))
+      .select()
+      .single();
 
-    if (!recipient) {
+    if (error) throw error;
+    if (!data) {
       return res.status(404).json({ message: 'Recipient not found' });
     }
 
