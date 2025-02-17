@@ -6,6 +6,7 @@ import {
 import { User } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import TokenManager from "@/lib/token-manager";
 
 type AuthContextType = {
   user: User | null;
@@ -22,7 +23,10 @@ type LoginData = {
 };
 
 type RegisterData = LoginData & {
-  full_name: string;
+  name: string;
+  units?: string;
+  telephone?: string;
+  department?: string;
 };
 
 // Auth response types
@@ -36,6 +40,8 @@ type AuthResponse = {
 
 function useLoginMutation() {
   const { toast } = useToast();
+  const tokenManager = TokenManager.getInstance();
+
   return useMutation({
     mutationFn: async (credentials: LoginData) => {
       console.log('[Auth] Attempting login:', credentials.email);
@@ -50,7 +56,7 @@ function useLoginMutation() {
       }
 
       console.log('[Auth] Login successful, storing token');
-      localStorage.setItem('authToken', response.token);
+      tokenManager.setToken(response.token);
       return response.user;
     },
     onSuccess: (user) => {
@@ -70,6 +76,8 @@ function useLoginMutation() {
 
 function useLogoutMutation() {
   const { toast } = useToast();
+  const tokenManager = TokenManager.getInstance();
+
   return useMutation({
     mutationFn: async () => {
       console.log('[Auth] Attempting logout');
@@ -77,7 +85,7 @@ function useLogoutMutation() {
         method: "POST",
       });
       console.log('[Auth] Removing auth token');
-      localStorage.removeItem('authToken');
+      tokenManager.clearToken();
     },
     onSuccess: () => {
       console.log('[Auth] Clearing user data from query cache');
@@ -96,6 +104,8 @@ function useLogoutMutation() {
 
 function useRegisterMutation() {
   const { toast } = useToast();
+  const tokenManager = TokenManager.getInstance();
+
   return useMutation({
     mutationFn: async (userData: RegisterData) => {
       console.log('[Auth] Attempting registration:', userData.email);
@@ -110,7 +120,7 @@ function useRegisterMutation() {
       }
 
       console.log('[Auth] Registration successful, storing token');
-      localStorage.setItem('authToken', response.token);
+      tokenManager.setToken(response.token);
       return response.user;
     },
     onSuccess: (user) => {

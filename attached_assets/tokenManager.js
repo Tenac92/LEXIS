@@ -1,196 +1,191 @@
+export class TokenManager {
+  static instance = null;
+  static ERROR_MESSAGES = {
+    INVALID_TOKEN: 'Invalid token format',
+    TOKEN_REQUIRED: 'Token is required',
+    TOKEN_EXPIRED: 'Token has expired',
+    REFRESH_FAILED: 'Token refresh failed',
+    NO_TOKEN: 'No token available'
+  };
 
-const TOKEN_KEY = 'auth_token';
-const STORAGE_TYPE = {
-  LOCAL: 'localStorage',
-  SESSION: 'sessionStorage',
-  MEMORY: 'memory',
-  COOKIE: 'cookie'
-};
-
-class TokenManagerClass {
   constructor() {
+    if (TokenManager.instance) {
+      return TokenManager.instance;
+    }
+    this.TOKEN_KEY = 'authToken';
+    this.REFRESH_TOKEN_KEY = 'refreshToken';
+    this.TOKEN_REFRESH_THRESHOLD = 300;
     this.token = null;
-    this.memoryStorage = new Map();
-    this.storageType = this.detectStorageType();
-    this.initializeStorage();
+    this.refreshTimeout = null;
+    this.eventListeners = new Set();
+    TokenManager.instance = this;
   }
 
-  initializeStorage() {
+  static getInstance() {
+    if (!TokenManager.instance) {
+      TokenManager.instance = new TokenManager();
+    }
+    return TokenManager.instance;
+  }
+
+  addEventListener(listener) {
+    this.eventListeners.add(listener);
+  }
+
+  removeEventListener(listener) {
+    this.eventListeners.delete(listener);
+  }
+
+  notifyListeners(event) {
+    this.eventListeners.forEach(listener => listener(event));
+  }
+
+  async getToken() {
     try {
-      const storedType = this.getStoredToken();
-      if (storedType && this.storageType !== STORAGE_TYPE.MEMORY) {
-        this.token = storedType;
+      const token = localStorage.getItem(this.TOKEN_KEY);
+      if (!token || token === 'undefined' || token === 'null') {
+        this.clearToken();
+        return null;
       }
-    } catch {
-      this.fallbackToMemory();
-    }
-  }
 
-  fallbackToMemory() {
-    this.storageType = STORAGE_TYPE.MEMORY;
-    console.warn('Falling back to memory storage');
-  }
-
-  encrypt(value) {
-    if (!value) return null;
-    try {
-      const encrypted = btoa(encodeURIComponent(value));
-      if (!encrypted) throw new Error('Encryption failed');
-      return encrypted;
-    } catch {
-      return value;
-    }
-  }
-
-  decrypt(value) {
-    if (!value) return null;
-    try {
-      const decrypted = decodeURIComponent(atob(value));
-      if (!decrypted) throw new Error('Decryption failed');
-      return decrypted;
-    } catch {
-      return value;
-    }
-  }
-
-  detectStorageType() {
-    const types = ['cookie', 'localStorage', 'sessionStorage'];
-    for (const type of types) {
-      if (this.isStorageAvailable(type)) {
-        return STORAGE_TYPE[type.toUpperCase()] || STORAGE_TYPE.MEMORY;
+      const payload = this.parseToken(token);
+      if (!payload) {
+        this.clearToken();
+        return null;
       }
-    }
-    return STORAGE_TYPE.MEMORY;
-  }
 
-  isStorageAvailable(type) {
-    const testKey = `__test__${Date.now()}`;
-    try {
-      switch (type) {
-        case 'cookie': {
-          document.cookie = `${testKey}=1;path=/;max-age=1`;
-          const hasCookie = document.cookie.indexOf(testKey) !== -1;
-          document.cookie = `${testKey}=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT`;
-          return hasCookie;
-        }
-        case 'localStorage':
-          localStorage.setItem(testKey, '1');
-          localStorage.removeItem(testKey);
-          return true;
-        case 'sessionStorage':
-          sessionStorage.setItem(testKey, '1');
-          sessionStorage.removeItem(testKey);
-          return true;
-        default:
-          return false;
+      if (this.isTokenExpiringSoon(payload)) {
+        const refreshedToken = await this.refreshToken();
+        return refreshedToken;
       }
-    } catch {
-      return false;
-    }
-  }
 
-  setCookie(value, options = {}) {
-    const secure = window.location.protocol === 'https:';
-    const sameSite = options.sameSite || 'Strict';
-    const maxAge = options.maxAge || 86400;
-    const encryptedValue = this.encrypt(value);
-    
-    if (!encryptedValue) return false;
-    
-    try {
-      document.cookie = `${TOKEN_KEY}=${encryptedValue};path=/;max-age=${maxAge};${secure ? 'secure;' : ''}samesite=${sameSite}`;
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  getCookie() {
-    try {
-      const match = document.cookie.match(new RegExp(`(^| )${TOKEN_KEY}=([^;]+)`));
-      return match ? this.decrypt(match[2]) : null;
-    } catch {
+      return token;
+    } catch (error) {
+      console.error('Token retrieval error:', error);
       return null;
     }
   }
 
-  getStoredToken() {
+  isTokenExpiringSoon(payload) {
+    if (!payload?.exp) return true;
+    const currentTime = Math.floor(Date.now() / 1000);
+    return currentTime >= payload.exp - this.TOKEN_REFRESH_THRESHOLD;
+  }
+
+  scheduleTokenRefresh(expiresIn) {
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
+    }
+    const refreshTime = (expiresIn - this.TOKEN_REFRESH_THRESHOLD) * 1000;
+    this.refreshTimeout = setTimeout(() => this.refreshToken(), refreshTime);
+  }
+
+  async refreshToken() {
     try {
-      switch (this.storageType) {
-        case STORAGE_TYPE.COOKIE:
-          return this.getCookie();
-        case STORAGE_TYPE.LOCAL: {
-          const token = localStorage.getItem(TOKEN_KEY);
-          return token ? this.decrypt(token) : null;
-        }
-        case STORAGE_TYPE.SESSION: {
-          const token = sessionStorage.getItem(TOKEN_KEY);
-          return token ? this.decrypt(token) : null;
-        }
-        default:
-          return this.memoryStorage.get(TOKEN_KEY) || null;
+      const currentToken = localStorage.getItem(this.TOKEN_KEY);
+      if (!currentToken) {
+        throw new Error(TokenManager.ERROR_MESSAGES.NO_TOKEN);
       }
-    } catch {
-      return this.token;
+
+      const response = await fetch('/auth/refresh', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${currentToken}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.clearToken();
+        }
+        throw new Error(TokenManager.ERROR_MESSAGES.REFRESH_FAILED);
+      }
+
+      const { token } = await response.json();
+      this.setToken(token);
+
+      const payload = this.parseToken(token);
+      if (payload?.exp) {
+        this.scheduleTokenRefresh(payload.exp);
+      }
+
+      return token;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      this.clearToken();
+      window.location.href = '/index.html';
+      return null;
     }
   }
 
   setToken(token) {
-    if (!token) {
-      this.clearToken();
-      return false;
-    }
-
-    try {
-      const encryptedToken = this.encrypt(token);
-      if (!encryptedToken) return false;
-
-      switch (this.storageType) {
-        case STORAGE_TYPE.COOKIE:
-          if (!this.setCookie(token)) throw new Error('Cookie storage failed');
-          break;
-        case STORAGE_TYPE.LOCAL:
-          localStorage.setItem(TOKEN_KEY, encryptedToken);
-          break;
-        case STORAGE_TYPE.SESSION:
-          sessionStorage.setItem(TOKEN_KEY, encryptedToken);
-          break;
-        default:
-          this.memoryStorage.set(TOKEN_KEY, token);
-      }
-      this.token = token;
-      return true;
-    } catch {
-      this.fallbackToMemory();
-      this.token = token;
-      this.memoryStorage.set(TOKEN_KEY, token);
-      return true;
-    }
+    localStorage.setItem(this.TOKEN_KEY, token);
+    this.token = token;
+    this.notifyListeners({ type: 'tokenChanged', token });
   }
 
   clearToken() {
-    try {
-      switch (this.storageType) {
-        case STORAGE_TYPE.COOKIE:
-          document.cookie = `${TOKEN_KEY}=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT`;
-          break;
-        case STORAGE_TYPE.LOCAL:
-          localStorage.removeItem(TOKEN_KEY);
-          break;
-        case STORAGE_TYPE.SESSION:
-          sessionStorage.removeItem(TOKEN_KEY);
-          break;
-        default:
-          this.memoryStorage.delete(TOKEN_KEY);
-      }
-      this.token = null;
-      return true;
-    } catch {
-      this.token = null;
-      this.memoryStorage.clear();
-      return false;
+    localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+    this.token = null;
+    if (this.refreshTimeout) {
+      clearTimeout(this.refreshTimeout);
     }
+    this.notifyListeners({ type: 'tokenCleared' });
+  }
+
+  parseToken(token) {
+    try {
+      if (!token || typeof token !== 'string') {
+        return null;
+      }
+
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return null;
+      }
+
+      const base64Url = parts[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error('Token parsing error:', error);
+      return null;
+    }
+  }
+  async initializeUI() {
+    // Add header
+    if (document.body && !document.querySelector('header')) {
+      const { createHeader } = await import('../components/header.js');
+      document.body.insertBefore(createHeader(), document.body.firstChild);
+    }
+
+    // Initialize common UI elements
+    this.elements = {
+      catalogContainer: document.getElementById('catalogContainer'),
+      searchInput: document.getElementById('searchInput'),
+      loadingSpinner: document.getElementById('loadingSpinner'),
+      filterTags: document.getElementById('filterTags')
+    };
+
+    return this.elements;
+  }
+
+  getUIElements() {
+    return this.elements || this.initializeUI();
+  }
+
+  isUserAdmin() {
+    const token = localStorage.getItem(this.TOKEN_KEY);
+    if (!token) return false;
+    
+    const payload = this.parseToken(token);
+    return payload?.role === 'admin';
   }
 }
 
-export const TokenManager = new TokenManagerClass();
+export default TokenManager;
