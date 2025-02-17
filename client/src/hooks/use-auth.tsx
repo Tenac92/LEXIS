@@ -38,7 +38,7 @@ function useLoginMutation() {
       const response = await apiRequest<AuthResponse>("/api/login", {
         method: "POST",
         body: JSON.stringify({
-          email: credentials.email,
+          username: credentials.email,
           password: credentials.password
         }),
       });
