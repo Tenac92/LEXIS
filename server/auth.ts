@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction, Express } from "express";
-import { supabase } from "./config/supabase";
 import { User, loginSchema, registerSchema } from "@shared/schema";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { db } from './db';
+import { users } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 const SECRET_KEY = process.env.SESSION_SECRET || "your-secret-key";
 
@@ -14,7 +16,6 @@ declare global {
   }
 }
 
-// Middleware to verify JWT token
 const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
@@ -27,9 +28,15 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
       });
     }
 
-    console.log('[Auth] Authorization header:', authHeader);
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid authorization header format',
+        code: 'INVALID_AUTH_HEADER'
+      });
+    }
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.split(' ')[1];
     if (!token) {
       console.log('[Auth] No token found in header');
       return res.status(401).json({
@@ -44,14 +51,14 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
       const decoded = jwt.verify(token, SECRET_KEY) as any;
       console.log('[Auth] Token decoded:', decoded);
 
-      const { data: { user }, error } = await supabase.auth.getUser(decoded.email);
+      const user = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
 
-      if (error || !user) {
-        console.log('[Auth] User not found in Supabase:', error);
-        throw error || new Error('User not found');
+      if (!user || user.length === 0) {
+        console.log('[Auth] User not found in database');
+        throw new Error('User not found');
       }
 
-      req.user = user as User;
+      req.user = user[0] as User;
       console.log('[Auth] User authenticated:', req.user.email);
       next();
     } catch (error: any) {
@@ -69,9 +76,6 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
 };
 
 export async function setupAuth(app: Express) {
-  // Middleware to check auth token
-  app.use(authenticateToken);
-
   // Register endpoint
   app.post("/api/register", async (req, res) => {
     try {
@@ -85,34 +89,39 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      const { email, password, full_name } = parsed.data;
+      const { email, password, name, units, telephone, department } = parsed.data;
+
+      // Check if user already exists
+      const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (existingUser.length > 0) {
+        return res.status(400).json({
+          error: { message: "Email already registered" }
+        });
+      }
 
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const { data, error } = await supabase.auth.signUp({
+      // Create user
+      const [newUser] = await db.insert(users).values({
         email,
         password: hashedPassword,
-        options: {
-          data: {
-            full_name,
-            role: 'user'
-          }
-        }
-      });
-
-      if (error) {
-        console.error('[Auth] Supabase registration error:', error);
-        throw error;
-      }
+        name,
+        role: 'user',
+        units,
+        telephone,
+        department
+      }).returning();
 
       // Generate JWT token
       const token = jwt.sign(
         { 
-          userId: data.user?.id,
-          email: data.user?.email,
-          role: 'user',
-          full_name
+          userId: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
+          units: newUser.units,
+          department: newUser.department
         },
         SECRET_KEY,
         { expiresIn: '7d' }
@@ -123,10 +132,12 @@ export async function setupAuth(app: Express) {
 
       res.status(201).json({ 
         user: {
-          id: data.user?.id,
-          email: data.user?.email,
-          full_name,
-          role: 'user'
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
+          units: newUser.units,
+          department: newUser.department
         },
         token 
       });
@@ -155,23 +166,33 @@ export async function setupAuth(app: Express) {
 
       const { email, password } = parsed.data;
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      // Find user
+      const userResult = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (userResult.length === 0) {
+        return res.status(401).json({
+          error: { message: "Invalid email or password" }
+        });
+      }
 
-      if (error) {
-        console.error('[Auth] Supabase login error:', error);
-        throw error;
+      const user = userResult[0];
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({
+          error: { message: "Invalid email or password" }
+        });
       }
 
       // Generate JWT token
       const token = jwt.sign(
         { 
-          userId: data.user?.id,
-          email: data.user?.email,
-          role: data.user?.user_metadata?.role || 'user',
-          full_name: data.user?.user_metadata?.full_name
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          units: user.units,
+          department: user.department
         },
         SECRET_KEY,
         { expiresIn: '7d' }
@@ -182,10 +203,12 @@ export async function setupAuth(app: Express) {
 
       res.json({ 
         user: {
-          id: data.user?.id,
-          email: data.user?.email,
-          full_name: data.user?.user_metadata?.full_name,
-          role: data.user?.user_metadata?.role || 'user'
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          units: user.units,
+          department: user.department
         },
         token
       });
@@ -193,9 +216,7 @@ export async function setupAuth(app: Express) {
       console.error('[Auth] Login error:', error);
       res.status(401).json({ 
         error: { 
-          message: error.message === "Invalid login credentials" 
-            ? "Invalid email or password" 
-            : error.message || "Login failed"
+          message: error.message || "Login failed"
         } 
       });
     }
@@ -226,18 +247,7 @@ export async function setupAuth(app: Express) {
   });
 
   // Logout endpoint
-  app.post("/api/logout", async (req, res) => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
-      console.log('[Auth] Logout successful');
-      res.sendStatus(200);
-    } catch (error: any) {
-      console.error('[Auth] Logout error:', error);
-      res.status(500).json({ 
-        error: { message: error.message || "Logout failed" } 
-      });
-    }
+  app.post("/api/logout", (req, res) => {
+    res.sendStatus(200);
   });
 }

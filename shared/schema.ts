@@ -1,18 +1,16 @@
 import { pgTable, text, serial, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { relations } from "drizzle-orm";
 
-// Users table
+// Users table matching existing database structure
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
-  full_name: text("full_name").notNull(),
   role: text("role").default("user").notNull(),
-  unit: text("unit"),
-  active: boolean("active").default(true),
-  created_at: timestamp("created_at").defaultNow(),
+  password: text("password").notNull(),
+  units: text("units"),
+  telephone: text("telephone"),
   department: text("department"),
 });
 
@@ -23,15 +21,20 @@ export const loginSchema = z.object({
 });
 
 // Registration schema
-export const registerSchema = loginSchema.extend({
-  full_name: z.string().min(1, "Full name is required"),
+export const registerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  units: z.string().optional(),
+  telephone: z.string().optional(),
+  department: z.string().optional(),
 });
 
 // Create the insert schema from the users table
 export const insertUserSchema = createInsertSchema(users, {
   email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  full_name: z.string().min(1, "Full name is required"),
+  name: z.string().min(1, "Name is required"),
 });
 
 // Types
