@@ -51,6 +51,7 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
       const decoded = jwt.verify(token, SECRET_KEY) as any;
       console.log('[Auth] Token decoded:', decoded);
 
+      // Find user in database
       const user = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
 
       if (!user || user.length === 0) {
@@ -58,7 +59,7 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
         throw new Error('User not found');
       }
 
-      req.user = user[0] as User;
+      req.user = user[0];
       console.log('[Auth] User authenticated:', req.user.email);
       next();
     } catch (error: any) {
@@ -76,6 +77,77 @@ const authenticateToken = async (req: Request, res: Response, next: NextFunction
 };
 
 export async function setupAuth(app: Express) {
+  // Login endpoint
+  app.post("/api/login", async (req, res) => {
+    try {
+      console.log('[Auth] Login attempt:', req.body);
+      const parsed = loginSchema.safeParse(req.body);
+
+      if (!parsed.success) {
+        console.log('[Auth] Login validation failed:', parsed.error);
+        return res.status(400).json({
+          error: { message: parsed.error.message }
+        });
+      }
+
+      const { email, password } = parsed.data;
+
+      // Find user
+      const userResult = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (userResult.length === 0) {
+        return res.status(401).json({
+          error: { message: "Invalid email or password" }
+        });
+      }
+
+      const user = userResult[0];
+
+      // Verify password using bcrypt
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return res.status(401).json({
+          error: { message: "Invalid email or password" }
+        });
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { 
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          units: user.units,
+          department: user.department
+        },
+        SECRET_KEY,
+        { expiresIn: '7d' }
+      );
+
+      console.log('[Auth] Login successful:', email);
+      console.log('[Auth] Generated token:', token);
+
+      res.json({ 
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          units: user.units,
+          department: user.department
+        },
+        token
+      });
+    } catch (error: any) {
+      console.error('[Auth] Login error:', error);
+      res.status(401).json({ 
+        error: { 
+          message: error.message || "Login failed"
+        } 
+      });
+    }
+  });
+
   // Register endpoint
   app.post("/api/register", async (req, res) => {
     try {
@@ -99,7 +171,7 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      // Hash password
+      // Hash password with bcrypt
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Create user
@@ -146,77 +218,6 @@ export async function setupAuth(app: Express) {
       res.status(400).json({ 
         error: { 
           message: error.message || "Registration failed" 
-        } 
-      });
-    }
-  });
-
-  // Login endpoint
-  app.post("/api/login", async (req, res) => {
-    try {
-      console.log('[Auth] Login attempt:', req.body);
-      const parsed = loginSchema.safeParse(req.body);
-
-      if (!parsed.success) {
-        console.log('[Auth] Login validation failed:', parsed.error);
-        return res.status(400).json({
-          error: { message: parsed.error.message }
-        });
-      }
-
-      const { email, password } = parsed.data;
-
-      // Find user
-      const userResult = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      if (userResult.length === 0) {
-        return res.status(401).json({
-          error: { message: "Invalid email or password" }
-        });
-      }
-
-      const user = userResult[0];
-
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      if (!isValidPassword) {
-        return res.status(401).json({
-          error: { message: "Invalid email or password" }
-        });
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { 
-          userId: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          units: user.units,
-          department: user.department
-        },
-        SECRET_KEY,
-        { expiresIn: '7d' }
-      );
-
-      console.log('[Auth] Login successful:', email);
-      console.log('[Auth] Generated token:', token);
-
-      res.json({ 
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          units: user.units,
-          department: user.department
-        },
-        token
-      });
-    } catch (error: any) {
-      console.error('[Auth] Login error:', error);
-      res.status(401).json({ 
-        error: { 
-          message: error.message || "Login failed"
         } 
       });
     }
