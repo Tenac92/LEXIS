@@ -30,7 +30,7 @@ export default function AuthPage() {
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -57,12 +57,12 @@ export default function AuthPage() {
                   <Label htmlFor="username">Email</Label>
                   <Input 
                     type="email" 
-                    id="username"
-                    {...loginForm.register("username")} 
+                    id="email"
+                    {...loginForm.register("email")} 
                   />
-                  {loginForm.formState.errors.username && (
+                  {loginForm.formState.errors.email && (
                     <p className="text-sm text-destructive mt-1">
-                      {loginForm.formState.errors.username.message}
+                      {loginForm.formState.errors.email.message}
                     </p>
                   )}
                 </div>
