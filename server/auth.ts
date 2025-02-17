@@ -10,7 +10,7 @@ if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET must be set");
 }
 
-const SECRET_KEY = process.env.SESSION_SECRET;
+const SECRET_KEY = process.env.SESSION_SECRET || 'your-secret-key';
 
 declare global {
   namespace Express {
@@ -33,16 +33,16 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 
     try {
       const decoded = jwt.verify(token, SECRET_KEY) as { userId: number };
-      const user = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
+      const [user] = await db.select().from(users).where(eq(users.id, decoded.userId));
 
-      if (!user || user.length === 0) {
-        console.log('[Auth] User not found');
+      if (!user) {
+        console.log('[Auth] User not found from token');
         return res.status(401).json({
           error: { message: 'User not found' }
         });
       }
 
-      req.user = user[0];
+      req.user = user;
       next();
     } catch (error) {
       console.error('[Auth] Token verification error:', error);
@@ -52,7 +52,9 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     }
   } catch (error) {
     console.error('[Auth] Authentication error:', error);
-    next(error);
+    return res.status(500).json({
+      error: { message: 'Authentication failed' }
+    });
   }
 };
 
@@ -67,7 +69,7 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      console.log('[Auth] Login attempt:', { email: username });
+      console.log('[Auth] Login attempt for:', username);
 
       // Find user by email (stored in username field)
       const [user] = await db.select().from(users).where(eq(users.username, username));
@@ -81,23 +83,22 @@ export async function setupAuth(app: Express) {
 
       // Compare passwords
       const isValidPassword = await bcrypt.compare(password, user.password);
-      console.log('[Auth] Password validation:', { isValid: isValidPassword });
 
       if (!isValidPassword) {
-        console.log('[Auth] Password validation failed for user:', username);
+        console.log('[Auth] Invalid password for user:', username);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
       }
 
-      // Generate JWT token
+      // Generate token
       const token = jwt.sign(
         { userId: user.id },
         SECRET_KEY,
-        { expiresIn: '7d' }
+        { expiresIn: '24h' }
       );
 
-      // Send success response
+      // Send response
       res.json({
         user: {
           id: user.id,
@@ -111,7 +112,7 @@ export async function setupAuth(app: Express) {
     } catch (error) {
       console.error('[Auth] Login error:', error);
       res.status(500).json({
-        error: { message: 'Internal server error' }
+        error: { message: 'Login failed' }
       });
     }
   });
@@ -120,7 +121,13 @@ export async function setupAuth(app: Express) {
     try {
       const { email, password, full_name, unit } = req.body;
 
-      // Validate input
+      if (!email || !password) {
+        return res.status(400).json({
+          error: { message: 'Email and password are required' }
+        });
+      }
+
+      // Check if user exists
       const [existingUser] = await db.select().from(users).where(eq(users.username, email));
 
       if (existingUser) {
@@ -134,10 +141,10 @@ export async function setupAuth(app: Express) {
 
       // Create user
       const [newUser] = await db.insert(users).values({
-        username: email, // Store email in username field
+        username: email,
         password: hashedPassword,
-        full_name,
-        unit,
+        full_name: full_name || null,
+        unit: unit || null,
         role: 'user'
       }).returning();
 
@@ -145,10 +152,9 @@ export async function setupAuth(app: Express) {
       const token = jwt.sign(
         { userId: newUser.id },
         SECRET_KEY,
-        { expiresIn: '7d' }
+        { expiresIn: '24h' }
       );
 
-      // Send success response
       res.status(201).json({
         user: {
           id: newUser.id,
@@ -162,25 +168,32 @@ export async function setupAuth(app: Express) {
     } catch (error) {
       console.error('[Auth] Registration error:', error);
       res.status(500).json({
-        error: { message: 'Internal server error' }
+        error: { message: 'Registration failed' }
       });
     }
   });
 
   app.get("/api/user", authenticateToken, (req, res) => {
-    if (!req.user) {
-      return res.status(401).json({
-        error: { message: 'Not authenticated' }
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          error: { message: 'Not authenticated' }
+        });
+      }
+
+      res.json({
+        id: req.user.id,
+        email: req.user.username,
+        full_name: req.user.full_name || req.user.username.split('@')[0],
+        role: req.user.role,
+        unit: req.user.unit
+      });
+    } catch (error) {
+      console.error('[Auth] User fetch error:', error);
+      res.status(500).json({
+        error: { message: 'Failed to fetch user data' }
       });
     }
-
-    res.json({
-      id: req.user.id,
-      email: req.user.username,
-      full_name: req.user.full_name || req.user.username.split('@')[0],
-      role: req.user.role,
-      unit: req.user.unit
-    });
   });
 
   app.post("/api/logout", (_req, res) => {
