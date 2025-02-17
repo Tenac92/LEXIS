@@ -35,11 +35,8 @@ export default function AuthPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    console.log('[Auth] Submitting login form with:', { email: data.email });
-    loginMutation.mutate({
-      email: data.email,
-      password: data.password
-    });
+    console.log('Submitting login form with data:', data);
+    loginMutation.mutate(data);
   };
 
   return (

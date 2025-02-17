@@ -11,17 +11,11 @@ type AuthContextType = {
   error: Error | null;
   loginMutation: ReturnType<typeof useLoginMutation>;
   logoutMutation: ReturnType<typeof useLogoutMutation>;
-  registerMutation: ReturnType<typeof useRegisterMutation>;
 };
 
 type LoginData = {
   email: string;
   password: string;
-};
-
-type RegisterData = LoginData & {
-  full_name?: string;
-  unit?: string;
 };
 
 function useLoginMutation() {
@@ -39,6 +33,10 @@ function useLoginMutation() {
       if (error) {
         console.error('[Auth] Login error:', error);
         throw error;
+      }
+
+      if (!data.user) {
+        throw new Error('No user data returned');
       }
 
       return data.user as unknown as User;
@@ -78,38 +76,6 @@ function useLogoutMutation() {
   });
 }
 
-function useRegisterMutation() {
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async (userData: RegisterData) => {
-      const { data, error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            full_name: userData.full_name,
-            unit: userData.unit,
-          },
-        },
-      });
-
-      if (error) throw error;
-      return data.user as unknown as User;
-    },
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/user"], user);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Registration failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-}
-
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -119,14 +85,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) throw error;
+      if (error) {
+        console.error('[Auth] Get user error:', error);
+        return null;
+      }
       return user as unknown as User | null;
     },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('[Auth] Auth state change:', event, session?.user?.id);
         if (session?.user) {
           queryClient.setQueryData(["/api/user"], session.user);
         } else {
@@ -142,7 +114,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
-  const registerMutation = useRegisterMutation();
 
   return (
     <AuthContext.Provider
@@ -152,7 +123,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: error instanceof Error ? error : null,
         loginMutation,
         logoutMutation,
-        registerMutation,
       }}
     >
       {children}

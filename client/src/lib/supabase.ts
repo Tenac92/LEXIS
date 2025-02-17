@@ -1,29 +1,43 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@shared/schema';
 
-// Get Supabase URL and Key from environment
+// Get environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Debug environment variables (without exposing values)
+console.log('[Supabase] Environment check:', {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseKey,
+  urlType: typeof supabaseUrl,
+  keyType: typeof supabaseKey
+});
+
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase credentials:', {
-    url: !!supabaseUrl,
-    key: !!supabaseKey
-  });
-  throw new Error('Missing Supabase credentials. Please check your environment variables.');
+  throw new Error(
+    'Missing Supabase credentials. Make sure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in your environment.'
+  );
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
-    persistSession: true
+    persistSession: true,
+    storageKey: 'supabase.auth.token',
   }
 });
 
-// Add auth state change listener
+// Debug auth state changes
 supabase.auth.onAuthStateChange((event, session) => {
-  console.log('Supabase auth event:', event);
+  console.log('[Supabase] Auth state changed:', event);
   if (session) {
-    console.log('User authenticated:', session.user.id);
+    console.log('[Supabase] User authenticated:', session.user.id);
+  } else {
+    console.log('[Supabase] No active session');
   }
+});
+
+// Initialize auth state
+supabase.auth.getSession().then(({ data: { session } }) => {
+  console.log('[Supabase] Initial auth state:', session ? 'Authenticated' : 'Not authenticated');
 });
