@@ -75,17 +75,24 @@ app.use((req, res, next) => {
     });
 
     // Get port from environment variable with fallback
-    const PORT = process.env.PORT || 5000;
+    let PORT = process.env.PORT || 5000;
     const HOST = '0.0.0.0'; // Bind to all network interfaces
 
-    // Kill any existing process on the port (if running on Unix-like system)
-    try {
-      const execSync = require('child_process').execSync;
-      execSync(`kill $(lsof -t -i:${PORT}) 2>/dev/null || true`);
-    } catch (error) {
-      // Ignore errors if process killing fails or on Windows
-      console.log('Port cleanup attempted');
-    }
+    // Attempt to find an available port
+    const tryPort = (port: number): Promise<number> => {
+      return new Promise((resolve, reject) => {
+        const tempServer = require('http').createServer();
+        tempServer.listen(port, HOST);
+        tempServer.on('error', () => {
+          resolve(tryPort(port + 1));
+        });
+        tempServer.on('listening', () => {
+          tempServer.close(() => resolve(port));
+        });
+      });
+    };
+
+    PORT = await tryPort(PORT);
 
     // Add error handler for the server
     server.on('error', (error: any) => {
