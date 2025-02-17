@@ -35,11 +35,11 @@ function useLoginMutation() {
 
   return useMutation({
     mutationFn: async (credentials: LoginData): Promise<User> => {
-      console.log('Auth: Attempting login', credentials.email);
+      console.log('[Auth] Attempting login with:', credentials.email);
       const response = await apiRequest<AuthResponse>("/api/login", {
         method: "POST",
         body: JSON.stringify({
-          username: credentials.email,
+          username: credentials.email, // Map email to username for backend
           password: credentials.password
         }),
         headers: {
@@ -48,12 +48,12 @@ function useLoginMutation() {
       });
 
       if (!response?.token) {
-        console.error('Auth: No token in response');
+        console.error('[Auth] No token in response');
         throw new Error('Invalid credentials');
       }
 
       tokenManager.setToken(response.token);
-      console.log('Token set after login:', response.token);
+      console.log('[Auth] Login successful, token set');
 
       return response.user;
     },
@@ -102,7 +102,7 @@ function useRegisterMutation() {
       const response = await apiRequest<AuthResponse>("/api/register", {
         method: "POST",
         body: JSON.stringify({
-          email: userData.email,
+          username: userData.email, // Map email to username
           password: userData.password,
           full_name: userData.full_name,
           unit: userData.unit
@@ -131,7 +131,7 @@ function useRegisterMutation() {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { data: user, error, isLoading } = useQuery<User>({
+  const { data: user, error, isLoading } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });

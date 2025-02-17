@@ -47,11 +47,8 @@ export default function AuthPage() {
           <CardContent>
             <form
               onSubmit={loginForm.handleSubmit(data => {
-                console.log('Submitting login form with data:', data);
-                loginMutation.mutate({
-                  username: data.email, // Map email to username for backend
-                  password: data.password,
-                });
+                console.log('[Auth] Submitting login form with:', data);
+                loginMutation.mutate(data);
               })}
             >
               <div className="space-y-4">
