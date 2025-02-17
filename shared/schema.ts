@@ -14,15 +14,15 @@ export const users = pgTable("users", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
-// Login schema for validation
+// Login schema for validation - updated to match implementation
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email format"), // Keep as email in API for consistency
+  username: z.string().email("Invalid email format"), // Changed to username to match server
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-// Registration schema
+// Registration schema - updated for consistency
 export const registerSchema = z.object({
-  email: z.string().email("Invalid email format"),
+  username: z.string().email("Invalid email format"), // Changed to username
   password: z.string().min(6, "Password must be at least 6 characters"),
   full_name: z.string().optional(),
   unit: z.string().optional(),
