@@ -38,7 +38,17 @@ export async function setupAuth(app: Express) {
 
       if (!email || !password || !full_name) {
         return res.status(400).json({
-          message: "Email, password, and full name are required"
+          data: null,
+          error: { message: "Email, password, and full name are required" }
+        });
+      }
+
+      // Check if user already exists
+      const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({
+          data: null,
+          error: { message: "Email already registered" }
         });
       }
 
@@ -54,12 +64,27 @@ export async function setupAuth(app: Express) {
       });
 
       if (error) throw error;
+      if (!data.session) {
+        return res.status(400).json({
+          data: null,
+          error: { message: "Email confirmation required. Please check your inbox." }
+        });
+      }
 
       console.log('[Auth] Registration successful:', email);
-      res.status(201).json({ data: { user: data.user, session: data.session }, error: null });
+      res.status(201).json({ 
+        data: { 
+          user: data.user, 
+          session: data.session 
+        }, 
+        error: null 
+      });
     } catch (error: any) {
       console.error('[Auth] Registration error:', error);
-      res.status(400).json({ data: null, error: { message: error.message } });
+      res.status(400).json({ 
+        data: null, 
+        error: { message: error.message || "Registration failed" } 
+      });
     }
   });
 
@@ -71,7 +96,8 @@ export async function setupAuth(app: Express) {
 
       if (!email || !password) {
         return res.status(400).json({
-          message: "Email and password are required"
+          data: null,
+          error: { message: "Email and password are required" }
         });
       }
 
@@ -83,10 +109,23 @@ export async function setupAuth(app: Express) {
       if (error) throw error;
 
       console.log('[Auth] Login successful:', email);
-      res.json({ data: { user: data.user, session: data.session }, error: null });
+      res.json({ 
+        data: { 
+          user: data.user, 
+          session: data.session 
+        }, 
+        error: null 
+      });
     } catch (error: any) {
       console.error('[Auth] Login error:', error);
-      res.status(401).json({ data: null, error: { message: error.message } });
+      res.status(401).json({ 
+        data: null, 
+        error: { 
+          message: error.message === "Invalid login credentials" 
+            ? "Invalid email or password" 
+            : error.message || "Login failed"
+        } 
+      });
     }
   });
 
@@ -100,7 +139,10 @@ export async function setupAuth(app: Express) {
       res.sendStatus(200);
     } catch (error: any) {
       console.error('[Auth] Logout error:', error);
-      res.status(500).json({ data: null, error: { message: error.message } });
+      res.status(500).json({ 
+        data: null, 
+        error: { message: error.message || "Logout failed" } 
+      });
     }
   });
 
@@ -126,7 +168,7 @@ export async function setupAuth(app: Express) {
       res.json(user);
     } catch (error: any) {
       console.error('[Auth] Error getting user:', error);
-      res.status(401).json({ message: error.message });
+      res.status(401).json({ message: error.message || "Authentication failed" });
     }
   });
 }
