@@ -1,0 +1,55 @@
+GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/dashboard/stats 500 (Internal Server Error)
+queryFn @ dashboard.tsx:19
+fetchFn @ @tanstack_react-query.js?v=3f0e6ad0:840
+run @ @tanstack_react-query.js?v=3f0e6ad0:494
+start @ @tanstack_react-query.js?v=3f0e6ad0:536
+fetch @ @tanstack_react-query.js?v=3f0e6ad0:926
+executeFetch_fn @ @tanstack_react-query.js?v=3f0e6ad0:2211
+onSubscribe @ @tanstack_react-query.js?v=3f0e6ad0:1898
+subscribe @ @tanstack_react-query.js?v=3f0e6ad0:24
+(ανώνυμες) @ @tanstack_react-query.js?v=3f0e6ad0:3022
+subscribeToStore @ chunk-WERSD76P.js?v=3f0e6ad0:11984
+commitHookEffectListMount @ chunk-WERSD76P.js?v=3f0e6ad0:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=3f0e6ad0:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=3f0e6ad0:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=3f0e6ad0:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=3f0e6ad0:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=3f0e6ad0:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=3f0e6ad0:19447
+commitRootImpl @ chunk-WERSD76P.js?v=3f0e6ad0:19416
+commitRoot @ chunk-WERSD76P.js?v=3f0e6ad0:19277
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=3f0e6ad0:18895
+flushSyncCallbacks @ chunk-WERSD76P.js?v=3f0e6ad0:9119
+(ανώνυμες) @ chunk-WERSD76P.js?v=3f0e6ad0:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=3f0e6ad0:555
+flush @ @tanstack_react-query.js?v=3f0e6ad0:569
+batch @ @tanstack_react-query.js?v=3f0e6ad0:587
+dispatch_fn @ @tanstack_react-query.js?v=3f0e6ad0:996
+setData @ @tanstack_react-query.js?v=3f0e6ad0:696
+setQueryData @ @tanstack_react-query.js?v=3f0e6ad0:1661
+onSuccess @ use-auth.tsx:49
+execute @ @tanstack_react-query.js?v=3f0e6ad0:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=3f0e6ad0:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=3f0e6ad0:3295
+onSubmit @ auth-page.tsx:39
+(ανώνυμες) @ chunk-RBMNEPGM.js?v=3f0e6ad0:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-WERSD76P.js?v=3f0e6ad0:3674
+invokeGuardedCallbackDev @ chunk-WERSD76P.js?v=3f0e6ad0:3699
+invokeGuardedCallback @ chunk-WERSD76P.js?v=3f0e6ad0:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-WERSD76P.js?v=3f0e6ad0:3736
+executeDispatch @ chunk-WERSD76P.js?v=3f0e6ad0:7014
+processDispatchQueueItemsInOrder @ chunk-WERSD76P.js?v=3f0e6ad0:7034
+processDispatchQueue @ chunk-WERSD76P.js?v=3f0e6ad0:7043
+dispatchEventsForPlugins @ chunk-WERSD76P.js?v=3f0e6ad0:7051
+(ανώνυμες) @ chunk-WERSD76P.js?v=3f0e6ad0:7174
+batchedUpdates$1 @ chunk-WERSD76P.js?v=3f0e6ad0:18913
+batchedUpdates @ chunk-WERSD76P.js?v=3f0e6ad0:3579
+dispatchEventForPluginEventSystem @ chunk-WERSD76P.js?v=3f0e6ad0:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-WERSD76P.js?v=3f0e6ad0:5478
+dispatchEvent @ chunk-WERSD76P.js?v=3f0e6ad0:5472
+dispatchDiscreteEvent @ chunk-WERSD76P.js?v=3f0e6ad0:5449
+Εμφάνιση 46 ακόμη πλαισίων
+Εμφάνιση λιγότερων
