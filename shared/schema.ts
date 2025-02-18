@@ -71,7 +71,10 @@ export const recipients = pgTable("recipients", {
   created_at: timestamp("created_at").defaultNow(),
   created_by: text("created_by").references(() => users.id),
   updated_at: timestamp("updated_at"),
-  document_id: integer("document_id").references(() => generatedDocuments.id),
+  document_id: integer("document_id").references(() => generatedDocuments.id, {
+    onDelete: "cascade",
+    onUpdate: "cascade"
+  }),
 });
 
 export const projects = pgTable("projects", {
