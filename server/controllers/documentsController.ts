@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../config/db';
+import { Document, Packer } from 'docx';
 import type { Database } from '@shared/schema';
 
 const router = Router();
@@ -120,6 +121,61 @@ router.patch('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error updating document:', error);
     res.status(500).json({ message: 'Failed to update document' });
+  }
+});
+
+// Add new export route
+router.post('/:id/export', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { format, unit_details, contact_info, margins, include_attachments, include_signatures } = req.body;
+
+    // Fetch document data from database
+    const { data: document, error } = await supabase
+      .from('generated_documents')
+      .select('*, recipients(*)')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    // Create document sections
+    const headerTable = createDocumentHeader(unit_details, contact_info);
+    const contentTable = createPaymentTable(document.recipients);
+    const footerTable = createDocumentFooter(unit_details);
+
+    // Create document
+    const docx = new Document({
+      sections: [{
+        properties: { page: { margin: margins } },
+        children: [
+          headerTable,
+          ...createMainContent(document),
+          contentTable,
+          footerTable
+        ]
+      }]
+    });
+
+    // Pack document
+    const buffer = await Packer.toBuffer(docx);
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename=document-${document.document_number || document.id}.docx`);
+
+    // Send document
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ 
+      message: 'Failed to export document',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
