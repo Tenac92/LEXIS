@@ -8,6 +8,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 
 interface Unit {
   id: string;
@@ -17,9 +18,16 @@ interface Unit {
 interface Project {
   id: number;
   name: string;
-  mis: string | null;
+  mis: string;
   na853: string | null;
   budget: number | null;
+}
+
+interface BudgetData {
+  budgetAmount: number;
+  ethsiaPistosi: number;
+  availableAmount: number;
+  totalSpent: number;
 }
 
 const createDocumentSchema = z.object({
@@ -42,7 +50,7 @@ const createDocumentSchema = z.object({
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
-const steps = ["Project Details", "Recipients", "Attachments", "Review"];
+const steps = ["Unit Selection", "Project Details", "Recipients", "Attachments"];
 
 interface CreateDocumentDialogProps {
   open: boolean;
@@ -51,6 +59,7 @@ interface CreateDocumentDialogProps {
 
 export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [budgetData, setBudgetData] = useState<BudgetData | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -72,7 +81,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects", form.watch("unit")],
-    enabled: currentStep === 0 && Boolean(form.watch("unit"))
+    enabled: Boolean(form.watch("unit"))
   });
 
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
@@ -80,18 +89,39 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: Boolean(form.watch("project"))
   });
 
+  // Load budget data when project is selected
+  const { data: projectBudget } = useQuery<BudgetData>({
+    queryKey: ["/api/budget", form.watch("project")],
+    enabled: Boolean(form.watch("project")),
+    onSuccess: (data) => setBudgetData(data)
+  });
+
+  const calculateTotalAmount = () => {
+    return form.watch("recipients")?.reduce((sum, r) => sum + (r.amount || 0), 0) || 0;
+  };
+
+  const validateBudgetAmount = () => {
+    if (!budgetData) return true;
+    const totalAmount = calculateTotalAmount();
+    return totalAmount <= budgetData.availableAmount;
+  };
+
   const createDocumentMutation = useMutation({
     mutationFn: async (data: CreateDocumentForm) => {
       const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        if (key === "attachments") {
-          Object.entries(value as Record<string, File>).forEach(([type, file]) => {
-            if (file) formData.append(`attachment_${type}`, file);
-          });
-        } else if (key === "recipients") {
-          formData.append("recipients", JSON.stringify(value));
-        } else {
-          formData.append(key, String(value));
+
+      // Add basic fields
+      formData.append("unit", data.unit);
+      formData.append("project", data.project);
+      formData.append("expenditure_type", data.expenditure_type);
+
+      // Add recipients as JSON
+      formData.append("recipients", JSON.stringify(data.recipients));
+
+      // Add attachments
+      Object.entries(data.attachments).forEach(([type, file]) => {
+        if (file) {
+          formData.append(`attachment_${type}`, file);
         }
       });
 
@@ -126,13 +156,60 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   });
 
-  const nextStep = () => {
+  const addRecipient = () => {
+    const currentRecipients = form.watch("recipients") || [];
+    if (currentRecipients.length >= 10) {
+      toast({
+        title: "Error",
+        description: "Maximum 10 recipients allowed",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    form.setValue("recipients", [
+      ...currentRecipients,
+      { firstname: "", lastname: "", afm: "", amount: 0, installment: 1 }
+    ]);
+  };
+
+  const removeRecipient = (index: number) => {
+    const currentRecipients = form.watch("recipients") || [];
+    form.setValue("recipients", currentRecipients.filter((_, i) => i !== index));
+  };
+
+  const handleFileChange = (type: keyof CreateDocumentForm["attachments"]) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "File size exceeds 10MB limit",
+        variant: "destructive"
+      });
+      e.target.value = "";
+      return;
+    }
+
+    form.setValue(`attachments.${type}`, file);
+  };
+
+  const nextStep = async () => {
     const fields = getFieldsForStep(currentStep);
-    form.trigger(fields).then((isValid) => {
-      if (isValid) {
-        setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+    const isValid = await form.trigger(fields);
+
+    if (isValid) {
+      if (currentStep === 2 && !validateBudgetAmount()) {
+        toast({
+          title: "Error",
+          description: "Total amount exceeds available budget",
+          variant: "destructive"
+        });
+        return;
       }
-    });
+      setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+    }
   };
 
   const prevStep = () => {
@@ -142,10 +219,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const getFieldsForStep = (step: number): Array<keyof CreateDocumentForm> => {
     switch (step) {
       case 0:
-        return ["unit", "project", "expenditure_type"];
+        return ["unit"];
       case 1:
-        return ["recipients"];
+        return ["project", "expenditure_type"];
       case 2:
+        return ["recipients"];
+      case 3:
         return ["attachments"];
       default:
         return [];
@@ -169,11 +248,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Create New Document</DialogTitle>
           <DialogDescription>
-            Fill in the required information to create a new document. Navigate through the steps to complete the form.
+            Step {currentStep + 1} of {steps.length}: {steps[currentStep]}
           </DialogDescription>
         </DialogHeader>
 
@@ -203,41 +282,38 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {currentStep === 0 && (
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="unit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unit</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={unitsLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select unit">
-                              {getSelectedValue('unit', units)}
-                            </SelectValue>
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {units.map((unit) => (
-                            <SelectItem 
-                              key={`unit-${unit.id}`} 
-                              value={unit.id}
-                            >
-                              {unit.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="unit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Unit</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={unitsLoading}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select unit" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
+            {currentStep === 1 && (
+              <div className="space-y-4">
                 <FormField
                   control={form.control}
                   name="project"
@@ -260,7 +336,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <SelectContent>
                           {projects.map((project) => (
                             <SelectItem 
-                              key={`project-${project.id}`} 
+                              key={project.id.toString()} 
                               value={project.id.toString()}
                             >
                               {project.na853 ? `${project.na853} - ${project.name}` : project.name}
@@ -292,7 +368,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <SelectContent>
                           {expenditureTypes.map((type, index) => (
                             <SelectItem 
-                              key={`expenditure-${index}`}
+                              key={`type-${index}`}
                               value={type}
                             >
                               {type}
@@ -304,28 +380,192 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                     </FormItem>
                   )}
                 />
-              </div>
-            )}
 
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                {/* Recipients form fields */}
+                {budgetData && (
+                  <div className="mt-4 p-4 bg-muted rounded-lg">
+                    <h3 className="text-sm font-medium mb-2">Budget Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-sm text-muted-foreground">Total Budget:</span>
+                        <p className="font-medium">{budgetData.budgetAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Available Amount:</span>
+                        <p className="font-medium">{budgetData.availableAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {currentStep === 2 && (
               <div className="space-y-4">
-                {/* File upload fields */}
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Recipients</h3>
+                  <Button
+                    type="button"
+                    onClick={addRecipient}
+                    disabled={form.watch("recipients")?.length >= 10}
+                  >
+                    Add Recipient
+                  </Button>
+                </div>
+
+                {form.watch("recipients")?.map((_, index) => (
+                  <div key={index} className="grid grid-cols-5 gap-4 p-4 border rounded-lg">
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.firstname`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.lastname`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.afm`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>AFM</FormLabel>
+                          <FormControl>
+                            <Input {...field} maxLength={9} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.amount`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              onChange={e => field.onChange(parseFloat(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.installment`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Installment</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              onChange={e => field.onChange(parseInt(e.target.value))}
+                              min={1}
+                              max={12}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => removeRecipient(index)}
+                      className="mt-8"
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
 
             {currentStep === 3 && (
               <div className="space-y-4">
-                {/* Review summary */}
+                <div className="grid grid-cols-1 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="attachments.main"
+                    render={({ field: { value, ...field } }) => (
+                      <FormItem>
+                        <FormLabel>Main Document</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            onChange={(e) => handleFileChange("main")(e)}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="attachments.support"
+                    render={({ field: { value, ...field } }) => (
+                      <FormItem>
+                        <FormLabel>Supporting Document</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            onChange={(e) => handleFileChange("support")(e)}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="attachments.additional"
+                    render={({ field: { value, ...field } }) => (
+                      <FormItem>
+                        <FormLabel>Additional Document</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            onChange={(e) => handleFileChange("additional")(e)}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
             )}
 
-            <div className="flex justify-between">
+            <div className="flex justify-between pt-6">
               <Button
                 type="button"
                 variant="outline"
