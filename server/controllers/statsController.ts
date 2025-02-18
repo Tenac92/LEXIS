@@ -1,4 +1,3 @@
-
 import { Router } from 'express';
 import { supabase } from '../config/db';
 import type { Database } from '@shared/schema';
@@ -8,9 +7,9 @@ const router = Router();
 router.get('/dashboard', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('documents')
+      .from('generated_documents')
       .select('status, total_amount')
-      .eq('created_by', req.user!.id);
+      .eq('generated_by', req.user!.id);
 
     if (error) throw error;
 
@@ -23,7 +22,7 @@ router.get('/dashboard', async (req, res) => {
 
     res.json(stats);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error fetching dashboard statistics:', error);
     res.status(500).json({ message: 'Failed to fetch dashboard statistics' });
   }
 });
@@ -34,14 +33,14 @@ router.get('/monthly', async (req, res) => {
     startDate.setMonth(startDate.getMonth() - 11);
 
     const { data, error } = await supabase
-      .from('documents')
+      .from('generated_documents')
       .select('created_at, status, total_amount')
       .gte('created_at', startDate.toISOString());
 
     if (error) throw error;
 
     const monthlyStats: Record<string, { total: number; completed: number; amount: number }> = {};
-    
+
     data.forEach(doc => {
       const month = doc.created_at.substring(0, 7);
       if (!monthlyStats[month]) {
@@ -58,7 +57,7 @@ router.get('/monthly', async (req, res) => {
 
     res.json(monthlyStats);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error fetching monthly statistics:', error);
     res.status(500).json({ message: 'Failed to fetch monthly statistics' });
   }
 });
