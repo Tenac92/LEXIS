@@ -1,7 +1,7 @@
 import { Plus } from 'lucide-react';
 import { Button } from './button';
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
+import { CreateDocumentDialog } from '../documents/create-document-dialog';
 
 export function FAB() {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,14 +15,10 @@ export function FAB() {
         <Plus className="h-6 w-6" />
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Document</DialogTitle>
-          </DialogHeader>
-          {/* Document creation form will be added here */}
-        </DialogContent>
-      </Dialog>
+      <CreateDocumentDialog 
+        open={isOpen} 
+        onOpenChange={setIsOpen}
+      />
     </>
   );
 }
