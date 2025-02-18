@@ -6,15 +6,11 @@ const router = Router();
 
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    const { data: units, error } = await storage.getProjectCatalog();
-
-    if (error) {
-      throw error;
-    }
+    const projects = await storage.getProjectCatalog();
 
     // Extract unique implementing agencies and map them to unit format
     const uniqueUnits = Array.from(new Set(
-      units.flatMap(project => 
+      projects.flatMap(project => 
         Array.isArray(project.implementing_agency) 
           ? project.implementing_agency 
           : [project.implementing_agency]
