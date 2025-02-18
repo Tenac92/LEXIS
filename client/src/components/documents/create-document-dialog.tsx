@@ -18,10 +18,10 @@ interface Unit {
 
 interface Project {
   id: number;
-  event_description: string;
-  na853: string;
-  mis?: string | null;
-  budget?: number | null;
+  name: string;
+  mis: string | null;
+  na853: string | null;
+  budget: number | null;
 }
 
 const createDocumentSchema = z.object({
@@ -167,13 +167,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   };
 
   const getProjectDisplayName = (project: Project): string => {
-    if (project?.na853 && project?.event_description) {
-      return `${project.na853} - ${project.event_description}`;
-    }
-    return project?.event_description || 'Unknown Project';
+    if (!project) return 'Unknown Project';
+    return project.na853 ? `${project.na853} - ${project.name}` : project.name;
   };
-
-  console.log('Projects data:', projects); // Debug log
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -258,8 +254,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {projects && projects.map((project) => (
-                            <SelectItem key={project.id} value={project.id.toString()}>
+                          {projects?.map((project) => (
+                            <SelectItem key={project.id} value={String(project.id)}>
                               {getProjectDisplayName(project)}
                             </SelectItem>
                           ))}
