@@ -1,7 +1,10 @@
 import { Request, Response } from 'express';
-import { Document, Packer } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, BorderStyle, WidthType } from 'docx';
 import { supabase } from '../config/db';
-const DocumentFormatter = require('../../attached_assets/documentFormatter.js');
+import path from 'path';
+
+// Import the correct DocumentFormatter
+const DocumentFormatter = require(path.join(__dirname, '../../attached_assets/documentFormatter.js'));
 
 export async function exportDocument(req: Request, res: Response) {
   try {
@@ -21,13 +24,13 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Recipients are stored in the document object
+    // Ensure recipients array
     const recipients = Array.isArray(document.recipients) ? document.recipients : [];
 
-    // Create document with proper formatting
+    // Create document with full formatting
     const docx = new Document({
       sections: [{
-        properties: {
+        properties: { 
           page: {
             ...DocumentFormatter.getDefaultMargins(),
             size: { width: 11906, height: 16838 },
@@ -36,14 +39,33 @@ export async function exportDocument(req: Request, res: Response) {
         },
         children: [
           DocumentFormatter.createDocumentHeader(req),
+          new Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
           DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
+          new Paragraph({ 
+            children: [
+              new TextRun({ text: `Μονάδα: ${document.unit || 'N/A'}`, bold: true }),
+              new TextRun({ text: `    NA853: ${document.project_na853 || 'N/A'}`, bold: true })
+            ],
+            spacing: { before: 240, after: 240 }
+          }),
           DocumentFormatter.createPaymentTable(recipients),
+          new Paragraph({ text: '', spacing: { before: 300 } }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: 'ΣΥΝΟΛΟ: ', bold: true }),
+              new TextRun({ 
+                text: `${recipients.reduce((sum, r) => sum + parseFloat(r.amount), 0).toFixed(2)}€` 
+              })
+            ]
+          }),
+          new Paragraph({ text: '', spacing: { before: 300 } }),
           DocumentFormatter.createDocumentFooter()
         ]
       }]
     });
 
     const buffer = await Packer.toBuffer(docx);
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
     res.send(buffer);
