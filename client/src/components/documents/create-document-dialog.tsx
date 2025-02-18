@@ -166,7 +166,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   };
 
-  const getProjectDisplayName = (projectId: string): string => {
+  const getProjectDisplayName = (projectId: string | undefined): string => {
     if (!projectId) return 'Select project';
     const project = projects.find(p => p.id.toString() === projectId);
     return project ? (project.na853 ? `${project.na853} - ${project.name}` : project.name) : 'Select project';
@@ -251,8 +251,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select project">
-                              {field.value ? getProjectDisplayName(field.value) : "Select project"}
+                            <SelectValue>
+                              {getProjectDisplayName(field.value)}
                             </SelectValue>
                           </SelectTrigger>
                         </FormControl>
