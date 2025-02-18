@@ -1,10 +1,10 @@
-import { Document, Packer, IPropertiesOptions } from 'docx';
+import { Document, Packer, Paragraph, TextRun, ISectionOptions } from 'docx';
 import { DocumentTemplate } from '@shared/schema';
 import { supabase } from '../config/db';
 
 interface TemplateData {
   sections: Array<{
-    properties: IPropertiesOptions;
+    properties: ISectionOptions;
     children: any[];
   }>;
   metadata?: Record<string, any>;
@@ -100,7 +100,6 @@ export class TemplateManager {
   }
 
   private static processTemplateChildren(children: any[], data: any): any[] {
-    // Process template placeholders with actual data
     return children.map(child => {
       if (typeof child === 'string') {
         return this.replacePlaceholders(child, data);
@@ -125,7 +124,7 @@ export class TemplateManager {
     });
   }
 
-  static async listTemplates(category?: string) {
+  static async listTemplates(category?: string): Promise<DocumentTemplate[]> {
     let query = supabase
       .from('document_templates')
       .select('*')

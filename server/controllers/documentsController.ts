@@ -3,6 +3,8 @@ import { supabase } from '../config/db';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import type { Database } from '@shared/schema';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
+import { TemplateManager } from '../utils/TemplateManager';
+import { VersionController } from '../utils/VersionController';
 
 const router = Router();
 
@@ -279,6 +281,112 @@ router.post('/generated/:id/export', async (req, res) => {
       message: 'Failed to export document',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
+  }
+});
+
+// New Template Management Routes
+router.get('/templates', async (req, res) => {
+  try {
+    const templates = await TemplateManager.listTemplates(req.query.category as string);
+    res.json(templates);
+  } catch (error) {
+    console.error('Error fetching templates:', error);
+    res.status(500).json({ message: 'Failed to fetch templates' });
+  }
+});
+
+router.post('/templates', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { name, description, category, templateData } = req.body;
+    const template = await TemplateManager.createTemplate(
+      name,
+      description,
+      category,
+      templateData,
+      req.user.id
+    );
+
+    res.status(201).json(template);
+  } catch (error) {
+    console.error('Error creating template:', error);
+    res.status(500).json({ message: 'Failed to create template' });
+  }
+});
+
+router.get('/templates/:id/preview', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { previewData } = req.query;
+
+    const buffer = await TemplateManager.generatePreview(
+      parseInt(id),
+      JSON.parse(previewData as string),
+      { watermark: true }
+    );
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename=template-preview-${id}.docx`);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Error generating preview:', error);
+    res.status(500).json({ message: 'Failed to generate preview' });
+  }
+});
+
+// Document Version Management Routes
+router.get('/versions/:documentId', async (req, res) => {
+  try {
+    const versions = await VersionController.getVersionHistory(parseInt(req.params.documentId));
+    res.json(versions);
+  } catch (error) {
+    console.error('Error fetching versions:', error);
+    res.status(500).json({ message: 'Failed to fetch versions' });
+  }
+});
+
+router.post('/versions/:documentId', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { documentId } = req.params;
+    const { recipients, metadata } = req.body;
+
+    const version = await VersionController.createVersion(
+      parseInt(documentId),
+      recipients,
+      req.user.id,
+      metadata
+    );
+
+    res.status(201).json(version);
+  } catch (error) {
+    console.error('Error creating version:', error);
+    res.status(500).json({ message: 'Failed to create version' });
+  }
+});
+
+router.post('/versions/:documentId/revert/:versionId', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const version = await VersionController.revertToVersion(
+      parseInt(req.params.documentId),
+      parseInt(req.params.versionId),
+      req.user.id
+    );
+
+    res.json(version);
+  } catch (error) {
+    console.error('Error reverting version:', error);
+    res.status(500).json({ message: 'Failed to revert version' });
   }
 });
 
