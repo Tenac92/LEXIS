@@ -259,8 +259,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <SelectContent>
                           {projects?.map((project) => (
                             <SelectItem 
-                              key={`project-${project.id}`} 
-                              value={project.id.toString()}
+                              key={`project-${project.mis}`} 
+                              value={project.mis}
                             >
                               {project.na853 ? `${project.na853} - ${project.name}` : project.name}
                             </SelectItem>
