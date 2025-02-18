@@ -7,8 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
@@ -32,6 +40,10 @@ interface DeleteModalProps extends BaseModalProps {
   onDelete: () => void;
 }
 
+interface ExportModalProps extends BaseModalProps {
+  document: any;
+}
+
 export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps) {
   const { toast } = useToast();
   const [protocolNumber, setProtocolNumber] = useState('');
@@ -40,7 +52,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
   useEffect(() => {
     if (document) {
       setProtocolNumber(document.protocol_number_input || '');
-      setProtocolDate(document.protocol_date ? 
+      setProtocolDate(document.protocol_date ?
         new Date(document.protocol_date).toISOString().split('T')[0] :
         new Date().toISOString().split('T')[0]
       );
@@ -195,8 +207,8 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   useEffect(() => {
     if (document) {
       setProtocolNumber(document.protocol_number_input || '');
-      setProtocolDate(document.protocol_date ? 
-        new Date(document.protocol_date).toISOString().split('T')[0] : 
+      setProtocolDate(document.protocol_date ?
+        new Date(document.protocol_date).toISOString().split('T')[0] :
         ''
       );
       setProjectId(document.project_id || '');
@@ -468,6 +480,216 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={loading}>
             {loading ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalProps) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [format, setFormat] = useState('docx');
+  const [unitDetails, setUnitDetails] = useState({
+    unit_name: '',
+    email: 'daefkke@civilprotection.gr',
+    parts: []
+  });
+  const [contactInfo, setContactInfo] = useState({
+    address: 'Κηφισίας 124 & Ιατρίδου 2',
+    postal_code: '11526',
+    city: 'Αθήνα',
+    contact_person: ''
+  });
+
+  useEffect(() => {
+    if (document) {
+      // Initialize with document data if available
+      setUnitDetails(prev => ({
+        ...prev,
+        unit_name: document.unit || '',
+        parts: document.unit_parts || []
+      }));
+      setContactInfo(prev => ({
+        ...prev,
+        contact_person: document.contact_person || ''
+      }));
+    }
+  }, [document]);
+
+  if (!document) return null;
+
+  const handleExport = async () => {
+    try {
+      setLoading(true);
+
+      // Prepare export configuration
+      const exportConfig = {
+        format,
+        document_id: document.id,
+        unit_details: unitDetails,
+        contact_info: contactInfo,
+        margins: {
+          top: 850,
+          right: 1000,
+          bottom: 850,
+          left: 1000
+        },
+        include_attachments: format === 'docx',
+        include_signatures: true
+      };
+
+      const response = await apiRequest(`/api/documents/generated/${document.id}/export`, {
+        method: 'POST',
+        body: exportConfig
+      });
+
+      // Handle the response based on format
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `document-${document.document_number || document.id}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Success",
+        description: "Document exported successfully",
+      });
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export document",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-[800px]">
+        <DialogHeader>
+          <DialogTitle>Export Document</DialogTitle>
+          <DialogDescription>
+            Configure document export settings and choose format.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          {/* Unit Details Section */}
+          <div className="space-y-4 p-4 bg-muted rounded-lg">
+            <h3 className="font-medium text-lg">Unit Details</h3>
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label>Unit Name</Label>
+                <Input
+                  value={unitDetails.unit_name}
+                  onChange={(e) => setUnitDetails(prev => ({
+                    ...prev,
+                    unit_name: e.target.value
+                  }))}
+                  placeholder="Enter unit name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  value={unitDetails.email}
+                  onChange={(e) => setUnitDetails(prev => ({
+                    ...prev,
+                    email: e.target.value
+                  }))}
+                  placeholder="Enter email"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Information Section */}
+          <div className="space-y-4 p-4 bg-muted rounded-lg">
+            <h3 className="font-medium text-lg">Contact Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Address</Label>
+                <Input
+                  value={contactInfo.address}
+                  onChange={(e) => setContactInfo(prev => ({
+                    ...prev,
+                    address: e.target.value
+                  }))}
+                  placeholder="Enter address"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Postal Code</Label>
+                <Input
+                  value={contactInfo.postal_code}
+                  onChange={(e) => setContactInfo(prev => ({
+                    ...prev,
+                    postal_code: e.target.value
+                  }))}
+                  placeholder="Enter postal code"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>City</Label>
+                <Input
+                  value={contactInfo.city}
+                  onChange={(e) => setContactInfo(prev => ({
+                    ...prev,
+                    city: e.target.value
+                  }))}
+                  placeholder="Enter city"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Contact Person</Label>
+                <Input
+                  value={contactInfo.contact_person}
+                  onChange={(e) => setContactInfo(prev => ({
+                    ...prev,
+                    contact_person: e.target.value
+                  }))}
+                  placeholder="Enter contact person"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Export Format Section */}
+          <div className="space-y-2">
+            <Label>Export Format</Label>
+            <Select
+              value={format}
+              onValueChange={(value) => setFormat(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a format" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="docx">DOCX (with formatting)</SelectItem>
+                <SelectItem value="pdf">PDF</SelectItem>
+              </SelectContent>
+            </Select>
+            {format === 'docx' && (
+              <p className="text-sm text-muted-foreground mt-2">
+                DOCX format includes full document formatting with headers, footers, and proper layout.
+              </p>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleExport} disabled={loading}>
+            {loading ? "Exporting..." : "Export"}
           </Button>
         </DialogFooter>
       </DialogContent>
