@@ -17,7 +17,18 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: error.message });
     }
 
-    res.json(data);
+    // Extract user data from Supabase session
+    const user = data.session?.user;
+    if (!user) {
+      return res.status(401).json({ message: 'No user data in session' });
+    }
+
+    res.json({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      session: data.session
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Internal server error' });
