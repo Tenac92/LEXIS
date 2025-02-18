@@ -43,11 +43,12 @@ export async function setupAuth(app: Express) {
 
   app.post("/api/login", async (req, res) => {
     try {
-      const { username, password } = req.body; // Changed to username
+      const { email, password } = req.body;
+      const username = email; // Use email as username for compatibility
 
       if (!username || !password) {
         return res.status(400).json({
-          error: { message: 'Username and password are required' }
+          error: { message: 'Email and password are required' }
         });
       }
 
@@ -57,7 +58,7 @@ export async function setupAuth(app: Express) {
       const { data: user, error } = await supabase
         .from('users')
         .select('*')
-        .eq('username', username) 
+        .eq('username', username)
         .single();
 
       if (error) {
@@ -101,7 +102,7 @@ export async function setupAuth(app: Express) {
         console.log('[Auth] User data stored in session:', userData);
       }
 
-      console.log('[Auth] Login successful for user:', username); // Changed to username
+      console.log('[Auth] Login successful for user:', username);
       res.json(userData);
 
     } catch (error) {
