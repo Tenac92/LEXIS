@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../config/db';
-import { Document, Packer } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Table } from 'docx';
 import type { Database } from '@shared/schema';
 
 const router = Router();
@@ -127,8 +127,8 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-// Add new export route
-router.post('/:id/export', async (req, res) => {
+// Update the export route to match the expected path
+router.post('/generated/:id/export', async (req, res) => {
   try {
     const { id } = req.params;
     const { format, unit_details, contact_info, margins, include_attachments, include_signatures } = req.body;
@@ -146,9 +146,47 @@ router.post('/:id/export', async (req, res) => {
     }
 
     // Create document sections
-    const headerTable = createDocumentHeader(unit_details, contact_info);
-    const contentTable = createPaymentTable(document.recipients);
-    const footerTable = createDocumentFooter(unit_details);
+    const headerTable = new Table({
+      rows: [{
+        children: [{
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: unit_details.unit_name || '', bold: true })],
+              alignment: AlignmentType.LEFT
+            })
+          ]
+        }]
+      }]
+    });
+
+    const contentTable = new Table({
+      rows: document.recipients.map((recipient, index) => ({
+        children: [{
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` }),
+                new TextRun({ text: ` - ${recipient.afm}` }),
+                new TextRun({ text: ` - ${recipient.amount}€` })
+              ]
+            })
+          ]
+        }]
+      }))
+    });
+
+    const footerTable = new Table({
+      rows: [{
+        children: [{
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: contact_info.contact_person || '' })],
+              alignment: AlignmentType.CENTER
+            })
+          ]
+        }]
+      }]
+    });
 
     // Create document
     const docx = new Document({
@@ -156,8 +194,9 @@ router.post('/:id/export', async (req, res) => {
         properties: { page: { margin: margins } },
         children: [
           headerTable,
-          ...createMainContent(document),
+          new Paragraph({ text: '' }), // Spacing
           contentTable,
+          new Paragraph({ text: '' }), // Spacing
           footerTable
         ]
       }]
