@@ -19,9 +19,10 @@ interface Unit {
 interface Project {
   id: string;
   name: string;
-  na853?: string; // Added NA853 field
+  na853: string;
+  mis?: string;
+  budget?: number;
 }
-
 
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
@@ -165,6 +166,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   };
 
+  const getProjectDisplayName = (project: Project): string => {
+    if (project.na853 && project.name) {
+      return `${project.na853} - ${project.name}`;
+    }
+    return project.name;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -250,7 +258,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <SelectContent>
                           {projects.map((project) => (
                             <SelectItem key={project.id} value={project.id}>
-                              {project.na853 ? `${project.na853} - ${project.name}` : project.name}
+                              {getProjectDisplayName(project)}
                             </SelectItem>
                           ))}
                         </SelectContent>
