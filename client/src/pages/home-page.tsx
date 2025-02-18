@@ -1,29 +1,42 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
-import { getDashboardStats } from "@/lib/services/dashboard";
 import { Dashboard } from "@/components/dashboard/dashboard";
+import { Loader2 } from "lucide-react";
 
 export default function HomePage() {
-  const { user, logoutMutation } = useAuth();
+  const { user, logoutMutation, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-border" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <header className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-2xl font-bold">Welcome, {user?.full_name}</h1>
-          <p className="text-muted-foreground">Document Management System</p>
+    <div className="min-h-screen bg-background">
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold">Welcome, {user?.email}</h1>
+              <p className="text-muted-foreground">Document Management System</p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+            >
+              Logout
+            </Button>
+          </div>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={() => logoutMutation.mutate()}
-          disabled={logoutMutation.isPending}
-        >
-          Logout
-        </Button>
       </header>
 
-      <Dashboard />
+      <main className="container mx-auto px-4 py-6">
+        <Dashboard />
+      </main>
     </div>
   );
 }
