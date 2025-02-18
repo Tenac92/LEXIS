@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../config/db';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, Table } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, BorderStyle } from 'docx';
 import type { Database } from '@shared/schema';
 
 const router = Router();
@@ -160,65 +160,90 @@ router.get('/generated/:id/export', async (req, res) => {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Create document sections
-    const headerTable = new Table({
-      rows: [{
-        cells: [{
-          children: [
-            new Paragraph({
-              children: [new TextRun({ text: 'Document Export', bold: true })],
-              alignment: AlignmentType.LEFT
-            })
-          ]
-        }]
-      }]
+    // Create document sections with proper table structure
+    const headerRow = new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({
+            children: [new TextRun({ text: 'Document Export', bold: true })],
+            alignment: AlignmentType.LEFT
+          })]
+        })
+      ]
     });
 
-    const contentTable = new Table({
-      rows: [
-        {
-          cells: [
-            {
-              children: [new Paragraph({ children: [new TextRun({ text: 'Name', bold: true })] })],
-            },
-            {
-              children: [new Paragraph({ children: [new TextRun({ text: 'AFM', bold: true })] })],
-            },
-            {
-              children: [new Paragraph({ children: [new TextRun({ text: 'Amount', bold: true })] })],
-            }
-          ]
-        },
-        ...(data.recipients || []).map((recipient: any) => ({
-          cells: [
-            {
-              children: [
-                new Paragraph({ 
-                  children: [new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` })]
-                })
-              ]
-            },
-            {
-              children: [
-                new Paragraph({ children: [new TextRun({ text: recipient.afm })] })
-              ]
-            },
-            {
-              children: [
-                new Paragraph({ 
-                  children: [new TextRun({ text: `${recipient.amount}€` })]
-                })
-              ]
-            }
-          ]
-        }))
+    const headerTable = new Table({
+      width: {
+        size: 100,
+        type: 'pct',
+      },
+      rows: [headerRow]
+    });
+
+    // Create content table with headers
+    const contentHeaderRow = new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: 'Name', bold: true })] })]
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: 'AFM', bold: true })] })]
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: 'Amount', bold: true })] })]
+        })
       ]
+    });
+
+    const contentRows = (data.recipients || []).map((recipient: any) => 
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [new Paragraph({ 
+              children: [new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` })]
+            })]
+          }),
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: recipient.afm })] })]
+          }),
+          new TableCell({
+            children: [new Paragraph({ 
+              children: [new TextRun({ text: `${recipient.amount}€` })]
+            })]
+          })
+        ]
+      })
+    );
+
+    const contentTable = new Table({
+      width: {
+        size: 100,
+        type: 'pct',
+      },
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 1 },
+        bottom: { style: BorderStyle.SINGLE, size: 1 },
+        left: { style: BorderStyle.SINGLE, size: 1 },
+        right: { style: BorderStyle.SINGLE, size: 1 },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+        insideVertical: { style: BorderStyle.SINGLE, size: 1 }
+      },
+      rows: [contentHeaderRow, ...contentRows]
     });
 
     // Create document
     const docx = new Document({
       sections: [{
-        properties: { page: { margin: { top: 1000, bottom: 1000, left: 1000, right: 1000 } } },
+        properties: { 
+          page: { 
+            margin: { 
+              top: 1000, 
+              bottom: 1000, 
+              left: 1000, 
+              right: 1000 
+            } 
+          } 
+        },
         children: [
           headerTable,
           new Paragraph({ text: '' }), // Spacing
