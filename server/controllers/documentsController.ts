@@ -127,7 +127,88 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-// Update the export route to match the expected path
+router.get('/generated/:id/export', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Fetch document data from database
+    const { data: document, error } = await supabase
+      .from('generated_documents')
+      .select('*, recipients(*)')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    // Create document sections
+    const headerTable = new Table({
+      rows: [{
+        children: [{
+          children: [
+            new Paragraph({
+              children: [new TextRun({ text: 'Document Export' })],
+              alignment: AlignmentType.LEFT
+            })
+          ]
+        }]
+      }]
+    });
+
+    const contentTable = new Table({
+      rows: (document.recipients || []).map((recipient: any) => ({
+        children: [{
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` }),
+                new TextRun({ text: ` - ${recipient.afm}` }),
+                new TextRun({ text: ` - ${recipient.amount}€` })
+              ]
+            })
+          ]
+        }]
+      }))
+    });
+
+    // Create document
+    const docx = new Document({
+      sections: [{
+        properties: { page: { margin: { top: 1000, bottom: 1000, left: 1000, right: 1000 } } },
+        children: [
+          headerTable,
+          new Paragraph({ text: '' }), // Spacing
+          contentTable,
+          new Paragraph({ text: '' }), // Spacing
+        ]
+      }]
+    });
+
+    // Pack document
+    const buffer = await Packer.toBuffer(docx);
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename=document-${document.document_number || document.id}.docx`);
+
+    // Send document
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ 
+      message: 'Failed to export document',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 router.post('/generated/:id/export', async (req, res) => {
   try {
     const { id } = req.params;
