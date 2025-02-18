@@ -19,11 +19,26 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { DocumentCard } from "@/components/documents/document-card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ViewDocumentModal, EditDocumentModal, DeleteDocumentModal } from "@/components/documents/document-modals";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DocumentsPage() {
   const [isAdvancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [modalState, setModalState] = useState<{
+    view: boolean;
+    edit: boolean;
+    delete: boolean;
+  }>({
+    view: false,
+    edit: false,
+    delete: false,
+  });
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const [filters, setFilters] = useState({
     unit: 'all',
     status: 'all',
@@ -50,6 +65,38 @@ export default function DocumentsPage() {
       return response.json();
     }
   });
+
+  const handleExport = async (docId: string) => {
+    try {
+      const response = await fetch(`/api/documents/generated/${docId}/export`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) throw new Error('Failed to export document');
+
+      // Create a blob from the response
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `document-${docId}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Success",
+        description: "Document exported successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export document",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -205,7 +252,6 @@ export default function DocumentsPage() {
           {/* Documents Grid */}
           <div className={`grid ${viewMode === 'grid' ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1'} gap-6 p-6`}>
             {isLoading ? (
-              // Loading skeleton
               Array.from({ length: 6 }).map((_, index) => (
                 <Card key={index} className="h-[200px] animate-pulse bg-muted" />
               ))
@@ -214,9 +260,19 @@ export default function DocumentsPage() {
                 <DocumentCard
                   key={doc.id}
                   document={doc}
-                  onView={(id) => console.log('View', id)}
-                  onEdit={(id) => console.log('Edit', id)}
-                  onDelete={(id) => console.log('Delete', id)}
+                  onView={(id) => {
+                    setSelectedDocument(doc);
+                    setModalState(prev => ({ ...prev, view: true }));
+                  }}
+                  onEdit={(id) => {
+                    setSelectedDocument(doc);
+                    setModalState(prev => ({ ...prev, edit: true }));
+                  }}
+                  onDelete={(id) => {
+                    setSelectedDocument(doc);
+                    setModalState(prev => ({ ...prev, delete: true }));
+                  }}
+                  onExport={handleExport}
                 />
               ))
             ) : (
@@ -228,6 +284,33 @@ export default function DocumentsPage() {
           </div>
         </Card>
       </div>
+
+      {/* Modals */}
+      <ViewDocumentModal
+        isOpen={modalState.view}
+        onClose={() => setModalState(prev => ({ ...prev, view: false }))}
+        document={selectedDocument}
+      />
+
+      <EditDocumentModal
+        isOpen={modalState.edit}
+        onClose={() => setModalState(prev => ({ ...prev, edit: false }))}
+        document={selectedDocument}
+        onEdit={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+          setModalState(prev => ({ ...prev, edit: false }));
+        }}
+      />
+
+      <DeleteDocumentModal
+        isOpen={modalState.delete}
+        onClose={() => setModalState(prev => ({ ...prev, delete: false }))}
+        documentId={selectedDocument?.id}
+        onDelete={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+          setModalState(prev => ({ ...prev, delete: false }));
+        }}
+      />
     </div>
   );
 }
