@@ -2,12 +2,17 @@ import { pgTable, text, serial, boolean, timestamp, jsonb, numeric, integer } fr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users table matching Supabase Auth
-export const users = pgTable("auth.users", {
+// Users table matching the CSV structure
+export const users = pgTable("users", {
   id: text("id").primaryKey(),
+  name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  created_at: timestamp("created_at").defaultNow(),
   role: text("role").default("user").notNull(),
+  password: text("password").notNull(),
+  units: jsonb("units"),
+  telephone: text("telephone"),
+  department: text("department"),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Document Templates table
@@ -196,12 +201,11 @@ export type Database = {
       project_catalog: {
         Row: ProjectCatalog;
         Insert: InsertProjectCatalog;
+      };
+      users: {
+        Row: User;
+        Insert: z.infer<typeof createInsertSchema(users)>
       }
-    };
-  };
-  auth: {
-    Users: {
-      Row: User;
     };
   };
 };

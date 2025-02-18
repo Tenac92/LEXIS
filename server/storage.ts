@@ -1,11 +1,9 @@
-import { users, generatedDocuments, projectCatalog, type ProjectCatalog, type InsertProjectCatalog } from "@shared/schema";
-import type { User, GeneratedDocument, InsertGeneratedDocument } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog } from "@shared/schema";
 import { supabase } from "./db";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
-import { pool } from "./db";
+import MemoryStore from "memorystore";
 
-const PostgresSessionStore = connectPg(session);
+const MemoryStoreSession = MemoryStore(session);
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -13,21 +11,20 @@ export interface IStorage {
   createGeneratedDocument(doc: InsertGeneratedDocument): Promise<GeneratedDocument>;
   getGeneratedDocument(id: number): Promise<GeneratedDocument | undefined>;
   listGeneratedDocuments(): Promise<GeneratedDocument[]>;
-  sessionStore: session.Store;
   getProjectCatalog(): Promise<ProjectCatalog[]>;
   getProjectCatalogByUnit(unit: string): Promise<ProjectCatalog[]>;
   getProjectExpenditureTypes(projectId: string): Promise<string[]>;
   getUserUnits(userId: string): Promise<string[]>;
+  sessionStore: session.Store;
 }
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({
-      pool: pool,
-      tableName: 'session',
-      createTableIfMissing: true,
+    // Use in-memory session store for now
+    this.sessionStore = new MemoryStoreSession({
+      checkPeriod: 86400000 // prune expired entries every 24h
     });
   }
 
@@ -80,7 +77,7 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     try {
       const { data, error } = await supabase
-        .from('auth.users')
+        .from('users')
         .select('*')
         .eq('id', id)
         .single();
@@ -96,7 +93,7 @@ export class DatabaseStorage implements IStorage {
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
       const { data, error } = await supabase
-        .from('auth.users')
+        .from('users')
         .select('*')
         .eq('email', email)
         .single();
