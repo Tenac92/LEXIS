@@ -1,10 +1,7 @@
 import { Request, Response } from 'express';
 import { Document, Packer } from 'docx';
 import { supabase } from '../config/db';
-import path from 'path';
-
-// Import the DocumentFormatter
-const DocumentFormatter = require(path.join(__dirname, '../../attached_assets/documentFormatter.js'));
+import { DocumentFormatter } from '../utils/DocumentFormatter';
 
 export async function exportDocument(req: Request, res: Response) {
   try {
@@ -25,9 +22,15 @@ export async function exportDocument(req: Request, res: Response) {
     }
 
     // Ensure recipients array is properly formatted
-    const recipients = Array.isArray(document.recipients) ? document.recipients : [];
+    const recipients = Array.isArray(document.recipients) 
+      ? document.recipients.map(recipient => ({
+          ...recipient,
+          amount: Number(recipient.amount),
+          installment: Number(recipient.installment)
+        }))
+      : [];
 
-    // Create document using DocumentFormatter
+    // Create document
     const docx = new Document({
       sections: [{
         properties: { 
