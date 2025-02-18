@@ -1,0 +1,206 @@
+arning: Encountered two children with the same key, `type-[object Object]`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:101:15
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:3001:13
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:101:15
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:2545:59
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:360:22
+    at SelectPortal
+    at _c7 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/select.tsx:116:12)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:31:15)
+    at CollectionProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:92:13)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:1948:15)
+    at Popper (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:2042:11)
+    at Select (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:2333:5)
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/form.tsx:71:6
+    at Controller (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RBMNEPGM.js?v=27d0e533:313:35)
+    at FormField (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/form.tsx:32:6)
+    at div
+    at form
+    at FormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RBMNEPGM.js?v=27d0e533:102:11)
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:156:7
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-ZDGSPFP4.js?v=27d0e533:58:5
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dialog.js?v=27d0e533:228:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dialog.js?v=27d0e533:151:58
+    at Presence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CLBZWXG7.js?v=27d0e533:24:11)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dialog.js?v=27d0e533:142:64
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:360:22
+    at Presence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CLBZWXG7.js?v=27d0e533:24:11)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at DialogPortal (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dialog.js?v=27d0e533:105:11)
+    at _c3 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/dialog.tsx:49:12)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at Dialog (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dialog.js?v=27d0e533:46:5)
+    at CreateDocumentDialog (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:46:40)
+    at FAB (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/fab.tsx:24:31)
+    at div
+    at HomePage (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/home-page.tsx:27:47)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=27d0e533:379:17)
+    at Router
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:100:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=27d0e533:2805:3)
+    at App
+printWarning @ chunk-WERSD76P.js?v=27d0e533:521
+Εμφάνιση 1 ακόμη πλαισίου
+Εμφάνιση λιγότερων
+106chunk-WERSD76P.js?v=27d0e533:9934 Uncaught Error: Objects are not valid as a React child (found: object with keys {id, name, mis, na853, budget}). If you meant to render a collection of children, use an array instead.
+    at throwOnInvalidObjectType (chunk-WERSD76P.js?v=27d0e533:9934:17)
+    at reconcileChildFibers2 (chunk-WERSD76P.js?v=27d0e533:10564:15)
+    at reconcileChildren (chunk-WERSD76P.js?v=27d0e533:14290:37)
+    at updateHostComponent (chunk-WERSD76P.js?v=27d0e533:14807:11)
+    at beginWork (chunk-WERSD76P.js?v=27d0e533:15935:22)
+    at HTMLUnknownElement.callCallback2 (chunk-WERSD76P.js?v=27d0e533:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-WERSD76P.js?v=27d0e533:3699:24)
+    at invokeGuardedCallback (chunk-WERSD76P.js?v=27d0e533:3733:39)
+    at beginWork$1 (chunk-WERSD76P.js?v=27d0e533:19765:15)
+    at performUnitOfWork (chunk-WERSD76P.js?v=27d0e533:19198:20)
+105chunk-WERSD76P.js?v=27d0e533:521 Warning: Encountered two children with the same key, `type-[object Object]`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:101:15
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:3001:13
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:101:15
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:2545:59
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:360:22
+    at SelectPortal
+    at _c7 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/select.tsx:116:12)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:31:15)
+    at CollectionProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:92:13)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:1948:15)
+    at Popper (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:2042:11)
+    at Select (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:2333:5)
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/form.tsx:71:6
+    at Controller (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RBMNEPGM.js?v=27d0e533:313:35)
+    at FormField (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/form.tsx:32:6)
+    at div
+    at form
+    at FormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RBMNEPGM.js?v=27d0e533:102:11)
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:156:7
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-ZDGSPFP4.js?v=27d0e533:58:5
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dialog.js?v=27d0e533:228:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dialog.js?v=27d0e533:151:58
+    at Presence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CLBZWXG7.js?v=27d0e533:24:11)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dialog.js?v=27d0e533:142:64
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:360:22
+    at Presence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CLBZWXG7.js?v=27d0e533:24:11)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at DialogPortal (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dialog.js?v=27d0e533:105:11)
+    at _c3 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/dialog.tsx:49:12)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at Dialog (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-dialog.js?v=27d0e533:46:5)
+    at CreateDocumentDialog (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:46:40)
+    at FAB (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/fab.tsx:24:31)
+    at div
+    at HomePage (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/home-page.tsx:27:47)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=27d0e533:379:17)
+    at Router
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:100:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=27d0e533:2805:3)
+    at App
+printWarning @ chunk-WERSD76P.js?v=27d0e533:521
+Εμφάνιση 1 ακόμη πλαισίου
+Εμφάνιση λιγότερων
+106chunk-WERSD76P.js?v=27d0e533:9934 Uncaught Error: Objects are not valid as a React child (found: object with keys {id, name, mis, na853, budget}). If you meant to render a collection of children, use an array instead.
+    at throwOnInvalidObjectType (chunk-WERSD76P.js?v=27d0e533:9934:17)
+    at reconcileChildFibers2 (chunk-WERSD76P.js?v=27d0e533:10564:15)
+    at reconcileChildren (chunk-WERSD76P.js?v=27d0e533:14290:37)
+    at updateHostComponent (chunk-WERSD76P.js?v=27d0e533:14807:11)
+    at beginWork (chunk-WERSD76P.js?v=27d0e533:15935:22)
+    at HTMLUnknownElement.callCallback2 (chunk-WERSD76P.js?v=27d0e533:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-WERSD76P.js?v=27d0e533:3699:24)
+    at invokeGuardedCallback (chunk-WERSD76P.js?v=27d0e533:3733:39)
+    at beginWork$1 (chunk-WERSD76P.js?v=27d0e533:19765:15)
+    at performUnitOfWork (chunk-WERSD76P.js?v=27d0e533:19198:20)
+106chunk-WERSD76P.js?v=27d0e533:14032 The above error occurred in the <span> component:
+
+    at span
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:3197:13
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:112:15
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:3090:7
+    at _c11 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/select.tsx:195:13)
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:101:15
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:3001:13
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:101:15
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-select.js?v=27d0e533:2545:59
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-TQG5UYZM.js?v=27d0e533:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RDHMCQ3E.js?v=27d0e533:41:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:360:22
+    at SelectPortal
+    at _c7 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/select.tsx:116:12)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:31:15)
+    at CollectionProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LRND2OLD.js?v=27d0e533:92:13)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-FR55676U.js?v=27d0e533:58:15)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-
+logCapturedError @ chunk-WERSD76P.js?v=27d0e533:14032
+Εμφάνιση 1 ακόμη πλαισίου
+Εμφάνιση λιγότερων
+chunk-WERSD76P.js?v=27d0e533:9129 Uncaught Error: Objects are not valid as a React child (found: object with keys {id, name, mis, na853, budget}). If you meant to render a collection of children, use an array instead.
+    at throwOnInvalidObjectType (chunk-WERSD76P.js?v=27d0e533:9934:17)
+    at reconcileChildFibers2 (chunk-WERSD76P.js?v=27d0e533:10564:15)
+    at reconcileChildren (chunk-WERSD76P.js?v=27d0e533:14290:37)
+    at updateHostComponent (chunk-WERSD76P.js?v=27d0e533:14807:11)
+    at beginWork (chunk-WERSD76P.js?v=27d0e533:15935:22)
+    at beginWork$1 (chunk-WERSD76P.js?v=27d0e533:19753:22)
+    at performUnitOfWork (chunk-WERSD76P.js?v=27d0e533:19198:20)
+    at workLoopSync (chunk-WERSD76P.js?v=27d0e533:19137:13)
+    at renderRootSync (chunk-WERSD76P.js?v=27d0e533:19116:15)
+    at recoverFromConcurrentError (chunk-WERSD76P.js?v=27d0e533:18736:28)

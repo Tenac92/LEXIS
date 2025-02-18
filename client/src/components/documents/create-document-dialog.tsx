@@ -163,12 +163,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   };
 
-  const getProjectDisplayName = (projectId: string | undefined): string => {
-    if (!projectId) return 'Select project';
-    const project = projects.find(p => p.id.toString() === projectId);
-    return project ? (project.na853 ? `${project.na853} - ${project.name}` : project.name) : 'Select project';
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -255,7 +249,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           {projects?.map((project) => (
                             <SelectItem 
                               key={`project-${project.id}`}
-                              value={String(project.id)}
+                              value={project.id.toString()}
                             >
                               {project.na853 ? `${project.na853} - ${project.name}` : project.name}
                             </SelectItem>
@@ -284,8 +278,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {expenditureTypes?.map((type) => (
-                            <SelectItem key={`type-${type}`} value={type}>
+                          {expenditureTypes?.map((type, index) => (
+                            <SelectItem 
+                              key={`expenditure-type-${index}`} 
+                              value={type}
+                            >
                               {type}
                             </SelectItem>
                           ))}
