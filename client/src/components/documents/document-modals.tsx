@@ -180,11 +180,13 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
 export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [correctionReason, setCorrectionReason] = useState('');
-  const [comments, setComments] = useState(document?.comments || '');
+  const [protocolNumber, setProtocolNumber] = useState(document?.protocol_number_input || '');
+  const [protocolDate, setProtocolDate] = useState(
+    document?.protocol_date ? new Date(document.protocol_date).toISOString().split('T')[0] : ''
+  );
+  const [projectId, setProjectId] = useState(document?.project_id || '');
+  const [expenditureType, setExpenditureType] = useState(document?.expenditure_type || '');
   const [recipients, setRecipients] = useState(document?.recipients || []);
-  const [unit, setUnit] = useState(document?.unit || '');
-  const [na853, setNa853] = useState(document?.project_na853 || '');
 
   const handleRecipientChange = (index: number, field: string, value: string | number) => {
     const updatedRecipients = [...recipients];
@@ -220,44 +222,42 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
 
   const handleEdit = async () => {
     try {
-      if (!correctionReason.trim()) {
+      if (!protocolNumber || !protocolDate) {
         toast({
           title: "Error",
-          description: "Please provide a reason for correction",
+          description: "Protocol number and date are required",
           variant: "destructive",
         });
         return;
       }
 
       setLoading(true);
-      await apiRequest(`/api/documents/generated/${document.id}/orthi-epanalipsi`, {
-        method: 'POST',
+      await apiRequest(`/api/documents/generated/${document.id}`, {
+        method: 'PATCH',
         body: {
-          ...document,
-          unit,
-          project_na853: na853,
-          comments: correctionReason,
+          protocol_number_input: protocolNumber,
+          protocol_date: protocolDate,
+          project_id: projectId,
+          expenditure_type: expenditureType,
           recipients: recipients.map(r => ({
             ...r,
             amount: parseFloat(r.amount) || 0,
             installment: parseInt(r.installment) || 1
           })),
-          original_protocol_number: document.protocol_number_input,
-          original_protocol_date: document.protocol_date,
-          status: 'pending',
           total_amount: calculateTotalAmount()
         }
       });
 
       toast({
         title: "Success",
-        description: "Document correction created successfully",
+        description: "Document updated successfully",
       });
       onEdit(document.id);
+      onClose();
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to create document correction",
+        description: "Failed to update document",
         variant: "destructive",
       });
     } finally {
@@ -269,61 +269,50 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Document Correction</DialogTitle>
+          <DialogTitle>Edit Document</DialogTitle>
           <DialogDescription>
-            Create a correction for this document. All fields are required.
+            Make changes to the document here. All fields are required.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
           <div className="space-y-4">
-            {/* Original Document Info */}
+            {/* Protocol Information */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Original Protocol</Label>
+                <Label>Protocol Number</Label>
                 <Input
-                  value={document.protocol_number_input || ''}
-                  readOnly
-                  className="bg-muted"
+                  value={protocolNumber}
+                  onChange={(e) => setProtocolNumber(e.target.value)}
+                  placeholder="Enter protocol number"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Original Protocol Date</Label>
+                <Label>Protocol Date</Label>
                 <Input
-                  value={document.protocol_date ? new Date(document.protocol_date).toLocaleDateString() : ''}
-                  readOnly
-                  className="bg-muted"
+                  type="date"
+                  value={protocolDate}
+                  onChange={(e) => setProtocolDate(e.target.value)}
                 />
               </div>
             </div>
 
-            {/* Correction Reason */}
-            <div className="space-y-2">
-              <Label>Reason for Correction</Label>
-              <Textarea
-                value={correctionReason}
-                onChange={(e) => setCorrectionReason(e.target.value)}
-                placeholder="Provide the reason for this correction..."
-                className="min-h-[100px]"
-              />
-            </div>
-
-            {/* Document Details */}
+            {/* Project Information */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Unit</Label>
+                <Label>Project ID</Label>
                 <Input
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  placeholder="Enter unit"
+                  value={projectId}
+                  onChange={(e) => setProjectId(e.target.value)}
+                  placeholder="Enter project ID"
                 />
               </div>
               <div className="space-y-2">
-                <Label>NA853</Label>
+                <Label>Expenditure Type</Label>
                 <Input
-                  value={na853}
-                  onChange={(e) => setNa853(e.target.value)}
-                  placeholder="Enter NA853"
+                  value={expenditureType}
+                  onChange={(e) => setExpenditureType(e.target.value)}
+                  placeholder="Enter expenditure type"
                 />
               </div>
             </div>
@@ -403,16 +392,6 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                 </span>
               </div>
             </div>
-            {/* Comments Section */}
-            <div>
-              <Label>Comments</Label>
-              <Textarea
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                placeholder="Add your comments here..."
-                className="mt-2"
-              />
-            </div>
           </div>
         </div>
         <DialogFooter>
@@ -420,7 +399,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
             Cancel
           </Button>
           <Button onClick={handleEdit} disabled={loading}>
-            {loading ? "Creating Correction..." : "Create Correction"}
+            {loading ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>
