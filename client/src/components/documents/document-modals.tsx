@@ -9,10 +9,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface BaseModalProps {
   isOpen: boolean;
@@ -34,14 +33,21 @@ interface DeleteModalProps extends BaseModalProps {
 }
 
 export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps) {
-  if (!document) return null;
-
   const { toast } = useToast();
-  const [protocolNumber, setProtocolNumber] = useState(document.protocol_number_input || '');
-  const [protocolDate, setProtocolDate] = useState(document.protocol_date ?
-    new Date(document.protocol_date).toISOString().split('T')[0] :
-    new Date().toISOString().split('T')[0]
-  );
+  const [protocolNumber, setProtocolNumber] = useState('');
+  const [protocolDate, setProtocolDate] = useState('');
+
+  useEffect(() => {
+    if (document) {
+      setProtocolNumber(document.protocol_number_input || '');
+      setProtocolDate(document.protocol_date ? 
+        new Date(document.protocol_date).toISOString().split('T')[0] :
+        new Date().toISOString().split('T')[0]
+      );
+    }
+  }, [document]);
+
+  if (!document) return null;
 
   const handleProtocolSave = async () => {
     try {
@@ -180,13 +186,24 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
 export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [protocolNumber, setProtocolNumber] = useState(document?.protocol_number_input || '');
-  const [protocolDate, setProtocolDate] = useState(
-    document?.protocol_date ? new Date(document.protocol_date).toISOString().split('T')[0] : ''
-  );
-  const [projectId, setProjectId] = useState(document?.project_id || '');
-  const [expenditureType, setExpenditureType] = useState(document?.expenditure_type || '');
-  const [recipients, setRecipients] = useState(document?.recipients || []);
+  const [protocolNumber, setProtocolNumber] = useState('');
+  const [protocolDate, setProtocolDate] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [expenditureType, setExpenditureType] = useState('');
+  const [recipients, setRecipients] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (document) {
+      setProtocolNumber(document.protocol_number_input || '');
+      setProtocolDate(document.protocol_date ? 
+        new Date(document.protocol_date).toISOString().split('T')[0] : 
+        ''
+      );
+      setProjectId(document.project_id || '');
+      setExpenditureType(document.expenditure_type || '');
+      setRecipients(document.recipients || []);
+    }
+  }, [document]);
 
   const handleRecipientChange = (index: number, field: string, value: string | number) => {
     const updatedRecipients = [...recipients];
@@ -264,6 +281,8 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
       setLoading(false);
     }
   };
+
+  if (!document) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
