@@ -4,6 +4,7 @@ import { Dashboard } from "@/components/dashboard/dashboard";
 import { Loader2, FileText, FolderKanban, LogOut } from "lucide-react";
 import { Link } from "wouter";
 import { Separator } from "@/components/ui/separator";
+import { FAB } from "@/components/ui/fab";
 
 export default function HomePage() {
   const { user, logoutMutation, isLoading } = useAuth();
@@ -61,6 +62,8 @@ export default function HomePage() {
       <main className="container mx-auto px-4 py-6">
         <Dashboard />
       </main>
+
+      <FAB />
     </div>
   );
 }
