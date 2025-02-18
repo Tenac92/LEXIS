@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, BorderStyle, WidthType } from 'docx';
+import { Document, Packer } from 'docx';
 import { supabase } from '../config/db';
 import path from 'path';
 
-// Import the correct DocumentFormatter
+// Import the DocumentFormatter
 const DocumentFormatter = require(path.join(__dirname, '../../attached_assets/documentFormatter.js'));
 
 export async function exportDocument(req: Request, res: Response) {
@@ -24,14 +24,14 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Ensure recipients array
+    // Ensure recipients array is properly formatted
     const recipients = Array.isArray(document.recipients) ? document.recipients : [];
 
-    // Create document with full formatting
+    // Create document using DocumentFormatter
     const docx = new Document({
       sections: [{
         properties: { 
-          page: {
+          page: { 
             ...DocumentFormatter.getDefaultMargins(),
             size: { width: 11906, height: 16838 },
             columns: { space: 708, count: 2 }
@@ -39,26 +39,8 @@ export async function exportDocument(req: Request, res: Response) {
         },
         children: [
           DocumentFormatter.createDocumentHeader(req),
-          new Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
           DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
-          new Paragraph({ 
-            children: [
-              new TextRun({ text: `Μονάδα: ${document.unit || 'N/A'}`, bold: true }),
-              new TextRun({ text: `    NA853: ${document.project_na853 || 'N/A'}`, bold: true })
-            ],
-            spacing: { before: 240, after: 240 }
-          }),
           DocumentFormatter.createPaymentTable(recipients),
-          new Paragraph({ text: '', spacing: { before: 300 } }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'ΣΥΝΟΛΟ: ', bold: true }),
-              new TextRun({ 
-                text: `${recipients.reduce((sum, r) => sum + parseFloat(r.amount), 0).toFixed(2)}€` 
-              })
-            ]
-          }),
-          new Paragraph({ text: '', spacing: { before: 300 } }),
           DocumentFormatter.createDocumentFooter()
         ]
       }]
@@ -77,8 +59,4 @@ export async function exportDocument(req: Request, res: Response) {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-}
-
-function calculateTotal(recipients: any[]): number {
-  return recipients.reduce((sum, recipient) => sum + parseFloat(recipient.amount), 0);
 }
