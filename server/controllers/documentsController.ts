@@ -135,10 +135,10 @@ router.get('/generated/:id/export', async (req, res) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    // Modified query to use explicit join
+    // Simple query without join since recipients is a JSONB column
     const { data, error } = await supabase
       .from('generated_documents')
-      .select('*')
+      .select('*, recipients')
       .eq('id', id)
       .single();
 
