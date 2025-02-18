@@ -3,6 +3,7 @@ import { supabase } from "./db";
 import session from "express-session";
 import { storage } from "./storage";
 import type { User } from "@shared/schema";
+import bcrypt from "bcrypt";
 
 // Session middleware
 const sessionMiddleware = session({
@@ -26,7 +27,7 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
       });
     }
     req.user = req.session.user;
-    console.log('[Auth] User authenticated:', req.user.email);
+    console.log('[Auth] User authenticated:', req.user.username);
     next();
   } catch (error) {
     console.error('[Auth] Authentication error:', error);
@@ -42,21 +43,21 @@ export async function setupAuth(app: Express) {
 
   app.post("/api/login", async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { username, password } = req.body; // Changed to username
 
-      if (!email || !password) {
+      if (!username || !password) {
         return res.status(400).json({
-          error: { message: 'Email and password are required' }
+          error: { message: 'Username and password are required' }
         });
       }
 
-      console.log('[Auth] Attempting login for email:', email);
+      console.log('[Auth] Attempting login for username:', username);
 
-      // Query the users table directly using supabase
+      // Query the users table using email as username
       const { data: user, error } = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
+        .eq('username', username) 
         .single();
 
       if (error) {
@@ -67,24 +68,30 @@ export async function setupAuth(app: Express) {
       }
 
       if (!user) {
-        console.error('[Auth] No user found for email:', email);
+        console.error('[Auth] No user found for username:', username);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
       }
 
-      // Compare password - for now just compare directly since we're using Supabase's auth
-      if (password !== user.password) {
-        console.error('[Auth] Password validation failed for user:', email);
+      // Compare password using bcrypt
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        console.error('[Auth] Password validation failed for user:', username);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
       }
 
+      // Map the database fields to our User type
       const userData: User = {
         id: user.id,
-        email: user.email,
+        username: user.username,
+        full_name: user.full_name,
         role: user.role,
+        unit: user.unit,
+        active: user.active,
+        name: user.name,
         created_at: user.created_at,
       };
 
@@ -94,7 +101,7 @@ export async function setupAuth(app: Express) {
         console.log('[Auth] User data stored in session:', userData);
       }
 
-      console.log('[Auth] Login successful for user:', email);
+      console.log('[Auth] Login successful for user:', username); // Changed to username
       res.json(userData);
 
     } catch (error) {

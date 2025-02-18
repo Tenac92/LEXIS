@@ -2,16 +2,16 @@ import { pgTable, text, serial, boolean, timestamp, jsonb, numeric, integer } fr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users table matching the CSV structure
+// Users table matching the actual database structure
 export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  role: text("role").default("user").notNull(),
+  id: serial("id").primaryKey(),
+  username: text("username").notNull(),
   password: text("password").notNull(),
-  units: jsonb("units"),
-  telephone: text("telephone"),
-  department: text("department"),
+  full_name: text("full_name").notNull(),
+  role: text("role").notNull(),
+  unit: text("unit"),
+  active: boolean("active").default(true),
+  name: text("name"),
   created_at: timestamp("created_at").defaultNow(),
 });
 
