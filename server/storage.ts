@@ -17,6 +17,7 @@ export interface IStorage {
   getProjectCatalog(): Promise<ProjectCatalog[]>;
   getProjectCatalogByUnit(unit: string): Promise<ProjectCatalog[]>;
   getProjectExpenditureTypes(projectId: string): Promise<string[]>;
+  getUserUnits(userId: string): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -28,6 +29,22 @@ export class DatabaseStorage implements IStorage {
       tableName: 'session',
       createTableIfMissing: true,
     });
+  }
+
+  async getUserUnits(userId: string): Promise<string[]> {
+    try {
+      const { data, error } = await supabase
+        .from('auth.users')
+        .select('units')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      return data?.units || [];
+    } catch (error) {
+      console.error('[Storage] Error fetching user units:', error);
+      throw error;
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {

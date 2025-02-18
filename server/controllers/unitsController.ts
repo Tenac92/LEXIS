@@ -6,22 +6,17 @@ const router = Router();
 
 router.get("/", authenticateToken, async (req, res) => {
   try {
-    const projects = await storage.getProjectCatalog();
+    // Get user's allowed units from their profile
+    const userUnits = await storage.getUserUnits(req.user!.id);
 
-    // Extract unique implementing agencies and map them to unit format
-    const uniqueUnits = Array.from(new Set(
-      projects.flatMap(project => 
-        Array.isArray(project.implementing_agency) 
-          ? project.implementing_agency 
-          : [project.implementing_agency]
-      )
-    )).filter(Boolean).map(name => ({
-      id: name,
-      name: name,
-      code: name,
+    // Map the units to the expected format
+    const formattedUnits = userUnits.map(unitName => ({
+      id: unitName,
+      name: unitName,
+      code: unitName,
     }));
 
-    res.json(uniqueUnits);
+    res.json(formattedUnits);
   } catch (error) {
     console.error("Error fetching units:", error);
     res.status(500).json({ error: "Failed to fetch units" });
