@@ -3,13 +3,12 @@ import { supabase } from "../config/db";
 
 export async function getDashboardStats(req: Request, res: Response) {
   try {
-    // Get document counts from the documents table
+    // Get document counts from the generated_documents table
     const { data: documentsData, error: documentsError } = await supabase
-      .from('documents')
+      .from('generated_documents')
       .select('status', { count: 'exact' });
 
     if (documentsError) {
-      // If table doesn't exist or other error, return empty stats
       console.error('Error fetching documents:', documentsError);
       return res.json({
         totalDocuments: 0,
@@ -30,7 +29,6 @@ export async function getDashboardStats(req: Request, res: Response) {
     });
   } catch (error) {
     console.error('Dashboard stats error:', error);
-    // Return empty stats instead of error to prevent UI from showing error state
     res.json({
       totalDocuments: 0,
       pendingDocuments: 0,
