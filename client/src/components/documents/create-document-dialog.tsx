@@ -65,19 +65,16 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   });
 
-  // Fetch units
   const { data: units = [], isLoading: unitsLoading } = useQuery<Unit[]>({
     queryKey: ["/api/units"],
     enabled: currentStep === 0
   });
 
-  // Fetch projects when unit is selected
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects", form.watch("unit")],
     enabled: currentStep === 0 && Boolean(form.watch("unit"))
   });
 
-  // Fetch expenditure types when project is selected
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
     queryKey: ["/api/projects", form.watch("project"), "expenditure-types"],
     enabled: Boolean(form.watch("project"))
@@ -236,7 +233,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                     <FormItem>
                       <FormLabel>Project</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          // Reset expenditure type when project changes
+                          form.setValue("expenditure_type", "");
+                        }}
                         value={field.value}
                         disabled={!form.watch("unit") || projectsLoading}
                       >
@@ -248,7 +249,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <SelectContent>
                           {projects?.map((project) => (
                             <SelectItem 
-                              key={`project-${project.id}`}
+                              key={`project-${project.id}`} 
                               value={project.id.toString()}
                             >
                               {project.na853 ? `${project.na853} - ${project.name}` : project.name}
@@ -280,7 +281,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <SelectContent>
                           {expenditureTypes?.map((type, index) => (
                             <SelectItem 
-                              key={`expenditure-type-${index}`} 
+                              key={`expenditure-${index}`}
                               value={type}
                             >
                               {type}
