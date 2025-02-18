@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { supabase } from '../config/db';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, BorderStyle } from 'docx';
+import { Document, Packer } from 'docx';
 import type { Database } from '@shared/schema';
+import { DocumentFormatter } from '../utils/DocumentFormatter';
 
 const router = Router();
 
@@ -135,7 +136,6 @@ router.get('/generated/:id/export', async (req, res) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    // Simple query without join since recipients is a JSONB column
     const { data, error } = await supabase
       .from('generated_documents')
       .select('*, recipients')
@@ -151,131 +151,79 @@ router.get('/generated/:id/export', async (req, res) => {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Create document sections with proper table structure
-    const headerRow = new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph({
-            children: [new TextRun({ text: 'Document Export', bold: true })],
-            alignment: AlignmentType.LEFT
-          })]
-        })
-      ]
-    });
+    // Format recipients data
+    const recipients = Array.isArray(data.recipients)
+      ? data.recipients.map(recipient => ({
+          lastname: recipient.lastname || '',
+          firstname: recipient.firstname || '',
+          fathername: recipient.fathername || '',
+          amount: Number(recipient.amount) || 0,
+          installment: Number(recipient.installment) || 1,
+          afm: recipient.afm || ''
+        }))
+      : [];
 
-    const headerTable = new Table({
-      width: {
-        size: 100,
-        type: 'pct',
-      },
-      rows: [headerRow]
-    });
-
-    // Create content table with headers
-    const contentHeaderRow = new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Name', bold: true })] })]
-        }),
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'AFM', bold: true })] })]
-        }),
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: 'Amount', bold: true })] })]
-        })
-      ]
-    });
-
-    const contentRows = (data.recipients || []).map((recipient: any) => 
-      new TableRow({
-        children: [
-          new TableCell({
-            children: [new Paragraph({ 
-              children: [new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` })]
-            })]
-          }),
-          new TableCell({
-            children: [new Paragraph({ children: [new TextRun({ text: recipient.afm })] })]
-          }),
-          new TableCell({
-            children: [new Paragraph({ 
-              children: [new TextRun({ text: `${recipient.amount}€` })]
-            })]
-          })
-        ]
-      })
-    );
-
-    const contentTable = new Table({
-      width: {
-        size: 100,
-        type: 'pct',
-      },
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
-        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-        insideVertical: { style: BorderStyle.SINGLE, size: 1 }
-      },
-      rows: [contentHeaderRow, ...contentRows]
-    });
-
-    // Create document
+    // Create document using our DocumentFormatter
     const docx = new Document({
       sections: [{
-        properties: { 
-          page: { 
-            margin: { 
-              top: 1000, 
-              bottom: 1000, 
-              left: 1000, 
-              right: 1000 
-            } 
-          } 
+        properties: {
+          page: {
+            ...DocumentFormatter.getDefaultMargins(),
+            size: { width: 11906, height: 16838 }
+          }
         },
         children: [
-          headerTable,
-          new Paragraph({ text: '' }), // Spacing
-          contentTable,
-          new Paragraph({ text: '' }), // Spacing
+          DocumentFormatter.createDocumentHeader(req),
+          DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
+          new Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: `Μονάδα: ${data.unit || 'N/A'}`, bold: true }),
+              new TextRun({ text: `    NA853: ${data.project_na853 || 'N/A'}`, bold: true })
+            ],
+            spacing: { before: 240, after: 240 }
+          }),
+          DocumentFormatter.createPaymentTable(recipients),
+          new Paragraph({ text: '', spacing: { before: 300 } }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: 'ΣΥΝΟΛΟ: ', bold: true }),
+              new TextRun({ text: `${data.total_amount?.toFixed(2) || '0.00'}€` })
+            ]
+          }),
+          DocumentFormatter.createDocumentFooter()
         ]
       }]
     });
 
-    // Pack document
     const buffer = await Packer.toBuffer(docx);
 
-    // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${data.document_number || data.id}.docx`);
-
-    // Send document
+    res.setHeader('Content-Disposition', `attachment; filename=document-${data.document_number || id}.docx`);
     res.send(buffer);
 
   } catch (error) {
     console.error('Export error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Failed to export document',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
 
+// Update POST route for custom document export
 router.post('/generated/:id/export', async (req, res) => {
   try {
     const { id } = req.params;
-    const { format, unit_details, contact_info, margins, include_attachments, include_signatures } = req.body;
+    const { unit_details, margins } = req.body;
 
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    // Fetch document data from database
     const { data: document, error } = await supabase
       .from('generated_documents')
-      .select('*, recipients(*)')
+      .select('*, recipients')
       .eq('id', id)
       .single();
 
@@ -284,76 +232,44 @@ router.post('/generated/:id/export', async (req, res) => {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Create document sections
-    const headerTable = new Table({
-      rows: [{
-        children: [{
-          children: [
-            new Paragraph({
-              children: [new TextRun({ text: unit_details?.unit_name || '', bold: true })],
-              alignment: AlignmentType.LEFT
-            })
-          ]
-        }]
-      }]
-    });
+    // Format recipients data
+    const recipients = Array.isArray(document.recipients)
+      ? document.recipients.map(recipient => ({
+          lastname: recipient.lastname || '',
+          firstname: recipient.firstname || '',
+          fathername: recipient.fathername || '',
+          amount: Number(recipient.amount) || 0,
+          installment: Number(recipient.installment) || 1,
+          afm: recipient.afm || ''
+        }))
+      : [];
 
-    const contentTable = new Table({
-      rows: (document.recipients || []).map((recipient: any) => ({
-        children: [{
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` }),
-                new TextRun({ text: ` - ${recipient.afm}` }),
-                new TextRun({ text: ` - ${recipient.amount}€` })
-              ]
-            })
-          ]
-        }]
-      }))
-    });
-
-    const footerTable = new Table({
-      rows: [{
-        children: [{
-          children: [
-            new Paragraph({
-              children: [new TextRun({ text: contact_info?.contact_person || '' })],
-              alignment: AlignmentType.CENTER
-            })
-          ]
-        }]
-      }]
-    });
-
-    // Create document
+    // Create document using DocumentFormatter
     const docx = new Document({
       sections: [{
-        properties: { page: { margin: margins } },
+        properties: {
+          page: {
+            margin: margins || DocumentFormatter.getDefaultMargins()
+          }
+        },
         children: [
-          headerTable,
-          new Paragraph({ text: '' }), // Spacing
-          contentTable,
-          new Paragraph({ text: '' }), // Spacing
-          footerTable
+          DocumentFormatter.createDocumentHeader(req, unit_details),
+          DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
+          DocumentFormatter.createPaymentTable(recipients),
+          DocumentFormatter.createDocumentFooter()
         ]
       }]
     });
 
-    // Pack document
     const buffer = await Packer.toBuffer(docx);
 
-    // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${document.document_number || document.id}.docx`);
-
-    // Send document
+    res.setHeader('Content-Disposition', `attachment; filename=document-${document.document_number || id}.docx`);
     res.send(buffer);
 
   } catch (error) {
     console.error('Export error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Failed to export document',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
