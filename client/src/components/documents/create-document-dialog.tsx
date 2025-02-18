@@ -18,7 +18,7 @@ interface Unit {
 
 interface Project {
   id: string;
-  name: string;
+  event_description: string;
   na853: string;
   mis?: string;
   budget?: number;
@@ -167,10 +167,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   };
 
   const getProjectDisplayName = (project: Project): string => {
-    if (project.na853 && project.name) {
-      return `${project.na853} - ${project.name}`;
+    if (project.na853 && project.event_description) {
+      return `${project.na853} - ${project.event_description}`;
     }
-    return project.name;
+    return project.event_description || 'Unknown Project';
   };
 
   return (
