@@ -65,14 +65,16 @@ export async function setupAuth(app: Express) {
         .single();
 
       if (error || !user) {
+        console.error('User lookup error:', error);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
       }
 
       // Verify password using bcrypt
-      const isValid = await bcrypt.compare(password, user.encrypted_password);
+      const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
+        console.error('Password validation failed for user:', email);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
