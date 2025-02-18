@@ -65,12 +65,26 @@ export async function setupAuth(app: Express) {
         });
       }
 
+      // Compare password using bcrypt
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          error: { message: 'Invalid credentials' }
+        });
+      }
+
       // Set user in session
       req.session.user = user;
       await req.session.save();
 
-      // Query the users table using email as username
-      const { data: user, error } = await supabase
+      // Return user data
+      const userData = {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      };
+
+      return res.json(userData);
         .from('users')
         .select('*')
         .eq('username', username)
