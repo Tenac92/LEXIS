@@ -138,16 +138,7 @@ router.get('/generated/:id/export', async (req, res) => {
     // Modified query to use explicit join
     const { data, error } = await supabase
       .from('generated_documents')
-      .select(`
-        *,
-        recipients:recipients(
-          id,
-          firstname,
-          lastname,
-          afm,
-          amount
-        )
-      `)
+      .select('*')
       .eq('id', id)
       .single();
 
