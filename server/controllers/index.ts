@@ -9,7 +9,12 @@ import attachmentsController from './attachments';
 
 const router = express.Router();
 
-// Mount controllers with authentication middleware
+import authController from './authController';
+
+// Mount auth controller without authentication middleware
+router.use('/auth', authController);
+
+// Mount other controllers with authentication middleware
 router.use('/documents', authenticateSession, documentsController);
 router.use('/recipients', authenticateSession, recipientsController);
 router.use('/stats', authenticateSession, statsController);
