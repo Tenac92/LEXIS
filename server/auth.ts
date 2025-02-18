@@ -57,15 +57,24 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      // Query our custom auth.users table
+      console.log('Attempting login for email:', email);
+
+      // Query the users table in auth schema
       const { data: user, error } = await supabase
-        .from('auth.users')
+        .from('users')
         .select('*')
         .eq('email', email)
         .single();
 
-      if (error || !user) {
-        console.error('User lookup error:', error);
+      if (error) {
+        console.error('Database query error:', error);
+        return res.status(401).json({
+          error: { message: 'Invalid credentials' }
+        });
+      }
+
+      if (!user) {
+        console.error('No user found for email:', email);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
@@ -90,6 +99,7 @@ export async function setupAuth(app: Express) {
       // Store user data in session
       req.session.user = userData;
 
+      console.log('Login successful for user:', email);
       res.json(userData);
 
     } catch (error) {
