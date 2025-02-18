@@ -7,6 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
@@ -33,6 +36,41 @@ interface DeleteModalProps extends BaseModalProps {
 export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps) {
   if (!document) return null;
 
+  const { toast } = useToast();
+  const [protocolNumber, setProtocolNumber] = useState(document.protocol_number_input || '');
+  const [protocolDate, setProtocolDate] = useState(document.protocol_date ? 
+    new Date(document.protocol_date).toISOString().split('T')[0] : 
+    new Date().toISOString().split('T')[0]
+  );
+
+  const handleProtocolSave = async () => {
+    try {
+      if (!protocolNumber || !protocolDate) {
+        throw new Error('Protocol number and date are required');
+      }
+
+      await apiRequest(`/api/documents/generated/${document.id}/protocol`, {
+        method: 'PATCH',
+        body: {
+          protocol_number: protocolNumber,
+          protocol_date: protocolDate
+        }
+      });
+
+      toast({
+        title: "Success",
+        description: "Protocol updated successfully",
+      });
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update protocol",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px]">
@@ -41,13 +79,39 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-4">
+            {/* Protocol Section */}
+            <div className="p-4 bg-muted rounded-lg">
+              <h3 className="font-medium text-lg mb-4">Protocol Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Protocol Number</Label>
+                  <Input 
+                    value={protocolNumber}
+                    onChange={(e) => setProtocolNumber(e.target.value)}
+                    placeholder="Enter protocol number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Protocol Date</Label>
+                  <Input 
+                    type="date"
+                    value={protocolDate}
+                    onChange={(e) => setProtocolDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button 
+                className="mt-4"
+                onClick={handleProtocolSave}
+              >
+                Save Protocol
+              </Button>
+            </div>
+
+            {/* Document Information */}
             <div>
               <h3 className="font-medium text-lg">Document Information</h3>
               <div className="grid grid-cols-2 gap-4 mt-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Protocol Number</p>
-                  <p className="font-medium">{document.protocol_number_input || 'N/A'}</p>
-                </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status</p>
                   <p className="font-medium capitalize">{document.status}</p>
@@ -69,7 +133,8 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
                 </div>
               </div>
             </div>
-            
+
+            {/* Recipients Section */}
             {document.recipients && document.recipients.length > 0 && (
               <div>
                 <h3 className="font-medium text-lg mb-2">Recipients</h3>
@@ -115,13 +180,28 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
 export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [comments, setComments] = useState(document?.comments || '');
+  const [recipients, setRecipients] = useState(document?.recipients || []);
+
+  const handleRecipientChange = (index: number, field: string, value: string) => {
+    const updatedRecipients = [...recipients];
+    updatedRecipients[index] = {
+      ...updatedRecipients[index],
+      [field]: value,
+    };
+    setRecipients(updatedRecipients);
+  };
 
   const handleEdit = async () => {
     try {
       setLoading(true);
-      await apiRequest(`/api/documents/${document.id}`, {
+      await apiRequest(`/api/documents/generated/${document.id}`, {
         method: 'PATCH',
-        body: document
+        body: {
+          ...document,
+          comments,
+          recipients,
+        }
       });
       toast({
         title: "Success",
@@ -142,14 +222,53 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Edit Document</DialogTitle>
           <DialogDescription>
             Make changes to the document here.
           </DialogDescription>
         </DialogHeader>
-        {/* Add form fields here */}
+        <div className="grid gap-4 py-4">
+          <div className="space-y-4">
+            {/* Recipients Section */}
+            <div>
+              <Label>Recipients</Label>
+              <div className="space-y-2 mt-2">
+                {recipients.map((recipient: any, index: number) => (
+                  <div key={index} className="grid grid-cols-3 gap-2 p-2 bg-muted rounded-lg">
+                    <Input
+                      value={recipient.firstname}
+                      onChange={(e) => handleRecipientChange(index, 'firstname', e.target.value)}
+                      placeholder="First Name"
+                    />
+                    <Input
+                      value={recipient.lastname}
+                      onChange={(e) => handleRecipientChange(index, 'lastname', e.target.value)}
+                      placeholder="Last Name"
+                    />
+                    <Input
+                      value={recipient.amount}
+                      type="number"
+                      onChange={(e) => handleRecipientChange(index, 'amount', e.target.value)}
+                      placeholder="Amount"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Comments Section */}
+            <div>
+              <Label>Comments</Label>
+              <Textarea
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                placeholder="Add your comments here..."
+                className="mt-2"
+              />
+            </div>
+          </div>
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
@@ -170,7 +289,7 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
   const handleDelete = async () => {
     try {
       setLoading(true);
-      await apiRequest(`/api/documents/${documentId}`, {
+      await apiRequest(`/api/documents/generated/${documentId}`, {
         method: 'DELETE'
       });
       toast({
