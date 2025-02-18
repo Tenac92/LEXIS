@@ -1,17 +1,18 @@
 import { Router } from 'express';
 import { supabase } from '../config/db';
-import { documents, type Document } from '@shared/schema';
-import type { Request, Response } from 'express';
+import type { Database } from '@shared/schema';
 
 const router = Router();
 
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req, res) => {
   try {
-    const { status, unit, dateFrom, dateTo, amountFrom, amountTo, user, recipient, afm } = req.query;
-    let query = supabase.from('documents').select(`
-      *,
-      creator:created_by(name, email)
-    `);
+    const { status, unit, dateFrom, dateTo, amountFrom, amountTo, user } = req.query;
+    let query = supabase.from('generated_documents').select('*');
+
+    // Filter by user's role
+    if (req.user?.role !== 'admin') {
+      query = query.eq('generated_by', req.user?.id);
+    }
 
     // Apply filters
     if (status && status !== 'all') {
@@ -33,32 +34,31 @@ router.get('/', async (req: Request, res: Response) => {
       query = query.lte('total_amount', amountTo);
     }
 
-    // Add recipient and AFM filters if provided
-    if (recipient) {
-      query = query.ilike('title', `%${recipient}%`);
-    }
-    if (afm) {
-      query = query.eq('afm', afm);
+    // User/Recipient filter with proper text search
+    if (user) {
+      const searchTerm = (user as string).toLowerCase().trim();
+      if (searchTerm) {
+        query = query.or(`recipients.cs.[{"lastname":"${searchTerm}"}],recipients.cs.[{"afm":"${searchTerm}"}]`);
+      }
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    query = query.order('created_at', { ascending: false });
+
+    const { data, error } = await query;
 
     if (error) throw error;
     res.json(data);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error fetching documents:', error);
     res.status(500).json({ message: 'Failed to fetch documents' });
   }
 });
 
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('documents')
-      .select(`
-        *,
-        creator:created_by(name, email)
-      `)
+      .from('generated_documents')
+      .select('*')
       .eq('id', req.params.id)
       .single();
 
@@ -69,22 +69,22 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     res.json(data);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error fetching document:', error);
     res.status(500).json({ message: 'Failed to fetch document' });
   }
 });
 
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
     const { data, error } = await supabase
-      .from('documents')
+      .from('generated_documents')
       .insert({
         ...req.body,
-        created_by: req.user.id,
+        generated_by: req.user.id,
         created_at: new Date().toISOString()
       })
       .select()
@@ -93,17 +93,18 @@ router.post('/', async (req: Request, res: Response) => {
     if (error) throw error;
     res.status(201).json(data);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error creating document:', error);
     res.status(500).json({ message: 'Failed to create document' });
   }
 });
 
-router.patch('/:id', async (req: Request, res: Response) => {
+router.patch('/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('documents')
+      .from('generated_documents')
       .update({
         ...req.body,
+        updated_by: req.user?.id,
         updated_at: new Date().toISOString()
       })
       .eq('id', req.params.id)
@@ -117,7 +118,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
 
     res.json(data);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error updating document:', error);
     res.status(500).json({ message: 'Failed to update document' });
   }
 });

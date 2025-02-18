@@ -24,14 +24,14 @@ interface DocumentCardProps {
     title: string;
     status: 'pending' | 'completed';
     created_at: string;
-    amount: number;
+    total_amount: number;
     recipients: Array<{
-      name: string;
+      lastname: string;
+      firstname: string;
       amount: number;
+      afm: string;
     }>;
-    creator: {
-      name: string;
-    };
+    generated_by: string;
   };
   onView: (id: string) => void;
   onEdit: (id: string) => void;
@@ -48,10 +48,12 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
               <FileText className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-medium text-foreground">{document.title}</h3>
+              <h3 className="font-medium text-foreground">
+                {document.title || `Document #${document.id}`}
+              </h3>
               <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                 <User className="h-3 w-3" />
-                <span>{document.creator.name}</span>
+                <span>ID: {document.generated_by}</span>
               </div>
             </div>
           </div>
@@ -101,7 +103,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
             </div>
             <div className="flex items-center gap-1 font-medium">
               <DollarSign className="h-3 w-3" />
-              {document.amount.toLocaleString('en-US', {
+              {document.total_amount.toLocaleString('en-US', {
                 style: 'currency',
                 currency: 'EUR'
               })}
