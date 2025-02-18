@@ -96,6 +96,15 @@ export const projects = pgTable("projects", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// Units table
+export const units = pgTable("units", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(),
+  created_at: timestamp("created_at").defaultNow(),
+  is_active: boolean("is_active").default(true),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
@@ -103,6 +112,7 @@ export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type Recipient = typeof recipients.$inferSelect;
 export type Project = typeof projects.$inferSelect;
+export type Unit = typeof units.$inferSelect;
 
 // Insert Types
 export type InsertDocumentTemplate = z.infer<typeof insertDocumentTemplateSchema>;
@@ -110,6 +120,7 @@ export type InsertDocumentVersion = z.infer<typeof insertDocumentVersionSchema>;
 export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
 export type InsertRecipient = z.infer<typeof insertRecipientSchema>;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type InsertUnit = z.infer<typeof insertUnitSchema>;
 
 // Insert Schemas
 export const insertDocumentTemplateSchema = createInsertSchema(documentTemplates);
@@ -126,6 +137,7 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
 });
 export const insertRecipientSchema = createInsertSchema(recipients);
 export const insertProjectSchema = createInsertSchema(projects);
+export const insertUnitSchema = createInsertSchema(units);
 
 // Database type for Supabase
 export type Database = {
@@ -151,6 +163,10 @@ export type Database = {
         Row: Project;
         Insert: InsertProject;
       };
+      units: {
+        Row: Unit;
+        Insert: InsertUnit;
+      }
     };
   };
   auth: {

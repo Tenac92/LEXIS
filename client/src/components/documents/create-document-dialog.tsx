@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,17 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+
+interface Unit {
+  id: string;
+  name: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+}
+
 
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
@@ -59,18 +70,18 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   });
 
-  const { data: units } = useQuery({
+  const { data: units = [], isLoading: unitsLoading } = useQuery<Unit[]>({
     queryKey: ["/api/units"],
     enabled: currentStep === 0
   });
 
-  const { data: projects } = useQuery({
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects", form.watch("unit")],
     enabled: !!form.watch("unit")
   });
 
-  const { data: expenditureTypes } = useQuery({
-    queryKey: ["/api/expenditure-types", form.watch("project")],
+  const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
+    queryKey: ["/api/projects", form.watch("project"), "expenditure-types"],
     enabled: !!form.watch("project")
   });
 
@@ -88,16 +99,16 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           formData.append(key, String(value));
         }
       });
-      
+
       const response = await fetch("/api/documents/generated", {
         method: "POST",
         body: formData
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to create document");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -120,7 +131,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const nextStep = () => {
     const fields = getFieldsForStep(currentStep);
     const isValid = fields.every(field => !form.formState.errors[field]);
-    
+
     if (isValid) {
       setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
     } else {
@@ -158,6 +169,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Create New Document</DialogTitle>
+          <DialogDescription>
+            Fill in the required information to create a new document. Navigate through the steps to complete the form.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center justify-center mb-8">
@@ -196,6 +210,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
+                        disabled={unitsLoading}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -203,7 +218,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {units?.map((unit) => (
+                          {units.map((unit) => (
                             <SelectItem key={unit.id} value={unit.id}>
                               {unit.name}
                             </SelectItem>
@@ -224,7 +239,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        disabled={!form.watch("unit")}
+                        disabled={!form.watch("unit") || projectsLoading}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -232,7 +247,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {projects?.map((project) => (
+                          {projects.map((project) => (
                             <SelectItem key={project.id} value={project.id}>
                               {project.name}
                             </SelectItem>
@@ -253,7 +268,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
-                        disabled={!form.watch("project")}
+                        disabled={!form.watch("project") || expenditureTypesLoading}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -261,7 +276,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {expenditureTypes?.map((type) => (
+                          {expenditureTypes.map((type) => (
                             <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>

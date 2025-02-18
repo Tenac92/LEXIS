@@ -5,6 +5,8 @@ import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
 import { authenticateSession } from "./auth";
 import documentsController from "./controllers/documentsController";
+import unitsController from "./controllers/unitsController";
+import projectsController from "./controllers/projectsController";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -15,6 +17,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Documents routes - make sure this is registered before the general apiRouter
   app.use('/api/documents', authenticateSession, documentsController);
+
+  // Units and Projects routes
+  app.use('/api/units', authenticateSession, unitsController);
+  app.use('/api/projects', authenticateSession, projectsController);
 
   // Mount all API routes under /api
   app.use('/api', apiRouter);
