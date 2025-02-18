@@ -1,7 +1,6 @@
-import { pgTable, text, serial, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, boolean, timestamp, jsonb, numeric, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { integer, numeric, jsonb } from "drizzle-orm/pg-core";
 
 // Users table matching Supabase Auth
 export const users = pgTable("auth.users", {
@@ -11,13 +10,22 @@ export const users = pgTable("auth.users", {
   role: text("role").default("user").notNull(),
 });
 
-// Login schema for validation
-export const loginSchema = z.object({
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+// Document Templates table
+export const documentTemplates = pgTable("document_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  created_at: timestamp("created_at").defaultNow(),
+  created_by: text("created_by").references(() => users.id),
+  updated_at: timestamp("updated_at"),
+  updated_by: text("updated_by").references(() => users.id),
+  is_active: boolean("is_active").default(true),
+  category: text("category").notNull(),
+  template_data: jsonb("template_data").notNull(),
+  structure_version: text("structure_version").notNull(),
 });
 
-// Generated Documents table
+// Generated Documents table (with versioning support)
 export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
   created_at: timestamp("created_at").defaultNow(),
@@ -39,25 +47,24 @@ export const generatedDocuments = pgTable("generated_documents", {
   comments: text("comments"),
   original_document_id: integer("original_document_id"),
   updated_by: text("updated_by").references(() => users.id),
+  template_id: integer("template_id").references(() => documentTemplates.id),
+  current_version: integer("current_version"),
 });
 
-// Types
-export type User = typeof users.$inferSelect;
-export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
-export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
-
-// Insert Schemas
-export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
-  recipients: z.array(z.object({
-    afm: z.string(),
-    amount: z.number(),
-    status: z.string(),
-    lastname: z.string(),
-    firstname: z.string(),
-    installment: z.number()
-  }))
+// Document Versions table
+export const documentVersions = pgTable("document_versions", {
+  id: serial("id").primaryKey(),
+  document_id: integer("document_id").references(() => generatedDocuments.id),
+  version_number: integer("version_number").notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+  created_by: text("created_by").references(() => users.id),
+  changes: jsonb("changes").notNull(),
+  recipients: jsonb("recipients").notNull(),
+  metadata: jsonb("metadata"),
+  is_current: boolean("is_current").default(false),
 });
 
+// Recipients table
 export const recipients = pgTable("recipients", {
   id: serial("id").primaryKey(),
   firstname: text("firstname").notNull(),
@@ -77,6 +84,7 @@ export const recipients = pgTable("recipients", {
   }),
 });
 
+// Projects table
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   mis: text("mis").notNull().unique(),
@@ -86,20 +94,49 @@ export const projects = pgTable("projects", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
-// Schemas
+// Types
+export type User = typeof users.$inferSelect;
+export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type DocumentVersion = typeof documentVersions.$inferSelect;
+export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
+export type Recipient = typeof recipients.$inferSelect;
+export type Project = typeof projects.$inferSelect;
+
+// Insert Types
+export type InsertDocumentTemplate = z.infer<typeof insertDocumentTemplateSchema>;
+export type InsertDocumentVersion = z.infer<typeof insertDocumentVersionSchema>;
+export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
+export type InsertRecipient = z.infer<typeof insertRecipientSchema>;
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+
+// Insert Schemas
+export const insertDocumentTemplateSchema = createInsertSchema(documentTemplates);
+export const insertDocumentVersionSchema = createInsertSchema(documentVersions);
+export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
+  recipients: z.array(z.object({
+    afm: z.string(),
+    amount: z.number(),
+    status: z.string(),
+    lastname: z.string(),
+    firstname: z.string(),
+    installment: z.number()
+  }))
+});
 export const insertRecipientSchema = createInsertSchema(recipients);
 export const insertProjectSchema = createInsertSchema(projects);
 
-// Types
-export type Recipient = typeof recipients.$inferSelect;
-export type InsertRecipient = z.infer<typeof insertRecipientSchema>;
-export type Project = typeof projects.$inferSelect;
-export type InsertProject = z.infer<typeof insertProjectSchema>;
-
-// Define the Database type for Supabase
+// Database type for Supabase
 export type Database = {
   public: {
     Tables: {
+      document_templates: {
+        Row: DocumentTemplate;
+        Insert: InsertDocumentTemplate;
+      };
+      document_versions: {
+        Row: DocumentVersion;
+        Insert: InsertDocumentVersion;
+      };
       generated_documents: {
         Row: GeneratedDocument;
         Insert: InsertGeneratedDocument;

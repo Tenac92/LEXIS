@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, WidthType, AlignmentType, VerticalAlign } from 'docx';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, WidthType, AlignmentType, VerticalAlign, IBorderOptions } from 'docx';
 import { Request } from 'express';
 
 interface DocumentMargins {
@@ -65,7 +65,7 @@ export class DocumentFormatter {
         right: { style: BorderStyle.SINGLE, size: 1 },
         insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
         insideVertical: { style: BorderStyle.SINGLE, size: 1 }
-      },
+      } as { [key: string]: IBorderOptions },
       rows: [
         this.createTableHeader(['Α.Α.', 'ΟΝΟΜΑΤΕΠΩΝΥΜΟ', 'ΠΟΣΟ (€)', 'ΔΟΣΗ', 'ΑΦΜ']),
         ...this.createTableRows(recipients)
@@ -125,7 +125,7 @@ export class DocumentFormatter {
 
   static createDocumentHeader(req: Request, unitDetails: UnitDetails = {}): Table {
     const defaultEmail = unitDetails?.email || this.DEFAULT_EMAIL;
-    
+
     const headerInfo = [
       { text: 'ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ', bold: true },
       { text: 'ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ', bold: true },
@@ -156,7 +156,13 @@ export class DocumentFormatter {
   ): Table {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: { top: {}, bottom: {}, left: {}, right: {}, insideVertical: {} },
+      borders: { 
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE }
+      },
       rows: [this.createHeaderRow(headerInfo, rightColumnInfo)]
     });
   }
@@ -212,7 +218,13 @@ export class DocumentFormatter {
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: { top: {}, bottom: {}, left: {}, right: {}, insideVertical: {} },
+      borders: { 
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE }
+      },
       rows: [
         new TableRow({
           children: [
