@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { User, LoginCredentials } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { supabase } from "@/lib/supabase";
+import { supabase, debugAuthState } from "@/lib/supabase";
 
 type AuthContextType = {
   user: User | null;
@@ -20,13 +20,25 @@ function useLoginMutation() {
   return useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
       try {
+        console.log('Attempting login with email:', credentials.email);
+
         const { data, error } = await supabase.auth.signInWithPassword({
           email: credentials.email,
           password: credentials.password,
         });
 
-        if (error) throw error;
-        if (!data.user) throw new Error('No user returned from authentication');
+        if (error) {
+          console.error('Supabase auth error:', error);
+          throw error;
+        }
+
+        if (!data.user) {
+          console.error('No user returned from authentication');
+          throw new Error('Authentication failed - no user returned');
+        }
+
+        console.log('Login successful:', data.user);
+        await debugAuthState();
 
         return {
           id: data.user.id,
@@ -36,14 +48,23 @@ function useLoginMutation() {
         } as User;
       } catch (err) {
         console.error('Authentication error:', err);
-        throw err;
+        if (err instanceof Error) {
+          throw new Error(`Login failed: ${err.message}`);
+        }
+        throw new Error('Login failed: Unknown error');
       }
     },
     onSuccess: (user) => {
+      console.log('Login mutation succeeded, updating cache with user:', user);
       queryClient.setQueryData(["/api/user"], user);
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${user.email}!`,
+      });
     },
     onError: (error: Error) => {
+      console.error('Login mutation error:', error);
       toast({
         title: "Login failed",
         description: error.message,
