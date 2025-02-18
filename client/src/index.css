@@ -11,3 +11,33 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+@layer components {
+  .document-card {
+    @apply relative;
+    perspective: 1000px;
+    height: 420px;
+  }
+
+  .flip-card-inner {
+    @apply relative w-full h-full;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+  }
+
+  .flip-card-front,
+  .flip-card-back {
+    @apply absolute w-full h-full p-6 bg-white rounded-xl border border-gray-200/75 shadow-sm;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+
+  .flip-card-back {
+    transform: rotateY(180deg);
+    @apply bg-white/95 backdrop-blur-sm;
+  }
+
+  .is-flipped {
+    transform: rotateY(180deg);
+  }
+}
