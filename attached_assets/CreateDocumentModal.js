@@ -731,8 +731,10 @@ export class CreateDocumentModal extends BaseModal {
               ${projects
                 .map(
                   (p) => `
-                <option value="${p.mis}" data-na853 ="${p.na853}" data-budget="${p.budget_na853}">${p.na853} - ${p.event_description || "Unnamed Project"}</option>
-              `,
+                  <option value="${p.mis}" data-na853="${p.na853}" data-budget="${p.budget_na853 || 0}">
+                    ${p.na853} - ${p.event_description || p.name || "Unnamed Project"}
+                  </option>
+                `,
                 )
                 .join("")}
             </select>
@@ -846,7 +848,7 @@ export class CreateDocumentModal extends BaseModal {
                 (recipient, index) => `
               <tr class="hover:bg-gray-50 transition-colors">
                 <td class="w-12 px-2 py-3 border-b border-r text-sm font-medium text-gray-900 text-center">
-                  <span class="inline-flex items-center justify-center h-7 w-7 rounded-full bg-blue-50 text-blue-600 font-semibold text-sm">
+                  <span class<span class="inline-flex items-center justify-center h-7 w-7 rounded-full bg-blue-50 text-blue-600 font-semibold text-sm">
                     ${index + 1}
                   </span>
                 </td>
