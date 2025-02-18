@@ -21,6 +21,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface DocumentCardProps {
   document: {
@@ -47,11 +48,35 @@ interface DocumentCardProps {
 
 export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: DocumentCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't flip if clicking on buttons or dropdown
     if (!(e.target as HTMLElement).closest('button')) {
       setIsFlipped(!isFlipped);
+    }
+  };
+
+  const handleButtonClick = async (
+    action: () => Promise<void>, 
+    successMessage: string
+  ) => {
+    try {
+      setIsLoading(true);
+      await action();
+      toast({
+        description: successMessage,
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -118,16 +143,49 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
           </div>
 
           <div className="mt-6 flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => onEdit(document.id)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleButtonClick(
+                  async () => await onEdit(document.id),
+                  "Document opened for editing"
+                );
+              }}
+              disabled={isLoading}
+            >
               <FileEdit className="h-3 w-3 mr-1" />
               Edit
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onExport(document.id)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleButtonClick(
+                  async () => await onExport(document.id),
+                  "Document exported successfully"
+                );
+              }}
+              disabled={isLoading}
+            >
               <Download className="h-3 w-3 mr-1" />
               Export
             </Button>
             {document.status !== 'completed' && (
-              <Button variant="outline" size="sm" onClick={() => onView(document.id)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleButtonClick(
+                    async () => await onView(document.id),
+                    "Protocol form opened"
+                  );
+                }}
+                disabled={isLoading}
+              >
                 <ClipboardCheck className="h-3 w-3 mr-1" />
                 Add Protocol
               </Button>
