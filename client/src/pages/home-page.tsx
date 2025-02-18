@@ -1,7 +1,8 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Dashboard } from "@/components/dashboard/dashboard";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileText, FolderKanban } from "lucide-react";
+import { Link } from "wouter";
 
 export default function HomePage() {
   const { user, logoutMutation, isLoading } = useAuth();
@@ -23,13 +24,27 @@ export default function HomePage() {
               <h1 className="text-2xl font-bold">Welcome, {user?.email}</h1>
               <p className="text-muted-foreground">Document Management System</p>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
-            >
-              Logout
-            </Button>
+            <div className="flex items-center gap-4">
+              <Link href="/documents">
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Generated Documents
+                </Button>
+              </Link>
+              <Link href="/projects">
+                <Button variant="ghost" className="flex items-center gap-2">
+                  <FolderKanban className="h-4 w-4" />
+                  Projects
+                </Button>
+              </Link>
+              <Button 
+                variant="outline" 
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+              >
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
