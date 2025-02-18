@@ -89,7 +89,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: Boolean(form.watch("project"))
   });
 
-  // Load budget data when project is selected
   const { data: projectBudget } = useQuery<BudgetData>({
     queryKey: ["/api/budget", form.watch("project")],
     enabled: Boolean(form.watch("project")),
@@ -110,15 +109,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     mutationFn: async (data: CreateDocumentForm) => {
       const formData = new FormData();
 
-      // Add basic fields
       formData.append("unit", data.unit);
       formData.append("project", data.project);
       formData.append("expenditure_type", data.expenditure_type);
-
-      // Add recipients as JSON
       formData.append("recipients", JSON.stringify(data.recipients));
 
-      // Add attachments
       Object.entries(data.attachments).forEach(([type, file]) => {
         if (file) {
           formData.append(`attachment_${type}`, file);
@@ -196,19 +191,33 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   };
 
   const nextStep = async () => {
-    const fields = getFieldsForStep(currentStep);
-    const isValid = await form.trigger(fields);
+    try {
+      const fields = getFieldsForStep(currentStep);
+      const isValid = await form.trigger(fields);
 
-    if (isValid) {
-      if (currentStep === 2 && !validateBudgetAmount()) {
-        toast({
-          title: "Error",
-          description: "Total amount exceeds available budget",
-          variant: "destructive"
-        });
+      if (!isValid) {
         return;
       }
+
+      if (currentStep === 2) {
+        if (!validateBudgetAmount()) {
+          toast({
+            title: "Error",
+            description: "Total amount exceeds available budget",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
       setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+    } catch (error) {
+      console.error('Error in nextStep:', error);
+      toast({
+        title: "Error",
+        description: "Failed to proceed to next step",
+        variant: "destructive"
+      });
     }
   };
 
@@ -231,7 +240,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   };
 
-  const onSubmit = (data: CreateDocumentForm) => {
+  const handleSubmit = (data: CreateDocumentForm) => {
     if (currentStep === steps.length - 1) {
       createDocumentMutation.mutate(data);
     } else {
@@ -280,7 +289,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             {currentStep === 0 && (
               <FormField
                 control={form.control}
@@ -335,8 +344,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         </FormControl>
                         <SelectContent>
                           {projects.map((project) => (
-                            <SelectItem 
-                              key={project.id.toString()} 
+                            <SelectItem
+                              key={project.id.toString()}
                               value={project.id.toString()}
                             >
                               {project.na853 ? `${project.na853} - ${project.name}` : project.name}
@@ -367,7 +376,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         </FormControl>
                         <SelectContent>
                           {expenditureTypes.map((type, index) => (
-                            <SelectItem 
+                            <SelectItem
                               key={`type-${index}`}
                               value={type}
                             >
@@ -460,9 +469,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <FormItem>
                           <FormLabel>Amount</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
+                            <Input
+                              type="number"
+                              {...field}
                               onChange={e => field.onChange(parseFloat(e.target.value))}
                             />
                           </FormControl>
@@ -477,9 +486,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <FormItem>
                           <FormLabel>Installment</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="number" 
-                              {...field} 
+                            <Input
+                              type="number"
+                              {...field}
                               onChange={e => field.onChange(parseInt(e.target.value))}
                               min={1}
                               max={12}
