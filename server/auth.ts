@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction, Express } from "express";
 import { supabase } from "./config/db";
+import bcrypt from "bcrypt";
 import type { User } from "@shared/schema";
 
-// Add type augmentation for Express Request
 declare global {
   namespace Express {
     interface Request {
@@ -12,34 +12,46 @@ declare global {
 }
 
 export const authenticateSession = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({
-      error: { message: 'Authentication required' }
-    });
-  }
-
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const { email, password } = req.body;
 
-    if (error || !user) {
-      return res.status(401).json({
-        error: { message: 'Invalid token' }
+    if (!email || !password) {
+      return res.status(400).json({
+        error: { message: 'Email and password are required' }
       });
     }
 
-    // Transform Supabase user to our User type
+    // Query our custom auth.users table
+    const { data: user, error } = await supabase
+      .from('auth.users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error || !user) {
+      return res.status(401).json({
+        error: { message: 'Invalid credentials' }
+      });
+    }
+
+    // Verify password using bcrypt
+    const isValid = await bcrypt.compare(password, user.encrypted_password);
+    if (!isValid) {
+      return res.status(401).json({
+        error: { message: 'Invalid credentials' }
+      });
+    }
+
     req.user = {
       id: user.id,
       email: user.email,
-      role: 'user',
+      role: user.role,
       created_at: user.created_at,
     };
 
     next();
   } catch (error) {
-    console.error('[Auth] Session authentication error:', error);
+    console.error('[Auth] Authentication error:', error);
     return res.status(500).json({
       error: { message: 'Authentication failed' }
     });
@@ -47,7 +59,6 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
 };
 
 export async function setupAuth(app: Express) {
-  // Login endpoint
   app.post("/api/login", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -58,25 +69,35 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      // Query our custom auth.users table
+      const { data: user, error } = await supabase
+        .from('auth.users')
+        .select('*')
+        .eq('email', email)
+        .single();
 
-      if (error) {
+      if (error || !user) {
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
       }
 
-      const user: User = {
-        id: data.user.id,
-        email: data.user.email,
-        role: 'user',
-        created_at: data.user.created_at,
+      // Verify password using bcrypt
+      const isValid = await bcrypt.compare(password, user.encrypted_password);
+      if (!isValid) {
+        return res.status(401).json({
+          error: { message: 'Invalid credentials' }
+        });
+      }
+
+      const userData: User = {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        created_at: user.created_at,
       };
 
-      res.json(user);
+      res.json(userData);
 
     } catch (error) {
       console.error('[Auth] Login error:', error);
@@ -86,16 +107,16 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/logout", async (req, res) => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      return res.status(500).json({
-        error: { message: 'Logout failed' }
-      });
-    }
-
-    res.sendStatus(200);
+  app.post("/api/logout", (req, res) => {
+    req.session?.destroy((err) => {
+      if (err) {
+        console.error('[Auth] Logout error:', err);
+        return res.status(500).json({
+          error: { message: 'Logout failed' }
+        });
+      }
+      res.sendStatus(200);
+    });
   });
 
   app.get("/api/user", authenticateSession, (req, res) => {

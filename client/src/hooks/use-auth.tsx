@@ -3,7 +3,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { User, LoginCredentials } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { supabase, debugAuthState } from "@/lib/supabase";
 
 type AuthContextType = {
   user: User | null;
@@ -11,7 +10,6 @@ type AuthContextType = {
   error: Error | null;
   loginMutation: ReturnType<typeof useLoginMutation>;
   logoutMutation: ReturnType<typeof useLogoutMutation>;
-  registerMutation: ReturnType<typeof useRegisterMutation>;
 };
 
 function useLoginMutation() {
@@ -20,32 +18,24 @@ function useLoginMutation() {
   return useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
       try {
-        console.log('Attempting login with email:', credentials.email);
+        console.log('Attempting login with:', credentials.email);
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: credentials.email,
-          password: credentials.password,
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(credentials),
         });
 
-        if (error) {
-          console.error('Supabase auth error:', error);
-          throw error;
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error?.message || 'Login failed');
         }
 
-        if (!data.user) {
-          console.error('No user returned from authentication');
-          throw new Error('Authentication failed - no user returned');
-        }
-
-        console.log('Login successful:', data.user);
-        await debugAuthState();
-
-        return {
-          id: data.user.id,
-          email: data.user.email,
-          role: 'user',
-          created_at: data.user.created_at,
-        } as User;
+        const user = await response.json();
+        console.log('Login successful:', user);
+        return user as User;
       } catch (err) {
         console.error('Authentication error:', err);
         if (err instanceof Error) {
@@ -74,59 +64,15 @@ function useLoginMutation() {
   });
 }
 
-function useRegisterMutation() {
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async (credentials: LoginCredentials) => {
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email: credentials.email,
-          password: credentials.password,
-          options: {
-            emailRedirectTo: window.location.origin,
-          },
-        });
-
-        if (error) throw error;
-        if (!data.user) throw new Error('No user returned from registration');
-
-        return {
-          id: data.user.id,
-          email: data.user.email,
-          role: 'user',
-          created_at: data.user.created_at,
-        } as User;
-      } catch (err) {
-        console.error('Registration error:', err);
-        throw err;
-      }
-    },
-    onSuccess: (user) => {
-      queryClient.setQueryData(["/api/user"], user);
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      toast({
-        title: "Registration successful",
-        description: "Please check your email to confirm your account",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Registration failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-}
-
 function useLogoutMutation() {
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      const response = await fetch('/api/logout', { method: 'POST' });
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
@@ -148,15 +94,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user, error, isLoading } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) return null;
-
-      return {
-        id: user.id,
-        email: user.email,
-        role: 'user',
-        created_at: user.created_at,
-      } as User;
+      try {
+        const response = await fetch('/api/user');
+        if (!response.ok) {
+          if (response.status === 401) return null;
+          throw new Error('Failed to fetch user data');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        return null;
+      }
     },
     retry: false,
     refetchOnWindowFocus: false,
@@ -164,7 +112,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
-  const registerMutation = useRegisterMutation();
 
   return (
     <AuthContext.Provider
@@ -174,7 +121,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: error instanceof Error ? error : null,
         loginMutation,
         logoutMutation,
-        registerMutation,
       }}
     >
       {children}
