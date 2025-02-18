@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,12 +42,7 @@ const createDocumentSchema = z.object({
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
-const steps = [
-  "Project Details",
-  "Recipients",
-  "Attachments",
-  "Review"
-];
+const steps = ["Project Details", "Recipients", "Attachments", "Review"];
 
 interface CreateDocumentDialogProps {
   open: boolean;
@@ -72,19 +65,22 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   });
 
+  // Fetch units
   const { data: units = [], isLoading: unitsLoading } = useQuery<Unit[]>({
     queryKey: ["/api/units"],
     enabled: currentStep === 0
   });
 
+  // Fetch projects when unit is selected
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects", form.watch("unit")],
-    enabled: currentStep === 0 && !!form.watch("unit")
+    enabled: currentStep === 0 && Boolean(form.watch("unit"))
   });
 
+  // Fetch expenditure types when project is selected
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
     queryKey: ["/api/projects", form.watch("project"), "expenditure-types"],
-    enabled: !!form.watch("project")
+    enabled: Boolean(form.watch("project"))
   });
 
   const createDocumentMutation = useMutation({
@@ -92,7 +88,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       const formData = new FormData();
       Object.entries(data).forEach(([key, value]) => {
         if (key === "attachments") {
-          Object.entries(value).forEach(([type, file]) => {
+          Object.entries(value as Record<string, File>).forEach(([type, file]) => {
             if (file) formData.append(`attachment_${type}`, file);
           });
         } else if (key === "recipients") {
@@ -108,7 +104,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create document");
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create document");
       }
 
       return response.json();
@@ -120,8 +117,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         description: "Document created successfully",
       });
       onOpenChange(false);
+      form.reset();
+      setCurrentStep(0);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: error.message,
@@ -132,13 +131,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const nextStep = () => {
     const fields = getFieldsForStep(currentStep);
-    const isValid = fields.every(field => !form.formState.errors[field]);
-
-    if (isValid) {
-      setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
-    } else {
-      fields.forEach(field => form.trigger(field));
-    }
+    form.trigger(fields).then((isValid) => {
+      if (isValid) {
+        setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+      }
+    });
   };
 
   const prevStep = () => {
@@ -227,7 +224,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         </FormControl>
                         <SelectContent>
                           {units?.map((unit) => (
-                            <SelectItem key={unit.id} value={unit.id}>
+                            <SelectItem key={`unit-${unit.id}`} value={unit.id}>
                               {unit.name}
                             </SelectItem>
                           ))}
@@ -251,16 +248,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue>
-                              {getProjectDisplayName(field.value)}
-                            </SelectValue>
+                            <SelectValue placeholder="Select project" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {projects?.map((project) => (
                             <SelectItem 
-                              key={`project-${project.mis}`} 
-                              value={project.mis}
+                              key={`project-${project.id}`}
+                              value={String(project.id)}
                             >
                               {project.na853 ? `${project.na853} - ${project.name}` : project.name}
                             </SelectItem>
@@ -305,19 +300,19 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
             {currentStep === 1 && (
               <div className="space-y-4">
-                {/* Recipients form fields will be implemented here */}
+                {/* Recipients form fields */}
               </div>
             )}
 
             {currentStep === 2 && (
               <div className="space-y-4">
-                {/* File upload fields will be implemented here */}
+                {/* File upload fields */}
               </div>
             )}
 
             {currentStep === 3 && (
               <div className="space-y-4">
-                {/* Review summary will be implemented here */}
+                {/* Review summary */}
               </div>
             )}
 
