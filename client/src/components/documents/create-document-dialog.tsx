@@ -160,6 +160,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   };
 
+  const getSelectedValue = (field: keyof CreateDocumentForm, list: any[], displayField: string = 'name') => {
+    const value = form.watch(field);
+    if (!value) return undefined;
+    const item = list.find((i: any) => String(i.id) === value);
+    return item ? item[displayField] : undefined;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -210,12 +217,17 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select unit" />
+                            <SelectValue placeholder="Select unit">
+                              {getSelectedValue('unit', units)}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {units?.map((unit) => (
-                            <SelectItem key={`unit-${unit.id}`} value={unit.id}>
+                          {units.map((unit) => (
+                            <SelectItem 
+                              key={`unit-${unit.id}`} 
+                              value={unit.id}
+                            >
                               {unit.name}
                             </SelectItem>
                           ))}
@@ -235,7 +247,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={(value) => {
                           field.onChange(value);
-                          // Reset expenditure type when project changes
                           form.setValue("expenditure_type", "");
                         }}
                         value={field.value}
@@ -247,7 +258,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {projects?.map((project) => (
+                          {projects.map((project) => (
                             <SelectItem 
                               key={`project-${project.id}`} 
                               value={project.id.toString()}
@@ -279,7 +290,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {expenditureTypes?.map((type, index) => (
+                          {expenditureTypes.map((type, index) => (
                             <SelectItem 
                               key={`expenditure-${index}`}
                               value={type}
