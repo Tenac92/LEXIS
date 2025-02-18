@@ -135,25 +135,38 @@ router.get('/generated/:id/export', async (req, res) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    // Fetch document data from database
-    const { data: document, error } = await supabase
+    // Modified query to use explicit join
+    const { data, error } = await supabase
       .from('generated_documents')
-      .select('*, recipients(*)')
+      .select(`
+        *,
+        recipients:recipients(
+          id,
+          firstname,
+          lastname,
+          afm,
+          amount
+        )
+      `)
       .eq('id', id)
       .single();
 
-    if (error) throw error;
-    if (!document) {
+    if (error) {
+      console.error('Database query error:', error);
+      throw error;
+    }
+
+    if (!data) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
     // Create document sections
     const headerTable = new Table({
       rows: [{
-        children: [{
+        cells: [{
           children: [
             new Paragraph({
-              children: [new TextRun({ text: 'Document Export' })],
+              children: [new TextRun({ text: 'Document Export', bold: true })],
               alignment: AlignmentType.LEFT
             })
           ]
@@ -162,19 +175,44 @@ router.get('/generated/:id/export', async (req, res) => {
     });
 
     const contentTable = new Table({
-      rows: (document.recipients || []).map((recipient: any) => ({
-        children: [{
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` }),
-                new TextRun({ text: ` - ${recipient.afm}` }),
-                new TextRun({ text: ` - ${recipient.amount}€` })
-              ]
-            })
+      rows: [
+        {
+          cells: [
+            {
+              children: [new Paragraph({ children: [new TextRun({ text: 'Name', bold: true })] })],
+            },
+            {
+              children: [new Paragraph({ children: [new TextRun({ text: 'AFM', bold: true })] })],
+            },
+            {
+              children: [new Paragraph({ children: [new TextRun({ text: 'Amount', bold: true })] })],
+            }
           ]
-        }]
-      }))
+        },
+        ...(data.recipients || []).map((recipient: any) => ({
+          cells: [
+            {
+              children: [
+                new Paragraph({ 
+                  children: [new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` })]
+                })
+              ]
+            },
+            {
+              children: [
+                new Paragraph({ children: [new TextRun({ text: recipient.afm })] })
+              ]
+            },
+            {
+              children: [
+                new Paragraph({ 
+                  children: [new TextRun({ text: `${recipient.amount}€` })]
+                })
+              ]
+            }
+          ]
+        }))
+      ]
     });
 
     // Create document
@@ -195,7 +233,7 @@ router.get('/generated/:id/export', async (req, res) => {
 
     // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${document.document_number || document.id}.docx`);
+    res.setHeader('Content-Disposition', `attachment; filename=document-${data.document_number || data.id}.docx`);
 
     // Send document
     res.send(buffer);
