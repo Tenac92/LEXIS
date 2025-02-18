@@ -1,44 +1,52 @@
 import { Request, Response } from 'express';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, Table } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, BorderStyle, WidthType } from 'docx';
+import { supabase } from '../config/db';
 
 export async function exportDocument(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { format, unit_details, contact_info, margins, include_attachments, include_signatures } = req.body;
 
-    // Fetch document data from database
-    const document = await db.query(`
-      SELECT d.*, array_agg(json_build_object(
-        'firstname', r.firstname,
-        'lastname', r.lastname,
-        'afm', r.afm,
-        'amount', r.amount,
-        'installment', r.installment
-      )) as recipients
-      FROM generated_documents d
-      LEFT JOIN recipients r ON d.id = r.document_id
-      WHERE d.id = $1
-      GROUP BY d.id
-    `, [id]);
+    // Fetch document data from supabase
+    const { data: document, error } = await supabase
+      .from('generated_documents')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    if (!document.rows[0]) {
-      return res.status(404).json({ error: 'Document not found' });
+    if (error) {
+      console.error('Database query error:', error);
+      throw error;
     }
 
-    const doc = document.rows[0];
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    // Parse recipients from JSON array
+    const recipients = Array.isArray(document.recipients) ? document.recipients : [];
 
     // Create document sections
     const headerTable = createDocumentHeader(unit_details, contact_info);
-    const contentTable = createPaymentTable(doc.recipients);
+    const contentTable = createPaymentTable(recipients);
     const footerTable = createDocumentFooter(unit_details);
 
     // Create document
     const docx = new Document({
       sections: [{
-        properties: { page: { margin: margins } },
+        properties: { 
+          page: { 
+            margin: margins || {
+              top: 1000,
+              right: 1000,
+              bottom: 1000,
+              left: 1000
+            }
+          } 
+        },
         children: [
           headerTable,
-          ...createMainContent(doc),
+          ...createMainContent(document),
           contentTable,
           footerTable
         ]
@@ -50,14 +58,17 @@ export async function exportDocument(req: Request, res: Response) {
 
     // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${doc.document_number || doc.id}.docx`);
-    
+    res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
+
     // Send document
     res.send(buffer);
 
   } catch (error) {
     console.error('Export error:', error);
-    res.status(500).json({ error: 'Failed to export document' });
+    res.status(500).json({ 
+      message: 'Failed to export document',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }
 
@@ -69,10 +80,10 @@ function createDocumentHeader(unitDetails: any, contactInfo: any) {
     { text: 'ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ', bold: true },
     { text: unitDetails?.unit_name || '', bold: true },
     { text: '', bold: false },
-    { text: `Ταχ. Δ/νση: ${contactInfo.address}`, bold: false },
-    { text: `Ταχ. Κώδικας: ${contactInfo.postal_code}, ${contactInfo.city}`, bold: false },
-    { text: `Πληροφορίες: ${contactInfo.contact_person}`, bold: false },
-    { text: `Email: ${unitDetails.email}`, bold: false }
+    { text: `Ταχ. Δ/νση: ${contactInfo?.address || 'Κηφισίας 124 & Ιατρίδου 2'}`, bold: false },
+    { text: `Ταχ. Κώδικας: ${contactInfo?.postal_code || '11526'}, ${contactInfo?.city || 'Αθήνα'}`, bold: false },
+    { text: `Πληροφορίες: ${contactInfo?.contact_person || ''}`, bold: false },
+    { text: `Email: ${unitDetails?.email || 'daefkke@civilprotection.gr'}`, bold: false }
   ];
 
   const rightColumnInfo = [
@@ -83,28 +94,40 @@ function createDocumentHeader(unitDetails: any, contactInfo: any) {
   ];
 
   return new Table({
-    width: { size: 100, type: 'pct' },
-    borders: { top: {}, bottom: {}, left: {}, right: {}, insideVertical: {} },
-    rows: [{
-      children: [
-        {
-          children: headerInfo.map(item => new Paragraph({
-            children: [new TextRun({ text: item.text, size: 20, bold: item.bold })],
-            alignment: AlignmentType.LEFT,
-            spacing: { before: 0, after: 0 }
-          })),
-          width: { size: 65, type: 'pct' }
-        },
-        {
-          children: rightColumnInfo.map(item => new Paragraph({
-            children: [new TextRun({ text: item.text, size: 20, bold: item.bold })],
-            alignment: AlignmentType.LEFT,
-            spacing: { before: 0, after: 0 }
-          })),
-          width: { size: 35, type: 'pct' }
-        }
-      ]
-    }]
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: { 
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE }
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 65, type: WidthType.PERCENTAGE },
+            children: headerInfo.map(item => 
+              new Paragraph({
+                children: [new TextRun({ text: item.text, bold: item.bold, size: 20 })],
+                alignment: AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 }
+              })
+            )
+          }),
+          new TableCell({
+            width: { size: 35, type: WidthType.PERCENTAGE },
+            children: rightColumnInfo.map(item =>
+              new Paragraph({
+                children: [new TextRun({ text: item.text, bold: item.bold, size: 20 })],
+                alignment: AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 }
+              })
+            )
+          })
+        ]
+      })
+    ]
   });
 }
 
@@ -126,33 +149,62 @@ function createMainContent(doc: any) {
 
 function createPaymentTable(recipients: any[]) {
   return new Table({
-    width: { size: 100, type: 'pct' },
+    width: { size: 100, type: WidthType.PERCENTAGE },
     borders: {
-      top: { style: 'single', size: 1 },
-      bottom: { style: 'single', size: 1 },
-      left: { style: 'single', size: 1 },
-      right: { style: 'single', size: 1 }
+      top: { style: BorderStyle.SINGLE, size: 1 },
+      bottom: { style: BorderStyle.SINGLE, size: 1 },
+      left: { style: BorderStyle.SINGLE, size: 1 },
+      right: { style: BorderStyle.SINGLE, size: 1 },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1 }
     },
     rows: [
-      {
-        children: ['Α/Α', 'ΟΝΟΜΑΤΕΠΩΝΥΜΟ', 'ΑΦΜ', 'ΠΟΣΟ (€)', 'ΔΟΣΗ'].map(
-          header => ({
+      new TableRow({
+        children: ['Α/Α', 'ΟΝΟΜΑΤΕΠΩΝΥΜΟ', 'ΑΦΜ', 'ΠΟΣΟ (€)', 'ΔΟΣΗ'].map(header =>
+          new TableCell({
             children: [new Paragraph({
               children: [new TextRun({ text: header, bold: true })],
               alignment: AlignmentType.CENTER
             })]
           })
         )
-      },
-      ...recipients.map((recipient, index) => ({
-        children: [
-          { children: [new Paragraph({ text: (index + 1).toString() })] },
-          { children: [new Paragraph({ text: `${recipient.lastname} ${recipient.firstname}` })] },
-          { children: [new Paragraph({ text: recipient.afm })] },
-          { children: [new Paragraph({ text: recipient.amount.toFixed(2) })] },
-          { children: [new Paragraph({ text: recipient.installment.toString() })] }
-        ]
-      }))
+      }),
+      ...recipients.map((recipient, index) => 
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [new Paragraph({ 
+                children: [new TextRun({ text: (index + 1).toString() })],
+                alignment: AlignmentType.CENTER
+              })]
+            }),
+            new TableCell({
+              children: [new Paragraph({ 
+                children: [new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` })],
+                alignment: AlignmentType.LEFT
+              })]
+            }),
+            new TableCell({
+              children: [new Paragraph({ 
+                children: [new TextRun({ text: recipient.afm })],
+                alignment: AlignmentType.CENTER
+              })]
+            }),
+            new TableCell({
+              children: [new Paragraph({ 
+                children: [new TextRun({ text: recipient.amount.toFixed(2) })],
+                alignment: AlignmentType.RIGHT
+              })]
+            }),
+            new TableCell({
+              children: [new Paragraph({ 
+                children: [new TextRun({ text: recipient.installment.toString() })],
+                alignment: AlignmentType.CENTER
+              })]
+            })
+          ]
+        })
+      )
     ]
   });
 }
@@ -169,26 +221,48 @@ function createDocumentFooter(unitDetails: any) {
   ];
 
   return new Table({
-    width: { size: 100, type: 'pct' },
-    borders: { top: {}, bottom: {}, left: {}, right: {}, insideVertical: {} },
-    rows: [{
-      children: [
-        {
-          children: [
-            new Paragraph({ text: 'ΣΥΝΗΜΜΕΝΑ', bold: true }),
-            ...attachments.map((text, index) => 
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: { 
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE }
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            children: [
               new Paragraph({
-                text: `${index + 1}. ${text}`,
-                indent: { left: 240 }
+                children: [new TextRun({ text: 'ΣΥΝΗΜΜΕΝΑ', bold: true })],
+                spacing: { before: 240, after: 240 }
+              }),
+              ...attachments.map((text, index) => 
+                new Paragraph({
+                  children: [new TextRun({ text: `${index + 1}. ${text}` })],
+                  indent: { left: 240 },
+                  spacing: { before: 60, after: 60 }
+                })
+              ),
+              new Paragraph({ text: '', spacing: { before: 3000 } }),
+              new Paragraph({
+                children: [new TextRun({ text: 'Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ Δ.Α.Ε.Φ.Κ.', bold: true })],
+                alignment: AlignmentType.CENTER
+              }),
+              new Paragraph({ text: '', spacing: { before: 500 } }),
+              new Paragraph({
+                children: [new TextRun({ text: 'ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ', bold: true })],
+                alignment: AlignmentType.CENTER
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: 'ΠΟΛ. ΜΗΧΑΝΙΚΟΣ' })],
+                alignment: AlignmentType.CENTER
               })
-            ),
-            new Paragraph({ text: 'Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ Δ.Α.Ε.Φ.Κ.', bold: true, alignment: AlignmentType.CENTER }),
-            new Paragraph({ text: '', spacing: { before: 500 } }),
-            new Paragraph({ text: 'ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ', bold: true, alignment: AlignmentType.CENTER }),
-            new Paragraph({ text: 'ΠΟΛ. ΜΗΧΑΝΙΚΟΣ', alignment: AlignmentType.CENTER })
-          ]
-        }
-      ]
-    }]
+            ]
+          })
+        ]
+      })
+    ]
   });
 }
