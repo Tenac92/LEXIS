@@ -6,6 +6,15 @@ import { DocumentFormatter } from '../utils/DocumentFormatter';
 import { TemplateManager } from '../utils/TemplateManager';
 import { VersionController } from '../utils/VersionController';
 
+interface Recipient {
+  lastname: string;
+  firstname: string;
+  fathername?: string;
+  amount: number;
+  installment: number;
+  afm: string;
+}
+
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -155,7 +164,7 @@ router.get('/generated/:id/export', async (req, res) => {
 
     // Format recipients data
     const recipients = Array.isArray(data.recipients)
-      ? data.recipients.map(recipient => ({
+      ? data.recipients.map((recipient: Recipient) => ({
           lastname: String(recipient.lastname || ''),
           firstname: String(recipient.firstname || ''),
           fathername: String(recipient.fathername || ''),
@@ -242,7 +251,7 @@ router.post('/generated/:id/export', async (req, res) => {
 
     // Format recipients data
     const recipients = Array.isArray(document.recipients)
-      ? document.recipients.map(recipient => ({
+      ? document.recipients.map((recipient: Recipient) => ({
           lastname: String(recipient.lastname || ''),
           firstname: String(recipient.firstname || ''),
           fathername: String(recipient.fathername || ''),
