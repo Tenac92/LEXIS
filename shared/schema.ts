@@ -105,6 +105,28 @@ export const units = pgTable("units", {
   is_active: boolean("is_active").default(true),
 });
 
+// Project Catalog table
+export const projectCatalog = pgTable("project_catalog", {
+  id: serial("id").primaryKey(),
+  mis: text("mis").notNull().unique(),
+  na271: text("na271"),
+  na853: text("na853"),
+  event_description: text("event_description"),
+  project_title: text("project_title"),
+  event_type: text("event_type"),
+  event_year: text("event_year"),
+  region: text("region"),
+  regional_unit: text("regional_unit"),
+  municipality: text("municipality"),
+  implementing_agency: jsonb("implementing_agency"),
+  expenditure_type: jsonb("expenditure_type"),
+  budget_e069: numeric("budget_e069"),
+  budget_na271: numeric("budget_na271"),
+  budget_na853: numeric("budget_na853"),
+  status: text("status"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
@@ -113,6 +135,8 @@ export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type Recipient = typeof recipients.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type Unit = typeof units.$inferSelect;
+export type ProjectCatalog = typeof projectCatalog.$inferSelect;
+
 
 // Insert Types
 export type InsertDocumentTemplate = z.infer<typeof insertDocumentTemplateSchema>;
@@ -121,6 +145,7 @@ export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSche
 export type InsertRecipient = z.infer<typeof insertRecipientSchema>;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type InsertUnit = z.infer<typeof insertUnitSchema>;
+export type InsertProjectCatalog = z.infer<typeof insertProjectCatalogSchema>;
 
 // Insert Schemas
 export const insertDocumentTemplateSchema = createInsertSchema(documentTemplates);
@@ -138,6 +163,7 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
 export const insertRecipientSchema = createInsertSchema(recipients);
 export const insertProjectSchema = createInsertSchema(projects);
 export const insertUnitSchema = createInsertSchema(units);
+export const insertProjectCatalogSchema = createInsertSchema(projectCatalog);
 
 // Database type for Supabase
 export type Database = {
@@ -166,6 +192,10 @@ export type Database = {
       units: {
         Row: Unit;
         Insert: InsertUnit;
+      };
+      project_catalog: {
+        Row: ProjectCatalog;
+        Insert: InsertProjectCatalog;
       }
     };
   };

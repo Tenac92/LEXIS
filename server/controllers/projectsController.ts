@@ -1,8 +1,6 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/authMiddleware";
 import { storage } from "../storage";
-import { projects } from "@shared/schema";
-import { eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -10,14 +8,20 @@ router.get("/", authenticateToken, async (req, res) => {
   const { unit } = req.query;
 
   try {
-    let query = storage.db.select().from(projects);
-    
-    if (unit) {
-      query = query.where(eq(projects.unit, unit as string));
-    }
-    
-    const result = await query.orderBy(projects.mis);
-    res.json(result);
+    const projects = unit 
+      ? await storage.getProjectCatalogByUnit(unit as string)
+      : await storage.getProjectCatalog();
+
+    // Map projects to the expected format
+    const formattedProjects = projects.map(project => ({
+      id: project.mis,
+      name: project.project_title || project.event_description,
+      mis: project.mis,
+      na853: project.na853,
+      budget: project.budget_na853 || project.budget_na271 || project.budget_e069
+    }));
+
+    res.json(formattedProjects);
   } catch (error) {
     console.error("Error fetching projects:", error);
     res.status(500).json({ error: "Failed to fetch projects" });
@@ -28,24 +32,17 @@ router.get("/:projectId/expenditure-types", authenticateToken, async (req, res) 
   const { projectId } = req.params;
 
   try {
-    const result = await storage.db
-      .select()
-      .from(projects)
-      .where(eq(projects.id, parseInt(projectId)));
+    const expenditureTypes = await storage.getProjectExpenditureTypes(projectId);
 
-    if (result.length === 0) {
-      return res.status(404).json({ error: "Project not found" });
+    if (!expenditureTypes || expenditureTypes.length === 0) {
+      return res.json([
+        "Travel",
+        "Equipment",
+        "Supplies",
+        "Services",
+        "Other"
+      ]);
     }
-
-    // For now, return a static list of expenditure types
-    // This should be replaced with actual data from your business logic
-    const expenditureTypes = [
-      "Travel",
-      "Equipment",
-      "Supplies",
-      "Services",
-      "Other"
-    ];
 
     res.json(expenditureTypes);
   } catch (error) {
