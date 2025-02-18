@@ -1,5 +1,15 @@
 import { Request, Response, NextFunction, Express } from "express";
 import { supabase } from "./config/db";
+import type { User } from "@shared/schema";
+
+// Add type augmentation for Express Request
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
 
 export const authenticateSession = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -19,7 +29,14 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
       });
     }
 
-    req.user = user;
+    // Transform Supabase user to our User type
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: 'user',
+      created_at: user.created_at,
+    };
+
     next();
   } catch (error) {
     console.error('[Auth] Session authentication error:', error);
@@ -52,11 +69,14 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      res.json({
+      const user: User = {
         id: data.user.id,
         email: data.user.email,
-        token: data.session.access_token
-      });
+        role: 'user',
+        created_at: data.user.created_at,
+      };
+
+      res.json(user);
 
     } catch (error) {
       console.error('[Auth] Login error:', error);

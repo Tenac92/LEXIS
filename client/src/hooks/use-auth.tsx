@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useContext } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { User } from "@shared/schema";
+import { User, LoginCredentials } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { supabase } from "@/lib/supabase";
@@ -13,28 +13,33 @@ type AuthContextType = {
   logoutMutation: ReturnType<typeof useLogoutMutation>;
 };
 
-type LoginData = {
-  email: string;
-  password: string;
-};
-
 function useLoginMutation() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (credentials: LoginData) => {
+    mutationFn: async (credentials: LoginCredentials) => {
       try {
-        const { data, error } = await supabase.auth.signInWithPassword(credentials);
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: credentials.email,
+          password: credentials.password,
+        });
+
         if (error) throw error;
         if (!data.user) throw new Error('No user returned from authentication');
-        return data.user;
+
+        return {
+          id: data.user.id,
+          email: data.user.email,
+          role: 'user',
+          created_at: data.user.created_at,
+        } as User;
       } catch (err) {
         console.error('Authentication error:', err);
         throw err;
       }
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(["/api/user"], data);
+    onSuccess: (user) => {
+      queryClient.setQueryData(["/api/user"], user);
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error: Error) => {
@@ -76,8 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) return null;
-      return user;
+      if (error || !user) return null;
+
+      return {
+        id: user.id,
+        email: user.email,
+        role: 'user',
+        created_at: user.created_at,
+      } as User;
     },
     retry: false,
     refetchOnWindowFocus: false,

@@ -1,16 +1,14 @@
 import { pgTable, text, serial, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { integer, numeric } from "drizzle-orm/pg-core";
 
-// Users table
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(), // This is actually storing email
-  password: text("password").notNull(),
-  full_name: text("full_name"),
-  role: text("role").default("user").notNull(),
-  active: boolean("active").default(true),
+// Users table matching Supabase Auth
+export const users = pgTable("auth.users", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
   created_at: timestamp("created_at").defaultNow(),
+  role: text("role").default("user").notNull(),
 });
 
 // Login schema for validation
@@ -19,32 +17,25 @@ export const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-// Registration schema extends login schema with additional fields
-export const registrationSchema = loginSchema.extend({
-  full_name: z.string().min(1, "Full name is required"),
-});
+// User type for Supabase Auth
+export type User = {
+  id: string;
+  email: string | null;
+  role: string;
+  created_at: string;
+};
 
-// Create the insert schema from the users table
-export const insertUserSchema = createInsertSchema(users, {
-  username: z.string().email("Invalid email format"), // This field stores email
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-// Types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+// Login credentials type
 export type LoginCredentials = z.infer<typeof loginSchema>;
-export type RegistrationCredentials = z.infer<typeof registrationSchema>;
 
-
-// Documents table
+// Rest of the schema remains unchanged
 export const documents = pgTable("documents", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
   content: text("content").notNull(),
   unit: text("unit").notNull(),
   status: text("status").default("pending").notNull(),
-  created_by: integer("created_by").references(() => users.id),
+  created_by: text("created_by").references(() => users.id),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at"),
   protocol_number: text("protocol_number"),
@@ -53,7 +44,6 @@ export const documents = pgTable("documents", {
   project_id: text("project_id").notNull(),
 });
 
-// Recipients table
 export const recipients = pgTable("recipients", {
   id: serial("id").primaryKey(),
   firstname: text("firstname").notNull(),
@@ -65,11 +55,10 @@ export const recipients = pgTable("recipients", {
   installment: integer("installment").default(1),
   status: text("status").default("pending"),
   created_at: timestamp("created_at").defaultNow(),
-  created_by: integer("created_by").references(() => users.id),
+  created_by: text("created_by").references(() => users.id),
   updated_at: timestamp("updated_at"),
 });
 
-// Projects table
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   mis: text("mis").notNull().unique(),
@@ -96,10 +85,6 @@ export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Database = {
   public: {
     Tables: {
-      users: {
-        Row: User;
-        Insert: InsertUser;
-      };
       documents: {
         Row: Document;
         Insert: InsertDocument;
@@ -114,5 +99,9 @@ export type Database = {
       };
     };
   };
+  auth: {
+    Users: {
+      Row: User;
+    };
+  };
 };
-import { integer, numeric } from "drizzle-orm/pg-core";
