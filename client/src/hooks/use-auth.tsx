@@ -11,6 +11,7 @@ type AuthContextType = {
   error: Error | null;
   loginMutation: ReturnType<typeof useLoginMutation>;
   logoutMutation: ReturnType<typeof useLogoutMutation>;
+  registerMutation: ReturnType<typeof useRegisterMutation>;
 };
 
 function useLoginMutation() {
@@ -45,6 +46,52 @@ function useLoginMutation() {
     onError: (error: Error) => {
       toast({
         title: "Login failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+function useRegisterMutation() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (credentials: LoginCredentials) => {
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email: credentials.email,
+          password: credentials.password,
+          options: {
+            emailRedirectTo: window.location.origin,
+          },
+        });
+
+        if (error) throw error;
+        if (!data.user) throw new Error('No user returned from registration');
+
+        return {
+          id: data.user.id,
+          email: data.user.email,
+          role: 'user',
+          created_at: data.user.created_at,
+        } as User;
+      } catch (err) {
+        console.error('Registration error:', err);
+        throw err;
+      }
+    },
+    onSuccess: (user) => {
+      queryClient.setQueryData(["/api/user"], user);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({
+        title: "Registration successful",
+        description: "Please check your email to confirm your account",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Registration failed",
         description: error.message,
         variant: "destructive",
       });
@@ -96,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
+  const registerMutation = useRegisterMutation();
 
   return (
     <AuthContext.Provider
@@ -105,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: error instanceof Error ? error : null,
         loginMutation,
         logoutMutation,
+        registerMutation,
       }}
     >
       {children}
