@@ -1,0 +1,129 @@
+<!-- Progress Bar -->
+    <div class="p-6 bg-gradient-to-r from-blue-50 to-white">
+      <div class="relative w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+        <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-500 transform origin-left"></div>
+      </div>
+    </div>
+
+    <!-- Combined Indicators -->
+    <div class="px-6 py-4 bg-gradient-to-br from-gray-50 to-white border-b border-gray-200">
+      <div class="space-y-4">
+        <div class="grid grid-cols-4 gap-3" id="steps-container"></div>
+      </div>
+    </div>
+
+    <!-- Content Area -->
+    <div class="px-3 py-2 flex-1">
+      <!-- Main Content Area -->
+      <div class="flex-1 bg-white rounded-lg border border-gray-100/75 shadow-sm overflow-hidden">
+        <div class="px-4 py-3 bg-gradient-to-r from-blue-50/50 to-white border-b border-gray-100/75 flex items-center justify-between">
+          <h2 class="text-base font-semibold text-gray-800" id="step-title"></h2>
+          <div class="text-xs text-gray-500 bg-white/80 px-3 py-1.5 rounded-full border border-gray-100/75 shadow-sm">
+            Βήμα <span class="font-medium text-blue-600" id="current-step"></span> από 4
+          </div>
+        </div>
+
+        <div class="p-4 flex-1 overflow-y-auto max-h-[calc(90vh-16rem)]" id="step-content">
+          <!-- Unit Selection Step -->
+          <div id="unit-step" class="step-content hidden">
+            <div class="space-y-4">
+              <label class="block text-sm font-medium text-gray-700" for="unitSelect">Επιλογή Μονάδας</label>
+              <select id="unitSelect" name="unitSelect" class="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-lg shadow-sm">
+                <option value="">Επιλέξτε μονάδα...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Project Selection Step -->
+          <div id="project-step" class="step-content hidden">
+            <div class="space-y-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="projectSelect">Επιλογή Έργου</label>
+                <select id="projectSelect" name="projectSelect" class="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-lg shadow-sm">
+                  <option value="">Επιλέξτε έργο...</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2" for="expTypeSelect">Τύπος Δαπάνης</label>
+                <select id="expTypeSelect" name="expTypeSelect" class="mt-1 block w-full pl-3 pr-10 py-2.5 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 rounded-lg shadow-sm">
+                  <option value="">Επιλέξτε τύπο δαπάνης...</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recipients Step -->
+          <div id="recipients-step" class="step-content hidden">
+            <div class="space-y-6">
+              <div class="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
+                <div class="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 class="text-lg font-semibold text-gray-800">Δικαιούχοι</h3>
+                    <p class="text-sm text-gray-600 mt-1">Προσθέστε έως 10 δικαιούχους για αυτό το έγγραφο</p>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="bg-white/80 px-4 py-2 rounded-lg border border-gray-200/75 shadow-sm">
+                      <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                          <i class="fas fa-users text-blue-500"></i>
+                          <span class="text-sm font-medium text-gray-700">Σύνολο:</span>
+                          <span class="text-sm font-semibold text-blue-600" id="recipientCount">0</span>
+                        </div>
+                        <div class="w-px h-4 bg-gray-200"></div>
+                        <div class="flex items-center gap-2">
+                          <i class="fas fa-euro-sign text-green-500"></i>
+                          <span class="text-sm font-medium text-gray-700">Ποσό:</span>
+                          <span class="text-sm font-semibold text-green-600" id="totalAmount">€0.00</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button id="addRecipientBtn" class="inline-flex items-right px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow transform hover:scale-105">
+                      <i class="fas fa-plus-circle mr-2"></i>
+                      Προσθήκη Δικαιούχου
+                    </button>
+                  </div>
+                </div>
+                <div id="recipients-container" class="space-y-4">
+                  <div class="overflow-x-auto overflow-y-auto max-h-[calc(100vh-24rem)] rounded-xl border border-gray-200/75 shadow-sm bg-white">
+                    <table class="min-w-full bg-white table-fixed divide-y divide-gray-100">
+                      <thead class="sticky top-0 z-10">
+                        <tr class="bg-gradient-to-br from-gray-50 to-white">
+                          <th class="w-16 px-4 py-3 border-b text-center text-xs font-semibold text-gray-600 uppercase tracking-wider bg-white/90 backdrop-blur-sm">#</th>
+                          <th class="w-40 px-4 py-3 border-b text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Όνομα</th>
+                          <th class="w-40 px-4 py-3 border-b text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Επώνυμο</th>
+                          <th class="w-36 px-4 py-3 border-b text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">ΑΦΜ</th>
+                          <th class="w-36 px-4 py-3 border-b text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Ποσό</th>
+                          <th class="w-24 px-4 py-3 border-b text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Δόση</th>
+                          <th class="w-20 px-4 py-3 border-b text-center text-xs font-semibold text-gray-600 uppercase tracking-wider"></th>
+                        </tr>
+                      </thead>
+                      <tbody id="recipientsTableBody" class="divide-y divide-gray-100">
+                        <!-- Recipients will be dynamically inserted here -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attachments Step -->
+          <div id="attachments-step" class="step-content hidden">
+            <div id="attachments-container" class="space-y-6"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="flex justify-between items-center px-4 py-3 border-t border-gray-100/75 mt-auto bg-white/90 backdrop-blur-sm sticky bottom-0 z-10">
+    <div id="prev-button-container"></div>
+    <button class="next-step inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-all duration-200 shadow-sm hover:shadow">
+      Επόμενο
+      <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+    </button>
+  </div>
+</div>

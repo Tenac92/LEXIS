@@ -18,26 +18,26 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-gradient-to-r from-background via-muted to-background">
-        <div className="container mx-auto px-4 py-6">
+      <header className="border-b bg-card">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-foreground bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-foreground">
                 Welcome, {user?.email}
               </h1>
-              <p className="text-muted-foreground mt-1">Document Management System</p>
+              <p className="text-muted-foreground">Document Management System</p>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="flex items-center bg-card rounded-lg p-1 shadow-sm">
+              <div className="flex items-center bg-background rounded-lg p-1 shadow-sm">
                 <Link href="/documents">
-                  <Button variant="ghost" className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground transition-colors">
+                  <Button variant="ghost" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
                     Generated Documents
                   </Button>
                 </Link>
                 <Separator orientation="vertical" className="h-8 mx-2" />
                 <Link href="/projects">
-                  <Button variant="ghost" className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground transition-colors">
+                  <Button variant="ghost" className="flex items-center gap-2">
                     <FolderKanban className="h-4 w-4" />
                     Projects
                   </Button>
@@ -47,7 +47,7 @@ export default function HomePage() {
                   variant="ghost" 
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
-                  className="flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                  className="flex items-center gap-2"
                 >
                   <LogOut className="h-4 w-4" />
                   Logout
