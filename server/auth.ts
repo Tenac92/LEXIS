@@ -44,15 +44,30 @@ export async function setupAuth(app: Express) {
   app.post("/api/login", async (req, res) => {
     try {
       const { email, password } = req.body;
-      const username = email; // Use email as username for compatibility
 
-      if (!username || !password) {
+      if (!email || !password) {
         return res.status(400).json({
           error: { message: 'Email and password are required' }
         });
       }
 
-      console.log('[Auth] Attempting login for username:', username);
+      console.log('[Auth] Attempting login for email:', email);
+
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (error || !user) {
+        return res.status(401).json({
+          error: { message: 'Invalid credentials' }
+        });
+      }
+
+      // Set user in session
+      req.session.user = user;
+      await req.session.save();
 
       // Query the users table using email as username
       const { data: user, error } = await supabase
