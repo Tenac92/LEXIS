@@ -10,7 +10,7 @@ export async function exportDocument(req: Request, res: Response) {
     const { id } = req.params;
     const { data: document, error } = await supabase
       .from('generated_documents')
-      .select('*, template_id')
+      .select('*, template_id, expenditure_type')
       .eq('id', id)
       .single();
 
@@ -33,18 +33,26 @@ export async function exportDocument(req: Request, res: Response) {
       );
     }
 
-    let docx: Document;
+    let template = null;
     if (document.template_id) {
-      // Use template if specified
+      // Use specifically assigned template if it exists
+      template = await TemplateManager.getTemplate(document.template_id);
+    } else {
+      // Get template based on expenditure type
+      template = await TemplateManager.getTemplateForExpenditure(document.expenditure_type);
+    }
+
+    if (template) {
+      // Use template if available
       const buffer = await TemplateManager.generatePreview(
-        document.template_id,
+        template.id,
         { recipients: document.recipients }
       );
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
       return res.send(buffer);
     } else {
-      // Use default formatting
+      // Fallback to default formatting
       const recipients = Array.isArray(document.recipients) 
         ? document.recipients.map(recipient => ({
             ...recipient,
@@ -53,7 +61,7 @@ export async function exportDocument(req: Request, res: Response) {
           }))
         : [];
 
-      docx = new Document({
+      const doc = new Document({
         sections: [{
           properties: { 
             page: { 
@@ -69,13 +77,12 @@ export async function exportDocument(req: Request, res: Response) {
           ]
         }]
       });
+
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
+      res.send(buffer);
     }
-
-    const buffer = await Packer.toBuffer(docx);
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
-    res.send(buffer);
-
   } catch (error) {
     console.error('Export error:', error);
     res.status(500).json({ 

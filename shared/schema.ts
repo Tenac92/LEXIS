@@ -23,6 +23,8 @@ export const documentTemplates = pgTable("document_templates", {
   category: text("category").notNull(),
   template_data: jsonb("template_data").notNull(),
   structure_version: text("structure_version").notNull(),
+  expenditure_type: text("expenditure_type"),
+  is_default: boolean("is_default").default(false),
 });
 
 // Generated Documents table (with versioning support)

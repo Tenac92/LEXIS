@@ -16,6 +16,35 @@ interface PreviewOptions {
 }
 
 export class TemplateManager {
+  static async getTemplateForExpenditure(expenditureType: string): Promise<DocumentTemplate | null> {
+    try {
+      // First try to find a specific template for this expenditure type
+      let { data: specificTemplate } = await supabase
+        .from('document_templates')
+        .select('*')
+        .eq('expenditure_type', expenditureType)
+        .eq('is_active', true)
+        .single();
+
+      if (specificTemplate) {
+        return specificTemplate;
+      }
+
+      // If no specific template found, get the default template
+      const { data: defaultTemplate } = await supabase
+        .from('document_templates')
+        .select('*')
+        .eq('is_default', true)
+        .eq('is_active', true)
+        .single();
+
+      return defaultTemplate || null;
+    } catch (error) {
+      console.error('Error fetching template:', error);
+      return null;
+    }
+  }
+
   static async createTemplate(
     name: string,
     description: string,
@@ -169,5 +198,42 @@ export class TemplateManager {
       .eq('id', id);
 
     if (error) throw error;
+  }
+
+  static async createDefaultTemplate(userId: string): Promise<DocumentTemplate> {
+    const defaultTemplate = {
+      name: 'Default Document Template',
+      description: 'Default template for all expenditure types except ΕΚΤΟΣ ΕΔΡΑΣ',
+      category: 'default',
+      template_data: {
+        sections: [{
+          properties: {
+            page: {
+              size: { width: 11906, height: 16838 },
+              margins: { top: 850, right: 1000, bottom: 850, left: 1000 }
+            }
+          },
+          children: [
+            // Your default template structure here
+          ]
+        }]
+      },
+      is_default: true,
+      structure_version: '1.0',
+      is_active: true, // Added is_active to ensure the default template is active
+      created_by: userId, // Added created_by to match other template creation methods
+      expenditure_type: null //or "" , depending on your DB schema
+    };
+
+    const { data, error } = await supabase
+      .from('document_templates')
+      .insert({
+        ...defaultTemplate
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 }
