@@ -33,14 +33,44 @@ export class DatabaseStorage implements IStorage {
 
   async getUserUnits(userId: string): Promise<string[]> {
     try {
+      console.log('[Storage] Fetching units for user:', userId);
+
       const { data, error } = await supabase
-        .from('auth.users')
+        .from('users')
         .select('units')
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
-      return data?.units || [];
+      if (error) {
+        console.error('[Storage] Error in getUserUnits:', error);
+        throw error;
+      }
+
+      console.log('[Storage] Raw units data:', data?.units);
+
+      if (!data?.units) {
+        console.log('[Storage] No units found for user');
+        return [];
+      }
+
+      // Handle units whether it's a JSON string or array
+      let units: string[];
+      if (typeof data.units === 'string') {
+        try {
+          units = JSON.parse(data.units);
+        } catch (e) {
+          console.error('[Storage] Error parsing units JSON:', e);
+          return [];
+        }
+      } else if (Array.isArray(data.units)) {
+        units = data.units;
+      } else {
+        console.log('[Storage] Unexpected units format:', typeof data.units);
+        return [];
+      }
+
+      console.log('[Storage] Processed units:', units);
+      return units;
     } catch (error) {
       console.error('[Storage] Error fetching user units:', error);
       throw error;

@@ -7,25 +7,35 @@ import { authenticateSession } from "./auth";
 import documentsController from "./controllers/documentsController";
 import unitsController from "./controllers/unitsController";
 import projectsController from "./controllers/projectsController";
+import { log } from "./vite";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Set up authentication routes
-  await setupAuth(app);
+  try {
+    // Set up authentication routes and middleware
+    log('[Routes] Setting up authentication...');
+    await setupAuth(app);
+    log('[Routes] Authentication setup complete');
 
-  // Dashboard routes
-  app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
+    // Dashboard routes
+    app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
 
-  // Documents routes - make sure this is registered before the general apiRouter
-  app.use('/api/documents', authenticateSession, documentsController);
+    // Documents routes - make sure this is registered before the general apiRouter
+    app.use('/api/documents', authenticateSession, documentsController);
 
-  // Units and Projects routes
-  app.use('/api/units', authenticateSession, unitsController);
-  app.use('/api/projects', authenticateSession, projectsController);
+    // Units and Projects routes
+    log('[Routes] Registering units and projects routes...');
+    app.use('/api/units', authenticateSession, unitsController);
+    app.use('/api/projects', authenticateSession, projectsController);
+    log('[Routes] Units and projects routes registered');
 
-  // Mount all API routes under /api
-  app.use('/api', apiRouter);
+    // Mount all API routes under /api
+    app.use('/api', apiRouter);
 
-  // Create and return HTTP server
-  const httpServer = createServer(app);
-  return httpServer;
+    // Create and return HTTP server
+    const httpServer = createServer(app);
+    return httpServer;
+  } catch (error) {
+    log('[Routes] Error registering routes:', error);
+    throw error;
+  }
 }

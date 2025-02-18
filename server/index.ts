@@ -6,6 +6,15 @@ import { setupVite, serveStatic, log } from "./vite";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { securityHeaders } from "./middleware/securityHeaders";
 
+// Verify required environment variables
+const requiredEnvVars = ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_KEY'];
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`Missing required environment variable: ${envVar}`);
+    process.exit(1);
+  }
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -26,6 +35,15 @@ app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  // Add session diagnostic logging
+  if (req.path.startsWith('/api')) {
+    log(`[Request] ${req.method} ${path}`);
+    log(`[Session] ${req.session ? 'Active' : 'Not initialized'}`);
+    if (req.session?.user) {
+      log(`[Session] User: ${JSON.stringify(req.session.user)}`);
+    }
+  }
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -55,7 +73,9 @@ app.use((req, res, next) => {
 (async () => {
   let server;
   try {
+    log('[Startup] Initializing Express server...');
     server = await registerRoutes(app);
+    log('[Startup] Routes registered successfully');
 
     // Error handling middleware
     app.use(errorMiddleware);
@@ -64,7 +84,9 @@ app.use((req, res, next) => {
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
     if (app.get("env") === "development") {
+      log('[Startup] Setting up Vite development server...');
       await setupVite(app, server);
+      log('[Startup] Vite setup complete');
     } else {
       serveStatic(app);
     }
@@ -75,41 +97,24 @@ app.use((req, res, next) => {
     });
 
     // Get port from environment variable with fallback
-    let PORT = process.env.PORT || 5000;
+    const PORT = parseInt(process.env.PORT || '5000', 10);
     const HOST = '0.0.0.0'; // Bind to all network interfaces
-
-    // Attempt to find an available port
-    const tryPort = async (port: number): Promise<number> => {
-      return new Promise(async (resolve, reject) => {
-        const { createServer } = await import('http');
-        const tempServer = createServer();
-        tempServer.listen(port, HOST);
-        tempServer.on('error', () => {
-          resolve(tryPort(port + 1));
-        });
-        tempServer.on('listening', () => {
-          tempServer.close(() => resolve(port));
-        });
-      });
-    };
-
-    PORT = await tryPort(PORT);
 
     // Add error handler for the server
     server.on('error', (error: any) => {
       if (error.code === 'EADDRINUSE') {
-        console.error(`Port ${PORT} is already in use. Please use a different port or free up the current port.`);
+        console.error(`[Error] Port ${PORT} is already in use`);
         process.exit(1);
       }
-      console.error('Server error:', error);
+      console.error('[Error] Server error:', error);
     });
 
     // Start the server
     server.listen(PORT, HOST, () => {
-      log(`Server running at http://${HOST}:${PORT}`);
+      log(`[Startup] Server running at http://${HOST}:${PORT}`);
     });
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error('[Error] Failed to start server:', error);
     process.exit(1);
   }
 })();
