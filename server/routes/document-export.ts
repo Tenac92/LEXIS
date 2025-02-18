@@ -7,7 +7,7 @@ export async function exportDocument(req: Request, res: Response) {
     const { id } = req.params;
     const config = req.method === 'POST' ? req.body : {};
 
-    // Fetch document data from supabase
+    // Fetch document data from supabase - simplified query
     const { data: document, error } = await supabase
       .from('generated_documents')
       .select('*')
@@ -23,15 +23,10 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Use the recipients array directly from the document
+    // Recipients are already stored in the document object
     const recipients = Array.isArray(document.recipients) ? document.recipients : [];
 
-    // Create document sections
-    const headerTable = createDocumentHeader(config.unit_details || {}, config.contact_info || {});
-    const contentTable = createPaymentTable(recipients);
-    const footerTable = createDocumentFooter(config.unit_details || {});
-
-    // Create document
+    // Create document with sections
     const docx = new Document({
       sections: [{
         properties: { 
@@ -45,22 +40,20 @@ export async function exportDocument(req: Request, res: Response) {
           } 
         },
         children: [
-          headerTable,
+          createHeader(config.unit_details || {}, config.contact_info || {}),
           ...createMainContent(document),
-          contentTable,
-          footerTable
+          createPaymentTable(recipients),
+          createFooter()
         ]
       }]
     });
 
-    // Pack document
+    // Generate buffer
     const buffer = await Packer.toBuffer(docx);
 
-    // Set response headers
+    // Set headers and send response
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
-
-    // Send document
     res.send(buffer);
 
   } catch (error) {
@@ -72,20 +65,7 @@ export async function exportDocument(req: Request, res: Response) {
   }
 }
 
-function createDocumentHeader(unitDetails: any, contactInfo: any) {
-  const headerInfo = [
-    { text: 'ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ', bold: true },
-    { text: 'ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ', bold: true },
-    { text: 'ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ', bold: true },
-    { text: 'ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ', bold: true },
-    { text: unitDetails?.unit_name || '', bold: true },
-    { text: '', bold: false },
-    { text: `Ταχ. Δ/νση: ${contactInfo?.address || 'Κηφισίας 124 & Ιατρίδου 2'}`, bold: false },
-    { text: `Ταχ. Κώδικας: ${contactInfo?.postal_code || '11526'}, ${contactInfo?.city || 'Αθήνα'}`, bold: false },
-    { text: `Πληροφορίες: ${contactInfo?.contact_person || ''}`, bold: false },
-    { text: `Email: ${unitDetails?.email || 'daefkke@civilprotection.gr'}`, bold: false }
-  ];
-
+function createHeader(unitDetails: any, contactInfo: any) {
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: { 
@@ -98,13 +78,25 @@ function createDocumentHeader(unitDetails: any, contactInfo: any) {
       new TableRow({
         children: [
           new TableCell({
-            children: headerInfo.map(item => 
+            children: [
               new Paragraph({
-                children: [new TextRun({ text: item.text, bold: item.bold, size: 20 })],
-                alignment: AlignmentType.LEFT,
-                spacing: { before: 120, after: 120 }
+                children: [new TextRun({ text: 'ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ', bold: true, size: 24 })],
+                alignment: AlignmentType.CENTER
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: 'ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ', bold: true, size: 24 })],
+                alignment: AlignmentType.CENTER
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: unitDetails?.unit_name || '', bold: true })],
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 240, after: 240 }
+              }),
+              new Paragraph({
+                children: [new TextRun({ text: `Email: ${unitDetails?.email || 'daefkke@civilprotection.gr'}` })],
+                alignment: AlignmentType.LEFT
               })
-            )
+            ]
           })
         ]
       })
@@ -117,25 +109,20 @@ function createMainContent(doc: any) {
     new Paragraph({
       children: [
         new TextRun({ text: 'ΘΕΜΑ:', bold: true }),
-        new TextRun({ text: ' Έγκριση χορήγησης Στεγαστικής Συνδρομής για την αποκατάσταση της πληγείσας κατοικίας' })
+        new TextRun({ text: ' Έγκριση χορήγησης Στεγαστικής Συνδρομής' })
       ],
       spacing: { before: 400, after: 200 }
     }),
     new Paragraph({
-      children: [new TextRun({ text: 'Έχοντας υπόψη:' })],
-      spacing: { before: 200, after: 200 }
-    }),
-    new Paragraph({
       children: [
-        new TextRun({ text: `Αριθμός Πρωτοκόλλου: ${doc.protocol_number || ''}` }),
+        new TextRun({ text: `Πρωτόκολλο: ${doc.protocol_number || ''}` })
       ],
-      spacing: { before: 200, after: 200 }
+      spacing: { before: 200, after: 400 }
     })
   ];
 }
 
 function createPaymentTable(recipients: any[]) {
-  // Create header row
   const headerRow = new TableRow({
     children: ['Α/Α', 'ΟΝΟΜΑΤΕΠΩΝΥΜΟ', 'ΑΦΜ', 'ΠΟΣΟ (€)', 'ΔΟΣΗ'].map(header =>
       new TableCell({
@@ -147,7 +134,6 @@ function createPaymentTable(recipients: any[]) {
     )
   });
 
-  // Create recipient rows
   const recipientRows = recipients.map((recipient, index) => 
     new TableRow({
       children: [
@@ -171,7 +157,7 @@ function createPaymentTable(recipients: any[]) {
         }),
         new TableCell({
           children: [new Paragraph({ 
-            children: [new TextRun({ text: recipient.amount.toFixed(2) })],
+            children: [new TextRun({ text: recipient.amount.toString() })],
             alignment: AlignmentType.RIGHT
           })]
         }),
@@ -199,7 +185,7 @@ function createPaymentTable(recipients: any[]) {
   });
 }
 
-function createDocumentFooter(unitDetails: any) {
+function createFooter() {
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: { 
