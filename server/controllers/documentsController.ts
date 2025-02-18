@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../config/db';
-import { Document, Packer } from 'docx';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
 import type { Database } from '@shared/schema';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
 
@@ -154,17 +154,17 @@ router.get('/generated/:id/export', async (req, res) => {
     // Format recipients data
     const recipients = Array.isArray(data.recipients)
       ? data.recipients.map(recipient => ({
-          lastname: recipient.lastname || '',
-          firstname: recipient.firstname || '',
-          fathername: recipient.fathername || '',
+          lastname: String(recipient.lastname || ''),
+          firstname: String(recipient.firstname || ''),
+          fathername: String(recipient.fathername || ''),
           amount: Number(recipient.amount) || 0,
           installment: Number(recipient.installment) || 1,
-          afm: recipient.afm || ''
+          afm: String(recipient.afm || '')
         }))
       : [];
 
-    // Create document using our DocumentFormatter
-    const docx = new Document({
+    // Create document using DocumentFormatter
+    const doc = new Document({
       sections: [{
         properties: {
           page: {
@@ -175,7 +175,10 @@ router.get('/generated/:id/export', async (req, res) => {
         children: [
           DocumentFormatter.createDocumentHeader(req),
           DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
-          new Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
+          new Paragraph({ 
+            text: '', 
+            spacing: { before: 240, after: 240 } 
+          }),
           new Paragraph({
             children: [
               new TextRun({ text: `Μονάδα: ${data.unit || 'N/A'}`, bold: true }),
@@ -184,7 +187,10 @@ router.get('/generated/:id/export', async (req, res) => {
             spacing: { before: 240, after: 240 }
           }),
           DocumentFormatter.createPaymentTable(recipients),
-          new Paragraph({ text: '', spacing: { before: 300 } }),
+          new Paragraph({ 
+            text: '', 
+            spacing: { before: 300 } 
+          }),
           new Paragraph({
             children: [
               new TextRun({ text: 'ΣΥΝΟΛΟ: ', bold: true }),
@@ -196,7 +202,7 @@ router.get('/generated/:id/export', async (req, res) => {
       }]
     });
 
-    const buffer = await Packer.toBuffer(docx);
+    const buffer = await Packer.toBuffer(doc);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename=document-${data.document_number || id}.docx`);
@@ -211,7 +217,7 @@ router.get('/generated/:id/export', async (req, res) => {
   }
 });
 
-// Update POST route for custom document export
+// POST route for custom document export
 router.post('/generated/:id/export', async (req, res) => {
   try {
     const { id } = req.params;
@@ -235,21 +241,21 @@ router.post('/generated/:id/export', async (req, res) => {
     // Format recipients data
     const recipients = Array.isArray(document.recipients)
       ? document.recipients.map(recipient => ({
-          lastname: recipient.lastname || '',
-          firstname: recipient.firstname || '',
-          fathername: recipient.fathername || '',
+          lastname: String(recipient.lastname || ''),
+          firstname: String(recipient.firstname || ''),
+          fathername: String(recipient.fathername || ''),
           amount: Number(recipient.amount) || 0,
           installment: Number(recipient.installment) || 1,
-          afm: recipient.afm || ''
+          afm: String(recipient.afm || '')
         }))
       : [];
 
     // Create document using DocumentFormatter
-    const docx = new Document({
+    const doc = new Document({
       sections: [{
         properties: {
           page: {
-            margin: margins || DocumentFormatter.getDefaultMargins()
+            ...(margins || DocumentFormatter.getDefaultMargins())
           }
         },
         children: [
@@ -261,7 +267,7 @@ router.post('/generated/:id/export', async (req, res) => {
       }]
     });
 
-    const buffer = await Packer.toBuffer(docx);
+    const buffer = await Packer.toBuffer(doc);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename=document-${document.document_number || id}.docx`);
