@@ -5,7 +5,7 @@ import { supabase } from '../config/db';
 export async function exportDocument(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { format, unit_details, contact_info, margins, include_attachments, include_signatures } = req.body;
+    const config = req.method === 'POST' ? req.body : {};
 
     // Fetch document data from supabase
     const { data: document, error } = await supabase
@@ -23,20 +23,20 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Parse recipients from JSON array
+    // Use the recipients array directly from the document
     const recipients = Array.isArray(document.recipients) ? document.recipients : [];
 
     // Create document sections
-    const headerTable = createDocumentHeader(unit_details, contact_info);
+    const headerTable = createDocumentHeader(config.unit_details || {}, config.contact_info || {});
     const contentTable = createPaymentTable(recipients);
-    const footerTable = createDocumentFooter(unit_details);
+    const footerTable = createDocumentFooter(config.unit_details || {});
 
     // Create document
     const docx = new Document({
       sections: [{
         properties: { 
           page: { 
-            margin: margins || {
+            margin: config.margins || {
               top: 1000,
               right: 1000,
               bottom: 1000,
@@ -86,42 +86,23 @@ function createDocumentHeader(unitDetails: any, contactInfo: any) {
     { text: `Email: ${unitDetails?.email || 'daefkke@civilprotection.gr'}`, bold: false }
   ];
 
-  const rightColumnInfo = [
-    { text: 'ΑΝΑΡΤΗΤΕΑ ΣΤΟ ΔΙΑΔΙΚΤΥΟ', bold: true },
-    { text: '', bold: false },
-    { text: 'Αθήνα, ........................', bold: true },
-    { text: 'Αρ. Πρωτ.: ......................', bold: true }
-  ];
-
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: { 
       top: { style: BorderStyle.NONE },
       bottom: { style: BorderStyle.NONE },
       left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-      insideVertical: { style: BorderStyle.NONE }
+      right: { style: BorderStyle.NONE }
     },
     rows: [
       new TableRow({
         children: [
           new TableCell({
-            width: { size: 65, type: WidthType.PERCENTAGE },
             children: headerInfo.map(item => 
               new Paragraph({
                 children: [new TextRun({ text: item.text, bold: item.bold, size: 20 })],
                 alignment: AlignmentType.LEFT,
-                spacing: { before: 0, after: 0 }
-              })
-            )
-          }),
-          new TableCell({
-            width: { size: 35, type: WidthType.PERCENTAGE },
-            children: rightColumnInfo.map(item =>
-              new Paragraph({
-                children: [new TextRun({ text: item.text, bold: item.bold, size: 20 })],
-                alignment: AlignmentType.LEFT,
-                spacing: { before: 0, after: 0 }
+                spacing: { before: 120, after: 120 }
               })
             )
           })
@@ -143,11 +124,67 @@ function createMainContent(doc: any) {
     new Paragraph({
       children: [new TextRun({ text: 'Έχοντας υπόψη:' })],
       spacing: { before: 200, after: 200 }
+    }),
+    new Paragraph({
+      children: [
+        new TextRun({ text: `Αριθμός Πρωτοκόλλου: ${doc.protocol_number || ''}` }),
+      ],
+      spacing: { before: 200, after: 200 }
     })
   ];
 }
 
 function createPaymentTable(recipients: any[]) {
+  // Create header row
+  const headerRow = new TableRow({
+    children: ['Α/Α', 'ΟΝΟΜΑΤΕΠΩΝΥΜΟ', 'ΑΦΜ', 'ΠΟΣΟ (€)', 'ΔΟΣΗ'].map(header =>
+      new TableCell({
+        children: [new Paragraph({
+          children: [new TextRun({ text: header, bold: true })],
+          alignment: AlignmentType.CENTER
+        })]
+      })
+    )
+  });
+
+  // Create recipient rows
+  const recipientRows = recipients.map((recipient, index) => 
+    new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: (index + 1).toString() })],
+            alignment: AlignmentType.CENTER
+          })]
+        }),
+        new TableCell({
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` })],
+            alignment: AlignmentType.LEFT
+          })]
+        }),
+        new TableCell({
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: recipient.afm })],
+            alignment: AlignmentType.CENTER
+          })]
+        }),
+        new TableCell({
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: recipient.amount.toFixed(2) })],
+            alignment: AlignmentType.RIGHT
+          })]
+        }),
+        new TableCell({
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: recipient.installment.toString() })],
+            alignment: AlignmentType.CENTER
+          })]
+        })
+      ]
+    })
+  );
+
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: {
@@ -158,94 +195,25 @@ function createPaymentTable(recipients: any[]) {
       insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
       insideVertical: { style: BorderStyle.SINGLE, size: 1 }
     },
-    rows: [
-      new TableRow({
-        children: ['Α/Α', 'ΟΝΟΜΑΤΕΠΩΝΥΜΟ', 'ΑΦΜ', 'ΠΟΣΟ (€)', 'ΔΟΣΗ'].map(header =>
-          new TableCell({
-            children: [new Paragraph({
-              children: [new TextRun({ text: header, bold: true })],
-              alignment: AlignmentType.CENTER
-            })]
-          })
-        )
-      }),
-      ...recipients.map((recipient, index) => 
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [new Paragraph({ 
-                children: [new TextRun({ text: (index + 1).toString() })],
-                alignment: AlignmentType.CENTER
-              })]
-            }),
-            new TableCell({
-              children: [new Paragraph({ 
-                children: [new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` })],
-                alignment: AlignmentType.LEFT
-              })]
-            }),
-            new TableCell({
-              children: [new Paragraph({ 
-                children: [new TextRun({ text: recipient.afm })],
-                alignment: AlignmentType.CENTER
-              })]
-            }),
-            new TableCell({
-              children: [new Paragraph({ 
-                children: [new TextRun({ text: recipient.amount.toFixed(2) })],
-                alignment: AlignmentType.RIGHT
-              })]
-            }),
-            new TableCell({
-              children: [new Paragraph({ 
-                children: [new TextRun({ text: recipient.installment.toString() })],
-                alignment: AlignmentType.CENTER
-              })]
-            })
-          ]
-        })
-      )
-    ]
+    rows: [headerRow, ...recipientRows]
   });
 }
 
 function createDocumentFooter(unitDetails: any) {
-  const attachments = [
-    'Η σε ορθή επανάληψη έγκριση Σ.Σ για ανακατ. κτιρίου',
-    'Οι εκδοθείσες άδειες επισκευής κτιρίου',
-    'Οι εγκρίσεις Σ.Σ για ανακατασκευή άδειες επισκευής',
-    'Υπεύθυνες δηλώσεις δικαιούχων',
-    'Φωτοτυπίες των βιβλιαρίων',
-    'Φωτοτυπίες ΑΔΤ των δικαιούχων',
-    'Ένας συγκεντρωτικός πίνακας των δικαιούχων'
-  ];
-
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: { 
       top: { style: BorderStyle.NONE },
       bottom: { style: BorderStyle.NONE },
       left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-      insideVertical: { style: BorderStyle.NONE }
+      right: { style: BorderStyle.NONE }
     },
     rows: [
       new TableRow({
         children: [
           new TableCell({
             children: [
-              new Paragraph({
-                children: [new TextRun({ text: 'ΣΥΝΗΜΜΕΝΑ', bold: true })],
-                spacing: { before: 240, after: 240 }
-              }),
-              ...attachments.map((text, index) => 
-                new Paragraph({
-                  children: [new TextRun({ text: `${index + 1}. ${text}` })],
-                  indent: { left: 240 },
-                  spacing: { before: 60, after: 60 }
-                })
-              ),
-              new Paragraph({ text: '', spacing: { before: 3000 } }),
+              new Paragraph({ text: '', spacing: { before: 500 } }),
               new Paragraph({
                 children: [new TextRun({ text: 'Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ Δ.Α.Ε.Φ.Κ.', bold: true })],
                 alignment: AlignmentType.CENTER
