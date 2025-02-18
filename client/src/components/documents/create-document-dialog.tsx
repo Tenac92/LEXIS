@@ -17,7 +17,7 @@ interface Unit {
 }
 
 interface Project {
-  id: string;
+  id: number;
   event_description: string;
   na853: string;
   mis?: string;
@@ -257,7 +257,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         </FormControl>
                         <SelectContent>
                           {projects.map((project) => (
-                            <SelectItem key={project.id} value={project.id}>
+                            <SelectItem key={project.id} value={project.id.toString()}>
                               {getProjectDisplayName(project)}
                             </SelectItem>
                           ))}
