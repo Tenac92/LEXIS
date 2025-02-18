@@ -13,8 +13,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard routes
   app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
 
-  // Documents routes
-  app.use('/api/documents', documentsController);
+  // Documents routes - make sure this is registered before the general apiRouter
+  app.use('/api/documents', authenticateSession, documentsController);
 
   // Mount all API routes under /api
   app.use('/api', apiRouter);

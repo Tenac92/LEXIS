@@ -133,6 +133,10 @@ router.post('/generated/:id/export', async (req, res) => {
     const { id } = req.params;
     const { format, unit_details, contact_info, margins, include_attachments, include_signatures } = req.body;
 
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     // Fetch document data from database
     const { data: document, error } = await supabase
       .from('generated_documents')
@@ -151,7 +155,7 @@ router.post('/generated/:id/export', async (req, res) => {
         children: [{
           children: [
             new Paragraph({
-              children: [new TextRun({ text: unit_details.unit_name || '', bold: true })],
+              children: [new TextRun({ text: unit_details?.unit_name || '', bold: true })],
               alignment: AlignmentType.LEFT
             })
           ]
@@ -160,7 +164,7 @@ router.post('/generated/:id/export', async (req, res) => {
     });
 
     const contentTable = new Table({
-      rows: document.recipients.map((recipient, index) => ({
+      rows: (document.recipients || []).map((recipient: any) => ({
         children: [{
           children: [
             new Paragraph({
@@ -180,7 +184,7 @@ router.post('/generated/:id/export', async (req, res) => {
         children: [{
           children: [
             new Paragraph({
-              children: [new TextRun({ text: contact_info.contact_person || '' })],
+              children: [new TextRun({ text: contact_info?.contact_person || '' })],
               alignment: AlignmentType.CENTER
             })
           ]
