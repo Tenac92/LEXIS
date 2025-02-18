@@ -20,8 +20,8 @@ interface Project {
   id: number;
   event_description: string;
   na853: string;
-  mis?: string;
-  budget?: number;
+  mis?: string | null;
+  budget?: number | null;
 }
 
 const createDocumentSchema = z.object({
@@ -79,7 +79,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects", form.watch("unit")],
-    enabled: !!form.watch("unit")
+    enabled: currentStep === 0 && !!form.watch("unit")
   });
 
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
@@ -167,11 +167,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   };
 
   const getProjectDisplayName = (project: Project): string => {
-    if (project.na853 && project.event_description) {
+    if (project?.na853 && project?.event_description) {
       return `${project.na853} - ${project.event_description}`;
     }
-    return project.event_description || 'Unknown Project';
+    return project?.event_description || 'Unknown Project';
   };
+
+  console.log('Projects data:', projects); // Debug log
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -256,7 +258,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {projects.map((project) => (
+                          {projects && projects.map((project) => (
                             <SelectItem key={project.id} value={project.id.toString()}>
                               {getProjectDisplayName(project)}
                             </SelectItem>
