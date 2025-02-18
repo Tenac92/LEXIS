@@ -179,7 +179,7 @@ export class CreateDocumentModal extends BaseModal {
   }
 
   updateRecipientField(recipient, field, value, input) {
-    switch(field) {
+    switch (field) {
       case 'firstname':
         const cleanFirstname = value ? value.trim().replace(/[^\p{L}\s-]/gu, '') : '';
         recipient.firstname = cleanFirstname;
@@ -263,7 +263,7 @@ export class CreateDocumentModal extends BaseModal {
       if (expTypeSelect) {
         expTypeSelect.innerHTML = `
           <option value="">Select expenditure type...</option>
-          ${expenditure_types.map(type => 
+          ${expenditure_types.map(type =>
             `<option value="${type}">${type}</option>`
           ).join('')}
         `;
@@ -287,7 +287,7 @@ export class CreateDocumentModal extends BaseModal {
   }
 
   calculateTotalAmount() {
-    return this.state.recipients.reduce((sum, r) => 
+    return this.state.recipients.reduce((sum, r) =>
       sum + (parseFloat(r.amount) || 0), 0
     );
   }
@@ -452,16 +452,16 @@ export class CreateDocumentModal extends BaseModal {
     }
 
     try {
-        for (const recipient of this.state.recipients) {
-            const validation = this.validationManager.validateRecipient(recipient);
-            if (!validation.valid) {
-                console.log('Validation failed for recipient:', recipient);
-                return validation;
-            }
+      for (const recipient of this.state.recipients) {
+        const validation = this.validationManager.validateRecipient(recipient);
+        if (!validation.valid) {
+          console.log('Validation failed for recipient:', recipient);
+          return validation;
         }
+      }
     } catch (error) {
-        console.error('Error during recipients validation:', error);
-        return { valid: false, message: "Σφάλμα επικύρωσης παραλήπτη" };
+      console.error('Error during recipients validation:', error);
+      return { valid: false, message: "Σφάλμα επικύρωσης παραλήπτη" };
     }
 
     const totalAmount = this.calculateTotalAmount();
@@ -599,7 +599,7 @@ export class CreateDocumentModal extends BaseModal {
   }
 
   createPrevButton() {
-    return this.currentStep > 0 
+    return this.currentStep > 0
       ? `<button class="prev-step px-6 py-3 text-gray-600 hover:text-gray-800 bg-gray-100/80 hover:bg-gray-200/80 rounded-lg transition-all duration-200 flex items-center font-medium shadow-sm hover:shadow backdrop-blur-sm">
           <i class="fas fa-arrow-left mr-2"></i>Προηγούμενο
          </button>`
@@ -613,27 +613,27 @@ export class CreateDocumentModal extends BaseModal {
           <div class="flex items-center ${index !== 0 ? 'ml-2' : ''} ${index !== this.stepTitles.length - 1 ? 'mr-2' : ''}">
             <div class="relative group">
               <div class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-all duration-200 ${
-                index === this.currentStep 
-                  ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-100" 
-                  : index < this.currentStep
-                  ? "text-green-600 hover:bg-white/60"
-                  : "text-gray-500 hover:bg-white/60"
-              }">
+        index === this.currentStep
+          ? "bg-white text-blue-600 shadow-sm ring-1 ring-blue-100"
+          : index < this.currentStep
+            ? "text-green-600 hover:bg-white/60"
+            : "text-gray-500 hover:bg-white/60"
+      }">
                 <div class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium ${
-                  index === this.currentStep 
-                    ? "bg-blue-100/80" 
-                    : index < this.currentStep
-                    ? "bg-green-100/80"
-                    : "bg-gray-100"
-                }">
+        index === this.currentStep
+          ? "bg-blue-100/80"
+          : index < this.currentStep
+            ? "bg-green-100/80"
+            : "bg-gray-100"
+      }">
                   ${index < this.currentStep ? '<i class="fas fa-check text-[10px]"></i>' : index + 1}
                 </div>
                 <span class="text-xs font-medium whitespace-nowrap">${step}</span>
               </div>
             </div>
-            ${index !== this.stepTitles.length - 1 
-              ? `<div class="ml-1 w-2 h-px bg-gray-200"></div>` 
-              : ''}
+            ${index !== this.stepTitles.length - 1
+        ? `<div class="ml-1 w-2 h-px bg-gray-200"></div>`
+        : ''}
           </div>
         `).join('')}
       </div>
@@ -847,7 +847,7 @@ export class CreateDocumentModal extends BaseModal {
               <tr class="hover:bg-gray-50 transition-colors">
                 <td class="w-12 px-2 py-3 border-b border-r text-sm font-medium text-gray-900 text-center">
                   <span class="inline-flex items-center justify-center h-7 w-7 rounded-full bg-blue-50 text-blue-600 font-semibold text-sm">
-                    ${index + 1}
+                    ${index +1}
                   </span>
                 </td>
                 <td class="px-6 py-3 border-b border-r">
@@ -905,248 +905,154 @@ export class CreateDocumentModal extends BaseModal {
                 </td>
                 <td class="px-6 py-3 border-b border-r w-24">
                   <div class="relative">
-                    <input type="number" 
-                           value="${recipient.installment || ""}"
+<input type="number" 
+                           value="${recipient.installment || 1}" 
                            class="w-full px-3 py-2 bg-white/50 border border-gray-200 rounded-md hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-sm text-center recipient-input" 
                            data-field="installment" 
                            data-index="${index}"
                            min="1"
+                           max="12"
                            placeholder="1"
                            aria-label="Installment for recipient ${index + 1}">
-                  </div>
+                   </div>
                 </td>
-                <td class="px-14 py-4 border-b text-center">
-                  <button class="delete-recipient text-red-600 hover:text-red-800 p-1" data-index="${index}">
-                    <i class="fas fa-trash"></i>
+                <td class="px-14 py-3 border-b text-center">
+                  <button class="delete-recipient text-red-500 hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50"
+                          data-index="${index}"
+                          aria-label="Delete recipient ${index + 1}">
+                    <i class="fas fa-trash-alt"></i>
                   </button>
                 </td>
               </tr>
-            `,
-              )
-              .join("")}
+            `).join('')}
           </tbody>
         </table>
       </div>
-      </div>
-    `;
-    } catch (error) {
-      console.error("Error rendering recipients step:", error);
-      return `<p class="text-red-600">Failed to render recipients: ${error.message}</p>`;
-    }
-  }
-
-  createRecipientRow(recipient, index) {
-    return `
-      <tr class="hover:bg-gray-50 transition-colors">
-        <td class="w-12 px-2 py-3 border-b border-r text-sm font-medium text-gray-900 text-center">
-          <span class="inline-flex items-center justify-center h-7 w-7 rounded-full bg-blue-50 text-blue-600 font-semibold text-sm">
-            ${index + 1}
-          </span>
-        </td>
-        <td class="px-6 py-3 border-b border-r">
-          <div class="relative group">
-            <input type="text" 
-                   value="${recipient.firstname || ""}" 
-                   class="w-full px-3 py-2 bg-white/50 border border-gray-200 rounded-md hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-sm recipient-input" 
-                   data-field="firstname" 
-                   data-index="${index}"
-                   placeholder="Όνομα"
-                   autocomplete="given-name"
-                   aria-label="First name for recipient ${index + 1}">
-            <div class="invalid-feedback hidden text-red-500 text-xs mt-1">At least 2 characters required.</div>
-          </div>
-        </td>
-        <td class="px-14 py-3 border-b border-r">
-          <div class="relative">
-            <input type="text" 
-                   value="${recipient.lastname || ""}" 
-                   class="w-full px-3 py-2 bg-white/50 border border-gray-200 rounded-md hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-sm recipient-input" 
-                   data-field="lastname" 
-                   data-index="${index}"
-                   placeholder="Επώνυμο"
-                   autocomplete="family-name"
-                   aria-label="Last name for recipient ${index + 1}">
-            <div class="invalid-feedback hidden text-red-500 text-xs mt-1">At least 2 characters required.</div>
-          </div>
-        </td>
-        <td class="px-24 py-3 border-b border-r">
-          <div class="relative">
-            <input type="text" 
-                   value="${recipient.afm || ""}" 
-                   class="w-full px-3 py-2 bg-white/50 border border-gray-200 rounded-md hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-sm font-mono recipient-input" 
-                   data-field="afm" 
-                   data-index="${index}"
-                   maxlength="9"
-                   placeholder="ΑΦΜ"
-                   autocomplete="off"
-                   aria-label="AFM for recipient ${index + 1}">
-            <div class="invalid-feedback hidden text-red-500 text-xs mt-1">AFM must be 9 digits long.</div>
-          </div>
-        </td>
-        <td class="px-14 py-3 border-b border-r">
-          <div class="relative">
-            <input type="number" 
-                   value="${recipient.amount || ""}" 
-                   class="w-full px-3 py-2 bg-white/50 border border-gray-200 rounded-md hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-sm text-right recipient-input" 
-                   data-field="amount" 
-                   data-index="${index}"
-                   step="0.01"
-                   placeholder="0.00"
-                   aria-label="Amount for recipient ${index + 1}">
-            <div class="invalid-feedback hidden text-red-500 text-xs mt-1">Amount must be greater than 0.</div>
-          </div>
-        </td>
-        <td class="px-6 py-3 border-b border-r w-24">
-          <div class="relative">
-            <input type="number" 
-                   value="${recipient.installment || ""}"
-                   class="w-full px-3 py-2 bg-white/50 border border-gray-200 rounded-md hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-sm text-center recipient-input" 
-                   data-field="installment" 
-                   data-index="${index}"
-                   min="1"
-                   placeholder="1"
-                   aria-label="Installment for recipient ${index + 1}">
-          </div>
-        </td>
-        <td class="px-14 py-4 border-b text-center">
-          <button class="delete-recipient text-red-600 hover:text-red-800 p-1" data-index="${index}">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
-      </tr>
-    `;
+    </div>
+  </div>
+`;
   }
 
   async renderAttachmentsStep() {
-    try {
-      const expType = this.state.expenditure_type || "default";
-      const installment = this.state.recipients?.[0]?.installment || 1;
+    const allowedTypes = ['pdf', 'docx', 'xlsx'];
+    const attachmentTypes = [
+      { id: 'main', label: 'Main Document', required: true },
+      { id: 'support', label: 'Supporting Document', required: false },
+      { id: 'additional', label: 'Additional Files', required: false }
+    ];
 
-      if (!expType || !installment) {
-        return `<div class="p-4 text-red-600">Missing expenditure type or installment information</div>`;
-      }
+    return `
+      <div class="space-y-6">
+        <div class="bg-white rounded-xl border border-gray-200/75 shadow-sm p-6">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Document Attachments</h3>
+          <p class="text-sm text-gray-600 mb-6">Upload required documents in PDF, DOCX, or XLSX format (max 10MB each)</p>
 
-      const token = await getAuthToken();
-      const response = await fetch(
-        `/api/documents/attachments/${encodeURIComponent(expType)}/${encodeURIComponent(installment)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-            'Content-Type': 'application/json'
-          },
-        },
-      );
-
-      const data = await response.json();
-      const attachmentsList = data?.attachments || [];
-
-      return `
-        <div class="space-y-6">
-          <div class="flexjustify-between items-center mb-4">
-            <h3 class="text-lg font-medium">Required Attachments</h3>
-            <span class="text-sm text-gray-500">${attachmentsList.length} attachments required</span>
-          </div>
           <div class="space-y-4">
-            ${attachmentsList
-              .map(
-                (attachment, index) => `
-              <div class="flex items-start space-x-3 p-4 border rounded-lg bg-gray-50">
-                <input type="checkbox"                       id="attachment-${index}"
-                       class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                       data-attachment="${attachment}">
-                <div class="flex-1">
-                  <label for="attachment-${index}" class="block text-sm font-medium text-gray-700 cursor-pointer">
-                    ${attachment}
+            ${attachmentTypes.map(type => `
+              <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div class="flex items-center justify-between mb-2">
+                  <label class="block text-sm font-medium text-gray-700">
+                    ${type.label}
+                    ${type.required ? '<span class="text-red-500">*</span>' : ''}
                   </label>
-                  <div class="mt-2">
-                    <input type="file" 
-                           class="attachment-input w-full text-sm text-gray-500 file:mr-4file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
-                           data-type="${attachment}">
-                  </div>
+                  ${this.state.selectedFiles.get(type.id) ? `
+                    <span class="text-sm text-green-600">
+                      <i class="fas fa-check-circle mr-1"></i>
+                      ${this.state.selectedFiles.get(type.id).name}
+                    </span>
+                  ` : ''}
                 </div>
+                <input type="file" 
+                       class="attachment-input w-full"
+                       data-type="${type.id}"
+                       accept="${allowedTypes.map(ext => `.${ext}`).join(',')}"
+                       ${type.required ? 'required' : ''}>
+                <p class="mt-1 text-xs text-gray-500">Allowed formats: ${allowedTypes.join(', ')}</p>
               </div>
-            `,
-              )
-              .join("")}
+            `).join('')}
           </div>
         </div>
-      `;
-    } catch (error) {
-      console.error("Error loading attachments:", error);
-      return `<p class="text-red600">Failed to load attachments: ${error.message}</p>`;
-    }
+      </div>
+    `;
   }
 
-  async handleSubmitResponse(result) {
-    this.showSuccess("Document created successfully");
-    this.hide();
-    if (this.manager?.loadDocuments) {
-      await this.manager.loadDocuments();
-    }
-  }
-
-  async submitFormData(formData) {
-    const token = await getAuthToken();
-    if (!token) throw new Error("Authentication required");
-
-    const response = await fetch("/api/documents/generated", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to create document");
-    }
-
-    return response.json();
-  }
   async setupStepHandlers() {
     const unitSelect = this.modal?.querySelector('#unitSelect');
     const projectSelect = this.modal?.querySelector('#projectSelect');
     const expTypeSelect = this.modal?.querySelector('#expTypeSelect');
 
-    if (this.currentStep === 0 && unitSelect) {
+    if (unitSelect) {
+      unitSelect.value = this.state.unit || '';
       unitSelect.addEventListener('change', (e) => {
         this.state.unit = e.target.value;
         this.state.hasUnsavedChanges = true;
       });
     }
 
-    if (this.currentStep === 1) {
-      if (projectSelect) {
-        projectSelect.addEventListener('change', (e) => this.handleProjectChange(e.target.value));
-      }
-      if (expTypeSelect) {
-        expTypeSelect.addEventListener('change', (e) => this.handleExpenditureTypeChange(e.target.value));
-      }
-    }
-
-    if (this.currentStep === 2) {
-      const inputs = this.modal?.querySelectorAll('.recipient-input');
-      inputs?.forEach(input => {
-        input.addEventListener('input', (e) => this.handleRecipientInput(e.target));
+    if (projectSelect) {
+      projectSelect.value = this.state.project || '';
+      projectSelect.addEventListener('change', async (e) => {
+        await this.handleProjectChange(e.target.value);
       });
     }
+
+    if (expTypeSelect) {
+      expTypeSelect.value = this.state.expenditure_type || '';
+      expTypeSelect.addEventListener('change', (e) => {
+        this.handleExpenditureTypeChange(e.target.value);
+      });
+    }
+
+    // Set up validation handlers for recipient inputs
+    const recipientInputs = this.modal?.querySelectorAll('.recipient-input');
+    recipientInputs?.forEach(input => {
+      input.addEventListener('input', (e) => this.handleRecipientInput(e.target));
+      input.addEventListener('blur', (e) => this.validateRecipientField(e.target));
+    });
+
+    // Set up attachment handlers
+    const attachmentInputs = this.modal?.querySelectorAll('.attachment-input');
+    attachmentInputs?.forEach(input => {
+      input.addEventListener('change', (e) => this.handleAttachmentChange(e));
+    });
   }
 
-  cleanup() {
-    this.eventHandlers.forEach((handler, element) => {
-      element.removeEventListener(handler.type, handler.fn);
-    });
-    this.eventHandlers.clear();
-    this.state = this.getInitialState();
+  validateRecipientField(input) {
+    const field = input.dataset.field;
+    const value = input.value.trim();
+    const feedback = input.parentElement.querySelector('.invalid-feedback');
+    let isValid = true;
+
+    switch (field) {
+      case 'firstname':
+      case 'lastname':
+        isValid = value.length >= 2;
+        break;
+      case 'afm':
+        isValid = /^\d{9}$/.test(value);
+        break;
+      case 'amount':
+        isValid = parseFloat(value) > 0;
+        break;
+      case 'installment':
+        const installment = parseInt(value);
+        isValid = installment >= 1 && installment <= 12;
+        break;
+    }
+
+    input.classList.toggle('border-red-500', !isValid);
+    if (feedback) {
+      feedback.classList.toggle('hidden', isValid);
+    }
+
+    return isValid;
   }
-  validateField(input, isValid, message) {
+
+  validateField(input, isValid, errorMessage) {
     input.classList.toggle('border-red-500', !isValid);
     const feedback = input.parentElement.querySelector('.invalid-feedback');
     if (feedback) {
-      feedback.textContent = message;
+      feedback.textContent = errorMessage;
       feedback.classList.toggle('hidden', isValid);
     }
   }
