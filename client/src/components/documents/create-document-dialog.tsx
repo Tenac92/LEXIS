@@ -19,6 +19,7 @@ interface Unit {
 interface Project {
   id: string;
   name: string;
+  na853?: string; // Added NA853 field
 }
 
 
@@ -249,7 +250,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <SelectContent>
                           {projects.map((project) => (
                             <SelectItem key={project.id} value={project.id}>
-                              {project.name}
+                              {project.na853 ? `${project.na853} - ${project.name}` : project.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
