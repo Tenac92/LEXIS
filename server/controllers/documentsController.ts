@@ -10,29 +10,29 @@ router.get('/', async (req, res) => {
     const { status, unit, dateFrom, dateTo, amountFrom, amountTo, user } = req.query;
     let query = supabase.from('generated_documents').select('*');
 
-    // Filter by user's role
-    if (req.user?.role !== 'admin') {
-      query = query.eq('generated_by', req.user?.id);
+    // Filter by user's role and ID - fixed the undefined user ID issue
+    if (req.user?.role !== 'admin' && req.user?.id) {
+      query = query.eq('generated_by', req.user.id);
     }
 
     // Apply filters
     if (status && status !== 'all') {
-      query = query.eq('status', status);
+      query = query.eq('status', status as string);
     }
     if (unit && unit !== 'all') {
-      query = query.eq('unit', unit);
+      query = query.eq('unit', unit as string);
     }
     if (dateFrom) {
-      query = query.gte('created_at', dateFrom);
+      query = query.gte('created_at', dateFrom as string);
     }
     if (dateTo) {
-      query = query.lte('created_at', dateTo);
+      query = query.lte('created_at', dateTo as string);
     }
-    if (amountFrom) {
-      query = query.gte('total_amount', amountFrom);
+    if (amountFrom && !isNaN(Number(amountFrom))) {
+      query = query.gte('total_amount', Number(amountFrom));
     }
-    if (amountTo) {
-      query = query.lte('total_amount', amountTo);
+    if (amountTo && !isNaN(Number(amountTo))) {
+      query = query.lte('total_amount', Number(amountTo));
     }
 
     // User/Recipient filter with proper text search
@@ -47,8 +47,11 @@ router.get('/', async (req, res) => {
 
     const { data, error } = await query;
 
-    if (error) throw error;
-    res.json(data);
+    if (error) {
+      console.error('Supabase query error:', error);
+      throw error;
+    }
+    res.json(data || []);
   } catch (error) {
     console.error('Error fetching documents:', error);
     res.status(500).json({ message: 'Failed to fetch documents' });
