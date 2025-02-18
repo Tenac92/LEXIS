@@ -27,7 +27,7 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
       });
     }
     req.user = req.session.user;
-    console.log('[Auth] User authenticated:', req.user.username);
+    console.log('[Auth] User authenticated:', req.user.email);
     next();
   } catch (error) {
     console.error('[Auth] Authentication error:', error);
@@ -60,6 +60,7 @@ export async function setupAuth(app: Express) {
         .single();
 
       if (error || !user) {
+        console.error('[Auth] No user found for email:', email);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
@@ -68,46 +69,7 @@ export async function setupAuth(app: Express) {
       // Compare password using bcrypt
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        return res.status(401).json({
-          error: { message: 'Invalid credentials' }
-        });
-      }
-
-      // Set user in session
-      req.session.user = user;
-      await req.session.save();
-
-      // Return user data
-      const userData = {
-        id: user.id,
-        email: user.email,
-        role: user.role
-      };
-
-      return res.json(userData);
-        .from('users')
-        .select('*')
-        .eq('username', username)
-        .single();
-
-      if (error) {
-        console.error('[Auth] Database query error:', error);
-        return res.status(401).json({
-          error: { message: 'Invalid credentials' }
-        });
-      }
-
-      if (!user) {
-        console.error('[Auth] No user found for username:', username);
-        return res.status(401).json({
-          error: { message: 'Invalid credentials' }
-        });
-      }
-
-      // Compare password using bcrypt
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        console.error('[Auth] Password validation failed for user:', username);
+        console.error('[Auth] Password validation failed for user:', email);
         return res.status(401).json({
           error: { message: 'Invalid credentials' }
         });
@@ -116,22 +78,17 @@ export async function setupAuth(app: Express) {
       // Map the database fields to our User type
       const userData: User = {
         id: user.id,
-        username: user.username,
-        full_name: user.full_name,
+        email: user.email,
         role: user.role,
-        unit: user.unit,
-        active: user.active,
         name: user.name,
         created_at: user.created_at,
       };
 
       // Store user data in session
-      if (req.session) {
-        req.session.user = userData;
-        console.log('[Auth] User data stored in session:', userData);
-      }
+      req.session.user = userData;
+      await req.session.save();
 
-      console.log('[Auth] Login successful for user:', username);
+      console.log('[Auth] Login successful for user:', email);
       res.json(userData);
 
     } catch (error) {
