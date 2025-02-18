@@ -166,9 +166,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   };
 
-  const getProjectDisplayName = (project: Project): string => {
-    if (!project) return 'Unknown Project';
-    return project.na853 ? `${project.na853} - ${project.name}` : project.name;
+  const getProjectDisplayName = (projectId: string | null): string => {
+    if (!projectId) return 'Select project';
+    const project = projects?.find(p => p.id.toString() === projectId);
+    return project ? (project.na853 ? `${project.na853} - ${project.name}` : project.name) : 'Select project';
+  };
+
+  const findProjectById = (id: string): Project | undefined => {
+    return projects?.find(p => p.id.toString() === id);
   };
 
   return (
@@ -225,7 +230,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {units.map((unit) => (
+                          {units?.map((unit) => (
                             <SelectItem key={unit.id} value={unit.id}>
                               {unit.name}
                             </SelectItem>
@@ -245,18 +250,20 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <FormLabel>Project</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                         disabled={!form.watch("unit") || projectsLoading}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select project" />
+                            <SelectValue placeholder="Select project">
+                              {getProjectDisplayName(field.value)}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {projects?.map((project) => (
-                            <SelectItem key={project.id} value={String(project.id)}>
-                              {getProjectDisplayName(project)}
+                            <SelectItem key={project.id} value={project.id.toString()}>
+                              {project.na853 ? `${project.na853} - ${project.name}` : project.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -283,7 +290,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {expenditureTypes.map((type) => (
+                          {expenditureTypes?.map((type) => (
                             <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>
