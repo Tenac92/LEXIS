@@ -190,7 +190,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     form.setValue(`attachments.${type}`, file);
   };
 
-  const nextStep = async () => {
+  const handleNextStep = async () => {
     try {
       const fields = getFieldsForStep(currentStep);
       const isValid = await form.trigger(fields);
@@ -210,9 +210,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         }
       }
 
-      setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+      if (currentStep === steps.length - 1) {
+        const formData = form.getValues();
+        createDocumentMutation.mutate(formData);
+      } else {
+        setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+      }
     } catch (error) {
-      console.error('Error in nextStep:', error);
+      console.error('Error in handleNextStep:', error);
       toast({
         title: "Error",
         description: "Failed to proceed to next step",
@@ -221,7 +226,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   };
 
-  const prevStep = () => {
+  const handlePrevStep = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
@@ -237,14 +242,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         return ["attachments"];
       default:
         return [];
-    }
-  };
-
-  const handleSubmit = (data: CreateDocumentForm) => {
-    if (currentStep === steps.length - 1) {
-      createDocumentMutation.mutate(data);
-    } else {
-      nextStep();
     }
   };
 
@@ -289,7 +286,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-6">
             {currentStep === 0 && (
               <FormField
                 control={form.control}
@@ -578,7 +575,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               <Button
                 type="button"
                 variant="outline"
-                onClick={prevStep}
+                onClick={handlePrevStep}
                 disabled={currentStep === 0}
               >
                 Previous
