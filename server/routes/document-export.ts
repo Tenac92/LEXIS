@@ -7,7 +7,7 @@ export async function exportDocument(req: Request, res: Response) {
     const { id } = req.params;
     const config = req.method === 'POST' ? req.body : {};
 
-    // Fetch document data from supabase - simplified query
+    // Fetch document data from supabase
     const { data: document, error } = await supabase
       .from('generated_documents')
       .select('*')
@@ -32,18 +32,35 @@ export async function exportDocument(req: Request, res: Response) {
         properties: { 
           page: { 
             margin: config.margins || {
-              top: 1000,
+              top: 850,
               right: 1000,
-              bottom: 1000,
+              bottom: 850,
               left: 1000
-            }
+            },
+            size: { width: 11906, height: 16838 }
           } 
         },
         children: [
-          createHeader(config.unit_details || {}, config.contact_info || {}),
-          ...createMainContent(document),
+          createDocumentHeader(req, config.unit_details || {}),
+          new Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
+          createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
+          new Paragraph({ 
+            children: [
+              new TextRun({ text: `Μονάδα: ${document.unit || 'N/A'}`, bold: true }),
+              new TextRun({ text: `    NA853: ${document.project_na853 || 'N/A'}`, bold: true })
+            ],
+            spacing: { before: 240, after: 240 }
+          }),
           createPaymentTable(recipients),
-          createFooter()
+          new Paragraph({ text: '', spacing: { before: 300 } }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: 'ΣΥΝΟΛΟ: ', bold: true }),
+              new TextRun({ text: `${calculateTotal(recipients).toFixed(2)}€` })
+            ]
+          }),
+          new Paragraph({ text: '', spacing: { before: 300 } }),
+          createDocumentFooter()
         ]
       }]
     });
@@ -65,7 +82,41 @@ export async function exportDocument(req: Request, res: Response) {
   }
 }
 
-function createHeader(unitDetails: any, contactInfo: any) {
+function calculateTotal(recipients: any[]): number {
+  return recipients.reduce((sum, recipient) => sum + parseFloat(recipient.amount), 0);
+}
+
+function createHeader(text: string, size = 24, bold = true): Paragraph {
+  return new Paragraph({
+    children: [new TextRun({ text, size, bold })],
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 240, after: 240 }
+  });
+}
+
+function createDocumentHeader(req: Request, unitDetails: any = {}) {
+  const defaultEmail = unitDetails?.email || 'daefkke@civilprotection.gr';
+
+  const headerInfo = [
+    { text: 'ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ', bold: true },
+    { text: 'ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ', bold: true },
+    { text: 'ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ', bold: true },
+    { text: 'ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ', bold: true },
+    { text: unitDetails?.unit_name || '', bold: true },
+    { text: '', bold: false },
+    { text: 'Ταχ. Δ/νση: Κηφισίας 124 & Ιατρίδου 2', bold: false },
+    { text: 'Ταχ. Κώδικας: 11526, Αθήνα', bold: false },
+    { text: `Πληροφορίες: ${req?.user?.name || ''}`, bold: false },
+    { text: 'Email: ' + defaultEmail, bold: false }
+  ];
+
+  const rightColumnInfo = [
+    { text: 'ΑΝΑΡΤΗΤΕΑ ΣΤΟ ΔΙΑΔΙΚΤΥΟ', bold: true },
+    { text: '', bold: false },
+    { text: 'Αθήνα, ........................', bold: true },
+    { text: 'Αρ. Πρωτ.: ......................', bold: true }
+  ];
+
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: { 
@@ -78,48 +129,29 @@ function createHeader(unitDetails: any, contactInfo: any) {
       new TableRow({
         children: [
           new TableCell({
-            children: [
+            width: { size: 65, type: WidthType.PERCENTAGE },
+            children: headerInfo.map(item => 
               new Paragraph({
-                children: [new TextRun({ text: 'ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ', bold: true, size: 24 })],
-                alignment: AlignmentType.CENTER
-              }),
-              new Paragraph({
-                children: [new TextRun({ text: 'ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ', bold: true, size: 24 })],
-                alignment: AlignmentType.CENTER
-              }),
-              new Paragraph({
-                children: [new TextRun({ text: unitDetails?.unit_name || '', bold: true })],
-                alignment: AlignmentType.CENTER,
-                spacing: { before: 240, after: 240 }
-              }),
-              new Paragraph({
-                children: [new TextRun({ text: `Email: ${unitDetails?.email || 'daefkke@civilprotection.gr'}` })],
-                alignment: AlignmentType.LEFT
+                children: [new TextRun({ text: item.text, bold: item.bold, size: 20 })],
+                alignment: AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 }
               })
-            ]
+            )
+          }),
+          new TableCell({
+            width: { size: 35, type: WidthType.PERCENTAGE },
+            children: rightColumnInfo.map(item =>
+              new Paragraph({
+                children: [new TextRun({ text: item.text, bold: item.bold, size: 20 })],
+                alignment: AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 }
+              })
+            )
           })
         ]
       })
     ]
   });
-}
-
-function createMainContent(doc: any) {
-  return [
-    new Paragraph({
-      children: [
-        new TextRun({ text: 'ΘΕΜΑ:', bold: true }),
-        new TextRun({ text: ' Έγκριση χορήγησης Στεγαστικής Συνδρομής' })
-      ],
-      spacing: { before: 400, after: 200 }
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({ text: `Πρωτόκολλο: ${doc.protocol_number || ''}` })
-      ],
-      spacing: { before: 200, after: 400 }
-    })
-  ];
 }
 
 function createPaymentTable(recipients: any[]) {
@@ -139,13 +171,15 @@ function createPaymentTable(recipients: any[]) {
       children: [
         new TableCell({
           children: [new Paragraph({ 
-            children: [new TextRun({ text: (index + 1).toString() })],
+            children: [new TextRun({ text: (index + 1).toString() + '.' })],
             alignment: AlignmentType.CENTER
           })]
         }),
         new TableCell({
           children: [new Paragraph({ 
-            children: [new TextRun({ text: `${recipient.lastname} ${recipient.firstname}` })],
+            children: [new TextRun({ 
+              text: `${recipient.lastname} ${recipient.firstname} ${recipient.fathername || ''}`.trim() 
+            })],
             alignment: AlignmentType.LEFT
           })]
         }),
@@ -157,7 +191,7 @@ function createPaymentTable(recipients: any[]) {
         }),
         new TableCell({
           children: [new Paragraph({ 
-            children: [new TextRun({ text: recipient.amount.toString() })],
+            children: [new TextRun({ text: parseFloat(recipient.amount).toFixed(2) })],
             alignment: AlignmentType.RIGHT
           })]
         }),
@@ -185,7 +219,29 @@ function createPaymentTable(recipients: any[]) {
   });
 }
 
-function createFooter() {
+function createDocumentFooter() {
+  const attachments = [
+    'Η σε ορθή επανάληψη έγκριση Σ.Σ για ανακατ. κτιρίου',
+    'Οι εκδοθείσες άδειες επισκευής κτιρίου',
+    'Οι εγκρίσεις Σ.Σ για ανακατασκευή άδειες επισκευής',
+    'Υπεύθυνες δηλώσεις δικαιούχων',
+    'Φωτοτυπίες των βιβλιαρίων',
+    'Φωτοτυπίες ΑΔΤ των δικαιούχων',
+    'Ένας συγκεντρωτικός πίνακας των δικαιούχων'
+  ];
+
+  const notifications = [
+    'Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας',
+    'Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής',
+    'Γ.Δ.Α.Ε.Φ.Κ.'
+  ];
+
+  const internalDist = [
+    'Χρονολογικό Αρχείο',
+    'Τμήμα Β/20.51',
+    'Αβραμόπουλο Ι.'
+  ];
+
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: { 
@@ -199,12 +255,51 @@ function createFooter() {
         children: [
           new TableCell({
             children: [
-              new Paragraph({ text: '', spacing: { before: 500 } }),
+              new Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
+              new Paragraph({
+                children: [new TextRun({ text: 'ΣΥΝΗΜΜΕΝΑ', bold: true })],
+                spacing: { before: 240, after: 240 }
+              }),
+              ...attachments.map((item, index) => new Paragraph({
+                children: [new TextRun({ text: `${index + 1}. ${item}` })],
+                indent: { left: 240 },
+                spacing: { before: 60, after: 60 }
+              })),
+              new Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
+              new Paragraph({
+                children: [new TextRun({ text: 'ΚΟΙΝΟΠΟΙΗΣΗ', bold: true })],
+                spacing: { before: 60, after: 240 }
+              }),
+              ...notifications.map((item, index) => new Paragraph({
+                children: [new TextRun({ text: `${index + 1}. ${item}` })],
+                indent: { left: 240 },
+                spacing: { before: 60, after: 60 }
+              })),
+              new Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
+              new Paragraph({
+                children: [new TextRun({ text: 'ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ', bold: true })],
+                spacing: { before: 60, after: 60 }
+              }),
+              ...internalDist.map((item, index) => new Paragraph({
+                children: [new TextRun({ text: `${index + 1}. ${item}` })],
+                indent: { left: 240 },
+                spacing: { before: 60, after: 60 }
+              }))
+            ],
+            width: { size: 65, type: WidthType.PERCENTAGE }
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({ text: '', spacing: { before: 3000 } }),
               new Paragraph({
                 children: [new TextRun({ text: 'Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ Δ.Α.Ε.Φ.Κ.', bold: true })],
                 alignment: AlignmentType.CENTER
               }),
-              new Paragraph({ text: '', spacing: { before: 500 } }),
+              new Paragraph({
+                text: '',
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 500 }
+              }),
               new Paragraph({
                 children: [new TextRun({ text: 'ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ', bold: true })],
                 alignment: AlignmentType.CENTER
@@ -213,7 +308,8 @@ function createFooter() {
                 children: [new TextRun({ text: 'ΠΟΛ. ΜΗΧΑΝΙΚΟΣ' })],
                 alignment: AlignmentType.CENTER
               })
-            ]
+            ],
+            width: { size: 35, type: WidthType.PERCENTAGE }
           })
         ]
       })
