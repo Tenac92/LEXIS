@@ -131,11 +131,32 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         }
 
         console.log('Projects data:', data);
-        return data.map((item: any) => ({
-          id: item.mis,
-          name: `${item.na853} - ${item.event_description || item.project_title}`,
-          expenditure_types: Array.isArray(item.expenditure_type) ? item.expenditure_type : []
-        }));
+        return data.map((item: any) => {
+          // Parse the expenditure_type array
+          let expenditureTypes: string[] = [];
+          try {
+            if (typeof item.expenditure_type === 'string') {
+              // Remove the curly braces and split by comma
+              expenditureTypes = item.expenditure_type
+                .replace(/[{}"\[\]]/g, '')
+                .split(',')
+                .map((type: string) => type.trim())
+                .filter((type: string) => type.length > 0);
+            } else if (Array.isArray(item.expenditure_type)) {
+              expenditureTypes = item.expenditure_type;
+            }
+          } catch (e) {
+            console.error('Error parsing expenditure types:', e);
+          }
+
+          return {
+            id: item.mis,
+            name: item.na853
+              ? `${item.na853} - ${item.event_description || item.project_title || 'No description'}`
+              : item.project_title || 'Untitled Project',
+            expenditure_types: expenditureTypes
+          };
+        });
       } catch (error) {
         console.error('Projects fetch error:', error);
         throw error;
