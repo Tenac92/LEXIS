@@ -75,7 +75,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   });
 
   const selectedUnit = form.watch("unit");
-  const selectedProjectId = form.watch("project");
+  const selectedProjectId = form.watch("mis");
 
   const { data: units = [], isLoading: unitsLoading } = useQuery<Unit[]>({
     queryKey: ["/api/units"],
@@ -83,7 +83,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   });
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
-    queryKey: ["/api/catalog", selectedUnit],
+    queryKey: ["projects", selectedUnit],
     queryFn: async () => {
       if (!selectedUnit) return [];
       const response = await fetch(`/api/catalog?unit=${encodeURIComponent(selectedUnit)}`);
@@ -92,6 +92,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         throw new Error(errorData.message || 'Failed to fetch projects');
       }
       const data = await response.json();
+      console.log("Fetched projects:", data);
       return data || [];
     },
     enabled: Boolean(selectedUnit)
@@ -122,7 +123,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   useEffect(() => {
     if (!selectedUnit) {
-      form.setValue("project", "");
+      form.setValue("mis", "");
       form.setValue("expenditure_type", "");
     }
   }, [selectedUnit, form]);
@@ -262,11 +263,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={(value) => {
                           field.onChange(value);
-                          const project = projects.find(p => p.mis === value);
-                          if (project) {
-                            // Update project-related state here if needed
-                            console.log("Selected project:", project);
-                          }
+                          console.log("Selected project value:", value);
                         }}
                         value={field.value?.toString() || ""}
                         disabled={!selectedUnit || projectsLoading}
