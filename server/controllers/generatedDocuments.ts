@@ -42,12 +42,20 @@ router.post('/', authenticateToken, async (req, res) => {
         recipients,
         total_amount: parseFloat(total_amount) || 0,
         generated_by: req.user?.id,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        department: 'ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.)',
+        is_correction: false
       }])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Document creation error:', error);
+      return res.status(500).json({ 
+        message: 'Failed to create document',
+        error: error.message 
+      });
+    }
 
     return res.status(201).json(data);
   } catch (error) {
