@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import * as schema from "@shared/schema";
+import type { Database } from '@shared/schema';
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
   throw new Error(
@@ -7,12 +7,16 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
   );
 }
 
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_KEY,
   {
     auth: {
-      persistSession: false
+      persistSession: false,
+      autoRefreshToken: false
+    },
+    db: {
+      schema: 'public'
     }
   }
 );

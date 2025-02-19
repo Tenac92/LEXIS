@@ -1,6 +1,7 @@
-import { Router, Request } from "express";
+import { Router } from "express";
 import { authenticateToken } from "../middleware/authMiddleware";
 import { supabase } from "../config/db";
+import type { InsertGeneratedDocument } from "@shared/schema";
 
 // Extend Request type to include user
 interface AuthRequest extends Request {
@@ -17,7 +18,9 @@ const router = Router();
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { status, unit, dateFrom, dateTo } = req.query;
-    let query = supabase.from('generated_documents').select('*');
+    let query = supabase
+      .from('generated_documents')
+      .select('*');
 
     // Filter by user's assigned units unless they're admin
     if (req.user?.role !== 'admin' && req.user?.units?.length) {
@@ -43,7 +46,10 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error:', error);
+      throw error;
+    }
 
     res.json({
       status: 'success',
@@ -84,24 +90,26 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       .single();
 
     if (projectError || !projectData) {
+      console.error('Project lookup error:', projectError);
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    const documentData = {
+    const documentData: InsertGeneratedDocument = {
       unit,
       project_id,
       project_na853: projectData.na853,
       expenditure_type,
-      status: status || 'draft',
+      status: status || 'pending',
       recipients,
       total_amount: parseFloat(total_amount) || 0,
       generated_by: req.user.id,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      is_correction: false
     };
 
     const { data, error } = await supabase
       .from('generated_documents')
-      .insert([documentData])
+      .insert(documentData)
       .select()
       .single();
 

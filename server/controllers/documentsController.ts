@@ -1,10 +1,10 @@
-import { Router } from 'express';
+import { Router, Request } from 'express';
 import { supabase } from '../db';
-import { insertDocumentSchema } from '@shared/schema';
+import { insertGeneratedDocumentSchema } from '@shared/schema';
 import type { Database } from '@shared/schema';
 
 interface Recipient {
-  lastname: string;
+  lastname: string;  
   firstname: string;
   fathername?: string;
   amount: number;
@@ -12,16 +12,31 @@ interface Recipient {
   afm: string;
 }
 
+interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    role?: string;
+    units?: string[];
+  };
+}
+
 const router = Router();
 
-router.get('/', async (req, res) => {
+// Authentication middleware (needs to be defined elsewhere)
+const authenticateToken = (req: Request, res: any, next: any) => {
+  // Implement your authentication logic here
+  // ... (e.g., check for JWT token in headers)
+  next();
+}
+
+router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { status, unit, dateFrom, dateTo, amountFrom, amountTo, user } = req.query;
-    let query = supabase.from('documents').select('*');
+    let query = supabase.from('generated_documents').select('*');
 
     // Filter by user's role and ID
     if (req.user?.role !== 'admin' && req.user?.id) {
-      query = query.eq('created_by', req.user.id);
+      query = query.eq('generated_by', req.user.id);
     }
 
     // Apply filters
@@ -66,20 +81,20 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const validatedData = insertDocumentSchema.parse({
+    const validatedData = insertGeneratedDocumentSchema.parse({
       ...req.body,
-      created_by: req.user.id,
-      created_at: new Date().toISOString()
+      generated_by: req.user.id,
+      created_at: new Date()
     });
 
     const { data: document, error } = await supabase
-      .from('documents')
+      .from('generated_documents')
       .insert([validatedData])
       .select()
       .single();
@@ -99,10 +114,10 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { data: document, error } = await supabase
-      .from('documents')
+      .from('generated_documents')
       .select('*')
       .eq('id', parseInt(req.params.id))
       .single();
@@ -119,13 +134,13 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { data: document, error } = await supabase
-      .from('documents')
+      .from('generated_documents')
       .update({
         ...req.body,
-        updated_at: new Date().toISOString()
+        updated_at: new Date()
       })
       .eq('id', parseInt(req.params.id))
       .select()
@@ -143,7 +158,7 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-router.get('/generated/:id/export', async (req, res) => {
+router.get('/generated/:id/export', async (req: Request, res) => {
   try {
     const { id } = req.params;
 
@@ -228,7 +243,7 @@ router.get('/generated/:id/export', async (req, res) => {
 });
 
 // POST route for custom document export
-router.post('/generated/:id/export', async (req, res) => {
+router.post('/generated/:id/export', async (req: Request, res) => {
   try {
     const { id } = req.params;
     const { unit_details, margins } = req.body;
@@ -292,7 +307,7 @@ router.post('/generated/:id/export', async (req, res) => {
 });
 
 // New Template Management Routes
-router.get('/templates', async (req, res) => {
+router.get('/templates', async (req:Request, res) => {
   try {
     const templates = await TemplateManager.listTemplates(req.query.category as string);
     res.json(templates);
@@ -302,7 +317,7 @@ router.get('/templates', async (req, res) => {
   }
 });
 
-router.post('/templates', async (req, res) => {
+router.post('/templates', async (req:Request, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -324,7 +339,7 @@ router.post('/templates', async (req, res) => {
   }
 });
 
-router.get('/templates/:id/preview', async (req, res) => {
+router.get('/templates/:id/preview', async (req:Request, res) => {
   try {
     const { id } = req.params;
     const { previewData } = req.query;
@@ -345,7 +360,7 @@ router.get('/templates/:id/preview', async (req, res) => {
 });
 
 // Document Version Management Routes
-router.get('/versions/:documentId', async (req, res) => {
+router.get('/versions/:documentId', async (req:Request, res) => {
   try {
     const versions = await VersionController.getVersionHistory(parseInt(req.params.documentId));
     res.json(versions);
@@ -355,7 +370,7 @@ router.get('/versions/:documentId', async (req, res) => {
   }
 });
 
-router.post('/versions/:documentId', async (req, res) => {
+router.post('/versions/:documentId', async (req:Request, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -378,7 +393,7 @@ router.post('/versions/:documentId', async (req, res) => {
   }
 });
 
-router.post('/versions/:documentId/revert/:versionId', async (req, res) => {
+router.post('/versions/:documentId/revert/:versionId', async (req:Request, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
