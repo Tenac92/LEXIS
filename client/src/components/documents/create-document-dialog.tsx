@@ -262,8 +262,15 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                     <FormItem>
                       <FormLabel>Project</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          const project = projects.find(p => p.mis === value);
+                          if (project) {
+                            // Update project-related state here if needed
+                            console.log("Selected project:", project);
+                          }
+                        }}
+                        value={field.value?.toString() || ""}
                         disabled={!selectedUnit || projectsLoading}
                       >
                         <FormControl>
@@ -280,7 +287,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                             projects.map((project) => (
                               <SelectItem 
                                 key={project.mis} 
-                                value={project.mis?.toString() || ""} // Ensure value is always a string and never undefined
+                                value={project.mis || ""} 
                               >
                                 {project.na853
                                   ? `${project.na853} - ${project.event_description}`
