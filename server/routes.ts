@@ -5,6 +5,7 @@ import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
 import { authenticateSession } from "./auth";
 import documentsController from "./controllers/documentsController";
+import generatedDocumentsRouter from "./controllers/generatedDocuments";
 import unitsController from "./controllers/unitsController";
 import projectsController from "./controllers/projectsController";
 import { listProjects, getExpenditureTypes } from "./controllers/projectController";
@@ -30,6 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Documents routes
     app.use('/api/documents', authenticateSession, documentsController);
+    app.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
 
     // Units and Projects routes
     log('[Routes] Registering units and projects routes...');
