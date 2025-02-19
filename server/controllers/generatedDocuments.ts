@@ -10,9 +10,13 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     const { unit, project_id, expenditure_type, status, recipients, total_amount } = req.body;
 
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
       return res.status(400).json({ 
-        message: 'Missing required fields'
+        message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
       });
     }
 

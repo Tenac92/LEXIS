@@ -10,7 +10,7 @@ import usersController from '../controllers/usersController';
 const router = Router();
 
 // Mount the generated documents router at /api/documents/generated
-router.use('/documents/generated', authenticateToken, generatedDocumentsRouter);
+router.use('/documents/generated', generatedDocumentsRouter);
 
 // Mount other controllers
 router.use('/documents', authenticateSession, documentsController);
