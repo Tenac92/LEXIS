@@ -96,7 +96,7 @@ export default function ProjectsPage() {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="pending_reallocation">Pending Reallocation</SelectItem>
