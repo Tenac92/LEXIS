@@ -4,7 +4,7 @@ import { isAdmin } from '../middleware/adminMiddleware';
 import { db } from '../db';
 import { eq } from 'drizzle-orm';
 import { ProjectCatalog } from '@shared/schema';
-import { createObjectCsvStringifier } from 'csv-writer';
+import * as xlsx from 'xlsx';
 import multer from 'multer';
 import { parse } from 'csv-parse';
 
@@ -21,6 +21,49 @@ router.get('/', authenticateToken, async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Failed to fetch projects' 
+    });
+  }
+});
+
+// Export projects to XLSX
+router.get('/export/xlsx', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const projects = await db.query.ProjectCatalog.findMany();
+
+    if (!projects.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'No projects found for export'
+      });
+    }
+
+    // Create workbook and worksheet
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(projects.map(project => ({
+      MIS: project.mis,
+      NA853: project.na853,
+      Description: project.event_description,
+      Budget: project.budget_na853,
+      Status: project.status,
+      Region: project.region
+    })));
+
+    // Add worksheet to workbook
+    xlsx.utils.book_append_sheet(wb, ws, 'Projects');
+
+    // Generate buffer
+    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    // Set headers and send response
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=projects-${new Date().toISOString().split('T')[0]}.xlsx`);
+    res.send(buf);
+
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to export projects' 
     });
   }
 });
@@ -47,36 +90,6 @@ router.delete('/:mis', authenticateToken, isAdmin, async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Failed to delete project' 
-    });
-  }
-});
-
-// Export projects
-router.get('/export', authenticateToken, isAdmin, async (req, res) => {
-  try {
-    const projects = await db.query.ProjectCatalog.findMany();
-
-    const csvStringifier = createObjectCsvStringifier({
-      header: [
-        { id: 'mis', title: 'MIS' },
-        { id: 'na853', title: 'NA853' },
-        { id: 'event_description', title: 'Description' },
-        { id: 'budget_na853', title: 'Budget' },
-        { id: 'status', title: 'Status' },
-        { id: 'region', title: 'Region' },
-      ]
-    });
-
-    const csvString = csvStringifier.stringifyRecords(projects);
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=projects-${new Date().toISOString().split('T')[0]}.csv`);
-    res.send(csvString);
-  } catch (error) {
-    console.error('Export error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to export projects' 
     });
   }
 });
