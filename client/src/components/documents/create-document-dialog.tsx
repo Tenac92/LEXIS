@@ -80,9 +80,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       try {
         console.log('Fetching units...');
         const { data, error } = await supabase
-          .from('generated_documents')
-          .select('distinct unit')
-          .not('unit', 'is', null)
+          .from('unit_det')
+          .select('unit, unit_name')
           .order('unit');
 
         if (error) {
@@ -96,10 +95,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         }
 
         console.log('Units data:', data);
-        // Transform the data to match the expected format
         return data.map((item: any) => ({
           id: item.unit,
-          name: item.unit
+          name: item.unit_name
         }));
       } catch (error) {
         console.error('Units fetch error:', error);
@@ -117,10 +115,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       try {
         console.log('Fetching projects for unit:', selectedUnit);
         const { data, error } = await supabase
-          .from('generated_documents')
-          .select('distinct project_id, project_na853')
-          .eq('unit', selectedUnit)
-          .not('project_id', 'is', null)
+          .from('project_catalog')
+          .select('mis, project_title, expenditure_type')
+          .eq('implementing_agency', `{"${selectedUnit}"}`)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -135,8 +132,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
         console.log('Projects data:', data);
         return data.map((item: any) => ({
-          id: item.project_id,
-          name: item.project_na853
+          id: item.mis,
+          name: item.project_title,
+          expenditure_types: Array.isArray(item.expenditure_type) ? item.expenditure_type : []
         }));
       } catch (error) {
         console.error('Projects fetch error:', error);
@@ -155,9 +153,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       try {
         console.log('Fetching budget for project:', selectedProjectId);
         const { data, error } = await supabase
-          .from('generated_documents')
-          .select('total_amount')
-          .eq('project_id', selectedProjectId)
+          .from('budget_na853_split')
+          .select('proip, ethsia_pistosi, katanomes_etous')
+          .eq('mis', selectedProjectId)
           .single();
 
         if (error) {
@@ -172,9 +170,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
         console.log('Budget data:', data);
         return {
-          current_budget: data?.total_amount || 0,
-          total_budget: data?.total_amount || 0,
-          annual_budget: data?.total_amount || 0
+          current_budget: parseFloat(data?.katanomes_etous || '0'),
+          total_budget: parseFloat(data?.proip || '0'),
+          annual_budget: parseFloat(data?.ethsia_pistosi || '0')
         };
       } catch (error) {
         console.error('Budget fetch error:', error);
@@ -375,13 +373,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {projects
-                              .find((p: any) => p.id === selectedProjectId)
-                              ?.expenditure_types.map((type: string) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
+                            {selectedProject?.expenditure_types?.map((type: string) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
