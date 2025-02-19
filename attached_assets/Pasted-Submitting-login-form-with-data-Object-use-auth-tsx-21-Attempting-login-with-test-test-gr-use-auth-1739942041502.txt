@@ -1,0 +1,44 @@
+Submitting login form with data: Object
+use-auth.tsx:21 Attempting login with: test@test.gr
+use-auth.tsx:37 Login successful: Object
+use-auth.tsx:48 Login mutation succeeded, updating cache with user: Object
+2create-document-dialog.tsx:101 Uncaught TypeError: Cannot read properties of undefined (reading 'toString')
+    at create-document-dialog.tsx:101:51
+    at Array.find (<anonymous>)
+    at CreateDocumentDialog (create-document-dialog.tsx:101:36)
+    at renderWithHooks (chunk-WERSD76P.js?v=f065ee67:11548:26)
+    at updateFunctionComponent (chunk-WERSD76P.js?v=f065ee67:14582:28)
+    at beginWork (chunk-WERSD76P.js?v=f065ee67:15924:22)
+    at HTMLUnknownElement.callCallback2 (chunk-WERSD76P.js?v=f065ee67:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-WERSD76P.js?v=f065ee67:3699:24)
+    at invokeGuardedCallback (chunk-WERSD76P.js?v=f065ee67:3733:39)
+    at beginWork$1 (chunk-WERSD76P.js?v=f065ee67:19765:15)
+chunk-WERSD76P.js?v=f065ee67:14032 The above error occurred in the <CreateDocumentDialog> component:
+
+    at CreateDocumentDialog (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:47:40)
+    at FAB (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/fab.tsx:24:31)
+    at div
+    at HomePage (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/home-page.tsx:27:47)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=f065ee67:379:17)
+    at Router
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:100:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=f065ee67:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-WERSD76P.js?v=f065ee67:14032
+Εμφάνιση 1 ακόμη πλαισίου
+Εμφάνιση λιγότερων
+chunk-WERSD76P.js?v=f065ee67:9129 Uncaught TypeError: Cannot read properties of undefined (reading 'toString')
+    at create-document-dialog.tsx:101:51
+    at Array.find (<anonymous>)
+    at CreateDocumentDialog (create-document-dialog.tsx:101:36)
+    at renderWithHooks (chunk-WERSD76P.js?v=f065ee67:11548:26)
+    at updateFunctionComponent (chunk-WERSD76P.js?v=f065ee67:14582:28)
+    at beginWork (chunk-WERSD76P.js?v=f065ee67:15924:22)
+    at beginWork$1 (chunk-WERSD76P.js?v=f065ee67:19753:22)
+    at performUnitOfWork (chunk-WERSD76P.js?v=f065ee67:19198:20)
+    at workLoopSync (chunk-WERSD76P.js?v=f065ee67:19137:13)
+    at renderRootSync (chunk-WERSD76P.js?v=f065ee67:19116:15)

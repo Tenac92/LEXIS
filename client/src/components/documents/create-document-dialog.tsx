@@ -16,13 +16,12 @@ interface Unit {
 }
 
 interface Project {
-  id: number;
-  name: string;
+  id: string;  // Changed from number to string since MIS is used as ID
   mis: string;
   na853: string;
   event_description: string;
   budget_na853: number;
-  expenditure_types?: string[];
+  expenditure_type: string[];
 }
 
 interface BudgetData {
@@ -98,7 +97,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: Boolean(selectedUnit)
   });
 
-  const selectedProject = projects.find(p => p.id.toString() === selectedProjectId);
+  const selectedProject = projects.find(p => p.mis === selectedProjectId);
 
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
     queryKey: ["/api/catalog", selectedProject?.mis, "expenditure-types"],
@@ -143,7 +142,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const createDocumentMutation = useMutation({
     mutationFn: async (data: CreateDocumentForm) => {
       const formData = new FormData();
-      const selectedProject = projects.find(p => p.id.toString() === data.project);
+      const selectedProject = projects.find(p => p.mis === data.project);
 
       if (!selectedProject) {
         throw new Error("Selected project not found");
@@ -404,10 +403,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <SelectContent>
                           {projects.map((project) => (
                             <SelectItem
-                              key={project.id.toString()}
-                              value={project.id.toString()}
+                              key={project.mis}
+                              value={project.mis}
                             >
-                              {project.na853 ? `${project.na853} - ${project.event_description}` : project.name}
+                              {project.na853 ? `${project.na853} - ${project.event_description}` : project.event_description}
                             </SelectItem>
                           ))}
                         </SelectContent>

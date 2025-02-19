@@ -15,12 +15,12 @@ export async function listProjects(req: Request, res: Response) {
     if (error) throw error;
 
     const projects = data?.map(project => ({
-      id: project.id,
+      id: project.mis,
       mis: project.mis,
       na853: project.na853,
       event_description: project.event_description,
       budget_na853: project.budget_na853,
-      expenditure_types: project.expenditure_type
+      expenditure_type: project.expenditure_type
     })) || [];
 
     res.json(projects);
