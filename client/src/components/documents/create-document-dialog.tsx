@@ -12,10 +12,23 @@ import { Input } from "@/components/ui/input";
 import { createClient } from '@supabase/supabase-js';
 
 // Create a single supabase client for the frontend
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_KEY!
-);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Supabase URL and Key must be defined in environment variables');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false
+  },
+  global: {
+    headers: {
+      'apikey': supabaseKey
+    }
+  }
+});
 
 // Form Schema with strict validation
 const createDocumentSchema = z.object({
