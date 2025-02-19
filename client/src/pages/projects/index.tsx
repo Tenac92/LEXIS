@@ -13,7 +13,7 @@ import {
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { useToast } from "@/hooks/use-toast";
 import { type ProjectCatalog } from "@shared/schema";
-import { Plus, FileUp, Download } from "lucide-react";
+import { Plus, FileUp, Download, LayoutGrid, LayoutList } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function ProjectsPage() {
@@ -22,6 +22,7 @@ export default function ProjectsPage() {
   const isAdmin = user?.role === 'admin';
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
+  const [view, setView] = useState<"grid" | "list">("grid");
 
   const { data: projects, isLoading } = useQuery<ProjectCatalog[]>({
     queryKey: ["/api/projects", { search, status }],
@@ -64,6 +65,17 @@ export default function ProjectsPage() {
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <h1 className="text-3xl font-bold">Projects</h1>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setView(view === "grid" ? "list" : "grid")}
+          >
+            {view === "grid" ? (
+              <><LayoutList className="mr-2 h-4 w-4" /> List View</>
+            ) : (
+              <><LayoutGrid className="mr-2 h-4 w-4" /> Grid View</>
+            )}
+          </Button>
           {isAdmin && (
             <>
               <Link href="/projects/new">
@@ -113,15 +125,15 @@ export default function ProjectsPage() {
         </div>
 
         {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
             {[...Array(6)].map((_, i) => (
               <div key={i} className="h-48 rounded-lg bg-gray-100 animate-pulse" />
             ))}
           </div>
         ) : projects?.length ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
             {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard key={project.id} project={project} view={view} />
             ))}
           </div>
         ) : (
