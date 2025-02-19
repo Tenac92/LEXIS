@@ -10,33 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 
-// Types remain the same
-interface Unit {
-  id: string;
-  name: string;
-}
-
-interface Project {
-  id: string;
-  mis: string;
-  na853: string;
-  event_description: string;
-  budget_na853: number;
-  expenditure_type: string[];
-}
-
-interface BudgetData {
-  user_view: number;
-  ethsia_pistosi: number;
-  q1: number;
-  q2: number;
-  q3: number;
-  q4: number;
-  total_spent: number;
-  current_budget: number;
-}
-
-// Form Schema remains the same
+// Form Schema
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
   project: z.string().min(1, "Project is required"),
@@ -52,12 +26,12 @@ const createDocumentSchema = z.object({
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
-const steps = ["Unit Selection", "Project Details", "Recipients"];
-
 interface CreateDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const steps = ["Unit Selection", "Project Details", "Recipients"];
 
 export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -77,29 +51,26 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedUnit = form.watch("unit");
   const selectedProjectId = form.watch("project");
 
-  const { data: units = [], isLoading: unitsLoading } = useQuery<Unit[]>({
+  // Fetch units
+  const { data: units = [], isLoading: unitsLoading } = useQuery({
     queryKey: ["/api/units"],
     enabled: currentStep === 0
   });
 
-  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
+  // Fetch projects for selected unit
+  const { data: projects = [], isLoading: projectsLoading } = useQuery({
     queryKey: ["/api/catalog", selectedUnit],
     queryFn: async () => {
       if (!selectedUnit) return [];
       const response = await fetch(`/api/catalog?unit=${encodeURIComponent(selectedUnit)}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch projects');
-      }
-      const data = await response.json();
-      return data || [];
+      if (!response.ok) throw new Error('Failed to fetch projects');
+      return response.json();
     },
     enabled: Boolean(selectedUnit)
   });
 
-  const selectedProject = projects.find(p => p.mis === selectedProjectId);
-
-  const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
+  // Fetch expenditure types for selected project
+  const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery({
     queryKey: ["/api/catalog", selectedProjectId, "expenditure-types"],
     queryFn: async () => {
       if (!selectedProjectId) throw new Error('No project selected');
@@ -111,7 +82,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: Boolean(selectedProjectId)
   });
 
-  const { data: budgetData } = useQuery<BudgetData>({
+  // Fetch budget data for selected project
+  const { data: budgetData } = useQuery({
     queryKey: ["/api/budget", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) throw new Error('No project selected');
@@ -131,20 +103,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
-      // Calculate total amount from recipients
       const total_amount = data.recipients.reduce((sum, recipient) => sum + recipient.amount, 0);
 
-      // Prepare document data matching the server schema
       const documentData = {
         unit: data.unit,
         project_id: data.project,
         expenditure_type: data.expenditure_type,
         recipients: data.recipients.map(recipient => ({
-          firstname: recipient.firstname,
-          lastname: recipient.lastname,
-          afm: recipient.afm,
-          amount: recipient.amount,
-          installment: recipient.installment,
+          ...recipient,
           status: "pending"
         })),
         total_amount,
@@ -325,7 +291,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             {/* Recipients Step */}
             {currentStep === 2 && (
               <div className="space-y-4">
-                {/* Budget Information Panel */}
                 {budgetData && (
                   <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
@@ -349,7 +314,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       </div>
                     </div>
 
-                    {/* Current Recipients Total */}
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                       <h4 className="text-sm font-medium text-gray-600">Current Document Total</h4>
                       <p className="text-xl font-bold text-green-600">
