@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { FileText, FolderKanban, LogOut, Menu, LayoutDashboard } from "lucide-react";
+import { FileText, FolderKanban, LogOut, Menu, LayoutDashboard, Users } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Sheet,
@@ -15,6 +15,7 @@ import { useState } from "react";
 export function Header() {
   const { user, logoutMutation } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isAdmin = user?.role === 'admin';
 
   const NavItems = () => (
     <>
@@ -38,6 +39,17 @@ export function Header() {
           Projects
         </Button>
       </Link>
+      {isAdmin && (
+        <>
+          <Separator orientation="vertical" className="h-8 mx-2" />
+          <Link href="/users">
+            <Button variant="ghost" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Users
+            </Button>
+          </Link>
+        </>
+      )}
       <Separator orientation="vertical" className="h-8 mx-2" />
       <Button 
         variant="ghost" 
@@ -50,7 +62,6 @@ export function Header() {
       </Button>
     </>
   );
-
 
   return (
     <header className="border-b bg-card">
