@@ -69,14 +69,16 @@ export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export const insertUserSchema = createInsertSchema(users);
 export const insertProjectCatalogSchema = createInsertSchema(projectCatalog, {
   implementing_agency: z.array(z.string()).min(1, "At least one implementing agency is required"),
-  budget_na853: z.coerce.number().min(0, "Budget NA853 must be non-negative"),
-  budget_e069: z.coerce.number().min(0, "Budget E069 must be non-negative"),
-  budget_na271: z.coerce.number().min(0, "Budget NA271 must be non-negative"),
-  ethsia_pistosi: z.coerce.number().min(0, "Annual credit must be non-negative"),
-  status: z.enum(["active", "pending", "pending_reallocation", "completed"]).default("pending"),
-  event_type: z.string().optional(),
-  event_year: z.array(z.string()).optional(),
-  procedures: z.string().optional(),
+  budget_na853: z.coerce.number().min(0, "Budget NA853 must be non-negative").nullable(),
+  budget_e069: z.coerce.number().min(0, "Budget E069 must be non-negative").nullable(),
+  budget_na271: z.coerce.number().min(0, "Budget NA271 must be non-negative").nullable(),
+  ethsia_pistosi: z.coerce.number().min(0, "Annual credit must be non-negative")
+    .nullable()
+    .transform(val => isNaN(val) ? null : val),
+  status: z.enum(["active", "pending", "pending_reallocation", "completed"]).nullable().default("pending"),
+  event_type: z.string().nullable(),
+  event_year: z.array(z.coerce.string()).nullable(),
+  procedures: z.string().nullable(),
 }).omit({ id: true, created_at: true, updated_at: true });
 
 export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {

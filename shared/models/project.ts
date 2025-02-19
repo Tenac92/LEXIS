@@ -2,15 +2,15 @@ import { z } from 'zod';
 
 // Base schema for project catalog
 export const projectSchema = z.object({
-  id: z.number(),
-  mis: z.string(),
+  id: z.coerce.number(),
+  mis: z.coerce.string(),
   na853: z.string().nullable(),
   e069: z.string().nullable(),
   na271: z.string().nullable(),
   event_description: z.string().nullable(),
   project_title: z.string().nullable(),
   event_type: z.string().nullable(),
-  event_year: z.array(z.string()).nullable(),
+  event_year: z.array(z.coerce.string()).nullable(),
   region: z.string().nullable(),
   regional_unit: z.string().nullable(),
   municipality: z.string().nullable(),
@@ -18,8 +18,10 @@ export const projectSchema = z.object({
   budget_na853: z.coerce.number().nullable(),
   budget_e069: z.coerce.number().nullable(),
   budget_na271: z.coerce.number().nullable(),
-  ethsia_pistosi: z.coerce.number().nullable(),
-  status: z.string().default("pending"),
+  ethsia_pistosi: z.coerce.number().nullable().transform(val => 
+    isNaN(val) ? null : val
+  ),
+  status: z.string().nullable().default("pending"),
   kya: z.string().nullable(),
   fek: z.string().nullable(),
   ada: z.string().nullable(),
@@ -75,11 +77,16 @@ export const projectHelpers = {
   }),
 
   validateProject: (data: unknown): Project => {
-    const result = projectSchema.safeParse(data);
-    if (!result.success) {
-      console.error('Project validation failed:', result.error);
-      throw result.error;
+    try {
+      const result = projectSchema.safeParse(data);
+      if (!result.success) {
+        console.error('Project validation failed:', result.error);
+        throw result.error;
+      }
+      return result.data;
+    } catch (error) {
+      console.error('Project validation error details:', error);
+      throw error;
     }
-    return result.data;
   }
 };
