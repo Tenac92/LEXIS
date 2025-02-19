@@ -18,7 +18,7 @@ interface Unit {
 
 interface Project {
   id: string;
-  mis: string;
+  mis: string | null;
   na853: string;
   event_description: string;
   budget_na853: number;
@@ -273,15 +273,18 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         </FormControl>
                         <SelectContent>
                           {projectsLoading ? (
-                            <SelectItem value="">Loading projects...</SelectItem>
+                            <SelectItem value="loading">Loading projects...</SelectItem>
                           ) : projects.length === 0 ? (
-                            <SelectItem value="">No projects available</SelectItem>
+                            <SelectItem value="none">No projects available</SelectItem>
                           ) : (
                             projects.map((project) => (
-                              <SelectItem key={project.mis} value={project.mis.toString()}>
+                              <SelectItem 
+                                key={project.mis} 
+                                value={project.mis?.toString() || ""} // Ensure value is always a string and never undefined
+                              >
                                 {project.na853
                                   ? `${project.na853} - ${project.event_description}`
-                                  : project.event_description}
+                                  : project.event_description || "Untitled Project"}
                               </SelectItem>
                             ))
                           )}
