@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { supabase } from '../config/db';
 import { authenticateSession } from '../auth';
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 
 interface AuthenticatedRequest extends Request {
   user?: {
-    id: number;
+    id: string;
     email: string;
     role: string;
   };
@@ -21,7 +21,14 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
 
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, email, name, role, department, units, telephone, created_at')
+      .select(`
+        id,
+        email,
+        name,
+        role,
+        unit,
+        created_at
+      `)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -35,27 +42,19 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
   }
 });
 
-router.get('/profile', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+// Get available units
+router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const { data: user, error } = await supabase
-      .from('users')
-      .select()
-      .eq('id', req.user.id)
-      .single();
+    const { data: units, error } = await supabase
+      .from('units')
+      .select('*')
+      .order('name', { ascending: true });
 
     if (error) throw error;
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json(user);
+    res.json(units);
   } catch (error) {
-    console.error('Profile fetch error:', error);
-    res.status(500).json({ message: 'Failed to fetch profile' });
+    console.error('Units fetch error:', error);
+    res.status(500).json({ message: 'Failed to fetch units' });
   }
 });
 
@@ -81,9 +80,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
         email: req.body.email,
         name: req.body.name,
         role: req.body.role,
-        department: req.body.department,
-        units: req.body.units,
-        telephone: req.body.telephone,
+        unit: req.body.unit,
         created_at: new Date().toISOString()
       }])
       .select()
@@ -109,12 +106,10 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
         email: req.body.email,
         name: req.body.name,
         role: req.body.role,
-        department: req.body.department,
-        units: req.body.units,
-        telephone: req.body.telephone,
+        unit: req.body.unit,
         updated_at: new Date().toISOString()
       })
-      .eq('id', parseInt(req.params.id))
+      .eq('id', req.params.id)
       .select()
       .single();
 
@@ -139,7 +134,7 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
     const { error } = await supabase
       .from('users')
       .delete()
-      .eq('id', parseInt(req.params.id));
+      .eq('id', req.params.id);
 
     if (error) throw error;
     res.status(200).json({ message: 'User deleted successfully' });

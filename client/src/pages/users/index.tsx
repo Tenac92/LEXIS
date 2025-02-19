@@ -46,19 +46,20 @@ interface User {
   email: string;
   name: string;
   role: string;
-  department?: string;
-  units?: string[];
-  telephone?: string;
+  unit?: string;
   created_at: string;
+}
+
+interface Unit {
+  id: number;
+  name: string;
 }
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required"),
   role: z.string().min(1, "Role is required"),
-  department: z.string().optional(),
-  telephone: z.string().optional(),
-  units: z.array(z.string()).optional(),
+  unit: z.string().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -70,7 +71,6 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
 
@@ -80,9 +80,7 @@ export default function UsersPage() {
       email: "",
       name: "",
       role: "user",
-      department: "",
-      telephone: "",
-      units: [],
+      unit: undefined,
     },
   });
 
@@ -91,6 +89,15 @@ export default function UsersPage() {
     queryFn: async () => {
       const response = await fetch("/api/users");
       if (!response.ok) throw new Error("Failed to fetch users");
+      return response.json();
+    },
+  });
+
+  const { data: units = [] } = useQuery<Unit[]>({
+    queryKey: ["/api/users/units"],
+    queryFn: async () => {
+      const response = await fetch("/api/users/units");
+      if (!response.ok) throw new Error("Failed to fetch units");
       return response.json();
     },
   });
@@ -169,7 +176,7 @@ export default function UsersPage() {
       !search ||
       user.name.toLowerCase().includes(search.toLowerCase()) ||
       user.email.toLowerCase().includes(search.toLowerCase()) ||
-      user.department?.toLowerCase().includes(search.toLowerCase());
+      user.unit?.toLowerCase().includes(search.toLowerCase());
 
     const roleMatch = selectedRole === "all" || user.role === selectedRole;
 
@@ -232,7 +239,7 @@ export default function UsersPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Department</TableHead>
+                  <TableHead>Unit</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -245,7 +252,7 @@ export default function UsersPage() {
                     <TableCell>
                       <span className="capitalize">{user.role}</span>
                     </TableCell>
-                    <TableCell>{user.department || "-"}</TableCell>
+                    <TableCell>{user.unit || "-"}</TableCell>
                     <TableCell>
                       {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
@@ -253,17 +260,6 @@ export default function UsersPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setIsEditDialogOpen(true);
-                        }}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-red-600 hover:text-red-900"
                         onClick={() => {
                           setSelectedUser(user);
                           setIsDeleteDialogOpen(true);
@@ -375,26 +371,27 @@ export default function UsersPage() {
               />
               <FormField
                 control={form.control}
-                name="department"
+                name="unit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <FormControl>
-                      <Input placeholder="IT Department" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="telephone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telephone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="+1234567890" {...field} />
-                    </FormControl>
+                    <FormLabel>Unit</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a unit" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.name}>
+                            {unit.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
