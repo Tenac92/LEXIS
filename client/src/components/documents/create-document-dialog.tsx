@@ -398,12 +398,25 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <FormLabel>Project</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        value={field.value || ""}
+                        value={field.value}
                         disabled={!selectedUnit || projectsLoading}
                       >
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select project" />
+                          <SelectTrigger className="w-full">
+                            <SelectValue
+                              placeholder="Select project"
+                              className="w-full"
+                            >
+                              {selectedProject ? (
+                                <span>
+                                  {selectedProject.na853
+                                    ? `${selectedProject.na853} - ${selectedProject.event_description}`
+                                    : selectedProject.event_description}
+                                </span>
+                              ) : (
+                                "Select project"
+                              )}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
