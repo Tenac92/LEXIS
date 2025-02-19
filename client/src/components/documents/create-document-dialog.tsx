@@ -110,9 +110,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     queryKey: ["expenditureTypes", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return [];
-      return selectedProject?.expenditure_type || [];
+      const project = projects.find(p => p.mis === selectedProjectId);
+      return project?.expenditure_type || [];
     },
-    enabled: Boolean(selectedProjectId)
+    enabled: Boolean(selectedProjectId && projects.length > 0)
   });
 
   const { data: budgetData } = useQuery<BudgetData>({
@@ -268,11 +269,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={(value) => {
                           field.onChange(value);
-                          if (projects.find(p => p.mis === value)) {
+                          const project = projects.find(p => p.mis === value);
+                          if (project) {
                             form.setValue("expenditure_type", "");
                           }
                         }}
-                        value={field.value}
+                        defaultValue={field.value}
                         disabled={!selectedUnit || projectsLoading}
                       >
                         <FormControl>
