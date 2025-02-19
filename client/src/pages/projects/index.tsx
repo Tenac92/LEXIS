@@ -53,16 +53,15 @@ export default function ProjectsPage() {
 
   const handleExport = async () => {
     try {
-      const response = await apiRequest("/api/projects/export/xlsx", {
+      const response = await fetch("/api/projects/export/xlsx", {
         method: "GET",
         headers: {
           Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         },
-      }) as APIResponse;
+      });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Export failed");
+        throw new Error("Export failed");
       }
 
       const blob = await response.blob();
