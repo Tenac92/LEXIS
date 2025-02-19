@@ -19,13 +19,16 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    const { data: allUsers, error } = await supabase
+    const { data: users, error } = await supabase
       .from('users')
-      .select()
-      .order('created_at');
+      .select('id, email, name, role, department, units, telephone, created_at')
+      .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    res.json(allUsers);
+    if (error) {
+      console.error('Users fetch error:', error);
+      throw error;
+    }
+    res.json(users);
   } catch (error) {
     console.error('Users fetch error:', error);
     res.status(500).json({ message: 'Failed to fetch users' });
@@ -64,7 +67,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 
     const { data: existingUser } = await supabase
       .from('users')
-      .select()
+      .select('id')
       .eq('email', req.body.email)
       .single();
 
@@ -75,9 +78,13 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const { data: newUser, error } = await supabase
       .from('users')
       .insert([{
-        ...req.body,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        email: req.body.email,
+        name: req.body.name,
+        role: req.body.role,
+        department: req.body.department,
+        units: req.body.units,
+        telephone: req.body.telephone,
+        created_at: new Date().toISOString()
       }])
       .select()
       .single();
@@ -99,7 +106,12 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
     const { data: user, error } = await supabase
       .from('users')
       .update({
-        ...req.body,
+        email: req.body.email,
+        name: req.body.name,
+        role: req.body.role,
+        department: req.body.department,
+        units: req.body.units,
+        telephone: req.body.telephone,
         updated_at: new Date().toISOString()
       })
       .eq('id', parseInt(req.params.id))

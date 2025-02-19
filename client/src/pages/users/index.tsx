@@ -17,7 +17,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -30,6 +29,17 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Plus, Search, Edit2, Trash2, UserPlus } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 interface User {
   id: number;
@@ -42,6 +52,17 @@ interface User {
   created_at: string;
 }
 
+const userSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  name: z.string().min(1, "Name is required"),
+  role: z.string().min(1, "Role is required"),
+  department: z.string().optional(),
+  telephone: z.string().optional(),
+  units: z.array(z.string()).optional(),
+});
+
+type UserFormData = z.infer<typeof userSchema>;
+
 export default function UsersPage() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
@@ -52,6 +73,18 @@ export default function UsersPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
+
+  const form = useForm<UserFormData>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      email: "",
+      name: "",
+      role: "user",
+      department: "",
+      telephone: "",
+      units: [],
+    },
+  });
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -93,13 +126,13 @@ export default function UsersPage() {
   });
 
   const createUserMutation = useMutation({
-    mutationFn: async (userData: Partial<User>) => {
+    mutationFn: async (data: UserFormData) => {
       const response = await apiRequest("/api/users", {
         method: "POST",
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(userData)
+        body: JSON.stringify(data)
       });
 
       if (!response.ok) {
@@ -116,6 +149,7 @@ export default function UsersPage() {
         description: "New user has been successfully created",
       });
       setNewUserDialogOpen(false);
+      form.reset();
     },
     onError: (error: Error) => {
       toast({
@@ -126,39 +160,9 @@ export default function UsersPage() {
     },
   });
 
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<User> }) => {
-      const response = await apiRequest(`/api/users/${id}`, {
-        method: "PATCH",
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to update user");
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({
-        title: "User Updated",
-        description: "User has been successfully updated",
-      });
-      setIsEditDialogOpen(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Update Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const onSubmit = (data: UserFormData) => {
+    createUserMutation.mutate(data);
+  };
 
   const filteredUsers = users?.filter((user) => {
     const searchMatch =
@@ -276,19 +280,6 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* Edit User Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>
-              Make changes to user information below
-            </DialogDescription>
-          </DialogHeader>
-          {/* Add edit form here */}
-        </DialogContent>
-      </Dialog>
-
       {/* Delete User Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
@@ -329,7 +320,99 @@ export default function UsersPage() {
               Enter the details for the new user below
             </DialogDescription>
           </DialogHeader>
-          {/* Add new user form here */}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="user@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <FormControl>
+                      <Input placeholder="IT Department" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="telephone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telephone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+1234567890" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setNewUserDialogOpen(false)}
+                  type="button"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createUserMutation.isPending}>
+                  {createUserMutation.isPending ? "Creating..." : "Create User"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>
