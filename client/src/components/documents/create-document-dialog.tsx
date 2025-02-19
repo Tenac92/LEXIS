@@ -131,12 +131,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               if (Array.isArray(item.expenditure_type)) {
                 expenditureTypes = item.expenditure_type;
               } else if (typeof item.expenditure_type === 'string') {
-                // Parse PostgreSQL array format: {type1,type2,type3}
                 expenditureTypes = item.expenditure_type
-                  .replace(/^\{|\}$/g, '') // Remove curly braces
+                  .replace(/[{}]/g, '')
                   .split(',')
-                  .map((type: string) => type.trim())
-                  .filter((type: string) => type.length > 0);
+                  .map(type => type.trim())
+                  .filter(Boolean);
               }
             }
           } catch (e) {
@@ -144,11 +143,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           }
 
           return {
-            id: item.mis,
+            id: item.mis.toString(),
             name: `${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
             expenditure_types: expenditureTypes
           };
-        });
       } catch (error) {
         console.error('Projects fetch error:', error);
         throw error;
@@ -420,7 +418,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                   )}
                 />
 
-                {selectedProjectId && (
+                {selectedProject && (
                   <FormField
                     control={form.control}
                     name="expenditure_type"
