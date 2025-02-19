@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -89,11 +89,17 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: Boolean(form.watch("project"))
   });
 
-  const { data: projectBudget } = useQuery<BudgetData>({
-    queryKey: ["/api/budget", form.watch("project")],
-    enabled: Boolean(form.watch("project")),
-    onSuccess: (data) => setBudgetData(data)
+  const { data: projectBudgetData } = useQuery<BudgetData>({
+    queryKey: ["/api/projects", form.watch("project"), "budget"],
+    enabled: Boolean(form.watch("project"))
   });
+
+  // Update budget data when project budget data changes
+  useEffect(() => {
+    if (projectBudgetData) {
+      setBudgetData(projectBudgetData);
+    }
+  }, [projectBudgetData]);
 
   const calculateTotalAmount = () => {
     return form.watch("recipients")?.reduce((sum, r) => sum + (r.amount || 0), 0) || 0;
@@ -243,13 +249,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       default:
         return [];
     }
-  };
-
-  const getSelectedValue = (field: keyof CreateDocumentForm, list: any[], displayField: string = 'name') => {
-    const value = form.watch(field);
-    if (!value) return undefined;
-    const item = list.find((i: any) => String(i.id) === value);
-    return item ? item[displayField] : undefined;
   };
 
   return (
@@ -418,7 +417,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                   </Button>
                 </div>
 
-                {form.watch("recipients")?.map((_, index) => (
+                {form.watch("recipients")?.map((recipient, index) => (
                   <div key={index} className="grid grid-cols-5 gap-4 p-4 border rounded-lg">
                     <FormField
                       control={form.control}
