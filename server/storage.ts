@@ -1,5 +1,5 @@
 import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog } from "@shared/schema";
-import { supabase } from "./db";
+import { db } from "./db";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import { PostgrestError } from '@supabase/supabase-js';
@@ -28,52 +28,12 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getUserUnits(userId: string): Promise<string[]> {
-    try {
-      console.log('[Storage] Fetching units for user:', userId);
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('units')
-        .eq('id', userId.toString())
-        .single();
-
-      if (error) {
-        console.error('[Storage] Error in getUserUnits:', error);
-        throw error;
-      }
-
-      if (!data?.units) {
-        console.log('[Storage] No units found for user');
-        return [];
-      }
-
-      let units: string[] = [];
-      if (typeof data.units === 'string') {
-        try {
-          units = JSON.parse(data.units);
-        } catch (e) {
-          console.error('[Storage] Error parsing units JSON:', e);
-          return [];
-        }
-      } else if (Array.isArray(data.units)) {
-        units = data.units;
-      }
-
-      console.log('[Storage] Processed units:', units);
-      return units;
-    } catch (error) {
-      console.error('[Storage] Error fetching user units:', error);
-      throw error;
-    }
-  }
-
   async getUser(id: string): Promise<User | undefined> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('users')
         .select('*')
-        .eq('id', id.toString())
+        .eq('id', id)
         .single();
 
       if (error) throw error;
@@ -86,7 +46,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('users')
         .select('*')
         .eq('email', email)
@@ -102,7 +62,7 @@ export class DatabaseStorage implements IStorage {
 
   async createGeneratedDocument(doc: InsertGeneratedDocument): Promise<GeneratedDocument> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('generated_documents')
         .insert([doc])
         .select()
@@ -120,7 +80,7 @@ export class DatabaseStorage implements IStorage {
 
   async getGeneratedDocument(id: number): Promise<GeneratedDocument | undefined> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('generated_documents')
         .select('*')
         .eq('id', id.toString())
@@ -136,7 +96,7 @@ export class DatabaseStorage implements IStorage {
 
   async listGeneratedDocuments(): Promise<GeneratedDocument[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('generated_documents')
         .select('*')
         .order('created_at');
@@ -152,7 +112,7 @@ export class DatabaseStorage implements IStorage {
   async getProjectCatalog(): Promise<ProjectCatalog[]> {
     try {
       console.log('[Storage] Fetching project catalog');
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('project_catalog')
         .select('*')
         .order('mis');
@@ -173,7 +133,7 @@ export class DatabaseStorage implements IStorage {
   async getProjectCatalogByUnit(unit: string): Promise<ProjectCatalog[]> {
     try {
       console.log('[Storage] Fetching project catalog for unit:', unit);
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('project_catalog')
         .select('*')
         .contains('implementing_agency', [unit])
@@ -194,7 +154,7 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectExpenditureTypes(projectId: string): Promise<string[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('project_catalog')
         .select('expenditure_type')
         .eq('mis', projectId)
@@ -204,6 +164,32 @@ export class DatabaseStorage implements IStorage {
       return data?.expenditure_type || [];
     } catch (error) {
       console.error('[Storage] Error fetching project expenditure types:', error);
+      throw error;
+    }
+  }
+
+  async getUserUnits(userId: string): Promise<string[]> {
+    try {
+      console.log('[Storage] Fetching units for user:', userId);
+      const { data, error } = await db
+        .from('users')
+        .select('unit')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('[Storage] Error in getUserUnits:', error);
+        throw error;
+      }
+
+      if (!data?.unit) {
+        console.log('[Storage] No units found for user');
+        return [];
+      }
+
+      return [data.unit];
+    } catch (error) {
+      console.error('[Storage] Error fetching user units:', error);
       throw error;
     }
   }

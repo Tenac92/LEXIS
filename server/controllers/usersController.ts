@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { supabase } from '../config/db';
+import { supabase } from '../db';
 import { authenticateSession } from '../auth';
 import { Request, Response } from 'express';
 
@@ -18,36 +18,45 @@ const router = Router();
 // Get all units
 router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res: Response) => {
   try {
+    console.log('[Units] Fetching units from unit_det table');
     const { data: units, error } = await supabase
       .from('unit_det')
-      .select('implementing_agency')
-      .order('implementing_agency', { ascending: true });
+      .select('implementing_agency');
 
     if (error) {
-      console.error('Supabase query error:', error);
+      console.error('[Units] Supabase query error:', error);
       throw error;
     }
 
-    // Extract unique unit names from implementing_agency JSONB field
+    console.log('[Units] Raw units data:', units);
+
+    // Extract unique unit names from implementing_agency field
     const uniqueUnits = new Set<string>();
     units?.forEach(unit => {
-      const agency = unit.implementing_agency;
-      if (typeof agency === 'string') {
-        uniqueUnits.add(agency);
-      } else if (agency && typeof agency === 'object') {
-        // Handle case where implementing_agency is a JSONB object
-        const agencyValue = agency.name || agency.value || Object.values(agency)[0];
-        if (agencyValue && typeof agencyValue === 'string') {
-          uniqueUnits.add(agencyValue);
+      if (!unit.implementing_agency) return;
+
+      try {
+        const agency = unit.implementing_agency;
+        if (typeof agency === 'string') {
+          uniqueUnits.add(agency);
+        } else if (Array.isArray(agency)) {
+          agency.forEach(a => typeof a === 'string' && uniqueUnits.add(a));
+        } else if (typeof agency === 'object' && agency !== null) {
+          Object.values(agency).forEach(value => {
+            if (typeof value === 'string') uniqueUnits.add(value);
+          });
         }
+      } catch (err) {
+        console.error('[Units] Error processing unit:', unit, err);
       }
     });
 
     const unitsList = Array.from(uniqueUnits).sort();
+    console.log('[Units] Processed units list:', unitsList);
     res.json(unitsList);
   } catch (error) {
-    console.error('Units fetch error:', error);
-    res.status(500).json({ message: 'Failed to fetch units' });
+    console.error('[Units] Units fetch error:', error);
+    res.status(500).json({ message: 'Failed to fetch units', error: error.message });
   }
 });
 
@@ -57,6 +66,7 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
       return res.status(403).json({ message: 'Admin access required' });
     }
 
+    console.log('[Users] Fetching users list');
     const { data: users, error } = await supabase
       .from('users')
       .select(`
@@ -70,13 +80,15 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Users fetch error:', error);
+      console.error('[Users] Users fetch error:', error);
       throw error;
     }
+
+    console.log('[Users] Successfully fetched users:', users?.length);
     res.json(users);
   } catch (error) {
-    console.error('Users fetch error:', error);
-    res.status(500).json({ message: 'Failed to fetch users' });
+    console.error('[Users] Users fetch error:', error);
+    res.status(500).json({ message: 'Failed to fetch users', error: error.message });
   }
 });
 
@@ -111,39 +123,8 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     if (error) throw error;
     res.status(201).json(newUser);
   } catch (error) {
-    console.error('User creation error:', error);
+    console.error('[Users] User creation error:', error);
     res.status(500).json({ message: error.message || 'Failed to create user' });
-  }
-});
-
-router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
-
-    const { data: user, error } = await supabase
-      .from('users')
-      .update({
-        email: req.body.email,
-        name: req.body.name,
-        role: req.body.role,
-        unit: req.body.unit,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', req.params.id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json(user);
-  } catch (error) {
-    console.error('User update error:', error);
-    res.status(500).json({ message: 'Failed to update user' });
   }
 });
 
@@ -161,7 +142,7 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
     if (error) throw error;
     res.status(200).json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error('User deletion error:', error);
+    console.error('[Users] User deletion error:', error);
     res.status(500).json({ message: 'Failed to delete user' });
   }
 });
