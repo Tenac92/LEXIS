@@ -214,11 +214,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue>
-                              {field.value
-                                ? projects.find(p => p.mis === field.value)?.event_description
-                                : "Select project"}
-                            </SelectValue>
+                            <SelectValue placeholder="Select Project" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
