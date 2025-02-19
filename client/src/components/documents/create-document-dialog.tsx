@@ -10,7 +10,33 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 
-// Form Schema
+// Types remain the same
+interface Unit {
+  id: string;
+  name: string;
+}
+
+interface Project {
+  id: string;
+  mis: string | null;
+  na853: string;
+  event_description: string;
+  budget_na853: number;
+  expenditure_type: string[];
+}
+
+interface BudgetData {
+  user_view: number;
+  ethsia_pistosi: number;
+  q1: number;
+  q2: number;
+  q3: number;
+  q4: number;
+  total_spent: number;
+  current_budget: number;
+}
+
+// Form Schema remains the same
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
   project: z.string().min(1, "Project is required"),
@@ -26,12 +52,12 @@ const createDocumentSchema = z.object({
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
+const steps = ["Unit Selection", "Project Details", "Recipients"];
+
 interface CreateDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const steps = ["Unit Selection", "Project Details", "Recipients"];
 
 export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -51,26 +77,29 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedUnit = form.watch("unit");
   const selectedProjectId = form.watch("project");
 
-  // Fetch units
-  const { data: units = [], isLoading: unitsLoading } = useQuery({
+  const { data: units = [], isLoading: unitsLoading } = useQuery<Unit[]>({
     queryKey: ["/api/units"],
     enabled: currentStep === 0
   });
 
-  // Fetch projects for selected unit
-  const { data: projects = [], isLoading: projectsLoading } = useQuery({
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/catalog", selectedUnit],
     queryFn: async () => {
       if (!selectedUnit) return [];
       const response = await fetch(`/api/catalog?unit=${encodeURIComponent(selectedUnit)}`);
-      if (!response.ok) throw new Error('Failed to fetch projects');
-      return response.json();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch projects');
+      }
+      const data = await response.json();
+      return data || [];
     },
     enabled: Boolean(selectedUnit)
   });
 
-  // Fetch expenditure types for selected project
-  const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery({
+  const selectedProject = projects.find(p => p.mis === selectedProjectId);
+
+  const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
     queryKey: ["/api/catalog", selectedProjectId, "expenditure-types"],
     queryFn: async () => {
       if (!selectedProjectId) throw new Error('No project selected');
@@ -82,8 +111,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: Boolean(selectedProjectId)
   });
 
-  // Fetch budget data for selected project
-  const { data: budgetData } = useQuery({
+  const { data: budgetData } = useQuery<BudgetData>({
     queryKey: ["/api/budget", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) throw new Error('No project selected');
@@ -103,31 +131,16 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
-      const total_amount = data.recipients.reduce((sum, recipient) => sum + recipient.amount, 0);
-
-      const documentData = {
-        unit: data.unit,
-        project_id: data.project,
-        expenditure_type: data.expenditure_type,
-        recipients: data.recipients.map(recipient => ({
-          ...recipient,
-          status: "pending"
-        })),
-        total_amount,
-        status: "pending"
-      };
-
       const response = await fetch('/api/documents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(documentData),
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create document');
+        throw new Error('Failed to create document');
       }
 
       await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
@@ -142,7 +155,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       console.error('Submission error:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create document",
+        description: "Failed to create document",
         variant: "destructive"
       });
     }
@@ -217,6 +230,31 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             {/* Project Selection Step */}
             {currentStep === 1 && (
               <div className="space-y-4">
+                {budgetData && (
+                  <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {budgetData.current_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
+                        <p className="text-2xl font-bold text-gray-700">
+                          {budgetData.user_view.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
+                        <p className="text-2xl font-bold text-gray-700">
+                          {budgetData.ethsia_pistosi.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <FormField
                   control={form.control}
                   name="project"
@@ -240,9 +278,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                             <SelectItem value="none">No projects available</SelectItem>
                           ) : (
                             projects.map((project) => (
-                              <SelectItem
-                                key={project.mis}
-                                value={project.mis}
+                              <SelectItem 
+                                key={project.mis} 
+                                value={project.mis?.toString() || ""} // Ensure value is always a string and never undefined
                               >
                                 {project.na853
                                   ? `${project.na853} - ${project.event_description}`
@@ -291,39 +329,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             {/* Recipients Step */}
             {currentStep === 2 && (
               <div className="space-y-4">
-                {budgetData && (
-                  <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
-                        <p className="text-2xl font-bold text-blue-600">
-                          {budgetData.current_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                        </p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
-                        <p className="text-2xl font-bold text-gray-700">
-                          {budgetData.user_view.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                        </p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
-                        <p className="text-2xl font-bold text-gray-700">
-                          {budgetData.ethsia_pistosi.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-600">Current Document Total</h4>
-                      <p className="text-xl font-bold text-green-600">
-                        {form.watch("recipients").reduce((sum, r) => sum + (r.amount || 0), 0)
-                          .toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-lg font-medium">Recipients</h3>

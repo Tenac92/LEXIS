@@ -1,7 +1,5 @@
 import { Router } from 'express';
 import { supabase } from '../config/db';
-import { insertGeneratedDocumentSchema } from '@shared/schema';
-import type { InsertGeneratedDocument } from '@shared/schema';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import type { Database } from '@shared/schema';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
@@ -92,48 +90,27 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create document endpoint
 router.post('/', async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    // Validate request body against schema
-    const result = insertGeneratedDocumentSchema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).json({
-        message: 'Invalid document data',
-        errors: result.error.errors
-      });
-    }
-
-    const documentData: InsertGeneratedDocument = {
-      ...result.data,
-      generated_by: req.user.id,
-      created_at: new Date().toISOString(),
-      status: 'pending'
-    };
-
-    // Insert into database
     const { data, error } = await supabase
       .from('generated_documents')
-      .insert(documentData)
+      .insert({
+        ...req.body,
+        generated_by: req.user.id,
+        created_at: new Date().toISOString()
+      })
       .select()
       .single();
 
-    if (error) {
-      console.error('Database error:', error);
-      throw error;
-    }
-
+    if (error) throw error;
     res.status(201).json(data);
   } catch (error) {
     console.error('Error creating document:', error);
-    res.status(500).json({
-      message: 'Failed to create document',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    res.status(500).json({ message: 'Failed to create document' });
   }
 });
 
@@ -209,9 +186,9 @@ router.get('/generated/:id/export', async (req, res) => {
         children: [
           DocumentFormatter.createDocumentHeader(req),
           DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
-          new Paragraph({
-            text: '',
-            spacing: { before: 240, after: 240 }
+          new Paragraph({ 
+            text: '', 
+            spacing: { before: 240, after: 240 } 
           }),
           new Paragraph({
             children: [
@@ -221,9 +198,9 @@ router.get('/generated/:id/export', async (req, res) => {
             spacing: { before: 240, after: 240 }
           }),
           DocumentFormatter.createPaymentTable(recipients),
-          new Paragraph({
-            text: '',
-            spacing: { before: 300 }
+          new Paragraph({ 
+            text: '', 
+            spacing: { before: 300 } 
           }),
           new Paragraph({
             children: [
