@@ -87,9 +87,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     queryFn: async () => {
       if (!selectedUnit) return [];
       const response = await fetch(`/api/catalog?unit=${encodeURIComponent(selectedUnit)}`);
-      if (!response.ok) throw new Error('Failed to fetch projects');
-      const result = await response.json();
-      return result.data || [];
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch projects');
+      }
+      const data = await response.json();
+      return data || [];
     },
     enabled: Boolean(selectedUnit)
   });
@@ -269,13 +272,19 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {projects.map((project) => (
-                            <SelectItem key={project.mis} value={project.mis}>
-                              {project.na853
-                                ? `${project.na853} - ${project.event_description}`
-                                : project.event_description}
-                            </SelectItem>
-                          ))}
+                          {projectsLoading ? (
+                            <SelectItem value="">Loading projects...</SelectItem>
+                          ) : projects.length === 0 ? (
+                            <SelectItem value="">No projects available</SelectItem>
+                          ) : (
+                            projects.map((project) => (
+                              <SelectItem key={project.mis} value={project.mis.toString()}>
+                                {project.na853
+                                  ? `${project.na853} - ${project.event_description}`
+                                  : project.event_description}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
