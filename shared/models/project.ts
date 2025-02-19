@@ -10,23 +10,23 @@ export const projectSchema = z.object({
   event_description: z.string().nullable(),
   project_title: z.string().nullable(),
   event_type: z.string().nullable(),
-  event_year: z.string().nullable(),
+  event_year: z.array(z.string()).nullable(),
   region: z.string().nullable(),
   regional_unit: z.string().nullable(),
   municipality: z.string().nullable(),
   implementing_agency: z.array(z.string()).nullable(),
-  budget_na853: z.string().nullable(),
-  budget_e069: z.string().nullable(),
-  budget_na271: z.string().nullable(),
-  ethsia_pistosi: z.string().nullable(),
-  status: z.string(),
+  budget_na853: z.coerce.number().nullable(),
+  budget_e069: z.coerce.number().nullable(),
+  budget_na271: z.coerce.number().nullable(),
+  ethsia_pistosi: z.coerce.number().nullable(),
+  status: z.string().default("pending"),
   kya: z.string().nullable(),
   fek: z.string().nullable(),
   ada: z.string().nullable(),
   expenditure_type: z.array(z.string()).nullable(),
   procedures: z.string().nullable(),
-  created_at: z.date().nullable(),
-  updated_at: z.date().nullable()
+  created_at: z.date().nullable().default(() => new Date()),
+  updated_at: z.date().nullable().default(() => new Date())
 });
 
 // Type inference
@@ -51,17 +51,17 @@ export const projectHelpers = {
     'Event Description': project.event_description,
     'Project Title': project.project_title,
     'Event Type': project.event_type,
-    'Event Year': project.event_year,
+    'Event Year': project.event_year ? project.event_year.join(', ') : '',
     'Region': project.region,
     'Regional Unit': project.regional_unit,
     'Municipality': project.municipality,
     'Implementing Agency': Array.isArray(project.implementing_agency) 
       ? project.implementing_agency.join(', ') 
       : project.implementing_agency,
-    'Budget NA853': project.budget_na853,
-    'Budget E069': project.budget_e069,
-    'Budget NA271': project.budget_na271,
-    'Annual Credit': project.ethsia_pistosi,
+    'Budget NA853': project.budget_na853?.toString() ?? '0',
+    'Budget E069': project.budget_e069?.toString() ?? '0',
+    'Budget NA271': project.budget_na271?.toString() ?? '0',
+    'Annual Credit': project.ethsia_pistosi?.toString() ?? '0',
     'Status': project.status,
     'KYA': project.kya,
     'FEK': project.fek,
@@ -75,6 +75,11 @@ export const projectHelpers = {
   }),
 
   validateProject: (data: unknown): Project => {
-    return projectSchema.parse(data);
+    const result = projectSchema.safeParse(data);
+    if (!result.success) {
+      console.error('Project validation failed:', result.error);
+      throw result.error;
+    }
+    return result.data;
   }
 };
