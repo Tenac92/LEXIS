@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import { authenticateToken } from "../middleware/authMiddleware";
 import { supabase } from "../config/db";
@@ -15,16 +16,28 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
+    // Get project NA853
+    const { data: projectData, error: projectError } = await supabase
+      .from('project_catalog')
+      .select('na853')
+      .eq('mis', project_id)
+      .single();
+
+    if (projectError || !projectData) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
     const { data, error } = await supabase
       .from('generated_documents')
       .insert([{
         unit,
         project_id,
+        project_na853: projectData.na853,
         expenditure_type,
         status: status || 'draft',
         recipients,
-        total_amount,
-        created_by: req.user?.id,
+        total_amount: parseFloat(total_amount) || 0,
+        generated_by: req.user?.id,
         created_at: new Date().toISOString()
       }])
       .select()
