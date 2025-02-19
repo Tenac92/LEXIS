@@ -101,8 +101,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     retry: 2
   });
 
-  // Query projects based on selected unit with error handling
-  const { data: projects = [], isLoading: projectsLoading } = useQuery({
+  // Query projects based on selected unit with improved error handling
+  const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useQuery({
     queryKey: ["projects", selectedUnit],
     queryFn: async () => {
       if (!selectedUnit) return [];
@@ -127,14 +127,18 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         return data.map((item: any) => {
           let expenditureTypes: string[] = [];
 
-          if (Array.isArray(item.expenditure_type)) {
-            expenditureTypes = item.expenditure_type;
-          } else if (typeof item.expenditure_type === 'string') {
-            expenditureTypes = item.expenditure_type
-              .replace(/[{}"]/g, '')
-              .split(',')
-              .map((type: string) => type.trim())
-              .filter((type: string) => type.length > 0);
+          try {
+            if (Array.isArray(item.expenditure_type)) {
+              expenditureTypes = item.expenditure_type;
+            } else if (typeof item.expenditure_type === 'string') {
+              expenditureTypes = item.expenditure_type
+                .replace(/[{}"]/g, '')
+                .split(',')
+                .map((type: string) => type.trim())
+                .filter((type: string) => type.length > 0);
+            }
+          } catch (e) {
+            console.error('Error parsing expenditure types:', e);
           }
 
           return {
@@ -152,8 +156,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     retry: 2
   });
 
-  // Query budget data with error handling
-  const { data: budgetData } = useQuery({
+  // Query budget data with improved error handling
+  const { data: budgetData, error: budgetError } = useQuery({
     queryKey: ["budget", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return null;
@@ -165,7 +169,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           .eq('mis', selectedProjectId)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Budget fetch error:', error);
+          throw error;
+        }
 
         return {
           current_budget: parseFloat(data?.katanomes_etous || '0'),
@@ -267,11 +274,33 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   const handleNext = async () => {
+    if (currentStep === 1) {
+      const isValid = await form.trigger(["project_id", "expenditure_type"]);
+
+      if (!isValid) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!selectedProject?.expenditure_types?.length) {
+        toast({
+          title: "Error",
+          description: "Selected project has no expenditure types available",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
     if (currentStep < steps.length - 1) {
       const isValid = await form.trigger(
         currentStep === 0 ? ["unit"] :
-        currentStep === 1 ? ["project_id", "expenditure_type"] :
-        ["recipients"]
+          currentStep === 1 ? ["project_id", "expenditure_type"] :
+            ["recipients"]
       );
 
       if (isValid) {
@@ -351,6 +380,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         </p>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {projectsError && (
+                  <div className="bg-destructive/10 p-4 rounded-lg text-destructive">
+                    Failed to load projects. Please try again.
                   </div>
                 )}
 
