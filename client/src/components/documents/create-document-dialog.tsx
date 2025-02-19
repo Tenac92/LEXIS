@@ -216,10 +216,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to create document');
-      }
-
+      // apiRequest already handles response.ok check internally
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
 
       toast({
