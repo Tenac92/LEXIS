@@ -88,6 +88,15 @@ export default function UsersPage() {
     },
   });
 
+  const { data: units = [] } = useQuery<string[]>({
+    queryKey: ["/api/users/units"],
+    queryFn: async () => {
+      const response = await fetch("/api/users/units");
+      if (!response.ok) throw new Error("Failed to fetch units");
+      return response.json();
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (userId: number) => {
       const response = await apiRequest(`/api/users/${userId}`, {
@@ -98,7 +107,6 @@ export default function UsersPage() {
         const error = await response.json();
         throw new Error(error.message || "Failed to delete user");
       }
-
       return response.json();
     },
     onSuccess: () => {
@@ -132,7 +140,6 @@ export default function UsersPage() {
         const error = await response.json();
         throw new Error(error.message || "Failed to create user");
       }
-
       return response.json();
     },
     onSuccess: () => {
@@ -361,9 +368,23 @@ export default function UsersPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unit</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter unit name" {...field} />
-                    </FormControl>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a unit" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

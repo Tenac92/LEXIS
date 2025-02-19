@@ -13,6 +13,32 @@ interface AuthenticatedRequest extends Request {
 
 const router = Router();
 
+// Get all units
+router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { data: units, error } = await supabase
+      .from('unit_det')
+      .select('id, implementing_agency')
+      .order('implementing_agency', { ascending: true });
+
+    if (error) throw error;
+
+    // Extract unique unit names from implementing_agency
+    const uniqueUnits = new Set();
+    units?.forEach(unit => {
+      if (unit.implementing_agency) {
+        uniqueUnits.add(unit.implementing_agency);
+      }
+    });
+
+    const unitsList = Array.from(uniqueUnits);
+    res.json(unitsList);
+  } catch (error) {
+    console.error('Units fetch error:', error);
+    res.status(500).json({ message: 'Failed to fetch units' });
+  }
+});
+
 router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (req.user?.role !== 'admin') {
