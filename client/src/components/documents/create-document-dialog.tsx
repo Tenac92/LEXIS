@@ -377,7 +377,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
+                              <SelectValue placeholder="Select expenditure type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
