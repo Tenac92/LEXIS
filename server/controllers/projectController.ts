@@ -14,7 +14,13 @@ export async function listProjects(req: Request, res: Response) {
 
     // Map projects and validate with our model
     const formattedProjects = projects.map(project => {
-      const validatedProject = projectHelpers.validateProject(project);
+      // Convert NaN values to null before validation
+      const sanitizedProject = {
+        ...project,
+        id: isNaN(Number(project.id)) ? null : Number(project.id),
+        ethsia_pistosi: isNaN(Number(project.ethsia_pistosi)) ? null : Number(project.ethsia_pistosi)
+      };
+      const validatedProject = projectHelpers.validateProject(sanitizedProject);
       return {
         id: validatedProject.id,
         mis: validatedProject.mis,
