@@ -22,6 +22,8 @@ import { DocumentCard } from "@/components/documents/document-card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ViewDocumentModal, EditDocumentModal, DeleteDocumentModal } from "@/components/documents/document-modals";
 import { useToast } from "@/hooks/use-toast";
+import { Header } from "@/components/header";
+import { FAB } from "@/components/ui/fab";
 
 export default function DocumentsPage() {
   const [isAdvancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
@@ -74,7 +76,6 @@ export default function DocumentsPage() {
 
       if (!response.ok) throw new Error('Failed to export document');
 
-      // Create a blob from the response
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -100,6 +101,7 @@ export default function DocumentsPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <div className="container mx-auto px-4 pt-6 pb-8">
         <Card className="bg-card">
           <div className="p-4">
@@ -311,6 +313,8 @@ export default function DocumentsPage() {
           setModalState(prev => ({ ...prev, delete: false }));
         }}
       />
+
+      <FAB />
     </div>
   );
 }
