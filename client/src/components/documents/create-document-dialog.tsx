@@ -80,7 +80,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       try {
         console.log('Fetching units...');
         const { data, error } = await supabase
-          .from('documents')
+          .from('generated_documents')
           .select('distinct unit')
           .not('unit', 'is', null)
           .order('unit');
@@ -117,7 +117,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       try {
         console.log('Fetching projects for unit:', selectedUnit);
         const { data, error } = await supabase
-          .from('documents')
+          .from('generated_documents')
           .select('distinct project_id, project_na853')
           .eq('unit', selectedUnit)
           .not('project_id', 'is', null)
@@ -155,7 +155,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       try {
         console.log('Fetching budget for project:', selectedProjectId);
         const { data, error } = await supabase
-          .from('documents')
+          .from('generated_documents')
           .select('total_amount')
           .eq('project_id', selectedProjectId)
           .single();
@@ -171,12 +171,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         }
 
         console.log('Budget data:', data);
-        // Calculate budget information from documents
-        const totalBudget = data?.total_amount || 0;
         return {
-          current_budget: totalBudget,
-          total_budget: totalBudget,
-          annual_budget: totalBudget
+          current_budget: data?.total_amount || 0,
+          total_budget: data?.total_amount || 0,
+          annual_budget: data?.total_amount || 0
         };
       } catch (error) {
         console.error('Budget fetch error:', error);
@@ -189,7 +187,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
       const { data: document, error } = await supabase
-        .from('documents')
+        .from('generated_documents')
         .insert([{
           ...data,
           total_amount: data.recipients.reduce((sum, r) => sum + r.amount, 0),
