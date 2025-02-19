@@ -52,31 +52,39 @@ router.get('/export/xlsx', authenticateToken, isAdmin, async (req, res) => {
 
     console.log(`Found ${projects.length} projects to export`);
 
-    // Create workbook and worksheet
-    const wb = xlsx.utils.book_new();
-    const wsData = projects.map(project => ({
-      MIS: project.mis,
-      NA853: project.na853,
-      Description: project.event_description,
-      Budget: project.budget_na853,
-      Status: project.status,
-      Region: project.region
-    }));
+    try {
+      // Create workbook and worksheet
+      const wb = xlsx.utils.book_new();
+      const wsData = projects.map(project => ({
+        MIS: project.mis || '',
+        NA853: project.na853 || '',
+        Description: project.event_description || '',
+        Budget: project.budget_na853 || 0,
+        Status: project.status || '',
+        Region: project.region || ''
+      }));
 
-    const ws = xlsx.utils.json_to_sheet(wsData);
+      console.log('Creating worksheet...');
+      const ws = xlsx.utils.json_to_sheet(wsData);
 
-    // Add worksheet to workbook
-    xlsx.utils.book_append_sheet(wb, ws, 'Projects');
+      // Add worksheet to workbook
+      xlsx.utils.book_append_sheet(wb, ws, 'Projects');
 
-    // Generate buffer
-    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+      console.log('Generating XLSX buffer...');
+      // Generate buffer
+      const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-    console.log('XLSX file generated successfully');
+      console.log('XLSX file generated successfully');
 
-    // Set headers and send response
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=projects-${new Date().toISOString().split('T')[0]}.xlsx`);
-    res.send(buf);
+      // Set headers and send response
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename=projects-${new Date().toISOString().split('T')[0]}.xlsx`);
+      res.send(buf);
+
+    } catch (xlsxError) {
+      console.error('XLSX generation error:', xlsxError);
+      throw new Error(`Failed to generate XLSX file: ${xlsxError instanceof Error ? xlsxError.message : 'Unknown XLSX error'}`);
+    }
 
   } catch (error) {
     console.error('Export error:', error);

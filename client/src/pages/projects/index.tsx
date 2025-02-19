@@ -53,6 +53,11 @@ export default function ProjectsPage() {
 
   const handleExport = async () => {
     try {
+      toast({
+        title: "Starting Export",
+        description: "Please wait while we prepare your file...",
+      });
+
       const response = await fetch("/api/projects/export/xlsx", {
         method: "GET",
         headers: {
@@ -61,8 +66,14 @@ export default function ProjectsPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Export failed');
+        let errorMessage = 'Export failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || 'Export failed';
+        } catch (e) {
+          console.error('Error parsing error response:', e);
+        }
+        throw new Error(errorMessage);
       }
 
       const blob = await response.blob();
