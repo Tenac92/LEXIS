@@ -85,20 +85,41 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: currentStep === 0
   });
 
+  const selectedUnit = form.watch("unit");
+  const selectedProjectId = form.watch("project");
+
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
-    queryKey: ["/api/catalog", form.watch("unit")],
-    enabled: Boolean(form.watch("unit"))
+    queryKey: ["/api/catalog"],
+    queryFn: async () => {
+      const response = await fetch(`/api/catalog?unit=${encodeURIComponent(selectedUnit)}`);
+      if (!response.ok) throw new Error('Failed to fetch projects');
+      return response.json();
+    },
+    enabled: Boolean(selectedUnit)
   });
 
-  const selectedProject = projects.find(p => p.id.toString() === form.watch("project"));
+  const selectedProject = projects.find(p => p.id.toString() === selectedProjectId);
 
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
     queryKey: ["/api/catalog", selectedProject?.mis, "expenditure-types"],
+    queryFn: async () => {
+      if (!selectedProject?.mis) throw new Error('No project selected');
+      const response = await fetch(`/api/catalog/${selectedProject.mis}/expenditure-types`);
+      if (!response.ok) throw new Error('Failed to fetch expenditure types');
+      const data = await response.json();
+      return data.expenditure_types || [];
+    },
     enabled: Boolean(selectedProject?.mis)
   });
 
   const { data: projectBudgetData } = useQuery<BudgetData>({
     queryKey: ["/api/budget", selectedProject?.mis],
+    queryFn: async () => {
+      if (!selectedProject?.mis) throw new Error('No project selected');
+      const response = await fetch(`/api/budget/${selectedProject.mis}`);
+      if (!response.ok) throw new Error('Failed to fetch budget data');
+      return response.json();
+    },
     enabled: Boolean(selectedProject?.mis)
   });
 
