@@ -125,7 +125,6 @@ class CsvProcessor {
 }
 
 router.post("/", authenticateToken, async (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
   const startTime = performance.now();
   const results = { success: [], errors: [], skipped: [] };
   const progressUpdates = [];

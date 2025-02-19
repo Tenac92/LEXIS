@@ -7,6 +7,8 @@ import { authenticateSession } from "./auth";
 import documentsController from "./controllers/documentsController";
 import unitsController from "./controllers/unitsController";
 import projectsController from "./controllers/projectsController";
+import { listProjects, getExpenditureTypes } from "./controllers/projectController";
+import { getBudget } from "./controllers/budgetController";
 import { log } from "./vite";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -19,7 +21,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Dashboard routes
     app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
 
-    // Documents routes - make sure this is registered before the general apiRouter
+    // Project catalog routes
+    app.get('/api/catalog', authenticateSession, listProjects);
+    app.get('/api/catalog/:mis/expenditure-types', authenticateSession, getExpenditureTypes);
+
+    // Budget routes
+    app.get('/api/budget/:mis', authenticateSession, getBudget);
+
+    // Documents routes
     app.use('/api/documents', authenticateSession, documentsController);
 
     // Units and Projects routes

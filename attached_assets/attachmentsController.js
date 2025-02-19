@@ -10,7 +10,6 @@ router.get('/:type/:installment', authenticateToken, async (req, res) => {
     
     if (!type || !installment) {
       return res.status(400).json({ 
-        status: 'error',
         message: 'Expenditure type and installment are required' 
       });
     }
@@ -20,51 +19,46 @@ router.get('/:type/:installment', authenticateToken, async (req, res) => {
 
     if (isNaN(parsedInstallment) || parsedInstallment < 1) {
       return res.status(400).json({ 
-        status: 'error',
         message: 'Invalid installment number' 
       });
     }
 
+    console.log('Fetching attachments for:', { decodedType, parsedInstallment });
+
     const { data, error } = await supabase
       .from('attachments')
       .select('*')
-      .eq('expediture_type', decodedType)
+      .eq('expenditure_type', decodedType)
       .eq('installment', parsedInstallment)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('Database error:', error);
       return res.status(500).json({ 
-        status: 'error',
         message: 'Database error',
         error: error.message 
       });
     }
 
-    // Get default attachments if no specific ones found
-    if (!data?.attachments?.length) {
-      const { data: defaultData } = await supabase
-        .from('attachments')
-        .select('*')
-        .eq('expediture_type', 'default')
-        .eq('installment', 1)
-        .single();
-
-      return res.json({
-        status: 'success',
-        attachments: defaultData?.attachments || ['Διαβιβαστικό', 'ΔΚΑ']
+    if (error) {
+      console.error('Database error:', error);
+      return res.status(500).json({ 
+        message: 'Failed to fetch attachments',
+        error: error.message 
       });
     }
 
+    // Return first matching record or default empty attachments
+    const attachments = data?.[0]?.attachments || [];
+
     res.json({
       status: 'success',
-      attachments: data.attachments
+      attachments
     });
 
   } catch (error) {
     console.error('Error fetching attachments:', error);
     res.status(500).json({ 
-      status: 'error',
       message: 'Failed to fetch attachments',
       error: error.message
     });
