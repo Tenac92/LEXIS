@@ -103,7 +103,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   useEffect(() => {
     if (selectedProject) {
       form.setValue("expenditure_type", "");
-      console.log("Selected project:", selectedProject);
     }
   }, [selectedProject, form]);
 
@@ -111,9 +110,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     queryKey: ["expenditureTypes", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return [];
-      const project = projects.find(p => p.mis === selectedProjectId);
-      console.log("Project for expenditure types:", project);
-      return project?.expenditure_type || [];
+      return selectedProject?.expenditure_type || [];
     },
     enabled: Boolean(selectedProjectId)
   });
@@ -271,13 +268,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={(value) => {
                           field.onChange(value);
-                          const project = projects.find(p => p.mis === value);
-                          console.log("Selected project:", project);
-                          if (project) {
+                          if (projects.find(p => p.mis === value)) {
                             form.setValue("expenditure_type", "");
                           }
                         }}
-                        value={field.value?.toString()}
+                        value={field.value}
                         disabled={!selectedUnit || projectsLoading}
                       >
                         <FormControl>
