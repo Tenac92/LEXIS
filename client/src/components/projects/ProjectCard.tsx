@@ -27,6 +27,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
+// Add APIResponse type
+interface APIResponse<T = any> {
+  ok: boolean;
+  json(): Promise<T>;
+  blob(): Promise<Blob>;
+}
+
 interface ProjectCardProps {
   project: ProjectCatalog;
   view?: "grid" | "list";
@@ -36,8 +43,6 @@ interface ProjectCardProps {
 export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -49,20 +54,16 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      try {
-        const response = await apiRequest(`/api/projects/${project.mis}`, {
-          method: "DELETE",
-        });
+      const response = await apiRequest(`/api/projects/${project.mis}`, {
+        method: "DELETE",
+      }) as APIResponse;
 
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.message || "Failed to delete project");
-        }
-
-        return response.json();
-      } catch (error) {
-        throw new Error(error instanceof Error ? error.message : "Failed to delete project");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete project");
       }
+
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
@@ -207,7 +208,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                 </Badge>
               </div>
             </DialogTitle>
-            </DialogHeader>
+          </DialogHeader>
 
           <div className="mt-6 space-y-8">
             {/* Key Information Section */}

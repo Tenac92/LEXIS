@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -16,6 +16,14 @@ import { type ProjectCatalog } from "@shared/schema";
 import { Plus, FileUp, Download, LayoutGrid, LayoutList, FileEdit, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useRef, useState as useState2 } from "react";
+
+interface APIResponse<T = any> {
+  ok: boolean;
+  json(): Promise<T>;
+  blob(): Promise<Blob>;
+}
 
 export default function ProjectsPage() {
   const { toast } = useToast();
@@ -27,6 +35,7 @@ export default function ProjectsPage() {
   const [status, setStatus] = useState<string>("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Debounce search input
   useEffect(() => {
@@ -49,7 +58,7 @@ export default function ProjectsPage() {
         headers: {
           Accept: "text/csv",
         },
-      });
+      }) as APIResponse;
 
       if (!response.ok) {
         const error = await response.json();
@@ -79,7 +88,7 @@ export default function ProjectsPage() {
     }
   };
 
-  const handleBulkUpload = async (file: File) => {
+  const handleFileUpload = async (file: File) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -87,11 +96,11 @@ export default function ProjectsPage() {
       const response = await apiRequest("/api/projects/bulk-upload", {
         method: "POST",
         body: formData,
-      });
+      }) as APIResponse;
 
       const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.message || "Bulk upload failed");
+      if (!response.ok) {
+        throw new Error(data.message || "Upload failed");
       }
 
       toast({
@@ -101,6 +110,7 @@ export default function ProjectsPage() {
 
       // Invalidate projects query to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      setUploadDialogOpen(false);
     } catch (error) {
       toast({
         title: "Upload Failed",
@@ -112,7 +122,7 @@ export default function ProjectsPage() {
 
   // Filter projects based on search and status
   const filteredProjects = projects?.filter(project => {
-    const searchMatch = !debouncedSearch || 
+    const searchMatch = !debouncedSearch ||
       project.event_description?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
       project.mis?.toString().includes(debouncedSearch) ||
       project.region?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
@@ -200,9 +210,9 @@ export default function ProjectsPage() {
         ) : filteredProjects?.length ? (
           <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
             {filteredProjects.map((project) => (
-              <ProjectCard 
-                key={`${project.id}-${project.mis}`} 
-                project={project} 
+              <ProjectCard
+                key={`${project.id}-${project.mis}`}
+                project={project}
                 view={view}
                 isAdmin={isAdmin}
               />
@@ -214,6 +224,36 @@ export default function ProjectsPage() {
           </div>
         )}
       </div>
+
+      {/* Add CSV Upload Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload CSV</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".csv"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleFileUpload(file);
+                }
+              }}
+              className="hidden"
+            />
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Select CSV File
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
