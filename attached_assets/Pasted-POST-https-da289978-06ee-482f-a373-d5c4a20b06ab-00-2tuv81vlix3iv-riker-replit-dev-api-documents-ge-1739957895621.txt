@@ -1,0 +1,550 @@
+POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents/generated 404 (Not Found)
+apiRequest @ queryClient.ts:13
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:31 [API] Request failed: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+apiRequest @ queryClient.ts:31
+await in apiRequest
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:234 Submission error: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+onSubmit @ create-document-dialog.tsx:234
+await in onSubmit
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:13 
+        
+        
+       POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents/generated 404 (Not Found)
+apiRequest @ queryClient.ts:13
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:31 [API] Request failed: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+apiRequest @ queryClient.ts:31
+await in apiRequest
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:234 Submission error: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+onSubmit @ create-document-dialog.tsx:234
+await in onSubmit
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:13 
+        
+        
+       POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents/generated 404 (Not Found)
+apiRequest @ queryClient.ts:13
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:31 [API] Request failed: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+apiRequest @ queryClient.ts:31
+await in apiRequest
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:234 Submission error: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+onSubmit @ create-document-dialog.tsx:234
+await in onSubmit
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:13 
+        
+        
+       POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents/generated 404 (Not Found)
+apiRequest @ queryClient.ts:13
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:31 [API] Request failed: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+apiRequest @ queryClient.ts:31
+await in apiRequest
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:234 Submission error: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+onSubmit @ create-document-dialog.tsx:234
+await in onSubmit
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:13 
+        
+        
+       POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents/generated 404 (Not Found)
+apiRequest @ queryClient.ts:13
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:31 [API] Request failed: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+apiRequest @ queryClient.ts:31
+await in apiRequest
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:234 Submission error: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+onSubmit @ create-document-dialog.tsx:234
+await in onSubmit
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:13 
+        
+        
+       POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents/generated 404 (Not Found)
+apiRequest @ queryClient.ts:13
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:31 [API] Request failed: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+apiRequest @ queryClient.ts:31
+await in apiRequest
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:234 Submission error: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+onSubmit @ create-document-dialog.tsx:234
+await in onSubmit
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:13 
+        
+        
+       POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents/generated 404 (Not Found)
+apiRequest @ queryClient.ts:13
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:31 [API] Request failed: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+apiRequest @ queryClient.ts:31
+await in apiRequest
+onSubmit @ create-document-dialog.tsx:211
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:234 Submission error: Error: HTTP error! status: 404
+    at apiRequest (queryClient.ts:26:13)
+    at async onSubmit (create-document-dialog.tsx:211:24)
+    at async chunk-EV5STJTR.js?v=ead1ee53:1675:9
+onSubmit @ create-document-dialog.tsx:234
+await in onSubmit
+(ανώνυμες) @ chunk-EV5STJTR.js?v=ead1ee53:1675
+await in (ανώνυμες)
+handleNext @ create-document-dialog.tsx:317
+callCallback2 @ chunk-UPELNCPK.js?v=ead1ee53:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=ead1ee53:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=ead1ee53:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=ead1ee53:3736
+executeDispatch @ chunk-UPELNCPK.js?v=ead1ee53:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=ead1ee53:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=ead1ee53:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=ead1ee53:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=ead1ee53:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=ead1ee53:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=ead1ee53:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=ead1ee53:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=ead1ee53:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=ead1ee53:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=ead1ee53:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
