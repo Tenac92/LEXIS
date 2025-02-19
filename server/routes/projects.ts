@@ -55,14 +55,27 @@ router.get('/export/xlsx', authenticateToken, isAdmin, async (req, res) => {
     try {
       // Create workbook and worksheet
       const wb = xlsx.utils.book_new();
-      const wsData = projects.map(project => ({
-        MIS: project.mis || '',
-        NA853: project.na853 || '',
-        Description: project.event_description || '',
-        Budget: project.budget_na853 || 0,
-        Status: project.status || '',
-        Region: project.region || ''
-      }));
+      const wsData = projects.map(project => {
+        // Convert numeric fields safely
+        const budget = typeof project.budget_na853 === 'number' && !isNaN(project.budget_na853) 
+          ? project.budget_na853 
+          : 0;
+
+        const ethsia = typeof project.ethsia_pistosi === 'number' && !isNaN(project.ethsia_pistosi)
+          ? project.ethsia_pistosi
+          : 0;
+
+        return {
+          MIS: project.mis || '',
+          NA853: project.na853 || '',
+          Description: project.event_description || '',
+          Budget: budget,
+          Annual_Credit: ethsia,
+          Status: project.status || '',
+          Region: project.region || '',
+          Created_At: project.created_at ? new Date(project.created_at).toLocaleDateString() : ''
+        };
+      });
 
       console.log('Creating worksheet...');
       const ws = xlsx.utils.json_to_sheet(wsData);
@@ -146,7 +159,7 @@ router.post('/bulk-upload', authenticateToken, isAdmin, upload.single('file'), a
           mis: record.MIS,
           na853: record.NA853,
           event_description: record.Description,
-          budget_na853: parseFloat(record.Budget),
+          budget_na853: parseFloat(record.Budget) || 0,
           status: record.Status,
           region: record.Region,
         }, {
