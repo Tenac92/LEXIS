@@ -147,6 +147,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             name: `${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
             expenditure_types: expenditureTypes
           };
+        });
+
+        return data;
       } catch (error) {
         console.error('Projects fetch error:', error);
         throw error;
