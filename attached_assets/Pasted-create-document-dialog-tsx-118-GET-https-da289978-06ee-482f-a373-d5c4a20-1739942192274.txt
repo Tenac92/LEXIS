@@ -1,0 +1,56 @@
+create-document-dialog.tsx:118 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/budget/5203935 500 (Internal Server Error)
+queryFn @ create-document-dialog.tsx:118
+fetchFn @ @tanstack_react-query.js?v=f065ee67:840
+run @ @tanstack_react-query.js?v=f065ee67:494
+start @ @tanstack_react-query.js?v=f065ee67:536
+fetch @ @tanstack_react-query.js?v=f065ee67:926
+executeFetch_fn @ @tanstack_react-query.js?v=f065ee67:2211
+setOptions @ @tanstack_react-query.js?v=f065ee67:1955
+(ανώνυμες) @ @tanstack_react-query.js?v=f065ee67:3032
+commitHookEffectListMount @ chunk-WERSD76P.js?v=f065ee67:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=f065ee67:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=f065ee67:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=f065ee67:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=f065ee67:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=f065ee67:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=f065ee67:19447
+commitRootImpl @ chunk-WERSD76P.js?v=f065ee67:19416
+commitRoot @ chunk-WERSD76P.js?v=f065ee67:19277
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=f065ee67:18895
+flushSyncCallbacks @ chunk-WERSD76P.js?v=f065ee67:9119
+(ανώνυμες) @ chunk-WERSD76P.js?v=f065ee67:18627
+Εμφάνιση 19 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:118 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/budget/5203934 500 (Internal Server Error)
+queryFn @ create-document-dialog.tsx:118
+fetchFn @ @tanstack_react-query.js?v=f065ee67:840
+run @ @tanstack_react-query.js?v=f065ee67:494
+start @ @tanstack_react-query.js?v=f065ee67:536
+fetch @ @tanstack_react-query.js?v=f065ee67:926
+executeFetch_fn @ @tanstack_react-query.js?v=f065ee67:2211
+setOptions @ @tanstack_react-query.js?v=f065ee67:1955
+(ανώνυμες) @ @tanstack_react-query.js?v=f065ee67:3032
+commitHookEffectListMount @ chunk-WERSD76P.js?v=f065ee67:16915
+commitPassiveMountOnFiber @ chunk-WERSD76P.js?v=f065ee67:18156
+commitPassiveMountEffects_complete @ chunk-WERSD76P.js?v=f065ee67:18129
+commitPassiveMountEffects_begin @ chunk-WERSD76P.js?v=f065ee67:18119
+commitPassiveMountEffects @ chunk-WERSD76P.js?v=f065ee67:18109
+flushPassiveEffectsImpl @ chunk-WERSD76P.js?v=f065ee67:19490
+flushPassiveEffects @ chunk-WERSD76P.js?v=f065ee67:19447
+commitRootImpl @ chunk-WERSD76P.js?v=f065ee67:19416
+commitRoot @ chunk-WERSD76P.js?v=f065ee67:19277
+performSyncWorkOnRoot @ chunk-WERSD76P.js?v=f065ee67:18895
+flushSyncCallbacks @ chunk-WERSD76P.js?v=f065ee67:9119
+(ανώνυμες) @ chunk-WERSD76P.js?v=f065ee67:18627
+Εμφάνιση 19 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:118 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/budget/5203932 500 (Internal Server Error)

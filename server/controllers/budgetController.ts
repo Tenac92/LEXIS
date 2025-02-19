@@ -5,15 +5,39 @@ export async function getBudget(req: Request, res: Response) {
   try {
     const { mis } = req.params;
 
+    // First get the NA853 code from project_catalog
+    const { data: projectData, error: projectError } = await supabase
+      .from("project_catalog")
+      .select("na853")
+      .eq("mis", mis)
+      .single();
+
+    if (projectError || !projectData?.na853) {
+      return res.status(404).json({ message: "Project not found or NA853 code not available" });
+    }
+
+    // Then get the budget data using the NA853 code
     const { data, error } = await supabase
       .from("budget_na853_split")
       .select("*")
-      .eq("na853", mis)
+      .eq("na853", projectData.na853)
       .single();
 
-    if (error) throw error;
-    if (!data) {
-      return res.status(404).json({ message: "Budget not found" });
+    if (error) {
+      // If no data found, return default values
+      if (error.code === 'PGRST116') {
+        return res.json({
+          user_view: 0,
+          ethsia_pistosi: 0,
+          q1: 0,
+          q2: 0,
+          q3: 0,
+          q4: 0,
+          total_spent: 0,
+          current_budget: 0
+        });
+      }
+      throw error;
     }
 
     res.json({
