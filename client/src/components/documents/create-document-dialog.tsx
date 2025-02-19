@@ -199,17 +199,21 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
       // Convert form data to FormData
-      const formData = new FormData();
-      formData.append('unit', data.unit);
-      formData.append('project_id', data.project_id);
-      formData.append('expenditure_type', data.expenditure_type);
-      formData.append('status', data.status);
-      formData.append('recipients', JSON.stringify(data.recipients));
-      formData.append('total_amount', data.recipients.reduce((sum, r) => sum + r.amount, 0).toString());
+      const payload = {
+        unit: data.unit,
+        project_id: data.project_id,
+        expenditure_type: data.expenditure_type,
+        status: data.status,
+        recipients: data.recipients,
+        total_amount: data.recipients.reduce((sum, r) => sum + r.amount, 0)
+      };
 
       const response = await apiRequest('/api/documents/generated', {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
