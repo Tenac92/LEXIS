@@ -8,9 +8,18 @@ export async function listProjects(req: Request, res: Response) {
   const { unit } = req.query;
 
   try {
-    const projects = unit 
-      ? await storage.getProjectCatalogByUnit(unit as string)
-      : await storage.getProjectCatalog();
+    let projects;
+    try {
+      projects = unit 
+        ? await storage.getProjectCatalogByUnit(unit as string)
+        : await storage.getProjectCatalog();
+    } catch (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ 
+        message: "Failed to fetch projects from database",
+        error: err instanceof Error ? err.message : "Unknown error"
+      });
+    }
 
     // Map projects and validate with our model
     const formattedProjects = projects.map(project => {

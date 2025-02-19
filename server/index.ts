@@ -97,7 +97,7 @@ app.use((req, res, next) => {
     });
 
     // Get port from environment variable with fallback
-    const PORT = parseInt(process.env.PORT || '5000', 10);
+    const PORT = parseInt(process.env.PORT || '3000', 10);
     const HOST = '0.0.0.0'; // Bind to all network interfaces
 
     // Add error handler for the server
