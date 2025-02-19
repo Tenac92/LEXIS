@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,21 @@ export default function ProjectsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [view, setView] = useState<"grid" | "list">("grid");
 
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const { data: projects, isLoading } = useQuery<ProjectCatalog[]>({
-    queryKey: ["/api/projects", { search, status }],
+    queryKey: ["/api/projects", { search: debouncedSearch, status: status !== "all" ? status : undefined }],
     enabled: true,
   });
 
@@ -59,6 +69,19 @@ export default function ProjectsPage() {
       });
     }
   };
+
+  // Filter projects based on search and status
+  const filteredProjects = projects?.filter(project => {
+    const searchMatch = !debouncedSearch || 
+      project.event_description?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.mis?.toString().includes(debouncedSearch) ||
+      project.region?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.na853?.toLowerCase().includes(debouncedSearch.toLowerCase());
+
+    const statusMatch = status === "all" || project.status === status;
+
+    return searchMatch && statusMatch;
+  });
 
   return (
     <div className="container mx-auto py-8">
@@ -102,10 +125,10 @@ export default function ProjectsPage() {
       <div className="mt-8 space-y-4">
         <div className="flex flex-col gap-4 md:flex-row">
           <Input
-            placeholder="Search projects..."
+            placeholder="Search by MIS, description, region..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="md:w-64"
+            className="md:w-96"
           />
           <Select
             value={status}
@@ -130,9 +153,9 @@ export default function ProjectsPage() {
               <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-gray-100 animate-pulse" />
             ))}
           </div>
-        ) : projects?.length ? (
+        ) : filteredProjects?.length ? (
           <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-            {projects.map((project) => (
+            {filteredProjects.map((project) => (
               <ProjectCard 
                 key={`${project.id}-${project.mis}`} 
                 project={project} 
