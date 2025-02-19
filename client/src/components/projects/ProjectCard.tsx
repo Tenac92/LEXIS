@@ -39,6 +39,10 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
+  const dialogId = `project-dialog-${project.id}`;
+  const dialogTitleId = `${dialogId}-title`;
+  const dialogDescriptionId = `${dialogId}-description`;
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({
@@ -171,11 +175,6 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
     </>
   );
 
-  const dialogId = `project-dialog-${project.id}`;
-  const dialogDescriptionId = `project-dialog-description-${project.id}`;
-
-  const dialogDescription = `Project details for ${project.mis || ''} - ${project.event_description || ''}`;
-
   return (
     <Card className={`transition-shadow hover:shadow-lg ${view === "list" ? "flex" : ""}`}>
       <Dialog>
@@ -184,20 +183,23 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
             {cardContent}
           </CardContent>
         </DialogTrigger>
-        <DialogContent
-          className="max-w-4xl max-h-[85vh] overflow-y-auto"
-          aria-labelledby={dialogId}
+
+        <DialogContent 
+          className="max-w-4xl max-h-[85vh] overflow-y-auto" 
+          aria-labelledby={dialogTitleId}
           aria-describedby={dialogDescriptionId}
         >
           <DialogHeader>
-            <DialogTitle id={dialogId} className="flex items-center justify-between">
-              <span className="text-2xl font-bold">{project.event_description || "Project Details"}</span>
-              <Badge variant="secondary" className={`${getStatusColor(project.status || '')} px-4 py-1.5`}>
-                {getStatusText(project.status || '')}
-              </Badge>
+            <DialogTitle id={dialogTitleId}>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-bold">{project.event_description || "Project Details"}</span>
+                <Badge variant="secondary" className={`${getStatusColor(project.status || '')} px-4 py-1.5`}>
+                  {getStatusText(project.status || '')}
+                </Badge>
+              </div>
             </DialogTitle>
-            <DialogDescription id={dialogDescriptionId} className="mt-2 text-gray-600">
-              {dialogDescription}
+            <DialogDescription id={dialogDescriptionId}>
+              Project {project.mis || 'N/A'} - {project.event_description || 'No description'}
             </DialogDescription>
           </DialogHeader>
 
@@ -215,6 +217,7 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
                     <button
                       onClick={() => copyToClipboard(project.mis || '', 'MIS')}
                       className="text-gray-400 hover:text-gray-600"
+                      aria-label="Copy MIS number"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
@@ -227,6 +230,7 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
                     <button
                       onClick={() => copyToClipboard(project.na853 || '', 'NA853')}
                       className="text-gray-400 hover:text-gray-600"
+                      aria-label="Copy NA853 number"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
