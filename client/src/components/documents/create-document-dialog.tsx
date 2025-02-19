@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { apiRequest } from "@/lib/queryClient";
 import { createClient } from '@supabase/supabase-js';
 
 // Create a single supabase client for the frontend
@@ -22,11 +23,6 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: false
-  },
-  global: {
-    headers: {
-      'apikey': supabaseKey
-    }
   }
 });
 
@@ -73,7 +69,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedUnit = form.watch("unit");
   const selectedProjectId = form.watch("project_id");
 
-  // Query units from Supabase
+  // Query units from Supabase with error handling
   const { data: units = [], isLoading: unitsLoading } = useQuery({
     queryKey: ["units"],
     queryFn: async () => {
@@ -101,10 +97,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         console.error('Units fetch error:', error);
         throw error;
       }
-    }
+    },
+    retry: 2
   });
 
-  // Query projects based on selected unit
+  // Query projects based on selected unit with error handling
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
     queryKey: ["projects", selectedUnit],
     queryFn: async () => {
@@ -130,11 +127,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         return data.map((item: any) => {
           let expenditureTypes: string[] = [];
 
-          // Handle different formats of expenditure_type
           if (Array.isArray(item.expenditure_type)) {
             expenditureTypes = item.expenditure_type;
           } else if (typeof item.expenditure_type === 'string') {
-            // Remove PostgreSQL array syntax characters and split
             expenditureTypes = item.expenditure_type
               .replace(/[{}"]/g, '')
               .split(',')
@@ -153,10 +148,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         throw error;
       }
     },
-    enabled: Boolean(selectedUnit)
+    enabled: Boolean(selectedUnit),
+    retry: 2
   });
 
-  // Query budget data based on selected project - Single source of truth
+  // Query budget data with error handling
   const { data: budgetData } = useQuery({
     queryKey: ["budget", selectedProjectId],
     queryFn: async () => {
@@ -186,22 +182,29 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         return null;
       }
     },
-    enabled: Boolean(selectedProjectId)
+    enabled: Boolean(selectedProjectId),
+    retry: 2
   });
 
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
-      const { data: document, error } = await supabase
-        .from('generated_documents')
-        .insert([{
-          ...data,
-          total_amount: data.recipients.reduce((sum, r) => sum + r.amount, 0),
-          created_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
+      // Convert form data to FormData
+      const formData = new FormData();
+      formData.append('unit', data.unit);
+      formData.append('project_id', data.project_id);
+      formData.append('expenditure_type', data.expenditure_type);
+      formData.append('status', data.status);
+      formData.append('recipients', JSON.stringify(data.recipients));
+      formData.append('total_amount', data.recipients.reduce((sum, r) => sum + r.amount, 0).toString());
 
-      if (error) throw error;
+      const response = await apiRequest('/api/documents/generated', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create document');
+      }
 
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
 
@@ -211,6 +214,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       });
 
       onOpenChange(false);
+      form.reset();
+      setCurrentStep(0);
     } catch (error) {
       console.error('Submission error:', error);
       toast({
@@ -243,7 +248,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     form.setValue("recipients", currentRecipients.filter((_, i) => i !== index));
   };
 
-  // Effect to reset form fields when unit changes
+  // Reset form fields when unit changes
   useEffect(() => {
     if (!selectedUnit) {
       form.setValue("project_id", "");
@@ -251,7 +256,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   }, [selectedUnit, form]);
 
-  // Effect to reset expenditure type when project changes
+  // Reset expenditure type when project changes
   useEffect(() => {
     if (selectedProjectId) {
       form.setValue("expenditure_type", "");
@@ -261,6 +266,21 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   // Get selected project and its expenditure types
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
+  const handleNext = async () => {
+    if (currentStep < steps.length - 1) {
+      const isValid = await form.trigger(
+        currentStep === 0 ? ["unit"] :
+        currentStep === 1 ? ["project_id", "expenditure_type"] :
+        ["recipients"]
+      );
+
+      if (isValid) {
+        setCurrentStep((prev) => prev + 1);
+      }
+    } else {
+      form.handleSubmit(onSubmit)();
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -516,13 +536,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               </Button>
               <Button
                 type="button"
-                onClick={() => {
-                  if (currentStep < steps.length - 1) {
-                    setCurrentStep((prev) => prev + 1);
-                  } else {
-                    form.handleSubmit(onSubmit)();
-                  }
-                }}
+                onClick={handleNext}
               >
                 {currentStep === steps.length - 1 ? "Create Document" : "Next"}
               </Button>
