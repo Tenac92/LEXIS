@@ -18,7 +18,7 @@ interface Unit {
 
 interface Project {
   id: string;
-  mis: string | null;
+  mis: string;
   na853: string;
   event_description: string;
   budget_na853: number;
@@ -131,16 +131,37 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
+      // Calculate total amount from recipients
+      const total_amount = data.recipients.reduce((sum, recipient) => sum + recipient.amount, 0);
+
+      // Prepare document data matching the server schema
+      const documentData = {
+        unit: data.unit,
+        project_id: data.project,
+        expenditure_type: data.expenditure_type,
+        recipients: data.recipients.map(recipient => ({
+          firstname: recipient.firstname,
+          lastname: recipient.lastname,
+          afm: recipient.afm,
+          amount: recipient.amount,
+          installment: recipient.installment,
+          status: "pending"
+        })),
+        total_amount,
+        status: "pending"
+      };
+
       const response = await fetch('/api/documents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(documentData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create document');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create document');
       }
 
       await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
@@ -155,7 +176,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       console.error('Submission error:', error);
       toast({
         title: "Error",
-        description: "Failed to create document",
+        description: error instanceof Error ? error.message : "Failed to create document",
         variant: "destructive"
       });
     }
@@ -230,31 +251,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             {/* Project Selection Step */}
             {currentStep === 1 && (
               <div className="space-y-4">
-                {budgetData && (
-                  <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
-                        <p className="text-2xl font-bold text-blue-600">
-                          {budgetData.current_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                        </p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
-                        <p className="text-2xl font-bold text-gray-700">
-                          {budgetData.user_view.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                        </p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
-                        <p className="text-2xl font-bold text-gray-700">
-                          {budgetData.ethsia_pistosi.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 <FormField
                   control={form.control}
                   name="project"
@@ -278,9 +274,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                             <SelectItem value="none">No projects available</SelectItem>
                           ) : (
                             projects.map((project) => (
-                              <SelectItem 
-                                key={project.mis} 
-                                value={project.mis?.toString() || ""} // Ensure value is always a string and never undefined
+                              <SelectItem
+                                key={project.mis}
+                                value={project.mis}
                               >
                                 {project.na853
                                   ? `${project.na853} - ${project.event_description}`
@@ -329,6 +325,41 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             {/* Recipients Step */}
             {currentStep === 2 && (
               <div className="space-y-4">
+                {/* Budget Information Panel */}
+                {budgetData && (
+                  <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {budgetData.current_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
+                        <p className="text-2xl font-bold text-gray-700">
+                          {budgetData.user_view.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
+                        <p className="text-2xl font-bold text-gray-700">
+                          {budgetData.ethsia_pistosi.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Current Recipients Total */}
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <h4 className="text-sm font-medium text-gray-600">Current Document Total</h4>
+                      <p className="text-xl font-bold text-green-600">
+                        {form.watch("recipients").reduce((sum, r) => sum + (r.amount || 0), 0)
+                          .toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-lg font-medium">Recipients</h3>
