@@ -53,10 +53,10 @@ export default function ProjectsPage() {
 
   const handleExport = async () => {
     try {
-      const response = await apiRequest("/api/projects/export/csv", {
+      const response = await apiRequest("/api/projects/export/xlsx", {
         method: "GET",
         headers: {
-          Accept: "text/csv",
+          Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         },
       }) as APIResponse;
 
@@ -69,7 +69,7 @@ export default function ProjectsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `projects-${new Date().toISOString().split("T")[0]}.csv`;
+      a.download = `projects-${new Date().toISOString().split("T")[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -77,7 +77,7 @@ export default function ProjectsPage() {
 
       toast({
         title: "Export Successful",
-        description: "Projects data has been exported to CSV",
+        description: "Projects data has been exported to Excel",
       });
     } catch (error) {
       toast({
