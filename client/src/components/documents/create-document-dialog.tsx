@@ -116,7 +116,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         console.log('Fetching projects for unit:', selectedUnit);
         const { data, error } = await supabase
           .from('project_catalog')
-          .select('mis, project_title, expenditure_type')
+          .select('mis, na853, event_description, project_title, expenditure_type')
           .contains('implementing_agency', [`"${selectedUnit}"`])
           .order('mis');
 
@@ -133,7 +133,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         console.log('Projects data:', data);
         return data.map((item: any) => ({
           id: item.mis,
-          name: item.project_title,
+          name: `${item.na853} - ${item.event_description || item.project_title}`,
           expenditure_types: Array.isArray(item.expenditure_type) ? item.expenditure_type : []
         }));
       } catch (error) {
