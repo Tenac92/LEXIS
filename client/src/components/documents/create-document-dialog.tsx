@@ -39,7 +39,7 @@ interface BudgetData {
 // Form Schema remains the same
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
-  project: z.string().min(1, "Project is required"),
+  mis: z.string().min(1, "Project is required"),
   expenditure_type: z.string().min(1, "Expenditure type is required"),
   recipients: z.array(z.object({
     firstname: z.string().min(2, "First name must be at least 2 characters"),
@@ -68,7 +68,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     resolver: zodResolver(createDocumentSchema),
     defaultValues: {
       unit: "",
-      project: "",
+      mis: "",
       expenditure_type: "",
       recipients: []
     }
@@ -257,7 +257,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
                 <FormField
                   control={form.control}
-                  name="project"
+                  name="mis"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Project</FormLabel>
