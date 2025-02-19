@@ -15,14 +15,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -37,7 +29,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const dialogId = `project-dialog-${project.id}`;
+  const dialogId = `project-dialog-${project.mis}`;
   const dialogTitleId = `${dialogId}-title`;
   const dialogDescriptionId = `${dialogId}-description`;
 
@@ -52,16 +44,16 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   const deleteMutation = useMutation({
     mutationFn: async () => {
       try {
-        const response = await apiRequest(`/api/projects/${project.id}`, {
+        const response = await apiRequest(`/api/projects/${project.mis}`, {
           method: "DELETE",
         });
 
-        const data = await response.json();
-        if (!data.success) {
+        if (!response.ok) {
+          const data = await response.json();
           throw new Error(data.message || "Failed to delete project");
         }
 
-        return data;
+        return response.json();
       } catch (error) {
         throw new Error(error instanceof Error ? error.message : "Failed to delete project");
       }
@@ -193,8 +185,8 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           </CardContent>
         </DialogTrigger>
 
-        <DialogContent 
-          className="max-w-4xl max-h-[85vh] overflow-y-auto" 
+        <DialogContent
+          className="max-w-4xl max-h-[85vh] overflow-y-auto"
           aria-labelledby={dialogTitleId}
           aria-describedby={dialogDescriptionId}
         >
@@ -332,7 +324,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
 
       {isAdmin && (
         <CardFooter className="flex justify-end gap-2 border-t p-4">
-          <Link href={`/projects/${project.id}/edit`}>
+          <Link href={`/projects/${project.mis}/edit`}>
             <Button variant="outline" size="sm">
               <Edit className="mr-2 h-4 w-4" />
               Edit

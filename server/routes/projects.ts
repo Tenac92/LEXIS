@@ -2,23 +2,38 @@ import { Router } from 'express';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { isAdmin } from '../middleware/adminMiddleware';
 import { db } from '../db';
+import { eq } from 'drizzle-orm';
 import { ProjectCatalog } from '@shared/schema';
 import { createObjectCsvStringifier } from 'csv-writer';
 import multer from 'multer';
-import csv from 'csv-parse';
+import { parse } from 'csv-parse';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Delete project
-router.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
+// Get all projects
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
-    
+    const projects = await db.query.ProjectCatalog.findMany();
+    res.json(projects);
+  } catch (error) {
+    console.error('Get projects error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch projects' 
+    });
+  }
+});
+
+// Delete project
+router.delete('/:mis', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const { mis } = req.params;
+
     const result = await db.delete(ProjectCatalog)
-      .where('id', '=', id)
+      .where(eq(ProjectCatalog.mis, mis))
       .returning();
-    
+
     if (!result.length) {
       return res.status(404).json({ 
         success: false, 
@@ -39,8 +54,8 @@ router.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
 // Export projects
 router.get('/export', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const projects = await db.select().from(ProjectCatalog);
-    
+    const projects = await db.query.ProjectCatalog.findMany();
+
     const csvStringifier = createObjectCsvStringifier({
       header: [
         { id: 'mis', title: 'MIS' },
@@ -53,7 +68,7 @@ router.get('/export', authenticateToken, isAdmin, async (req, res) => {
     });
 
     const csvString = csvStringifier.stringifyRecords(projects);
-    
+
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename=projects-${new Date().toISOString().split('T')[0]}.csv`);
     res.send(csvString);
@@ -76,9 +91,9 @@ router.post('/bulk-upload', authenticateToken, isAdmin, upload.single('file'), a
   }
 
   try {
-    const records = await new Promise((resolve, reject) => {
+    const records: any[] = await new Promise((resolve, reject) => {
       const results: any[] = [];
-      csv.parse(req.file?.buffer, {
+      parse(req.file!.buffer, {
         columns: true,
         skip_empty_lines: true
       })
