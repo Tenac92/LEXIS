@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type ProjectCatalog } from "@shared/schema";
-import { Edit, Trash2, Calendar, MapPin, Building2, Eye } from "lucide-react";
+import { Edit, Trash2, Calendar, MapPin, Building2, Eye, Copy, Coins, FileText } from "lucide-react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +38,14 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: `${label} has been copied to clipboard`,
+    });
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -173,75 +181,131 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
             {cardContent}
           </CardContent>
         </DialogTrigger>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto" aria-describedby="dialog-description">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto" aria-describedby="dialog-description">
           <DialogHeader>
-            <DialogTitle>Project Details</DialogTitle>
-            <DialogDescription id="dialog-description">
+            <DialogTitle className="flex items-center justify-between">
+              <span className="text-2xl font-bold">{project.event_description || "Project Details"}</span>
+              <Badge variant="secondary" className={`${getStatusColor(project.status || '')} px-4 py-1.5`}>
+                {getStatusText(project.status || '')}
+              </Badge>
+            </DialogTitle>
+            <DialogDescription id="dialog-description" className="mt-2 text-gray-600">
               {dialogDescription}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-lg mb-2">Description</h3>
-              <p className="text-gray-700 whitespace-pre-wrap">{project.event_description || "N/A"}</p>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold">MIS</h3>
-                <p className="text-gray-700">{project.mis || "N/A"}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold">Region</h3>
-                <p className="text-gray-700">{project.region || "N/A"}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold">Status</h3>
-                <p className="text-gray-700">{getStatusText(project.status || '')}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold">Budget NA853</h3>
-                <p className="text-gray-700">{formatCurrency(project.budget_na853)}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold">Budget E069</h3>
-                <p className="text-gray-700">{formatCurrency(project.budget_e069)}</p>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold">Budget NA271</h3>
-                <p className="text-gray-700">{formatCurrency(project.budget_na271)}</p>
-              </div>
-              {project.ethsia_pistosi && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold">Annual Credit</h3>
-                  <p className="text-gray-700">{formatCurrency(project.ethsia_pistosi)}</p>
+          <div className="mt-6 space-y-8">
+            {/* Key Information Section */}
+            <section className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Key Information
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm text-gray-600">MIS</h4>
+                    <button 
+                      onClick={() => copyToClipboard(project.mis || '', 'MIS')}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <p className="text-gray-900 font-medium">{project.mis || "N/A"}</p>
                 </div>
-              )}
-              {project.implementing_agency && (
-                <div className="bg-gray-50 p-4 rounded-lg col-span-2">
-                  <h3 className="font-semibold">Implementing Agency</h3>
-                  <p className="text-gray-700">{Array.isArray(project.implementing_agency) ? project.implementing_agency.join(", ") : project.implementing_agency}</p>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-sm text-gray-600">NA853</h4>
+                    <button 
+                      onClick={() => copyToClipboard(project.na853 || '', 'NA853')}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <p className="text-gray-900 font-medium">{project.na853 || "N/A"}</p>
                 </div>
-              )}
-              {project.event_type && (
-                <div className="bg-gray-50 p-4 rounded-lg col-span-2">
-                  <h3 className="font-semibold">Event Type</h3>
-                  <p className="text-gray-700">{project.event_type}</p>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <h4 className="font-semibold text-sm text-gray-600">Region</h4>
+                  <p className="text-gray-900 font-medium">{project.region || "N/A"}</p>
                 </div>
-              )}
-              {project.municipality && (
-                <div className="bg-gray-50 p-4 rounded-lg col-span-2">
-                  <h3 className="font-semibold">Municipality</h3>
-                  <p className="text-gray-700">{project.municipality}</p>
+              </div>
+            </section>
+
+            {/* Budget Information Section */}
+            <section className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Coins className="h-5 w-5" />
+                Budget Information
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <h4 className="font-semibold text-sm text-gray-600">Budget NA853</h4>
+                  <p className="text-gray-900 font-medium">{formatCurrency(project.budget_na853)}</p>
                 </div>
-              )}
-              {project.procedures && (
-                <div className="bg-gray-50 p-4 rounded-lg col-span-2">
-                  <h3 className="font-semibold">Procedures</h3>
-                  <p className="text-gray-700">{project.procedures}</p>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <h4 className="font-semibold text-sm text-gray-600">Budget E069</h4>
+                  <p className="text-gray-900 font-medium">{formatCurrency(project.budget_e069)}</p>
                 </div>
-              )}
-            </div>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <h4 className="font-semibold text-sm text-gray-600">Budget NA271</h4>
+                  <p className="text-gray-900 font-medium">{formatCurrency(project.budget_na271)}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <h4 className="font-semibold text-sm text-gray-600">Annual Credit</h4>
+                  <p className="text-gray-900 font-medium">{formatCurrency(project.ethsia_pistosi)}</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Additional Details Section */}
+            <section className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Additional Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {project.implementing_agency && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h4 className="font-semibold text-sm text-gray-600">Implementing Agency</h4>
+                    <p className="text-gray-900">{Array.isArray(project.implementing_agency) ? project.implementing_agency.join(", ") : project.implementing_agency}</p>
+                  </div>
+                )}
+                {project.event_type && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h4 className="font-semibold text-sm text-gray-600">Event Type</h4>
+                    <p className="text-gray-900">{project.event_type}</p>
+                  </div>
+                )}
+                {project.municipality && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h4 className="font-semibold text-sm text-gray-600">Municipality</h4>
+                    <p className="text-gray-900">{project.municipality}</p>
+                  </div>
+                )}
+                {project.procedures && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2 col-span-full">
+                    <h4 className="font-semibold text-sm text-gray-600">Procedures</h4>
+                    <p className="text-gray-900 whitespace-pre-wrap">{project.procedures}</p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Timestamps Section */}
+            <section className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <h4 className="font-semibold text-sm text-gray-600">Created At</h4>
+                  <p className="text-gray-900">{formatDate(project.created_at)}</p>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                  <h4 className="font-semibold text-sm text-gray-600">Last Updated</h4>
+                  <p className="text-gray-900">{formatDate(project.updated_at)}</p>
+                </div>
+              </div>
+            </section>
           </div>
         </DialogContent>
       </Dialog>
