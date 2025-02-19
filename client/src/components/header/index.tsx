@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { FileText, FolderKanban, LogOut, Menu } from "lucide-react";
+import { FileText, FolderKanban, LogOut, Menu, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Sheet,
@@ -18,6 +18,13 @@ export function Header() {
 
   const NavItems = () => (
     <>
+      <Link href="/dashboard">
+        <Button variant="ghost" className="flex items-center gap-2">
+          <LayoutDashboard className="h-4 w-4" />
+          Dashboard
+        </Button>
+      </Link>
+      <Separator orientation="vertical" className="h-8 mx-2" />
       <Link href="/documents">
         <Button variant="ghost" className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
