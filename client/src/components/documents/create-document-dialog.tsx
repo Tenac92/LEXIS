@@ -100,11 +100,19 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const selectedProject = projects.find(p => p.mis === selectedProjectId);
 
+  useEffect(() => {
+    if (selectedProject) {
+      form.setValue("expenditure_type", "");
+      console.log("Selected project:", selectedProject);
+    }
+  }, [selectedProject, form]);
+
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
     queryKey: ["expenditureTypes", selectedProjectId],
     queryFn: async () => {
-      // Use the expenditure_type array from the selected project
+      if (!selectedProjectId) return [];
       const project = projects.find(p => p.mis === selectedProjectId);
+      console.log("Project for expenditure types:", project);
       return project?.expenditure_type || [];
     },
     enabled: Boolean(selectedProjectId)
@@ -263,9 +271,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={(value) => {
                           field.onChange(value);
-                          console.log("Selected project value:", value);
+                          const project = projects.find(p => p.mis === value);
+                          console.log("Selected project:", project);
+                          if (project) {
+                            form.setValue("expenditure_type", "");
+                          }
                         }}
-                        value={field.value?.toString() || ""}
+                        value={field.value?.toString()}
                         disabled={!selectedUnit || projectsLoading}
                       >
                         <FormControl>
