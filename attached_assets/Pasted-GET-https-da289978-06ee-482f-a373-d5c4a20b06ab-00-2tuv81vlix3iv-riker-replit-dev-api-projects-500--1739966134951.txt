@@ -1,0 +1,52 @@
+GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/projects 500 (Internal Server Error)
+(ανώνυμες) @ queryClient.ts:39
+fetchFn @ @tanstack_react-query.js?v=8ea8e8cb:840
+run @ @tanstack_react-query.js?v=8ea8e8cb:494
+start @ @tanstack_react-query.js?v=8ea8e8cb:536
+fetch @ @tanstack_react-query.js?v=8ea8e8cb:926
+executeFetch_fn @ @tanstack_react-query.js?v=8ea8e8cb:2211
+onSubscribe @ @tanstack_react-query.js?v=8ea8e8cb:1898
+subscribe @ @tanstack_react-query.js?v=8ea8e8cb:24
+(ανώνυμες) @ @tanstack_react-query.js?v=8ea8e8cb:3022
+subscribeToStore @ chunk-UPELNCPK.js?v=8ea8e8cb:11984
+commitHookEffectListMount @ chunk-UPELNCPK.js?v=8ea8e8cb:16915
+commitPassiveMountOnFiber @ chunk-UPELNCPK.js?v=8ea8e8cb:18156
+commitPassiveMountEffects_complete @ chunk-UPELNCPK.js?v=8ea8e8cb:18129
+commitPassiveMountEffects_begin @ chunk-UPELNCPK.js?v=8ea8e8cb:18119
+commitPassiveMountEffects @ chunk-UPELNCPK.js?v=8ea8e8cb:18109
+flushPassiveEffectsImpl @ chunk-UPELNCPK.js?v=8ea8e8cb:19490
+flushPassiveEffects @ chunk-UPELNCPK.js?v=8ea8e8cb:19447
+commitRootImpl @ chunk-UPELNCPK.js?v=8ea8e8cb:19416
+commitRoot @ chunk-UPELNCPK.js?v=8ea8e8cb:19277
+performSyncWorkOnRoot @ chunk-UPELNCPK.js?v=8ea8e8cb:18895
+flushSyncCallbacks @ chunk-UPELNCPK.js?v=8ea8e8cb:9119
+(ανώνυμες) @ chunk-UPELNCPK.js?v=8ea8e8cb:18627
+Εμφάνιση 21 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:58 [Query] Request failed: Error: HTTP error! status: 500
+    at queryClient.ts:53:15
+(ανώνυμες) @ queryClient.ts:58
+await in (ανώνυμες)
+fetchFn @ @tanstack_react-query.js?v=8ea8e8cb:840
+run @ @tanstack_react-query.js?v=8ea8e8cb:494
+start @ @tanstack_react-query.js?v=8ea8e8cb:536
+fetch @ @tanstack_react-query.js?v=8ea8e8cb:926
+executeFetch_fn @ @tanstack_react-query.js?v=8ea8e8cb:2211
+onSubscribe @ @tanstack_react-query.js?v=8ea8e8cb:1898
+subscribe @ @tanstack_react-query.js?v=8ea8e8cb:24
+(ανώνυμες) @ @tanstack_react-query.js?v=8ea8e8cb:3022
+subscribeToStore @ chunk-UPELNCPK.js?v=8ea8e8cb:11984
+commitHookEffectListMount @ chunk-UPELNCPK.js?v=8ea8e8cb:16915
+commitPassiveMountOnFiber @ chunk-UPELNCPK.js?v=8ea8e8cb:18156
+commitPassiveMountEffects_complete @ chunk-UPELNCPK.js?v=8ea8e8cb:18129
+commitPassiveMountEffects_begin @ chunk-UPELNCPK.js?v=8ea8e8cb:18119
+commitPassiveMountEffects @ chunk-UPELNCPK.js?v=8ea8e8cb:18109
+flushPassiveEffectsImpl @ chunk-UPELNCPK.js?v=8ea8e8cb:19490
+flushPassiveEffects @ chunk-UPELNCPK.js?v=8ea8e8cb:19447
+commitRootImpl @ chunk-UPELNCPK.js?v=8ea8e8cb:19416
+commitRoot @ chunk-UPELNCPK.js?v=8ea8e8cb:19277
+performSyncWorkOnRoot @ chunk-UPELNCPK.js?v=8ea8e8cb:18895
+flushSyncCallbacks @ chunk-UPELNCPK.js?v=8ea8e8cb:9119
+(ανώνυμες) @ chunk-UPELNCPK.js?v=8ea8e8cb:18627
+Εμφάνιση 21 ακόμη πλαισίων
+Εμφάνιση λιγότερων
