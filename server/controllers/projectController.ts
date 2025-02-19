@@ -17,12 +17,11 @@ export async function listProjects(req: Request, res: Response) {
       // Convert NaN values to null before validation
       const sanitizedProject = {
         ...project,
-        id: isNaN(Number(project.id)) ? null : Number(project.id),
         ethsia_pistosi: isNaN(Number(project.ethsia_pistosi)) ? null : Number(project.ethsia_pistosi)
       };
       const validatedProject = projectHelpers.validateProject(sanitizedProject);
       return {
-        id: validatedProject.id,
+        mis: validatedProject.mis,
         mis: validatedProject.mis,
         na853: validatedProject.na853,
         event_description: validatedProject.event_description,

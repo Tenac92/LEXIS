@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 // Base schema for project catalog
 export const projectSchema = z.object({
-  id: z.coerce.number(),
   mis: z.coerce.string(),
   na853: z.string().nullable(),
   e069: z.string().nullable(),
