@@ -21,6 +21,55 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 
+interface APIResponse {
+  ok: boolean;
+  json: () => Promise<any>;
+  blob: () => Promise<Blob>;
+}
+
+// Document types
+interface DocumentProtocol {
+  protocol_number: string;
+  protocol_date: string;
+}
+
+interface DocumentUpdate extends DocumentProtocol {
+  project_id: string;
+  expenditure_type: string;
+  recipients: Array<{
+    firstname: string;
+    lastname: string;
+    afm: string;
+    amount: number;
+    installment: number;
+  }>;
+  total_amount: number;
+}
+
+interface ExportConfig {
+  format: string;
+  document_id: string;
+  unit_details: {
+    unit_name: string;
+    email: string;
+    parts: any[];
+  };
+  contact_info: {
+    address: string;
+    postal_code: string;
+    city: string;
+    contact_person: string;
+  };
+  margins: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+  include_attachments: boolean;
+  include_signatures: boolean;
+}
+
 interface BaseModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -67,12 +116,13 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         throw new Error('Protocol number and date are required');
       }
 
-      await apiRequest(`/api/documents/generated/${document.id}/protocol`, {
+      const formData = new FormData();
+      formData.append('protocol_number', protocolNumber);
+      formData.append('protocol_date', protocolDate);
+
+      const response = await apiRequest(`/api/documents/generated/${document.id}/protocol`, {
         method: 'PATCH',
-        body: {
-          protocol_number: protocolNumber,
-          protocol_date: protocolDate
-        }
+        body: formData
       });
 
       toast({
@@ -261,20 +311,21 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
       }
 
       setLoading(true);
+      const formData = new FormData();
+      formData.append('protocol_number_input', protocolNumber);
+      formData.append('protocol_date', protocolDate);
+      formData.append('project_id', projectId);
+      formData.append('expenditure_type', expenditureType);
+      formData.append('recipients', JSON.stringify(recipients.map(r => ({
+        ...r,
+        amount: parseFloat(r.amount) || 0,
+        installment: parseInt(r.installment) || 1
+      }))));
+      formData.append('total_amount', calculateTotalAmount().toString());
+
       await apiRequest(`/api/documents/generated/${document.id}`, {
         method: 'PATCH',
-        body: {
-          protocol_number_input: protocolNumber,
-          protocol_date: protocolDate,
-          project_id: projectId,
-          expenditure_type: expenditureType,
-          recipients: recipients.map(r => ({
-            ...r,
-            amount: parseFloat(r.amount) || 0,
-            installment: parseInt(r.installment) || 1
-          })),
-          total_amount: calculateTotalAmount()
-        }
+        body: formData
       });
 
       toast({
@@ -524,28 +575,25 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
     try {
       setLoading(true);
 
-      // Prepare export configuration
-      const exportConfig = {
-        format,
-        document_id: document.id,
-        unit_details: unitDetails,
-        contact_info: contactInfo,
-        margins: {
-          top: 850,
-          right: 1000,
-          bottom: 850,
-          left: 1000
-        },
-        include_attachments: format === 'docx',
-        include_signatures: true
-      };
+      const formData = new FormData();
+      formData.append('format', format);
+      formData.append('document_id', document.id);
+      formData.append('unit_details', JSON.stringify(unitDetails));
+      formData.append('contact_info', JSON.stringify(contactInfo));
+      formData.append('margins', JSON.stringify({
+        top: 850,
+        right: 1000,
+        bottom: 850,
+        left: 1000
+      }));
+      formData.append('include_attachments', format === 'docx' ? 'true' : 'false');
+      formData.append('include_signatures', 'true');
 
       const response = await apiRequest(`/api/documents/generated/${document.id}/export`, {
         method: 'POST',
-        body: exportConfig
-      });
+        body: formData
+      }) as APIResponse;
 
-      // Handle the response based on format
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
