@@ -117,7 +117,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         const { data, error } = await supabase
           .from('project_catalog')
           .select('mis, project_title, expenditure_type')
-          .eq('implementing_agency', `{"${selectedUnit}"}`)
+          .contains('implementing_agency', [selectedUnit])
           .order('created_at', { ascending: false });
 
         if (error) {
