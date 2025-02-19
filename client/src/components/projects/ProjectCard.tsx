@@ -199,7 +199,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
             </DialogDescription>
           </DialogHeader>
           <DialogHeader>
-            <DialogTitle id={dialogTitleId}>
+            <DialogTitle>
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-bold">{project.event_description || "Project Details"}</span>
                 <Badge variant="secondary" className={`${getStatusColor(project.status || '')} px-4 py-1.5`}>
@@ -207,10 +207,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                 </Badge>
               </div>
             </DialogTitle>
-            <DialogDescription id={dialogDescriptionId}>
-              Project {project.mis || 'N/A'} - {project.event_description || 'No description'}
-            </DialogDescription>
-          </DialogHeader>
+            </DialogHeader>
 
           <div className="mt-6 space-y-8">
             {/* Key Information Section */}
