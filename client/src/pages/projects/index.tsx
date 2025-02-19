@@ -61,24 +61,26 @@ export default function ProjectsPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Export failed");
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Export failed');
       }
 
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `projects-${new Date().toISOString().split("T")[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(url);
 
       toast({
         title: "Export Successful",
         description: "Projects data has been exported to Excel",
       });
     } catch (error) {
+      console.error('Export error:', error);
       toast({
         title: "Export Failed",
         description: error instanceof Error ? error.message : "Failed to export projects data",
