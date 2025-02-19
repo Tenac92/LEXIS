@@ -17,7 +17,7 @@ import { Plus, FileUp, Download, LayoutGrid, LayoutList, FileEdit, Upload } from
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useRef, useState as useState2 } from "react";
+import { useRef } from "react";
 
 interface APIResponse<T = any> {
   ok: boolean;
@@ -53,7 +53,7 @@ export default function ProjectsPage() {
 
   const handleExport = async () => {
     try {
-      const response = await apiRequest("/api/projects/export", {
+      const response = await apiRequest("/api/projects/export/csv", {
         method: "GET",
         headers: {
           Accept: "text/csv",

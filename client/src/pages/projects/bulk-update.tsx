@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,7 @@ interface APIResponse<T = any> {
 
 export default function BulkUpdatePage() {
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const [loading, setLoading] = useState(false);
   const [updateData, setUpdateData] = useState('');
 
@@ -21,7 +21,7 @@ export default function BulkUpdatePage() {
     try {
       setLoading(true);
       let updates;
-      
+
       try {
         updates = JSON.parse(updateData);
       } catch (e) {
@@ -43,7 +43,7 @@ export default function BulkUpdatePage() {
         description: "Projects updated successfully",
       });
 
-      navigate('/projects');
+      setLocation('/projects');
     } catch (error) {
       toast({
         title: "Error",
@@ -60,8 +60,8 @@ export default function BulkUpdatePage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Bulk Update Projects</h1>
-          <Button variant="outline" onClick={() => navigate('/projects')}>
-            Back to Projects
+          <Button variant="outline" asChild>
+            <Link href="/projects">Back to Projects</Link>
           </Button>
         </div>
 
@@ -72,10 +72,9 @@ export default function BulkUpdatePage() {
               Enter a JSON array of updates in the format:
               <br />
               <code className="text-xs bg-background p-1 rounded">
-                [{'\n'}
-                {'  '}{"mis": "5203921", "data": {"project_title": "New Title"}},
-                {'\n'}
-                {'  '}{"mis": "5203922", "data": {"status": "completed"}}{'\n'}
+                [
+                  {`{"mis": "5203921", "data": {"project_title": "New Title"}}`},
+                  {`{"mis": "5203922", "data": {"status": "completed"}}`}
                 ]
               </code>
             </p>
