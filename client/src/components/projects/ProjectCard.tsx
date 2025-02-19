@@ -37,9 +37,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const dialogId = `project-dialog-${project.mis}`;
-  const dialogTitleId = `${dialogId}-title`;
-  const dialogDescriptionId = `${dialogId}-description`;
+  
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -193,11 +191,13 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           </CardContent>
         </DialogTrigger>
 
-        <DialogContent
-          className="max-w-4xl max-h-[85vh] overflow-y-auto"
-          aria-labelledby={dialogTitleId}
-          aria-describedby={dialogDescriptionId}
-        >
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Project Details</DialogTitle>
+            <DialogDescription>
+              Project {project.mis || 'N/A'} - {project.event_description || 'No description'}
+            </DialogDescription>
+          </DialogHeader>
           <DialogHeader>
             <DialogTitle id={dialogTitleId}>
               <div className="flex items-center justify-between">
