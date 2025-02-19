@@ -5,9 +5,11 @@ import { Request, Response } from 'express';
 
 interface AuthenticatedRequest extends Request {
   user?: {
-    id: string;
+    id: number;
     email: string;
     role: string;
+    name: string | null;
+    unit: string | null;
   };
 }
 
@@ -18,20 +20,30 @@ router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res
   try {
     const { data: units, error } = await supabase
       .from('unit_det')
-      .select('id, implementing_agency')
+      .select('implementing_agency')
       .order('implementing_agency', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase query error:', error);
+      throw error;
+    }
 
-    // Extract unique unit names from implementing_agency
-    const uniqueUnits = new Set();
+    // Extract unique unit names from implementing_agency JSONB field
+    const uniqueUnits = new Set<string>();
     units?.forEach(unit => {
-      if (unit.implementing_agency) {
-        uniqueUnits.add(unit.implementing_agency);
+      const agency = unit.implementing_agency;
+      if (typeof agency === 'string') {
+        uniqueUnits.add(agency);
+      } else if (agency && typeof agency === 'object') {
+        // Handle case where implementing_agency is a JSONB object
+        const agencyValue = agency.name || agency.value || Object.values(agency)[0];
+        if (agencyValue && typeof agencyValue === 'string') {
+          uniqueUnits.add(agencyValue);
+        }
       }
     });
 
-    const unitsList = Array.from(uniqueUnits);
+    const unitsList = Array.from(uniqueUnits).sort();
     res.json(unitsList);
   } catch (error) {
     console.error('Units fetch error:', error);
