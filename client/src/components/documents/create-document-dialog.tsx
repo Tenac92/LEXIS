@@ -111,7 +111,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         const { data, error } = await supabase
           .from('project_catalog')
           .select('mis, na853, event_description, project_title, expenditure_type')
-          .contains('implementing_agency', [`"${selectedUnit}"`])
+          .eq('implementing_agency', selectedUnit)
           .order('mis');
 
         if (error) {
@@ -126,19 +126,21 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
         return data.map((item: any) => {
           let expenditureTypes: string[] = [];
-
           try {
-            if (Array.isArray(item.expenditure_type)) {
-              expenditureTypes = item.expenditure_type;
-            } else if (typeof item.expenditure_type === 'string') {
-              expenditureTypes = item.expenditure_type
-                .replace(/[{}"]/g, '')
-                .split(',')
-                .map((type: string) => type.trim())
-                .filter((type: string) => type.length > 0);
+            if (item.expenditure_type) {
+              if (Array.isArray(item.expenditure_type)) {
+                expenditureTypes = item.expenditure_type;
+              } else if (typeof item.expenditure_type === 'string') {
+                // Parse PostgreSQL array format: {type1,type2,type3}
+                expenditureTypes = item.expenditure_type
+                  .replace(/^\{|\}$/g, '') // Remove curly braces
+                  .split(',')
+                  .map((type: string) => type.trim())
+                  .filter((type: string) => type.length > 0);
+              }
             }
           } catch (e) {
-            console.error('Error parsing expenditure types:', e);
+            console.error('Error parsing expenditure types:', e, item);
           }
 
           return {
@@ -257,7 +259,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   // Reset form fields when unit changes
   useEffect(() => {
-    if (!selectedUnit) {
+    if (selectedUnit) {
       form.setValue("project_id", "");
       form.setValue("expenditure_type", "");
     }
