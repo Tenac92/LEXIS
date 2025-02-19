@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type ProjectCatalog } from "@shared/schema";
 import { Edit, Trash2, Calendar, MapPin, Building2, Eye, Copy, Coins, FileText } from "lucide-react";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -171,7 +171,10 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
     </>
   );
 
-  const dialogDescription = `Detailed information for project ${project.mis || ''} - ${project.event_description || ''}`;
+  const dialogId = `project-dialog-${project.id}`;
+  const dialogDescriptionId = `project-dialog-description-${project.id}`;
+
+  const dialogDescription = `Project details for ${project.mis || ''} - ${project.event_description || ''}`;
 
   return (
     <Card className={`transition-shadow hover:shadow-lg ${view === "list" ? "flex" : ""}`}>
@@ -181,15 +184,19 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
             {cardContent}
           </CardContent>
         </DialogTrigger>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto" aria-describedby="dialog-description">
+        <DialogContent
+          className="max-w-4xl max-h-[85vh] overflow-y-auto"
+          aria-labelledby={dialogId}
+          aria-describedby={dialogDescriptionId}
+        >
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
+            <DialogTitle id={dialogId} className="flex items-center justify-between">
               <span className="text-2xl font-bold">{project.event_description || "Project Details"}</span>
               <Badge variant="secondary" className={`${getStatusColor(project.status || '')} px-4 py-1.5`}>
                 {getStatusText(project.status || '')}
               </Badge>
             </DialogTitle>
-            <DialogDescription id="dialog-description" className="mt-2 text-gray-600">
+            <DialogDescription id={dialogDescriptionId} className="mt-2 text-gray-600">
               {dialogDescription}
             </DialogDescription>
           </DialogHeader>
@@ -205,7 +212,7 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-sm text-gray-600">MIS</h4>
-                    <button 
+                    <button
                       onClick={() => copyToClipboard(project.mis || '', 'MIS')}
                       className="text-gray-400 hover:text-gray-600"
                     >
@@ -217,7 +224,7 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-sm text-gray-600">NA853</h4>
-                    <button 
+                    <button
                       onClick={() => copyToClipboard(project.na853 || '', 'NA853')}
                       className="text-gray-400 hover:text-gray-600"
                     >

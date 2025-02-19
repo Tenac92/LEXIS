@@ -127,13 +127,17 @@ export default function ProjectsPage() {
         {isLoading ? (
           <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-48 rounded-lg bg-gray-100 animate-pulse" />
+              <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-gray-100 animate-pulse" />
             ))}
           </div>
         ) : projects?.length ? (
           <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
             {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} view={view} />
+              <ProjectCard 
+                key={`${project.id}-${project.mis}`} 
+                project={project} 
+                view={view} 
+              />
             ))}
           </div>
         ) : (
