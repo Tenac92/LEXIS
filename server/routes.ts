@@ -7,7 +7,6 @@ import { authenticateSession } from "./auth";
 import documentsController from "./controllers/documentsController";
 import generatedDocumentsRouter from "./controllers/generatedDocuments";
 import unitsController from "./controllers/unitsController";
-import projectsController from "./controllers/projectsController";
 import { listProjects, getExpenditureTypes, exportProjectsXLSX, bulkUpdateProjects } from "./controllers/projectController";
 import { getBudget } from "./controllers/budgetController";
 import { log } from "./vite";
@@ -36,12 +35,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Units and Projects routes
     log('[Routes] Registering units and projects routes...');
     app.use('/api/units', authenticateSession, unitsController);
-    app.use('/api/projects', authenticateSession, projectsController);
-
-    // Project export and bulk update routes
+    app.get('/api/projects', authenticateSession, listProjects);
     app.get('/api/projects/export/xlsx', authenticateSession, exportProjectsXLSX);
     app.put('/api/projects/bulk-update', authenticateSession, bulkUpdateProjects);
-
     log('[Routes] Units and projects routes registered');
 
     // Mount all API routes under /api
