@@ -20,7 +20,7 @@ export async function listProjects(req: Request, res: Response) {
       na853: project.na853,
       event_description: project.event_description,
       budget_na853: project.budget_na853,
-      expenditure_type: project.expenditure_type
+      expenditure_type: project.expenditure_type || []
     })) || [];
 
     res.json(projects);
@@ -44,8 +44,10 @@ export async function getExpenditureTypes(req: Request, res: Response) {
       return res.status(404).json({ message: "Project not found" });
     }
 
+    const expenditureTypes = data.expenditure_type || [];
+
     res.json({
-      expenditure_types: data.expenditure_type || []
+      expenditure_types: Array.isArray(expenditureTypes) ? expenditureTypes : []
     });
   } catch (error) {
     console.error("Error fetching expenditure types:", error);

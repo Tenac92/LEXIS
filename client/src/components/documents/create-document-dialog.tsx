@@ -16,7 +16,7 @@ interface Unit {
 }
 
 interface Project {
-  id: string;  // Changed from number to string since MIS is used as ID
+  id: string;
   mis: string;
   na853: string;
   event_description: string;
@@ -88,7 +88,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedProjectId = form.watch("project");
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
-    queryKey: ["/api/catalog"],
+    queryKey: ["/api/catalog", selectedUnit],
     queryFn: async () => {
       const response = await fetch(`/api/catalog?unit=${encodeURIComponent(selectedUnit)}`);
       if (!response.ok) throw new Error('Failed to fetch projects');
@@ -100,15 +100,15 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedProject = projects.find(p => p.mis === selectedProjectId);
 
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
-    queryKey: ["/api/catalog", selectedProject?.mis, "expenditure-types"],
+    queryKey: ["/api/catalog", selectedProjectId, "expenditure-types"],
     queryFn: async () => {
-      if (!selectedProject?.mis) throw new Error('No project selected');
-      const response = await fetch(`/api/catalog/${selectedProject.mis}/expenditure-types`);
+      if (!selectedProjectId) throw new Error('No project selected');
+      const response = await fetch(`/api/catalog/${selectedProjectId}/expenditure-types`);
       if (!response.ok) throw new Error('Failed to fetch expenditure types');
       const data = await response.json();
       return data.expenditure_types || [];
     },
-    enabled: Boolean(selectedProject?.mis)
+    enabled: Boolean(selectedProjectId)
   });
 
   const { data: projectBudgetData } = useQuery<BudgetData>({
@@ -305,8 +305,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                     index === currentStep
                       ? "bg-primary text-primary-foreground"
                       : index < currentStep
-                      ? "bg-primary/20 text-primary"
-                      : "bg-muted text-muted-foreground"
+                        ? "bg-primary/20 text-primary"
+                        : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {index + 1}
@@ -390,10 +390,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={(value) => {
                           field.onChange(value);
-                          form.setValue("expenditure_type", "");
+                          // Only reset expenditure type if project changed
+                          if (value !== field.value) {
+                            form.setValue("expenditure_type", "");
+                          }
                         }}
                         value={field.value}
-                        disabled={!form.watch("unit") || projectsLoading}
+                        disabled={!selectedUnit || projectsLoading}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -425,7 +428,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={!form.watch("project") || expenditureTypesLoading}
+                        disabled={!selectedProjectId || expenditureTypesLoading}
                       >
                         <FormControl>
                           <SelectTrigger>
