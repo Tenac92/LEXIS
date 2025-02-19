@@ -3,7 +3,7 @@ const DocumentFormatter = require('../utils/documentFormatter');
 const docx = require('docx');
 const { Packer } = require('docx');
 const getAuthToken = require('../utils/getAuthToken');
-
+const { Project, projectHelpers } = require('@shared/models/project');
 
 class DocumentGenerator {
   static async generateSingle(req, res) {
@@ -17,7 +17,7 @@ class DocumentGenerator {
         return res.status(400).json({ message: 'Invalid document ID format' });
       }
 
-      const documents = await DocumentGenerator.fetchDocuments(documentIds, req); // Pass req object
+      const documents = await DocumentGenerator.fetchDocuments(documentIds, req);
 
       if (!documents) {
         return res.status(500).json({ message: 'Failed to fetch documents' });
@@ -59,45 +59,60 @@ class DocumentGenerator {
     }
   }
 
-  static async fetchDocuments(documentIds, req) { // Modified to accept req object
-    const authToken = await getAuthToken(req); // Added auth token retrieval
+  static async fetchDocuments(documentIds, req) {
+    const authToken = await getAuthToken(req);
 
-    const { data, error } = await supabase
+    const { data: recipientsData, error } = await supabase
       .from('recipients')
       .select(`
         *,
-        project_catalog:project_id (
+        project:project_id (
           mis,
           na853,
-          expenditure_type
+          expenditure_type,
+          project_title,
+          event_description,
+          implementing_agency,
+          budget_na853,
+          budget_na271,
+          budget_e069,
+          ethsia_pistosi,
+          status,
+          event_type,
+          event_year,
+          procedures
         )
       `)
       .in('id', documentIds)
       .order('lastname')
-      .auth(authToken); // Added authentication
-
+      .auth(authToken);
 
     if (error) throw error;
-    if (!data || !data.length) throw new Error('No documents found');
+    if (!recipientsData || !recipientsData.length) throw new Error('No documents found');
 
-    // Ensure project_id and project_catalog data exists
-    const invalidDocs = data.filter(doc => !doc.project_id || !doc.project_catalog);
-    if (invalidDocs.length > 0) {
-      throw new Error('Invalid project data in documents');
-    }
+    // Validate project data using our model
+    return recipientsData.map(doc => {
+      const projectData = doc.project;
+      if (!projectData) throw new Error('Invalid project data in documents');
 
-    return data.map(doc => ({
-      ...doc,
-      project_id: doc.project_id,
-      project_na853: doc.project_catalog?.na853,
-      expenditure_type: doc.expenditure_type || doc.project_catalog?.expenditure_type
-    }));
+      const validatedProject = projectHelpers.validateProject(projectData);
+      return {
+        ...doc,
+        project_id: validatedProject.id,
+        project_na853: validatedProject.na853,
+        expenditure_type: validatedProject.expenditure_type || doc.expenditure_type
+      };
+    });
   }
 
   static validateDocuments(documents) {
     return documents.every(doc => 
-      doc.firstname && doc.lastname && doc.amount && 
-      doc.installment && doc.afm
+      doc.firstname && 
+      doc.lastname && 
+      doc.amount && 
+      doc.installment && 
+      doc.afm &&
+      doc.project_id
     );
   }
 
@@ -119,7 +134,6 @@ class DocumentGenerator {
         throw new Error('Invalid total amount');
       }
 
-      // Delete recipients first
       const { error: deleteError } = await supabase
         .from('recipients')
         .delete()
@@ -135,11 +149,14 @@ class DocumentGenerator {
         throw new Error('No documents provided');
       }
 
-      if (!firstDoc.project_id) {
-        throw new Error('Project ID is required');
+      const projectData = firstDoc.project;
+      if (!projectData) {
+        throw new Error('Project data is required');
       }
 
-      const projectId = firstDoc.project_id.toString();
+      // Validate project using our model
+      const validatedProject = projectHelpers.validateProject(projectData);
+
       const isValid = documents.every(doc => 
         doc.project_id === firstDoc.project_id &&
         doc.expenditure_type === firstDoc.expenditure_type &&
@@ -150,14 +167,6 @@ class DocumentGenerator {
         throw new Error('All documents must have the same project, unit and expenditure type');
       }
 
-      // Get project details for NA853
-      const projectMis = firstDoc.project_id.split(':')[0];
-      const { data: projectDetails } = await supabase
-        .from('project_catalog')
-        .select('na853, budget_na853')
-        .eq('mis', projectMis)
-        .single();
-
       const { error: docError } = await supabase
         .from('generated_documents')
         .insert({
@@ -165,19 +174,18 @@ class DocumentGenerator {
           recipients: documents.map(doc => ({
             ...doc,
             unit: firstDoc.unit,
-            project_na853: projectDetails?.na853
+            project_na853: validatedProject.na853
           })),
           total_amount: totalAmount,
           status: 'pending',
           created_at: new Date().toISOString(),
-          project_id: projectMis,
-          project_na853: projectDetails?.na853,
+          project_id: validatedProject.mis,
+          project_na853: validatedProject.na853,
           expenditure_type: firstDoc.expenditure_type,
           unit: firstDoc.unit
         });
 
       if (docError) throw docError;
-
 
     } catch (error) {
       console.error('Transaction error:', error);
@@ -188,6 +196,14 @@ class DocumentGenerator {
   static async generateDocument(req, documents, options = {}) {
     const { department, attachments, unitDetails } = options;
     const totalAmount = documents.reduce((sum, doc) => sum + parseFloat(doc.amount), 0);
+
+    // Get project data from the first document and validate
+    const projectData = documents[0]?.project;
+    if (!projectData) {
+      throw new Error('Project data is missing');
+    }
+
+    const validatedProject = projectHelpers.validateProject(projectData);
 
     const doc = new docx.Document({
       sections: [{
@@ -205,7 +221,7 @@ class DocumentGenerator {
           new docx.Paragraph({ 
             children: [
               new docx.TextRun({ text: `Μονάδα: ${documents[0].unit || 'N/A'}`, bold: true }),
-              new docx.TextRun({ text: `    NA853: ${documents[0].project_na853 || 'N/A'}`, bold: true })
+              new docx.TextRun({ text: `    NA853: ${validatedProject.na853 || 'N/A'}`, bold: true })
             ],
             spacing: { before: 240, after: 240 }
           }),
