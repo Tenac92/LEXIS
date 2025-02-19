@@ -24,7 +24,7 @@ export default function HomePage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-foreground">
-                Welcome, {user?.email}
+                Welcome, {user?.username || user?.name || 'User'}
               </h1>
               <p className="text-muted-foreground">Document Management System</p>
             </div>
