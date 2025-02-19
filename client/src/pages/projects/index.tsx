@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { useToast } from "@/hooks/use-toast";
-import { type Project } from "@shared/schema";
+import { type ProjectCatalog } from "@shared/schema";
 import { Plus, FileUp, Download } from "lucide-react";
 
 export default function ProjectsPage() {
@@ -20,7 +20,7 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("");
 
-  const { data: projects, isLoading } = useQuery<Project[]>({
+  const { data: projects, isLoading } = useQuery<ProjectCatalog[]>({
     queryKey: ["/api/projects", { search, status }],
     enabled: true,
   });
@@ -32,9 +32,9 @@ export default function ProjectsPage() {
           Accept: "text/csv",
         },
       });
-      
+
       if (!response.ok) throw new Error("Export failed");
-      
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -42,7 +42,7 @@ export default function ProjectsPage() {
       a.download = `projects-${new Date().toISOString().split("T")[0]}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      
+
       toast({
         title: "Export Successful",
         description: "Projects data has been exported to CSV",

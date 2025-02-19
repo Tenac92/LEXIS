@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type Project } from "@shared/schema";
+import { type ProjectCatalog } from "@shared/schema";
 import { Edit, Trash2 } from "lucide-react";
 import { 
   AlertDialog,
@@ -20,7 +20,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 interface ProjectCardProps {
-  project: Project;
+  project: ProjectCatalog;
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
@@ -49,11 +49,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
     },
   });
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | string) => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     return new Intl.NumberFormat("el-GR", {
       style: "currency",
       currency: "EUR",
-    }).format(amount);
+    }).format(numAmount || 0);
   };
 
   const getStatusColor = (status: string) => {
@@ -76,10 +77,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
       <CardContent className="p-6">
         <div className="mb-4">
           <h3 className="line-clamp-2 text-lg font-bold">
-            {project.title || "Untitled Project"}
+            {project.event_description || "Untitled Project"}
           </h3>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Badge variant="secondary" className={getStatusColor(project.status)}>
+            <Badge variant="secondary" className={getStatusColor(project.status || '')}>
               {project.status === "pending"
                 ? "Αναμονή Χρηματοδότησης"
                 : project.status === "pending_reallocation"
@@ -89,8 +90,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 : "Ολοκληρωμένο"}
             </Badge>
             <span className="text-sm font-semibold text-blue-600">
-              {formatCurrency(Number(project.budget_na853))}
+              {formatCurrency(project.budget_na853)}
             </span>
+            {project.ethsia_pistosi && (
+              <span className="text-sm text-gray-500">
+                Ετήσια Πίστωση: {formatCurrency(project.ethsia_pistosi)}
+              </span>
+            )}
           </div>
         </div>
 
@@ -113,7 +119,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             Edit
           </Button>
         </Link>
-        
+
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="sm">

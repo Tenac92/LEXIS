@@ -15,13 +15,12 @@ export const users = pgTable("users", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
-// Projects table
-export const projects = pgTable("projects", {
+// Project Catalog table matching Supabase structure
+export const projectCatalog = pgTable("project_catalog", {
   id: serial("id").primaryKey(),
   mis: text("mis").notNull().unique(),
   na853: text("na853"),
-  title: text("title").notNull(),
-  description: text("description"),
+  event_description: text("event_description"),
   implementing_agency: text("implementing_agency").array(),
   region: text("region"),
   municipality: text("municipality"),
@@ -32,7 +31,7 @@ export const projects = pgTable("projects", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// Generated Documents table (keeping the existing one)
+// Generated Documents table
 export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
   created_at: timestamp("created_at").defaultNow(),
@@ -58,12 +57,12 @@ export const generatedDocuments = pgTable("generated_documents", {
 
 // Types
 export type User = typeof users.$inferSelect;
-export type Project = typeof projects.$inferSelect;
+export type ProjectCatalog = typeof projectCatalog.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users);
-export const insertProjectSchema = createInsertSchema(projects, {
+export const insertProjectCatalogSchema = createInsertSchema(projectCatalog, {
   implementing_agency: z.array(z.string()).min(1, "At least one implementing agency is required"),
   budget_na853: z.number().min(0, "Budget must be non-negative"),
   ethsia_pistosi: z.number().min(0, "Annual credit must be non-negative"),
@@ -85,12 +84,12 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
 
 // Export types for insert operations
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type InsertProjectCatalog = z.infer<typeof insertProjectCatalogSchema>;
 export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
 
 // Export database type
 export type Database = {
   users: User;
-  projects: Project;
+  projectCatalog: ProjectCatalog;
   generatedDocuments: GeneratedDocument;
 };
