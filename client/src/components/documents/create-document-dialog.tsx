@@ -77,18 +77,34 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const { data: units = [], isLoading: unitsLoading } = useQuery({
     queryKey: ["units"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('documents')
-        .select('distinct unit')
-        .not('unit', 'is', null)
-        .order('unit');
+      try {
+        console.log('Fetching units...');
+        const { data, error } = await supabase
+          .from('documents')
+          .select('distinct unit')
+          .not('unit', 'is', null)
+          .order('unit');
 
-      if (error) throw error;
-      // Transform the data to match the expected format
-      return data.map((item: any) => ({
-        id: item.unit,
-        name: item.unit
-      }));
+        if (error) {
+          console.error('Error fetching units:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load units. Please try again.",
+            variant: "destructive"
+          });
+          throw error;
+        }
+
+        console.log('Units data:', data);
+        // Transform the data to match the expected format
+        return data.map((item: any) => ({
+          id: item.unit,
+          name: item.unit
+        }));
+      } catch (error) {
+        console.error('Units fetch error:', error);
+        throw error;
+      }
     }
   });
 
@@ -98,18 +114,34 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     queryFn: async () => {
       if (!selectedUnit) return [];
 
-      const { data, error } = await supabase
-        .from('documents')
-        .select('distinct project_id, project_na853')
-        .eq('unit', selectedUnit)
-        .not('project_id', 'is', null)
-        .order('created_at', { ascending: false });
+      try {
+        console.log('Fetching projects for unit:', selectedUnit);
+        const { data, error } = await supabase
+          .from('documents')
+          .select('distinct project_id, project_na853')
+          .eq('unit', selectedUnit)
+          .not('project_id', 'is', null)
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data.map((item: any) => ({
-        id: item.project_id,
-        name: item.project_na853
-      }));
+        if (error) {
+          console.error('Error fetching projects:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load projects. Please try again.",
+            variant: "destructive"
+          });
+          throw error;
+        }
+
+        console.log('Projects data:', data);
+        return data.map((item: any) => ({
+          id: item.project_id,
+          name: item.project_na853
+        }));
+      } catch (error) {
+        console.error('Projects fetch error:', error);
+        throw error;
+      }
     },
     enabled: Boolean(selectedUnit)
   });
@@ -120,21 +152,36 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     queryFn: async () => {
       if (!selectedProjectId) return null;
 
-      const { data, error } = await supabase
-        .from('documents')
-        .select('total_amount')
-        .eq('project_id', selectedProjectId)
-        .single();
+      try {
+        console.log('Fetching budget for project:', selectedProjectId);
+        const { data, error } = await supabase
+          .from('documents')
+          .select('total_amount')
+          .eq('project_id', selectedProjectId)
+          .single();
 
-      if (error) throw error;
+        if (error) {
+          console.error('Error fetching budget:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load budget information. Please try again.",
+            variant: "destructive"
+          });
+          throw error;
+        }
 
-      // Calculate budget information from documents
-      const totalBudget = data?.total_amount || 0;
-      return {
-        current_budget: totalBudget,
-        total_budget: totalBudget,
-        annual_budget: totalBudget
-      };
+        console.log('Budget data:', data);
+        // Calculate budget information from documents
+        const totalBudget = data?.total_amount || 0;
+        return {
+          current_budget: totalBudget,
+          total_budget: totalBudget,
+          annual_budget: totalBudget
+        };
+      } catch (error) {
+        console.error('Budget fetch error:', error);
+        throw error;
+      }
     },
     enabled: Boolean(selectedProjectId)
   });
