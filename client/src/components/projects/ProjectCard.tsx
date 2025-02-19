@@ -26,18 +26,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/use-auth";
 
 interface ProjectCardProps {
   project: ProjectCatalog;
   view?: "grid" | "list";
+  isAdmin: boolean;
 }
 
-export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
+export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
 
   const dialogId = `project-dialog-${project.id}`;
   const dialogTitleId = `${dialogId}-title`;
@@ -53,9 +51,10 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest(`/api/projects/${project.id}`, {
+      const response = await apiRequest(`/api/projects/${project.id}`, {
         method: "DELETE",
       });
+      if (!response.ok) throw new Error("Failed to delete project");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });

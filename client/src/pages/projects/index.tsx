@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,17 +13,20 @@ import {
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { useToast } from "@/hooks/use-toast";
 import { type ProjectCatalog } from "@shared/schema";
-import { Plus, FileUp, Download, LayoutGrid, LayoutList } from "lucide-react";
+import { Plus, FileUp, Download, LayoutGrid, LayoutList, FileEdit, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function ProjectsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const isAdmin = user?.role === 'admin';
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   // Debounce search input
   useEffect(() => {
@@ -65,6 +68,34 @@ export default function ProjectsPage() {
       toast({
         title: "Export Failed",
         description: "Failed to export projects data",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkUpload = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await apiRequest<{ success: boolean }>("/api/projects/bulk-upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Bulk upload failed");
+
+      toast({
+        title: "Upload Successful",
+        description: "Projects have been updated successfully",
+      });
+
+      // Invalidate projects query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload projects data",
         variant: "destructive",
       });
     }
@@ -113,10 +144,14 @@ export default function ProjectsPage() {
               </Button>
               <Link href="/projects/bulk-update">
                 <Button variant="outline">
-                  <FileUp className="mr-2 h-4 w-4" />
+                  <FileEdit className="mr-2 h-4 w-4" />
                   Bulk Update
                 </Button>
               </Link>
+              <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload CSV
+              </Button>
             </>
           )}
         </div>
@@ -159,7 +194,8 @@ export default function ProjectsPage() {
               <ProjectCard 
                 key={`${project.id}-${project.mis}`} 
                 project={project} 
-                view={view} 
+                view={view}
+                isAdmin={isAdmin}
               />
             ))}
           </div>
