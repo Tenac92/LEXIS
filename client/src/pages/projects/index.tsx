@@ -44,20 +44,26 @@ export default function ProjectsPage() {
 
   const handleExport = async () => {
     try {
-      const response = await fetch("/api/projects/export", {
+      const response = await apiRequest("/api/projects/export", {
+        method: "GET",
         headers: {
           Accept: "text/csv",
         },
       });
 
-      if (!response.ok) throw new Error("Export failed");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Export failed");
+      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `projects-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
       toast({
@@ -67,7 +73,7 @@ export default function ProjectsPage() {
     } catch (error) {
       toast({
         title: "Export Failed",
-        description: "Failed to export projects data",
+        description: error instanceof Error ? error.message : "Failed to export projects data",
         variant: "destructive",
       });
     }
@@ -78,12 +84,15 @@ export default function ProjectsPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await apiRequest<{ success: boolean }>("/api/projects/bulk-upload", {
+      const response = await apiRequest("/api/projects/bulk-upload", {
         method: "POST",
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Bulk upload failed");
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || "Bulk upload failed");
+      }
 
       toast({
         title: "Upload Successful",
@@ -95,7 +104,7 @@ export default function ProjectsPage() {
     } catch (error) {
       toast({
         title: "Upload Failed",
-        description: "Failed to upload projects data",
+        description: error instanceof Error ? error.message : "Failed to upload projects data",
         variant: "destructive",
       });
     }

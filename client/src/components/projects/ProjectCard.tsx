@@ -51,10 +51,20 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest(`/api/projects/${project.id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete project");
+      try {
+        const response = await apiRequest(`/api/projects/${project.id}`, {
+          method: "DELETE",
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+          throw new Error(data.message || "Failed to delete project");
+        }
+
+        return data;
+      } catch (error) {
+        throw new Error(error instanceof Error ? error.message : "Failed to delete project");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
@@ -63,10 +73,10 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
         description: "Project has been successfully deleted",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Delete Failed",
-        description: "Failed to delete project",
+        description: error.message || "Failed to delete project",
         variant: "destructive",
       });
     },
