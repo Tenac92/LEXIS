@@ -14,11 +14,14 @@ import { ProjectCard } from "@/components/projects/ProjectCard";
 import { useToast } from "@/hooks/use-toast";
 import { type ProjectCatalog } from "@shared/schema";
 import { Plus, FileUp, Download } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function ProjectsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<string>("all");
 
   const { data: projects, isLoading } = useQuery<ProjectCatalog[]>({
     queryKey: ["/api/projects", { search, status }],
@@ -61,22 +64,26 @@ export default function ProjectsPage() {
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <h1 className="text-3xl font-bold">Projects</h1>
         <div className="flex flex-wrap gap-2">
-          <Link href="/projects/new">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Button>
-          </Link>
-          <Button variant="secondary" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-          <Link href="/projects/bulk-update">
-            <Button variant="outline">
-              <FileUp className="mr-2 h-4 w-4" />
-              Bulk Update
-            </Button>
-          </Link>
+          {isAdmin && (
+            <>
+              <Link href="/projects/new">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Project
+                </Button>
+              </Link>
+              <Button variant="secondary" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+              <Link href="/projects/bulk-update">
+                <Button variant="outline">
+                  <FileUp className="mr-2 h-4 w-4" />
+                  Bulk Update
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type ProjectCatalog } from "@shared/schema";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Calendar, MapPin, Building2 } from "lucide-react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ProjectCardProps {
   project: ProjectCatalog;
@@ -26,6 +27,8 @@ interface ProjectCardProps {
 export function ProjectCard({ project }: ProjectCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -49,12 +52,18 @@ export function ProjectCard({ project }: ProjectCardProps) {
     },
   });
 
-  const formatCurrency = (amount: number | string) => {
+  const formatDate = (date: string | null) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleDateString('el-GR');
+  };
+
+  const formatCurrency = (amount: number | string | null) => {
+    if (!amount) return '€0,00';
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     return new Intl.NumberFormat("el-GR", {
       style: "currency",
       currency: "EUR",
-    }).format(numAmount || 0);
+    }).format(numAmount);
   };
 
   const getStatusColor = (status: string) => {
@@ -76,10 +85,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
     <Card className="transition-shadow hover:shadow-lg">
       <CardContent className="p-6">
         <div className="mb-4">
-          <h3 className="line-clamp-2 text-lg font-bold">
-            {project.event_description || "Untitled Project"}
-          </h3>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="line-clamp-2 text-lg font-bold">
+              {project.event_description || "Untitled Project"}
+            </h3>
             <Badge variant="secondary" className={getStatusColor(project.status || '')}>
               {project.status === "pending"
                 ? "Αναμονή Χρηματοδότησης"
@@ -89,63 +98,89 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 ? "Ενεργό"
                 : "Ολοκληρωμένο"}
             </Badge>
-            <span className="text-sm font-semibold text-blue-600">
-              {formatCurrency(project.budget_na853)}
-            </span>
-            {project.ethsia_pistosi && (
-              <span className="text-sm text-gray-500">
-                Ετήσια Πίστωση: {formatCurrency(project.ethsia_pistosi)}
-              </span>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Calendar className="mr-1 h-4 w-4" />
+              {formatDate(project.created_at)}
+            </div>
+            {project.region && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <MapPin className="mr-1 h-4 w-4" />
+                {project.region}
+              </div>
+            )}
+            {project.implementing_agency?.[0] && (
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Building2 className="mr-1 h-4 w-4" />
+                {project.implementing_agency[0]}
+              </div>
             )}
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded bg-gray-50 p-2">
-            <div className="text-xs text-gray-500">MIS</div>
-            <div className="font-medium">{project.mis}</div>
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between rounded-md bg-primary/5 p-2">
+              <span className="text-sm font-medium">Budget NA853</span>
+              <span className="font-semibold text-blue-600">{formatCurrency(project.budget_na853)}</span>
+            </div>
+            {project.ethsia_pistosi && (
+              <div className="flex items-center justify-between rounded-md bg-primary/5 p-2">
+                <span className="text-sm font-medium">Ετήσια Πίστωση</span>
+                <span className="font-semibold">{formatCurrency(project.ethsia_pistosi)}</span>
+              </div>
+            )}
           </div>
-          <div className="rounded bg-gray-50 p-2">
-            <div className="text-xs text-gray-500">Region</div>
-            <div className="font-medium">{project.region || "N/A"}</div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded bg-gray-50 p-2">
+              <div className="text-xs text-gray-500">MIS</div>
+              <div className="font-medium">{project.mis}</div>
+            </div>
+            <div className="rounded bg-gray-50 p-2">
+              <div className="text-xs text-gray-500">NA853</div>
+              <div className="font-medium">{project.na853 || "N/A"}</div>
+            </div>
           </div>
         </div>
       </CardContent>
 
-      <CardFooter className="flex justify-end gap-2 border-t p-4">
-        <Link href={`/projects/${project.id}/edit`}>
-          <Button variant="outline" size="sm">
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-        </Link>
-
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete
+      {isAdmin && (
+        <CardFooter className="flex justify-end gap-2 border-t p-4">
+          <Link href={`/projects/${project.id}/edit`}>
+            <Button variant="outline" size="sm">
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Project</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this project? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => deleteMutation.mutate()}
-                className="bg-red-600 hover:bg-red-700"
-              >
+          </Link>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="mr-2 h-4 w-4" />
                 Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardFooter>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this project? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => deleteMutation.mutate()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardFooter>
+      )}
     </Card>
   );
 }
