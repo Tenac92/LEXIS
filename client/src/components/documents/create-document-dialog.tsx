@@ -65,12 +65,17 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     queryKey: ["units"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('units')
-        .select('*')
-        .order('name');
+        .from('documents')
+        .select('distinct unit')
+        .not('unit', 'is', null)
+        .order('unit');
 
       if (error) throw error;
-      return data;
+      // Transform the data to match the expected format
+      return data.map((item: any) => ({
+        id: item.unit,
+        name: item.unit
+      }));
     }
   });
 
@@ -81,13 +86,17 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       if (!selectedUnit) return [];
 
       const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('unit_id', selectedUnit)
+        .from('documents')
+        .select('distinct project_id, project_na853')
+        .eq('unit', selectedUnit)
+        .not('project_id', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data.map((item: any) => ({
+        id: item.project_id,
+        name: item.project_na853
+      }));
     },
     enabled: Boolean(selectedUnit)
   });
@@ -99,13 +108,20 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       if (!selectedProjectId) return null;
 
       const { data, error } = await supabase
-        .from('budgets')
-        .select('*')
+        .from('documents')
+        .select('total_amount')
         .eq('project_id', selectedProjectId)
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Calculate budget information from documents
+      const totalBudget = data?.total_amount || 0;
+      return {
+        current_budget: totalBudget,
+        total_budget: totalBudget,
+        annual_budget: totalBudget
+      };
     },
     enabled: Boolean(selectedProjectId)
   });
