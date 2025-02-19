@@ -1,74 +1,64 @@
-import { Router, Request } from 'express';
-import { supabase } from '../db';
-import { insertGeneratedDocumentSchema } from '@shared/schema';
-import type { Database } from '@shared/schema';
-
-interface Recipient {
-  lastname: string;  
-  firstname: string;
-  fathername?: string;
-  amount: number;
-  installment: number;
-  afm: string;
-}
+import { Router, Request, Response, NextFunction } from "express";
+import { supabase } from "../db";
+import { insertGeneratedDocumentSchema } from "@shared/schema";
+import type { Database } from "@shared/schema";
+import type { User } from "@shared/schema";
 
 interface AuthRequest extends Request {
-  user?: {
-    id: number;
-    role?: string;
-    units?: string[];
-  };
+  user?: User;
 }
 
 const router = Router();
 
-// Authentication middleware (needs to be defined elsewhere)
-const authenticateToken = (req: Request, res: any, next: any) => {
-  // Implement your authentication logic here
-  // ... (e.g., check for JWT token in headers)
+// Authentication middleware
+const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  if (!req.user?.id) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
   next();
-}
+};
 
-router.get('/', authenticateToken, async (req: AuthRequest, res) => {
+router.get("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { status, unit, dateFrom, dateTo, amountFrom, amountTo, user } = req.query;
-    let query = supabase.from('generated_documents').select('*');
+    let query = supabase
+      .from("generated_documents")
+      .select("*");
 
     // Filter by user's role and ID
-    if (req.user?.role !== 'admin' && req.user?.id) {
-      query = query.eq('generated_by', req.user.id);
+    if (req.user?.role !== "admin" && req.user?.id) {
+      query = query.eq("generated_by", req.user.id);
     }
 
     // Apply filters
-    if (status && status !== 'all') {
-      query = query.eq('status', status as string);
+    if (status && status !== "all") {
+      query = query.eq("status", status as string);
     }
-    if (unit && unit !== 'all') {
-      query = query.eq('unit', unit as string);
+    if (unit && unit !== "all") {
+      query = query.eq("unit", unit as string);
     }
     if (dateFrom) {
-      query = query.gte('created_at', dateFrom as string);
+      query = query.gte("created_at", dateFrom as string);
     }
     if (dateTo) {
-      query = query.lte('created_at', dateTo as string);
+      query = query.lte("created_at", dateTo as string);
     }
     if (amountFrom && !isNaN(Number(amountFrom))) {
-      query = query.gte('total_amount', Number(amountFrom));
+      query = query.gte("total_amount", Number(amountFrom));
     }
     if (amountTo && !isNaN(Number(amountTo))) {
-      query = query.lte('total_amount', Number(amountTo));
+      query = query.lte("total_amount", Number(amountTo));
     }
 
     // User/Recipient filter
     if (user) {
       const searchTerm = (user as string).toLowerCase().trim();
       if (searchTerm) {
-        // Use Supabase text search for recipients JSON array
-        query = query.textSearch('recipients', searchTerm);
+        query = query.textSearch("recipients", searchTerm);
       }
     }
 
-    query = query.order('created_at', { ascending: false });
+    query = query.order("created_at", { ascending: false });
 
     const { data, error } = await query;
 
@@ -76,8 +66,8 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
 
     res.json(data || []);
   } catch (error) {
-    console.error('Error fetching documents:', error);
-    res.status(500).json({ message: 'Failed to fetch documents' });
+    console.error("Error fetching documents:", error);
+    res.status(500).json({ message: "Failed to fetch documents" });
   }
 });
 

@@ -25,8 +25,13 @@ export const projectCatalog = pgTable("project_catalog", {
   region: text("region"),
   municipality: text("municipality"),
   budget_na853: numeric("budget_na853").default("0"),
+  budget_e069: numeric("budget_e069").default("0"),
+  budget_na271: numeric("budget_na271").default("0"),
   ethsia_pistosi: numeric("ethsia_pistosi").default("0"),
   status: text("status").default("pending"),
+  event_type: text("event_type"),
+  event_year: text("event_year"),
+  procedures: text("procedures"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
@@ -64,9 +69,14 @@ export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export const insertUserSchema = createInsertSchema(users);
 export const insertProjectCatalogSchema = createInsertSchema(projectCatalog, {
   implementing_agency: z.array(z.string()).min(1, "At least one implementing agency is required"),
-  budget_na853: z.number().min(0, "Budget must be non-negative"),
+  budget_na853: z.number().min(0, "Budget NA853 must be non-negative"),
+  budget_e069: z.number().min(0, "Budget E069 must be non-negative"),
+  budget_na271: z.number().min(0, "Budget NA271 must be non-negative"),
   ethsia_pistosi: z.number().min(0, "Annual credit must be non-negative"),
   status: z.enum(["active", "pending", "pending_reallocation", "completed"]),
+  event_type: z.string().optional(),
+  event_year: z.string().optional(),
+  procedures: z.string().optional(),
 }).omit({ id: true, created_at: true, updated_at: true });
 
 export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {

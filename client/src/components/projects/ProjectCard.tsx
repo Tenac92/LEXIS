@@ -61,14 +61,14 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
     },
   });
 
-  const formatDate = (date: string | null) => {
+  const formatDate = (date: string | Date | null) => {
     if (!date) return 'N/A';
-    const formattedDate = new Date(date).toLocaleDateString('el-GR', {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('el-GR', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-    return formattedDate;
   };
 
   const formatCurrency = (amount: number | string | null) => {
@@ -203,18 +203,14 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
                 <h3 className="font-semibold">Budget NA853</h3>
                 <p className="text-gray-700">{formatCurrency(project.budget_na853)}</p>
               </div>
-              {project.budget_e069 && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold">Budget E069</h3>
-                  <p className="text-gray-700">{formatCurrency(project.budget_e069)}</p>
-                </div>
-              )}
-              {project.budget_na271 && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold">Budget NA271</h3>
-                  <p className="text-gray-700">{formatCurrency(project.budget_na271)}</p>
-                </div>
-              )}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold">Budget E069</h3>
+                <p className="text-gray-700">{formatCurrency(project.budget_e069)}</p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-semibold">Budget NA271</h3>
+                <p className="text-gray-700">{formatCurrency(project.budget_na271)}</p>
+              </div>
               {project.ethsia_pistosi && (
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold">Annual Credit</h3>
@@ -231,6 +227,12 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
                 <div className="bg-gray-50 p-4 rounded-lg col-span-2">
                   <h3 className="font-semibold">Event Type</h3>
                   <p className="text-gray-700">{project.event_type}</p>
+                </div>
+              )}
+              {project.municipality && (
+                <div className="bg-gray-50 p-4 rounded-lg col-span-2">
+                  <h3 className="font-semibold">Municipality</h3>
+                  <p className="text-gray-700">{project.municipality}</p>
                 </div>
               )}
               {project.procedures && (
