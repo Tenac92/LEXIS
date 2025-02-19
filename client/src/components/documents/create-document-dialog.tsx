@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 
@@ -62,6 +62,7 @@ interface CreateDocumentDialogProps {
 export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
@@ -87,7 +88,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       if (!selectedUnit) return [];
       const response = await fetch(`/api/catalog?unit=${encodeURIComponent(selectedUnit)}`);
       if (!response.ok) throw new Error('Failed to fetch projects');
-      return response.json();
+      const result = await response.json();
+      return result.data || [];
     },
     enabled: Boolean(selectedUnit)
   });
@@ -126,7 +128,25 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
-      console.log('Form submitted:', data);
+      const response = await fetch('/api/documents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create document');
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+
+      toast({
+        title: "Success",
+        description: "Document created successfully",
+      });
+
       onOpenChange(false);
     } catch (error) {
       console.error('Submission error:', error);
