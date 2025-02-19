@@ -1,27 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@shared/schema';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import * as schema from "@shared/schema";
 
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-export const supabase = createClient<Database>(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
-
-// Remove Neon-specific configurations and use Supabase only
-export const pool = {
-  query: async (text: string, params?: any[]) => {
-    const { data, error } = await supabase.from(text).select('*');
-    if (error) throw error;
-    return { rows: data };
-  }
-};
-
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+if (!process.env.DATABASE_URL) {
   throw new Error(
-    "SUPABASE_URL and SUPABASE_KEY must be set.",
+    "DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
+
+const queryClient = postgres(process.env.DATABASE_URL);
+export const db = drizzle(queryClient, { schema });
+
+// For direct SQL queries if needed
+export const pool = queryClient;

@@ -10,7 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 
-// Types remain the same
+// Define strict types for API responses
 interface Unit {
   id: string;
   name: string;
@@ -36,18 +36,19 @@ interface BudgetData {
   current_budget: number;
 }
 
-// Form Schema remains the same
+// Form Schema with strict validation
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
-  mis: z.string().min(1, "Project is required"),
+  project_id: z.string().min(1, "Project is required"),
   expenditure_type: z.string().min(1, "Expenditure type is required"),
   recipients: z.array(z.object({
     firstname: z.string().min(2, "First name must be at least 2 characters"),
     lastname: z.string().min(2, "Last name must be at least 2 characters"),
     afm: z.string().length(9, "AFM must be exactly 9 digits"),
     amount: z.number().min(0.01, "Amount must be greater than 0"),
-    installment: z.number().min(1).max(12, "Installment must be between 1 and 12")
-  })).min(1, "At least one recipient is required")
+    installment: z.number().int().min(1).max(12, "Installment must be between 1 and 12")
+  })).min(1, "At least one recipient is required"),
+  status: z.string().default("draft")
 });
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
@@ -68,22 +69,25 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     resolver: zodResolver(createDocumentSchema),
     defaultValues: {
       unit: "",
-      mis: "",
+      project_id: "",
       expenditure_type: "",
-      recipients: []
+      recipients: [],
+      status: "draft"
     }
   });
 
   const selectedUnit = form.watch("unit");
-  const selectedProjectId = form.watch("mis");
+  const selectedProjectId = form.watch("project_id");
 
+  // Query units
   const { data: units = [], isLoading: unitsLoading } = useQuery<Unit[]>({
     queryKey: ["/api/units"],
     enabled: currentStep === 0
   });
 
+  // Query projects based on selected unit
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
-    queryKey: ["projects", selectedUnit],
+    queryKey: ["/api/catalog", selectedUnit],
     queryFn: async () => {
       if (!selectedUnit) return [];
       const response = await fetch(`/api/catalog?unit=${encodeURIComponent(selectedUnit)}`);
@@ -91,45 +95,43 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to fetch projects');
       }
-      const data = await response.json();
-      console.log("Fetched projects:", data);
-      return data || [];
+      return response.json();
     },
     enabled: Boolean(selectedUnit)
   });
 
-  const selectedProject = projects.find(p => p.mis === selectedProjectId);
+  // Get selected project
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
 
+  // Reset expenditure type when project changes
   useEffect(() => {
     if (selectedProject) {
       form.setValue("expenditure_type", "");
     }
   }, [selectedProject, form]);
 
+  // Query expenditure types based on selected project
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
     queryKey: ["expenditureTypes", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return [];
-      const project = projects.find(p => p.mis === selectedProjectId);
+      const project = projects.find(p => p.id === selectedProjectId);
       return project?.expenditure_type || [];
     },
     enabled: Boolean(selectedProjectId && projects.length > 0)
   });
 
+
+  // Query budget data based on selected project
   const { data: budgetData } = useQuery<BudgetData>({
     queryKey: ["/api/budget", selectedProjectId],
-    queryFn: async () => {
-      if (!selectedProjectId) throw new Error('No project selected');
-      const response = await fetch(`/api/budget/${selectedProjectId}`);
-      if (!response.ok) throw new Error('Failed to fetch budget data');
-      return response.json();
-    },
     enabled: Boolean(selectedProjectId)
   });
 
+  // Reset project-related fields when unit changes
   useEffect(() => {
     if (!selectedUnit) {
-      form.setValue("mis", "");
+      form.setValue("project_id", "");
       form.setValue("expenditure_type", "");
     }
   }, [selectedUnit, form]);
@@ -141,11 +143,15 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          total_amount: data.recipients.reduce((sum, r) => sum + r.amount, 0)
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create document');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create document');
       }
 
       await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
@@ -160,7 +166,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       console.error('Submission error:', error);
       toast({
         title: "Error",
-        description: "Failed to create document",
+        description: error instanceof Error ? error.message : "Failed to create document",
         variant: "destructive"
       });
     }
@@ -262,19 +268,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
                 <FormField
                   control={form.control}
-                  name="mis"
+                  name="project_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Project</FormLabel>
                       <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          const project = projects.find(p => p.mis === value);
-                          if (project) {
-                            form.setValue("expenditure_type", "");
-                          }
-                        }}
-                        defaultValue={field.value}
+                        onValueChange={field.onChange}
+                        value={field.value}
                         disabled={!selectedUnit || projectsLoading}
                       >
                         <FormControl>
@@ -290,8 +290,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           ) : (
                             projects.map((project) => (
                               <SelectItem 
-                                key={project.mis} 
-                                value={project.mis || ""} 
+                                key={project.id} 
+                                value={project.id}
                               >
                                 {project.na853
                                   ? `${project.na853} - ${project.event_description}`
@@ -306,34 +306,35 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="expenditure_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Expenditure Type</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={!selectedProjectId || expenditureTypesLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {expenditureTypes.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {selectedProject && (
+                  <FormField
+                    control={form.control}
+                    name="expenditure_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Expenditure Type</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {selectedProject.expenditure_type.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
             )}
 
