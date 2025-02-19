@@ -402,21 +402,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         disabled={!selectedUnit || projectsLoading}
                       >
                         <FormControl>
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger>
                             <SelectValue
                               placeholder="Select project"
-                              className="w-full"
-                            >
-                              {selectedProject ? (
-                                <span>
-                                  {selectedProject.na853
-                                    ? `${selectedProject.na853} - ${selectedProject.event_description}`
-                                    : selectedProject.event_description}
-                                </span>
-                              ) : (
-                                "Select project"
-                              )}
-                            </SelectValue>
+                            />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -425,7 +414,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                               key={project.mis}
                               value={project.mis}
                             >
-                              {project.na853 ? `${project.na853} - ${project.event_description}` : project.event_description}
+                              {project.na853
+                                ? `${project.na853} - ${project.event_description}`
+                                : project.event_description}
                             </SelectItem>
                           ))}
                         </SelectContent>
