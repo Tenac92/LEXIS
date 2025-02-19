@@ -13,6 +13,49 @@ interface AuthRequest extends Request {
 
 const router = Router();
 
+// List generated documents
+router.get('/', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { status, unit, dateFrom, dateTo } = req.query;
+    let query = supabase.from('generated_documents').select('*');
+
+    // Filter by user's assigned units unless they're admin
+    if (req.user?.role !== 'admin' && req.user?.units?.length) {
+      query = query.in('unit', req.user.units);
+    }
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+    if (unit && unit !== 'all') {
+      query = query.eq('unit', unit);
+    }
+
+    // Date filters
+    if (dateFrom) {
+      query = query.gte('created_at', dateFrom as string);
+    }
+    if (dateTo) {
+      query = query.lte('created_at', dateTo as string);
+    }
+
+    query = query.order('created_at', { ascending: false });
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    res.json({
+      status: 'success',
+      data: data || []
+    });
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    res.status(500).json({ message: 'Failed to fetch documents' });
+  }
+});
+
+// Create new document
 router.post('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { unit, project_id, expenditure_type, status, recipients, total_amount } = req.body;
@@ -27,6 +70,10 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
           hasExpenditureType: !!expenditure_type
         }
       });
+    }
+
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
     }
 
     // Get project NA853 from project catalog
@@ -48,7 +95,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       status: status || 'draft',
       recipients,
       total_amount: parseFloat(total_amount) || 0,
-      created_by: req.user?.id,
+      generated_by: req.user.id,
       created_at: new Date().toISOString()
     };
 
@@ -58,12 +105,18 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Document creation error:', error);
+      throw error;
+    }
 
-    return res.status(201).json(data);
+    res.status(201).json(data);
   } catch (error) {
     console.error('Error creating document:', error);
-    return res.status(500).json({ message: 'Failed to create document' });
+    res.status(500).json({ 
+      message: 'Failed to create document',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
