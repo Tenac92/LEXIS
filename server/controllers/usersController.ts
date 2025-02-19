@@ -42,22 +42,6 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
   }
 });
 
-// Get available units
-router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { data: units, error } = await supabase
-      .from('units')
-      .select('*')
-      .order('name', { ascending: true });
-
-    if (error) throw error;
-    res.json(units);
-  } catch (error) {
-    console.error('Units fetch error:', error);
-    res.status(500).json({ message: 'Failed to fetch units' });
-  }
-});
-
 router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (req.user?.role !== 'admin') {
@@ -90,7 +74,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     res.status(201).json(newUser);
   } catch (error) {
     console.error('User creation error:', error);
-    res.status(500).json({ message: 'Failed to create user' });
+    res.status(500).json({ message: error.message || 'Failed to create user' });
   }
 });
 

@@ -50,11 +50,6 @@ interface User {
   created_at: string;
 }
 
-interface Unit {
-  id: number;
-  name: string;
-}
-
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required"),
@@ -80,7 +75,7 @@ export default function UsersPage() {
       email: "",
       name: "",
       role: "user",
-      unit: undefined,
+      unit: "",
     },
   });
 
@@ -89,15 +84,6 @@ export default function UsersPage() {
     queryFn: async () => {
       const response = await fetch("/api/users");
       if (!response.ok) throw new Error("Failed to fetch users");
-      return response.json();
-    },
-  });
-
-  const { data: units = [] } = useQuery<Unit[]>({
-    queryKey: ["/api/users/units"],
-    queryFn: async () => {
-      const response = await fetch("/api/users/units");
-      if (!response.ok) throw new Error("Failed to fetch units");
       return response.json();
     },
   });
@@ -375,23 +361,9 @@ export default function UsersPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Unit</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a unit" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {units.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.name}>
-                            {unit.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input placeholder="Enter unit name" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
