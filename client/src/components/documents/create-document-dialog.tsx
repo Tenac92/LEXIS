@@ -129,18 +129,17 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
         return data.map((item: any) => {
           let expenditureTypes: string[] = [];
-          try {
-            if (typeof item.expenditure_type === 'string') {
-              expenditureTypes = item.expenditure_type
-                .replace(/[{}"\[\]]/g, '')
-                .split(',')
-                .map((type: string) => type.trim())
-                .filter((type: string) => type.length > 0);
-            } else if (Array.isArray(item.expenditure_type)) {
-              expenditureTypes = item.expenditure_type;
-            }
-          } catch (e) {
-            console.error('Error parsing expenditure types:', e);
+
+          // Handle different formats of expenditure_type
+          if (Array.isArray(item.expenditure_type)) {
+            expenditureTypes = item.expenditure_type;
+          } else if (typeof item.expenditure_type === 'string') {
+            // Remove PostgreSQL array syntax characters and split
+            expenditureTypes = item.expenditure_type
+              .replace(/[{}"]/g, '')
+              .split(',')
+              .map((type: string) => type.trim())
+              .filter((type: string) => type.length > 0);
           }
 
           return {
@@ -374,6 +373,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
+                          disabled={!selectedProject?.expenditure_types?.length}
                         >
                           <FormControl>
                             <SelectTrigger>
