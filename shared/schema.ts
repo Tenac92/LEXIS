@@ -163,7 +163,11 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
     lastname: z.string(),
     firstname: z.string(),
     installment: z.number()
-  }))
+  })),
+  project_id: z.string(),
+  unit: z.string(),
+  expenditure_type: z.string(),
+  total_amount: z.number()
 });
 export const insertRecipientSchema = createInsertSchema(recipients);
 export const insertProjectSchema = createInsertSchema(projects);

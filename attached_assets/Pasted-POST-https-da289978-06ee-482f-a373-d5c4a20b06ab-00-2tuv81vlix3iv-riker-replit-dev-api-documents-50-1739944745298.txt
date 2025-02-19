@@ -1,0 +1,47 @@
+POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents 500 (Internal Server Error)
+onSubmit @ create-document-dialog.tsx:134
+(ανώνυμες) @ chunk-RBMNEPGM.js?v=f065ee67:1675
+await in (ανώνυμες)
+onClick @ create-document-dialog.tsx:453
+callCallback2 @ chunk-WERSD76P.js?v=f065ee67:3674
+invokeGuardedCallbackDev @ chunk-WERSD76P.js?v=f065ee67:3699
+invokeGuardedCallback @ chunk-WERSD76P.js?v=f065ee67:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-WERSD76P.js?v=f065ee67:3736
+executeDispatch @ chunk-WERSD76P.js?v=f065ee67:7014
+processDispatchQueueItemsInOrder @ chunk-WERSD76P.js?v=f065ee67:7034
+processDispatchQueue @ chunk-WERSD76P.js?v=f065ee67:7043
+dispatchEventsForPlugins @ chunk-WERSD76P.js?v=f065ee67:7051
+(ανώνυμες) @ chunk-WERSD76P.js?v=f065ee67:7174
+batchedUpdates$1 @ chunk-WERSD76P.js?v=f065ee67:18913
+batchedUpdates @ chunk-WERSD76P.js?v=f065ee67:3579
+dispatchEventForPluginEventSystem @ chunk-WERSD76P.js?v=f065ee67:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-WERSD76P.js?v=f065ee67:5478
+dispatchEvent @ chunk-WERSD76P.js?v=f065ee67:5472
+dispatchDiscreteEvent @ chunk-WERSD76P.js?v=f065ee67:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:155 Submission error: Error: Failed to create document
+    at onSubmit (create-document-dialog.tsx:143:15)
+    at async chunk-RBMNEPGM.js?v=f065ee67:1675:9
+onSubmit @ create-document-dialog.tsx:155
+await in onSubmit
+(ανώνυμες) @ chunk-RBMNEPGM.js?v=f065ee67:1675
+await in (ανώνυμες)
+onClick @ create-document-dialog.tsx:453
+callCallback2 @ chunk-WERSD76P.js?v=f065ee67:3674
+invokeGuardedCallbackDev @ chunk-WERSD76P.js?v=f065ee67:3699
+invokeGuardedCallback @ chunk-WERSD76P.js?v=f065ee67:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-WERSD76P.js?v=f065ee67:3736
+executeDispatch @ chunk-WERSD76P.js?v=f065ee67:7014
+processDispatchQueueItemsInOrder @ chunk-WERSD76P.js?v=f065ee67:7034
+processDispatchQueue @ chunk-WERSD76P.js?v=f065ee67:7043
+dispatchEventsForPlugins @ chunk-WERSD76P.js?v=f065ee67:7051
+(ανώνυμες) @ chunk-WERSD76P.js?v=f065ee67:7174
+batchedUpdates$1 @ chunk-WERSD76P.js?v=f065ee67:18913
+batchedUpdates @ chunk-WERSD76P.js?v=f065ee67:3579
+dispatchEventForPluginEventSystem @ chunk-WERSD76P.js?v=f065ee67:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-WERSD76P.js?v=f065ee67:5478
+dispatchEvent @ chunk-WERSD76P.js?v=f065ee67:5472
+dispatchDiscreteEvent @ chunk-WERSD76P.js?v=f065ee67:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
