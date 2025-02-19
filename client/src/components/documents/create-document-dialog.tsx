@@ -100,13 +100,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedProject = projects.find(p => p.mis === selectedProjectId);
 
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
-    queryKey: ["/api/catalog", selectedProjectId, "expenditure-types"],
+    queryKey: ["expenditureTypes", selectedProjectId],
     queryFn: async () => {
-      if (!selectedProjectId) throw new Error('No project selected');
-      const response = await fetch(`/api/catalog/${selectedProjectId}/expenditure-types`);
-      if (!response.ok) throw new Error('Failed to fetch expenditure types');
-      const data = await response.json();
-      return data.expenditure_types || [];
+      // Use the expenditure_type array from the selected project
+      const project = projects.find(p => p.mis === selectedProjectId);
+      return project?.expenditure_type || [];
     },
     enabled: Boolean(selectedProjectId)
   });
