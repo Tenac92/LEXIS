@@ -2,6 +2,7 @@ import { users, type User, type GeneratedDocument, type InsertGeneratedDocument,
 import { supabase } from "./db";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import { PostgrestError } from '@supabase/supabase-js';
 
 const MemoryStoreSession = MemoryStore(session);
 
@@ -22,7 +23,6 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    // Use in-memory session store for now
     this.sessionStore = new MemoryStoreSession({
       checkPeriod: 86400000 // prune expired entries every 24h
     });
@@ -35,7 +35,7 @@ export class DatabaseStorage implements IStorage {
       const { data, error } = await supabase
         .from('users')
         .select('units')
-        .eq('id', userId)
+        .eq('id', userId.toString())
         .single();
 
       if (error) {
@@ -43,15 +43,12 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
 
-      console.log('[Storage] Raw units data:', data?.units);
-
       if (!data?.units) {
         console.log('[Storage] No units found for user');
         return [];
       }
 
-      // Handle units whether it's a JSON string or array
-      let units: string[];
+      let units: string[] = [];
       if (typeof data.units === 'string') {
         try {
           units = JSON.parse(data.units);
@@ -61,9 +58,6 @@ export class DatabaseStorage implements IStorage {
         }
       } else if (Array.isArray(data.units)) {
         units = data.units;
-      } else {
-        console.log('[Storage] Unexpected units format:', typeof data.units);
-        return [];
       }
 
       console.log('[Storage] Processed units:', units);
@@ -79,11 +73,11 @@ export class DatabaseStorage implements IStorage {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('id', id)
+        .eq('id', id.toString())
         .single();
 
       if (error) throw error;
-      return data;
+      return data || undefined;
     } catch (error) {
       console.error('[Storage] Error fetching user:', error);
       throw error;
@@ -99,7 +93,7 @@ export class DatabaseStorage implements IStorage {
         .single();
 
       if (error) throw error;
-      return data;
+      return data || undefined;
     } catch (error) {
       console.error('[Storage] Error fetching user by email:', error);
       throw error;
@@ -110,11 +104,13 @@ export class DatabaseStorage implements IStorage {
     try {
       const { data, error } = await supabase
         .from('generated_documents')
-        .insert(doc)
+        .insert([doc])
         .select()
         .single();
 
       if (error) throw error;
+      if (!data) throw new Error('No data returned from insert');
+
       return data;
     } catch (error) {
       console.error('[Storage] Error creating generated document:', error);
@@ -127,11 +123,11 @@ export class DatabaseStorage implements IStorage {
       const { data, error } = await supabase
         .from('generated_documents')
         .select('*')
-        .eq('id', id)
+        .eq('id', id.toString())
         .single();
 
       if (error) throw error;
-      return data;
+      return data || undefined;
     } catch (error) {
       console.error('[Storage] Error fetching generated document:', error);
       throw error;
@@ -155,12 +151,18 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectCatalog(): Promise<ProjectCatalog[]> {
     try {
+      console.log('[Storage] Fetching project catalog');
       const { data, error } = await supabase
         .from('project_catalog')
         .select('*')
         .order('mis');
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Storage] Error fetching project catalog:', error);
+        throw error;
+      }
+
+      console.log('[Storage] Project catalog data:', data?.length || 0, 'items');
       return data || [];
     } catch (error) {
       console.error('[Storage] Error fetching project catalog:', error);
@@ -170,13 +172,19 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectCatalogByUnit(unit: string): Promise<ProjectCatalog[]> {
     try {
+      console.log('[Storage] Fetching project catalog for unit:', unit);
       const { data, error } = await supabase
         .from('project_catalog')
         .select('*')
         .contains('implementing_agency', [unit])
         .order('mis');
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Storage] Error fetching project catalog by unit:', error);
+        throw error;
+      }
+
+      console.log('[Storage] Project catalog data for unit:', data?.length || 0, 'items');
       return data || [];
     } catch (error) {
       console.error('[Storage] Error fetching project catalog by unit:', error);
@@ -189,7 +197,7 @@ export class DatabaseStorage implements IStorage {
       const { data, error } = await supabase
         .from('project_catalog')
         .select('expenditure_type')
-        .eq('id', projectId)
+        .eq('mis', projectId)
         .single();
 
       if (error) throw error;

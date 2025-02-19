@@ -36,9 +36,13 @@ app.use((req, res, next) => {
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  // Add session diagnostic logging
+  // Add detailed request logging
   if (req.path.startsWith('/api')) {
     log(`[Request] ${req.method} ${path}`);
+    log(`[Headers] ${JSON.stringify(req.headers)}`);
+    if (req.method !== 'GET') {
+      log(`[Body] ${JSON.stringify(req.body)}`);
+    }
     log(`[Session] ${req.session ? 'Active' : 'Not initialized'}`);
     if (req.session?.user) {
       log(`[Session] User: ${JSON.stringify(req.session.user)}`);
@@ -96,8 +100,8 @@ app.use((req, res, next) => {
       res.sendFile(join(__dirname, '../client/index.html'));
     });
 
-    // Get port from environment variable with fallback
-    const PORT = parseInt(process.env.PORT || '3000', 10);
+    // Use port 5000 to match the expected configuration
+    const PORT = parseInt(process.env.PORT || '5000', 10);
     const HOST = '0.0.0.0'; // Bind to all network interfaces
 
     // Add error handler for the server

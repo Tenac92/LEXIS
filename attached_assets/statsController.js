@@ -2,6 +2,7 @@ const express = require("express");
 const { authenticateToken } = require("../middleware/authMiddleware.js");
 const { supabase } = require("../config/db.js");
 const rateLimit = require('express-rate-limit');
+const { projectHelpers } = require('@shared/models/project');
 const router = express.Router();
 
 // Constants
@@ -24,31 +25,44 @@ router.use(apiLimiter);
 router.get("/all", authenticateToken, async (req, res) => {
   try {
     if (!req.user?.id) {
-      res.status(401).json({ message: 'User not authenticated' });
-      return;
+      return res.status(401).json({ message: 'User not authenticated' });
     }
 
     const { searchQuery, pagination } = parseQueryParams(req.query);
     const query = buildDatabaseQuery(searchQuery);
-    const result = await executeQuery(query, pagination);
 
-    if (!result?.data) {
-      res.status(404).json({
-        status: 'error',
-        message: 'No data found'
+    try {
+      const result = await executeQuery(query, pagination);
+      if (!result?.data) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'No data found'
+        });
+      }
+
+      // Validate each project using the schema
+      const validatedData = result.data.map(project => {
+        try {
+          return projectHelpers.validateProject(project);
+        } catch (error) {
+          console.error(`Validation error for project ${project.mis}:`, error);
+          return null;
+        }
+      }).filter(Boolean);
+
+      res.json({
+        data: formatResponseData(validatedData),
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total: result.count,
+          pages: Math.ceil(result.count / pagination.limit),
+        },
       });
-      return;
+    } catch (error) {
+      console.error('Query execution error:', error);
+      throw error;
     }
-
-    res.json({
-      data: formatResponseData(result.data),
-      pagination: {
-        page: pagination.page,
-        limit: pagination.limit,
-        total: result.count,
-        pages: Math.ceil(result.count / pagination.limit),
-      },
-    });
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error:`, error);
     if (!res.headersSent) {
@@ -66,13 +80,12 @@ router.post("/action/:id", authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { actionType } = req.body;
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     if (!['approve', 'reject', 'review'].includes(actionType)) {
       return res.status(400).json({ message: 'Invalid action type' });
     }
 
-    // Update project status
     const { error } = await supabase
       .from('project_catalog')
       .update({ 
@@ -117,15 +130,17 @@ function parseQueryParams(query) {
 }
 
 function buildDatabaseQuery(searchTerm) {
-  let query = supabase.from("project_catalog").select("*", { count: "exact" });
+  let query = supabase
+    .from("project_catalog")
+    .select("*", { count: "exact" });
 
   if (searchTerm) {
     const sanitizedTerm = searchTerm.replace(/[\\%_'";]/g, '\\$&');
 
     if (/^\d+$/.test(searchTerm)) {
-      query = query.filter(`mis::text`, 'ilike', `%${sanitizedTerm}%`);
+      query = query.filter('mis', 'ilike', `%${sanitizedTerm}%`);
     } else {
-      query = query.or(`e069.ilike.%${sanitizedTerm}%,na271.ilike.%${sanitizedTerm}%,na853.ilike.%${sanitizedTerm}%,event_description.ilike.%${sanitizedTerm}%,project_title.ilike.%${sanitizedTerm}%,region.ilike.%${sanitizedTerm}%,municipality.ilike.%${sanitizedTerm}%`);
+      query = query.or(`event_description.ilike.%${sanitizedTerm}%,project_title.ilike.%${sanitizedTerm}%,region.ilike.%${sanitizedTerm}%,municipality.ilike.%${sanitizedTerm}%`);
     }
   }
 
@@ -135,9 +150,14 @@ function buildDatabaseQuery(searchTerm) {
 async function executeQuery(query, pagination) {
   try {
     const { data, error, count } = await query
-      .range(pagination.start, pagination.end);
+      .range(pagination.start, pagination.end)
+      .order('mis', { ascending: true });
 
-    if (error) throw new Error(`Database query failed: ${error.message}`);
+    if (error) {
+      console.error('Database query error:', error);
+      throw new Error(`Database query failed: ${error.message}`);
+    }
+
     return { data: data || [], count: count || 0 };
   } catch (err) {
     console.error('Query execution error:', err);
@@ -148,7 +168,7 @@ async function executeQuery(query, pagination) {
 function formatResponseData(data) {
   return data.map(item => ({
     id: item.id,
-    MIS: item.mis,
+    mis: item.mis,
     e069: item.e069,
     budget_e069: item.budget_e069,
     na271: item.na271,
@@ -164,11 +184,10 @@ function formatResponseData(data) {
     municipality: item.municipality,
     implementing_agency: item.implementing_agency,
     expenditure_type: item.expenditure_type,
-    KYA: item.kya,
-    FEK: item.fek,
-    ADA: item.ada,
     status: item.status,
-    procedures: item.procedures
+    procedures: item.procedures,
+    created_at: item.created_at,
+    updated_at: item.updated_at
   }));
 }
 
