@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { supabase } from "../db";
 import * as XLSX from 'xlsx';
 import { storage } from "../storage";
-import type { ProjectCatalog } from "@shared/schema";
+import { Project, projectHelpers } from "@shared/models/project";
 
 export async function listProjects(req: Request, res: Response) {
   const { unit } = req.query;
@@ -12,26 +12,29 @@ export async function listProjects(req: Request, res: Response) {
       ? await storage.getProjectCatalogByUnit(unit as string)
       : await storage.getProjectCatalog();
 
-    // Map projects to include all necessary fields
-    const formattedProjects = projects.map((project: ProjectCatalog) => ({
-      id: project.id,
-      mis: project.mis,
-      na853: project.na853,
-      event_description: project.event_description,
-      implementing_agency: project.implementing_agency,
-      region: project.region,
-      municipality: project.municipality,
-      budget_na853: project.budget_na853,
-      budget_na271: project.budget_na271,
-      budget_e069: project.budget_e069,
-      ethsia_pistosi: project.ethsia_pistosi,
-      status: project.status,
-      event_type: project.event_type,
-      event_year: project.event_year,
-      procedures: project.procedures,
-      created_at: project.created_at,
-      updated_at: project.updated_at
-    }));
+    // Map projects and validate with our model
+    const formattedProjects = projects.map(project => {
+      const validatedProject = projectHelpers.validateProject(project);
+      return {
+        id: validatedProject.id,
+        mis: validatedProject.mis,
+        na853: validatedProject.na853,
+        event_description: validatedProject.event_description,
+        implementing_agency: validatedProject.implementing_agency,
+        region: validatedProject.region,
+        municipality: validatedProject.municipality,
+        budget_na853: validatedProject.budget_na853,
+        budget_na271: validatedProject.budget_na271,
+        budget_e069: validatedProject.budget_e069,
+        ethsia_pistosi: validatedProject.ethsia_pistosi,
+        status: validatedProject.status,
+        event_type: validatedProject.event_type,
+        event_year: validatedProject.event_year,
+        procedures: validatedProject.procedures,
+        created_at: validatedProject.created_at,
+        updated_at: validatedProject.updated_at
+      };
+    });
 
     res.json(formattedProjects);
   } catch (error) {
@@ -67,37 +70,11 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
   try {
     const projects = await storage.getProjectCatalog();
 
-    // Format projects for Excel with all fields
-    const formattedProjects = projects.map(project => ({
-      'MIS': project.mis,
-      'NA853': project.na853,
-      'E069': project.e069,
-      'NA271': project.na271,
-      'Event Description': project.event_description,
-      'Project Title': project.project_title,
-      'Event Type': project.event_type,
-      'Event Year': project.event_year,
-      'Region': project.region,
-      'Regional Unit': project.regional_unit,
-      'Municipality': project.municipality,
-      'Implementing Agency': Array.isArray(project.implementing_agency) 
-        ? project.implementing_agency.join(', ') 
-        : project.implementing_agency,
-      'Budget NA853': project.budget_na853,
-      'Budget E069': project.budget_e069,
-      'Budget NA271': project.budget_na271,
-      'Annual Credit': project.ethsia_pistosi,
-      'Status': project.status,
-      'KYA': project.kya,
-      'FEK': project.fek,
-      'ADA': project.ada,
-      'Expenditure Type': Array.isArray(project.expenditure_type)
-        ? project.expenditure_type.join(', ')
-        : project.expenditure_type,
-      'Procedures': project.procedures,
-      'Created At': project.created_at ? new Date(project.created_at).toLocaleDateString() : '',
-      'Updated At': project.updated_at ? new Date(project.updated_at).toLocaleDateString() : ''
-    }));
+    // Use our model's helper function to format projects for Excel
+    const formattedProjects = projects.map(project => {
+      const validatedProject = projectHelpers.validateProject(project);
+      return projectHelpers.formatForExcel(validatedProject);
+    });
 
     // Create workbook and worksheet
     const wb = XLSX.utils.book_new();
@@ -139,6 +116,14 @@ export async function bulkUpdateProjects(req: Request, res: Response) {
       }
 
       try {
+        // Validate update data against our model
+        const validData = projectHelpers.validateProject({
+          ...update.data,
+          id: 0, // Placeholder for validation
+          created_at: new Date(),
+          updated_at: new Date()
+        });
+
         const { error } = await supabase
           .from("project_catalog")
           .update(update.data)
