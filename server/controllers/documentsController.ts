@@ -1,11 +1,7 @@
 import { Router } from 'express';
-import { db } from '../db';
-import { generatedDocuments, insertGeneratedDocumentSchema } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { supabase } from '../db';
+import { insertDocumentSchema } from '@shared/schema';
 import type { Database } from '@shared/schema';
-import { DocumentFormatter } from '../utils/DocumentFormatter';
-import { TemplateManager } from '../utils/TemplateManager';
-import { VersionController } from '../utils/VersionController';
 
 interface Recipient {
   lastname: string;
@@ -21,45 +17,47 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const { status, unit, dateFrom, dateTo, amountFrom, amountTo, user } = req.query;
-    let query = db.select().from(generatedDocuments);
+    let query = supabase.from('documents').select('*');
 
-    // Filter by user's role and ID - fixed the undefined user ID issue
+    // Filter by user's role and ID
     if (req.user?.role !== 'admin' && req.user?.id) {
-      query = query.where(eq(generatedDocuments.generated_by, req.user.id));
+      query = query.eq('created_by', req.user.id);
     }
 
     // Apply filters
     if (status && status !== 'all') {
-      query = query.where(eq(generatedDocuments.status, status as string));
+      query = query.eq('status', status as string);
     }
     if (unit && unit !== 'all') {
-      query = query.where(eq(generatedDocuments.unit, unit as string));
+      query = query.eq('unit', unit as string);
     }
     if (dateFrom) {
-      query = query.where(generatedDocuments.created_at >= dateFrom as string);
+      query = query.gte('created_at', dateFrom as string);
     }
     if (dateTo) {
-      query = query.where(generatedDocuments.created_at <= dateTo as string);
+      query = query.lte('created_at', dateTo as string);
     }
     if (amountFrom && !isNaN(Number(amountFrom))) {
-      query = query.where(generatedDocuments.total_amount >= Number(amountFrom));
+      query = query.gte('total_amount', Number(amountFrom));
     }
     if (amountTo && !isNaN(Number(amountTo))) {
-      query = query.where(generatedDocuments.total_amount <= Number(amountTo));
+      query = query.lte('total_amount', Number(amountTo));
     }
 
-    // User/Recipient filter with proper text search
+    // User/Recipient filter
     if (user) {
       const searchTerm = (user as string).toLowerCase().trim();
       if (searchTerm) {
-        //Drizzle-ORM doesn't directly support JSONB array searching like Supabase's `cs` operator.  A more complex query or database schema change might be needed.  This is a limitation of switching ORMs.
-        //For now, the user filter is removed to avoid errors.  A more robust solution would be needed for a production-ready app.
+        // Use Supabase text search for recipients JSON array
+        query = query.textSearch('recipients', searchTerm);
       }
     }
 
-    query = query.orderBy(generatedDocuments.created_at, 'desc');
+    query = query.order('created_at', { ascending: false });
 
-    const data = await query;
+    const { data, error } = await query;
+
+    if (error) throw error;
 
     res.json(data || []);
   } catch (error) {
@@ -74,16 +72,19 @@ router.post('/', async (req, res) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const validatedData = insertGeneratedDocumentSchema.parse({
+    const validatedData = insertDocumentSchema.parse({
       ...req.body,
-      generated_by: req.user.id,
+      created_by: req.user.id,
       created_at: new Date().toISOString()
     });
 
-    const [document] = await db
-      .insert(generatedDocuments)
-      .values(validatedData)
-      .returning();
+    const { data: document, error } = await supabase
+      .from('documents')
+      .insert([validatedData])
+      .select()
+      .single();
+
+    if (error) throw error;
 
     res.status(201).json(document);
   } catch (error) {
@@ -100,11 +101,13 @@ router.post('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const [document] = await db
-      .select()
-      .from(generatedDocuments)
-      .where(eq(generatedDocuments.id, parseInt(req.params.id)));
+    const { data: document, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', parseInt(req.params.id))
+      .single();
 
+    if (error) throw error;
     if (!document) {
       return res.status(404).json({ message: 'Document not found' });
     }
@@ -118,18 +121,22 @@ router.get('/:id', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   try {
-    const { data, error } = await db.update(generatedDocuments).set({
-      ...req.body,
-      updated_by: req.user?.id,
-      updated_at: new Date().toISOString()
-    }).where(eq(generatedDocuments.id, parseInt(req.params.id))).returning();
+    const { data: document, error } = await supabase
+      .from('documents')
+      .update({
+        ...req.body,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', parseInt(req.params.id))
+      .select()
+      .single();
 
     if (error) throw error;
-    if (!data || data.length === 0) {
+    if (!document) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    res.json(data[0]);
+    res.json(document);
   } catch (error) {
     console.error('Error updating document:', error);
     res.status(500).json({ message: 'Failed to update document' });
@@ -144,10 +151,11 @@ router.get('/generated/:id/export', async (req, res) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const [data] = await db
+    const { data } = await supabase
+      .from('documents')
       .select('*, recipients')
-      .from(generatedDocuments)
-      .where(eq(generatedDocuments.id, parseInt(id)));
+      .eq('id', parseInt(id))
+      .single();
 
     if (!data) {
       return res.status(404).json({ message: 'Document not found' });
@@ -229,10 +237,11 @@ router.post('/generated/:id/export', async (req, res) => {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const [document] = await db
+    const { data: document } = await supabase
+      .from('documents')
       .select('*, recipients')
-      .from(generatedDocuments)
-      .where(eq(generatedDocuments.id, parseInt(id)));
+      .eq('id', parseInt(id))
+      .single();
 
     if (!document) {
       return res.status(404).json({ message: 'Document not found' });

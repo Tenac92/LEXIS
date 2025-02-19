@@ -15,56 +15,90 @@ export const users = pgTable("users", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
-// Generated Documents table
-export const generatedDocuments = pgTable("generated_documents", {
+// Units table
+export const units = pgTable("units", {
   id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull(),
+  active: boolean("active").default(true),
   created_at: timestamp("created_at").defaultNow(),
-  generated_by: text("generated_by").references(() => users.id),
-  recipients: jsonb("recipients").notNull(),
-  protocol_date: timestamp("protocol_date"),
-  total_amount: numeric("total_amount").notNull(),
-  document_date: timestamp("document_date"),
-  status: text("status").default("pending"),
-  protocol_number_input: text("protocol_number_input"),
-  expenditure_type: text("expenditure_type").notNull(),
-  project_id: text("project_id").notNull(),
-  project_na853: text("project_na853"),
+});
+
+// Projects table
+export const projects = pgTable("projects", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  unit_id: integer("unit_id").references(() => units.id),
+  expenditure_types: text("expenditure_types").array(),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+});
+
+// Budgets table
+export const budgets = pgTable("budgets", {
+  id: serial("id").primaryKey(),
+  project_id: integer("project_id").references(() => projects.id),
+  total_budget: numeric("total_budget").notNull(),
+  annual_budget: numeric("annual_budget").notNull(),
+  current_budget: numeric("current_budget").notNull(),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+});
+
+// Documents table
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
   unit: text("unit").notNull(),
-  department: text("department"),
-  comments: text("comments"),
-  original_document_id: integer("original_document_id"),
-  updated_by: text("updated_by").references(() => users.id),
+  project_id: text("project_id").notNull(),
+  expenditure_type: text("expenditure_type").notNull(),
+  recipients: jsonb("recipients").notNull(),
+  total_amount: numeric("total_amount").notNull(),
+  status: text("status").default("draft"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+  created_by: integer("created_by").references(() => users.id),
 });
 
 // Types
 export type User = typeof users.$inferSelect;
-export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
+export type Unit = typeof units.$inferSelect;
+export type Project = typeof projects.$inferSelect;
+export type Budget = typeof budgets.$inferSelect;
+export type Document = typeof documents.$inferSelect;
 
-// Recipient type used in the recipients jsonb field
+// Recipient schema for documents
 export const recipientSchema = z.object({
-  lastname: z.string().min(1, "Last name is required"),
-  firstname: z.string().min(1, "First name is required"),
-  afm: z.string().min(9, "AFM must be at least 9 characters"),
-  amount: z.number().positive("Amount must be positive"),
-  installment: z.number().int().positive("Installment must be a positive integer"),
-  status: z.string().default("pending")
+  firstname: z.string().min(2, "First name must be at least 2 characters"),
+  lastname: z.string().min(2, "Last name must be at least 2 characters"),
+  afm: z.string().length(9, "AFM must be exactly 9 digits"),
+  amount: z.number().min(0.01, "Amount must be greater than 0"),
+  installment: z.number().int().min(1).max(12, "Installment must be between 1 and 12")
 });
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users);
-export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
+export const insertUnitSchema = createInsertSchema(units);
+export const insertProjectSchema = createInsertSchema(projects);
+export const insertBudgetSchema = createInsertSchema(budgets);
+export const insertDocumentSchema = createInsertSchema(documents, {
   recipients: z.array(recipientSchema),
   project_id: z.string().min(1, "Project ID is required"),
   unit: z.string().min(1, "Unit is required"),
-  expenditure_type: z.string().min(1, "Expenditure type is required"),
-  total_amount: z.number().positive("Total amount must be positive")
+  expenditure_type: z.string().min(1, "Expenditure type is required")
 });
 
+// Export types for insert operations
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
+export type InsertUnit = z.infer<typeof insertUnitSchema>;
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type InsertBudget = z.infer<typeof insertBudgetSchema>;
+export type InsertDocument = z.infer<typeof insertDocumentSchema>;
 
 // Export database type
 export type Database = {
   users: User;
-  generated_documents: GeneratedDocument;
+  units: Unit;
+  projects: Project;
+  budgets: Budget;
+  documents: Document;
 };

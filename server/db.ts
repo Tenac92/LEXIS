@@ -1,15 +1,21 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { createClient } from '@supabase/supabase-js';
 import * as schema from "@shared/schema";
 
-if (!process.env.DATABASE_URL) {
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "SUPABASE_URL and SUPABASE_KEY must be set in environment variables",
   );
 }
 
-const queryClient = postgres(process.env.DATABASE_URL);
-export const db = drizzle(queryClient, { schema });
+export const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY,
+  {
+    auth: {
+      persistSession: false
+    }
+  }
+);
 
-// For direct SQL queries if needed
-export const pool = queryClient;
+// Export for schema type usage
+export const db = supabase;

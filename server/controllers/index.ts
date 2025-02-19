@@ -4,12 +4,9 @@ import documentsController from './documentsController';
 import recipientsController from './recipientsController';
 import statsController from './statsController';
 import usersController from './usersController';
-import generatedDocumentsController from './generatedDocuments';
-import attachmentsController from './attachments';
+import authController from './authController';
 
 const router = express.Router();
-
-import authController from './authController';
 
 // Mount auth controller without authentication middleware
 router.use('/auth', authController);
@@ -19,8 +16,6 @@ router.use('/documents', authenticateSession, documentsController);
 router.use('/recipients', authenticateSession, recipientsController);
 router.use('/stats', authenticateSession, statsController);
 router.use('/users', authenticateSession, usersController);
-router.use('/generated', authenticateSession, generatedDocumentsController);
-router.use('/attachments', authenticateSession, attachmentsController);
 
 // Healthcheck endpoint
 router.get('/health', (_req, res) => {
