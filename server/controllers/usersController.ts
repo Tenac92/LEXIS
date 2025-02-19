@@ -21,7 +21,7 @@ router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res
     console.log('[Units] Fetching units from unit_det table');
     const { data: units, error } = await supabase
       .from('unit_det')
-      .select('implementing_agency');
+      .select('unit_nam');
 
     if (error) {
       console.error('[Units] Supabase query error:', error);
@@ -30,24 +30,11 @@ router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res
 
     console.log('[Units] Raw units data:', units);
 
-    // Extract unique unit names from implementing_agency field
+    // Extract unique unit names
     const uniqueUnits = new Set<string>();
     units?.forEach(unit => {
-      if (!unit.implementing_agency) return;
-
-      try {
-        const agency = unit.implementing_agency;
-        if (typeof agency === 'string') {
-          uniqueUnits.add(agency);
-        } else if (Array.isArray(agency)) {
-          agency.forEach(a => typeof a === 'string' && uniqueUnits.add(a));
-        } else if (typeof agency === 'object' && agency !== null) {
-          Object.values(agency).forEach(value => {
-            if (typeof value === 'string') uniqueUnits.add(value);
-          });
-        }
-      } catch (err) {
-        console.error('[Units] Error processing unit:', unit, err);
+      if (unit.unit_nam && typeof unit.unit_nam === 'string') {
+        uniqueUnits.add(unit.unit_nam);
       }
     });
 
@@ -56,10 +43,14 @@ router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res
     res.json(unitsList);
   } catch (error) {
     console.error('[Units] Units fetch error:', error);
-    res.status(500).json({ message: 'Failed to fetch units', error: error.message });
+    res.status(500).json({ 
+      message: 'Failed to fetch units', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
   }
 });
 
+// Get all users
 router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (req.user?.role !== 'admin') {
@@ -88,10 +79,14 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     res.json(users);
   } catch (error) {
     console.error('[Users] Users fetch error:', error);
-    res.status(500).json({ message: 'Failed to fetch users', error: error.message });
+    res.status(500).json({ 
+      message: 'Failed to fetch users', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
+// Create user
 router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (req.user?.role !== 'admin') {
@@ -124,10 +119,14 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     res.status(201).json(newUser);
   } catch (error) {
     console.error('[Users] User creation error:', error);
-    res.status(500).json({ message: error.message || 'Failed to create user' });
+    res.status(500).json({ 
+      message: 'Failed to create user', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
+// Delete user
 router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (req.user?.role !== 'admin') {
@@ -143,7 +142,10 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
     res.status(200).json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('[Users] User deletion error:', error);
-    res.status(500).json({ message: 'Failed to delete user' });
+    res.status(500).json({ 
+      message: 'Failed to delete user',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
