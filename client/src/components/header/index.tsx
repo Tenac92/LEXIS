@@ -18,7 +18,7 @@ export function Header() {
 
   const NavItems = () => (
     <>
-      <Link href="/dashboard">
+      <Link href="/">
         <Button variant="ghost" className="flex items-center gap-2">
           <LayoutDashboard className="h-4 w-4" />
           Dashboard
