@@ -19,15 +19,21 @@ interface Project {
   id: number;
   name: string;
   mis: string;
-  na853: string | null;
-  budget: number | null;
+  na853: string;
+  event_description: string;
+  budget_na853: number;
+  expenditure_types?: string[];
 }
 
 interface BudgetData {
-  budgetAmount: number;
-  ethsiaPistosi: number;
-  availableAmount: number;
-  totalSpent: number;
+  user_view: number;
+  ethsia_pistosi: number;
+  q1: number;
+  q2: number;
+  q3: number;
+  q4: number;
+  total_spent: number;
+  current_budget: number;
 }
 
 const createDocumentSchema = z.object({
@@ -80,18 +86,20 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   });
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
-    queryKey: ["/api/projects", form.watch("unit")],
+    queryKey: ["/api/catalog", form.watch("unit")],
     enabled: Boolean(form.watch("unit"))
   });
 
+  const selectedProject = projects.find(p => p.id.toString() === form.watch("project"));
+
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
-    queryKey: ["/api/projects", form.watch("project"), "expenditure-types"],
-    enabled: Boolean(form.watch("project"))
+    queryKey: ["/api/catalog", selectedProject?.mis, "expenditure-types"],
+    enabled: Boolean(selectedProject?.mis)
   });
 
   const { data: projectBudgetData } = useQuery<BudgetData>({
-    queryKey: ["/api/projects", form.watch("project"), "budget"],
-    enabled: Boolean(form.watch("project"))
+    queryKey: ["/api/budget", selectedProject?.mis],
+    enabled: Boolean(selectedProject?.mis)
   });
 
   // Update budget data when project budget data changes
@@ -108,18 +116,24 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const validateBudgetAmount = () => {
     if (!budgetData) return true;
     const totalAmount = calculateTotalAmount();
-    return totalAmount <= budgetData.availableAmount;
+    return totalAmount <= budgetData.current_budget;
   };
 
   const createDocumentMutation = useMutation({
     mutationFn: async (data: CreateDocumentForm) => {
       const formData = new FormData();
+      const selectedProject = projects.find(p => p.id.toString() === data.project);
+
+      if (!selectedProject) {
+        throw new Error("Selected project not found");
+      }
 
       formData.append("unit", data.unit);
-      formData.append("project", data.project);
+      formData.append("project_id", selectedProject.mis);
       formData.append("expenditure_type", data.expenditure_type);
       formData.append("recipients", JSON.stringify(data.recipients));
 
+      // Append files with proper type information
       Object.entries(data.attachments).forEach(([type, file]) => {
         if (file) {
           formData.append(`attachment_${type}`, file);
@@ -261,6 +275,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           </DialogDescription>
         </DialogHeader>
 
+        {/* Progress Steps */}
         <div className="flex items-center justify-center mb-8">
           <nav className="flex items-center space-x-2">
             {steps.map((step, index) => (
@@ -286,6 +301,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
         <Form {...form}>
           <form onSubmit={(e) => { e.preventDefault(); handleNextStep(); }} className="space-y-6">
+            {/* Unit Selection Step */}
             {currentStep === 0 && (
               <FormField
                 control={form.control}
@@ -317,8 +333,34 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               />
             )}
 
+            {/* Project Selection Step */}
             {currentStep === 1 && (
               <div className="space-y-4">
+                {budgetData && (
+                  <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {budgetData.current_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
+                        <p className="text-2xl font-bold text-gray-700">
+                          {budgetData.user_view.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
+                        <p className="text-2xl font-bold text-gray-700">
+                          {budgetData.ethsia_pistosi.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <FormField
                   control={form.control}
                   name="project"
@@ -344,7 +386,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                               key={project.id.toString()}
                               value={project.id.toString()}
                             >
-                              {project.na853 ? `${project.na853} - ${project.name}` : project.name}
+                              {project.na853 ? `${project.na853} - ${project.event_description}` : project.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -371,11 +413,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {expenditureTypes.map((type, index) => (
-                            <SelectItem
-                              key={`type-${index}`}
-                              value={type}
-                            >
+                          {expenditureTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
                               {type}
                             </SelectItem>
                           ))}
@@ -385,29 +424,17 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                     </FormItem>
                   )}
                 />
-
-                {budgetData && (
-                  <div className="mt-4 p-4 bg-muted rounded-lg">
-                    <h3 className="text-sm font-medium mb-2">Budget Information</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <span className="text-sm text-muted-foreground">Total Budget:</span>
-                        <p className="font-medium">{budgetData.budgetAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm text-muted-foreground">Available Amount:</span>
-                        <p className="font-medium">{budgetData.availableAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
+            {/* Recipients Step */}
             {currentStep === 2 && (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Recipients</h3>
+                  <div>
+                    <h3 className="text-lg font-medium">Recipients</h3>
+                    <p className="text-sm text-gray-500">Add up to 10 recipients</p>
+                  </div>
                   <Button
                     type="button"
                     onClick={addRecipient}
@@ -418,7 +445,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 </div>
 
                 {form.watch("recipients")?.map((recipient, index) => (
-                  <div key={index} className="grid grid-cols-5 gap-4 p-4 border rounded-lg">
+                  <div key={index} className="grid grid-cols-6 gap-4 p-4 border rounded-lg">
                     <FormField
                       control={form.control}
                       name={`recipients.${index}.firstname`}
@@ -467,8 +494,9 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           <FormControl>
                             <Input
                               type="number"
+                              step="0.01"
                               {...field}
-                              onChange={e => field.onChange(parseFloat(e.target.value))}
+                              onChange={(e) => field.onChange(parseFloat(e.target.value))}
                             />
                           </FormControl>
                           <FormMessage />
@@ -485,7 +513,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                             <Input
                               type="number"
                               {...field}
-                              onChange={e => field.onChange(parseInt(e.target.value))}
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
                               min={1}
                               max={12}
                             />
@@ -507,13 +535,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               </div>
             )}
 
+            {/* Attachments Step */}
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4">
                   <FormField
                     control={form.control}
                     name="attachments.main"
-                    render={({ field: { value, ...field } }) => (
+                    render={() => (
                       <FormItem>
                         <FormLabel>Main Document</FormLabel>
                         <FormControl>
@@ -521,7 +550,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                             type="file"
                             accept=".pdf,.doc,.docx"
                             onChange={(e) => handleFileChange("main")(e)}
-                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -532,7 +560,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                   <FormField
                     control={form.control}
                     name="attachments.support"
-                    render={({ field: { value, ...field } }) => (
+                    render={() => (
                       <FormItem>
                         <FormLabel>Supporting Document</FormLabel>
                         <FormControl>
@@ -540,7 +568,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                             type="file"
                             accept=".pdf,.doc,.docx"
                             onChange={(e) => handleFileChange("support")(e)}
-                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -551,7 +578,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                   <FormField
                     control={form.control}
                     name="attachments.additional"
-                    render={({ field: { value, ...field } }) => (
+                    render={() => (
                       <FormItem>
                         <FormLabel>Additional Document</FormLabel>
                         <FormControl>
@@ -559,7 +586,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                             type="file"
                             accept=".pdf,.doc,.docx"
                             onChange={(e) => handleFileChange("additional")(e)}
-                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -570,11 +596,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               </div>
             )}
 
+            {/* Navigation Buttons */}
             <div className="flex justify-between pt-6">
               <Button
                 type="button"
                 variant="outline"
-                onClick={handlePrevStep}
+                onClick={() => setCurrentStep((prev) => Math.max(prev - 1, 0))}
                 disabled={currentStep === 0}
               >
                 Previous
