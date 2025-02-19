@@ -1,0 +1,44 @@
+Failed to load resource: the server responded with a status of 400 ()
+create-document-dialog.tsx:118 Error fetching projects: Object
+queryFn @ create-document-dialog.tsx:118
+create-document-dialog.tsx:153 Projects fetch error: Object
+queryFn @ create-document-dialog.tsx:153
+rlzrtiufwxlljrtmpwsr.supabase.co/rest/v1/project_catalog?select=mis%2Cna853%2Cevent_description%2Cproject_title%2Cexpenditure_type&implementing_agency=eq.%CE%94%CE%91%CE%95%CE%A6%CE%9A-%CE%94%CE%95&order=mis.asc:1 
+        
+        
+       Failed to load resource: the server responded with a status of 400 ()
+create-document-dialog.tsx:118 Error fetching projects: Object
+queryFn @ create-document-dialog.tsx:118
+create-document-dialog.tsx:153 Projects fetch error: Object
+queryFn @ create-document-dialog.tsx:153
+@supabase_supabase-js.js?v=ead1ee53:3865 
+        
+        
+       GET https://rlzrtiufwxlljrtmpwsr.supabase.co/rest/v1/project_catalog?select=mis%2Cna853%2Cevent_description%2Cproject_title%2Cexpenditure_type&implementing_agency=eq.%CE%94%CE%91%CE%95%CE%A6%CE%9A-%CE%94%CE%95&order=mis.asc 400 (Bad Request)
+(ανώνυμες) @ @supabase_supabase-js.js?v=ead1ee53:3865
+(ανώνυμες) @ @supabase_supabase-js.js?v=ead1ee53:3886
+fulfilled @ @supabase_supabase-js.js?v=ead1ee53:3838
+Promise.then
+step @ @supabase_supabase-js.js?v=ead1ee53:3851
+(ανώνυμες) @ @supabase_supabase-js.js?v=ead1ee53:3853
+__awaiter6 @ @supabase_supabase-js.js?v=ead1ee53:3835
+(ανώνυμες) @ @supabase_supabase-js.js?v=ead1ee53:3876
+then @ @supabase_supabase-js.js?v=ead1ee53:89
+Εμφάνιση 8 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:118 Error fetching projects: {code: '22P02', details: 'Array value must start with "{" or dimension information.', hint: null, message: 'malformed array literal: "ΔΑΕΦΚ-ΔΕ"'}
+queryFn @ create-document-dialog.tsx:118
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=ead1ee53:840
+run @ @tanstack_react-query.js?v=ead1ee53:494
+(ανώνυμες) @ @tanstack_react-query.js?v=ead1ee53:519
+Εμφάνιση 3 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:153 Projects fetch error: {code: '22P02', details: 'Array value must start with "{" or dimension information.', hint: null, message: 'malformed array literal: "ΔΑΕΦΚ-ΔΕ"'}
+queryFn @ create-document-dialog.tsx:153
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=ead1ee53:840
+run @ @tanstack_react-query.js?v=ead1ee53:494
+(ανώνυμες) @ @tanstack_react-query.js?v=ead1ee53:519
+Εμφάνιση 3 ακόμη πλαισίων
+Εμφάνιση λιγότερων
