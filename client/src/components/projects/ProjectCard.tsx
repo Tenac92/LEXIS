@@ -63,7 +63,12 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
 
   const formatDate = (date: string | null) => {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('el-GR');
+    const formattedDate = new Date(date).toLocaleDateString('el-GR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    return formattedDate;
   };
 
   const formatCurrency = (amount: number | string | null) => {
@@ -72,6 +77,8 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
     return new Intl.NumberFormat("el-GR", {
       style: "currency",
       currency: "EUR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(numAmount);
   };
 
@@ -156,6 +163,8 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
     </>
   );
 
+  const dialogDescription = `Detailed information for project ${project.mis || ''} - ${project.event_description || ''}`;
+
   return (
     <Card className={`transition-shadow hover:shadow-lg ${view === "list" ? "flex" : ""}`}>
       <Dialog>
@@ -164,9 +173,12 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
             {cardContent}
           </CardContent>
         </DialogTrigger>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto" aria-describedby="dialog-description">
           <DialogHeader>
             <DialogTitle>Project Details</DialogTitle>
+            <DialogDescription id="dialog-description">
+              {dialogDescription}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-6">
             <div className="bg-gray-50 p-4 rounded-lg">
@@ -188,13 +200,21 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
                 <p className="text-gray-700">{getStatusText(project.status || '')}</p>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold">Budget</h3>
+                <h3 className="font-semibold">Budget NA853</h3>
                 <p className="text-gray-700">{formatCurrency(project.budget_na853)}</p>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-semibold">NA853</h3>
-                <p className="text-gray-700">{project.na853 || "N/A"}</p>
-              </div>
+              {project.budget_e069 && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold">Budget E069</h3>
+                  <p className="text-gray-700">{formatCurrency(project.budget_e069)}</p>
+                </div>
+              )}
+              {project.budget_na271 && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold">Budget NA271</h3>
+                  <p className="text-gray-700">{formatCurrency(project.budget_na271)}</p>
+                </div>
+              )}
               {project.ethsia_pistosi && (
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-semibold">Annual Credit</h3>
@@ -204,7 +224,19 @@ export function ProjectCard({ project, view = "grid" }: ProjectCardProps) {
               {project.implementing_agency && (
                 <div className="bg-gray-50 p-4 rounded-lg col-span-2">
                   <h3 className="font-semibold">Implementing Agency</h3>
-                  <p className="text-gray-700">{project.implementing_agency.join(", ")}</p>
+                  <p className="text-gray-700">{Array.isArray(project.implementing_agency) ? project.implementing_agency.join(", ") : project.implementing_agency}</p>
+                </div>
+              )}
+              {project.event_type && (
+                <div className="bg-gray-50 p-4 rounded-lg col-span-2">
+                  <h3 className="font-semibold">Event Type</h3>
+                  <p className="text-gray-700">{project.event_type}</p>
+                </div>
+              )}
+              {project.procedures && (
+                <div className="bg-gray-50 p-4 rounded-lg col-span-2">
+                  <h3 className="font-semibold">Procedures</h3>
+                  <p className="text-gray-700">{project.procedures}</p>
                 </div>
               )}
             </div>
