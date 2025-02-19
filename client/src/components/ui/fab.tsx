@@ -3,6 +3,12 @@ import { Button } from './button';
 import { useState } from 'react';
 import { CreateDocumentDialog } from '../documents/create-document-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function FAB() {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,24 +17,33 @@ export function FAB() {
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ scale: 0, opacity: 0 }}
+        initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 200, damping: 25 }}
       >
-        <Button
-          onClick={() => setIsOpen(true)}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full p-0 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out"
-        >
-          <motion.div
-            animate={{ rotate: isHovered ? 90 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Plus className="h-6 w-6" />
-          </motion.div>
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => setIsOpen(true)}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className="fixed bottom-6 right-6 h-14 w-14 rounded-full p-0 shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out"
+              >
+                <motion.div
+                  animate={{ rotate: isHovered ? 45 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Plus className="h-6 w-6" />
+                </motion.div>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>Δημιουργία Διαβιβαστικού</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         <CreateDocumentDialog 
           open={isOpen} 
