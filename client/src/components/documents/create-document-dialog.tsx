@@ -90,6 +90,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/catalog", selectedUnit],
     queryFn: async () => {
+      if (!selectedUnit) return [];
       const response = await fetch(`/api/catalog?unit=${encodeURIComponent(selectedUnit)}`);
       if (!response.ok) throw new Error('Failed to fetch projects');
       return response.json();
@@ -98,6 +99,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   });
 
   const selectedProject = projects.find(p => p.mis === selectedProjectId);
+
+  // Update project when unit changes
+  useEffect(() => {
+    if (!selectedUnit) {
+      form.setValue("project", "");
+      form.setValue("expenditure_type", "");
+    }
+  }, [selectedUnit, form]);
 
   const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useQuery<string[]>({
     queryKey: ["/api/catalog", selectedProjectId, "expenditure-types"],
@@ -388,14 +397,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                     <FormItem>
                       <FormLabel>Project</FormLabel>
                       <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          // Only reset expenditure type if project changed
-                          if (value !== field.value) {
-                            form.setValue("expenditure_type", "");
-                          }
-                        }}
-                        value={field.value}
+                        onValueChange={field.onChange}
+                        value={field.value || ""}
                         disabled={!selectedUnit || projectsLoading}
                       >
                         <FormControl>
