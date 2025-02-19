@@ -78,7 +78,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     queryKey: ["units"],
     queryFn: async () => {
       try {
-        console.log('Fetching units...');
         const { data, error } = await supabase
           .from('unit_det')
           .select('unit, unit_name')
@@ -94,7 +93,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           throw error;
         }
 
-        console.log('Units data:', data);
         return data.map((item: any) => ({
           id: item.unit,
           name: item.unit_name
@@ -113,7 +111,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       if (!selectedUnit) return [];
 
       try {
-        console.log('Fetching projects for unit:', selectedUnit);
         const { data, error } = await supabase
           .from('project_catalog')
           .select('mis, na853, event_description, project_title, expenditure_type')
@@ -130,13 +127,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           throw error;
         }
 
-        console.log('Projects data:', data);
         return data.map((item: any) => {
-          // Parse the expenditure_type array
           let expenditureTypes: string[] = [];
           try {
             if (typeof item.expenditure_type === 'string') {
-              // Remove the curly braces and split by comma
               expenditureTypes = item.expenditure_type
                 .replace(/[{}"\[\]]/g, '')
                 .split(',')
@@ -151,9 +145,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
           return {
             id: item.mis,
-            name: item.na853
-              ? `${item.na853} - ${item.event_description || item.project_title || 'No description'}`
-              : item.project_title || 'Untitled Project',
+            name: `${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
             expenditure_types: expenditureTypes
           };
         });
@@ -165,31 +157,21 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: Boolean(selectedUnit)
   });
 
-  // Query budget data based on selected project
+  // Query budget data based on selected project - Single source of truth
   const { data: budgetData } = useQuery({
     queryKey: ["budget", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return null;
 
       try {
-        console.log('Fetching budget for project:', selectedProjectId);
         const { data, error } = await supabase
           .from('budget_na853_split')
           .select('proip, ethsia_pistosi, katanomes_etous')
           .eq('mis', selectedProjectId)
           .single();
 
-        if (error) {
-          console.error('Error fetching budget:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load budget information. Please try again.",
-            variant: "destructive"
-          });
-          throw error;
-        }
+        if (error) throw error;
 
-        console.log('Budget data:', data);
         return {
           current_budget: parseFloat(data?.katanomes_etous || '0'),
           total_budget: parseFloat(data?.proip || '0'),
@@ -197,7 +179,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         };
       } catch (error) {
         console.error('Budget fetch error:', error);
-        throw error;
+        toast({
+          title: "Error",
+          description: "Failed to load budget information.",
+          variant: "destructive"
+        });
+        return null;
       }
     },
     enabled: Boolean(selectedProjectId)
@@ -257,7 +244,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     form.setValue("recipients", currentRecipients.filter((_, i) => i !== index));
   };
 
-  // Reset form fields when unit changes
+  // Effect to reset form fields when unit changes
   useEffect(() => {
     if (!selectedUnit) {
       form.setValue("project_id", "");
@@ -265,14 +252,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   }, [selectedUnit, form]);
 
-  // Reset expenditure type when project changes
+  // Effect to reset expenditure type when project changes
   useEffect(() => {
     if (selectedProjectId) {
       form.setValue("expenditure_type", "");
     }
   }, [selectedProjectId, form]);
 
-  // Get selected project
+  // Get selected project and its expenditure types
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
 
@@ -365,7 +352,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {projects.map((project: any) => (
+                          {projects.map((project) => (
                             <SelectItem key={project.id} value={project.id}>
                               {project.name}
                             </SelectItem>
