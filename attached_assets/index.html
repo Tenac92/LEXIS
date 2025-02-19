@@ -1,148 +1,112 @@
+
 <!DOCTYPE html>
-<html lang="el">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Document Management System">
-  <title>Document Management | Generated Documents</title>
+  <meta name="description" content="Project Catalog - Manage and view projects">
+  <title>Project Catalog</title>
   <link rel="stylesheet" href="/dist/output.css">
   <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-gray-50">
-  <div id="loadingOverlay" role="progressbar" aria-busy="true" aria-label="Loading..." class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-    <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
-  </div>
+<body class="bg-gray-50 min-h-screen">
+  <main id="mainContent" class="container mx-auto px-4 pt-24 pb-8 max-w-7xl">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+      <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <h1 class="text-3xl font-bold text-gray-900">Project Catalog</h1>
 
-  <div id="errorMessage" role="alert" aria-live="polite" class="hidden fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-lg z-50">
-    <div class="flex">
-      <div class="flex-shrink-0">
-        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
-      </div>
-      <div class="ml-3">
-        <p id="errorText" class="text-sm"></p>
-      </div>
-      <button aria-label="Close error message" class="ml-auto text-red-700 hover:text-red-900" onclick="this.parentElement.parentElement.classList.add('hidden')">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-  </div>
-
-  <main class="container mx-auto px-4 pt-20 pb-8">
-    <div class="bg-white rounded-lg shadow p-4">
-      <div class="bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow border border-gray-100/50 mb-4">
-        <div class="flex flex-col">
-          <!-- Always visible basic filters -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div class="flex-1 group">
-              <label class="block text-sm font-medium text-gray-600 mb-2 group-hover:text-blue-600 transition-colors">Μονάδα</label>
-              <div class="relative">
-                <select id="unitFilter" class="w-full rounded-xl border-gray-200 bg-white/50 py-3 px-4 shadow-sm transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-blue-300">
-                  <option value="all">Όλες οι Μονάδες</option>
-                </select>
-                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-400">
-                  <i class="fas fa-chevron-down text-xs"></i>
-                </div>
-              </div>
-            </div>
-            <div class="flex-1 group">
-              <label class="block text-sm font-medium text-gray-600 mb-2 group-hover:text-blue-600 transition-colors">Κατάσταση</label>
-              <div class="relative">
-                <select id="statusFilter" class="w-full rounded-xl border-gray-200 bg-white/50 py-3 px-4 shadow-sm transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-blue-300">
-                  <option value="all">Όλες οι Καταστάσεις</option>
-                  <option value="pending">Σε Εκκρεμότητα</option>
-                  <option value="completed">Ολοκληρωμένα</option>
-                </select>
-                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-400">
-                  <i class="fas fa-chevron-down text-xs"></i>
-                </div>
-              </div>
-            </div>
-            <div class="flex-1 group">
-              <label class="block text-sm font-medium text-gray-600 mb-2 group-hover:text-blue-600 transition-colors">Χρήστης</label>
-              <div class="relative">
-                <select id="userFilter" class="w-full rounded-xl border-gray-200 bg-white/50 py-3 px-4 shadow-sm transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-200 hover:border-blue-300">
-                  <option value="">Όλοι οι Χρήστες</option>
-                </select>
-                <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-gray-400">
-                  <i class="fas fa-chevron-down text-xs"></i>
-                </div>
-              </div>
-            </div>
+        <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+          <div class="relative flex-grow md:flex-grow-0">
+            <input type="text" 
+              id="searchInput" 
+              placeholder="Search by MIS, description or region..." 
+              class="w-full md:w-64 pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              aria-label="Search projects">
+            <i class="fas fa-search absolute left-3 top-3 text-gray-400" aria-hidden="true"></i>
           </div>
 
-          <!-- Advanced filters toggle -->
-          <button id="toggleFilters" class="group w-full flex justify-between items-center py-3 px-4 text-gray-700 rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-50/30 transition-all duration-200 shadow-sm">
-            <span class="font-medium flex items-center gap-2">
-              <i class="fas fa-sliders-h text-blue-500"></i>
-              <span class="text-gray-700 group-hover:text-gray-900">Προχωρημένα Φίλτρα</span>
-            </span>
-            <i class="fas fa-chevron-down text-gray-400 group-hover:text-blue-500 transition-transform duration-300"></i>
-          </button>
+          <div class="flex flex-wrap gap-2">
+            <a href="edit.html" 
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+              role="button">
+              <i class="fas fa-plus" aria-hidden="true"></i>
+              <span>New Project</span>
+            </a>
 
-          <!-- Advanced filters content -->
-          <div id="filterContent" class="hidden">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-              <!-- Date Range -->
-              <div class="filter-group">
-                <label class="block text-sm font-medium text-gray-600 mb-2">Από Ημερομηνία</label>
-                <input type="date" id="dateFrom" class="w-full rounded-lg border border-gray-200 p-2.5">
-              </div>
-              <div class="filter-group">
-                <label class="block text-sm font-medium text-gray-600 mb-2">Έως Ημερομηνία</label>
-                <input type="date" id="dateTo" class="w-full rounded-lg border border-gray-200 p-2.5">
-              </div>
+            <button id="exportButton" 
+              class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 transition-colors">
+              <i class="fas fa-file-export" aria-hidden="true"></i>
+              <span>Export</span>
+            </button>
 
-              <!-- Amount Range -->
-              <div class="filter-group">
-                <label class="block text-sm font-medium text-gray-600 mb-2">Ελάχιστο Ποσό</label>
-                <input type="number" id="amountFrom" class="w-full rounded-lg border border-gray-200 p-2.5" placeholder="0">
-              </div>
-              <div class="filter-group">
-                <label class="block text-sm font-medium text-gray-600 mb-2">Μέγιστο Ποσό</label>
-                <input type="number" id="amountTo" class="w-full rounded-lg border border-gray-200 p-2.5" placeholder="0">
-              </div>
-              <!-- Recipient Filter -->
-              <div class="filter-group">
-                <label class="block text-sm font-medium text-gray-600 mb-2">Παραλήπτης</label>
-                <input type="text" id="recipientFilter" class="w-full rounded-lg border border-gray-200 p-2.5" placeholder="Αναζήτηση παραλήπτη">
-              </div>
-              <!-- AFM Filter -->
-              <div class="filter-group">
-                <label class="block text-sm font-medium text-gray-600 mb-2">ΑΦΜ</label>
-                <input type="text" id="afmFilter" class="w-full rounded-lg border border-gray-200 p-2.5" placeholder="Αναζήτηση ΑΦΜ" maxlength="9">
-              </div>
-            </div>
+            <button id="uploadButton" 
+              class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center gap-2 transition-colors"
+              aria-controls="fileInput">
+              <i class="fas fa-file-upload" aria-hidden="true"></i>
+              <span>Upload CSV</span>
+            </button>
+
+            <a href="bulk-update.html" 
+              class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center gap-2 transition-colors">
+              <i class="fas fa-table" aria-hidden="true"></i>
+              <span>Bulk Update</span>
+            </a>
+
+            <input type="file" 
+              id="fileInput" 
+              accept=".csv" 
+              class="hidden"
+              aria-label="Upload CSV file">
           </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
-          <button id="refreshButton" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center shadow-sm">
-            <i class="fas fa-sync-alt mr-2"></i>Ανανέωση
-          </button>
-          <button id="viewToggle" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-all duration-200 shadow-sm">
-            <i id="viewIcon" class="fas fa-th-large"></i>
-          </button>
         </div>
       </div>
 
-      <div id="documentsTable" class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6 p-6 auto-rows-max"></div>
+      <div id="loadingSpinner" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="alert" aria-busy="true">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+        <span class="sr-only">Loading...</span>
+      </div>
+
+      <div class="flex gap-4 mb-4">
+        <select id="statusFilter" class="border rounded p-2">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="pending_funding">Pending Funding</option>
+          <option value="pending_reallocation">Pending Reallocation</option>
+        </select>
+        <select id="sortFilter" class="border rounded p-2">
+          <option value="date_desc">Newest First</option>
+          <option value="date_asc">Oldest First</option>
+          <option value="budget_desc">Budget: High to Low</option>
+          <option value="budget_asc">Budget: Low to High</option>
+        </select>
+      </div>
+      <div id="catalogContainer" 
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max" 
+        role="grid"
+        aria-label="Projects catalog">
+      </div>
+      <div id="virtualScrollAnchor" class="h-4"></div>
     </div>
   </main>
 
-  <div id="recipientModal" class="modal" role="dialog" aria-modal="true"></div>
-  <div id="createDocumentModal" class="modal" role="dialog" aria-modal="true"></div>
-  <div id="orthiEpanalipsiModal" class="modal" role="dialog" aria-modal="true"></div>
-  <div id="protocolModal" class="modal" role="dialog" aria-modal="true"></div>
+  <div id="bulkUpdateModal" class="modal hidden fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50" role="dialog" aria-labelledby="bulkUpdateTitle">
+    <div class="modal-content bg-white rounded-lg shadow-xl max-w-2xl mx-auto mt-20 p-6">
+      <h2 id="bulkUpdateTitle" class="text-xl font-bold mb-4">Bulk Update Projects</h2>
+      <textarea id="bulkUpdateData" 
+        rows="10" 
+        class="w-full p-2 border rounded" 
+        placeholder='[{"mis": "5203921", "data": {"project_title": "New Title"}}]'
+        aria-label="Bulk update data in JSON format"></textarea>
+      <div class="flex justify-end mt-4">
+        <button onclick="window.catalogManager.handleBulkUpdate()" 
+          class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+          Update Projects
+        </button>
+      </div>
+    </div>
+  </div>
 
-  <script type="module" src="managers/BaseModal.js"></script>
-  <script type="module" src="managers/DocumentUIManager.js"></script>
-  <script type="module" src="managers/GeneratedDocumentsManager.js"></script>
-  <script type="module" src="managers/ProtocolManager.js"></script>
-  <script type="module" src="managers/RecipientManager.js"></script>
-  <script type="module" src="managers/OrthiEpanalipsiManager.js"></script>
-  <script type="module" src="managers/CreateDocumentModal.js"></script>
   <script type="module" src="script.js"></script>
 </body>
 </html>

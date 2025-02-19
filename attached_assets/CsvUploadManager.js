@@ -1,4 +1,4 @@
-const ExcelJS = require('exceljs');
+
 import { ErrorHandler } from '../../utils/errorHandler.js';
 import { getAuthToken } from '../../utils/auth.js';
 
@@ -32,38 +32,62 @@ export class CsvUploadManager {
 
   async handleFileUpload(file) {
     try {
-      const workbook = new ExcelJS.Workbook();
+      this.validateFile(file);
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
 
-      if (file.name.endsWith('.csv')) {
-        await workbook.csv.load(file);
-      } else {
-        await workbook.xlsx.load(file);
+      const formData = new FormData();
+      
+      // Read file as text first to validate content
+      const fileText = await file.text();
+      if (!fileText.trim()) {
+        throw new Error('File is empty');
       }
 
-      const worksheet = workbook.worksheets[0];
-      const rows = [];
-      const headers = [];
+      // Create new file blob with validated content
+      const blob = new Blob([fileText], { type: 'text/csv' });
+      formData.append('file', blob, file.name);
 
-      worksheet.getRow(1).eachCell((cell) => {
-        headers.push(cell.value);
+      const response = await fetch(this.uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData,
+        credentials: 'include'
       });
 
-      worksheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1) return; // Skip header row
+      const responseText = await response.text();
+      let data;
+      
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse response:', e);
+        throw new Error('Invalid server response format');
+      }
 
-        const rowData = {};
-        row.eachCell((cell, colNumber) => {
-          rowData[headers[colNumber - 1]] = cell.value;
-        });
-        rows.push(rowData);
-      });
+      if (!response.ok) {
+        throw new Error(data.message || `Upload failed: ${response.status} - ${data.error || 'Unknown error'}`);
+      }
 
-      return { headers, rows };
+      if (data.progress) {
+        ErrorHandler.showSuccess(`Processing: ${data.progress[data.progress.length-1].progress}`);
+      }
+
+      ErrorHandler.showSuccess(`Upload complete: ${data.stats?.updated || 0} records processed`);
+      return {
+        success: true,
+        data: data
+      };
+
     } catch (error) {
-      console.error('Error processing file:', error);
-      throw new Error('Failed to process file');
+      console.error('CSV Upload Error:', error);
+      ErrorHandler.showError(error.message || 'Failed to upload file');
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 }
-
-module.exports = CsvUploadManager;
