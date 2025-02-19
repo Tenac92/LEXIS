@@ -117,8 +117,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         const { data, error } = await supabase
           .from('project_catalog')
           .select('mis, project_title, expenditure_type')
-          .contains('implementing_agency', [selectedUnit])
-          .order('created_at', { ascending: false });
+          .contains('implementing_agency', [`"${selectedUnit}"`])
+          .order('mis');
 
         if (error) {
           console.error('Error fetching projects:', error);
