@@ -80,17 +80,23 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   // Queries
   const { data: units = [], isLoading: unitsLoading } = useQuery<Unit[]>({
-    queryKey: ["/api/units"],
+    queryKey: ["units"],
+    queryFn: async () => {
+      const response = await fetch('/api/units');
+      if (!response.ok) throw new Error('Failed to fetch units');
+      return response.json();
+    },
     enabled: currentStep === 0
   });
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
-    queryKey: ["/api/catalog", selectedUnit],
+    queryKey: ["projects", selectedUnit],
     queryFn: async () => {
       if (!selectedUnit) return [];
       const response = await fetch(`/api/catalog?unit=${encodeURIComponent(selectedUnit)}`);
       if (!response.ok) throw new Error('Failed to fetch projects');
-      return response.json();
+      const data = await response.json();
+      return data.data || []; // Handle the response data structure correctly
     },
     enabled: Boolean(selectedUnit)
   });
