@@ -173,7 +173,7 @@ export class DatabaseStorage implements IStorage {
       console.log('[Storage] Fetching units for user:', userId);
       const { data, error } = await db
         .from('users')
-        .select('unit')
+        .select('unit_name') // Corrected column name
         .eq('id', userId)
         .single();
 
@@ -182,12 +182,12 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
 
-      if (!data?.unit) {
+      if (!data?.unit_name) { // Corrected column name
         console.log('[Storage] No units found for user');
         return [];
       }
 
-      return [data.unit];
+      return [data.unit_name]; // Corrected column name
     } catch (error) {
       console.error('[Storage] Error fetching user units:', error);
       throw error;

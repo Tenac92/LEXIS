@@ -10,10 +10,10 @@ router.get("/", authenticateToken, async (req, res) => {
     const userUnits = await storage.getUserUnits(req.user!.id);
 
     // Map the units to the expected format
-    const formattedUnits = userUnits.map(unitName => ({
-      id: unitName,
-      name: unitName,
-      code: unitName,
+    const formattedUnits = userUnits.map(unit => ({
+      id: unit.unit,
+      name: unit.unit_name,
+      code: unit.unit
     }));
 
     res.json(formattedUnits);
