@@ -48,6 +48,8 @@ interface User {
   role: string;
   units?: string[];
   created_at: string;
+  telephone?: string;
+  department?: string;
 }
 
 const userSchema = z.object({
@@ -55,6 +57,8 @@ const userSchema = z.object({
   name: z.string().min(1, "Name is required"),
   role: z.string().min(1, "Role is required"),
   units: z.array(z.string()).optional(),
+  telephone: z.string().optional(),
+  department: z.string().optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -76,6 +80,8 @@ export default function UsersPage() {
       name: "",
       role: "user",
       units: [],
+      telephone: "",
+      department: ""
     },
   });
 
@@ -169,7 +175,7 @@ export default function UsersPage() {
       !search ||
       user.name.toLowerCase().includes(search.toLowerCase()) ||
       user.email.toLowerCase().includes(search.toLowerCase()) ||
-      user.unit?.toLowerCase().includes(search.toLowerCase());
+      user.units?.toLowerCase().includes(search.toLowerCase());
 
     const roleMatch = selectedRole === "all" || user.role === selectedRole;
 
@@ -234,6 +240,7 @@ export default function UsersPage() {
                   <TableHead>Role</TableHead>
                   <TableHead>Unit</TableHead>
                   <TableHead>Telephone</TableHead>
+                  <TableHead>Department</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -247,6 +254,7 @@ export default function UsersPage() {
                     </TableCell>
                     <TableCell>{user.units?.join(", ") || "-"}</TableCell>
                     <TableCell>{user.telephone || "-"}</TableCell>
+                    <TableCell>{user.department || "-"}</TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
@@ -401,6 +409,32 @@ export default function UsersPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="telephone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telephone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter telephone number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter department" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
