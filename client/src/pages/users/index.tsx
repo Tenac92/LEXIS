@@ -54,7 +54,7 @@ const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required"),
   role: z.string().min(1, "Role is required"),
-  unit: z.string().optional(),
+  units: z.array(z.string()).optional(),
 });
 
 type UserFormData = z.infer<typeof userSchema>;
@@ -75,7 +75,7 @@ export default function UsersPage() {
       email: "",
       name: "",
       role: "user",
-      unit: "",
+      units: [],
     },
   });
 
@@ -362,23 +362,41 @@ export default function UsersPage() {
               />
               <FormField
                 control={form.control}
-                name="unit"
+                name="units"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Unit</FormLabel>
+                    <FormLabel>Units</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      onValueChange={(value) => {
+                        const currentUnits = field.value || [];
+                        const newUnits = currentUnits.includes(value)
+                          ? currentUnits.filter(unit => unit !== value)
+                          : [...currentUnits, value];
+                        field.onChange(newUnits);
+                      }}
+                      defaultValue={field.value?.[0]}
+                      multiple
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a unit" />
+                          <SelectValue placeholder="Select units">
+                            {field.value?.length 
+                              ? `${field.value.length} units selected` 
+                              : "Select units"}
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {units.map((unit) => (
                           <SelectItem key={unit} value={unit}>
-                            {unit}
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 border rounded flex items-center justify-center ${
+                                field.value?.includes(unit) ? "bg-primary" : ""
+                              }`}>
+                                {field.value?.includes(unit) && "✓"}
+                              </div>
+                              {unit}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
