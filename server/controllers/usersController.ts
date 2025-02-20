@@ -1,3 +1,4 @@
+
 import { Router } from 'express';
 import { supabase } from '../db';
 import { authenticateSession } from '../auth';
@@ -21,25 +22,22 @@ router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res
     console.log('[Units] Fetching units from unit_det table');
     const { data: units, error } = await supabase
       .from('unit_det')
-      .select('unit_nam');
+      .select('unit_name');
 
     if (error) {
       console.error('[Units] Supabase query error:', error);
       throw error;
     }
 
-    console.log('[Units] Raw units data:', units);
-
     // Extract unique unit names
     const uniqueUnits = new Set<string>();
     units?.forEach(unit => {
-      if (unit.unit_nam && typeof unit.unit_nam === 'string') {
-        uniqueUnits.add(unit.unit_nam);
+      if (unit.unit_name && typeof unit.unit_name === 'string') {
+        uniqueUnits.add(unit.unit_name);
       }
     });
 
     const unitsList = Array.from(uniqueUnits).sort();
-    console.log('[Units] Processed units list:', unitsList);
     res.json(unitsList);
   } catch (error) {
     console.error('[Units] Units fetch error:', error);
@@ -67,13 +65,12 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
         role,
         units,
         telephone,
-        department,
-        created_at
+        department
       `)
-      .order('created_at', { ascending: false });
+      .order('id');
 
     if (error) {
-      console.error('[Users] Users fetch error:', error);
+      console.error('[Users] Supabase query error:', error);
       throw error;
     }
 
@@ -111,8 +108,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
         email: req.body.email,
         name: req.body.name,
         role: req.body.role,
-        unit: req.body.unit,
-        created_at: new Date().toISOString()
+        units: req.body.unit ? [req.body.unit] : []
       }])
       .select()
       .single();
