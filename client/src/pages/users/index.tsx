@@ -40,7 +40,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import Header from "@/components/Header"; // Assuming Header component exists and is located here
+import { Header } from "@/components/header"; // Assuming Header component exists and is located here
 
 interface User {
   id: number;
