@@ -46,7 +46,7 @@ interface User {
   email: string;
   name: string;
   role: string;
-  unit?: string;
+  units?: string[];
   created_at: string;
 }
 
@@ -245,7 +245,7 @@ export default function UsersPage() {
                     <TableCell>
                       <span className="capitalize">{user.role}</span>
                     </TableCell>
-                    <TableCell>{user.unit || "-"}</TableCell>
+                    <TableCell>{user.units?.join(", ") || "-"}</TableCell>
                     <TableCell>
                       {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
