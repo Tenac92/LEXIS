@@ -284,7 +284,7 @@ export async function updateBudget(req: Request, res: Response) {
         ethsia_pistosi: Number(newEthsiaPistosi).toFixed(2),
         updated_at: new Date().toISOString()
       })
-      .eq('na853', mis);
+      .eq('mis', mis);
 
     if (updateError) {
       console.error('Budget update error:', updateError);
