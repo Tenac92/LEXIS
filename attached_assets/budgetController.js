@@ -39,13 +39,102 @@ router.get('/:mis', authenticateToken, async (req, res) => {
     if (error) throw error;
 
     res.json(data || {
-      user_view_budget: 0,
+      user_view: 0,
       total_budget: 0,
       katanomes_etous: 0,
+      ethsia_pistosi: 0,
       quarterly: { q1: 0, q2: 0, q3: 0, q4: 0 }
     });
   } catch (error) {
     console.error('Budget fetch error:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
+// Update budget amount after document creation
+router.post('/:mis/update-amount', authenticateToken, async (req, res) => {
+  try {
+    const { mis } = req.params;
+    const { amount } = req.body;
+    const user = req.user;
+
+    if (!mis || !amount) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'MIS and amount are required'
+      });
+    }
+
+    const { data: budgetData, error: fetchError } = await supabase
+      .from('budget_na853_split')
+      .select('user_view, ethsia_pistosi, katanomes_etous')
+      .eq('mis', mis)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    const currentUserView = parseFloat(budgetData.user_view) || 0;
+    const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi) || 0;
+    const katanomesEtous = parseFloat(budgetData.katanomes_etous) || 0;
+    const requestedAmount = parseFloat(amount);
+
+    // Calculate new amounts
+    const newUserView = Math.max(0, currentUserView - requestedAmount);
+    const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - requestedAmount);
+
+    // Check if we need to notify admin
+    const twentyPercentThreshold = katanomesEtous * 0.2;
+
+    if (newUserView <= twentyPercentThreshold) {
+      // Create notification for reallocation
+      await supabase.from('budget_notifications').insert([{
+        mis,
+        type: 'reallocation',
+        amount: requestedAmount,
+        current_budget: newUserView,
+        ethsia_pistosi: newEthsiaPistosi,
+        reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
+        status: 'pending',
+        user_id: user.id,
+        created_at: new Date().toISOString()
+      }]);
+    }
+
+    if (newEthsiaPistosi <= 0) {
+      // Create notification for funding
+      await supabase.from('budget_notifications').insert([{
+        mis,
+        type: 'funding',
+        amount: requestedAmount,
+        current_budget: newUserView,
+        ethsia_pistosi: newEthsiaPistosi,
+        reason: 'Η ετήσια πίστωση έχει εξαντληθεί',
+        status: 'pending',
+        user_id: user.id,
+        created_at: new Date().toISOString()
+      }]);
+    }
+
+    // Update the budget
+    const { error: updateError } = await supabase
+      .from('budget_na853_split')
+      .update({ 
+        user_view: newUserView,
+        ethsia_pistosi: newEthsiaPistosi 
+      })
+      .eq('mis', mis);
+
+    if (updateError) throw updateError;
+
+    res.json({ 
+      status: 'success', 
+      newUserView,
+      newEthsiaPistosi,
+      requiresReallocation: newUserView <= twentyPercentThreshold,
+      requiresFunding: newEthsiaPistosi <= 0
+    });
+  } catch (error) {
+    console.error('Budget update error:', error);
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
@@ -93,8 +182,9 @@ router.post('/bulk-update', authenticateToken, async (req, res) => {
   });
 });
 
-// Update budget amount after document creation
-router.post('/:mis/update-amount', authenticateToken, async (req, res) => {
+
+// Validate amount before document creation
+router.post('/:mis/validate-amount', authenticateToken, async (req, res) => {
   try {
     const { mis } = req.params;
     const { amount } = req.body;
@@ -108,26 +198,66 @@ router.post('/:mis/update-amount', authenticateToken, async (req, res) => {
 
     const { data, error } = await supabase
       .from('budget_na853_split')
-      .select('user_view')
+      .select('*')
       .eq('mis', mis)
       .single();
 
-    if (error) throw error;
+    if (error || !data) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Budget not found'
+      });
+    }
 
-    const currentAmount = parseFloat(data.user_view) || 0;
-    const newAmount = Math.max(0, currentAmount - parseFloat(amount));
+    const requestedAmount = parseFloat(amount);
+    const userView = parseFloat(data.user_view) || 0;
+    const katanomesEtous = parseFloat(data.katanomes_etous) || 0;
+    const ethsiaPistosi = parseFloat(data.ethsia_pistosi) || 0;
 
-    const { error: updateError } = await supabase
-      .from('budget_na853_split')
-      .update({ user_view: newAmount })
-      .eq('mis', mis);
+    // Check if amount exceeds available user_view budget
+    if (requestedAmount > userView) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Το ποσό υπερβαίνει το διαθέσιμο προϋπολογισμό',
+        canCreate: false
+      });
+    }
 
-    if (updateError) throw updateError;
+    // Check if amount will exhaust ethsia_pistosi
+    if (requestedAmount >= ethsiaPistosi) {
+      return res.status(200).json({
+        status: 'warning',
+        message: 'Το ποσό θα εξαντλήσει την ετήσια πίστωση',
+        canCreate: true,
+        requiresNotification: true,
+        notificationType: 'funding',
+        allowDocx: true
+      });
+    }
 
-    res.json({ status: 'success', newAmount });
+    // Check if amount exceeds 20% of katanomes_etous
+    if (requestedAmount > (katanomesEtous * 0.2)) {
+      return res.status(200).json({
+        status: 'warning',
+        message: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
+        canCreate: true,
+        requiresNotification: true,
+        notificationType: 'reallocation',
+        allowDocx: true
+      });
+    }
+
+    return res.json({
+      status: 'success',
+      canCreate: true,
+      allowDocx: true
+    });
   } catch (error) {
-    console.error('Budget update error:', error);
-    res.status(500).json({ status: 'error', message: error.message });
+    console.error('Budget validation error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
   }
 });
 
