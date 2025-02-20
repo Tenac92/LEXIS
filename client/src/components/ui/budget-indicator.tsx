@@ -18,10 +18,16 @@ export function BudgetIndicator({
   
   if (!budgetData) return null;
 
-  const availableBudget = budgetData.user_view - currentAmount;
-  const percentageUsed = (currentAmount / budgetData.user_view) * 100;
-  const isExceeding20Percent = currentAmount > (budgetData.katanomes_etous * 0.2);
-  const isExceedingEthsiaPistosi = currentAmount > budgetData.ethsia_pistosi;
+  // Parse values ensuring they are numbers
+  const userView = parseFloat(budgetData.user_view?.toString() || '0');
+  const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+  const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+  const amount = parseFloat(currentAmount?.toString() || '0');
+
+  const availableBudget = userView - amount;
+  const percentageUsed = (amount / userView) * 100;
+  const isExceeding20Percent = amount > (katanomesEtous * 0.2);
+  const isExceedingEthsiaPistosi = amount > ethsiaPistosi;
 
   // Show warnings when thresholds are exceeded
   if (isExceedingEthsiaPistosi && onValidationWarning) {
@@ -52,15 +58,15 @@ export function BudgetIndicator({
             </div>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
+            <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
             <p className="text-2xl font-bold text-gray-700">
-              {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {ethsiaPistosi.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
+            <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
             <p className="text-2xl font-bold text-gray-700">
-              {budgetData.annual_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {katanomesEtous.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
         </div>
