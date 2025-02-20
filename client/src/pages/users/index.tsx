@@ -40,6 +40,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import Header from "@/components/Header"; // Assuming Header component exists and is located here
 
 interface User {
   id: number;
@@ -193,6 +194,8 @@ export default function UsersPage() {
   }
 
   return (
+    <> {/*Added this fragment */}
+    <Header/> {/*Added Header component here*/}
     <div className="container mx-auto py-8">
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <h1 className="text-3xl font-bold">Users Management</h1>
@@ -471,5 +474,6 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }
