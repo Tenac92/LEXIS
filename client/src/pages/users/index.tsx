@@ -55,6 +55,7 @@ interface User {
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.string().min(1, "Role is required"),
   units: z.array(z.string()).optional(),
   telephone: z.string().optional(),
@@ -78,6 +79,7 @@ export default function UsersPage() {
     defaultValues: {
       email: "",
       name: "",
+      password: "",
       role: "user",
       units: [],
       telephone: "",
@@ -338,6 +340,19 @@ export default function UsersPage() {
                     <FormLabel>Name</FormLabel>
                     <FormControl>
                       <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Enter password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
