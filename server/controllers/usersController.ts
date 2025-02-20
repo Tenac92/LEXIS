@@ -108,7 +108,10 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
         email: req.body.email,
         name: req.body.name,
         role: req.body.role,
-        units: req.body.unit ? [req.body.unit] : []
+        password: req.body.password,
+        units: req.body.units || [],
+        telephone: req.body.telephone,
+        department: req.body.department
       }])
       .select()
       .single();
