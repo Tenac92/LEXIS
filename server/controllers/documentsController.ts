@@ -92,20 +92,65 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
 
     if (error) throw error;
 
-    // Update budget after document creation
+    // Get current budget data
     const { data: budgetData, error: budgetError } = await supabase
       .from('budget_na853_split')
-      .select('current_budget')
+      .select('user_view, ethsia_pistosi, katanomes_etous')
       .eq('mis', validatedData.project_id)
       .single();
 
     if (budgetError) throw budgetError;
 
-    const newBudget = (parseFloat(budgetData.current_budget) || 0) - validatedData.total_amount;
+    const currentUserView = parseFloat(budgetData.user_view) || 0;
+    const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi) || 0;
+    const katanomesEtous = parseFloat(budgetData.katanomes_etous) || 0;
 
+    // Calculate new amounts
+    const newUserView = Math.max(0, currentUserView - validatedData.total_amount);
+    const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - validatedData.total_amount);
+    const twentyPercentThreshold = katanomesEtous * 0.2;
+
+    // Create notifications if needed
+    if (newEthsiaPistosi <= 0) {
+      await supabase
+        .from('budget_notifications')
+        .insert({
+          mis: validatedData.project_id,
+          type: 'funding',
+          amount: validatedData.total_amount,
+          current_budget: newUserView,
+          ethsia_pistosi: newEthsiaPistosi,
+          reason: 'Η ετήσια πίστωση έχει εξαντληθεί',
+          status: 'pending',
+          user_id: req.user?.id,
+          created_at: new Date().toISOString()
+        });
+    }
+
+    if (newUserView <= twentyPercentThreshold) {
+      await supabase
+        .from('budget_notifications')
+        .insert({
+          mis: validatedData.project_id,
+          type: 'reallocation',
+          amount: validatedData.total_amount,
+          current_budget: newUserView,
+          ethsia_pistosi: newEthsiaPistosi,
+          reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
+          status: 'pending',
+          user_id: req.user?.id,
+          created_at: new Date().toISOString()
+        });
+    }
+
+    // Update budget amounts
     const { error: updateError } = await supabase
       .from('budget_na853_split')
-      .update({ current_budget: Math.max(0, newBudget) })
+      .update({
+        user_view: newUserView,
+        ethsia_pistosi: newEthsiaPistosi,
+        updated_at: new Date().toISOString()
+      })
       .eq('mis', validatedData.project_id);
 
     if (updateError) throw updateError;
