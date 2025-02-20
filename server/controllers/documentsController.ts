@@ -18,6 +18,146 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
   next();
 };
 
+router.post('/', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const validatedData = insertGeneratedDocumentSchema.parse({
+      ...req.body,
+      generated_by: req.user.id,
+      created_at: new Date()
+    });
+
+    // Start transaction
+    const { data: document, error } = await supabase
+      .from('generated_documents')
+      .insert([validatedData])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Get current budget data
+    const { data: budgetData, error: budgetError } = await supabase
+      .from('budget_na853_split')
+      .select('user_view, ethsia_pistosi, katanomes_etous')
+      .eq('mis', validatedData.project_id)
+      .single();
+
+    if (budgetError) {
+      console.error('Budget fetch error:', budgetError);
+      throw budgetError;
+    }
+
+    if (!budgetData) {
+      throw new Error('Budget data not found');
+    }
+
+    const currentUserView = parseFloat(budgetData.user_view?.toString() || '0');
+    const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+    const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+
+    // Calculate new amounts
+    const requestedAmount = parseFloat(validatedData.total_amount.toString());
+    const newUserView = Math.max(0, currentUserView - requestedAmount);
+    const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - requestedAmount);
+    const twentyPercentThreshold = katanomesEtous * 0.2;
+
+    const notifications = [];
+
+    // Prepare notifications if needed
+    if (newEthsiaPistosi <= 0) {
+      const { data: notifData, error: notifError } = await supabase
+        .from('budget_notifications')
+        .insert({
+          mis: validatedData.project_id,
+          type: 'funding',
+          amount: requestedAmount,
+          current_budget: newUserView,
+          ethsia_pistosi: newEthsiaPistosi,
+          reason: 'Η ετήσια πίστωση έχει εξαντληθεί',
+          status: 'pending',
+          user_id: req.user.id.toString(),
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (notifError) {
+        console.error('Failed to create funding notification:', notifError);
+      } else if (notifData) {
+        notifications.push({
+          id: notifData.id,
+          type: 'funding',
+          reason: 'Η ετήσια πίστωση έχει εξαντληθεί'
+        });
+      }
+    }
+
+    if (newUserView <= twentyPercentThreshold) {
+      const { data: notifData, error: notifError } = await supabase
+        .from('budget_notifications')
+        .insert({
+          mis: validatedData.project_id,
+          type: 'reallocation',
+          amount: requestedAmount,
+          current_budget: newUserView,
+          ethsia_pistosi: newEthsiaPistosi,
+          reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
+          status: 'pending',
+          user_id: req.user.id.toString(),
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (notifError) {
+        console.error('Failed to create reallocation notification:', notifError);
+      } else if (notifData) {
+        notifications.push({
+          id: notifData.id,
+          type: 'reallocation',
+          reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής'
+        });
+      }
+    }
+
+    // Update budget amounts
+    const { error: updateError } = await supabase
+      .from('budget_na853_split')
+      .update({
+        user_view: newUserView,
+        ethsia_pistosi: newEthsiaPistosi,
+        updated_at: new Date().toISOString()
+      })
+      .eq('mis', validatedData.project_id);
+
+    if (updateError) {
+      console.error('Failed to update budget:', updateError);
+      throw updateError;
+    }
+
+    res.status(201).json({
+      ...document,
+      notifications: notifications.length > 0 ? notifications : undefined
+    });
+  } catch (error) {
+    console.error('Error creating document:', error);
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        message: 'Validation error',
+        errors: error.errors
+      });
+    }
+    res.status(500).json({ 
+      message: 'Failed to create document',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 router.get("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { status, unit, dateFrom, dateTo, amountFrom, amountTo, user } = req.query;
@@ -68,112 +208,6 @@ router.get("/", authenticateToken, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error("Error fetching documents:", error);
     res.status(500).json({ message: "Failed to fetch documents" });
-  }
-});
-
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const validatedData = insertGeneratedDocumentSchema.parse({
-      ...req.body,
-      generated_by: req.user.id,
-      created_at: new Date()
-    });
-
-    // Start transaction
-    const { data: document, error } = await supabase
-      .from('generated_documents')
-      .insert([validatedData])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Get current budget data
-    const { data: budgetData, error: budgetError } = await supabase
-      .from('budget_na853_split')
-      .select('user_view, ethsia_pistosi, katanomes_etous')
-      .eq('mis', validatedData.project_id)
-      .single();
-
-    if (budgetError) throw budgetError;
-
-    const currentUserView = parseFloat(budgetData.user_view) || 0;
-    const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi) || 0;
-    const katanomesEtous = parseFloat(budgetData.katanomes_etous) || 0;
-
-    // Calculate new amounts
-    const newUserView = Math.max(0, currentUserView - validatedData.total_amount);
-    const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - validatedData.total_amount);
-    const twentyPercentThreshold = katanomesEtous * 0.2;
-
-    const notifications = [];
-
-    // Prepare notifications if needed
-    if (newEthsiaPistosi <= 0) {
-      notifications.push({
-        mis: validatedData.project_id,
-        type: 'funding',
-        amount: validatedData.total_amount,
-        current_budget: newUserView,
-        ethsia_pistosi: newEthsiaPistosi,
-        reason: 'Η ετήσια πίστωση έχει εξαντληθεί',
-        status: 'pending',
-        user_id: req.user.id.toString(),
-        created_at: new Date().toISOString()
-      });
-    }
-
-    if (newUserView <= twentyPercentThreshold) {
-      notifications.push({
-        mis: validatedData.project_id,
-        type: 'reallocation',
-        amount: validatedData.total_amount,
-        current_budget: newUserView,
-        ethsia_pistosi: newEthsiaPistosi,
-        reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
-        status: 'pending',
-        user_id: req.user.id.toString(),
-        created_at: new Date().toISOString()
-      });
-    }
-
-    // Insert notifications if any exist
-    if (notifications.length > 0) {
-      const { error: notificationError } = await supabase
-        .from('budget_notifications')
-        .insert(notifications);
-
-      if (notificationError) {
-        console.error('Failed to create notifications:', notificationError);
-      }
-    }
-
-    // Update budget amounts
-    const { error: updateError } = await supabase
-      .from('budget_na853_split')
-      .update({
-        user_view: newUserView,
-        ethsia_pistosi: newEthsiaPistosi,
-        updated_at: new Date().toISOString()
-      })
-      .eq('mis', validatedData.project_id);
-
-    if (updateError) throw updateError;
-
-    res.status(201).json(document);
-  } catch (error) {
-    console.error('Error creating document:', error);
-    if (error.name === 'ZodError') {
-      return res.status(400).json({
-        message: 'Validation error',
-        errors: error.errors
-      });
-    }
-    res.status(500).json({ message: 'Failed to create document' });
   }
 });
 

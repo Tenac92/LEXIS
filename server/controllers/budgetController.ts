@@ -13,9 +13,9 @@ interface BudgetValidationResponse {
 async function createBudgetNotification(
   mis: string, 
   type: 'funding' | 'reallocation',
-  amount: string,
-  current_budget: string,
-  ethsia_pistosi: string,
+  amount: number,
+  current_budget: number,
+  ethsia_pistosi: number,
   reason: string,
   userId: string
 ) {
@@ -24,9 +24,9 @@ async function createBudgetNotification(
     .insert({
       mis,
       type,
-      amount: parseFloat(amount),
-      current_budget: parseFloat(current_budget),
-      ethsia_pistosi: parseFloat(ethsia_pistosi),
+      amount,
+      current_budget,
+      ethsia_pistosi,
       reason,
       status: 'pending',
       user_id: userId,
@@ -225,7 +225,7 @@ export async function updateBudget(req: Request, res: Response) {
     const { data: budgetData, error: fetchError } = await supabase
       .from('budget_na853_split')
       .select('*')
-      .eq('mis', mis.toString())
+      .eq('mis', mis)
       .single();
 
     if (fetchError || !budgetData) {
@@ -247,29 +247,33 @@ export async function updateBudget(req: Request, res: Response) {
 
     try {
       if (newEthsiaPistosi <= 0) {
-        await createBudgetNotification(
+        const notif = await createBudgetNotification(
           mis,
           'funding',
-          requestedAmount.toString(),
-          newUserView.toString(),
-          newEthsiaPistosi.toString(),
+          requestedAmount,
+          newUserView,
+          newEthsiaPistosi,
           'Η ετήσια πίστωση έχει εξαντληθεί',
-          userId
+          userId.toString()
         );
-        notifications.push({ type: 'funding', reason: 'Η ετήσια πίστωση έχει εξαντληθεί' });
+        notifications.push({ type: 'funding', reason: 'Η ετήσια πίστωση έχει εξαντληθεί', id: notif?.[0]?.id });
       }
 
       if (newUserView <= twentyPercentThreshold) {
-        await createBudgetNotification(
+        const notif = await createBudgetNotification(
           mis,
           'reallocation',
-          requestedAmount.toString(),
-          newUserView.toString(),
-          newEthsiaPistosi.toString(),
+          requestedAmount,
+          newUserView,
+          newEthsiaPistosi,
           'Το ποσό θα μειώσει το διαθέσιμο προϋπολογισμό κάτω από το 20% της ετήσιας κατανομής',
-          userId
+          userId.toString()
         );
-        notifications.push({ type: 'reallocation', reason: 'Το ποσό θα μειώσει το διαθέσιμο προϋπολογισμό κάτω από το 20% της ετήσιας κατανομής' });
+        notifications.push({ 
+          type: 'reallocation', 
+          reason: 'Το ποσό θα μειώσει το διαθέσιμο προϋπολογισμό κάτω από το 20% της ετήσιας κατανομής',
+          id: notif?.[0]?.id 
+        });
       }
     } catch (notificationError) {
       console.error('Failed to create notifications:', notificationError);
@@ -280,8 +284,8 @@ export async function updateBudget(req: Request, res: Response) {
     const { error: updateError } = await supabase
       .from('budget_na853_split')
       .update({
-        user_view: Number(newUserView).toFixed(2),
-        ethsia_pistosi: Number(newEthsiaPistosi).toFixed(2),
+        user_view: newUserView,
+        ethsia_pistosi: newEthsiaPistosi,
         updated_at: new Date().toISOString()
       })
       .eq('mis', mis);
