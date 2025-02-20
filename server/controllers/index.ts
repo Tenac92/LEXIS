@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticateSession } from '../auth';
 import documentsController from './documentsController';
+import budgetController from './budgetController';
 import recipientsController from './recipientsController';
 import statsController from './statsController';
 import usersController from './usersController';
@@ -10,6 +11,11 @@ const router = express.Router();
 
 // Mount auth controller without authentication middleware
 router.use('/auth', authController);
+
+// Mount budget routes
+router.get('/budget/:mis', authenticateSession, budgetController.getBudget);
+router.post('/budget/validate', authenticateSession, budgetController.validateBudget);
+router.patch('/budget/:mis', authenticateSession, budgetController.updateBudget);
 
 // Mount other controllers with authentication middleware
 router.use('/documents', authenticateSession, documentsController);

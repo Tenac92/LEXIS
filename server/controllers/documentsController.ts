@@ -1,8 +1,10 @@
-import { Router, Request, Response, NextFunction } from "express";
+import { Router, Request, Response } from "express";
 import { supabase } from "../db";
+import { z } from "zod";
 import { insertGeneratedDocumentSchema } from "@shared/schema";
 import type { Database } from "@shared/schema";
 import type { User } from "@shared/schema";
+import { validateBudget, updateBudget } from "./budgetController";
 
 interface AuthRequest extends Request {
   user?: User;
@@ -11,7 +13,7 @@ interface AuthRequest extends Request {
 const router = Router();
 
 // Authentication middleware
-const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+const authenticateToken = (req: AuthRequest, res: Response, next: Function) => {
   if (!req.user?.id) {
     return res.status(401).json({ message: "Authentication required" });
   }
@@ -30,118 +32,44 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       created_at: new Date()
     });
 
+    // First validate budget
+    const budgetValidation = await validateBudget({
+      ...req,
+      body: {
+        mis: validatedData.project_id,
+        amount: validatedData.total_amount
+      }
+    } as AuthRequest, res);
+
+    if (budgetValidation.statusCode === 400) {
+      return budgetValidation;
+    }
+
     // Start transaction
     const { data: document, error } = await supabase
       .from('generated_documents')
-      .insert([validatedData])
+      .insert(validatedData)
       .select()
       .single();
 
     if (error) throw error;
 
-    // Get current budget data
-    const { data: budgetData, error: budgetError } = await supabase
-      .from('budget_na853_split')
-      .select('user_view, ethsia_pistosi, katanomes_etous')
-      .eq('mis', validatedData.project_id)
-      .single();
+    // Update budget
+    const budgetUpdate = await updateBudget({
+      ...req,
+      params: { mis: validatedData.project_id },
+      body: { amount: validatedData.total_amount }
+    } as AuthRequest, res);
 
-    if (budgetError) {
-      console.error('Budget fetch error:', budgetError);
-      throw budgetError;
+    if (budgetUpdate.statusCode === 500) {
+      throw new Error('Failed to update budget');
     }
 
-    if (!budgetData) {
-      throw new Error('Budget data not found');
-    }
-
-    const currentUserView = parseFloat(budgetData.user_view?.toString() || '0');
-    const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-    const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
-
-    // Calculate new amounts
-    const requestedAmount = parseFloat(validatedData.total_amount.toString());
-    const newUserView = Math.max(0, currentUserView - requestedAmount);
-    const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - requestedAmount);
-    const twentyPercentThreshold = katanomesEtous * 0.2;
-
-    const notifications = [];
-
-    // Prepare notifications if needed
-    if (newEthsiaPistosi <= 0) {
-      const { data: notifData, error: notifError } = await supabase
-        .from('budget_notifications')
-        .insert({
-          mis: validatedData.project_id,
-          type: 'funding',
-          amount: requestedAmount,
-          current_budget: newUserView,
-          ethsia_pistosi: newEthsiaPistosi,
-          reason: 'Η ετήσια πίστωση έχει εξαντληθεί',
-          status: 'pending',
-          user_id: req.user.id.toString(),
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (notifError) {
-        console.error('Failed to create funding notification:', notifError);
-      } else if (notifData) {
-        notifications.push({
-          id: notifData.id,
-          type: 'funding',
-          reason: 'Η ετήσια πίστωση έχει εξαντληθεί'
-        });
-      }
-    }
-
-    if (newUserView <= twentyPercentThreshold) {
-      const { data: notifData, error: notifError } = await supabase
-        .from('budget_notifications')
-        .insert({
-          mis: validatedData.project_id,
-          type: 'reallocation',
-          amount: requestedAmount,
-          current_budget: newUserView,
-          ethsia_pistosi: newEthsiaPistosi,
-          reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
-          status: 'pending',
-          user_id: req.user.id.toString(),
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (notifError) {
-        console.error('Failed to create reallocation notification:', notifError);
-      } else if (notifData) {
-        notifications.push({
-          id: notifData.id,
-          type: 'reallocation',
-          reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής'
-        });
-      }
-    }
-
-    // Update budget amounts
-    const { error: updateError } = await supabase
-      .from('budget_na853_split')
-      .update({
-        user_view: newUserView,
-        ethsia_pistosi: newEthsiaPistosi,
-        updated_at: new Date().toISOString()
-      })
-      .eq('mis', validatedData.project_id);
-
-    if (updateError) {
-      console.error('Failed to update budget:', updateError);
-      throw updateError;
-    }
+    const { notifications } = budgetUpdate.body?.data || { notifications: [] };
 
     res.status(201).json({
       ...document,
-      notifications: notifications.length > 0 ? notifications : undefined
+      notifications: notifications?.length > 0 ? notifications : undefined
     });
   } catch (error) {
     console.error('Error creating document:', error);
@@ -158,47 +86,48 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-router.get("/", authenticateToken, async (req: AuthRequest, res) => {
+// List documents with filters
+router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { status, unit, dateFrom, dateTo, amountFrom, amountTo, user } = req.query;
     let query = supabase
-      .from("generated_documents")
-      .select("*");
+      .from('generated_documents')
+      .select('*');
 
     // Filter by user's role and ID
-    if (req.user?.role !== "admin" && req.user?.id) {
-      query = query.eq("generated_by", req.user.id);
+    if (req.user?.role !== 'admin' && req.user?.id) {
+      query = query.eq('generated_by', req.user.id);
     }
 
     // Apply filters
-    if (status && status !== "all") {
-      query = query.eq("status", status as string);
+    if (status && status !== 'all') {
+      query = query.eq('status', status);
     }
-    if (unit && unit !== "all") {
-      query = query.eq("unit", unit as string);
+    if (unit && unit !== 'all') {
+      query = query.eq('unit', unit);
     }
     if (dateFrom) {
-      query = query.gte("created_at", dateFrom as string);
+      query = query.gte('created_at', dateFrom);
     }
     if (dateTo) {
-      query = query.lte("created_at", dateTo as string);
+      query = query.lte('created_at', dateTo);
     }
     if (amountFrom && !isNaN(Number(amountFrom))) {
-      query = query.gte("total_amount", Number(amountFrom));
+      query = query.gte('total_amount', Number(amountFrom));
     }
     if (amountTo && !isNaN(Number(amountTo))) {
-      query = query.lte("total_amount", Number(amountTo));
+      query = query.lte('total_amount', Number(amountTo));
     }
 
     // User/Recipient filter
     if (user) {
-      const searchTerm = (user as string).toLowerCase().trim();
+      const searchTerm = user.toString().toLowerCase().trim();
       if (searchTerm) {
-        query = query.textSearch("recipients", searchTerm);
+        query = query.textSearch('recipients', searchTerm);
       }
     }
 
-    query = query.order("created_at", { ascending: false });
+    query = query.order('created_at', { ascending: false });
 
     const { data, error } = await query;
 
@@ -206,8 +135,8 @@ router.get("/", authenticateToken, async (req: AuthRequest, res) => {
 
     res.json(data || []);
   } catch (error) {
-    console.error("Error fetching documents:", error);
-    res.status(500).json({ message: "Failed to fetch documents" });
+    console.error('Error fetching documents:', error);
+    res.status(500).json({ message: 'Failed to fetch documents' });
   }
 });
 

@@ -5,10 +5,10 @@ import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
 import { authenticateSession } from "./auth";
 import documentsController from "./controllers/documentsController";
+import budgetController from "./controllers/budgetController";
 import generatedDocumentsRouter from "./controllers/generatedDocuments";
 import unitsController from "./controllers/unitsController";
 import { listProjects, getExpenditureTypes, exportProjectsXLSX, bulkUpdateProjects } from "./controllers/projectController";
-import { getBudget } from "./controllers/budgetController";
 import { log } from "./vite";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -26,7 +26,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.get('/api/catalog/:mis/expenditure-types', authenticateSession, getExpenditureTypes);
 
     // Budget routes
-    app.get('/api/budget/:mis', authenticateSession, getBudget);
+    app.get('/api/budget/:mis', authenticateSession, budgetController.getBudget);
+    app.post('/api/budget/validate', authenticateSession, budgetController.validateBudget);
+    app.patch('/api/budget/:mis', authenticateSession, budgetController.updateBudget);
 
     // Documents routes
     app.use('/api/documents', authenticateSession, documentsController);
