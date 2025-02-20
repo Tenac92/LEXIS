@@ -51,6 +51,99 @@ router.get('/:mis', authenticateToken, async (req, res) => {
   }
 });
 
+// Validate amount before document creation
+router.post('/:mis/validate-amount', authenticateToken, async (req, res) => {
+  try {
+    const { mis } = req.params;
+    const { amount } = req.body;
+
+    if (!mis || !amount) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'MIS and amount are required'
+      });
+    }
+
+    const requestedAmount = parseFloat(amount);
+    if (isNaN(requestedAmount) || requestedAmount <= 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid amount'
+      });
+    }
+
+    const { data: budgetData, error: fetchError } = await supabase
+      .from('budget_na853_split')
+      .select('*')
+      .eq('mis', mis)
+      .single();
+
+    if (fetchError || !budgetData) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Budget not found'
+      });
+    }
+
+    const userView = parseFloat(budgetData.user_view) || 0;
+    const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi) || 0;
+    const katanomesEtous = parseFloat(budgetData.katanomes_etous) || 0;
+
+    // Check if amount exceeds available user_view budget
+    if (requestedAmount > userView) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Το ποσό υπερβαίνει το διαθέσιμο προϋπολογισμό',
+        canCreate: false,
+        allowDocx: false
+      });
+    }
+
+    const remainingEthsiaPistosi = ethsiaPistosi - requestedAmount;
+    const twentyPercentThreshold = katanomesEtous * 0.2;
+    const remainingUserView = userView - requestedAmount;
+
+    // Primary validation checks
+    let response = {
+      status: 'success',
+      canCreate: true,
+      allowDocx: true,
+      requiresNotification: false
+    };
+
+    // Check if amount will exhaust ethsia_pistosi
+    if (remainingEthsiaPistosi <= 0) {
+      response = {
+        status: 'warning',
+        message: 'Το ποσό θα εξαντλήσει την ετήσια πίστωση',
+        canCreate: false,
+        requiresNotification: true,
+        notificationType: 'funding',
+        allowDocx: false
+      };
+    }
+    // Check if remaining user_view will be below 20% threshold
+    else if (remainingUserView <= twentyPercentThreshold) {
+      response = {
+        status: 'warning',
+        message: 'Το ποσό θα μειώσει το διαθέσιμο προϋπολογισμό κάτω από το 20% της ετήσιας κατανομής',
+        canCreate: true,
+        requiresNotification: true,
+        notificationType: 'reallocation',
+        allowDocx: true
+      };
+    }
+
+    return res.json(response);
+  } catch (error) {
+    console.error('Budget validation error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+});
+
 // Update budget amount after document creation
 router.post('/:mis/update-amount', authenticateToken, async (req, res) => {
   try {
@@ -65,6 +158,15 @@ router.post('/:mis/update-amount', authenticateToken, async (req, res) => {
       });
     }
 
+    const requestedAmount = parseFloat(amount);
+    if (isNaN(requestedAmount) || requestedAmount <= 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid amount'
+      });
+    }
+
+    // Get current budget data
     const { data: budgetData, error: fetchError } = await supabase
       .from('budget_na853_split')
       .select('user_view, ethsia_pistosi, katanomes_etous')
@@ -76,32 +178,14 @@ router.post('/:mis/update-amount', authenticateToken, async (req, res) => {
     const currentUserView = parseFloat(budgetData.user_view) || 0;
     const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi) || 0;
     const katanomesEtous = parseFloat(budgetData.katanomes_etous) || 0;
-    const requestedAmount = parseFloat(amount);
 
     // Calculate new amounts
     const newUserView = Math.max(0, currentUserView - requestedAmount);
     const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - requestedAmount);
-
-    // Check if we need to notify admin
     const twentyPercentThreshold = katanomesEtous * 0.2;
 
-    if (newUserView <= twentyPercentThreshold) {
-      // Create notification for reallocation
-      await supabase.from('budget_notifications').insert([{
-        mis,
-        type: 'reallocation',
-        amount: requestedAmount,
-        current_budget: newUserView,
-        ethsia_pistosi: newEthsiaPistosi,
-        reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
-        status: 'pending',
-        user_id: user.id,
-        created_at: new Date().toISOString()
-      }]);
-    }
-
+    // Create notifications if needed
     if (newEthsiaPistosi <= 0) {
-      // Create notification for funding
       await supabase.from('budget_notifications').insert([{
         mis,
         type: 'funding',
@@ -109,6 +193,19 @@ router.post('/:mis/update-amount', authenticateToken, async (req, res) => {
         current_budget: newUserView,
         ethsia_pistosi: newEthsiaPistosi,
         reason: 'Η ετήσια πίστωση έχει εξαντληθεί',
+        status: 'pending',
+        user_id: user.id,
+        created_at: new Date().toISOString()
+      }]);
+    }
+    else if (newUserView <= twentyPercentThreshold) {
+      await supabase.from('budget_notifications').insert([{
+        mis,
+        type: 'reallocation',
+        amount: requestedAmount,
+        current_budget: newUserView,
+        ethsia_pistosi: newEthsiaPistosi,
+        reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
         status: 'pending',
         user_id: user.id,
         created_at: new Date().toISOString()
@@ -127,11 +224,13 @@ router.post('/:mis/update-amount', authenticateToken, async (req, res) => {
     if (updateError) throw updateError;
 
     res.json({ 
-      status: 'success', 
-      newUserView,
-      newEthsiaPistosi,
-      requiresReallocation: newUserView <= twentyPercentThreshold,
-      requiresFunding: newEthsiaPistosi <= 0
+      status: 'success',
+      data: {
+        newUserView,
+        newEthsiaPistosi,
+        requiresReallocation: newUserView <= twentyPercentThreshold,
+        requiresFunding: newEthsiaPistosi <= 0
+      }
     });
   } catch (error) {
     console.error('Budget update error:', error);
@@ -182,86 +281,6 @@ router.post('/bulk-update', authenticateToken, async (req, res) => {
   });
 });
 
-
-// Validate amount before document creation
-router.post('/:mis/validate-amount', authenticateToken, async (req, res) => {
-  try {
-    const { mis } = req.params;
-    const { amount } = req.body;
-
-    if (!mis || !amount) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'MIS and amount are required'
-      });
-    }
-
-    const { data, error } = await supabase
-      .from('budget_na853_split')
-      .select('*')
-      .eq('mis', mis)
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Budget not found'
-      });
-    }
-
-    const requestedAmount = parseFloat(amount);
-    const userView = parseFloat(data.user_view) || 0;
-    const katanomesEtous = parseFloat(data.katanomes_etous) || 0;
-    const ethsiaPistosi = parseFloat(data.ethsia_pistosi) || 0;
-
-    // Check if amount exceeds available user_view budget
-    if (requestedAmount > userView) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Το ποσό υπερβαίνει το διαθέσιμο προϋπολογισμό',
-        canCreate: false
-      });
-    }
-
-    // Check if amount will exhaust ethsia_pistosi
-    if (requestedAmount >= ethsiaPistosi) {
-      return res.status(200).json({
-        status: 'warning',
-        message: 'Το ποσό θα εξαντλήσει την ετήσια πίστωση',
-        canCreate: true,
-        requiresNotification: true,
-        notificationType: 'funding',
-        allowDocx: true
-      });
-    }
-
-    // Check if amount exceeds 20% of katanomes_etous
-    if (requestedAmount > (katanomesEtous * 0.2)) {
-      return res.status(200).json({
-        status: 'warning',
-        message: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
-        canCreate: true,
-        requiresNotification: true,
-        notificationType: 'reallocation',
-        allowDocx: true
-      });
-    }
-
-    return res.json({
-      status: 'success',
-      canCreate: true,
-      allowDocx: true
-    });
-  } catch (error) {
-    console.error('Budget validation error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
-  }
-});
-
-const { validateBudgetData } = require('../utils/validation');
 
 router.post('/notify-admin', authenticateToken, async (req, res) => {
   try {
@@ -374,82 +393,6 @@ router.post('/notify-admin', authenticateToken, async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: error.message || 'Failed to process notification'
-    });
-  }
-});
-
-router.post('/:mis/validate-amount', authenticateToken, async (req, res) => {
-  try {
-    const { mis } = req.params;
-    const { amount } = req.body;
-
-    if (!mis || !amount) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'MIS and amount are required'
-      });
-    }
-
-    const { data, error } = await supabase
-      .from('budget_na853_split')
-      .select('*')
-      .eq('mis', mis)
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Budget not found'
-      });
-    }
-
-    const requestedAmount = parseFloat(amount);
-    const userView = parseFloat(data.user_view) || 0;
-    const katanomesEtous = parseFloat(data.katanomes_etous) || 0;
-    const ethsiaPistosi = parseFloat(data.ethsia_pistosi) || 0;
-    const proip = parseFloat(data.proip) || 0;
-
-    if (requestedAmount > proip) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Το ποσό υπερβαίνει τον προϋπολογισμό (ΠΡΟΫΠ)',
-        canCreate: false,
-        notificationType: 'exceeded_proip'
-      });
-    }
-
-    if (requestedAmount > ethsiaPistosi) {
-      return res.status(200).json({
-        status: 'warning',
-        message: 'Το ποσό υπερβαίνει την ετήσια πίστωση',
-        canCreate: false,
-        requiresNotification: true,
-        notificationType: 'funding',
-        allowDocx: false
-      });
-    }
-
-    if (requestedAmount > (katanomesEtous * 0.2)) {
-      return res.status(200).json({
-        status: 'warning',
-        message: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
-        canCreate: true,
-        requiresNotification: true,
-        notificationType: 'reallocation',
-        allowDocx: true
-      });
-    }
-
-    return res.json({
-      status: 'success',
-      canCreate: true,
-      allowDocx: true
-    });
-  } catch (error) {
-    console.error('Budget validation error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: error.message
     });
   }
 });
