@@ -1,0 +1,102 @@
+queryClient.ts:13 
+        
+        
+       POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/users 500 (Internal Server Error)
+apiRequest @ queryClient.ts:13
+mutationFn @ index.tsx:139
+fn @ @tanstack_react-query.js?v=cdfcfee5:1189
+run @ @tanstack_react-query.js?v=cdfcfee5:494
+start @ @tanstack_react-query.js?v=cdfcfee5:536
+execute @ @tanstack_react-query.js?v=cdfcfee5:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=cdfcfee5:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=cdfcfee5:3295
+onSubmit @ index.tsx:172
+(ανώνυμες) @ chunk-EV5STJTR.js?v=cdfcfee5:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-UPELNCPK.js?v=cdfcfee5:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=cdfcfee5:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=cdfcfee5:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=cdfcfee5:3736
+executeDispatch @ chunk-UPELNCPK.js?v=cdfcfee5:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=cdfcfee5:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=cdfcfee5:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=cdfcfee5:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=cdfcfee5:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=cdfcfee5:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=cdfcfee5:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=cdfcfee5:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=cdfcfee5:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=cdfcfee5:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=cdfcfee5:5449
+Εμφάνιση 22 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:31 [API] Request failed: Error: HTTP error! status: 500
+    at apiRequest (queryClient.ts:26:13)
+    at async Object.mutationFn (index.tsx:139:24)
+apiRequest @ queryClient.ts:31
+await in apiRequest
+mutationFn @ index.tsx:139
+fn @ @tanstack_react-query.js?v=cdfcfee5:1189
+run @ @tanstack_react-query.js?v=cdfcfee5:494
+start @ @tanstack_react-query.js?v=cdfcfee5:536
+execute @ @tanstack_react-query.js?v=cdfcfee5:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=cdfcfee5:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=cdfcfee5:3295
+onSubmit @ index.tsx:172
+(ανώνυμες) @ chunk-EV5STJTR.js?v=cdfcfee5:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-UPELNCPK.js?v=cdfcfee5:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=cdfcfee5:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=cdfcfee5:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=cdfcfee5:3736
+executeDispatch @ chunk-UPELNCPK.js?v=cdfcfee5:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=cdfcfee5:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=cdfcfee5:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=cdfcfee5:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=cdfcfee5:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=cdfcfee5:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=cdfcfee5:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=cdfcfee5:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=cdfcfee5:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=cdfcfee5:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=cdfcfee5:5449
+Εμφάνιση 22 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:13 
+        
+        
+       POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/users 500 (Internal Server Error)
+apiRequest @ queryClient.ts:13
+mutationFn @ index.tsx:139
+fn @ @tanstack_react-query.js?v=cdfcfee5:1189
+run @ @tanstack_react-query.js?v=cdfcfee5:494
+start @ @tanstack_react-query.js?v=cdfcfee5:536
+execute @ @tanstack_react-query.js?v=cdfcfee5:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=cdfcfee5:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=cdfcfee5:3295
+onSubmit @ index.tsx:172
+(ανώνυμες) @ chunk-EV5STJTR.js?v=cdfcfee5:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-UPELNCPK.js?v=cdfcfee5:3674
+invokeGuardedCallbackDev @ chunk-UPELNCPK.js?v=cdfcfee5:3699
+invokeGuardedCallback @ chunk-UPELNCPK.js?v=cdfcfee5:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-UPELNCPK.js?v=cdfcfee5:3736
+executeDispatch @ chunk-UPELNCPK.js?v=cdfcfee5:7014
+processDispatchQueueItemsInOrder @ chunk-UPELNCPK.js?v=cdfcfee5:7034
+processDispatchQueue @ chunk-UPELNCPK.js?v=cdfcfee5:7043
+dispatchEventsForPlugins @ chunk-UPELNCPK.js?v=cdfcfee5:7051
+(ανώνυμες) @ chunk-UPELNCPK.js?v=cdfcfee5:7174
+batchedUpdates$1 @ chunk-UPELNCPK.js?v=cdfcfee5:18913
+batchedUpdates @ chunk-UPELNCPK.js?v=cdfcfee5:3579
+dispatchEventForPluginEventSystem @ chunk-UPELNCPK.js?v=cdfcfee5:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-UPELNCPK.js?v=cdfcfee5:5478
+dispatchEvent @ chunk-UPELNCPK.js?v=cdfcfee5:5472
+dispatchDiscreteEvent @ chunk-UPELNCPK.js?v=cdfcfee5:5449
+Εμφάνιση 22 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:31 [API] Request failed: Error: HTTP error! status: 500
+    at apiRequest (queryClient.ts:26:13)
+    at async Object.mutationFn (index.tsx:139:24)
