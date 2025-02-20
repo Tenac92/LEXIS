@@ -13,30 +13,32 @@ interface BudgetValidationResponse {
 async function createBudgetNotification(
   mis: string, 
   type: 'funding' | 'reallocation',
-  amount: number,
-  current_budget: number,
-  ethsia_pistosi: number,
+  amount: string,
+  current_budget: string,
+  ethsia_pistosi: string,
   reason: string,
   userId: string
 ) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('budget_notifications')
-    .insert([{
+    .insert({
       mis,
       type,
-      amount,
-      current_budget,
-      ethsia_pistosi,
+      amount: parseFloat(amount),
+      current_budget: parseFloat(current_budget),
+      ethsia_pistosi: parseFloat(ethsia_pistosi),
       reason,
       status: 'pending',
       user_id: userId,
       created_at: new Date().toISOString()
-    }]);
+    });
 
   if (error) {
     console.error('Failed to create budget notification:', error);
     throw error;
   }
+
+  return data;
 }
 
 export async function validateBudget(req: Request, res: Response) {
@@ -59,16 +61,21 @@ export async function validateBudget(req: Request, res: Response) {
       .eq("mis", mis)
       .single();
 
-    if (error) {
+    if (error || !budgetData) {
       console.error('Budget fetch error:', error);
-      throw error;
+      return res.status(404).json({
+        status: 'error',
+        message: 'Budget not found',
+        canCreate: false,
+        allowDocx: false
+      });
     }
 
-    const userView = parseFloat(budgetData.user_view) || 0;
-    const katanomesEtous = parseFloat(budgetData.katanomes_etous) || 0;
-    const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi) || 0;
+    const userView = parseFloat(budgetData.user_view?.toString() || '0');
+    const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+    const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
 
-    // Check if amount exceeds user_view
+    // First check: Amount cannot exceed user_view
     if (requestedAmount > userView) {
       return res.status(400).json({
         status: 'error',
@@ -82,19 +89,19 @@ export async function validateBudget(req: Request, res: Response) {
     const remainingUserView = userView - requestedAmount;
     const twentyPercentThreshold = katanomesEtous * 0.2;
 
-    // Check if ethsia_pistosi will be depleted
+    // Second check: Ethsia Pistosi will be depleted
     if (remainingEthsiaPistosi <= 0) {
       return res.json({
         status: 'warning',
         message: 'Το ποσό θα εξαντλήσει την ετήσια πίστωση',
-        canCreate: false,
+        canCreate: true,
         requiresNotification: true,
         notificationType: 'funding',
-        allowDocx: false
+        allowDocx: true
       });
     }
 
-    // Check if remaining budget will be below 20% threshold
+    // Third check: Below 20% of katanomes_etous
     if (remainingUserView <= twentyPercentThreshold) {
       return res.json({
         status: 'warning',
@@ -114,7 +121,7 @@ export async function validateBudget(req: Request, res: Response) {
 
   } catch (error) {
     console.error("Budget validation error:", error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       status: 'error',
       message: "Failed to validate budget",
       canCreate: false,
@@ -138,7 +145,7 @@ export async function getBudget(req: Request, res: Response) {
     const { data: projectData, error: projectError } = await supabase
       .from("project_catalog")
       .select("na853, budget_na853")
-      .eq("mis", mis)
+      .eq("mis", mis.toString())
       .single();
 
     if (projectError) {
@@ -146,7 +153,7 @@ export async function getBudget(req: Request, res: Response) {
       throw projectError;
     }
 
-    if (!projectData || !projectData.na853) {
+    if (!projectData?.na853) {
       return res.json({
         user_view: 0,
         ethsia_pistosi: 0,
@@ -172,21 +179,21 @@ export async function getBudget(req: Request, res: Response) {
     }
 
     const response = {
-      user_view: budgetData?.user_view || budgetData?.katanomes_etous || projectData.budget_na853 || 0,
-      ethsia_pistosi: budgetData?.ethsia_pistosi || 0,
-      q1: budgetData?.q1 || 0,
-      q2: budgetData?.q2 || 0,
-      q3: budgetData?.q3 || 0,
-      q4: budgetData?.q4 || 0,
-      total_spent: budgetData?.total_spent || 0,
-      current_budget: budgetData?.current_budget || budgetData?.katanomes_etous || projectData.budget_na853 || 0
+      user_view: budgetData?.user_view?.toString() || budgetData?.katanomes_etous?.toString() || projectData.budget_na853?.toString() || '0',
+      ethsia_pistosi: budgetData?.ethsia_pistosi?.toString() || '0',
+      q1: budgetData?.q1?.toString() || '0',
+      q2: budgetData?.q2?.toString() || '0',
+      q3: budgetData?.q3?.toString() || '0',
+      q4: budgetData?.q4?.toString() || '0',
+      total_spent: budgetData?.total_spent?.toString() || '0',
+      current_budget: budgetData?.current_budget?.toString() || budgetData?.katanomes_etous?.toString() || projectData.budget_na853?.toString() || '0'
     };
 
-    res.json(response);
+    return res.json(response);
 
   } catch (error) {
     console.error("Budget fetch error:", error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       message: "Failed to fetch budget data",
       status: "error"
     });
@@ -218,17 +225,17 @@ export async function updateBudget(req: Request, res: Response) {
     const { data: budgetData, error: fetchError } = await supabase
       .from('budget_na853_split')
       .select('*')
-      .eq('mis', mis)
+      .eq('mis', mis.toString())
       .single();
 
-    if (fetchError) {
+    if (fetchError || !budgetData) {
       console.error('Budget fetch error:', fetchError);
       throw new Error('Failed to fetch budget data');
     }
 
-    const currentUserView = parseFloat(budgetData.user_view) || 0;
-    const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi) || 0;
-    const katanomesEtous = parseFloat(budgetData.katanomes_etous) || 0;
+    const currentUserView = parseFloat(budgetData.user_view?.toString() || '0');
+    const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+    const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
 
     // Calculate new amounts
     const newUserView = Math.max(0, currentUserView - requestedAmount);
@@ -236,64 +243,68 @@ export async function updateBudget(req: Request, res: Response) {
     const twentyPercentThreshold = katanomesEtous * 0.2;
 
     // Create notifications if needed
+    const notifications = [];
+
     try {
       if (newEthsiaPistosi <= 0) {
         await createBudgetNotification(
           mis,
           'funding',
-          requestedAmount,
-          newUserView,
-          newEthsiaPistosi,
+          requestedAmount.toString(),
+          newUserView.toString(),
+          newEthsiaPistosi.toString(),
           'Η ετήσια πίστωση έχει εξαντληθεί',
           userId
         );
+        notifications.push({ type: 'funding', reason: 'Η ετήσια πίστωση έχει εξαντληθεί' });
       }
 
       if (newUserView <= twentyPercentThreshold) {
         await createBudgetNotification(
           mis,
           'reallocation',
-          requestedAmount,
-          newUserView,
-          newEthsiaPistosi,
+          requestedAmount.toString(),
+          newUserView.toString(),
+          newEthsiaPistosi.toString(),
           'Το ποσό θα μειώσει το διαθέσιμο προϋπολογισμό κάτω από το 20% της ετήσιας κατανομής',
           userId
         );
+        notifications.push({ type: 'reallocation', reason: 'Το ποσό θα μειώσει το διαθέσιμο προϋπολογισμό κάτω από το 20% της ετήσιας κατανομής' });
       }
     } catch (notificationError) {
       console.error('Failed to create notifications:', notificationError);
+      // Continue with budget update even if notifications fail
     }
 
     // Update budget amounts
     const { error: updateError } = await supabase
       .from('budget_na853_split')
       .update({
-        user_view: newUserView,
-        ethsia_pistosi: newEthsiaPistosi,
+        user_view: newUserView.toString(),
+        ethsia_pistosi: newEthsiaPistosi.toString(),
         updated_at: new Date().toISOString()
       })
-      .eq('mis', mis);
+      .eq('mis', mis.toString());
 
     if (updateError) {
       console.error('Budget update error:', updateError);
       throw new Error('Failed to update budget amounts');
     }
 
-    res.json({
+    return res.json({
       status: 'success',
       data: {
         newUserView,
         newEthsiaPistosi,
-        requiresReallocation: newUserView <= twentyPercentThreshold,
-        requiresFunding: newEthsiaPistosi <= 0
+        notifications
       }
     });
 
   } catch (error) {
     console.error('Budget update error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       status: 'error',
-      message: error.message || 'Failed to update budget'
+      message: error instanceof Error ? error.message : 'Failed to update budget'
     });
   }
 }
