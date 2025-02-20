@@ -92,6 +92,18 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       return res.status(403).json({ message: 'Admin access required' });
     }
 
+    if (!req.body.email || !req.body.name || !req.body.password || !req.body.role) {
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        details: {
+          email: !req.body.email ? 'Email is required' : null,
+          name: !req.body.name ? 'Name is required' : null,
+          password: !req.body.password ? 'Password is required' : null,
+          role: !req.body.role ? 'Role is required' : null
+        }
+      });
+    }
+
     const { data: existingUser } = await supabase
       .from('users')
       .select('id')
@@ -109,14 +121,18 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
         name: req.body.name,
         role: req.body.role,
         password: req.body.password,
-        units: req.body.units || [],
-        telephone: req.body.telephone,
-        department: req.body.department
+        units: Array.isArray(req.body.units) ? req.body.units : [],
+        telephone: req.body.telephone || null,
+        department: req.body.department || null
       }])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[Users] User creation error:', error);
+      throw error;
+    }
+    
     res.status(201).json(newUser);
   } catch (error) {
     console.error('[Users] User creation error:', error);
