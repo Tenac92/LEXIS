@@ -52,16 +52,18 @@ interface CreateDocumentDialogProps {
 
 interface BudgetIndicatorProps {
   budgetData: any;
+  currentAmount: number;
 }
 
-const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData }) => {
+const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
+  const availableBudget = budgetData.current_budget - currentAmount;
   return (
     <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div>
           <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
           <p className="text-2xl font-bold text-blue-600">
-            {budgetData.current_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
           </p>
         </div>
         <div>
@@ -394,7 +396,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             {/* Project Selection Step */}
             {currentStep === 1 && (
               <div className="space-y-4">
-                {budgetData && <BudgetIndicator budgetData={budgetData} />}
+                {budgetData && (
+                  <BudgetIndicator 
+                    budgetData={budgetData}
+                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0)}
+                  />
+                )}
 
                 {projectsError && (
                   <div className="bg-destructive/10 p-4 rounded-lg text-destructive">
@@ -467,7 +474,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             {/* Recipients Step */}
             {currentStep === 2 && (
               <div className="space-y-4">
-                {budgetData && <BudgetIndicator budgetData={budgetData} />}
+                {budgetData && (
+                  <BudgetIndicator 
+                    budgetData={budgetData}
+                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0)}
+                  />
+                )}
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <div>
