@@ -110,37 +110,46 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - validatedData.total_amount);
     const twentyPercentThreshold = katanomesEtous * 0.2;
 
-    // Create notifications if needed
+    const notifications = [];
+
+    // Prepare notifications if needed
     if (newEthsiaPistosi <= 0) {
-      await supabase
-        .from('budget_notifications')
-        .insert({
-          mis: validatedData.project_id,
-          type: 'funding',
-          amount: validatedData.total_amount,
-          current_budget: newUserView,
-          ethsia_pistosi: newEthsiaPistosi,
-          reason: 'Η ετήσια πίστωση έχει εξαντληθεί',
-          status: 'pending',
-          user_id: req.user?.id,
-          created_at: new Date().toISOString()
-        });
+      notifications.push({
+        mis: validatedData.project_id,
+        type: 'funding',
+        amount: validatedData.total_amount,
+        current_budget: newUserView,
+        ethsia_pistosi: newEthsiaPistosi,
+        reason: 'Η ετήσια πίστωση έχει εξαντληθεί',
+        status: 'pending',
+        user_id: req.user.id.toString(),
+        created_at: new Date().toISOString()
+      });
     }
 
     if (newUserView <= twentyPercentThreshold) {
-      await supabase
+      notifications.push({
+        mis: validatedData.project_id,
+        type: 'reallocation',
+        amount: validatedData.total_amount,
+        current_budget: newUserView,
+        ethsia_pistosi: newEthsiaPistosi,
+        reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
+        status: 'pending',
+        user_id: req.user.id.toString(),
+        created_at: new Date().toISOString()
+      });
+    }
+
+    // Insert notifications if any exist
+    if (notifications.length > 0) {
+      const { error: notificationError } = await supabase
         .from('budget_notifications')
-        .insert({
-          mis: validatedData.project_id,
-          type: 'reallocation',
-          amount: validatedData.total_amount,
-          current_budget: newUserView,
-          ethsia_pistosi: newEthsiaPistosi,
-          reason: 'Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
-          status: 'pending',
-          user_id: req.user?.id,
-          created_at: new Date().toISOString()
-        });
+        .insert(notifications);
+
+      if (notificationError) {
+        console.error('Failed to create notifications:', notificationError);
+      }
     }
 
     // Update budget amounts
