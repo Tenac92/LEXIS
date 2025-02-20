@@ -50,6 +50,38 @@ interface CreateDocumentDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface BudgetIndicatorProps {
+  budgetData: any;
+}
+
+const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData }) => {
+  return (
+    <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div>
+          <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
+          <p className="text-2xl font-bold text-blue-600">
+            {budgetData.current_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+          </p>
+        </div>
+        <div>
+          <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
+          <p className="text-2xl font-bold text-gray-700">
+            {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+          </p>
+        </div>
+        <div>
+          <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
+          <p className="text-2xl font-bold text-gray-700">
+            {budgetData.annual_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const { toast } = useToast();
@@ -362,30 +394,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             {/* Project Selection Step */}
             {currentStep === 1 && (
               <div className="space-y-4">
-                {budgetData && (
-                  <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
-                        <p className="text-2xl font-bold text-blue-600">
-                          {budgetData.current_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                        </p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
-                        <p className="text-2xl font-bold text-gray-700">
-                          {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                        </p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
-                        <p className="text-2xl font-bold text-gray-700">
-                          {budgetData.annual_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {budgetData && <BudgetIndicator budgetData={budgetData} />}
 
                 {projectsError && (
                   <div className="bg-destructive/10 p-4 rounded-lg text-destructive">
@@ -457,134 +466,112 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
             {/* Recipients Step */}
             {currentStep === 2 && (
-      <div className="space-y-4">
-        {budgetData && (
-          <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
-                <p className="text-2xl font-bold text-blue-600">
-                  {budgetData.current_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                </p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
-                <p className="text-2xl font-bold text-gray-700">
-                  {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                </p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
-                <p className="text-2xl font-bold text-gray-700">
-                  {budgetData.annual_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="text-lg font-medium">Recipients</h3>
-                    <p className="text-sm text-gray-500">Add up to 10 recipients</p>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={addRecipient}
-                    disabled={form.watch("recipients")?.length >= 10}
-                  >
-                    Add Recipient
-                  </Button>
-                </div>
-
-                {form.watch("recipients")?.map((recipient: any, index) => (
-                  <div key={index} className="grid grid-cols-6 gap-4 p-4 border rounded-lg">
-                    <FormField
-                      control={form.control}
-                      name={`recipients.${index}.firstname`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>First Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`recipients.${index}.lastname`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`recipients.${index}.afm`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>AFM</FormLabel>
-                          <FormControl>
-                            <Input {...field} maxLength={9} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`recipients.${index}.amount`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Amount</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`recipients.${index}.installment`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Installment</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                              min={1}
-                              max={12}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                {budgetData && <BudgetIndicator budgetData={budgetData} />}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-lg font-medium">Recipients</h3>
+                      <p className="text-sm text-gray-500">Add up to 10 recipients</p>
+                    </div>
                     <Button
                       type="button"
-                      variant="destructive"
-                      onClick={() => removeRecipient(index)}
-                      className="mt-8"
+                      onClick={addRecipient}
+                      disabled={form.watch("recipients")?.length >= 10}
                     >
-                      Remove
+                      Add Recipient
                     </Button>
                   </div>
-                ))}
+
+                  {form.watch("recipients")?.map((recipient: any, index) => (
+                    <div key={index} className="grid grid-cols-6 gap-4 p-4 border rounded-lg">
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.firstname`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.lastname`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.afm`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>AFM</FormLabel>
+                            <FormControl>
+                              <Input {...field} maxLength={9} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.amount`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Amount</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.installment`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Installment</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                min={1}
+                                max={12}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => removeRecipient(index)}
+                        className="mt-8"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -609,7 +596,5 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         </Form>
       </DialogContent>
     </Dialog>
-  );
-}
   );
 }
