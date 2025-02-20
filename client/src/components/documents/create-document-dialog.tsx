@@ -183,7 +183,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           };
         });
 
-        return data;
       } catch (error) {
         console.error('Projects fetch error:', error);
         throw error;
@@ -200,9 +199,19 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       if (!selectedProjectId) return null;
 
       try {
-        const { data, error } = await supabase
+        // First validate the budget
+        const validateResponse = await apiRequest(`/api/budget/validate`, {
+          method: 'POST',
+          body: JSON.stringify({
+            mis: selectedProjectId,
+            amount: form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0
+          })
+        });
+
+        // Get current budget data
+        const { data: budgetData, error } = await supabase
           .from('budget_na853_split')
-          .select('proip, ethsia_pistosi, katanomes_etous')
+          .select('proip, ethsia_pistosi, katanomes_etous, user_view')
           .eq('mis', selectedProjectId)
           .single();
 
@@ -211,10 +220,16 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           throw error;
         }
 
+        if (!budgetData) {
+          throw new Error('Budget data not found');
+        }
+
+        // Return both validation and budget data
         return {
-          current_budget: parseFloat(data?.katanomes_etous || '0'),
-          total_budget: parseFloat(data?.proip || '0'),
-          annual_budget: parseFloat(data?.ethsia_pistosi || '0')
+          validation: validateResponse,
+          current_budget: parseFloat(budgetData.user_view?.toString() || '0'),
+          total_budget: parseFloat(budgetData.proip?.toString() || '0'),
+          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0')
         };
       } catch (error) {
         console.error('Budget fetch error:', error);
@@ -223,7 +238,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           description: "Failed to load budget information.",
           variant: "destructive"
         });
-        return null;
+        throw error;
       }
     },
     enabled: Boolean(selectedProjectId),
@@ -232,7 +247,16 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
-      // Convert form data to FormData
+      if (!budgetData?.validation.canCreate) {
+        toast({
+          title: "Budget Error",
+          description: "Cannot create document due to budget constraints",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Convert form data to payload
       const payload = {
         unit: data.unit,
         project_id: data.project_id,
@@ -250,8 +274,17 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         body: JSON.stringify(payload)
       });
 
-      // apiRequest already handles response.ok check internally
+      // Handle budget update notifications if any
+      if (response.notifications?.length > 0) {
+        toast({
+          title: "Budget Update",
+          description: response.notifications[0].reason,
+          variant: "warning"
+        });
+      }
+
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
+      await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
 
       toast({
         title: "Success",
@@ -397,7 +430,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             {currentStep === 1 && (
               <div className="space-y-4">
                 {budgetData && (
-                  <BudgetIndicator 
+                  <BudgetIndicator
                     budgetData={budgetData}
                     currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0)}
                   />
@@ -475,7 +508,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
             {currentStep === 2 && (
               <div className="space-y-4">
                 {budgetData && (
-                  <BudgetIndicator 
+                  <BudgetIndicator
                     budgetData={budgetData}
                     currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0)}
                   />
