@@ -611,3 +611,5 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     </Dialog>
   );
 }
+  );
+}
