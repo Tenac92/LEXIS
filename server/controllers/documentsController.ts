@@ -83,6 +83,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       created_at: new Date()
     });
 
+    // Start transaction
     const { data: document, error } = await supabase
       .from('generated_documents')
       .insert([validatedData])
@@ -90,6 +91,24 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       .single();
 
     if (error) throw error;
+
+    // Update budget after document creation
+    const { data: budgetData, error: budgetError } = await supabase
+      .from('budget_na853_split')
+      .select('current_budget')
+      .eq('mis', validatedData.project_id)
+      .single();
+
+    if (budgetError) throw budgetError;
+
+    const newBudget = (parseFloat(budgetData.current_budget) || 0) - validatedData.total_amount;
+
+    const { error: updateError } = await supabase
+      .from('budget_na853_split')
+      .update({ current_budget: Math.max(0, newBudget) })
+      .eq('mis', validatedData.project_id);
+
+    if (updateError) throw updateError;
 
     res.status(201).json(document);
   } catch (error) {
