@@ -199,17 +199,30 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       if (!selectedProjectId) return null;
 
       try {
-        // First validate the budget
-        const currentAmount = form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0;
-        
+        // Calculate current amount properly
+        const recipients = form.watch("recipients") || [];
+        const currentAmount = recipients.reduce((sum, r) => {
+          const amount = parseFloat(r.amount?.toString() || '0');
+          return isNaN(amount) ? sum : sum + amount;
+        }, 0);
+
         // Only validate if there's an amount to validate
-        const validateResponse = await apiRequest(`/api/budget/validate`, {
-          method: 'POST',
-          body: JSON.stringify({
-            mis: selectedProjectId,
-            amount: Math.max(0.01, currentAmount) // Ensure minimum amount
-          })
-        });
+        if (currentAmount > 0) {
+          const validateResponse = await apiRequest(`/api/budget/validate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              mis: selectedProjectId,
+              amount: currentAmount
+            })
+          });
+
+          if (!validateResponse.ok) {
+            throw new Error(validateResponse.message || 'Budget validation failed');
+          }
+        }
 
         // Get current budget data
         const { data: budgetData, error } = await supabase
@@ -219,7 +232,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           .single();
 
         if (error) {
-          console.error('Budget fetch error:', error);
+          console.error('Budget data fetch error:', error);
           throw error;
         }
 
@@ -227,21 +240,25 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           throw new Error('Budget data not found');
         }
 
-        // Return both validation and budget data
+        // Parse budget values safely
+        const userView = parseFloat(budgetData.user_view?.toString() || '0');
+        const proip = parseFloat(budgetData.proip?.toString() || '0');
+        const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+
         return {
-          validation: validateResponse,
-          current_budget: parseFloat(budgetData.user_view?.toString() || '0'),
-          total_budget: parseFloat(budgetData.proip?.toString() || '0'),
-          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0')
+          validation: { canCreate: true },
+          current_budget: userView,
+          total_budget: proip,
+          annual_budget: ethsiaPistosi
         };
       } catch (error) {
         console.error('Budget fetch error:', error);
         toast({
           title: "Error",
-          description: "Failed to load budget information.",
+          description: error instanceof Error ? error.message : "Failed to load budget information.",
           variant: "destructive"
         });
-        throw error;
+        return null;
       }
     },
     enabled: Boolean(selectedProjectId),
