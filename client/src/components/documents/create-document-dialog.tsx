@@ -192,7 +192,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     retry: 2
   });
 
-  // Query budget data with improved error handling
+  // Updated budget query with proper validation handling
   const { data: budgetData, error: budgetError } = useQuery({
     queryKey: ["budget", selectedProjectId],
     queryFn: async () => {
@@ -206,28 +206,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           return isNaN(amount) ? sum : sum + amount;
         }, 0);
 
-        // Only validate if there's an amount to validate
-        if (currentAmount > 0) {
-          const validateResponse = await apiRequest(`/api/budget/validate`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              mis: selectedProjectId,
-              amount: currentAmount
-            })
-          });
-
-          if (!validateResponse.ok) {
-            throw new Error(validateResponse.message || 'Budget validation failed');
-          }
-        }
-
-        // Get current budget data
+        // Get current budget data first
         const { data: budgetData, error } = await supabase
           .from('budget_na853_split')
-          .select('proip, ethsia_pistosi, katanomes_etous, user_view')
+          .select('user_view, proip, ethsia_pistosi, katanomes_etous')
           .eq('mis', selectedProjectId)
           .single();
 
@@ -244,13 +226,63 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         const userView = parseFloat(budgetData.user_view?.toString() || '0');
         const proip = parseFloat(budgetData.proip?.toString() || '0');
         const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+        const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
 
+        // Only validate if there's an amount to validate
+        if (currentAmount > 0) {
+          try {
+            const validateResponse = await apiRequest(`/api/budget/validate`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                mis: selectedProjectId,
+                amount: currentAmount
+              })
+            });
+
+            // If validation shows warnings, display them but don't block
+            if (validateResponse.status === 'warning') {
+              toast({
+                title: "Budget Warning",
+                description: validateResponse.message,
+                variant: "warning"
+              });
+            }
+
+            return {
+              validation: validateResponse,
+              current_budget: userView,
+              total_budget: proip,
+              annual_budget: ethsiaPistosi,
+              katanomes_etous
+            };
+          } catch (validationError) {
+            // For validation errors, still return budget data but with validation error
+            return {
+              validation: {
+                status: 'error',
+                message: validationError instanceof Error ? validationError.message : 'Budget validation failed',
+                canCreate: false
+              },
+              current_budget: userView,
+              total_budget: proip,
+              annual_budget: ethsiaPistosi,
+              katanomes_etous
+            };
+          }
+        }
+
+        // If no amount to validate, return budget data with default validation
         return {
-          validation: { canCreate: true },
+          validation: { status: 'success', canCreate: true },
           current_budget: userView,
           total_budget: proip,
-          annual_budget: ethsiaPistosi
+          annual_budget: ethsiaPistosi,
+          katanomes_etous
         };
+
       } catch (error) {
         console.error('Budget fetch error:', error);
         toast({
@@ -267,10 +299,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
-      if (!budgetData?.validation.canCreate) {
+      if (budgetData?.validation.status === 'error') {
         toast({
           title: "Budget Error",
-          description: "Cannot create document due to budget constraints",
+          description: budgetData.validation.message || "Cannot create document due to budget constraints",
           variant: "destructive"
         });
         return;
