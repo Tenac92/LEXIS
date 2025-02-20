@@ -200,11 +200,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
       try {
         // First validate the budget
+        const currentAmount = form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0;
+        
+        // Only validate if there's an amount to validate
         const validateResponse = await apiRequest(`/api/budget/validate`, {
           method: 'POST',
           body: JSON.stringify({
             mis: selectedProjectId,
-            amount: form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0
+            amount: Math.max(0.01, currentAmount) // Ensure minimum amount
           })
         });
 
