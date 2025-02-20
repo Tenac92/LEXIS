@@ -12,3 +12,13 @@ declare module 'express' {
     user?: User;
   }
 }
+
+interface User {
+    id: number;
+    email: string;
+    role: string;
+    name: string | null;
+    units: string | null;
+    telephone: string | null;
+    department: string | null;
+}

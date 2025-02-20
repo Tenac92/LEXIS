@@ -65,7 +65,9 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
         email,
         name,
         role,
-        unit,
+        units,
+        telephone,
+        department,
         created_at
       `)
       .order('created_at', { ascending: false });
