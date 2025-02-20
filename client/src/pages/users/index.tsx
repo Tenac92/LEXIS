@@ -233,7 +233,7 @@ export default function UsersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Unit</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead>Telephone</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -246,9 +246,7 @@ export default function UsersPage() {
                       <span className="capitalize">{user.role}</span>
                     </TableCell>
                     <TableCell>{user.units?.join(", ") || "-"}</TableCell>
-                    <TableCell>
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </TableCell>
+                    <TableCell>{user.telephone || "-"}</TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
