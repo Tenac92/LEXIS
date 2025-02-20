@@ -326,7 +326,7 @@ export default function UsersPage() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="user@example.com" {...field} />
+                      <Input placeholder="user@example.com" autoComplete="off" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -339,7 +339,7 @@ export default function UsersPage() {
                   <FormItem>
                     <FormLabel>Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Doe" {...field} />
+                      <Input placeholder="John Doe" autoComplete="off" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -352,7 +352,7 @@ export default function UsersPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Enter password" {...field} />
+                      <Input type="password" placeholder="Enter password" autoComplete="new-password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -435,7 +435,7 @@ export default function UsersPage() {
                   <FormItem>
                     <FormLabel>Telephone</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter telephone number" {...field} />
+                      <Input placeholder="Enter telephone number" autoComplete="off" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -448,7 +448,7 @@ export default function UsersPage() {
                   <FormItem>
                     <FormLabel>Department</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter department" {...field} />
+                      <Input placeholder="Enter department" autoComplete="off" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
