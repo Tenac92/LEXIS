@@ -168,26 +168,25 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getUserUnits(userId: string): Promise<string[]> {
+  async getUserUnits(userId: string): Promise<any[]> {
     try {
-      console.log('[Storage] Fetching units for user:', userId);
+      console.log('[Storage] Fetching units from unit_det table');
       const { data, error } = await db
-        .from('users')
-        .select('unit_name') // Corrected column name
-        .eq('id', userId)
-        .single();
+        .from('unit_det')
+        .select('unit, unit_name')
+        .order('unit');
 
       if (error) {
         console.error('[Storage] Error in getUserUnits:', error);
         throw error;
       }
 
-      if (!data?.unit_name) { // Corrected column name
-        console.log('[Storage] No units found for user');
+      if (!data) {
+        console.log('[Storage] No units found');
         return [];
       }
 
-      return [data.unit_name]; // Corrected column name
+      return data;
     } catch (error) {
       console.error('[Storage] Error fetching user units:', error);
       throw error;
