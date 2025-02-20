@@ -280,9 +280,9 @@ export async function updateBudget(req: Request, res: Response) {
     const { error: updateError } = await supabase
       .from('budget_na853_split')
       .update({
-        user_view: newUserView.toString(),
-        ethsia_pistosi: newEthsiaPistosi.toString(),
-        updated_at: new Date().toISOString()
+        user_view: newUserView, // Ensure numerical type is preserved
+        ethsia_pistosi: newEthsiaPistosi, // Ensure numerical type is preserved
+        updated_at: new Date().toISOString() // This is fine as a string
       })
       .eq('mis', mis.toString());
 
