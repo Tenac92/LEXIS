@@ -13,12 +13,13 @@ import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 
 export default function BudgetHistoryPage() {
-  const { data: history, isLoading } = useQuery({
+  const { data: history, isLoading, error } = useQuery({
     queryKey: ['/api/budget/history'],
     queryFn: async () => {
       const res = await fetch('/api/budget/history');
       if (!res.ok) throw new Error('Failed to fetch budget history');
-      return res.json();
+      const json = await res.json();
+      return json.data;
     }
   });
 
@@ -34,6 +35,10 @@ export default function BudgetHistoryPage() {
                 <div className="flex items-center justify-center h-48">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
+              ) : error ? (
+                <div className="flex items-center justify-center h-48 text-red-500">
+                  {error instanceof Error ? error.message : 'An error occurred'}
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -48,7 +53,7 @@ export default function BudgetHistoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {history?.data?.map((entry: any) => (
+                    {history?.map((entry: any) => (
                       <TableRow key={entry.id}>
                         <TableCell>
                           {format(new Date(entry.created_at), 'dd/MM/yyyy HH:mm')}

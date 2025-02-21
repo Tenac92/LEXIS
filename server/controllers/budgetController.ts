@@ -313,19 +313,31 @@ export async function getBudgetHistory(req: Request, res: Response) {
       });
     }
 
-    const history = await storage.getBudgetHistory(mis);
-    console.log(`[Budget History] Found ${history.length} entries`);
+    // Get history from Supabase directly since we're having issues with storage
+    const { data: history, error } = await supabase
+      .from('budget_history')
+      .select('*')
+      .eq('mis', mis)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[Budget History] Database error:', error);
+      throw error;
+    }
+
+    console.log(`[Budget History] Found ${history?.length || 0} entries`);
 
     return res.json({
       status: 'success',
-      data: history
+      data: history || []
     });
 
   } catch (error) {
     console.error('Error fetching budget history:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch budget history'
+      message: 'Failed to fetch budget history',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 }
