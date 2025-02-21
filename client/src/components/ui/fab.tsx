@@ -129,6 +129,9 @@ export function FAB() {
           </Tooltip>
         </TooltipProvider>
 
+        <Button onClick={() => setIsOpen(true)}>
+          Create Document
+        </Button>
         <CreateDocumentDialog 
           open={isOpen} 
           onOpenChange={setIsOpen}
