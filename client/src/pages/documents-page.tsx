@@ -63,7 +63,7 @@ export default function DocumentsPage() {
         }
       });
       const response = await fetch(`/api/documents?${searchParams.toString()}`);
-      if (!response.ok) throw new Error('Failed to fetch documents');
+      if (!response.ok) throw new Error('Αποτυχία λήψης εγγράφων');
       return response.json();
     }
   });
@@ -74,26 +74,26 @@ export default function DocumentsPage() {
         method: 'GET',
       });
 
-      if (!response.ok) throw new Error('Failed to export document');
+      if (!response.ok) throw new Error('Αποτυχία εξαγωγής εγγράφου');
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `document-${docId}.docx`;
+      a.download = `έγγραφο-${docId}.docx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
       toast({
-        title: "Success",
-        description: "Document exported successfully",
+        title: "Επιτυχία",
+        description: "Το έγγραφο εξήχθη επιτυχώς",
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to export document",
+        title: "Σφάλμα",
+        description: "Αποτυχία εξαγωγής εγγράφου",
         variant: "destructive",
       });
     }
@@ -108,47 +108,47 @@ export default function DocumentsPage() {
             {/* Basic Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Unit</label>
+                <label className="text-sm font-medium text-foreground">Μονάδα</label>
                 <Select 
                   value={filters.unit}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select unit" />
+                    <SelectValue placeholder="Επιλέξτε μονάδα" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Units</SelectItem>
+                    <SelectItem value="all">Όλες οι Μονάδες</SelectItem>
                     {/* Add units dynamically */}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Status</label>
+                <label className="text-sm font-medium text-foreground">Κατάσταση</label>
                 <Select 
                   value={filters.status}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
+                    <SelectValue placeholder="Επιλέξτε κατάσταση" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="all">Όλες οι Καταστάσεις</SelectItem>
+                    <SelectItem value="pending">Σε Εκκρεμότητα</SelectItem>
+                    <SelectItem value="completed">Ολοκληρωμένα</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">User</label>
+                <label className="text-sm font-medium text-foreground">Χρήστης</label>
                 <Select 
                   value={filters.user}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, user: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select user" />
+                    <SelectValue placeholder="Επιλέξτε χρήστη" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="all">Όλοι οι Χρήστες</SelectItem>
                     {/* Add users dynamically */}
                   </SelectContent>
                 </Select>
@@ -161,64 +161,64 @@ export default function DocumentsPage() {
                 <Button variant="outline" className="w-full flex justify-between items-center">
                   <span className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
-                    Advanced Filters
+                    Προχωρημένα Φίλτρα
                   </span>
                   <span className="text-muted-foreground">⌘K</span>
                 </Button>
               </SheetTrigger>
               <SheetContent>
                 <SheetHeader>
-                  <SheetTitle>Advanced Filters</SheetTitle>
+                  <SheetTitle>Προχωρημένα Φίλτρα</SheetTitle>
                 </SheetHeader>
                 <div className="grid grid-cols-1 gap-4 py-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Date Range</label>
+                    <label className="text-sm font-medium">Εύρος Ημερομηνιών</label>
                     <div className="grid grid-cols-2 gap-2">
                       <Input 
                         type="date" 
                         value={filters.dateFrom}
                         onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                        placeholder="From" 
+                        placeholder="Από" 
                       />
                       <Input 
                         type="date"
                         value={filters.dateTo}
                         onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                        placeholder="To" 
+                        placeholder="Έως" 
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Amount Range</label>
+                    <label className="text-sm font-medium">Εύρος Ποσού</label>
                     <div className="grid grid-cols-2 gap-2">
                       <Input 
                         type="number"
                         value={filters.amountFrom}
                         onChange={(e) => setFilters(prev => ({ ...prev, amountFrom: e.target.value }))}
-                        placeholder="Min Amount" 
+                        placeholder="Ελάχιστο Ποσό" 
                       />
                       <Input 
                         type="number"
                         value={filters.amountTo}
                         onChange={(e) => setFilters(prev => ({ ...prev, amountTo: e.target.value }))}
-                        placeholder="Max Amount" 
+                        placeholder="Μέγιστο Ποσό" 
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Recipient</label>
+                    <label className="text-sm font-medium">Παραλήπτης</label>
                     <Input 
                       value={filters.recipient}
                       onChange={(e) => setFilters(prev => ({ ...prev, recipient: e.target.value }))}
-                      placeholder="Search recipient" 
+                      placeholder="Αναζήτηση παραλήπτη" 
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">AFM</label>
+                    <label className="text-sm font-medium">ΑΦΜ</label>
                     <Input 
                       value={filters.afm}
                       onChange={(e) => setFilters(prev => ({ ...prev, afm: e.target.value }))}
-                      placeholder="Search AFM" 
+                      placeholder="Αναζήτηση ΑΦΜ" 
                       maxLength={9} 
                     />
                   </div>
@@ -235,7 +235,7 @@ export default function DocumentsPage() {
                 disabled={isLoading}
               >
                 <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
+                Ανανέωση
               </Button>
               <Button
                 variant="outline"
@@ -280,7 +280,7 @@ export default function DocumentsPage() {
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mb-4" />
-                <p>No documents found</p>
+                <p>Δεν βρέθηκαν έγγραφα</p>
               </div>
             )}
           </div>

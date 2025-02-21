@@ -1,4 +1,3 @@
-
 import { type BudgetData } from "@/lib/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +14,7 @@ export function BudgetIndicator({
   onValidationWarning 
 }: BudgetIndicatorProps) {
   const { toast } = useToast();
-  
+
   if (!budgetData) return null;
 
   // Parse values ensuring they are numbers
@@ -41,7 +40,7 @@ export function BudgetIndicator({
       <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
+            <h3 className="text-sm font-medium text-gray-600">Διαθέσιμος Προϋπολογισμός</h3>
             <p className={`text-2xl font-bold ${availableBudget < 0 ? 'text-red-600' : 'text-blue-600'}`}>
               {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
@@ -53,18 +52,18 @@ export function BudgetIndicator({
                 />
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {percentageUsed.toFixed(1)}% used
+                {percentageUsed.toFixed(1)}% χρησιμοποιήθηκε
               </p>
             </div>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
+            <h3 className="text-sm font-medium text-gray-600">Ετήσιος Προϋπολογισμός</h3>
             <p className="text-2xl font-bold text-gray-700">
               {ethsiaPistosi.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
+            <h3 className="text-sm font-medium text-gray-600">Συνολικός Προϋπολογισμός</h3>
             <p className="text-2xl font-bold text-gray-700">
               {katanomesEtous.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
@@ -81,7 +80,7 @@ export function BudgetIndicator({
       )}
 
       {isExceeding20Percent && !isExceedingEthsiaPistosi && (
-        <Alert variant="warning">
+        <Alert>
           <AlertDescription>
             Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής. Απαιτείται ανακατανομή.
           </AlertDescription>
