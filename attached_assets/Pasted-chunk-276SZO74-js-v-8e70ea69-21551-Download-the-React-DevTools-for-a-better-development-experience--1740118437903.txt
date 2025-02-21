@@ -1,0 +1,62 @@
+chunk-276SZO74.js?v=8e70ea69:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+budget-history-page.tsx:19 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/budget/history 500 (Internal Server Error)
+queryFn @ budget-history-page.tsx:19
+fetchFn @ @tanstack_react-query.js?v=8e70ea69:840
+run @ @tanstack_react-query.js?v=8e70ea69:494
+start @ @tanstack_react-query.js?v=8e70ea69:536
+fetch @ @tanstack_react-query.js?v=8e70ea69:926
+executeFetch_fn @ @tanstack_react-query.js?v=8e70ea69:2211
+onSubscribe @ @tanstack_react-query.js?v=8e70ea69:1898
+subscribe @ @tanstack_react-query.js?v=8e70ea69:24
+(ανώνυμες) @ @tanstack_react-query.js?v=8e70ea69:3022
+subscribeToStore @ chunk-276SZO74.js?v=8e70ea69:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=8e70ea69:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=8e70ea69:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=8e70ea69:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=8e70ea69:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=8e70ea69:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=8e70ea69:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=8e70ea69:19447
+commitRootImpl @ chunk-276SZO74.js?v=8e70ea69:19416
+commitRoot @ chunk-276SZO74.js?v=8e70ea69:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=8e70ea69:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=8e70ea69:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=8e70ea69:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=8e70ea69:555
+flush @ @tanstack_react-query.js?v=8e70ea69:569
+batch @ @tanstack_react-query.js?v=8e70ea69:587
+dispatch_fn @ @tanstack_react-query.js?v=8e70ea69:996
+setData @ @tanstack_react-query.js?v=8e70ea69:696
+onSuccess @ @tanstack_react-query.js?v=8e70ea69:897
+resolve @ @tanstack_react-query.js?v=8e70ea69:456
+Promise.then
+run @ @tanstack_react-query.js?v=8e70ea69:498
+start @ @tanstack_react-query.js?v=8e70ea69:536
+fetch @ @tanstack_react-query.js?v=8e70ea69:926
+executeFetch_fn @ @tanstack_react-query.js?v=8e70ea69:2211
+onSubscribe @ @tanstack_react-query.js?v=8e70ea69:1898
+subscribe @ @tanstack_react-query.js?v=8e70ea69:24
+(ανώνυμες) @ @tanstack_react-query.js?v=8e70ea69:3022
+subscribeToStore @ chunk-276SZO74.js?v=8e70ea69:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=8e70ea69:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=8e70ea69:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=8e70ea69:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=8e70ea69:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=8e70ea69:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=8e70ea69:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=8e70ea69:19447
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=8e70ea69:18868
+flushSyncCallbacks @ chunk-276SZO74.js?v=8e70ea69:9119
+commitRootImpl @ chunk-276SZO74.js?v=8e70ea69:19432
+commitRoot @ chunk-276SZO74.js?v=8e70ea69:19277
+finishConcurrentRender @ chunk-276SZO74.js?v=8e70ea69:18805
+performConcurrentWorkOnRoot @ chunk-276SZO74.js?v=8e70ea69:18718
+workLoop @ chunk-276SZO74.js?v=8e70ea69:197
+flushWork @ chunk-276SZO74.js?v=8e70ea69:176
+performWorkUntilDeadline @ chunk-276SZO74.js?v=8e70ea69:384
+Εμφάνιση 52 ακόμη πλαισίων
+Εμφάνιση λιγότερων
