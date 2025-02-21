@@ -401,8 +401,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         total_amount: validatedData.total_amount,
         status: validatedData.status || 'draft',
         generated_by: validatedData.generated_by,
-        created_at: validatedData.created_at,
-        attachments: validatedData.attachments
+        created_at: validatedData.created_at
       })
       .select()
       .single();
