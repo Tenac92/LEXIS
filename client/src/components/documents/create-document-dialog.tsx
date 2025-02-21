@@ -576,6 +576,24 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     }
   };
 
+  const handleNextOrSubmit = async () => {
+    try {
+      if (currentStep === 3) {
+        // On last step, submit the form
+        await form.handleSubmit(handleSubmit)();
+      } else {
+        await handleNext();
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handlePrevious = () => {
     setDirection(-1);
     setCurrentStep((prev) => Math.max(prev - 1, 0));
@@ -914,39 +932,30 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             {renderStepContent()}
 
             <div className="flex justify-between mt-6">
-              {currentStep > 0 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handlePrevious}
-                >
-                  Previous
-                </Button>
-              )}
-              <div className="flex gap-2 ml-auto">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                >
-                  Cancel
-                </Button>
-                {currentStep < 3 ? (
-                  <Button
-                    type="button"
-                    onClick={handleNext}
-                  >
-                    Next
-                  </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0 || loading}
+              >
+                Previous
+              </Button>
+              <Button
+                type={currentStep === 3 ? "submit" : "button"}
+                onClick={handleNextOrSubmit}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="mr-2">Please wait</span>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  </>
+                ) : currentStep === 3 ? (
+                  'Create Document'
                 ) : (
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                  >
-                    {loading ? "Creating..." : "Create Document"}
-                  </Button>
+                  'Next'
                 )}
-              </div>
+              </Button>
             </div>
           </form>
         </Form>
