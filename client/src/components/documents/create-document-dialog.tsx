@@ -187,6 +187,7 @@ interface CreateDocumentDialogProps {
 export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -402,6 +403,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
+      setLoading(true);
       if (!selectedProjectId) {
         toast({
           title: "Error",
@@ -891,10 +893,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               </Button>
 
               <Button
-                type="button"
-                onClick={currentStep === 3 ? form.handleSubmit(onSubmit) : handleNext}
+                type={currentStep === 3 ? "submit" : "button"}
+                onClick={currentStep === 3 ? undefined : handleNext}
+                disabled={loading}
               >
-                {currentStep === 3 ? "Create Document" : "Next"}
+                {currentStep === 3 ? (loading ? "Creating..." : "Create Document") : "Next"}
               </Button>
             </div>
           </form>
