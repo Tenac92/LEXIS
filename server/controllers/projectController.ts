@@ -3,6 +3,10 @@ import { supabase } from "../db";
 import * as XLSX from 'xlsx';
 import { storage } from "../storage";
 import { Project, projectHelpers } from "@shared/models/project";
+import { Router } from 'express';
+import { authenticateToken } from '../middleware/authMiddleware';
+import { ProjectCatalog } from '@shared/schema';
+
 
 export async function listProjects(req: Request, res: Response) {
   try {
@@ -86,32 +90,66 @@ export async function getExpenditureTypes(req: Request, res: Response) {
 
 export async function exportProjectsXLSX(req: Request, res: Response) {
   try {
-    const projects = await storage.getProjectCatalog();
+    const { data: projects, error } = await supabase
+      .from('project_catalog')
+      .select('*');
 
-    // Use our model's helper function to format projects for Excel
-    const formattedProjects = projects.map(project => {
-      const validatedProject = projectHelpers.validateProject(project);
-      return projectHelpers.formatForExcel(validatedProject);
-    });
+    if (error) throw error;
+    if (!projects?.length) {
+      return res.status(400).json({ message: 'No projects found for export' });
+    }
 
-    // Create workbook and worksheet
+    const formattedProjects = projects.map(project => ({
+      MIS: project.mis || '',
+      NA853: project.na853 || '',
+      NA271: project.na271 || '',
+      E069: project.e069 || '',
+      Event_Description: project.event_description || '',
+      Project_Title: project.project_title || '',
+      Event_Type: project.event_type || '',
+      Event_Year: Array.isArray(project.event_year) ? project.event_year.join(', ') : '',
+      Region: project.region || '',
+      Regional_Unit: project.regional_unit || '',
+      Municipality: project.municipality || '',
+      Implementing_Agency: Array.isArray(project.implementing_agency) 
+        ? project.implementing_agency.join(', ') 
+        : project.implementing_agency || '',
+      Budget_NA853: project.budget_na853?.toString() || '0',
+      Budget_E069: project.budget_e069?.toString() || '0',
+      Budget_NA271: project.budget_na271?.toString() || '0',
+      Annual_Credit: project.ethsia_pistosi?.toString() || '0',
+      Status: project.status || '',
+      KYA: project.kya || '',
+      FEK: project.fek || '',
+      ADA: project.ada || '',
+      Expenditure_Type: Array.isArray(project.expenditure_type)
+        ? project.expenditure_type.join(', ')
+        : project.expenditure_type || '',
+      Procedures: project.procedures || '',
+      Created_At: project.created_at ? new Date(project.created_at).toLocaleDateString() : '',
+      Updated_At: project.updated_at ? new Date(project.updated_at).toLocaleDateString() : ''
+    }));
+
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(formattedProjects);
 
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Projects');
+    // Set column widths
+    const colWidths = Object.keys(formattedProjects[0]).map(() => ({ wch: 20 }));
+    ws['!cols'] = colWidths;
 
-    // Generate buffer
+    XLSX.utils.book_append_sheet(wb, ws, 'Projects');
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-    // Set headers for file download
-    res.setHeader('Content-Disposition', `attachment; filename=projects-${new Date().toISOString().split('T')[0]}.xlsx`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-
+    res.setHeader('Content-Disposition', `attachment; filename=projects-${new Date().toISOString().split('T')[0]}.xlsx`);
     res.send(buffer);
+
   } catch (error) {
     console.error("Error exporting projects:", error);
-    res.status(500).json({ message: "Failed to export projects" });
+    res.status(500).json({ 
+      message: "Failed to export projects",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }
 
