@@ -106,6 +106,14 @@ export const budgetHistory = pgTable("budget_history", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// Add the attachments_rows table schema
+export const attachmentsRows = pgTable("attachments_rows", {
+  id: serial("id").primaryKey(),
+  expediture_type: text("expediture_type").notNull(),
+  installment: integer("installment").notNull(),
+  attachments: text("attachments").array(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
@@ -113,6 +121,8 @@ export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
 export type BudgetHistory = typeof budgetHistory.$inferSelect;
 export type BudgetNotification = typeof budgetNotifications.$inferSelect;
+export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
+export type InsertAttachmentsRow = typeof attachmentsRows.$inferInsert;
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users);
@@ -167,9 +177,9 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
   expenditure_type: z.string().min(1, "Expenditure type is required")
 });
 
-export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({ 
+export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({
   id: true,
-  created_at: true 
+  created_at: true
 });
 
 // Export types for insert operations
@@ -189,4 +199,5 @@ export type Database = {
   budgetNA853Split: BudgetNA853Split;
   budgetHistory: BudgetHistory;
   budgetNotifications: BudgetNotification;
+  attachmentsRows: AttachmentsRow;
 };
