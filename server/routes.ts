@@ -34,8 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Budget routes setup complete');
 
     // Documents routes
-    app.post('/api/documents/generated', authenticateSession, documentsController.createDocument); //Added POST route for document creation.  Assumed createDocument function exists.
-    app.use('/api/documents', authenticateSession, documentsController); //Corrected endpoint.
+    app.use('/api/documents', authenticateSession, documentsController);
     app.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
 
     // Units and Projects routes
