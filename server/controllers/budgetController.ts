@@ -249,21 +249,25 @@ export async function updateBudget(req: AuthRequest, res: Response) {
       document_id
     });
 
-    // Create budget history entry
-    try {
-      await storage.createBudgetHistoryEntry({
+    // Create budget history entry in Supabase
+    const { error: historyError } = await supabase
+      .from('budget_history')
+      .insert({
         mis,
         previous_amount: currentUserView.toString(),
         new_amount: newUserView.toString(),
         change_type: 'document_creation',
         change_reason: 'Document creation reduced available budget',
         document_id,
-        created_by: userId
+        created_by: userId,
+        created_at: new Date().toISOString()
       });
-      console.log('[Budget Update] Successfully created history entry');
-    } catch (historyError) {
+
+    if (historyError) {
       console.error('[Budget Update] Failed to create history entry:', historyError);
       // Continue with budget update even if history creation fails
+    } else {
+      console.log('[Budget Update] Successfully created history entry');
     }
 
     // Update budget amounts
@@ -294,7 +298,7 @@ export async function updateBudget(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error('Budget update error:', error);
     return res.status(500).json({
-      status: 'error',
+      status: 'error', 
       message: error instanceof Error ? error.message : 'Failed to update budget'
     });
   }
@@ -313,11 +317,10 @@ export async function getBudgetHistory(req: Request, res: Response) {
       });
     }
 
-    // Get history from Supabase directly since we're having issues with storage
+    // Get history from Supabase directly
     const { data: history, error } = await supabase
       .from('budget_history')
       .select('*')
-      .eq('mis', mis)
       .order('created_at', { ascending: false });
 
     if (error) {
