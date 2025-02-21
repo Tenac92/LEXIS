@@ -76,27 +76,27 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
     <Card className="p-6 bg-gradient-to-br from-background/50 to-background border-primary/20">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Budget Overview</h3>
+          <h3 className="text-lg font-semibold">Επισκόπηση Προϋπολογισμού</h3>
           <Badge variant={percentageUsed > 90 ? "destructive" : percentageUsed > 70 ? "warning" : "default"}>
-            {percentageUsed.toFixed(1)}% Used
+            {percentageUsed.toFixed(1)}% Χρησιμοποιημένο
           </Badge>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Available Budget</p>
+            <p className="text-sm text-muted-foreground">Διαθέσιμος Προϋπολογισμός</p>
             <p className="text-2xl font-bold text-primary">
               {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Total Budget</p>
+            <p className="text-sm text-muted-foreground">Συνολικός Προϋπολογισμός</p>
             <p className="text-2xl font-bold">
               {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Annual Allocation</p>
+            <p className="text-sm text-muted-foreground">Ετήσια Κατανομή</p>
             <p className="text-2xl font-bold">
               {budgetData.katanomes_etous.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
@@ -111,7 +111,7 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
             />
           </div>
           <p className="text-sm text-muted-foreground text-right">
-            Current Amount: {currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            Τρέχον Ποσό: {currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
           </p>
         </div>
       </div>
@@ -121,10 +121,10 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
 
 const StepIndicator = ({ currentStep }: { currentStep: number }) => {
   const steps = [
-    { title: "Unit Selection", icon: <User className="h-4 w-4" /> },
-    { title: "Project Details", icon: <FileText className="h-4 w-4" /> },
-    { title: "Recipients", icon: <User className="h-4 w-4" /> },
-    { title: "Attachments", icon: <FileText className="h-4 w-4" /> }
+    { title: "Επιλογή Μονάδας", icon: <User className="h-4 w-4" /> },
+    { title: "Στοιχεία Έργου", icon: <FileText className="h-4 w-4" /> },
+    { title: "Παραλήπτες", icon: <User className="h-4 w-4" /> },
+    { title: "Συνημμένα", icon: <FileText className="h-4 w-4" /> }
   ];
 
   return (
@@ -154,25 +154,18 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
-interface Attachment {
-  id: string;
-  expediture_type: string;
-  installment: number;
-  attachments: string[];
-}
-
 const createDocumentSchema = z.object({
-  unit: z.string().min(1, "Unit is required"),
-  project_id: z.string().min(1, "Project is required"),
-  expenditure_type: z.string().min(1, "Expenditure type is required"),
+  unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
+  project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
+  expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
   recipients: z.array(z.object({
-    firstname: z.string().min(2, "First name must be at least 2 characters"),
-    lastname: z.string().min(2, "Last name must be at least 2 characters"),
-    afm: z.string().length(9, "AFM must be exactly 9 digits"),
-    amount: z.number().min(0.01, "Amount must be greater than 0"),
-    installment: z.number().int().min(1).max(12, "Installment must be between 1 and 12")
-  })).min(1, "At least one recipient is required"),
-  total_amount: z.number().min(0.01, "Total amount must be greater than 0"),
+    firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+    lastname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+    afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
+    amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
+    installment: z.number().int().min(1).max(12, "Η δόση πρέπει να είναι μεταξύ 1 και 12")
+  })).min(1, "Απαιτείται τουλάχιστον ένας παραλήπτης"),
+  total_amount: z.number().min(0.01, "Το συνολικό ποσό πρέπει να είναι μεγαλύτερο από 0"),
   status: z.string().default("draft"),
   selectedAttachments: z.array(z.string()).default([])
 });
@@ -420,13 +413,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const handleSubmit = async (data: CreateDocumentForm) => {
     try {
       setLoading(true);
-      console.log('Form submission started', data);
+      console.log('Έναρξη υποβολής φόρμας', data);
 
       // Validate project selection
       if (!data.project_id) {
         toast({
-          title: "Error",
-          description: "Project must be selected",
+          title: "Σφάλμα",
+          description: "Πρέπει να επιλέξετε έργο",
           variant: "destructive"
         });
         return;
@@ -435,8 +428,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       // Validate recipients
       if (!data.recipients?.length) {
         toast({
-          title: "Error",
-          description: "At least one recipient is required",
+          title: "Σφάλμα",
+          description: "Απαιτείται τουλάχιστον ένας παραλήπτης",
           variant: "destructive"
         });
         return;
@@ -449,8 +442,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       if (invalidRecipients) {
         toast({
-          title: "Error",
-          description: "All recipient fields must be filled out",
+          title: "Σφάλμα",
+          description: "Όλα τα πεδία παραλήπτη πρέπει να συμπληρωθούν",
           variant: "destructive"
         });
         return;
@@ -497,22 +490,21 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
 
       toast({
-        title: "Success",
-        description: "Document created successfully",
+        title: "Επιτυχία",
+        description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
       });
 
-      // Reset form and close dialog
       form.reset();
       setCurrentStep(0);
       onClose();
     } catch (error) {
-      console.error('Document creation error:', error);
+      console.error('Σφάλμα δημιουργίας εγγράφου:', error);
       const errorMessage = error instanceof Error ? error.message :
         typeof error === 'object' && error !== null && 'message' in error ? error.message :
-          "Failed to create document";
+          "Αποτυχία δημιουργίας εγγράφου";
 
       toast({
-        title: "Error",
+        title: "Σφάλμα",
         description: errorMessage,
         variant: "destructive"
       });
@@ -525,8 +517,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     const currentRecipients = form.watch("recipients") || [];
     if (currentRecipients.length >= 10) {
       toast({
-        title: "Maximum Recipients",
-        description: "You can't add more than 10 recipients.",
+        title: "Μέγιστος Αριθμός Παραληπτών",
+        description: "Δεν μπορείτε να προσθέσετε περισσότερους από 10 παραλήπτες.",
         variant: "destructive"
       });
       return;
@@ -579,7 +571,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const handleNextOrSubmit = async () => {
     try {
       if (currentStep === 3) {
-        // On last step, submit the form
         await form.handleSubmit(handleSubmit)();
       } else {
         await handleNext();
@@ -621,7 +612,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                 name="unit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Select Unit</FormLabel>
+                    <FormLabel>Επιλογή Μονάδας</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
@@ -629,7 +620,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Choose a unit" />
+                          <SelectValue placeholder="Επιλέξτε μονάδα" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -662,7 +653,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   name="project_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Project</FormLabel>
+                      <FormLabel>Έργο</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -670,7 +661,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select project" />
+                            <SelectValue placeholder="Επιλέξτε έργο" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -692,7 +683,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     name="expenditure_type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Expenditure Type</FormLabel>
+                        <FormLabel>Τύπος Δαπάνης</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
@@ -700,7 +691,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
+                              <SelectValue placeholder="Επιλέξτε τύπο" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -732,8 +723,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-lg font-medium">Recipients</h3>
-                    <p className="text-sm text-muted-foreground">Add up to 10 recipients</p>
+                    <h3 className="text-lg font-medium">Παραλήπτες</h3>
+                    <p className="text-sm text-muted-foreground">Προσθήκη έως 10 παραληπτών</p>
                   </div>
                   <Button
                     type="button"
@@ -743,7 +734,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     size="sm"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Recipient
+                    Προσθήκη Παραλήπτη
                   </Button>
                 </div>
 
@@ -751,16 +742,16 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   {recipients.map((_, index) => (
                     <Card key={index} className="p-4">
                       <div className="flex items-center justify-between gap-4">
-                        <span className="text-sm font-medium min-w-[100px]">Recipient #{index + 1}</span>
+                        <span className="text-sm font-medium min-w-[100px]">Παραλήπτης #{index + 1}</span>
                         <div className="flex-1 grid grid-cols-5 gap-4">
                           <FormField
                             control={form.control}
                             name={`recipients.${index}.firstname`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">First Name</FormLabel>
+                                <FormLabel className="sr-only">Όνομα</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="First Name" />
+                                  <Input {...field} placeholder="Όνομα" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -771,9 +762,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             name={`recipients.${index}.lastname`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">Last Name</FormLabel>
+                                <FormLabel className="sr-only">Επώνυμο</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="Last Name" />
+                                  <Input {...field} placeholder="Επώνυμο" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -784,9 +775,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             name={`recipients.${index}.afm`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">AFM</FormLabel>
+                                <FormLabel className="sr-only">ΑΦΜ</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="AFM" maxLength={9} />
+                                  <Input {...field} placeholder="ΑΦΜ" maxLength={9} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -797,13 +788,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             name={`recipients.${index}.amount`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">Amount</FormLabel>
+                                <FormLabel className="sr-only">Ποσό</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
                                     step="0.01"
                                     {...field}
-                                    placeholder="Amount"
+                                    placeholder="Ποσό"
                                     onChange={(e) => field.onChange(parseFloat(e.target.value))}
                                   />
                                 </FormControl>
@@ -816,12 +807,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             name={`recipients.${index}.installment`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">Installment</FormLabel>
+                                <FormLabel className="sr-only">Δόση</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
                                     {...field}
-                                    placeholder="Installment"
+                                    placeholder="Δόση"
                                     onChange={(e) => field.onChange(parseInt(e.target.value))}
                                     min={1}
                                     max={12}
@@ -853,9 +844,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-lg font-medium">Required Attachments</h3>
+                  <h3 className="text-lg font-medium">Απαιτούμενα Συνημμένα</h3>
                   <p className="text-sm text-muted-foreground">
-                    Select the documents that will be included
+                    Επιλέξτε τα έγγραφα που θα συμπεριληφθούν
                   </p>
                 </div>
               </div>
@@ -868,7 +859,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    No attachments are required for this document type.
+                    Δεν απαιτούνται συνημμένα για αυτόν τον τύπο εγγράφου.
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -920,41 +911,32 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Document</DialogTitle>
+          <DialogTitle>Δημιουργία Εγγράφου</DialogTitle>
           <DialogDescription>
-            Fill in the document details step by step.
+            Συμπληρώστε τα στοιχεία του εγγράφου. Όλα τα πεδία είναι υποχρεωτικά.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)}>
             <StepIndicator currentStep={currentStep} />
             {renderStepContent()}
 
-            <div className="flex justify-between mt-6">
+            <div className="mt-6 flex justify-between">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handlePrevious}
-                disabled={currentStep === 0 || loading}
+                disabled={currentStep === 0}
               >
-                Previous
+                Προηγούμενο
               </Button>
               <Button
-                type={currentStep === 3 ? "submit" : "button"}
+                type="button"
                 onClick={handleNextOrSubmit}
                 disabled={loading}
               >
-                {loading ? (
-                  <>
-                    <span className="mr-2">Please wait</span>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  </>
-                ) : currentStep === 3 ? (
-                  'Create Document'
-                ) : (
-                  'Next'
-                )}
+                {currentStep === 3 ? (loading ? "Αποθήκευση..." : "Αποθήκευση") : "Επόμενο"}
               </Button>
             </div>
           </form>
