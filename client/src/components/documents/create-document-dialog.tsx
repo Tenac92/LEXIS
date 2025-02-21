@@ -327,7 +327,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 expenditureTypes = item.expenditure_type
                   .replace(/[{}]/g, '')
                   .split(',')
-                  .map((type: string) => type.trim())
+                  .map(type => type.trim())
                   .filter(Boolean);
               }
             }
@@ -479,7 +479,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 {budgetData && (
                   <BudgetIndicator
                     budgetData={budgetData}
-                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount?.toString() || '0')), 0) || 0}
+                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0}
                   />
                 )}
 
@@ -556,7 +556,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 {budgetData && (
                   <BudgetIndicator
                     budgetData={budgetData}
-                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount?.toString() || '0')), 0) || 0}
+                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0}
                   />
                 )}
                 <div className="space-y-4">
