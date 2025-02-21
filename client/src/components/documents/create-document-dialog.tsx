@@ -182,9 +182,10 @@ type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 interface CreateDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onClose: () => void;
 }
 
-export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialogProps) {
+export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -895,41 +896,53 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Document</DialogTitle>
+          <DialogTitle>Create Document</DialogTitle>
           <DialogDescription>
-            Complete all required information to create a new document
+            Fill in the document details step by step.
           </DialogDescription>
         </DialogHeader>
 
-        <Separator className="my-4" />
-
-        <StepIndicator currentStep={currentStep} />
-
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <StepIndicator currentStep={currentStep} />
             {renderStepContent()}
 
-            <Separator className="my-4" />
-
-            <div className="flex justify-between items-center">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 0}
-              >
-                Previous
-              </Button>
-
-              <Button
-                type={currentStep === 3 ? "submit" : "button"}
-                onClick={currentStep === 3 ? undefined : handleNext}
-                disabled={loading}
-              >
-                {currentStep === 3 ? (loading ? "Creating..." : "Create Document") : "Next"}
-              </Button>
+            <div className="flex justify-between mt-6">
+              {currentStep > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevious}
+                >
+                  Previous
+                </Button>
+              )}
+              <div className="flex gap-2 ml-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                >
+                  Cancel
+                </Button>
+                {currentStep < 3 ? (
+                  <Button
+                    type="button"
+                    onClick={handleNext}
+                  >
+                    Next
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                  >
+                    {loading ? "Creating..." : "Create Document"}
+                  </Button>
+                )}
+              </div>
             </div>
           </form>
         </Form>
