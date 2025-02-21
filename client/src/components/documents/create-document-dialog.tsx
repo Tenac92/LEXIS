@@ -495,7 +495,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       }
 
       // Make API request
-      const response = await apiRequest('/api/documents', {
+      const result = await apiRequest('/api/documents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -503,15 +503,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         body: JSON.stringify(payload)
       });
 
-      if (!response || !response.ok) {
-        throw new Error('Failed to create document');
-      }
-
-      // Handle successful response
-      const result = await response.json();
-
-      if (!result.id) {
-        throw new Error('Invalid response from server');
+      if (!result || !result.id) {
+        throw new Error('Failed to create document: ' + (result?.message || 'Unknown error'));
       }
 
       // Invalidate queries to refresh data
