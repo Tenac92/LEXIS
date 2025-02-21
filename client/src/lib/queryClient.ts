@@ -19,16 +19,16 @@ export async function apiRequest<T = unknown>(
     if (!response.ok) {
       if (response.status === 401) {
         window.location.href = '/auth'; // Redirect to auth page on 401
-        throw new Error("Unauthorized. Please log in.");
+        throw new Error("Μη εξουσιοδοτημένη πρόσβαση. Παρακαλώ συνδεθείτε.");
       }
 
       const errorData = await response.json().catch(() => null);
-      throw new Error(errorData?.error?.message || `HTTP error! status: ${response.status}`);
+      throw new Error(errorData?.error?.message || `Σφάλμα HTTP! κατάσταση: ${response.status}`);
     }
 
     return response.json();
   } catch (error) {
-    console.error("[API] Request failed:", error);
+    console.error("[API] Το αίτημα απέτυχε:", error);
     throw error;
   }
 }
@@ -46,16 +46,16 @@ export const getQueryFn = ({ on401 = "throw" }: { on401?: "returnNull" | "throw"
             return null;
           }
           window.location.href = '/auth'; // Redirect to auth page on 401
-          throw new Error("Unauthorized. Please log in.");
+          throw new Error("Μη εξουσιοδοτημένη πρόσβαση. Παρακαλώ συνδεθείτε.");
         }
 
         const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.error?.message || `HTTP error! status: ${response.status}`);
+        throw new Error(errorData?.error?.message || `Σφάλμα HTTP! κατάσταση: ${response.status}`);
       }
 
       return response.json();
     } catch (error) {
-      console.error("[Query] Request failed:", error);
+      console.error("[Query] Το αίτημα απέτυχε:", error);
       throw error;
     }
   };

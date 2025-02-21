@@ -13,7 +13,7 @@ export async function refreshDashboardStats() {
 
 export async function getPendingDocuments(units: string[]) {
   if (!Array.isArray(units) || !units.length) {
-    throw new Error("Invalid units parameter");
+    throw new Error("Μη έγκυρη παράμετρος μονάδων");
   }
 
   return apiRequest<{ documents: any[] }>(`/api/dashboard/documents/pending?units=${encodeURIComponent(units.join(','))}`);
@@ -30,7 +30,7 @@ export const formatCurrency = (amount: number | null | undefined): string => {
 };
 
 export const formatDate = (dateString: string | null | undefined): string => {
-  if (!dateString) return 'Not available';
+  if (!dateString) return 'Μη διαθέσιμο';
   return new Date(dateString).toLocaleDateString('el-GR', {
     year: 'numeric',
     month: '2-digit',
