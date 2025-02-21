@@ -22,28 +22,28 @@ export function Header() {
       <Link href="/">
         <Button variant="ghost" className="flex items-center gap-2">
           <LayoutDashboard className="h-4 w-4" />
-          Dashboard
+          Πίνακας Ελέγχου
         </Button>
       </Link>
       <Separator orientation="vertical" className="h-8 mx-2" />
       <Link href="/documents">
         <Button variant="ghost" className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
-          Generated Documents
+          Δημιουργημένα Έγγραφα
         </Button>
       </Link>
       <Separator orientation="vertical" className="h-8 mx-2" />
       <Link href="/projects">
         <Button variant="ghost" className="flex items-center gap-2">
           <FolderKanban className="h-4 w-4" />
-          Projects
+          Έργα
         </Button>
       </Link>
       <Separator orientation="vertical" className="h-8 mx-2" />
       <Link href="/budget-history">
         <Button variant="ghost" className="flex items-center gap-2">
           <History className="h-4 w-4" />
-          Budget History
+          Ιστορικό Προϋπολογισμού
         </Button>
       </Link>
       {isAdmin && (
@@ -52,7 +52,7 @@ export function Header() {
           <Link href="/users">
             <Button variant="ghost" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Users
+              Χρήστες
             </Button>
           </Link>
         </>
@@ -65,7 +65,7 @@ export function Header() {
         className="flex items-center gap-2"
       >
         <LogOut className="h-4 w-4" />
-        Logout
+        Αποσύνδεση
       </Button>
     </>
   );
@@ -76,9 +76,9 @@ export function Header() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              {user?.username || user?.name || 'User'}
+              {user?.username || user?.name || 'Χρήστης'}
             </h1>
-            <p className="text-muted-foreground">Document Management System</p>
+            <p className="text-muted-foreground">Σύστημα Διαχείρισης Εγγράφων</p>
           </div>
 
           {/* Desktop Navigation */}
@@ -98,7 +98,7 @@ export function Header() {
               </SheetTrigger>
               <SheetContent side="right">
                 <SheetHeader>
-                  <SheetTitle>Menu</SheetTitle>
+                  <SheetTitle>Μενού</SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col gap-4 mt-6">
                   <NavItems />

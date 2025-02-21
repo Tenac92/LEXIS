@@ -10,8 +10,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 const loginSchema = z.object({
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Μη έγκυρη μορφή email"),
+  password: z.string().min(6, "Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -35,7 +35,7 @@ export default function AuthPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    console.log('Submitting login form with data:', data);
+    console.log('Υποβολή φόρμας σύνδεσης με δεδομένα:', data);
     loginMutation.mutate(data);
   };
 
@@ -45,7 +45,7 @@ export default function AuthPage() {
         <div>
           <CardHeader>
             <CardTitle className="text-2xl font-bold bg-gradient-to-br from-primary to-primary-foreground bg-clip-text text-transparent">
-              Document Management System
+              Σύστημα Διαχείρισης Εγγράφων
             </CardTitle>
           </CardHeader>
 
@@ -53,7 +53,7 @@ export default function AuthPage() {
             <form onSubmit={loginForm.handleSubmit(onSubmit)}>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Διεύθυνση Email</Label>
                   <Input 
                     type="email"
                     id="email"
@@ -66,7 +66,7 @@ export default function AuthPage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">Κωδικός</Label>
                   <Input 
                     type="password"
                     id="password"
@@ -83,7 +83,7 @@ export default function AuthPage() {
                   className="w-full"
                   disabled={loginMutation.isPending}
                 >
-                  {loginMutation.isPending ? "Logging in..." : "Login"}
+                  {loginMutation.isPending ? "Σύνδεση..." : "Σύνδεση"}
                 </Button>
               </div>
             </form>
@@ -91,10 +91,10 @@ export default function AuthPage() {
         </div>
 
         <div className="hidden md:block bg-muted rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Welcome to DMS</h2>
+          <h2 className="text-xl font-semibold mb-4">Καλώς ήρθατε στο ΣΔΕ</h2>
           <p className="text-muted-foreground">
-            Manage your documents efficiently with our comprehensive document management system.
-            Track budgets, generate reports, and handle recipient information all in one place.
+            Διαχειριστείτε αποτελεσματικά τα έγγραφά σας με το ολοκληρωμένο σύστημα διαχείρισης εγγράφων.
+            Παρακολουθήστε προϋπολογισμούς, δημιουργήστε αναφορές και διαχειριστείτε πληροφορίες παραληπτών σε ένα μέρος.
           </p>
         </div>
       </Card>
