@@ -101,6 +101,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       project_id: "",
       expenditure_type: "",
       recipients: [],
+      total_amount: 0,
       status: "draft"
     }
   });
@@ -372,9 +373,22 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   const handleNext = async () => {
+    if (currentStep === 0) {
+      const isValid = await form.trigger("unit");
+      if (isValid) {
+        setCurrentStep(1);
+      } else {
+        toast({
+          title: "Validation Error",
+          description: "Please select a unit",
+          variant: "destructive"
+        });
+      }
+      return;
+    }
+
     if (currentStep === 1) {
       const isValid = await form.trigger(["project_id", "expenditure_type"]);
-
       if (!isValid) {
         toast({
           title: "Validation Error",
@@ -392,19 +406,28 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         });
         return;
       }
+      setCurrentStep(2);
+      return;
     }
 
-    if (currentStep < 2) {
-      const isValid = await form.trigger(
-        currentStep === 0 ? ["unit"] :
-          ["project_id", "expenditure_type"]
-      );
-
-      if (isValid) {
-        setCurrentStep((prev) => prev + 1);
+    // Step 3 (final step)
+    if (currentStep === 2) {
+      const isValid = await form.trigger();
+      if (!isValid) {
+        toast({
+          title: "Validation Error",
+          description: "Please check all recipient details",
+          variant: "destructive"
+        });
+        return;
       }
-    } else {
-      form.handleSubmit(onSubmit)();
+
+      // Update total amount before submission
+      const total = form.getValues("recipients").reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+      form.setValue("total_amount", total);
+
+      // Submit the form
+      await form.handleSubmit(onSubmit)();
     }
   };
 
@@ -659,8 +682,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               <Button
                 type="button"
                 onClick={handleNext}
+                disabled={
+                  currentStep === 2 && 
+                  (form.formState.isSubmitting || !form.getValues("recipients").length)
+                }
               >
-                {currentStep === 2 ? "Create Document" : "Next"}
+                {currentStep === 2 ? (form.formState.isSubmitting ? "Creating..." : "Create Document") : "Next"}
               </Button>
             </div>
           </form>
