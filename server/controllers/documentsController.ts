@@ -390,6 +390,16 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       created_at: new Date().toISOString()
     });
 
+    // Validate budget first
+    const budgetValidation = await BudgetService.validateBudget(
+      validatedData.project_id,
+      validatedData.total_amount
+    );
+
+    if (budgetValidation.status === 'error') {
+      return res.status(400).json(budgetValidation);
+    }
+
     // Create document
     const { data: document, error: documentError } = await supabase
       .from('generated_documents')
@@ -401,10 +411,20 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
         total_amount: validatedData.total_amount,
         status: validatedData.status || 'draft',
         generated_by: validatedData.generated_by,
-        created_at: validatedData.created_at
+        created_at: validatedData.created_at,
+        department: 'ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.)'
       })
       .select()
       .single();
+
+    if (documentError) {
+      console.error('Document creation error:', documentError);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to create document',
+        error: documentError.message
+      });
+    }
 
     if (documentError) {
       console.error('Document creation error:', documentError);
