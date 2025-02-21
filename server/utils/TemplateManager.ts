@@ -1,5 +1,5 @@
 import { Document, Packer, Paragraph, TextRun, ISectionOptions } from 'docx';
-import { DocumentTemplate } from '@shared/schema';
+import { type DocumentTemplate } from '@shared/schema';
 import { supabase } from '../config/db';
 
 interface TemplateData {
@@ -19,28 +19,36 @@ export class TemplateManager {
   static async getTemplateForExpenditure(expenditureType: string): Promise<DocumentTemplate | null> {
     try {
       // First try to find a specific template for this expenditure type
-      let { data: specificTemplate } = await supabase
+      let { data: specificTemplate, error: specificError } = await supabase
         .from('document_templates')
         .select('*')
         .eq('expenditure_type', expenditureType)
         .eq('is_active', true)
         .single();
 
+      if (specificError) {
+        console.error('Error fetching specific template:', specificError);
+      }
+
       if (specificTemplate) {
         return specificTemplate;
       }
 
       // If no specific template found, get the default template
-      const { data: defaultTemplate } = await supabase
+      const { data: defaultTemplate, error: defaultError } = await supabase
         .from('document_templates')
         .select('*')
         .eq('is_default', true)
         .eq('is_active', true)
         .single();
 
+      if (defaultError) {
+        console.error('Error fetching default template:', defaultError);
+      }
+
       return defaultTemplate || null;
     } catch (error) {
-      console.error('Error fetching template:', error);
+      console.error('Error in getTemplateForExpenditure:', error);
       return null;
     }
   }
@@ -220,9 +228,9 @@ export class TemplateManager {
       },
       is_default: true,
       structure_version: '1.0',
-      is_active: true, // Added is_active to ensure the default template is active
-      created_by: userId, // Added created_by to match other template creation methods
-      expenditure_type: null //or "" , depending on your DB schema
+      is_active: true, 
+      created_by: userId, 
+      expenditure_type: null 
     };
 
     const { data, error } = await supabase

@@ -126,6 +126,22 @@ export const documentVersions = pgTable("document_versions", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+export const documentTemplates = pgTable("document_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category"),
+  expenditure_type: text("expenditure_type"),
+  template_data: jsonb("template_data").notNull(),
+  created_by: integer("created_by").references(() => users.id),
+  updated_by: integer("updated_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+  structure_version: text("structure_version").default("1.0"),
+  is_active: boolean("is_active").default(true),
+  is_default: boolean("is_default").default(false),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
@@ -137,6 +153,9 @@ export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
 export type InsertAttachmentsRow = typeof attachmentsRows.$inferInsert;
 export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type InsertDocumentVersion = typeof documentVersions.$inferInsert;
+export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type InsertDocumentTemplate = typeof documentTemplates.$inferInsert;
+
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users);
@@ -241,4 +260,5 @@ export type Database = {
   budgetNotifications: BudgetNotification;
   attachmentsRows: AttachmentsRow;
   documentVersions: DocumentVersion;
+  documentTemplates: DocumentTemplate;
 };
