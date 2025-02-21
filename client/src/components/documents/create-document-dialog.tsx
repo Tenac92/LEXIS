@@ -222,14 +222,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           throw new Error('Budget data not found');
         }
 
-        // Parse budget values safely
-        const userView = parseFloat(budgetData.user_view?.toString() || '0');
-        const proip = parseFloat(budgetData.proip?.toString() || '0');
-        const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-        const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+        // Safely parse budget data with fallbacks
+        const userView = parseFloat(budgetData?.user_view?.toString() || '0');
+        const proip = parseFloat(budgetData?.proip?.toString() || '0');
+        const ethsiaPistosi = parseFloat(budgetData?.ethsia_pistosi?.toString() || '0');
+        const katanomesEtous = parseFloat(budgetData?.katanomes_etous?.toString() || '0');
 
-        // Only validate if there's an amount to validate
-        if (currentAmount > 0) {
+        // Only validate if there's an amount to validate and budget data exists
+        if (currentAmount > 0 && budgetData) {
           try {
             const validateResponse = await apiRequest(`/api/budget/validate`, {
               method: 'POST',
