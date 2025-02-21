@@ -72,11 +72,26 @@ export const generatedDocuments = pgTable("generated_documents", {
   project_id: text("project_id").notNull(),
 });
 
+// Budget History table for tracking changes
+export const budgetHistory = pgTable("budget_history", {
+  id: serial("id").primaryKey(),
+  mis: text("mis").notNull(),
+  previous_amount: numeric("previous_amount").notNull(),
+  new_amount: numeric("new_amount").notNull(),
+  change_type: text("change_type").notNull(), // e.g., 'document_creation', 'manual_adjustment'
+  change_reason: text("change_reason"),
+  document_id: integer("document_id").references(() => generatedDocuments.id),
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
+// New types for budget history
+export type BudgetHistory = typeof budgetHistory.$inferSelect;
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users);
@@ -119,12 +134,18 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
   expenditure_type: z.string().min(1, "Expenditure type is required")
 });
 
+export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({ 
+  id: true,
+  created_at: true 
+});
+
 // Export types for insert operations
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertProjectCatalog = z.infer<typeof insertProjectCatalogSchema>;
 export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
 export type BudgetValidation = z.infer<typeof budgetValidationSchema>;
 export type BudgetValidationResponse = z.infer<typeof budgetValidationResponseSchema>;
+export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
 
 // Export database type
 export type Database = {
@@ -132,4 +153,5 @@ export type Database = {
   projectCatalog: ProjectCatalog;
   generatedDocuments: GeneratedDocument;
   budgetNA853Split: BudgetNA853Split;
+  budgetHistory: BudgetHistory;
 };

@@ -1,4 +1,4 @@
-import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog, type BudgetNA853Split, type BudgetValidation, type BudgetValidationResponse } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog, type BudgetNA853Split, type BudgetValidation, type BudgetValidationResponse, type BudgetHistory, type InsertBudgetHistory } from "@shared/schema";
 import { db } from "./db";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -18,6 +18,8 @@ export interface IStorage {
   getUserUnits(userId: string): Promise<string[]>;
   getBudgetData(projectId: string): Promise<BudgetNA853Split | undefined>;
   validateBudget(validation: BudgetValidation): Promise<BudgetValidationResponse>;
+  createBudgetHistoryEntry(historyEntry: InsertBudgetHistory): Promise<BudgetHistory>;
+  getBudgetHistory(projectId: string): Promise<BudgetHistory[]>;
   sessionStore: session.Store;
 }
 
@@ -217,6 +219,39 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async createBudgetHistoryEntry(historyEntry: InsertBudgetHistory): Promise<BudgetHistory> {
+    try {
+      const { data, error } = await db
+        .from('budget_history')
+        .insert([historyEntry])
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!data) throw new Error('No data returned from insert');
+
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error creating budget history entry:', error);
+      throw error;
+    }
+  }
+
+  async getBudgetHistory(projectId: string): Promise<BudgetHistory[]> {
+    try {
+      const { data, error } = await db
+        .from('budget_history')
+        .select('*')
+        .eq('mis', projectId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error fetching budget history:', error);
+      throw error;
+    }
+  }
   async getUserUnits(userId: string): Promise<string[]> {
     try {
       const { data, error } = await db
