@@ -1,8 +1,8 @@
 import { Plus } from 'lucide-react';
 import { Button } from './button';
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { CreateDocumentDialog } from '../documents/create-document-dialog';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Tooltip,
   TooltipContent,
@@ -123,7 +123,7 @@ export function FAB() {
                 exit="exit"
                 className="bg-popover text-popover-foreground px-3 py-1.5 text-sm rounded-md shadow-md"
               >
-                Create New Document
+                Δημιουργία Διαβιβαστικού
               </motion.div>
             </TooltipContent>
           </Tooltip>

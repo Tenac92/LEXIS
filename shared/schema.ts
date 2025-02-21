@@ -85,43 +85,12 @@ export const budgetHistory = pgTable("budget_history", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
-// Document Templates table
-export const documentTemplates = pgTable("document_templates", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  category: text("category").notNull(),
-  template_data: jsonb("template_data").notNull(),
-  expenditure_type: text("expenditure_type"),
-  is_default: boolean("is_default").default(false),
-  is_active: boolean("is_active").default(true),
-  structure_version: text("structure_version").notNull(),
-  created_by: integer("created_by").references(() => users.id),
-  created_at: timestamp("created_at").defaultNow(),
-  updated_by: integer("updated_by").references(() => users.id),
-  updated_at: timestamp("updated_at")
-});
-
-// Document Versions table
-export const documentVersions = pgTable("document_versions", {
-  id: serial("id").primaryKey(),
-  document_id: integer("document_id").references(() => generatedDocuments.id),
-  version_number: integer("version_number").notNull(),
-  created_by: integer("created_by").references(() => users.id),
-  created_at: timestamp("created_at").defaultNow(),
-  changes: jsonb("changes"),
-  recipients: jsonb("recipients").notNull(),
-  metadata: jsonb("metadata"),
-  is_current: boolean("is_current").default(true)
-});
-
 // Types
 export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
-export type DocumentTemplate = typeof documentTemplates.$inferSelect;
-export type DocumentVersion = typeof documentVersions.$inferSelect;
+// New types for budget history
 export type BudgetHistory = typeof budgetHistory.$inferSelect;
 
 // Insert Schemas
@@ -165,35 +134,15 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
   expenditure_type: z.string().min(1, "Expenditure type is required")
 });
 
-export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({
+export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({ 
   id: true,
-  created_at: true
-});
-
-export const insertDocumentTemplateSchema = createInsertSchema(documentTemplates, {
-  template_data: z.object({
-    sections: z.array(z.object({
-      properties: z.any(),
-      children: z.array(z.any())
-    }))
-  })
-}).omit({
-  id: true,
-  created_at: true,
-  updated_at: true
-});
-
-export const insertDocumentVersionSchema = createInsertSchema(documentVersions).omit({
-  id: true,
-  created_at: true
+  created_at: true 
 });
 
 // Export types for insert operations
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertProjectCatalog = z.infer<typeof insertProjectCatalogSchema>;
 export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
-export type InsertDocumentTemplate = z.infer<typeof insertDocumentTemplateSchema>;
-export type InsertDocumentVersion = z.infer<typeof insertDocumentVersionSchema>;
 export type BudgetValidation = z.infer<typeof budgetValidationSchema>;
 export type BudgetValidationResponse = z.infer<typeof budgetValidationResponseSchema>;
 export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
@@ -204,7 +153,5 @@ export type Database = {
   projectCatalog: ProjectCatalog;
   generatedDocuments: GeneratedDocument;
   budgetNA853Split: BudgetNA853Split;
-  documentTemplates: DocumentTemplate;
-  documentVersions: DocumentVersion;
   budgetHistory: BudgetHistory;
 };
