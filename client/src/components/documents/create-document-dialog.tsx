@@ -13,6 +13,12 @@ import { apiRequest } from "@/lib/queryClient";
 import { createClient } from '@supabase/supabase-js';
 import type { BudgetValidationResponse } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { AlertCircle, Check, ChevronRight, FileText, Plus, Trash2, User } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
@@ -45,31 +51,105 @@ interface BudgetIndicatorProps {
   currentAmount: number;
 }
 
+const stepVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 1000 : -1000,
+    opacity: 0
+  }),
+  center: {
+    zIndex: 1,
+    x: 0,
+    opacity: 1
+  },
+  exit: (direction: number) => ({
+    zIndex: 0,
+    x: direction < 0 ? 1000 : -1000,
+    opacity: 0
+  })
+};
+
 const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
   const availableBudget = budgetData.current_budget - currentAmount;
+  const percentageUsed = (currentAmount / budgetData.current_budget) * 100;
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div>
-          <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
-          <p className="text-2xl font-bold text-blue-600">
-            {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-          </p>
+    <Card className="p-6 bg-gradient-to-br from-background/50 to-background border-primary/20">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Budget Overview</h3>
+          <Badge variant={percentageUsed > 90 ? "destructive" : percentageUsed > 70 ? "warning" : "default"}>
+            {percentageUsed.toFixed(1)}% Used
+          </Badge>
         </div>
-        <div>
-          <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
-          <p className="text-2xl font-bold text-gray-700">
-            {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-          </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Available Budget</p>
+            <p className="text-2xl font-bold text-primary">
+              {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Total Budget</p>
+            <p className="text-2xl font-bold">
+              {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Annual Allocation</p>
+            <p className="text-2xl font-bold">
+              {budgetData.katanomes_etous.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-sm font-medium text-gray-600">Annual Allocation</h3>
-          <p className="text-2xl font-bold text-gray-700">
-            {budgetData.katanomes_etous.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+
+        <div className="space-y-2">
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-500 ease-in-out"
+              style={{ width: `${Math.min(percentageUsed, 100)}%` }}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground text-right">
+            Current Amount: {currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
           </p>
         </div>
       </div>
+    </Card>
+  );
+};
+
+const StepIndicator = ({ currentStep }: { currentStep: number }) => {
+  const steps = [
+    { title: "Unit Selection", icon: <User className="h-4 w-4" /> },
+    { title: "Project Details", icon: <FileText className="h-4 w-4" /> },
+    { title: "Recipients", icon: <User className="h-4 w-4" /> },
+    { title: "Attachments", icon: <FileText className="h-4 w-4" /> }
+  ];
+
+  return (
+    <div className="flex items-center justify-center mb-8">
+      {steps.map((step, index) => (
+        <div key={index} className="flex items-center">
+          <div className={`flex items-center justify-center ${
+            index <= currentStep ? 'text-primary' : 'text-muted-foreground'
+          }`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+              index === currentStep ? 'border-primary bg-primary/10' :
+              index < currentStep ? 'border-primary bg-primary text-background' :
+              'border-muted'
+            }`}>
+              {index < currentStep ? <Check className="h-4 w-4" /> : step.icon}
+            </div>
+            <span className="ml-2 text-sm font-medium hidden md:block">{step.title}</span>
+          </div>
+          {index < steps.length - 1 && (
+            <ChevronRight className={`mx-2 h-4 w-4 ${
+              index < currentStep ? 'text-primary' : 'text-muted-foreground'
+            }`} />
+          )}
+        </div>
+      ))}
     </div>
   );
 };
@@ -106,6 +186,7 @@ interface CreateDocumentDialogProps {
 
 export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [direction, setDirection] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -257,8 +338,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         const expenditureType = form.watch('expenditure_type');
         const installment = form.watch('recipients.0.installment') || 1;
 
-        console.log('Fetching attachments with:', { expenditureType, installment });
-
         const { data, error } = await supabase
           .from('attachments_rows')
           .select('*')
@@ -270,9 +349,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           throw error;
         }
 
-        console.log('Raw attachments data:', data);
-
-        const transformedData = data.map((row: Attachment) => 
+        const transformedData = data.map((row: Attachment) =>
           (row.attachments || []).map((title: string) => ({
             id: `${row.id}-${title}`,
             title,
@@ -281,7 +358,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           }))
         ).flat();
 
-        console.log('Transformed attachments data:', transformedData);
         return transformedData;
       } catch (error) {
         console.error('Error fetching attachments:', error);
@@ -308,13 +384,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           })
         });
 
-        console.log('Budget validation response:', response);
         return response;
       } catch (error) {
         console.error('Budget validation error:', error);
         // Return a default response instead of throwing
-        return { 
-          status: 'error', 
+        return {
+          status: 'error',
           canCreate: false,
           message: error instanceof Error ? error.message : 'Budget validation failed'
         };
@@ -363,7 +438,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         attachments: data.selectedAttachments
       };
 
-      console.log('Creating document with payload:', payload);
 
       const response = await apiRequest('/api/documents', {
         method: 'POST',
@@ -393,8 +467,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     const currentRecipients = form.watch("recipients") || [];
     if (currentRecipients.length >= 10) {
       toast({
-        title: "Error",
-        description: "Maximum 10 recipients allowed",
+        title: "Maximum Recipients",
+        description: "You can't add more than 10 recipients.",
         variant: "destructive"
       });
       return;
@@ -425,75 +499,61 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   }, [selectedProjectId, form]);
 
   const handleNext = async () => {
-    if (currentStep === 1) {
-      const isValid = await form.trigger(["project_id", "expenditure_type"]);
+    const isValid = await form.trigger(
+      currentStep === 0 ? ["unit"] :
+        currentStep === 1 ? ["project_id", "expenditure_type"] :
+          currentStep === 2 ? ["recipients"] :
+            ["selectedAttachments"]
+    );
 
-      if (!isValid) {
-        toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (!selectedProject?.expenditure_types?.length) {
-        toast({
-          title: "Error",
-          description: "Selected project has no expenditure types available",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-
-    if (currentStep < 3) {
-      const isValid = await form.trigger(
-        currentStep === 0 ? ["unit"] :
-          currentStep === 1 ? ["project_id", "expenditure_type"] :
-            ["recipients"]
-      );
-
-      if (isValid) {
-        setCurrentStep((prev) => prev + 1);
-      }
+    if (isValid) {
+      setDirection(1);
+      setCurrentStep((prev) => Math.min(prev + 1, 3));
     } else {
-      form.handleSubmit(onSubmit)();
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields correctly.",
+        variant: "destructive"
+      });
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>Create New Document</DialogTitle>
-          <DialogDescription>
-            Step {currentStep + 1} of 4: {
-              currentStep === 0 ? "Select Unit" :
-                currentStep === 1 ? "Choose Project" :
-                  currentStep === 2 ? "Add Recipients" :
-                    "Select Attachments"
-            }
-          </DialogDescription>
-        </DialogHeader>
+  const handlePrevious = () => {
+    setDirection(-1);
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
+  };
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {currentStep === 0 && (
+  const renderStepContent = () => {
+    return (
+      <AnimatePresence mode="wait" custom={direction}>
+        <motion.div
+          key={currentStep}
+          custom={direction}
+          variants={stepVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{
+            x: { type: "spring", stiffness: 300, damping: 30 },
+            opacity: { duration: 0.2 }
+          }}
+        >
+          {currentStep === 0 && (
+            <div className="space-y-6">
               <FormField
                 control={form.control}
                 name="unit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Unit</FormLabel>
+                    <FormLabel>Select Unit</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
                       disabled={unitsLoading}
                     >
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select unit" />
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Choose a unit" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -508,17 +568,19 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                   </FormItem>
                 )}
               />
-            )}
+            </div>
+          )}
 
-            {currentStep === 1 && (
-              <div className="space-y-4">
-                {budgetData && (
-                  <BudgetIndicator
-                    budgetData={budgetData}
-                    currentAmount={currentAmount}
-                  />
-                )}
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              {budgetData && (
+                <BudgetIndicator
+                  budgetData={budgetData}
+                  currentAmount={currentAmount}
+                />
+              )}
 
+              <div className="grid gap-6">
                 <FormField
                   control={form.control}
                   name="project_id"
@@ -562,7 +624,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select expenditure type" />
+                              <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -579,140 +641,184 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                   />
                 )}
               </div>
-            )}
+            </div>
+          )}
 
-            {currentStep === 2 && (
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              {budgetData && (
+                <BudgetIndicator
+                  budgetData={budgetData}
+                  currentAmount={currentAmount}
+                />
+              )}
+
               <div className="space-y-4">
-                {budgetData && (
-                  <BudgetIndicator
-                    budgetData={budgetData}
-                    currentAmount={currentAmount}
-                  />
-                )}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="text-lg font-medium">Recipients</h3>
-                      <p className="text-sm text-gray-500">Add up to 10 recipients</p>
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={addRecipient}
-                      disabled={recipients.length >= 10}
-                    >
-                      Add Recipient
-                    </Button>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-medium">Recipients</h3>
+                    <p className="text-sm text-muted-foreground">Add up to 10 recipients</p>
                   </div>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const currentRecipients = form.watch("recipients") || [];
+                      if (currentRecipients.length >= 10) {
+                        toast({
+                          title: "Maximum Recipients",
+                          description: "You can't add more than 10 recipients.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+                      form.setValue("recipients", [
+                        ...currentRecipients,
+                        { firstname: "", lastname: "", afm: "", amount: 0, installment: 1 }
+                      ]);
+                    }}
+                    disabled={recipients.length >= 10}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Recipient
+                  </Button>
+                </div>
 
+                <div className="space-y-4">
                   {recipients.map((_, index) => (
-                    <div key={index} className="grid grid-cols-6 gap-4 p-4 border rounded-lg">
-                      <FormField
-                        control={form.control}
-                        name={`recipients.${index}.firstname`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`recipients.${index}.lastname`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`recipients.${index}.afm`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>AFM</FormLabel>
-                            <FormControl>
-                              <Input {...field} maxLength={9} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`recipients.${index}.amount`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Amount</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`recipients.${index}.installment`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Installment</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                min={1}
-                                max={12}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={() => removeRecipient(index)}
-                        className="mt-8"
-                      >
-                        Remove
-                      </Button>
-                    </div>
+                    <Card key={index} className="p-4">
+                      <div className="flex justify-between items-start mb-4">
+                        <h4 className="text-sm font-medium">Recipient #{index + 1}</h4>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const currentRecipients = form.watch("recipients") || [];
+                            form.setValue(
+                              "recipients",
+                              currentRecipients.filter((_, i) => i !== index)
+                            );
+                          }}
+                          className="text-destructive hover:text-destructive/90"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name={`recipients.${index}.firstname`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>First Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`recipients.${index}.lastname`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Last Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`recipients.${index}.afm`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>AFM</FormLabel>
+                              <FormControl>
+                                <Input {...field} maxLength={9} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`recipients.${index}.amount`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Amount</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`recipients.${index}.installment`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Installment</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                  min={1}
+                                  max={12}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </Card>
                   ))}
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Select Attachments</h3>
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-medium">Required Attachments</h3>
                   <p className="text-sm text-muted-foreground">
-                    Choose the attachments to include in the document
+                    Select the documents that will be included
                   </p>
                 </div>
+              </div>
 
-                {attachmentsLoading ? (
-                  <div className="flex items-center justify-center p-4">
-                    <span className="loading loading-spinner loading-md"></span>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {attachments.map((attachment) => (
-                      <div key={attachment.id} className="flex items-start space-x-3">
+              {attachmentsLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                </div>
+              ) : attachments.length === 0 ? (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    No attachments are required for this document type.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-4">
+                  {attachments.map((attachment) => (
+                    <Card key={attachment.id} className="p-4">
+                      <div className="flex items-start space-x-4">
                         <Checkbox
                           checked={form.watch("selectedAttachments").includes(attachment.id)}
                           onCheckedChange={(checked) => {
@@ -728,10 +834,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           }}
                           id={`attachment-${attachment.id}`}
                         />
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           <label
                             htmlFor={`attachment-${attachment.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            className="text-sm font-medium leading-none cursor-pointer"
                           >
                             {attachment.title}
                           </label>
@@ -742,24 +848,50 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
 
-            <div className="flex justify-between pt-6">
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create New Document</DialogTitle>
+          <DialogDescription>
+            Complete all required information to create a new document
+          </DialogDescription>
+        </DialogHeader>
+
+        <Separator className="my-4" />
+
+        <StepIndicator currentStep={currentStep} />
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {renderStepContent()}
+
+            <Separator className="my-4" />
+
+            <div className="flex justify-between items-center">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setCurrentStep((prev) => Math.max(prev - 1, 0))}
+                onClick={handlePrevious}
                 disabled={currentStep === 0}
               >
                 Previous
               </Button>
+
               <Button
                 type="button"
-                onClick={handleNext}
+                onClick={currentStep === 3 ? form.handleSubmit(onSubmit) : handleNext}
               >
                 {currentStep === 3 ? "Create Document" : "Next"}
               </Button>
