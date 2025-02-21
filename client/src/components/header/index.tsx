@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { FileText, FolderKanban, LogOut, Menu, LayoutDashboard, Users } from "lucide-react";
+import { FileText, FolderKanban, LogOut, Menu, LayoutDashboard, Users, History } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Sheet,
@@ -37,6 +37,13 @@ export function Header() {
         <Button variant="ghost" className="flex items-center gap-2">
           <FolderKanban className="h-4 w-4" />
           Projects
+        </Button>
+      </Link>
+      <Separator orientation="vertical" className="h-8 mx-2" />
+      <Link href="/budget-history">
+        <Button variant="ghost" className="flex items-center gap-2">
+          <History className="h-4 w-4" />
+          Budget History
         </Button>
       </Link>
       {isAdmin && (

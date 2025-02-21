@@ -1,15 +1,24 @@
-import { Router } from 'express';
-import { supabase } from '../config/db';
+import { Router, type Request } from 'express';
+import { supabase } from '../db';
 import type { Database } from '@shared/schema';
+import type { User } from '@shared/schema';
+
+interface AuthRequest extends Request {
+  user?: User;
+}
 
 const router = Router();
 
-router.get('/dashboard', async (req, res) => {
+router.get('/dashboard', async (req: AuthRequest, res) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const { data, error } = await supabase
       .from('generated_documents')
       .select('status, total_amount')
-      .eq('generated_by', req.user!.id);
+      .eq('generated_by', req.user.id);
 
     if (error) throw error;
 
@@ -27,8 +36,12 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-router.get('/monthly', async (req, res) => {
+router.get('/monthly', async (req: AuthRequest, res) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - 11);
 
