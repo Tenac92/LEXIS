@@ -75,9 +75,10 @@ const createDocumentSchema = z.object({
     firstname: z.string().min(2, "First name must be at least 2 characters"),
     lastname: z.string().min(2, "Last name must be at least 2 characters"),
     afm: z.string().length(9, "AFM must be exactly 9 digits"),
-    amount: z.number().min(0.01, "Amount must be greater than 0"),
-    installment: z.number().int().min(1).max(12, "Installment must be between 1 and 12")
+    amount: z.coerce.number().min(0.01, "Amount must be greater than 0"),
+    installment: z.coerce.number().int().min(1).max(12, "Installment must be between 1 and 12")
   })).min(1, "At least one recipient is required"),
+  total_amount: z.coerce.number().min(0.01, "Total amount must be greater than 0"),
   status: z.string().default("draft")
 });
 
