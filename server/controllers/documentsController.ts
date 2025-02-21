@@ -1,12 +1,16 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../db";
 import { z } from "zod";
-import { Document, Paragraph, Packer, TextRun } from "docx";
+import { Document, Paragraph, Packer, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } from "docx";
 import { insertGeneratedDocumentSchema } from "@shared/schema";
 import type { Database } from "@shared/schema";
 import type { User } from "@shared/schema";
 import { validateBudget, updateBudget } from "./budgetController";
 
+// Initialize router at the top level
+const router = Router();
+
+// Define interfaces
 interface Recipient {
   lastname: string;
   firstname: string;
@@ -20,7 +24,15 @@ interface AuthRequest extends Request {
   user?: User;
 }
 
-// Document formatting utilities
+// Authentication middleware
+const authenticateToken = (req: AuthRequest, res: Response, next: Function) => {
+  if (!req.user?.id) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
+};
+
+// Enhanced document formatting utilities
 class DocumentFormatter {
   static getDefaultMargins() {
     return {
@@ -31,62 +43,231 @@ class DocumentFormatter {
     };
   }
 
-  static createDocumentHeader(req: Request, unitDetails?: any) {
-    return new Paragraph({
-      children: [
-        new TextRun({
-          text: unitDetails?.title || "ΥΠΟΥΡΓΕΙΟ ΕΘΝΙΚΗΣ ΑΜΥΝΑΣ",
-          bold: true
-        })
-      ],
-      spacing: { before: 240, after: 240 },
-      alignment: "center"
-    });
+  static createDocumentHeader(unitDetails?: any) {
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: unitDetails?.title || "ΥΠΟΥΡΓΕΙΟ ΕΘΝΙΚΗΣ ΑΜΥΝΑΣ",
+            bold: true,
+            size: 28
+          })
+        ],
+        spacing: { before: 240, after: 120 },
+        alignment: AlignmentType.CENTER
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: unitDetails?.subtitle || "",
+            size: 24
+          })
+        ],
+        spacing: { before: 120, after: 240 },
+        alignment: AlignmentType.CENTER
+      })
+    ];
   }
 
-  static createHeader(text: string) {
-    return new Paragraph({
-      children: [new TextRun({ text, bold: true })],
-      spacing: { before: 240, after: 240 },
-      alignment: "center"
-    });
+  static createMetadataSection(data: any) {
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({ text: `Αριθμός Πρωτοκόλλου: `, bold: true }),
+          new TextRun({ text: data.protocol_number || "N/A" }),
+        ],
+        spacing: { before: 240, after: 120 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: `Ημερομηνία: `, bold: true }),
+          new TextRun({ text: new Date().toLocaleDateString('el-GR') }),
+        ],
+        spacing: { before: 120, after: 240 }
+      })
+    ];
   }
 
   static createPaymentTable(recipients: Recipient[]) {
-    return new Paragraph({
-      children: recipients.map(recipient =>
-        new TextRun({
-          text: `${recipient.lastname} ${recipient.firstname} ${recipient.amount}€\n`,
-          size: 24
+    const tableRows = [
+      new TableRow({
+        children: [
+          new TableCell({ 
+            children: [new Paragraph({ text: "Επώνυμο", alignment: AlignmentType.CENTER })],
+            width: { size: 20, type: WidthType.PERCENTAGE }
+          }),
+          new TableCell({ 
+            children: [new Paragraph({ text: "Όνομα", alignment: AlignmentType.CENTER })],
+            width: { size: 20, type: WidthType.PERCENTAGE }
+          }),
+          new TableCell({ 
+            children: [new Paragraph({ text: "Πατρώνυμο", alignment: AlignmentType.CENTER })],
+            width: { size: 20, type: WidthType.PERCENTAGE }
+          }),
+          new TableCell({ 
+            children: [new Paragraph({ text: "ΑΦΜ", alignment: AlignmentType.CENTER })],
+            width: { size: 20, type: WidthType.PERCENTAGE }
+          }),
+          new TableCell({ 
+            children: [new Paragraph({ text: "Ποσό (€)", alignment: AlignmentType.CENTER })],
+            width: { size: 20, type: WidthType.PERCENTAGE }
+          })
+        ]
+      }),
+      ...recipients.map(recipient => 
+        new TableRow({
+          children: [
+            new TableCell({ 
+              children: [new Paragraph({ text: recipient.lastname })],
+              width: { size: 20, type: WidthType.PERCENTAGE }
+            }),
+            new TableCell({ 
+              children: [new Paragraph({ text: recipient.firstname })],
+              width: { size: 20, type: WidthType.PERCENTAGE }
+            }),
+            new TableCell({ 
+              children: [new Paragraph({ text: recipient.fathername })],
+              width: { size: 20, type: WidthType.PERCENTAGE }
+            }),
+            new TableCell({ 
+              children: [new Paragraph({ text: recipient.afm })],
+              width: { size: 20, type: WidthType.PERCENTAGE }
+            }),
+            new TableCell({ 
+              children: [new Paragraph({ 
+                text: recipient.amount.toFixed(2),
+                alignment: AlignmentType.RIGHT
+              })],
+              width: { size: 20, type: WidthType.PERCENTAGE }
+            })
+          ]
         })
-      ),
-      spacing: { before: 240, after: 240 }
+      )
+    ];
+
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: tableRows,
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 1 },
+        bottom: { style: BorderStyle.SINGLE, size: 1 },
+        left: { style: BorderStyle.SINGLE, size: 1 },
+        right: { style: BorderStyle.SINGLE, size: 1 },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+        insideVertical: { style: BorderStyle.SINGLE, size: 1 }
+      }
     });
   }
 
-  static createDocumentFooter() {
+  static createTotalSection(total: number) {
     return new Paragraph({
       children: [
-        new TextRun({
-          text: "Ο ΔΙΕΥΘΥΝΤΗΣ",
-          bold: true
-        })
+        new TextRun({ text: "Σύνολο: ", bold: true }),
+        new TextRun({ text: `${total.toFixed(2)}€` })
       ],
-      spacing: { before: 720 },
-      alignment: "right"
+      spacing: { before: 360, after: 360 },
+      alignment: AlignmentType.RIGHT
     });
+  }
+
+  static createDocumentFooter(signatory?: string) {
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Ο ΔΙΕΥΘΥΝΤΗΣ",
+            bold: true
+          })
+        ],
+        spacing: { before: 720, after: 720 },
+        alignment: AlignmentType.RIGHT
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: signatory || "",
+            bold: true
+          })
+        ],
+        spacing: { before: 360 },
+        alignment: AlignmentType.RIGHT
+      })
+    ];
   }
 }
 
-const router = Router();
+// Document generation routes
+router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
 
-// Authentication middleware
-const authenticateToken = (req: AuthRequest, res: Response, next: Function) => {
-  if (!req.user?.id) {
-    return res.status(401).json({ message: "Authentication required" });
+    const { data } = await supabase
+      .from('documents')
+      .select('*, recipients')
+      .eq('id', parseInt(id))
+      .single();
+
+    if (!data) {
+      return res.status(404).json({ 
+        status: 'error',
+        message: 'Document not found' 
+      });
+    }
+
+    // Validate and format recipients data
+    const recipients = Array.isArray(data.recipients)
+      ? data.recipients.map((recipient: Recipient) => ({
+          lastname: String(recipient.lastname || '').trim(),
+          firstname: String(recipient.firstname || '').trim(),
+          fathername: String(recipient.fathername || '').trim(),
+          amount: Number(recipient.amount) || 0,
+          installment: Number(recipient.installment) || 1,
+          afm: String(recipient.afm || '').trim()
+        }))
+      : [];
+
+    // Calculate total amount
+    const totalAmount = recipients.reduce((sum: number, recipient: Recipient) => sum + recipient.amount, 0);
+
+    // Create document with enhanced formatting
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            ...DocumentFormatter.getDefaultMargins(),
+            size: { width: 11906, height: 16838 }
+          }
+        },
+        children: [
+          ...DocumentFormatter.createDocumentHeader(data.unit_details),
+          ...DocumentFormatter.createMetadataSection(data),
+          new Paragraph({
+            text: 'ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ',
+            spacing: { before: 240, after: 240 },
+            alignment: AlignmentType.CENTER
+          }),
+          DocumentFormatter.createPaymentTable(recipients),
+          DocumentFormatter.createTotalSection(totalAmount),
+          ...DocumentFormatter.createDocumentFooter(data.signatory)
+        ]
+      }]
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename=document-${data.document_number || id}.docx`);
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('Document generation error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to generate document',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
-  next();
-};
+});
 
 // List documents with filters
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
@@ -96,7 +277,6 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
       .from('generated_documents')
       .select('*');
 
-    // Filter by user's role and ID
     if (req.user?.role !== 'admin' && req.user?.id) {
       query = query.eq('generated_by', req.user.id);
     }
@@ -121,7 +301,6 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
       query = query.lte('total_amount', Number(amountTo));
     }
 
-    // User/Recipient filter
     if (user) {
       const searchTerm = user.toString().toLowerCase().trim();
       if (searchTerm) {
@@ -142,6 +321,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// Get single document
 router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { data: document, error } = await supabase
@@ -162,6 +342,7 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// Update document
 router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { data: document, error } = await supabase
@@ -183,234 +364,6 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Error updating document:', error);
     res.status(500).json({ message: 'Failed to update document' });
-  }
-});
-
-// Document generation routes
-router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-
-    const { data } = await supabase
-      .from('documents')
-      .select('*, recipients')
-      .eq('id', parseInt(id))
-      .single();
-
-    if (!data) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
-
-    // Format recipients data
-    const recipients = Array.isArray(data.recipients)
-      ? data.recipients.map((recipient: Recipient) => ({
-          lastname: String(recipient.lastname || ''),
-          firstname: String(recipient.firstname || ''),
-          fathername: String(recipient.fathername || ''),
-          amount: Number(recipient.amount) || 0,
-          installment: Number(recipient.installment) || 1,
-          afm: String(recipient.afm || '')
-        }))
-      : [];
-
-    // Create document
-    const doc = new Document({
-      sections: [{
-        properties: {
-          page: {
-            ...DocumentFormatter.getDefaultMargins(),
-            size: { width: 11906, height: 16838 }
-          }
-        },
-        children: [
-          DocumentFormatter.createDocumentHeader(req),
-          DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
-          DocumentFormatter.createPaymentTable(recipients),
-          DocumentFormatter.createDocumentFooter()
-        ]
-      }]
-    });
-
-    const buffer = await Packer.toBuffer(doc);
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${data.document_number || id}.docx`);
-    res.send(buffer);
-
-  } catch (error) {
-    console.error('Export error:', error);
-    res.status(500).json({
-      message: 'Failed to export document',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-router.post('/generated/:id/export', async (req: Request, res) => {
-  try {
-    const { id } = req.params;
-    const { unit_details, margins } = req.body;
-
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const { data: document } = await supabase
-      .from('documents')
-      .select('*, recipients')
-      .eq('id', parseInt(id))
-      .single();
-
-    if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
-
-    // Format recipients data
-    const recipients = Array.isArray(document.recipients)
-      ? document.recipients.map((recipient: Recipient) => ({
-          lastname: String(recipient.lastname || ''),
-          firstname: String(recipient.firstname || ''),
-          fathername: String(recipient.fathername || ''),
-          amount: Number(recipient.amount) || 0,
-          installment: Number(recipient.installment) || 1,
-          afm: String(recipient.afm || '')
-        }))
-      : [];
-
-    // Create document using DocumentFormatter
-    const doc = new Document({
-      sections: [{
-        properties: {
-          page: {
-            ...(margins || DocumentFormatter.getDefaultMargins())
-          }
-        },
-        children: [
-          DocumentFormatter.createDocumentHeader(req, unit_details),
-          DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
-          DocumentFormatter.createPaymentTable(recipients),
-          DocumentFormatter.createDocumentFooter()
-        ]
-      }]
-    });
-
-    const buffer = await Packer.toBuffer(doc);
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${document.document_number || id}.docx`);
-    res.send(buffer);
-
-  } catch (error) {
-    console.error('Export error:', error);
-    res.status(500).json({
-      message: 'Failed to export document',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-
-router.get('/templates', async (req:Request, res) => {
-  try {
-    const templates = await TemplateManager.listTemplates(req.query.category as string);
-    res.json(templates);
-  } catch (error) {
-    console.error('Error fetching templates:', error);
-    res.status(500).json({ message: 'Failed to fetch templates' });
-  }
-});
-
-router.post('/templates', async (req:Request, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const { name, description, category, templateData } = req.body;
-    const template = await TemplateManager.createTemplate(
-      name,
-      description,
-      category,
-      templateData,
-      req.user.id
-    );
-
-    res.status(201).json(template);
-  } catch (error) {
-    console.error('Error creating template:', error);
-    res.status(500).json({ message: 'Failed to create template' });
-  }
-});
-
-router.get('/templates/:id/preview', async (req:Request, res) => {
-  try {
-    const { id } = req.params;
-    const { previewData } = req.query;
-
-    const buffer = await TemplateManager.generatePreview(
-      parseInt(id),
-      JSON.parse(previewData as string),
-      { watermark: true }
-    );
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=template-preview-${id}.docx`);
-    res.send(buffer);
-  } catch (error) {
-    console.error('Error generating preview:', error);
-    res.status(500).json({ message: 'Failed to generate preview' });
-  }
-});
-
-router.get('/versions/:documentId', async (req:Request, res) => {
-  try {
-    const versions = await VersionController.getVersionHistory(parseInt(req.params.documentId));
-    res.json(versions);
-  } catch (error) {
-    console.error('Error fetching versions:', error);
-    res.status(500).json({ message: 'Failed to fetch versions' });
-  }
-});
-
-router.post('/versions/:documentId', async (req:Request, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const { documentId } = req.params;
-    const { recipients, metadata } = req.body;
-
-    const version = await VersionController.createVersion(
-      parseInt(documentId),
-      recipients,
-      req.user.id,
-      metadata
-    );
-
-    res.status(201).json(version);
-  } catch (error) {
-    console.error('Error creating version:', error);
-    res.status(500).json({ message: 'Failed to create version' });
-  }
-});
-
-router.post('/versions/:documentId/revert/:versionId', async (req:Request, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const version = await VersionController.revertToVersion(
-      parseInt(req.params.documentId),
-      parseInt(req.params.versionId),
-      req.user.id
-    );
-
-    res.json(version);
-  } catch (error) {
-    console.error('Error reverting version:', error);
-    res.status(500).json({ message: 'Failed to revert version' });
   }
 });
 
