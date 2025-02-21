@@ -90,14 +90,43 @@ export async function getExpenditureTypes(req: Request, res: Response) {
 
 export async function exportProjectsXLSX(req: Request, res: Response) {
   try {
+    console.log('[Projects] Starting XLSX export');
     const { data: projects, error } = await supabase
       .from('project_catalog')
-      .select('*');
+      .select(`
+        mis,
+        na853,
+        na271,
+        e069,
+        event_description,
+        project_title,
+        event_type,
+        event_year,
+        region,
+        regional_unit,
+        municipality,
+        implementing_agency,
+        budget_na853,
+        budget_e069,
+        budget_na271,
+        ethsia_pistosi,
+        status,
+        kya,
+        fek,
+        ada,
+        expenditure_type,
+        procedures,
+        created_at,
+        updated_at
+      `);
 
     if (error) throw error;
     if (!projects?.length) {
+      console.log('[Projects] No projects found for export');
       return res.status(400).json({ message: 'No projects found for export' });
     }
+
+    console.log(`[Projects] Found ${projects.length} projects to export`);
 
     const formattedProjects = projects.map(project => ({
       MIS: project.mis || '',
