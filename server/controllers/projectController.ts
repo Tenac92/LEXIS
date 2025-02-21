@@ -5,24 +5,28 @@ import { storage } from "../storage";
 import { Project, projectHelpers } from "@shared/models/project";
 
 export async function listProjects(req: Request, res: Response) {
-  const { unit } = req.query;
-
   try {
-    let projects;
-    try {
-      projects = unit 
-        ? await storage.getProjectCatalogByUnit(unit as string)
-        : await storage.getProjectCatalog();
-    } catch (err) {
-      console.error("Database error:", err);
+    const { unit } = req.query;
+    const { data, error } = await supabase
+      .from('project_catalog')
+      .select('*')
+      .eq('unit', unit)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Database error:", error);
       return res.status(500).json({ 
         message: "Failed to fetch projects from database",
-        error: err instanceof Error ? err.message : "Unknown error"
+        error: error.message
       });
     }
 
+    if (!data) {
+        return res.status(404).json({ message: 'No projects found' });
+    }
+
     // Map projects and validate with our model
-    const formattedProjects = projects.map(project => {
+    const formattedProjects = data.map(project => {
       // Convert NaN values to null before validation
       const sanitizedProject = {
         ...project,

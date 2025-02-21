@@ -40,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Units and Projects routes
     log('[Routes] Registering units and projects routes...');
     app.use('/api/units', authenticateSession, unitsController);
-    app.get('/api/projects', authenticateSession, listProjects);
+    app.get('/api/catalog', authenticateSession, listProjects);
     app.get('/api/projects/export/xlsx', authenticateSession, exportProjectsXLSX);
     app.put('/api/projects/bulk-update', authenticateSession, bulkUpdateProjects);
     log('[Routes] Units and projects routes registered');
