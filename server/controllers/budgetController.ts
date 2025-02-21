@@ -129,10 +129,19 @@ export async function validateBudget(req: AuthRequest, res: Response) {
     const { mis, amount } = req.body;
     const requestedAmount = parseFloat(amount);
 
-    if (!mis || isNaN(requestedAmount) || requestedAmount <= 0) {
+    if (!mis) {
       return res.status(400).json({ 
         status: 'error',
-        message: "Invalid parameters",
+        message: "MIS parameter is required",
+        canCreate: false,
+        allowDocx: false
+      });
+    }
+
+    if (isNaN(requestedAmount) || requestedAmount <= 0) {
+      return res.status(400).json({ 
+        status: 'error',
+        message: "Valid amount parameter is required",
         canCreate: false,
         allowDocx: false
       });
