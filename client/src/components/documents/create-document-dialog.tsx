@@ -420,6 +420,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const handleSubmit = async (data: CreateDocumentForm) => {
     try {
       setLoading(true);
+      console.log('Form submission started', data);
 
       // Validate project selection
       if (!data.project_id) {
@@ -938,9 +939,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   </Button>
                 ) : (
                   <Button
-                    type="button"
-                    onClick={form.handleSubmit(handleSubmit)}
+                    type="submit"
                     disabled={loading}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      form.handleSubmit(handleSubmit)(e);
+                    }}
                   >
                     {loading ? "Creating..." : "Create Document"}
                   </Button>
