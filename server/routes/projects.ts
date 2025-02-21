@@ -101,12 +101,32 @@ router.get('/export/xlsx', authenticateToken, async (req, res) => {
     const wsData = projects.map(project => ({
       MIS: project.mis || '',
       NA853: project.na853 || '',
-      Description: project.event_description || '',
-      Budget: typeof project.budget_na853 === 'number' ? project.budget_na853 : 0,
-      Annual_Credit: typeof project.ethsia_pistosi === 'number' ? project.ethsia_pistosi : 0,
-      Status: project.status || '',
+      NA271: project.na271 || '',
+      E069: project.e069 || '',
+      Event_Description: project.event_description || '',
+      Project_Title: project.project_title || '',
+      Event_Type: project.event_type || '',
+      Event_Year: Array.isArray(project.event_year) ? project.event_year.join(', ') : '',
       Region: project.region || '',
-      Created_At: project.created_at ? new Date(project.created_at).toLocaleDateString() : ''
+      Regional_Unit: project.regional_unit || '',
+      Municipality: project.municipality || '',
+      Implementing_Agency: Array.isArray(project.implementing_agency) 
+        ? project.implementing_agency.join(', ') 
+        : project.implementing_agency || '',
+      Budget_NA853: project.budget_na853?.toString() || '0',
+      Budget_E069: project.budget_e069?.toString() || '0',
+      Budget_NA271: project.budget_na271?.toString() || '0',
+      Annual_Credit: project.ethsia_pistosi?.toString() || '0',
+      Status: project.status || '',
+      KYA: project.kya || '',
+      FEK: project.fek || '',
+      ADA: project.ada || '',
+      Expenditure_Type: Array.isArray(project.expenditure_type)
+        ? project.expenditure_type.join(', ')
+        : project.expenditure_type || '',
+      Procedures: project.procedures || '',
+      Created_At: project.created_at ? new Date(project.created_at).toLocaleDateString() : '',
+      Updated_At: project.updated_at ? new Date(project.updated_at).toLocaleDateString() : ''
     }));
 
     const ws = xlsx.utils.json_to_sheet(wsData);
