@@ -251,19 +251,29 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   });
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
-    queryKey: ['attachments'],
+    queryKey: ['attachments', form.watch('expenditure_type'), form.watch('recipients.0.installment')],
     queryFn: async () => {
       try {
+        const expenditureType = form.watch('expenditure_type');
+        const installment = form.watch('recipients.0.installment') || 1;
+
+        console.log('Fetching attachments with:', { expenditureType, installment });
+
         const { data, error } = await supabase
           .from('attachments_rows')
           .select('*')
-          .eq('expediture_type', form.watch('expenditure_type'))
-          .eq('installment', form.watch('recipients.0.installment') || 1);
+          .eq('expediture_type', expenditureType)
+          .eq('installment', installment);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching attachments:', error);
+          throw error;
+        }
+
+        console.log('Raw attachments data:', data);
 
         const transformedData = data.map((row: Attachment) => 
-          row.attachments.map((title: string) => ({
+          (row.attachments || []).map((title: string) => ({
             id: `${row.id}-${title}`,
             title,
             file_type: 'document',
@@ -271,6 +281,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           }))
         ).flat();
 
+        console.log('Transformed attachments data:', transformedData);
         return transformedData;
       } catch (error) {
         console.error('Error fetching attachments:', error);
@@ -288,17 +299,25 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       }
 
       try {
-        return await apiRequest<BudgetValidationResponse>('/api/budget/validate', {
+        const response = await apiRequest<BudgetValidationResponse>('/api/budget/validate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             mis: selectedProjectId,
-            amount: currentAmount
+            amount: currentAmount.toString()
           })
         });
+
+        console.log('Budget validation response:', response);
+        return response;
       } catch (error) {
         console.error('Budget validation error:', error);
-        throw error;
+        // Return a default response instead of throwing
+        return { 
+          status: 'error', 
+          canCreate: false,
+          message: error instanceof Error ? error.message : 'Budget validation failed'
+        };
       }
     },
     enabled: Boolean(selectedProjectId) && currentAmount > 0
