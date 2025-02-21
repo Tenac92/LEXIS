@@ -14,12 +14,8 @@ export const supabase = createClient<Database>(
     auth: {
       persistSession: false,
       autoRefreshToken: false
-    },
-    db: {
-      schema: 'public'
     }
   }
 );
 
-// Export for schema type usage
 export const db = supabase;

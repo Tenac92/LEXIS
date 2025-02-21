@@ -13,7 +13,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { createClient } from '@supabase/supabase-js';
 import type { BudgetValidationResponse } from "@shared/schema";
 
-// Create a single supabase client for the frontend
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 
@@ -41,6 +40,7 @@ interface BudgetIndicatorProps {
 
 const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
   const availableBudget = budgetData.current_budget - currentAmount;
+
   return (
     <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -57,9 +57,9 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
           </p>
         </div>
         <div>
-          <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
+          <h3 className="text-sm font-medium text-gray-600">Annual Allocation</h3>
           <p className="text-2xl font-bold text-gray-700">
-            {budgetData.annual_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            {budgetData.katanomes_etous.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
           </p>
         </div>
       </div>
@@ -67,7 +67,6 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
   );
 };
 
-// Form Schema with strict validation
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
   project_id: z.string().min(1, "Project is required"),
@@ -83,8 +82,6 @@ const createDocumentSchema = z.object({
 });
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
-
-const steps = ["Unit Selection", "Project Details", "Recipients"];
 
 interface CreateDocumentDialogProps {
   open: boolean;
@@ -109,6 +106,114 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
   const selectedUnit = form.watch("unit");
   const selectedProjectId = form.watch("project_id");
+  const recipients = form.watch("recipients") || [];
+
+  // Calculate total amount from recipients
+  const currentAmount = recipients.reduce((sum, r) => {
+    const amount = parseFloat(r.amount?.toString() || '0');
+    return isNaN(amount) ? sum : sum + amount;
+  }, 0);
+
+  const { data: budgetData, error: budgetError } = useQuery({
+    queryKey: ["budget", selectedProjectId],
+    queryFn: async () => {
+      if (!selectedProjectId) return null;
+
+      try {
+        const { data: budgetData, error } = await supabase
+          .from('budget_na853_split')
+          .select('user_view, proip, ethsia_pistosi, katanomes_etous')
+          .eq('mis', selectedProjectId)
+          .single();
+
+        if (error) throw error;
+        if (!budgetData) throw new Error('Budget data not found');
+
+        // Parse all budget values safely
+        return {
+          current_budget: parseFloat(budgetData.user_view?.toString() || '0'),
+          total_budget: parseFloat(budgetData.proip?.toString() || '0'),
+          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
+          katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0')
+        };
+      } catch (error) {
+        console.error('Budget fetch error:', error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to load budget information.",
+          variant: "destructive"
+        });
+        return null;
+      }
+    },
+    enabled: Boolean(selectedProjectId)
+  });
+
+  // Separate validation query
+  const { data: validationResult } = useQuery<BudgetValidationResponse>({
+    queryKey: ["budget-validation", selectedProjectId, currentAmount],
+    queryFn: async () => {
+      if (!selectedProjectId || currentAmount <= 0) {
+        return { status: 'success', canCreate: true };
+      }
+
+      try {
+        return await apiRequest<BudgetValidationResponse>('/api/budget/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mis: selectedProjectId,
+            amount: currentAmount
+          })
+        });
+      } catch (error) {
+        console.error('Budget validation error:', error);
+        throw error;
+      }
+    },
+    enabled: Boolean(selectedProjectId) && currentAmount > 0
+  });
+
+  // Handle form submission
+  const onSubmit = async (data: CreateDocumentForm) => {
+    try {
+      // Check validation result first
+      if (validationResult?.status === 'error' || validationResult?.canCreate === false) {
+        toast({
+          title: "Budget Error",
+          description: validationResult?.message || "Cannot create document due to budget constraints",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const payload = {
+        ...data,
+        total_amount: data.recipients.reduce((sum, r) => sum + r.amount, 0)
+      };
+
+      await apiRequest('/api/documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      // Invalidate relevant queries
+      await queryClient.invalidateQueries({ queryKey: ["documents"] });
+      await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
+
+      toast({ title: "Success", description: "Document created successfully" });
+      onOpenChange(false);
+      form.reset();
+      setCurrentStep(0);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create document",
+        variant: "destructive"
+      });
+    }
+  };
 
   const { data: units = [], isLoading: unitsLoading } = useQuery({
     queryKey: ["units"],
@@ -197,143 +302,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     retry: 2
   });
 
-  // Query budget data
-  const { data: budgetData, error: budgetError } = useQuery({
-    queryKey: ["budget", selectedProjectId],
-    queryFn: async () => {
-      if (!selectedProjectId) return null;
-
-      try {
-        const { data: budgetData, error } = await supabase
-          .from('budget_na853_split')
-          .select('user_view, proip, ethsia_pistosi, katanomes_etous')
-          .eq('mis', selectedProjectId)
-          .single();
-
-        if (error) {
-          console.error('Budget data fetch error:', error);
-          throw error;
-        }
-
-        if (!budgetData) {
-          throw new Error('Budget data not found');
-        }
-
-        // Parse budget values safely
-        return {
-          current_budget: parseFloat(budgetData.user_view?.toString() || '0'),
-          total_budget: parseFloat(budgetData.proip?.toString() || '0'),
-          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
-          katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0')
-        };
-      } catch (error) {
-        console.error('Budget fetch error:', error);
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load budget information.",
-          variant: "destructive"
-        });
-        return null;
-      }
-    },
-    enabled: Boolean(selectedProjectId),
-    retry: 2
-  });
-
-  // Validate budget whenever amount changes
-  const recipients = form.watch("recipients") || [];
-  const currentAmount = recipients.reduce((sum, r) => {
-    const amount = parseFloat(r.amount?.toString() || '0');
-    return isNaN(amount) ? sum : sum + amount;
-  }, 0);
-
-  const { data: validationResult } = useQuery<BudgetValidationResponse>({
-    queryKey: ["budget-validation", selectedProjectId, currentAmount],
-    queryFn: async () => {
-      if (!selectedProjectId || currentAmount <= 0) {
-        return { status: 'success', canCreate: true };
-      }
-
-      try {
-        const response = await apiRequest<BudgetValidationResponse>(`/api/budget/validate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            mis: selectedProjectId,
-            amount: currentAmount
-          })
-        });
-
-        // Show warning toast if needed but don't block
-        if (response.status === 'warning') {
-          toast({
-            title: "Budget Warning",
-            description: response.message,
-            variant: "warning"
-          });
-        }
-
-        return response;
-      } catch (error) {
-        console.error('Budget validation error:', error);
-        throw error;
-      }
-    },
-    enabled: Boolean(selectedProjectId) && currentAmount > 0
-  });
-
-  const onSubmit = async (data: CreateDocumentForm) => {
-    try {
-      // Check validation result
-      if (validationResult?.status === 'error' || validationResult?.canCreate === false) {
-        toast({
-          title: "Budget Error",
-          description: validationResult?.message || "Cannot create document due to budget constraints",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const payload = {
-        unit: data.unit,
-        project_id: data.project_id,
-        expenditure_type: data.expenditure_type,
-        status: data.status,
-        recipients: data.recipients,
-        total_amount: data.recipients.reduce((sum, r) => sum + r.amount, 0)
-      };
-
-      const response = await apiRequest('/api/documents', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      await queryClient.invalidateQueries({ queryKey: ["documents"] });
-      await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
-
-      toast({
-        title: "Success",
-        description: "Document created successfully",
-      });
-
-      onOpenChange(false);
-      form.reset();
-      setCurrentStep(0);
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create document",
-        variant: "destructive"
-      });
-    }
-  };
-
   const addRecipient = () => {
     const currentRecipients = form.watch("recipients") || [];
     if (currentRecipients.length >= 10) {
@@ -394,11 +362,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       }
     }
 
-    if (currentStep < steps.length - 1) {
+    if (currentStep < 2) {
       const isValid = await form.trigger(
         currentStep === 0 ? ["unit"] :
-          currentStep === 1 ? ["project_id", "expenditure_type"] :
-            ["recipients"]
+          ["project_id", "expenditure_type"]
       );
 
       if (isValid) {
@@ -415,7 +382,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         <DialogHeader>
           <DialogTitle>Create New Document</DialogTitle>
           <DialogDescription>
-            Step {currentStep + 1} of {steps.length}: {steps[currentStep]}
+            Step {currentStep + 1} of 3: {
+              currentStep === 0 ? "Select Unit" :
+              currentStep === 1 ? "Choose Project" :
+              "Add Recipients"
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -657,7 +628,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 type="button"
                 onClick={handleNext}
               >
-                {currentStep === steps.length - 1 ? "Create Document" : "Next"}
+                {currentStep === 2 ? "Create Document" : "Next"}
               </Button>
             </div>
           </form>
