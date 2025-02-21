@@ -177,28 +177,26 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   // Handle form submission
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
-      // Check validation result first
-      if (validationResult?.status === 'error' || validationResult?.canCreate === false) {
-        toast({
-          title: "Budget Error",
-          description: validationResult?.message || "Cannot create document due to budget constraints",
-          variant: "destructive"
-        });
-        return;
-      }
-
+      // Format the payload with proper type conversions
       const payload = {
         ...data,
-        total_amount: data.recipients.reduce((sum, r) => sum + r.amount, 0)
+        total_amount: data.recipients.reduce((sum, r) => sum + r.amount, 0).toString(), // Convert to string for API
+        recipients: data.recipients.map(r => ({
+          ...r,
+          amount: r.amount.toString(), // Convert amounts to strings
+          installment: parseInt(r.installment.toString()) // Ensure installment is an integer
+        }))
       };
 
-      await apiRequest('/api/documents', {
+      console.log('Submitting payload:', payload);
+
+      const response = await apiRequest('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
-      // Invalidate relevant queries
+      // Invalidate queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
 
@@ -207,6 +205,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       form.reset();
       setCurrentStep(0);
     } catch (error) {
+      console.error('Document creation error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create document",
@@ -384,8 +383,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           <DialogDescription>
             Step {currentStep + 1} of 3: {
               currentStep === 0 ? "Select Unit" :
-              currentStep === 1 ? "Choose Project" :
-              "Add Recipients"
+                currentStep === 1 ? "Choose Project" :
+                  "Add Recipients"
             }
           </DialogDescription>
         </DialogHeader>
