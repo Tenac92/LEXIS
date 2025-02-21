@@ -9,6 +9,24 @@ interface AuthRequest extends Request {
   user?: User;
 }
 
+// Document recipient schema
+const recipientSchema = z.object({
+  firstname: z.string(),
+  lastname: z.string(),
+  afm: z.string(),
+  amount: z.number(),
+  installment: z.number()
+});
+
+const documentSchema = z.object({
+  unit: z.string(),
+  project_id: z.string(),
+  expenditure_type: z.string(),
+  recipients: z.array(recipientSchema),
+  total_amount: z.number(),
+  status: z.enum(['draft', 'pending', 'completed'])
+});
+
 // Budget notification schema
 const budgetNotificationSchema = z.object({
   mis: z.string(),
@@ -306,17 +324,6 @@ export async function updateBudget(req: AuthRequest, res: Response) {
 
 export async function getBudgetHistory(req: Request, res: Response) {
   try {
-    const { mis } = req.params;
-
-    console.log(`[Budget History] Fetching history for MIS ${mis}`);
-
-    if (!mis) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Project ID (MIS) is required'
-      });
-    }
-
     // Get history from Supabase directly
     const { data: history, error } = await supabase
       .from('budget_history')
