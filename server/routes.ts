@@ -9,6 +9,7 @@ import budgetController from "./controllers/budgetController";
 import generatedDocumentsRouter from "./controllers/generatedDocuments";
 import unitsController from "./controllers/unitsController";
 import projectsRouter from "./routes/projects";
+import templatePreviewRouter from "./routes/template-preview";
 import { log } from "./vite";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -36,6 +37,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Documents routes
     app.use('/api/documents', authenticateSession, documentsController);
     app.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
+
+    // Template preview route
+    app.use('/api/templates', authenticateSession, templatePreviewRouter);
 
     // Units routes
     log('[Routes] Registering units routes...');
