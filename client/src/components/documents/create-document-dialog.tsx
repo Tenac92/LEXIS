@@ -339,33 +339,48 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         const expenditureType = form.watch('expenditure_type');
         const installment = form.watch('recipients.0.installment') || 1;
 
+        if (!expenditureType) {
+          return [];
+        }
+
         const { data, error } = await supabase
           .from('attachments_rows')
-          .select('*')
+          .select('id, expediture_type, installment, attachments')
           .eq('expediture_type', expenditureType)
           .eq('installment', installment);
 
         if (error) {
           console.error('Error fetching attachments:', error);
-          throw error;
+          toast({
+            title: "Error",
+            description: "Failed to load attachments",
+            variant: "destructive"
+          });
+          return [];
         }
 
-        const transformedData = data.map((row: Attachment) =>
-          (row.attachments || []).map((title: string) => ({
-            id: `${row.id}-${title}`,
-            title,
-            file_type: 'document',
-            description: `Required for ${row.expediture_type} - Installment ${row.installment}`
-          }))
-        ).flat();
+        if (!data || !Array.isArray(data)) {
+          return [];
+        }
 
-        return transformedData;
+        return data.reduce((acc: any[], row) => {
+          if (row.attachments && Array.isArray(row.attachments)) {
+            const items = row.attachments.map((title: string) => ({
+              id: `${row.id}-${title}`,
+              title,
+              file_type: 'document',
+              description: `Required for ${row.expediture_type} - Installment ${row.installment}`
+            }));
+            return [...acc, ...items];
+          }
+          return acc;
+        }, []);
       } catch (error) {
         console.error('Error fetching attachments:', error);
-        throw error;
+        return [];
       }
     },
-    enabled: Boolean(form.watch('expenditure_type') && form.watch('recipients.0.installment'))
+    enabled: Boolean(form.watch('expenditure_type'))
   });
 
   const { data: validationResult } = useQuery<BudgetValidationResponse>({
