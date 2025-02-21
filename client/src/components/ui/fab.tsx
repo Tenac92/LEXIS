@@ -35,6 +35,14 @@ export function FAB() {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
   return (
     <>
       <div className="fixed bottom-6 right-6 z-50">
@@ -72,7 +80,8 @@ export function FAB() {
 
       <CreateDocumentDialog 
         open={isOpen} 
-        onOpenChange={setIsOpen} 
+        onOpenChange={handleOpenChange}
+        onClose={handleClose}
       />
     </>
   );

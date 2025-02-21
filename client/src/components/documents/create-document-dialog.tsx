@@ -417,10 +417,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
-  const onSubmit = async (data: CreateDocumentForm) => {
+  const handleSubmit = async (data: CreateDocumentForm) => {
     try {
       setLoading(true);
-      if (!selectedProjectId) {
+      if (!data.project_id) {
         toast({
           title: "Error",
           description: "Project must be selected",
@@ -438,10 +438,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return;
       }
 
-      // Calculate total amount from recipients
       const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
 
-      // Ensure form data matches schema expectations
       const payload = {
         unit: data.unit,
         project_id: data.project_id,
@@ -450,10 +448,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           firstname: r.firstname,
           lastname: r.lastname,
           afm: r.afm,
-          amount: r.amount, // Keep as number
+          amount: r.amount,
           installment: r.installment
         })),
-        total_amount: totalAmount, // Keep as number
+        total_amount: totalAmount,
         status: "draft",
         attachments: data.selectedAttachments
       };
@@ -474,7 +472,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       });
 
       if (!response.ok) {
-        throw new Error(response.message || 'Failed to create document');
+        throw new Error('Failed to create document');
       }
 
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
@@ -482,9 +480,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       toast({ title: "Success", description: "Document created successfully" });
 
-      onOpenChange(false);
       form.reset();
       setCurrentStep(0);
+      onClose();
     } catch (error) {
       console.error('Document creation error:', error);
       toast({
@@ -695,21 +693,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   </div>
                   <Button
                     type="button"
-                    onClick={() => {
-                      const currentRecipients = form.watch("recipients") || [];
-                      if (currentRecipients.length >= 10) {
-                        toast({
-                          title: "Maximum Recipients",
-                          description: "You can't add more than 10 recipients.",
-                          variant: "destructive"
-                        });
-                        return;
-                      }
-                      form.setValue("recipients", [
-                        ...currentRecipients,
-                        { firstname: "", lastname: "", afm: "", amount: 0, installment: 1 }
-                      ]);
-                    }}
+                    onClick={addRecipient}
                     disabled={recipients.length >= 10}
                     variant="outline"
                     size="sm"
@@ -808,13 +792,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                           type="button"
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            const currentRecipients = form.watch("recipients") || [];
-                            form.setValue(
-                              "recipients",
-                              currentRecipients.filter((_, i) => i !== index)
-                            );
-                          }}
+                          onClick={() => removeRecipient(index)}
                           className="text-destructive hover:text-destructive/90"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -905,7 +883,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <StepIndicator currentStep={currentStep} />
             {renderStepContent()}
 
