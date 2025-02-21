@@ -345,7 +345,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         }
 
         const { data, error } = await supabase
-          .from('attachments_rows')
+          .from('attachments')
           .select('id, expediture_type, installment, attachments')
           .eq('expediture_type', expenditureType)
           .eq('installment', installment);

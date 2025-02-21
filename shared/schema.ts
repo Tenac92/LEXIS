@@ -106,7 +106,7 @@ export const budgetHistory = pgTable("budget_history", {
 });
 
 // Add the attachments_rows table schema
-export const attachmentsRows = pgTable("attachments_rows", {
+export const attachmentsRows = pgTable("attachments", {
   id: serial("id").primaryKey(),
   expediture_type: text("expediture_type").notNull(),
   installment: integer("installment").notNull(),
