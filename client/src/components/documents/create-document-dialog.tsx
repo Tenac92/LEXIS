@@ -177,18 +177,46 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   // Handle form submission
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
-      // Format the payload with proper type conversions
+      // Validate budget first
+      if (!selectedProjectId) {
+        toast({
+          title: "Error",
+          description: "Project must be selected",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Ensure we have recipients
+      if (!data.recipients?.length) {
+        toast({
+          title: "Error",
+          description: "At least one recipient is required",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Calculate total amount
+      const totalAmount = data.recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
+
+      // Format the payload
       const payload = {
-        ...data,
-        total_amount: data.recipients.reduce((sum, r) => sum + r.amount, 0).toString(), // Convert to string for API
+        unit: data.unit,
+        project_id: data.project_id,
+        expenditure_type: data.expenditure_type,
         recipients: data.recipients.map(r => ({
-          ...r,
-          amount: r.amount.toString(), // Convert amounts to strings
-          installment: parseInt(r.installment.toString()) // Ensure installment is an integer
-        }))
+          firstname: r.firstname,
+          lastname: r.lastname,
+          afm: r.afm,
+          amount: r.amount.toString(),
+          installment: r.installment
+        })),
+        total_amount: totalAmount.toString(),
+        status: "draft"
       };
 
-      console.log('Submitting payload:', payload);
+      console.log('Creating document with payload:', payload);
 
       const response = await apiRequest('/api/documents', {
         method: 'POST',
@@ -200,7 +228,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
 
-      toast({ title: "Success", description: "Document created successfully" });
+      toast({ 
+        title: "Success", 
+        description: "Document created successfully" 
+      });
+
       onOpenChange(false);
       form.reset();
       setCurrentStep(0);
