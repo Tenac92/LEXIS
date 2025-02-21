@@ -437,8 +437,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         return;
       }
 
+      // Calculate total amount from recipients
       const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
 
+      // Ensure form data matches schema expectations
       const payload = {
         unit: data.unit,
         project_id: data.project_id,
@@ -447,20 +449,32 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           firstname: r.firstname,
           lastname: r.lastname,
           afm: r.afm,
-          amount: r.amount.toString(),
+          amount: r.amount, // Keep as number
           installment: r.installment
         })),
-        total_amount: totalAmount.toString(),
+        total_amount: totalAmount, // Keep as number
         status: "draft",
         attachments: data.selectedAttachments
       };
 
+      if (validationResult?.canCreate === false) {
+        toast({
+          title: "Budget Validation Error",
+          description: validationResult.message || "Unable to create document due to budget constraints",
+          variant: "destructive"
+        });
+        return;
+      }
 
       const response = await apiRequest('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+
+      if (!response.ok) {
+        throw new Error(response.message || 'Failed to create document');
+      }
 
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
@@ -477,6 +491,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         description: error instanceof Error ? error.message : "Failed to create document",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
   };
 
