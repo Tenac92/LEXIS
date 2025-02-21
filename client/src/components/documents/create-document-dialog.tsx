@@ -457,15 +457,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       const totalAmount = data.recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
 
-      // Validate budget if available
-      if (budgetData && totalAmount > budgetData.current_budget) {
-        toast({
-          title: "Budget Error",
-          description: "Total amount exceeds available budget",
-          variant: "destructive"
-        });
-        return;
-      }
+      // Budget validation bypassed as per requirement
 
       // Prepare payload with all required fields
       const payload = {

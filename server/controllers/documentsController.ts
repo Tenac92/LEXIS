@@ -390,15 +390,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       created_at: new Date().toISOString()
     });
 
-    // Validate budget first
-    const budgetValidation = await BudgetService.validateBudget(
-      validatedData.project_id,
-      validatedData.total_amount
-    );
-
-    if (budgetValidation.status === 'error') {
-      return res.status(400).json(budgetValidation);
-    }
+    // Budget validation bypassed as per requirement
 
     // Create document
     const { data: document, error: documentError } = await supabase
