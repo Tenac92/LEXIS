@@ -507,7 +507,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       const errorMessage = error instanceof Error ? error.message : 
         typeof error === 'object' && error !== null && 'message' in error ? error.message : 
         "Failed to create document";
-      
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -932,12 +932,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   <Button
                     type="button"
                     onClick={handleNext}
+                    disabled={loading}
                   >
                     Next
                   </Button>
                 ) : (
                   <Button
-                    type="submit"
+                    type="button"
+                    onClick={form.handleSubmit(handleSubmit)}
                     disabled={loading}
                   >
                     {loading ? "Creating..." : "Create Document"}
