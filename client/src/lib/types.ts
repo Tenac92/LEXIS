@@ -15,7 +15,7 @@ export interface BudgetData {
 export interface BudgetNotification {
   id: number;
   mis: string;
-  type: 'funding' | 'reallocation';
+  type: 'funding' | 'reallocation' | 'low_budget';
   amount: number;
   current_budget: number;
   ethsia_pistosi: number;
@@ -31,6 +31,6 @@ export interface BudgetValidationResponse {
   message?: string;
   canCreate: boolean;
   requiresNotification?: boolean;
-  notificationType?: 'funding' | 'reallocation';
+  notificationType?: 'funding' | 'reallocation' | 'low_budget';
   allowDocx: boolean;
 }

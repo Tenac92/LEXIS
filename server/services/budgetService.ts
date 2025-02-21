@@ -22,7 +22,7 @@ export interface BudgetValidationResult {
   status: 'success' | 'error' | 'warning';
   message?: string;
   requiresNotification?: boolean;
-  notificationType?: 'funding' | 'reallocation';
+  notificationType?: 'funding' | 'reallocation' | 'low_budget';
   allowDocx?: boolean;
 }
 
@@ -127,6 +127,19 @@ export class BudgetService {
       const userView = parseFloat(budgetData.user_view?.toString() || '0');
       const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
       const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+      const twentyPercentThreshold = katanomesEtous * 0.2;
+
+      // Check if current user_view is already below 20% threshold
+      if (userView <= twentyPercentThreshold) {
+        return {
+          status: 'warning',
+          canCreate: true,
+          message: 'Current budget is below 20% of annual allocation',
+          requiresNotification: true,
+          notificationType: 'low_budget',
+          allowDocx: true
+        };
+      }
 
       if (amount > userView) {
         return {
@@ -139,7 +152,6 @@ export class BudgetService {
 
       const remainingEthsiaPistosi = ethsiaPistosi - amount;
       const remainingUserView = userView - amount;
-      const twentyPercentThreshold = katanomesEtous * 0.2;
 
       if (remainingEthsiaPistosi <= 0) {
         return {
@@ -152,6 +164,7 @@ export class BudgetService {
         };
       }
 
+      // Check if the transaction would bring user_view below 20% threshold
       if (remainingUserView <= twentyPercentThreshold) {
         return {
           status: 'warning',
