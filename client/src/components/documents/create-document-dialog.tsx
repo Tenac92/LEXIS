@@ -219,7 +219,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
       console.log('Creating document with payload:', payload);
 
-      const response = await apiRequest('/api/documents', {
+      const response = await apiRequest('/api/documents/generated', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
