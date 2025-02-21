@@ -1,0 +1,121 @@
+Failed to load resource: the server responded with a status of 400 ()
+create-document-dialog.tsx:265 Error fetching attachments: Object
+queryFn @ create-document-dialog.tsx:265
+queryClient.ts:39 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/projects 404 (Not Found)
+(ανώνυμες) @ queryClient.ts:39
+fetchFn @ @tanstack_react-query.js?v=52647a4c:840
+run @ @tanstack_react-query.js?v=52647a4c:494
+start @ @tanstack_react-query.js?v=52647a4c:536
+fetch @ @tanstack_react-query.js?v=52647a4c:926
+executeFetch_fn @ @tanstack_react-query.js?v=52647a4c:2211
+onSubscribe @ @tanstack_react-query.js?v=52647a4c:1898
+subscribe @ @tanstack_react-query.js?v=52647a4c:24
+(ανώνυμες) @ @tanstack_react-query.js?v=52647a4c:3022
+subscribeToStore @ chunk-276SZO74.js?v=52647a4c:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=52647a4c:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=52647a4c:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=52647a4c:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=52647a4c:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=52647a4c:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=52647a4c:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=52647a4c:19447
+commitRootImpl @ chunk-276SZO74.js?v=52647a4c:19416
+commitRoot @ chunk-276SZO74.js?v=52647a4c:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=52647a4c:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=52647a4c:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=52647a4c:18627
+Εμφάνιση 21 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:58 [Query] Request failed: Error: HTTP error! status: 404
+    at queryClient.ts:53:15
+(ανώνυμες) @ queryClient.ts:58
+await in (ανώνυμες)
+fetchFn @ @tanstack_react-query.js?v=52647a4c:840
+run @ @tanstack_react-query.js?v=52647a4c:494
+start @ @tanstack_react-query.js?v=52647a4c:536
+fetch @ @tanstack_react-query.js?v=52647a4c:926
+executeFetch_fn @ @tanstack_react-query.js?v=52647a4c:2211
+onSubscribe @ @tanstack_react-query.js?v=52647a4c:1898
+subscribe @ @tanstack_react-query.js?v=52647a4c:24
+(ανώνυμες) @ @tanstack_react-query.js?v=52647a4c:3022
+subscribeToStore @ chunk-276SZO74.js?v=52647a4c:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=52647a4c:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=52647a4c:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=52647a4c:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=52647a4c:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=52647a4c:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=52647a4c:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=52647a4c:19447
+commitRootImpl @ chunk-276SZO74.js?v=52647a4c:19416
+commitRoot @ chunk-276SZO74.js?v=52647a4c:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=52647a4c:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=52647a4c:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=52647a4c:18627
+Εμφάνιση 21 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:39 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/projects 404 (Not Found)
+(ανώνυμες) @ queryClient.ts:39
+fetchFn @ @tanstack_react-query.js?v=52647a4c:840
+run @ @tanstack_react-query.js?v=52647a4c:494
+start @ @tanstack_react-query.js?v=52647a4c:536
+fetch @ @tanstack_react-query.js?v=52647a4c:926
+executeFetch_fn @ @tanstack_react-query.js?v=52647a4c:2211
+onSubscribe @ @tanstack_react-query.js?v=52647a4c:1898
+subscribe @ @tanstack_react-query.js?v=52647a4c:24
+(ανώνυμες) @ @tanstack_react-query.js?v=52647a4c:3022
+subscribeToStore @ chunk-276SZO74.js?v=52647a4c:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=52647a4c:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=52647a4c:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=52647a4c:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=52647a4c:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=52647a4c:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=52647a4c:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=52647a4c:19447
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=52647a4c:18868
+flushSyncCallbacks @ chunk-276SZO74.js?v=52647a4c:9119
+commitRootImpl @ chunk-276SZO74.js?v=52647a4c:19432
+commitRoot @ chunk-276SZO74.js?v=52647a4c:19277
+finishConcurrentRender @ chunk-276SZO74.js?v=52647a4c:18805
+performConcurrentWorkOnRoot @ chunk-276SZO74.js?v=52647a4c:18718
+workLoop @ chunk-276SZO74.js?v=52647a4c:197
+flushWork @ chunk-276SZO74.js?v=52647a4c:176
+performWorkUntilDeadline @ chunk-276SZO74.js?v=52647a4c:384
+Εμφάνιση 25 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:58 [Query] Request failed: Error: HTTP error! status: 404
+    at queryClient.ts:53:15
+(ανώνυμες) @ queryClient.ts:58
+await in (ανώνυμες)
+fetchFn @ @tanstack_react-query.js?v=52647a4c:840
+run @ @tanstack_react-query.js?v=52647a4c:494
+start @ @tanstack_react-query.js?v=52647a4c:536
+fetch @ @tanstack_react-query.js?v=52647a4c:926
+executeFetch_fn @ @tanstack_react-query.js?v=52647a4c:2211
+onSubscribe @ @tanstack_react-query.js?v=52647a4c:1898
+subscribe @ @tanstack_react-query.js?v=52647a4c:24
+(ανώνυμες) @ @tanstack_react-query.js?v=52647a4c:3022
+subscribeToStore @ chunk-276SZO74.js?v=52647a4c:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=52647a4c:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=52647a4c:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=52647a4c:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=52647a4c:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=52647a4c:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=52647a4c:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=52647a4c:19447
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=52647a4c:18868
+flushSyncCallbacks @ chunk-276SZO74.js?v=52647a4c:9119
+commitRootImpl @ chunk-276SZO74.js?v=52647a4c:19432
+commitRoot @ chunk-276SZO74.js?v=52647a4c:19277
+finishConcurrentRender @ chunk-276SZO74.js?v=52647a4c:18805
+performConcurrentWorkOnRoot @ chunk-276SZO74.js?v=52647a4c:18718
+workLoop @ chunk-276SZO74.js?v=52647a4c:197
+flushWork @ chunk-276SZO74.js?v=52647a4c:176
+performWorkUntilDeadline @ chunk-276SZO74.js?v=52647a4c:384
+Εμφάνιση 25 ακόμη πλαισίων
+Εμφάνιση λιγότερων

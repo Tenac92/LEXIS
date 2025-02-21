@@ -8,7 +8,7 @@ import documentsController from "./controllers/documentsController";
 import budgetController from "./controllers/budgetController";
 import generatedDocumentsRouter from "./controllers/generatedDocuments";
 import unitsController from "./controllers/unitsController";
-import { listProjects, getExpenditureTypes, exportProjectsXLSX, bulkUpdateProjects } from "./controllers/projectController";
+import projectsRouter from "./routes/projects";
 import { log } from "./vite";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -21,9 +21,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Dashboard routes
     app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
 
-    // Project catalog routes
-    app.get('/api/catalog', authenticateSession, listProjects);
-    app.get('/api/catalog/:mis/expenditure-types', authenticateSession, getExpenditureTypes);
+    // Project catalog routes - maintaining both /catalog and /projects endpoints for backwards compatibility
+    app.use('/api/projects', authenticateSession, projectsRouter);
+    app.use('/api/catalog', authenticateSession, projectsRouter);
 
     // Budget routes
     log('[Routes] Setting up budget routes...');
@@ -37,13 +37,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use('/api/documents', authenticateSession, documentsController);
     app.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
 
-    // Units and Projects routes
-    log('[Routes] Registering units and projects routes...');
+    // Units routes
+    log('[Routes] Registering units routes...');
     app.use('/api/units', authenticateSession, unitsController);
-    app.get('/api/catalog', authenticateSession, listProjects);
-    app.get('/api/projects/export/xlsx', authenticateSession, exportProjectsXLSX);
-    app.put('/api/projects/bulk-update', authenticateSession, bulkUpdateProjects);
-    log('[Routes] Units and projects routes registered');
+    log('[Routes] Units routes registered');
 
     // Mount all API routes under /api
     app.use('/api', apiRouter);
