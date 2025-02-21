@@ -420,6 +420,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const handleSubmit = async (data: CreateDocumentForm) => {
     try {
       setLoading(true);
+
+      // Validate project selection
       if (!data.project_id) {
         toast({
           title: "Error",
@@ -429,6 +431,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return;
       }
 
+      // Validate recipients
       if (!data.recipients?.length) {
         toast({
           title: "Error",
@@ -438,24 +441,50 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return;
       }
 
-      const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
+      // Validate recipient data
+      const invalidRecipients = data.recipients.some(r => 
+        !r.firstname || !r.lastname || !r.afm || !r.amount || !r.installment
+      );
 
+      if (invalidRecipients) {
+        toast({
+          title: "Error",
+          description: "All recipient fields must be filled out",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const totalAmount = data.recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
+
+      // Validate budget if available
+      if (budgetData && totalAmount > budgetData.current_budget) {
+        toast({
+          title: "Budget Error",
+          description: "Total amount exceeds available budget",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Prepare payload with all required fields
       const payload = {
         unit: data.unit,
         project_id: data.project_id,
         expenditure_type: data.expenditure_type,
         recipients: data.recipients.map(r => ({
-          firstname: r.firstname,
-          lastname: r.lastname,
-          afm: r.afm,
-          amount: r.amount,
-          installment: r.installment
+          firstname: r.firstname.trim(),
+          lastname: r.lastname.trim(),
+          afm: r.afm.trim(),
+          amount: parseFloat(r.amount.toString()),
+          installment: parseInt(r.installment.toString())
         })),
         total_amount: totalAmount,
         status: "draft",
-        attachments: data.selectedAttachments
+        attachments: data.selectedAttachments || []
       };
 
+      // Validate against budget constraints
       if (validationResult?.canCreate === false) {
         toast({
           title: "Budget Validation Error",
@@ -465,21 +494,36 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return;
       }
 
+      // Make API request
       const response = await apiRequest('/api/documents', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) {
+      if (!response || !response.ok) {
         throw new Error('Failed to create document');
       }
 
+      // Handle successful response
+      const result = await response.json();
+
+      if (!result.id) {
+        throw new Error('Invalid response from server');
+      }
+
+      // Invalidate queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
 
-      toast({ title: "Success", description: "Document created successfully" });
+      toast({ 
+        title: "Success", 
+        description: "Document created successfully",
+      });
 
+      // Reset form and close dialog
       form.reset();
       setCurrentStep(0);
       onClose();
