@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
 import { createClient } from '@supabase/supabase-js';
 import type { BudgetValidationResponse } from "@shared/schema";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
@@ -67,6 +68,13 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
   );
 };
 
+interface Attachment {
+  id: string;
+  name: string;
+  type: string;
+  description?: string;
+}
+
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
   project_id: z.string().min(1, "Project is required"),
@@ -79,7 +87,8 @@ const createDocumentSchema = z.object({
     installment: z.coerce.number().int().min(1).max(12, "Installment must be between 1 and 12")
   })).min(1, "At least one recipient is required"),
   total_amount: z.coerce.number().min(0.01, "Total amount must be greater than 0"),
-  status: z.string().default("draft")
+  status: z.string().default("draft"),
+  selectedAttachments: z.array(z.string()).default([])
 });
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
@@ -94,6 +103,24 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
+    queryKey: ['attachments'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('attachments')
+          .select('*')
+          .order('name');
+
+        if (error) throw error;
+        return data as Attachment[];
+      } catch (error) {
+        console.error('Error fetching attachments:', error);
+        throw error;
+      }
+    }
+  });
+
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
     defaultValues: {
@@ -101,7 +128,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       project_id: "",
       expenditure_type: "",
       recipients: [],
-      status: "draft"
+      status: "draft",
+      selectedAttachments: []
     }
   });
 
@@ -109,7 +137,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedProjectId = form.watch("project_id");
   const recipients = form.watch("recipients") || [];
 
-  // Calculate total amount from recipients
   const currentAmount = recipients.reduce((sum, r) => {
     const amount = parseFloat(r.amount?.toString() || '0');
     return isNaN(amount) ? sum : sum + amount;
@@ -130,7 +157,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         if (error) throw error;
         if (!budgetData) throw new Error('Budget data not found');
 
-        // Parse all budget values safely
         return {
           current_budget: parseFloat(budgetData.user_view?.toString() || '0'),
           total_budget: parseFloat(budgetData.proip?.toString() || '0'),
@@ -150,7 +176,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: Boolean(selectedProjectId)
   });
 
-  // Separate validation query
   const { data: validationResult } = useQuery<BudgetValidationResponse>({
     queryKey: ["budget-validation", selectedProjectId, currentAmount],
     queryFn: async () => {
@@ -175,10 +200,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: Boolean(selectedProjectId) && currentAmount > 0
   });
 
-  // Handle form submission
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
-      // Validate budget first
       if (!selectedProjectId) {
         toast({
           title: "Error",
@@ -188,7 +211,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         return;
       }
 
-      // Ensure we have recipients
       if (!data.recipients?.length) {
         toast({
           title: "Error",
@@ -198,10 +220,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         return;
       }
 
-      // Calculate total amount
       const totalAmount = data.recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
 
-      // Format the payload
       const payload = {
         unit: data.unit,
         project_id: data.project_id,
@@ -214,7 +234,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           installment: r.installment
         })),
         total_amount: totalAmount.toString(),
-        status: "draft"
+        status: "draft",
+        attachments: data.selectedAttachments
       };
 
       console.log('Creating document with payload:', payload);
@@ -225,14 +246,10 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         body: JSON.stringify(payload)
       });
 
-      // Invalidate queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
 
-      toast({ 
-        title: "Success", 
-        description: "Document created successfully" 
-      });
+      toast({ title: "Success", description: "Document created successfully" });
 
       onOpenChange(false);
       form.reset();
@@ -394,10 +411,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       }
     }
 
-    if (currentStep < 2) {
+    if (currentStep < 3) {
       const isValid = await form.trigger(
         currentStep === 0 ? ["unit"] :
-          ["project_id", "expenditure_type"]
+          currentStep === 1 ? ["project_id", "expenditure_type"] :
+            ["recipients"]
       );
 
       if (isValid) {
@@ -414,10 +432,11 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         <DialogHeader>
           <DialogTitle>Create New Document</DialogTitle>
           <DialogDescription>
-            Step {currentStep + 1} of 3: {
+            Step {currentStep + 1} of 4: {
               currentStep === 0 ? "Select Unit" :
                 currentStep === 1 ? "Choose Project" :
-                  "Add Recipients"
+                  currentStep === 2 ? "Add Recipients" :
+                    "Select Attachments"
             }
           </DialogDescription>
         </DialogHeader>
@@ -647,6 +666,58 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               </div>
             )}
 
+            {currentStep === 3 && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium">Select Attachments</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Choose the attachments to include in the document
+                  </p>
+                </div>
+
+                {attachmentsLoading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <span className="loading loading-spinner loading-md"></span>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {attachments.map((attachment) => (
+                      <div key={attachment.id} className="flex items-start space-x-3">
+                        <Checkbox
+                          checked={form.watch("selectedAttachments").includes(attachment.id)}
+                          onCheckedChange={(checked) => {
+                            const currentSelected = form.watch("selectedAttachments");
+                            if (checked) {
+                              form.setValue("selectedAttachments", [...currentSelected, attachment.id]);
+                            } else {
+                              form.setValue(
+                                "selectedAttachments",
+                                currentSelected.filter(id => id !== attachment.id)
+                              );
+                            }
+                          }}
+                          id={`attachment-${attachment.id}`}
+                        />
+                        <div className="space-y-1">
+                          <label
+                            htmlFor={`attachment-${attachment.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            {attachment.name}
+                          </label>
+                          {attachment.description && (
+                            <p className="text-sm text-muted-foreground">
+                              {attachment.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex justify-between pt-6">
               <Button
                 type="button"
@@ -660,7 +731,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 type="button"
                 onClick={handleNext}
               >
-                {currentStep === 2 ? "Create Document" : "Next"}
+                {currentStep === 3 ? "Create Document" : "Next"}
               </Button>
             </div>
           </form>
