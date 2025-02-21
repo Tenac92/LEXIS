@@ -76,9 +76,9 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
 
 interface Attachment {
   id: string;
-  title: string;
-  file_type: string;
-  description?: string;
+  expediture_type: string;
+  installment: number;
+  attachments: string[];
 }
 
 const createDocumentSchema = z.object({
@@ -255,16 +255,29 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     queryFn: async () => {
       try {
         const { data, error } = await supabase
-          .from('attachments')
-          .select('*');
+          .from('attachments_rows')
+          .select('*')
+          .eq('expediture_type', form.watch('expenditure_type'))
+          .eq('installment', form.watch('recipients.0.installment') || 1);
 
         if (error) throw error;
-        return data as Attachment[];
+
+        const transformedData = data.map((row: Attachment) => 
+          row.attachments.map((title: string) => ({
+            id: `${row.id}-${title}`,
+            title,
+            file_type: 'document',
+            description: `Required for ${row.expediture_type} - Installment ${row.installment}`
+          }))
+        ).flat();
+
+        return transformedData;
       } catch (error) {
         console.error('Error fetching attachments:', error);
         throw error;
       }
-    }
+    },
+    enabled: Boolean(form.watch('expenditure_type') && form.watch('recipients.0.installment'))
   });
 
   const { data: validationResult } = useQuery<BudgetValidationResponse>({
@@ -430,7 +443,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   };
 
-  // Return dialog JSX
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
