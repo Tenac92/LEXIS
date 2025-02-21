@@ -1,7 +1,7 @@
 import { Plus } from 'lucide-react';
 import { Button } from './button';
 import { useState } from 'react';
-import { CreateDocumentDialog } from '../documents/create-document-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Tooltip,
@@ -79,6 +79,20 @@ const tooltipVariants = {
   }
 };
 
+interface CreateDocumentFormProps {
+  onClose: () => void;
+}
+
+const CreateDocumentForm: React.FC<CreateDocumentFormProps> = ({ onClose }) => {
+  // Create document form implementation will go here
+  return (
+    <div className="space-y-4">
+      <p>Document creation form will be implemented here</p>
+      <Button onClick={onClose}>Close</Button>
+    </div>
+  );
+};
+
 export function FAB() {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -123,16 +137,23 @@ export function FAB() {
                 exit="exit"
                 className="bg-popover text-popover-foreground px-3 py-1.5 text-sm rounded-md shadow-md"
               >
-                Δημιουργία Διαβιβαστικού
+                Create New Document
               </motion.div>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
-        <CreateDocumentDialog 
-          open={isOpen} 
-          onOpenChange={setIsOpen}
-        />
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Document</DialogTitle>
+              <DialogDescription>
+                Fill in the details to create a new document
+              </DialogDescription>
+            </DialogHeader>
+            <CreateDocumentForm onClose={() => setIsOpen(false)} />
+          </DialogContent>
+        </Dialog>
       </motion.div>
     </AnimatePresence>
   );
