@@ -26,6 +26,21 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
+// Add budget validation response type
+interface BudgetValidationResponse {
+  status: 'success' | 'warning' | 'error';
+  message?: string;
+  canCreate: boolean;
+}
+
+interface BudgetData {
+  current_budget: number;
+  total_budget: number;
+  annual_budget: number;
+  katanomes_etous: number;
+  validation?: BudgetValidationResponse;
+}
+
 // Form Schema with strict validation
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
@@ -51,12 +66,12 @@ interface CreateDocumentDialogProps {
 }
 
 interface BudgetIndicatorProps {
-  budgetData: any;
+  budgetData: BudgetData | null;
   currentAmount: number;
 }
 
 const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
-  const availableBudget = budgetData.current_budget - currentAmount;
+  const availableBudget = budgetData?.current_budget ? budgetData.current_budget - currentAmount : 0;
   return (
     <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -69,13 +84,13 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
         <div>
           <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
           <p className="text-2xl font-bold text-gray-700">
-            {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            {budgetData?.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
           </p>
         </div>
         <div>
           <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
           <p className="text-2xl font-bold text-gray-700">
-            {budgetData.annual_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            {budgetData?.annual_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
           </p>
         </div>
       </div>
@@ -103,7 +118,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedUnit = form.watch("unit");
   const selectedProjectId = form.watch("project_id");
 
-  // Query units from Supabase with error handling
   const { data: units = [], isLoading: unitsLoading } = useQuery({
     queryKey: ["units"],
     queryFn: async () => {
@@ -135,7 +149,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     retry: 2
   });
 
-  // Query projects based on selected unit with improved error handling
   const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useQuery({
     queryKey: ["projects", selectedUnit],
     queryFn: async () => {
@@ -192,21 +205,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     retry: 2
   });
 
-  // Updated budget query with proper validation handling
+  // Query budget data separately from validation
   const { data: budgetData, error: budgetError } = useQuery({
     queryKey: ["budget", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return null;
 
       try {
-        // Calculate current amount properly
-        const recipients = form.watch("recipients") || [];
-        const currentAmount = recipients.reduce((sum, r) => {
-          const amount = parseFloat(r.amount?.toString() || '0');
-          return isNaN(amount) ? sum : sum + amount;
-        }, 0);
-
-        // Get current budget data first
         const { data: budgetData, error } = await supabase
           .from('budget_na853_split')
           .select('user_view, proip, ethsia_pistosi, katanomes_etous')
@@ -222,61 +227,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           throw new Error('Budget data not found');
         }
 
-        // Safely parse budget data with fallbacks
-        const userView = parseFloat(budgetData?.user_view?.toString() || '0');
-        const proip = parseFloat(budgetData?.proip?.toString() || '0');
-        const ethsiaPistosi = parseFloat(budgetData?.ethsia_pistosi?.toString() || '0');
-        const katanomesEtous = parseFloat(budgetData?.katanomes_etous?.toString() || '0');
+        // Safely parse budget values
+        const userView = parseFloat(budgetData.user_view?.toString() || '0');
+        const proip = parseFloat(budgetData.proip?.toString() || '0');
+        const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+        const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
 
-        // Only validate if there's an amount to validate and budget data exists
-        if (currentAmount > 0 && budgetData) {
-          try {
-            const validateResponse = await apiRequest(`/api/budget/validate`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                mis: selectedProjectId,
-                amount: currentAmount
-              })
-            });
-
-            // If validation shows warnings, display them but don't block
-            if (validateResponse.status === 'warning') {
-              toast({
-                title: "Budget Warning",
-                description: validateResponse.message,
-                variant: "warning"
-              });
-            }
-
-            return {
-              validation: validateResponse,
-              current_budget: userView,
-              total_budget: proip,
-              annual_budget: ethsiaPistosi,
-              katanomes_etous
-            };
-          } catch (validationError) {
-            // For validation errors, still return budget data but with validation error
-            return {
-              validation: {
-                status: 'error',
-                message: validationError instanceof Error ? validationError.message : 'Budget validation failed',
-                canCreate: false
-              },
-              current_budget: userView,
-              total_budget: proip,
-              annual_budget: ethsiaPistosi,
-              katanomes_etous
-            };
-          }
-        }
-
-        // If no amount to validate, return budget data with default validation
         return {
-          validation: { status: 'success', canCreate: true },
           current_budget: userView,
           total_budget: proip,
           annual_budget: ethsiaPistosi,
@@ -297,18 +254,64 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     retry: 2
   });
 
+  // Validate budget whenever amount changes
+  const recipients = form.watch("recipients") || [];
+  const currentAmount = recipients.reduce((sum, r) => {
+    const amount = parseFloat(r.amount?.toString() || '0');
+    return isNaN(amount) ? sum : sum + amount;
+  }, 0);
+
+  const { data: validationResult } = useQuery({
+    queryKey: ["budget-validation", selectedProjectId, currentAmount],
+    queryFn: async (): Promise<BudgetValidationResponse | null> => {
+      if (!selectedProjectId || currentAmount <= 0) return null;
+
+      try {
+        const response = await apiRequest(`/api/budget/validate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            mis: selectedProjectId,
+            amount: currentAmount
+          })
+        });
+
+        // Show warning toast if needed but don't block
+        if (response.status === 'warning') {
+          toast({
+            title: "Budget Warning",
+            description: response.message,
+            variant: "warning"
+          });
+        }
+
+        return response;
+      } catch (error) {
+        console.error('Budget validation error:', error);
+        return {
+          status: 'error',
+          message: error instanceof Error ? error.message : 'Budget validation failed',
+          canCreate: false
+        };
+      }
+    },
+    enabled: Boolean(selectedProjectId) && currentAmount > 0
+  });
+
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
-      if (budgetData?.validation.status === 'error') {
+      // Check validation result
+      if (validationResult?.status === 'error' || validationResult?.canCreate === false) {
         toast({
           title: "Budget Error",
-          description: budgetData.validation.message || "Cannot create document due to budget constraints",
+          description: validationResult?.message || "Cannot create document due to budget constraints",
           variant: "destructive"
         });
         return;
       }
 
-      // Convert form data to payload
       const payload = {
         unit: data.unit,
         project_id: data.project_id,
@@ -318,7 +321,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         total_amount: data.recipients.reduce((sum, r) => sum + r.amount, 0)
       };
 
-      const response = await apiRequest('/api/documents/generated', {
+      const response = await apiRequest('/api/documents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -326,7 +329,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         body: JSON.stringify(payload)
       });
 
-      // Handle budget update notifications if any
+      // Handle budget update notifications
       if (response.notifications?.length > 0) {
         toast({
           title: "Budget Update",
@@ -378,7 +381,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     form.setValue("recipients", currentRecipients.filter((_, i) => i !== index));
   };
 
-  // Reset form fields when unit changes
   useEffect(() => {
     if (selectedUnit) {
       form.setValue("project_id", "");
@@ -386,14 +388,12 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   }, [selectedUnit, form]);
 
-  // Reset expenditure type when project changes
   useEffect(() => {
     if (selectedProjectId) {
       form.setValue("expenditure_type", "");
     }
   }, [selectedProjectId, form]);
 
-  // Get selected project and its expenditure types
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   const handleNext = async () => {
@@ -446,7 +446,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Unit Selection Step */}
             {currentStep === 0 && (
               <FormField
                 control={form.control}
@@ -478,7 +477,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               />
             )}
 
-            {/* Project Selection Step */}
             {currentStep === 1 && (
               <div className="space-y-4">
                 {budgetData && (
@@ -556,7 +554,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               </div>
             )}
 
-            {/* Recipients Step */}
             {currentStep === 2 && (
               <div className="space-y-4">
                 {budgetData && (
@@ -672,7 +669,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               </div>
             )}
 
-            {/* Navigation Buttons */}
             <div className="flex justify-between pt-6">
               <Button
                 type="button"
