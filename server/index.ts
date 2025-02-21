@@ -100,8 +100,8 @@ app.use((req, res, next) => {
       res.sendFile(join(__dirname, '../client/index.html'));
     });
 
-    // Use port 3000
-    const PORT = parseInt(process.env.PORT || '3000', 10);
+    // Use port 5000 to match the expected configuration
+    const PORT = parseInt(process.env.PORT || '5000', 10);
     const HOST = '0.0.0.0'; // Bind to all network interfaces
 
     // Add error handler for the server
