@@ -1,13 +1,81 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../db";
 import { z } from "zod";
+import { Document, Paragraph, Packer, TextRun } from "docx";
 import { insertGeneratedDocumentSchema } from "@shared/schema";
 import type { Database } from "@shared/schema";
 import type { User } from "@shared/schema";
 import { validateBudget, updateBudget } from "./budgetController";
 
+interface Recipient {
+  lastname: string;
+  firstname: string;
+  fathername: string;
+  amount: number;
+  installment: number;
+  afm: string;
+}
+
 interface AuthRequest extends Request {
   user?: User;
+}
+
+// Document formatting utilities
+class DocumentFormatter {
+  static getDefaultMargins() {
+    return {
+      top: 1440,
+      right: 1440,
+      bottom: 1440,
+      left: 1440
+    };
+  }
+
+  static createDocumentHeader(req: Request, unitDetails?: any) {
+    return new Paragraph({
+      children: [
+        new TextRun({
+          text: unitDetails?.title || "ΥΠΟΥΡΓΕΙΟ ΕΘΝΙΚΗΣ ΑΜΥΝΑΣ",
+          bold: true
+        })
+      ],
+      spacing: { before: 240, after: 240 },
+      alignment: "center"
+    });
+  }
+
+  static createHeader(text: string) {
+    return new Paragraph({
+      children: [new TextRun({ text, bold: true })],
+      spacing: { before: 240, after: 240 },
+      alignment: "center"
+    });
+  }
+
+  static createPaymentTable(recipients: Recipient[]) {
+    return new Paragraph({
+      children: recipients.map(recipient =>
+        new TextRun({
+          text: `${recipient.lastname} ${recipient.firstname} ${recipient.amount}€\n`,
+          size: 24
+        })
+      ),
+      spacing: { before: 240, after: 240 }
+    });
+  }
+
+  static createDocumentFooter() {
+    return new Paragraph({
+      children: [
+        new TextRun({
+          text: "Ο ΔΙΕΥΘΥΝΤΗΣ",
+          bold: true
+        })
+      ],
+      spacing: { before: 720 },
+      alignment: "right"
+    });
+  }
 }
 
 const router = Router();
@@ -19,72 +87,6 @@ const authenticateToken = (req: AuthRequest, res: Response, next: Function) => {
   }
   next();
 };
-
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    const validatedData = insertGeneratedDocumentSchema.parse({
-      ...req.body,
-      generated_by: req.user.id,
-      created_at: new Date()
-    });
-
-    // First validate budget
-    const budgetValidation = await validateBudget({
-      ...req,
-      body: {
-        mis: validatedData.project_id,
-        amount: validatedData.total_amount
-      }
-    } as AuthRequest, res);
-
-    if (budgetValidation.statusCode === 400) {
-      return budgetValidation;
-    }
-
-    // Start transaction
-    const { data: document, error } = await supabase
-      .from('generated_documents')
-      .insert(validatedData)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Update budget
-    const budgetUpdate = await updateBudget({
-      ...req,
-      params: { mis: validatedData.project_id },
-      body: { amount: validatedData.total_amount }
-    } as AuthRequest, res);
-
-    if (budgetUpdate.statusCode === 500) {
-      throw new Error('Failed to update budget');
-    }
-
-    const { notifications } = budgetUpdate.body?.data || { notifications: [] };
-
-    res.status(201).json({
-      ...document,
-      notifications: notifications?.length > 0 ? notifications : undefined
-    });
-  } catch (error) {
-    console.error('Error creating document:', error);
-    if (error.name === 'ZodError') {
-      return res.status(400).json({
-        message: 'Validation error',
-        errors: error.errors
-      });
-    }
-    res.status(500).json({ 
-      message: 'Failed to create document',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
 
 // List documents with filters
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
@@ -184,13 +186,10 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-router.get('/generated/:id/export', async (req: Request, res) => {
+// Document generation routes
+router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
 
     const { data } = await supabase
       .from('documents')
@@ -214,7 +213,7 @@ router.get('/generated/:id/export', async (req: Request, res) => {
         }))
       : [];
 
-    // Create document using DocumentFormatter
+    // Create document
     const doc = new Document({
       sections: [{
         properties: {
@@ -226,28 +225,7 @@ router.get('/generated/:id/export', async (req: Request, res) => {
         children: [
           DocumentFormatter.createDocumentHeader(req),
           DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
-          new Paragraph({
-            text: '',
-            spacing: { before: 240, after: 240 }
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: `Μονάδα: ${data.unit || 'N/A'}`, bold: true }),
-              new TextRun({ text: `    NA853: ${data.project_na853 || 'N/A'}`, bold: true })
-            ],
-            spacing: { before: 240, after: 240 }
-          }),
           DocumentFormatter.createPaymentTable(recipients),
-          new Paragraph({
-            text: '',
-            spacing: { before: 300 }
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'ΣΥΝΟΛΟ: ', bold: true }),
-              new TextRun({ text: `${data.total_amount?.toFixed(2) || '0.00'}€` })
-            ]
-          }),
           DocumentFormatter.createDocumentFooter()
         ]
       }]
@@ -268,7 +246,6 @@ router.get('/generated/:id/export', async (req: Request, res) => {
   }
 });
 
-// POST route for custom document export
 router.post('/generated/:id/export', async (req: Request, res) => {
   try {
     const { id } = req.params;
@@ -332,7 +309,7 @@ router.post('/generated/:id/export', async (req: Request, res) => {
   }
 });
 
-// New Template Management Routes
+
 router.get('/templates', async (req:Request, res) => {
   try {
     const templates = await TemplateManager.listTemplates(req.query.category as string);
@@ -385,7 +362,6 @@ router.get('/templates/:id/preview', async (req:Request, res) => {
   }
 });
 
-// Document Version Management Routes
 router.get('/versions/:documentId', async (req:Request, res) => {
   try {
     const versions = await VersionController.getVersionHistory(parseInt(req.params.documentId));

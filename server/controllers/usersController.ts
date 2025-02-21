@@ -1,17 +1,11 @@
-
 import { Router } from 'express';
 import { supabase } from '../db';
 import { authenticateSession } from '../auth';
 import { Request, Response } from 'express';
+import type { User } from '@shared/schema';
 
 interface AuthenticatedRequest extends Request {
-  user?: {
-    id: number;
-    email: string;
-    role: string;
-    name: string | null;
-    unit: string | null;
-  };
+  user?: User;
 }
 
 const router = Router();
@@ -132,7 +126,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       console.error('[Users] User creation error:', error);
       throw error;
     }
-    
+
     res.status(201).json(newUser);
   } catch (error) {
     console.error('[Users] User creation error:', error);
