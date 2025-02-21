@@ -12,6 +12,11 @@ import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
 import type { BudgetValidationResponse } from "@shared/schema";
 
+interface Unit {
+  id: string;
+  name: string;
+}
+
 // Form Schema
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
@@ -92,13 +97,29 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const recipients = form.watch("recipients") || [];
   const currentAmount = recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
 
-  // Fetch units
-  const { data: units = [] } = useQuery({
+  // Fetch units with proper typing
+  const { data: units = [], isLoading: unitsLoading } = useQuery<Unit[]>({
     queryKey: ["units"],
     queryFn: async () => {
-      const response = await apiRequest("/api/units");
-      if (!response.ok) throw new Error("Failed to fetch units");
-      return response.json();
+      try {
+        const response = await apiRequest("/api/units");
+        if (!response.ok) {
+          throw new Error("Failed to fetch units");
+        }
+        const data = await response.json();
+        return data.map((unit: any) => ({
+          id: unit.id || unit.unit,
+          name: unit.name || unit.unit_name
+        }));
+      } catch (error) {
+        console.error('Failed to fetch units:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load units. Please try again.",
+          variant: "destructive"
+        });
+        throw error;
+      }
     }
   });
 
@@ -204,8 +225,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const handleNext = async () => {
     const isValid = await form.trigger(
       currentStep === 0 ? ["unit"] :
-      currentStep === 1 ? ["project_id", "expenditure_type"] :
-      undefined
+        currentStep === 1 ? ["project_id", "expenditure_type"] :
+          undefined
     );
 
     if (!isValid) {
@@ -232,8 +253,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           <DialogDescription>
             Step {currentStep + 1} of 3: {
               currentStep === 0 ? "Select Unit" :
-              currentStep === 1 ? "Choose Project" :
-              "Add Recipients"
+                currentStep === 1 ? "Choose Project" :
+                  "Add Recipients"
             }
           </DialogDescription>
         </DialogHeader>
@@ -250,6 +271,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
+                      disabled={unitsLoading}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -257,7 +279,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {units.map((unit: any) => (
+                        {units.map((unit) => (
                           <SelectItem key={unit.id} value={unit.id}>
                             {unit.name}
                           </SelectItem>
@@ -472,7 +494,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                   form.formState.isSubmitting
                 }
               >
-                {currentStep === 2 
+                {currentStep === 2
                   ? (form.formState.isSubmitting ? "Creating..." : "Create Document")
                   : "Next"
                 }
