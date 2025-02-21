@@ -1,10 +1,10 @@
-import { Document, Packer, Paragraph, TextRun, ISectionOptions } from 'docx';
-import { DocumentTemplate } from '@shared/schema';
+import { Document, Packer, Paragraph, TextRun, ISectionOptions, SectionProperties } from 'docx';
+import { DocumentTemplate, type InsertDocumentTemplate } from '@shared/schema';
 import { supabase } from '../config/db';
 
 interface TemplateData {
   sections: Array<{
-    properties: ISectionOptions;
+    properties: SectionProperties;
     children: any[];
   }>;
   metadata?: Record<string, any>;
@@ -220,9 +220,9 @@ export class TemplateManager {
       },
       is_default: true,
       structure_version: '1.0',
-      is_active: true, // Added is_active to ensure the default template is active
-      created_by: userId, // Added created_by to match other template creation methods
-      expenditure_type: null //or "" , depending on your DB schema
+      is_active: true, 
+      created_by: userId, 
+      expenditure_type: null 
     };
 
     const { data, error } = await supabase

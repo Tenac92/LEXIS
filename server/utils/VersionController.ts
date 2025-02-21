@@ -7,6 +7,11 @@ interface VersionMetadata {
   changes_summary?: string[];
 }
 
+interface RecipientChanges {
+  old: any;
+  new: any;
+}
+
 export class VersionController {
   static async createVersion(
     documentId: number,
@@ -102,7 +107,7 @@ export class VersionController {
     return data;
   }
 
-  private static calculateChanges(oldRecipients: any[], newRecipients: any[]): any {
+  private static calculateChanges(oldRecipients: any[], newRecipients: any[]): Record<string, any[]> {
     const changes = {
       added: [] as any[],
       removed: [] as any[],
@@ -114,8 +119,8 @@ export class VersionController {
     const newMap = new Map(newRecipients.map(r => [r.afm, r]));
 
     // Find added and modified recipients
-    for (const [afm, newRecipient] of newMap) {
-      const oldRecipient = oldMap.get(afm);
+    for (const newRecipient of newRecipients) {
+      const oldRecipient = oldMap.get(newRecipient.afm);
       if (!oldRecipient) {
         changes.added.push(newRecipient);
       } else if (this.recipientChanged(oldRecipient, newRecipient)) {
@@ -128,8 +133,8 @@ export class VersionController {
     }
 
     // Find removed recipients
-    for (const [afm, oldRecipient] of oldMap) {
-      if (!newMap.has(afm)) {
+    for (const oldRecipient of oldRecipients) {
+      if (!newMap.has(oldRecipient.afm)) {
         changes.removed.push(oldRecipient);
       }
     }
@@ -164,7 +169,7 @@ export class VersionController {
     userId: string
   ): Promise<DocumentVersion> {
     const version = await this.getVersion(versionId);
-    
+
     // Create a new version based on the reverted data
     return this.createVersion(
       documentId,
