@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,63 +10,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
-import { createClient } from '@supabase/supabase-js';
 import type { BudgetValidationResponse } from "@shared/schema";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Supabase URL and Key must be defined in environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false
-  }
-});
-
-interface BudgetData {
-  current_budget: number;
-  total_budget: number;
-  annual_budget: number;
-  katanomes_etous: number;
-}
-
-interface BudgetIndicatorProps {
-  budgetData: BudgetData;
-  currentAmount: number;
-}
-
-const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
-  const availableBudget = budgetData.current_budget - currentAmount;
-
-  return (
-    <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div>
-          <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
-          <p className="text-2xl font-bold text-blue-600">
-            {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-          </p>
-        </div>
-        <div>
-          <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
-          <p className="text-2xl font-bold text-gray-700">
-            {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-          </p>
-        </div>
-        <div>
-          <h3 className="text-sm font-medium text-gray-600">Annual Allocation</h3>
-          <p className="text-2xl font-bold text-gray-700">
-            {budgetData.katanomes_etous.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
+// Form Schema
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
   project_id: z.string().min(1, "Project is required"),
@@ -89,6 +35,41 @@ interface CreateDocumentDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Budget Indicator Component
+const BudgetIndicator = ({ currentBudget, totalBudget, annualBudget, currentAmount }: {
+  currentBudget: number;
+  totalBudget: number;
+  annualBudget: number;
+  currentAmount: number;
+}) => {
+  const availableBudget = currentBudget - currentAmount;
+
+  return (
+    <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div>
+          <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
+          <p className="text-2xl font-bold text-blue-600">
+            {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+          </p>
+        </div>
+        <div>
+          <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
+          <p className="text-2xl font-bold text-gray-700">
+            {totalBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+          </p>
+        </div>
+        <div>
+          <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
+          <p className="text-2xl font-bold text-gray-700">
+            {annualBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const { toast } = useToast();
@@ -109,230 +90,57 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const selectedUnit = form.watch("unit");
   const selectedProjectId = form.watch("project_id");
   const recipients = form.watch("recipients") || [];
+  const currentAmount = recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
 
-  // Calculate total amount from recipients
-  const currentAmount = recipients.reduce((sum, r) => {
-    const amount = parseFloat(r.amount?.toString() || '0');
-    return isNaN(amount) ? sum : sum + amount;
-  }, 0);
+  // Fetch units
+  const { data: units = [] } = useQuery({
+    queryKey: ["units"],
+    queryFn: async () => {
+      const response = await apiRequest("/api/units");
+      if (!response.ok) throw new Error("Failed to fetch units");
+      return response.json();
+    }
+  });
 
-  const { data: budgetData, error: budgetError } = useQuery({
+  // Fetch projects based on selected unit
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects", selectedUnit],
+    queryFn: async () => {
+      if (!selectedUnit) return [];
+      const response = await apiRequest(`/api/projects?unit=${selectedUnit}`);
+      if (!response.ok) throw new Error("Failed to fetch projects");
+      return response.json();
+    },
+    enabled: Boolean(selectedUnit)
+  });
+
+  // Fetch budget data
+  const { data: budget } = useQuery({
     queryKey: ["budget", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return null;
-
-      try {
-        const { data: budgetData, error } = await supabase
-          .from('budget_na853_split')
-          .select('user_view, proip, ethsia_pistosi, katanomes_etous')
-          .eq('mis', selectedProjectId)
-          .single();
-
-        if (error) throw error;
-        if (!budgetData) throw new Error('Budget data not found');
-
-        // Parse all budget values safely
-        return {
-          current_budget: parseFloat(budgetData.user_view?.toString() || '0'),
-          total_budget: parseFloat(budgetData.proip?.toString() || '0'),
-          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
-          katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0')
-        };
-      } catch (error) {
-        console.error('Budget fetch error:', error);
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load budget information.",
-          variant: "destructive"
-        });
-        return null;
-      }
+      const response = await apiRequest(`/api/budget/${selectedProjectId}`);
+      if (!response.ok) throw new Error("Failed to fetch budget");
+      return response.json();
     },
     enabled: Boolean(selectedProjectId)
   });
 
-  // Separate validation query
+  // Validate budget
   const { data: validationResult } = useQuery<BudgetValidationResponse>({
     queryKey: ["budget-validation", selectedProjectId, currentAmount],
     queryFn: async () => {
       if (!selectedProjectId || currentAmount <= 0) {
         return { status: 'success', canCreate: true };
       }
-
-      try {
-        return await apiRequest<BudgetValidationResponse>('/api/budget/validate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mis: selectedProjectId,
-            amount: currentAmount
-          })
-        });
-      } catch (error) {
-        console.error('Budget validation error:', error);
-        throw error;
-      }
+      const response = await apiRequest('/api/budget/validate', {
+        method: 'POST',
+        body: JSON.stringify({ mis: selectedProjectId, amount: currentAmount })
+      });
+      if (!response.ok) throw new Error("Budget validation failed");
+      return response.json();
     },
     enabled: Boolean(selectedProjectId) && currentAmount > 0
-  });
-
-  // Handle form submission
-  const onSubmit = async (data: CreateDocumentForm) => {
-    try {
-      // Validate budget first
-      if (!selectedProjectId) {
-        toast({
-          title: "Error",
-          description: "Project must be selected",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Ensure we have recipients
-      if (!data.recipients?.length) {
-        toast({
-          title: "Error",
-          description: "At least one recipient is required",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Calculate total amount
-      const totalAmount = data.recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
-
-      // Format the payload
-      const payload = {
-        unit: data.unit,
-        project_id: data.project_id,
-        expenditure_type: data.expenditure_type,
-        recipients: data.recipients.map(r => ({
-          firstname: r.firstname,
-          lastname: r.lastname,
-          afm: r.afm,
-          amount: r.amount.toString(),
-          installment: r.installment
-        })),
-        total_amount: totalAmount.toString(),
-        status: "draft"
-      };
-
-      console.log('Creating document with payload:', payload);
-
-      const response = await apiRequest('/api/documents/generated', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      // Invalidate queries to refresh data
-      await queryClient.invalidateQueries({ queryKey: ["documents"] });
-      await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
-
-      toast({ 
-        title: "Success", 
-        description: "Document created successfully" 
-      });
-
-      onOpenChange(false);
-      form.reset();
-      setCurrentStep(0);
-    } catch (error) {
-      console.error('Document creation error:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create document",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const { data: units = [], isLoading: unitsLoading } = useQuery({
-    queryKey: ["units"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('unit_det')
-          .select('unit, unit_name')
-          .order('unit');
-
-        if (error) {
-          console.error('Error fetching units:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load units. Please try again.",
-            variant: "destructive"
-          });
-          throw error;
-        }
-
-        return data.map((item: any) => ({
-          id: item.unit,
-          name: item.unit_name
-        }));
-      } catch (error) {
-        console.error('Units fetch error:', error);
-        throw error;
-      }
-    },
-    retry: 2
-  });
-
-  const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useQuery({
-    queryKey: ["projects", selectedUnit],
-    queryFn: async () => {
-      if (!selectedUnit) return [];
-
-      try {
-        const { data, error } = await supabase
-          .from('project_catalog')
-          .select('mis, na853, event_description, project_title, expenditure_type')
-          .contains('implementing_agency', [selectedUnit])
-          .order('mis');
-
-        if (error) {
-          console.error('Error fetching projects:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load projects. Please try again.",
-            variant: "destructive"
-          });
-          throw error;
-        }
-
-        return data.map((item: any) => {
-          let expenditureTypes: string[] = [];
-          try {
-            if (item.expenditure_type) {
-              if (Array.isArray(item.expenditure_type)) {
-                expenditureTypes = item.expenditure_type;
-              } else if (typeof item.expenditure_type === 'string') {
-                expenditureTypes = item.expenditure_type
-                  .replace(/[{}]/g, '')
-                  .split(',')
-                  .map(type => type.trim())
-                  .filter(Boolean);
-              }
-            }
-          } catch (e) {
-            console.error('Error parsing expenditure types:', e, item);
-          }
-
-          return {
-            id: item.mis.toString(),
-            name: `${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
-            expenditure_types: expenditureTypes
-          };
-        });
-
-      } catch (error) {
-        console.error('Projects fetch error:', error);
-        throw error;
-      }
-    },
-    enabled: Boolean(selectedUnit),
-    retry: 2
   });
 
   const addRecipient = () => {
@@ -357,77 +165,62 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     form.setValue("recipients", currentRecipients.filter((_, i) => i !== index));
   };
 
-  useEffect(() => {
-    if (selectedUnit) {
-      form.setValue("project_id", "");
-      form.setValue("expenditure_type", "");
-    }
-  }, [selectedUnit, form]);
+  const onSubmit = async (data: CreateDocumentForm) => {
+    try {
+      // Calculate total amount
+      const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
+      data.total_amount = totalAmount;
 
-  useEffect(() => {
-    if (selectedProjectId) {
-      form.setValue("expenditure_type", "");
-    }
-  }, [selectedProjectId, form]);
+      const response = await apiRequest('/api/documents', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create document");
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["documents"] });
+      await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
+
+      toast({
+        title: "Success",
+        description: "Document created successfully"
+      });
+
+      onOpenChange(false);
+      form.reset();
+      setCurrentStep(0);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create document",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleNext = async () => {
-    if (currentStep === 0) {
-      const isValid = await form.trigger("unit");
-      if (isValid) {
-        setCurrentStep(1);
-      } else {
-        toast({
-          title: "Validation Error",
-          description: "Please select a unit",
-          variant: "destructive"
-        });
-      }
+    const isValid = await form.trigger(
+      currentStep === 0 ? ["unit"] :
+      currentStep === 1 ? ["project_id", "expenditure_type"] :
+      undefined
+    );
+
+    if (!isValid) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
       return;
     }
 
-    if (currentStep === 1) {
-      const isValid = await form.trigger(["project_id", "expenditure_type"]);
-      if (!isValid) {
-        toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (!selectedProject?.expenditure_types?.length) {
-        toast({
-          title: "Error",
-          description: "Selected project has no expenditure types available",
-          variant: "destructive"
-        });
-        return;
-      }
-      setCurrentStep(2);
-      return;
-    }
-
-    // Step 3 (final step)
     if (currentStep === 2) {
-      const isValid = await form.trigger();
-      if (!isValid) {
-        toast({
-          title: "Validation Error",
-          description: "Please check all recipient details",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Update total amount before submission
-      const total = form.getValues("recipients").reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-      form.setValue("total_amount", total);
-
-      // Submit the form
       await form.handleSubmit(onSubmit)();
+    } else {
+      setCurrentStep(prev => prev + 1);
     }
   };
 
@@ -439,14 +232,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           <DialogDescription>
             Step {currentStep + 1} of 3: {
               currentStep === 0 ? "Select Unit" :
-                currentStep === 1 ? "Choose Project" :
-                  "Add Recipients"
+              currentStep === 1 ? "Choose Project" :
+              "Add Recipients"
             }
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form className="space-y-6">
             {currentStep === 0 && (
               <FormField
                 control={form.control}
@@ -457,7 +250,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
-                      disabled={unitsLoading}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -480,17 +272,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
             {currentStep === 1 && (
               <div className="space-y-4">
-                {budgetData && (
+                {budget && (
                   <BudgetIndicator
-                    budgetData={budgetData}
-                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0}
+                    currentBudget={budget.current_budget}
+                    totalBudget={budget.total_budget}
+                    annualBudget={budget.annual_budget}
+                    currentAmount={currentAmount}
                   />
-                )}
-
-                {projectsError && (
-                  <div className="bg-destructive/10 p-4 rounded-lg text-destructive">
-                    Failed to load projects. Please try again.
-                  </div>
                 )}
 
                 <FormField
@@ -502,7 +290,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
-                        disabled={!selectedUnit || projectsLoading}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -510,7 +297,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {projects.map((project) => (
+                          {projects.map((project: any) => (
                             <SelectItem key={project.id} value={project.id}>
                               {project.name}
                             </SelectItem>
@@ -522,151 +309,149 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                   )}
                 />
 
-                {selectedProject && (
-                  <FormField
-                    control={form.control}
-                    name="expenditure_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Expenditure Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={!selectedProject?.expenditure_types?.length}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select expenditure type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {selectedProject?.expenditure_types?.map((type: string) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                <FormField
+                  control={form.control}
+                  name="expenditure_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expenditure Type</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {projects.find((p: any) => p.id === selectedProjectId)?.expenditure_types?.map((type: string) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             )}
 
             {currentStep === 2 && (
               <div className="space-y-4">
-                {budgetData && (
+                {budget && (
                   <BudgetIndicator
-                    budgetData={budgetData}
-                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0}
+                    currentBudget={budget.current_budget}
+                    totalBudget={budget.total_budget}
+                    annualBudget={budget.annual_budget}
+                    currentAmount={currentAmount}
                   />
                 )}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="text-lg font-medium">Recipients</h3>
-                      <p className="text-sm text-gray-500">Add up to 10 recipients</p>
-                    </div>
+
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-medium">Recipients</h3>
+                    <p className="text-sm text-gray-500">Add up to 10 recipients</p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={addRecipient}
+                    disabled={recipients.length >= 10}
+                  >
+                    Add Recipient
+                  </Button>
+                </div>
+
+                {recipients.map((_, index) => (
+                  <div key={index} className="grid grid-cols-6 gap-4 p-4 border rounded-lg">
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.firstname`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.lastname`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.afm`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>AFM</FormLabel>
+                          <FormControl>
+                            <Input {...field} maxLength={9} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.amount`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              {...field}
+                              onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.installment`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Installment</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              min={1}
+                              max={12}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <Button
                       type="button"
-                      onClick={addRecipient}
-                      disabled={form.watch("recipients")?.length >= 10}
+                      variant="destructive"
+                      onClick={() => removeRecipient(index)}
+                      className="mt-8"
                     >
-                      Add Recipient
+                      Remove
                     </Button>
                   </div>
-
-                  {form.watch("recipients")?.map((recipient: any, index) => (
-                    <div key={index} className="grid grid-cols-6 gap-4 p-4 border rounded-lg">
-                      <FormField
-                        control={form.control}
-                        name={`recipients.${index}.firstname`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`recipients.${index}.lastname`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`recipients.${index}.afm`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>AFM</FormLabel>
-                            <FormControl>
-                              <Input {...field} maxLength={9} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`recipients.${index}.amount`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Amount</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`recipients.${index}.installment`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Installment</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                min={1}
-                                max={12}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={() => removeRecipient(index)}
-                        className="mt-8"
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
             )}
 
@@ -674,7 +459,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setCurrentStep((prev) => Math.max(prev - 1, 0))}
+                onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))}
                 disabled={currentStep === 0}
               >
                 Previous
@@ -683,11 +468,14 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 type="button"
                 onClick={handleNext}
                 disabled={
-                  currentStep === 2 && 
-                  (form.formState.isSubmitting || !form.getValues("recipients").length)
+                  (currentStep === 2 && recipients.length === 0) ||
+                  form.formState.isSubmitting
                 }
               >
-                {currentStep === 2 ? (form.formState.isSubmitting ? "Creating..." : "Create Document") : "Next"}
+                {currentStep === 2 
+                  ? (form.formState.isSubmitting ? "Creating..." : "Create Document")
+                  : "Next"
+                }
               </Button>
             </div>
           </form>
