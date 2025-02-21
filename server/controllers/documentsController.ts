@@ -92,49 +92,49 @@ class DocumentFormatter {
     const tableRows = [
       new TableRow({
         children: [
-          new TableCell({ 
+          new TableCell({
             children: [new Paragraph({ text: "Επώνυμο", alignment: AlignmentType.CENTER })],
             width: { size: 20, type: WidthType.PERCENTAGE }
           }),
-          new TableCell({ 
+          new TableCell({
             children: [new Paragraph({ text: "Όνομα", alignment: AlignmentType.CENTER })],
             width: { size: 20, type: WidthType.PERCENTAGE }
           }),
-          new TableCell({ 
+          new TableCell({
             children: [new Paragraph({ text: "Πατρώνυμο", alignment: AlignmentType.CENTER })],
             width: { size: 20, type: WidthType.PERCENTAGE }
           }),
-          new TableCell({ 
+          new TableCell({
             children: [new Paragraph({ text: "ΑΦΜ", alignment: AlignmentType.CENTER })],
             width: { size: 20, type: WidthType.PERCENTAGE }
           }),
-          new TableCell({ 
+          new TableCell({
             children: [new Paragraph({ text: "Ποσό (€)", alignment: AlignmentType.CENTER })],
             width: { size: 20, type: WidthType.PERCENTAGE }
           })
         ]
       }),
-      ...recipients.map(recipient => 
+      ...recipients.map(recipient =>
         new TableRow({
           children: [
-            new TableCell({ 
+            new TableCell({
               children: [new Paragraph({ text: recipient.lastname })],
               width: { size: 20, type: WidthType.PERCENTAGE }
             }),
-            new TableCell({ 
+            new TableCell({
               children: [new Paragraph({ text: recipient.firstname })],
               width: { size: 20, type: WidthType.PERCENTAGE }
             }),
-            new TableCell({ 
+            new TableCell({
               children: [new Paragraph({ text: recipient.fathername })],
               width: { size: 20, type: WidthType.PERCENTAGE }
             }),
-            new TableCell({ 
+            new TableCell({
               children: [new Paragraph({ text: recipient.afm })],
               width: { size: 20, type: WidthType.PERCENTAGE }
             }),
-            new TableCell({ 
-              children: [new Paragraph({ 
+            new TableCell({
+              children: [new Paragraph({
                 text: recipient.amount.toFixed(2),
                 alignment: AlignmentType.RIGHT
               })],
@@ -208,9 +208,9 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
       .single();
 
     if (!data) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         status: 'error',
-        message: 'Document not found' 
+        message: 'Document not found'
       });
     }
 
@@ -364,6 +364,74 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Error updating document:', error);
     res.status(500).json({ message: 'Failed to update document' });
+  }
+});
+
+// Add the document creation route after the existing routes
+// Document creation route
+router.post('/', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const validatedData = insertGeneratedDocumentSchema.parse({
+      ...req.body,
+      generated_by: req.user.id,
+      created_at: new Date()
+    });
+
+    // First validate budget
+    const budgetValidation = await validateBudget({
+      ...req,
+      body: {
+        mis: validatedData.project_id,
+        amount: validatedData.total_amount
+      }
+    } as AuthRequest, res);
+
+    if (budgetValidation.statusCode === 400) {
+      return budgetValidation;
+    }
+
+    // Start transaction
+    const { data: document, error } = await supabase
+      .from('generated_documents')
+      .insert(validatedData)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Update budget
+    const budgetUpdate = await updateBudget({
+      ...req,
+      params: { mis: validatedData.project_id },
+      body: { amount: validatedData.total_amount }
+    } as AuthRequest, res);
+
+    if (budgetUpdate.statusCode === 500) {
+      throw new Error('Failed to update budget');
+    }
+
+    const { notifications } = budgetUpdate.body?.data || { notifications: [] };
+
+    res.status(201).json({
+      ...document,
+      notifications: notifications?.length > 0 ? notifications : undefined
+    });
+  } catch (error) {
+    console.error('Error creating document:', error);
+    if (error.name === 'ZodError') {
+      return res.status(400).json({
+        message: 'Validation error',
+        errors: error.errors
+      });
+    }
+    res.status(500).json({
+      message: 'Failed to create document',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
