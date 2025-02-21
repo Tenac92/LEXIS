@@ -72,13 +72,7 @@ export async function getExpenditureTypes(req: Request, res: Response) {
     const expenditureTypes = await storage.getProjectExpenditureTypes(projectId);
 
     if (!expenditureTypes || expenditureTypes.length === 0) {
-      return res.json([
-        "Travel",
-        "Equipment",
-        "Supplies",
-        "Services",
-        "Other"
-      ]);
+      return res.json({ message: "No expenditure types found." });
     }
 
     res.json(expenditureTypes);
