@@ -36,6 +36,18 @@ export const projectCatalog = pgTable("project_catalog", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
+// Budget NA853 Split table
+export const budgetNA853Split = pgTable("budget_na853_split", {
+  id: serial("id").primaryKey(),
+  mis: text("mis").notNull(),
+  user_view: numeric("user_view").default("0"),
+  proip: numeric("proip").default("0"),
+  ethsia_pistosi: numeric("ethsia_pistosi").default("0"),
+  katanomes_etous: numeric("katanomes_etous").default("0"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
 // Generated Documents table
 export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
@@ -64,6 +76,7 @@ export const generatedDocuments = pgTable("generated_documents", {
 export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
+export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users);
@@ -80,6 +93,18 @@ export const insertProjectCatalogSchema = createInsertSchema(projectCatalog, {
   event_year: z.array(z.coerce.string()).nullable(),
   procedures: z.string().nullable(),
 }).omit({ id: true, created_at: true, updated_at: true });
+
+// Budget validation schema
+export const budgetValidationSchema = z.object({
+  mis: z.string().min(1, "Project ID is required"),
+  amount: z.number().min(0, "Amount must be non-negative"),
+});
+
+export const budgetValidationResponseSchema = z.object({
+  status: z.enum(["success", "warning", "error"]),
+  message: z.string().optional(),
+  canCreate: z.boolean(),
+});
 
 export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
   recipients: z.array(z.object({
@@ -98,10 +123,13 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertProjectCatalog = z.infer<typeof insertProjectCatalogSchema>;
 export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
+export type BudgetValidation = z.infer<typeof budgetValidationSchema>;
+export type BudgetValidationResponse = z.infer<typeof budgetValidationResponseSchema>;
 
 // Export database type
 export type Database = {
   users: User;
   projectCatalog: ProjectCatalog;
   generatedDocuments: GeneratedDocument;
+  budgetNA853Split: BudgetNA853Split;
 };

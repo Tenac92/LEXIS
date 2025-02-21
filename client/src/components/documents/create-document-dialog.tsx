@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
 import { createClient } from '@supabase/supabase-js';
+import type { BudgetValidationResponse } from "@shared/schema";
 
 // Create a single supabase client for the frontend
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -26,20 +27,45 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
-// Add budget validation response type
-interface BudgetValidationResponse {
-  status: 'success' | 'warning' | 'error';
-  message?: string;
-  canCreate: boolean;
-}
-
 interface BudgetData {
   current_budget: number;
   total_budget: number;
   annual_budget: number;
   katanomes_etous: number;
-  validation?: BudgetValidationResponse;
 }
+
+interface BudgetIndicatorProps {
+  budgetData: BudgetData;
+  currentAmount: number;
+}
+
+const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
+  const availableBudget = budgetData.current_budget - currentAmount;
+  return (
+    <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div>
+          <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
+          <p className="text-2xl font-bold text-blue-600">
+            {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+          </p>
+        </div>
+        <div>
+          <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
+          <p className="text-2xl font-bold text-gray-700">
+            {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+          </p>
+        </div>
+        <div>
+          <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
+          <p className="text-2xl font-bold text-gray-700">
+            {budgetData.annual_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Form Schema with strict validation
 const createDocumentSchema = z.object({
@@ -64,40 +90,6 @@ interface CreateDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-interface BudgetIndicatorProps {
-  budgetData: BudgetData | null;
-  currentAmount: number;
-}
-
-const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
-  const availableBudget = budgetData?.current_budget ? budgetData.current_budget - currentAmount : 0;
-  return (
-    <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div>
-          <h3 className="text-sm font-medium text-gray-600">Available Budget</h3>
-          <p className="text-2xl font-bold text-blue-600">
-            {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-          </p>
-        </div>
-        <div>
-          <h3 className="text-sm font-medium text-gray-600">Total Budget</h3>
-          <p className="text-2xl font-bold text-gray-700">
-            {budgetData?.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-          </p>
-        </div>
-        <div>
-          <h3 className="text-sm font-medium text-gray-600">Annual Budget</h3>
-          <p className="text-2xl font-bold text-gray-700">
-            {budgetData?.annual_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 
 export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -205,7 +197,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     retry: 2
   });
 
-  // Query budget data separately from validation
+  // Query budget data
   const { data: budgetData, error: budgetError } = useQuery({
     queryKey: ["budget", selectedProjectId],
     queryFn: async () => {
@@ -227,19 +219,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
           throw new Error('Budget data not found');
         }
 
-        // Safely parse budget values
-        const userView = parseFloat(budgetData.user_view?.toString() || '0');
-        const proip = parseFloat(budgetData.proip?.toString() || '0');
-        const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-        const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
-
+        // Parse budget values safely
         return {
-          current_budget: userView,
-          total_budget: proip,
-          annual_budget: ethsiaPistosi,
-          katanomes_etous
+          current_budget: parseFloat(budgetData.user_view?.toString() || '0'),
+          total_budget: parseFloat(budgetData.proip?.toString() || '0'),
+          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
+          katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0')
         };
-
       } catch (error) {
         console.error('Budget fetch error:', error);
         toast({
@@ -261,13 +247,15 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     return isNaN(amount) ? sum : sum + amount;
   }, 0);
 
-  const { data: validationResult } = useQuery({
+  const { data: validationResult } = useQuery<BudgetValidationResponse>({
     queryKey: ["budget-validation", selectedProjectId, currentAmount],
-    queryFn: async (): Promise<BudgetValidationResponse | null> => {
-      if (!selectedProjectId || currentAmount <= 0) return null;
+    queryFn: async () => {
+      if (!selectedProjectId || currentAmount <= 0) {
+        return { status: 'success', canCreate: true };
+      }
 
       try {
-        const response = await apiRequest(`/api/budget/validate`, {
+        const response = await apiRequest<BudgetValidationResponse>(`/api/budget/validate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -290,11 +278,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         return response;
       } catch (error) {
         console.error('Budget validation error:', error);
-        return {
-          status: 'error',
-          message: error instanceof Error ? error.message : 'Budget validation failed',
-          canCreate: false
-        };
+        throw error;
       }
     },
     enabled: Boolean(selectedProjectId) && currentAmount > 0
@@ -328,15 +312,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         },
         body: JSON.stringify(payload)
       });
-
-      // Handle budget update notifications
-      if (response.notifications?.length > 0) {
-        toast({
-          title: "Budget Update",
-          description: response.notifications[0].reason,
-          variant: "warning"
-        });
-      }
 
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
@@ -482,7 +457,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 {budgetData && (
                   <BudgetIndicator
                     budgetData={budgetData}
-                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0)}
+                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0}
                   />
                 )}
 
@@ -559,7 +534,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 {budgetData && (
                   <BudgetIndicator
                     budgetData={budgetData}
-                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0)}
+                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0}
                   />
                 )}
                 <div className="space-y-4">

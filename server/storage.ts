@@ -1,4 +1,4 @@
-import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog, type BudgetNA853Split, type BudgetValidation, type BudgetValidationResponse } from "@shared/schema";
 import { db } from "./db";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -16,6 +16,8 @@ export interface IStorage {
   getProjectCatalogByUnit(unit: string): Promise<ProjectCatalog[]>;
   getProjectExpenditureTypes(projectId: string): Promise<string[]>;
   getUserUnits(userId: string): Promise<string[]>;
+  getBudgetData(projectId: string): Promise<BudgetNA853Split | undefined>;
+  validateBudget(validation: BudgetValidation): Promise<BudgetValidationResponse>;
   sessionStore: session.Store;
 }
 
@@ -111,18 +113,12 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectCatalog(): Promise<ProjectCatalog[]> {
     try {
-      console.log('[Storage] Fetching project catalog');
       const { data, error } = await db
         .from('project_catalog')
         .select('*')
         .order('mis');
 
-      if (error) {
-        console.error('[Storage] Error fetching project catalog:', error);
-        throw error;
-      }
-
-      console.log('[Storage] Project catalog data:', data?.length || 0, 'items');
+      if (error) throw error;
       return data || [];
     } catch (error) {
       console.error('[Storage] Error fetching project catalog:', error);
@@ -132,19 +128,13 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectCatalogByUnit(unit: string): Promise<ProjectCatalog[]> {
     try {
-      console.log('[Storage] Fetching project catalog for unit:', unit);
       const { data, error } = await db
         .from('project_catalog')
         .select('*')
         .contains('implementing_agency', [unit])
         .order('mis');
 
-      if (error) {
-        console.error('[Storage] Error fetching project catalog by unit:', error);
-        throw error;
-      }
-
-      console.log('[Storage] Project catalog data for unit:', data?.length || 0, 'items');
+      if (error) throw error;
       return data || [];
     } catch (error) {
       console.error('[Storage] Error fetching project catalog by unit:', error);
@@ -168,25 +158,74 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getUserUnits(userId: string): Promise<any[]> {
+  async getBudgetData(projectId: string): Promise<BudgetNA853Split | undefined> {
     try {
-      console.log('[Storage] Fetching units from unit_det table');
+      const { data, error } = await db
+        .from('budget_na853_split')
+        .select('*')
+        .eq('mis', projectId)
+        .single();
+
+      if (error) throw error;
+      return data || undefined;
+    } catch (error) {
+      console.error('[Storage] Error fetching budget data:', error);
+      throw error;
+    }
+  }
+
+  async validateBudget(validation: BudgetValidation): Promise<BudgetValidationResponse> {
+    try {
+      const budgetData = await this.getBudgetData(validation.mis);
+
+      if (!budgetData) {
+        return {
+          status: 'error',
+          message: 'Budget data not found for the project',
+          canCreate: false
+        };
+      }
+
+      const currentBudget = parseFloat(budgetData.user_view?.toString() || '0');
+      const annualAllocation = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+      const remainingBudget = currentBudget - validation.amount;
+      const minimumThreshold = annualAllocation * 0.2; // 20% of annual allocation
+
+      if (remainingBudget < 0) {
+        return {
+          status: 'error',
+          message: 'Insufficient budget available',
+          canCreate: false
+        };
+      }
+
+      if (remainingBudget < minimumThreshold) {
+        return {
+          status: 'warning',
+          message: 'Budget will be reduced below 20% of annual allocation',
+          canCreate: true
+        };
+      }
+
+      return {
+        status: 'success',
+        canCreate: true
+      };
+    } catch (error) {
+      console.error('[Storage] Error validating budget:', error);
+      throw error;
+    }
+  }
+
+  async getUserUnits(userId: string): Promise<string[]> {
+    try {
       const { data, error } = await db
         .from('unit_det')
         .select('unit, unit_name')
         .order('unit');
 
-      if (error) {
-        console.error('[Storage] Error in getUserUnits:', error);
-        throw error;
-      }
-
-      if (!data) {
-        console.log('[Storage] No units found');
-        return [];
-      }
-
-      return data;
+      if (error) throw error;
+      return data?.map(item => item.unit) || [];
     } catch (error) {
       console.error('[Storage] Error fetching user units:', error);
       throw error;
