@@ -443,7 +443,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       }
 
       // Validate recipient data
-      const invalidRecipients = data.recipients.some(r => 
+      const invalidRecipients = data.recipients.some(r =>
         !r.firstname || !r.lastname || !r.afm || !r.amount || !r.installment
       );
 
@@ -457,8 +457,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       }
 
       const totalAmount = data.recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
-
-      // Budget validation bypassed as per requirement
 
       // Prepare payload with all required fields
       const payload = {
@@ -477,8 +475,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         attachments: data.selectedAttachments || []
       };
 
+      console.log('Sending payload:', payload);
+
       // Make API request
-      const result = await apiRequest('/api/documents', {
+      const response = await apiRequest('/api/documents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -486,16 +486,18 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         body: JSON.stringify(payload)
       });
 
-      if (!result || !result.id) {
-        throw new Error('Failed to create document: ' + (result?.message || 'Unknown error'));
+      console.log('API Response:', response);
+
+      if (!response || !response.id) {
+        throw new Error('Failed to create document: Invalid response');
       }
 
       // Invalidate queries to refresh data
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
 
-      toast({ 
-        title: "Success", 
+      toast({
+        title: "Success",
         description: "Document created successfully",
       });
 
@@ -505,9 +507,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       onClose();
     } catch (error) {
       console.error('Document creation error:', error);
-      const errorMessage = error instanceof Error ? error.message : 
-        typeof error === 'object' && error !== null && 'message' in error ? error.message : 
-        "Failed to create document";
+      const errorMessage = error instanceof Error ? error.message :
+        typeof error === 'object' && error !== null && 'message' in error ? error.message :
+          "Failed to create document";
 
       toast({
         title: "Error",
@@ -933,7 +935,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   <Button
                     type="button"
                     onClick={handleNext}
-                    disabled={loading}
                   >
                     Next
                   </Button>
@@ -941,10 +942,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   <Button
                     type="submit"
                     disabled={loading}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      form.handleSubmit(handleSubmit)(e);
-                    }}
                   >
                     {loading ? "Creating..." : "Create Document"}
                   </Button>
