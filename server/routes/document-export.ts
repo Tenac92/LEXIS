@@ -55,9 +55,11 @@ export async function exportDocument(req: Request, res: Response) {
       // Fallback to default formatting
       const recipients = Array.isArray(document.recipients) 
         ? document.recipients.map(recipient => ({
-            ...recipient,
-            amount: Number(recipient.amount),
-            installment: Number(recipient.installment)
+            firstname: recipient.firstname || '',
+            lastname: recipient.lastname || '',
+            afm: recipient.afm || '',
+            amount: Number(recipient.amount) || 0,
+            installment: Number(recipient.installment) || 1
           }))
         : [];
 
@@ -70,7 +72,7 @@ export async function exportDocument(req: Request, res: Response) {
             }
           },
           children: [
-            DocumentFormatter.createDocumentHeader(req),
+            DocumentFormatter.createDocumentHeader(),
             DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
             DocumentFormatter.createPaymentTable(recipients),
             DocumentFormatter.createDocumentFooter()

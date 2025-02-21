@@ -27,6 +27,12 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
+interface Project {
+  id: string;
+  name: string;
+  expenditure_types: string[];
+}
+
 interface BudgetData {
   current_budget: number;
   total_budget: number;
@@ -123,6 +129,93 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     return sum + (typeof r.amount === 'number' ? r.amount : 0);
   }, 0);
 
+  const { data: units = [], isLoading: unitsLoading } = useQuery({
+    queryKey: ["units"],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('unit_det')
+          .select('unit, unit_name')
+          .order('unit');
+
+        if (error) {
+          console.error('Error fetching units:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load units. Please try again.",
+            variant: "destructive"
+          });
+          throw error;
+        }
+
+        return data.map((item: any) => ({
+          id: item.unit,
+          name: item.unit_name
+        }));
+      } catch (error) {
+        console.error('Units fetch error:', error);
+        throw error;
+      }
+    },
+    retry: 2
+  });
+
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
+    queryKey: ["projects", selectedUnit],
+    queryFn: async () => {
+      if (!selectedUnit) return [];
+
+      try {
+        const { data, error } = await supabase
+          .from('project_catalog')
+          .select('mis, na853, event_description, project_title, expenditure_type')
+          .contains('implementing_agency', [selectedUnit])
+          .order('mis');
+
+        if (error) {
+          console.error('Error fetching projects:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load projects. Please try again.",
+            variant: "destructive"
+          });
+          throw error;
+        }
+
+        return data.map((item: any) => {
+          let expenditureTypes: string[] = [];
+          try {
+            if (item.expenditure_type) {
+              if (Array.isArray(item.expenditure_type)) {
+                expenditureTypes = item.expenditure_type;
+              } else if (typeof item.expenditure_type === 'string') {
+                expenditureTypes = item.expenditure_type
+                  .replace(/[{}]/g, '')
+                  .split(',')
+                  .map((type: string) => type.trim())
+                  .filter(Boolean);
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing expenditure types:', e, item);
+          }
+
+          return {
+            id: item.mis.toString(),
+            name: `${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
+            expenditure_types: expenditureTypes
+          };
+        });
+
+      } catch (error) {
+        console.error('Projects fetch error:', error);
+        throw error;
+      }
+    },
+    enabled: Boolean(selectedUnit),
+    retry: 2
+  });
+
   const { data: budgetData, error: budgetError } = useQuery({
     queryKey: ["budget", selectedProjectId],
     queryFn: async () => {
@@ -157,6 +250,24 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     enabled: Boolean(selectedProjectId)
   });
 
+  const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
+    queryKey: ['attachments'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('attachments')
+          .select('*')
+          .order('name');
+
+        if (error) throw error;
+        return data as Attachment[];
+      } catch (error) {
+        console.error('Error fetching attachments:', error);
+        throw error;
+      }
+    }
+  });
+
   const { data: validationResult } = useQuery<BudgetValidationResponse>({
     queryKey: ["budget-validation", selectedProjectId, currentAmount],
     queryFn: async () => {
@@ -180,6 +291,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     },
     enabled: Boolean(selectedProjectId) && currentAmount > 0
   });
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   const onSubmit = async (data: CreateDocumentForm) => {
     try {
@@ -245,26 +358,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   };
 
-  const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
-    queryKey: ['attachments'],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('attachments')
-          .select('*')
-          .order('name');
-
-        if (error) throw error;
-        return data as Attachment[];
-      } catch (error) {
-        console.error('Error fetching attachments:', error);
-        throw error;
-      }
-    }
-  });
-
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
-
   const addRecipient = () => {
     const currentRecipients = form.watch("recipients") || [];
     if (currentRecipients.length >= 10) {
@@ -299,7 +392,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       form.setValue("expenditure_type", "");
     }
   }, [selectedProjectId, form]);
-
 
   const handleNext = async () => {
     if (currentStep === 1) {
@@ -339,94 +431,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     }
   };
 
-  const { data: units = [], isLoading: unitsLoading } = useQuery({
-    queryKey: ["units"],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('unit_det')
-          .select('unit, unit_name')
-          .order('unit');
-
-        if (error) {
-          console.error('Error fetching units:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load units. Please try again.",
-            variant: "destructive"
-          });
-          throw error;
-        }
-
-        return data.map((item: any) => ({
-          id: item.unit,
-          name: item.unit_name
-        }));
-      } catch (error) {
-        console.error('Units fetch error:', error);
-        throw error;
-      }
-    },
-    retry: 2
-  });
-
-  const { data: projects = [], isLoading: projectsLoading, error: projectsError } = useQuery({
-    queryKey: ["projects", selectedUnit],
-    queryFn: async () => {
-      if (!selectedUnit) return [];
-
-      try {
-        const { data, error } = await supabase
-          .from('project_catalog')
-          .select('mis, na853, event_description, project_title, expenditure_type')
-          .contains('implementing_agency', [selectedUnit])
-          .order('mis');
-
-        if (error) {
-          console.error('Error fetching projects:', error);
-          toast({
-            title: "Error",
-            description: "Failed to load projects. Please try again.",
-            variant: "destructive"
-          });
-          throw error;
-        }
-
-        return data.map((item: any) => {
-          let expenditureTypes: string[] = [];
-          try {
-            if (item.expenditure_type) {
-              if (Array.isArray(item.expenditure_type)) {
-                expenditureTypes = item.expenditure_type;
-              } else if (typeof item.expenditure_type === 'string') {
-                expenditureTypes = item.expenditure_type
-                  .replace(/[{}]/g, '')
-                  .split(',')
-                  .map(type => type.trim())
-                  .filter(Boolean);
-              }
-            }
-          } catch (e) {
-            console.error('Error parsing expenditure types:', e, item);
-          }
-
-          return {
-            id: item.mis.toString(),
-            name: `${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
-            expenditure_types: expenditureTypes
-          };
-        });
-
-      } catch (error) {
-        console.error('Projects fetch error:', error);
-        throw error;
-      }
-    },
-    enabled: Boolean(selectedUnit),
-    retry: 2
-  });
-
-
+  // Return dialog JSX
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
@@ -480,14 +485,8 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 {budgetData && (
                   <BudgetIndicator
                     budgetData={budgetData}
-                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0}
+                    currentAmount={currentAmount}
                   />
-                )}
-
-                {projectsError && (
-                  <div className="bg-destructive/10 p-4 rounded-lg text-destructive">
-                    Failed to load projects. Please try again.
-                  </div>
                 )}
 
                 <FormField
@@ -557,7 +556,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                 {budgetData && (
                   <BudgetIndicator
                     budgetData={budgetData}
-                    currentAmount={form.watch("recipients")?.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) || 0}
+                    currentAmount={currentAmount}
                   />
                 )}
                 <div className="space-y-4">
@@ -569,13 +568,13 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                     <Button
                       type="button"
                       onClick={addRecipient}
-                      disabled={form.watch("recipients")?.length >= 10}
+                      disabled={recipients.length >= 10}
                     >
                       Add Recipient
                     </Button>
                   </div>
 
-                  {form.watch("recipients")?.map((recipient: any, index) => (
+                  {recipients.map((_, index) => (
                     <div key={index} className="grid grid-cols-6 gap-4 p-4 border rounded-lg">
                       <FormField
                         control={form.control}

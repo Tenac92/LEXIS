@@ -1,0 +1,58 @@
+chunk-276SZO74.js?v=52647a4c:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+/api/user:1 
+        
+        
+       Failed to load resource: the server responded with a status of 401 (Unauthorized)
+auth-page.tsx:38 Submitting login form with data: Object
+use-auth.tsx:21 Attempting login with: test@test.gr
+use-auth.tsx:37 Login successful: Object
+use-auth.tsx:48 Login mutation succeeded, updating cache with user: Object
+2create-document-dialog.tsx:266 Uncaught ReferenceError: Cannot access 'projects' before initialization
+    at CreateDocumentDialog (create-document-dialog.tsx:266:27)
+    at renderWithHooks (chunk-276SZO74.js?v=52647a4c:11548:26)
+    at mountIndeterminateComponent (chunk-276SZO74.js?v=52647a4c:14926:21)
+    at beginWork (chunk-276SZO74.js?v=52647a4c:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-276SZO74.js?v=52647a4c:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-276SZO74.js?v=52647a4c:3699:24)
+    at invokeGuardedCallback (chunk-276SZO74.js?v=52647a4c:3733:39)
+    at beginWork$1 (chunk-276SZO74.js?v=52647a4c:19765:15)
+    at performUnitOfWork (chunk-276SZO74.js?v=52647a4c:19198:20)
+    at workLoopSync (chunk-276SZO74.js?v=52647a4c:19137:13)
+chunk-276SZO74.js?v=52647a4c:14032 The above error occurred in the <CreateDocumentDialog> component:
+
+    at CreateDocumentDialog (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:119:40)
+    at div
+    at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=52647a4c:6536:40)
+    at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=52647a4c:7742:24)
+    at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=52647a4c:7800:26)
+    at FAB (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/fab.tsx:97:31)
+    at div
+    at HomePage (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/home-page.tsx:25:25)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=52647a4c:379:17)
+    at div
+    at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=52647a4c:6536:40)
+    at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=52647a4c:7742:24)
+    at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=52647a4c:7800:26)
+    at PageTransition (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/page-transition.tsx:42:34)
+    at Router
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:100:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=52647a4c:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-276SZO74.js?v=52647a4c:14032
+Εμφάνιση 1 ακόμη πλαισίου
+Εμφάνιση λιγότερων
+chunk-276SZO74.js?v=52647a4c:9129 Uncaught ReferenceError: Cannot access 'projects' before initialization
+    at CreateDocumentDialog (create-document-dialog.tsx:266:27)
+    at renderWithHooks (chunk-276SZO74.js?v=52647a4c:11548:26)
+    at mountIndeterminateComponent (chunk-276SZO74.js?v=52647a4c:14926:21)
+    at beginWork (chunk-276SZO74.js?v=52647a4c:15914:22)
+    at beginWork$1 (chunk-276SZO74.js?v=52647a4c:19753:22)
+    at performUnitOfWork (chunk-276SZO74.js?v=52647a4c:19198:20)
+    at workLoopSync (chunk-276SZO74.js?v=52647a4c:19137:13)
+    at renderRootSync (chunk-276SZO74.js?v=52647a4c:19116:15)
+    at recoverFromConcurrentError (chunk-276SZO74.js?v=52647a4c:18736:28)
+    at performSyncWorkOnRoot (chunk-276SZO74.js?v=52647a4c:18879:28)
