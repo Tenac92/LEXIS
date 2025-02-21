@@ -68,7 +68,6 @@ export const projectCatalog = pgTable("project_catalog", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
-
 // Generated Documents table
 export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
@@ -114,6 +113,19 @@ export const attachmentsRows = pgTable("attachments_rows", {
   attachments: text("attachments").array(),
 });
 
+// Add document version table definition
+export const documentVersions = pgTable("document_versions", {
+  id: serial("id").primaryKey(),
+  document_id: integer("document_id").references(() => generatedDocuments.id),
+  version_number: integer("version_number").notNull(),
+  recipients: jsonb("recipients").notNull(),
+  changes: jsonb("changes"),
+  metadata: jsonb("metadata"),
+  is_current: boolean("is_current").default(true),
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
@@ -123,6 +135,8 @@ export type BudgetHistory = typeof budgetHistory.$inferSelect;
 export type BudgetNotification = typeof budgetNotifications.$inferSelect;
 export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
 export type InsertAttachmentsRow = typeof attachmentsRows.$inferInsert;
+export type DocumentVersion = typeof documentVersions.$inferSelect;
+export type InsertDocumentVersion = typeof documentVersions.$inferInsert;
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users);
@@ -163,18 +177,35 @@ export const insertBudgetNotificationSchema = createInsertSchema(budgetNotificat
   status: z.enum(["pending", "approved", "rejected"]).default("pending"),
 }).omit({ id: true, created_at: true, updated_at: true });
 
-// Rest of the schemas remain unchanged
+// Enhanced recipient schema with better validation
+const recipientSchema = z.object({
+  firstname: z.string().min(2, "First name must be at least 2 characters"),
+  lastname: z.string().min(2, "Last name must be at least 2 characters"),
+  afm: z.string().length(9, "AFM must be exactly 9 digits").regex(/^\d+$/, "AFM must contain only numbers"),
+  amount: z.number().min(0.01, "Amount must be greater than 0"),
+  installment: z.number().int().min(1).max(12, "Installment must be between 1 and 12")
+});
+
+// Update generated document schema with enhanced validation
 export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
-  recipients: z.array(z.object({
-    firstname: z.string().min(2, "First name must be at least 2 characters"),
-    lastname: z.string().min(2, "Last name must be at least 2 characters"),
-    afm: z.string().length(9, "AFM must be exactly 9 digits"),
-    amount: z.number().min(0.01, "Amount must be greater than 0"),
-    installment: z.number().int().min(1).max(12, "Installment must be between 1 and 12")
-  })),
+  recipients: z.array(recipientSchema)
+    .min(1, "At least one recipient is required")
+    .max(10, "Maximum 10 recipients allowed"),
+  total_amount: z.number().min(0.01, "Total amount must be greater than 0"),
   project_id: z.string().min(1, "Project ID is required"),
   unit: z.string().min(1, "Unit is required"),
-  expenditure_type: z.string().min(1, "Expenditure type is required")
+  expenditure_type: z.string().min(1, "Expenditure type is required"),
+  status: z.enum(["draft", "pending", "approved", "rejected"]).default("draft")
+}).superRefine((data, ctx) => {
+  // Validate that total amount matches sum of recipient amounts
+  const totalFromRecipients = data.recipients.reduce((sum, recipient) => sum + recipient.amount, 0);
+  if (Math.abs(totalFromRecipients - Number(data.total_amount)) > 0.01) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Total amount must match sum of recipient amounts",
+      path: ["total_amount"]
+    });
+  }
 });
 
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({
@@ -187,7 +218,16 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertProjectCatalog = z.infer<typeof insertProjectCatalogSchema>;
 export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
 export type BudgetValidation = z.infer<typeof budgetValidationSchema>;
-export type BudgetValidationResponse = z.infer<typeof budgetValidationResponseSchema>;
+
+export interface BudgetValidationResponse {
+  status: "success" | "warning" | "error";
+  message?: string;
+  canCreate: boolean;
+  requiresNotification?: boolean;
+  notificationType?: "funding" | "reallocation" | "exceeded_proip";
+  allowDocx?: boolean;
+}
+
 export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
 export type InsertBudgetNotification = z.infer<typeof insertBudgetNotificationSchema>;
 
@@ -200,4 +240,5 @@ export type Database = {
   budgetHistory: BudgetHistory;
   budgetNotifications: BudgetNotification;
   attachmentsRows: AttachmentsRow;
+  documentVersions: DocumentVersion;
 };

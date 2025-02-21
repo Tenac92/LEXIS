@@ -1,37 +1,61 @@
 import { supabase } from '../config/db';
 import type { DocumentVersion, GeneratedDocument } from '@shared/schema';
+import { z } from 'zod';
 
-interface VersionMetadata {
-  reason?: string;
-  notes?: string;
-  changes_summary?: string[];
+const versionMetadataSchema = z.object({
+  reason: z.string().optional(),
+  notes: z.string().optional(),
+  changes_summary: z.array(z.string()).optional()
+});
+
+type VersionMetadata = z.infer<typeof versionMetadataSchema>;
+
+interface RecipientChanges {
+  added: any[];
+  removed: any[];
+  modified: Array<{
+    old: any;
+    new: any;
+    changes: Record<string, { old: any; new: any }>;
+  }>;
 }
 
 export class VersionController {
   static async createVersion(
     documentId: number,
     recipients: any[],
-    userId: string,
+    userId: number,
     metadata?: VersionMetadata
   ): Promise<DocumentVersion> {
     try {
+      // Validate metadata if provided
+      if (metadata) {
+        versionMetadataSchema.parse(metadata);
+      }
+
       // Get the current version number for this document
-      const { data: versions } = await supabase
+      const { data: versions, error: versionError } = await supabase
         .from('document_versions')
         .select('version_number')
         .eq('document_id', documentId)
         .order('version_number', { ascending: false })
         .limit(1);
 
+      if (versionError) throw versionError;
+
       const nextVersionNumber = versions?.length ? versions[0].version_number + 1 : 1;
 
       // Get the previous version for comparison
-      const { data: prevVersion } = await supabase
+      const { data: prevVersion, error: prevVersionError } = await supabase
         .from('document_versions')
         .select('recipients')
         .eq('document_id', documentId)
         .eq('is_current', true)
         .single();
+
+      if (prevVersionError && prevVersionError.code !== 'PGRST116') {
+        throw prevVersionError;
+      }
 
       // Calculate changes from previous version
       const changes = this.calculateChanges(
@@ -40,7 +64,7 @@ export class VersionController {
       );
 
       // Create new version
-      const { data: newVersion, error } = await supabase
+      const { data: newVersion, error: insertError } = await supabase
         .from('document_versions')
         .insert({
           document_id: documentId,
@@ -54,27 +78,34 @@ export class VersionController {
         .select()
         .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
+      if (!newVersion) throw new Error('Failed to create version');
 
       // Update previous version to not be current
       if (prevVersion) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('document_versions')
           .update({ is_current: false })
           .eq('document_id', documentId)
           .neq('id', newVersion.id);
+
+        if (updateError) throw updateError;
       }
 
       // Update document's current version
-      await supabase
+      const { error: docUpdateError } = await supabase
         .from('generated_documents')
         .update({ current_version: newVersion.id })
         .eq('id', documentId);
 
+      if (docUpdateError) throw docUpdateError;
+
       return newVersion;
     } catch (error) {
       console.error('Error creating version:', error);
-      throw new Error('Failed to create version');
+      throw error instanceof Error 
+        ? error 
+        : new Error('Failed to create version');
     }
   }
 
@@ -102,20 +133,23 @@ export class VersionController {
     return data;
   }
 
-  private static calculateChanges(oldRecipients: any[], newRecipients: any[]): any {
-    const changes = {
-      added: [] as any[],
-      removed: [] as any[],
-      modified: [] as any[]
+  private static calculateChanges(oldRecipients: any[], newRecipients: any[]): RecipientChanges {
+    const changes: RecipientChanges = {
+      added: [],
+      removed: [],
+      modified: []
     };
 
     // Create maps for efficient lookup
-    const oldMap = new Map(oldRecipients.map(r => [r.afm, r]));
-    const newMap = new Map(newRecipients.map(r => [r.afm, r]));
+    const oldMap = new Map();
+    const newMap = new Map();
+
+    oldRecipients.forEach(r => oldMap.set(r.afm, r));
+    newRecipients.forEach(r => newMap.set(r.afm, r));
 
     // Find added and modified recipients
-    for (const [afm, newRecipient] of newMap) {
-      const oldRecipient = oldMap.get(afm);
+    newRecipients.forEach(newRecipient => {
+      const oldRecipient = oldMap.get(newRecipient.afm);
       if (!oldRecipient) {
         changes.added.push(newRecipient);
       } else if (this.recipientChanged(oldRecipient, newRecipient)) {
@@ -125,14 +159,14 @@ export class VersionController {
           changes: this.getRecipientChanges(oldRecipient, newRecipient)
         });
       }
-    }
+    });
 
     // Find removed recipients
-    for (const [afm, oldRecipient] of oldMap) {
-      if (!newMap.has(afm)) {
+    oldRecipients.forEach(oldRecipient => {
+      if (!newMap.has(oldRecipient.afm)) {
         changes.removed.push(oldRecipient);
       }
-    }
+    });
 
     return changes;
   }
@@ -142,7 +176,7 @@ export class VersionController {
     return keys.some(key => oldRecipient[key] !== newRecipient[key]);
   }
 
-  private static getRecipientChanges(oldRecipient: any, newRecipient: any): any {
+  private static getRecipientChanges(oldRecipient: any, newRecipient: any): Record<string, { old: any; new: any }> {
     const changes: Record<string, { old: any; new: any }> = {};
     const keys = ['firstname', 'lastname', 'amount', 'installment'];
 
@@ -161,11 +195,10 @@ export class VersionController {
   static async revertToVersion(
     documentId: number,
     versionId: number,
-    userId: string
+    userId: number
   ): Promise<DocumentVersion> {
     const version = await this.getVersion(versionId);
-    
-    // Create a new version based on the reverted data
+
     return this.createVersion(
       documentId,
       version.recipients,
