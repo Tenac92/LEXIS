@@ -484,16 +484,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         attachments: data.selectedAttachments || []
       };
 
-      // Validate against budget constraints
-      if (validationResult?.canCreate === false) {
-        toast({
-          title: "Budget Validation Error",
-          description: validationResult.message || "Unable to create document due to budget constraints",
-          variant: "destructive"
-        });
-        return;
-      }
-
       // Make API request
       const result = await apiRequest('/api/documents', {
         method: 'POST',
@@ -522,9 +512,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       onClose();
     } catch (error) {
       console.error('Document creation error:', error);
+      const errorMessage = error instanceof Error ? error.message : 
+        typeof error === 'object' && error !== null && 'message' in error ? error.message : 
+        "Failed to create document";
+      
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create document",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
