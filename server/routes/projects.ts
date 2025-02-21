@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/authMiddleware';
-import { isAdmin } from '../middleware/adminMiddleware';
-import { db } from '../db';
+import { supabase } from '../db';
 import { ProjectCatalog } from '@shared/schema';
 import * as xlsx from 'xlsx';
 import multer from 'multer';
@@ -13,18 +12,23 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Get all projects
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { data: projects, error } = await db
+    const { data: projects, error } = await supabase
       .from('project_catalog')
-      .select('*');
+      .select('*')
+      .order('mis');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Projects fetch error:', error);
+      throw error;
+    }
 
-    res.json(projects);
+    res.json(projects || []);
   } catch (error) {
     console.error('Get projects error:', error);
     res.status(500).json({ 
       success: false, 
-      message: 'Failed to fetch projects' 
+      message: 'Failed to fetch projects',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

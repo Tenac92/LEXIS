@@ -207,35 +207,39 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
   try {
     const { id } = req.params;
 
-    const { data } = await supabase
-      .from('documents')
-      .select('*, recipients')
-      .eq('id', parseInt(id))
+    const { data: document, error } = await supabase
+      .from('generated_documents')
+      .select('*')
+      .eq('id', id)
       .single();
 
-    if (!data) {
+    if (error) {
+      console.error('Document fetch error:', error);
+      throw error;
+    }
+
+    if (!document) {
       return res.status(404).json({
         status: 'error',
         message: 'Document not found'
       });
     }
 
-    // Validate and format recipients data
-    const recipients = Array.isArray(data.recipients)
-      ? data.recipients.map((recipient: Recipient) => ({
+    // Format recipients data
+    const recipients = Array.isArray(document.recipients)
+      ? document.recipients.map((recipient: any) => ({
           lastname: String(recipient.lastname || '').trim(),
           firstname: String(recipient.firstname || '').trim(),
-          fathername: String(recipient.fathername || '').trim(),
-          amount: Number(recipient.amount) || 0,
-          installment: Number(recipient.installment) || 1,
+          amount: parseFloat(recipient.amount) || 0,
+          installment: parseInt(recipient.installment) || 1,
           afm: String(recipient.afm || '').trim()
         }))
       : [];
 
     // Calculate total amount
-    const totalAmount = recipients.reduce((sum: number, recipient: Recipient) => sum + recipient.amount, 0);
+    const totalAmount = recipients.reduce((sum, recipient) => sum + recipient.amount, 0);
 
-    // Create document with enhanced formatting
+    // Create document
     const doc = new Document({
       sections: [{
         properties: {
@@ -245,16 +249,16 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
           }
         },
         children: [
-          ...DocumentFormatter.createDocumentHeader(data.unit_details),
-          ...DocumentFormatter.createMetadataSection(data),
+          ...DocumentFormatter.createDocumentHeader(document.unit_details),
+          ...DocumentFormatter.createMetadataSection(document),
           new Paragraph({
-            text: 'ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ',
+            text: 'ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ',
             spacing: { before: 240, after: 240 },
             alignment: AlignmentType.CENTER
           }),
           DocumentFormatter.createPaymentTable(recipients),
           DocumentFormatter.createTotalSection(totalAmount),
-          ...DocumentFormatter.createDocumentFooter(data.signatory)
+          ...DocumentFormatter.createDocumentFooter(document.signatory)
         ]
       }]
     });
@@ -262,7 +266,7 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
     const buffer = await Packer.toBuffer(doc);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${data.document_number || id}.docx`);
+    res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
     res.send(buffer);
 
   } catch (error) {
@@ -383,79 +387,32 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     const validatedData = insertGeneratedDocumentSchema.parse({
       ...req.body,
       generated_by: req.user.id,
-      created_at: new Date()
+      created_at: new Date().toISOString()
     });
-
-    // First validate budget
-    const budgetValidationResult = await new Promise<BudgetValidationResponse>((resolve, reject) => {
-      validateBudget({
-        ...req,
-        body: {
-          mis: validatedData.project_id,
-          amount: validatedData.total_amount
-        }
-      } as AuthRequest, {
-        json: resolve,
-        status: (code: number) => ({
-          json: (data: BudgetValidationResponse) => {
-            if (code >= 400) {
-              reject(new Error(data.message));
-            } else {
-              resolve(data);
-            }
-          }
-        })
-      } as Response);
-    });
-
-    if (!budgetValidationResult.canCreate) {
-      return res.status(400).json({
-        status: 'error',
-        message: budgetValidationResult.message || 'Budget validation failed'
-      });
-    }
 
     // Create document
-    const { data: document, error } = await supabase
+    const { data: document, error: documentError } = await supabase
       .from('generated_documents')
-      .insert(validatedData)
+      .insert({
+        unit: validatedData.unit,
+        project_id: validatedData.project_id,
+        expenditure_type: validatedData.expenditure_type,
+        recipients: validatedData.recipients,
+        total_amount: validatedData.total_amount,
+        status: validatedData.status || 'draft',
+        generated_by: validatedData.generated_by,
+        created_at: validatedData.created_at,
+        attachments: validatedData.attachments
+      })
       .select()
       .single();
 
-    if (error) throw error;
-
-    // Update budget
-    const budgetUpdateResult = await new Promise<{ status: string; data?: any }>((resolve, reject) => {
-      updateBudget({
-        ...req,
-        params: { mis: validatedData.project_id },
-        body: { amount: validatedData.total_amount }
-      } as AuthRequest, {
-        json: resolve,
-        status: (code: number) => ({
-          json: (data: any) => {
-            if (code >= 400) {
-              reject(new Error(data.message));
-            } else {
-              resolve(data);
-            }
-          }
-        })
-      } as Response);
-    });
-
-    if (budgetUpdateResult.status !== 'success') {
-      throw new Error('Failed to update budget');
+    if (documentError) {
+      console.error('Document creation error:', documentError);
+      throw documentError;
     }
 
-    res.status(201).json({
-      ...document,
-      budget: budgetUpdateResult.data,
-      notifications: budgetValidationResult.requiresNotification ? [{
-        type: budgetValidationResult.notificationType,
-        message: budgetValidationResult.message
-      }] : undefined
-    });
+    res.status(201).json(document);
 
   } catch (error) {
     console.error('Error creating document:', error);

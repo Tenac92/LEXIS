@@ -83,10 +83,10 @@ const createDocumentSchema = z.object({
     firstname: z.string().min(2, "First name must be at least 2 characters"),
     lastname: z.string().min(2, "Last name must be at least 2 characters"),
     afm: z.string().length(9, "AFM must be exactly 9 digits"),
-    amount: z.coerce.number().min(0.01, "Amount must be greater than 0"),
-    installment: z.coerce.number().int().min(1).max(12, "Installment must be between 1 and 12")
+    amount: z.number().min(0.01, "Amount must be greater than 0"),
+    installment: z.number().int().min(1).max(12, "Installment must be between 1 and 12")
   })).min(1, "At least one recipient is required"),
-  total_amount: z.coerce.number().min(0.01, "Total amount must be greater than 0"),
+  total_amount: z.number().min(0.01, "Total amount must be greater than 0"),
   status: z.string().default("draft"),
   selectedAttachments: z.array(z.string()).default([])
 });
@@ -102,24 +102,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const [currentStep, setCurrentStep] = useState(0);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
-    queryKey: ['attachments'],
-    queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from('attachments')
-          .select('*')
-          .order('name');
-
-        if (error) throw error;
-        return data as Attachment[];
-      } catch (error) {
-        console.error('Error fetching attachments:', error);
-        throw error;
-      }
-    }
-  });
 
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
@@ -138,8 +120,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
   const recipients = form.watch("recipients") || [];
 
   const currentAmount = recipients.reduce((sum, r) => {
-    const amount = parseFloat(r.amount?.toString() || '0');
-    return isNaN(amount) ? sum : sum + amount;
+    return sum + (typeof r.amount === 'number' ? r.amount : 0);
   }, 0);
 
   const { data: budgetData, error: budgetError } = useQuery({
@@ -220,7 +201,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         return;
       }
 
-      const totalAmount = data.recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
+      const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
 
       const payload = {
         unit: data.unit,
@@ -240,7 +221,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
 
       console.log('Creating document with payload:', payload);
 
-      const response = await apiRequest('/api/documents/generated', {
+      const response = await apiRequest('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -261,6 +242,100 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
         description: error instanceof Error ? error.message : "Failed to create document",
         variant: "destructive"
       });
+    }
+  };
+
+  const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
+    queryKey: ['attachments'],
+    queryFn: async () => {
+      try {
+        const { data, error } = await supabase
+          .from('attachments')
+          .select('*')
+          .order('name');
+
+        if (error) throw error;
+        return data as Attachment[];
+      } catch (error) {
+        console.error('Error fetching attachments:', error);
+        throw error;
+      }
+    }
+  });
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
+
+  const addRecipient = () => {
+    const currentRecipients = form.watch("recipients") || [];
+    if (currentRecipients.length >= 10) {
+      toast({
+        title: "Error",
+        description: "Maximum 10 recipients allowed",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    form.setValue("recipients", [
+      ...currentRecipients,
+      { firstname: "", lastname: "", afm: "", amount: 0, installment: 1 }
+    ]);
+  };
+
+  const removeRecipient = (index: number) => {
+    const currentRecipients = form.watch("recipients") || [];
+    form.setValue("recipients", currentRecipients.filter((_, i) => i !== index));
+  };
+
+  useEffect(() => {
+    if (selectedUnit) {
+      form.setValue("project_id", "");
+      form.setValue("expenditure_type", "");
+    }
+  }, [selectedUnit, form]);
+
+  useEffect(() => {
+    if (selectedProjectId) {
+      form.setValue("expenditure_type", "");
+    }
+  }, [selectedProjectId, form]);
+
+
+  const handleNext = async () => {
+    if (currentStep === 1) {
+      const isValid = await form.trigger(["project_id", "expenditure_type"]);
+
+      if (!isValid) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!selectedProject?.expenditure_types?.length) {
+        toast({
+          title: "Error",
+          description: "Selected project has no expenditure types available",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+
+    if (currentStep < 3) {
+      const isValid = await form.trigger(
+        currentStep === 0 ? ["unit"] :
+          currentStep === 1 ? ["project_id", "expenditure_type"] :
+            ["recipients"]
+      );
+
+      if (isValid) {
+        setCurrentStep((prev) => prev + 1);
+      }
+    } else {
+      form.handleSubmit(onSubmit)();
     }
   };
 
@@ -351,80 +426,6 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
     retry: 2
   });
 
-  const addRecipient = () => {
-    const currentRecipients = form.watch("recipients") || [];
-    if (currentRecipients.length >= 10) {
-      toast({
-        title: "Error",
-        description: "Maximum 10 recipients allowed",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    form.setValue("recipients", [
-      ...currentRecipients,
-      { firstname: "", lastname: "", afm: "", amount: 0, installment: 1 }
-    ]);
-  };
-
-  const removeRecipient = (index: number) => {
-    const currentRecipients = form.watch("recipients") || [];
-    form.setValue("recipients", currentRecipients.filter((_, i) => i !== index));
-  };
-
-  useEffect(() => {
-    if (selectedUnit) {
-      form.setValue("project_id", "");
-      form.setValue("expenditure_type", "");
-    }
-  }, [selectedUnit, form]);
-
-  useEffect(() => {
-    if (selectedProjectId) {
-      form.setValue("expenditure_type", "");
-    }
-  }, [selectedProjectId, form]);
-
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
-
-  const handleNext = async () => {
-    if (currentStep === 1) {
-      const isValid = await form.trigger(["project_id", "expenditure_type"]);
-
-      if (!isValid) {
-        toast({
-          title: "Validation Error",
-          description: "Please fill in all required fields",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (!selectedProject?.expenditure_types?.length) {
-        toast({
-          title: "Error",
-          description: "Selected project has no expenditure types available",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-
-    if (currentStep < 3) {
-      const isValid = await form.trigger(
-        currentStep === 0 ? ["unit"] :
-          currentStep === 1 ? ["project_id", "expenditure_type"] :
-            ["recipients"]
-      );
-
-      if (isValid) {
-        setCurrentStep((prev) => prev + 1);
-      }
-    } else {
-      form.handleSubmit(onSubmit)();
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
