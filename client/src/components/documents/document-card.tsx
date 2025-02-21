@@ -52,7 +52,6 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
   const { toast } = useToast();
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Don't flip if clicking on buttons or dropdown
     if (!(e.target as HTMLElement).closest('button')) {
       setIsFlipped(!isFlipped);
     }
@@ -71,8 +70,8 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred",
+        title: "Σφάλμα",
+        description: error instanceof Error ? error.message : "Παρουσιάστηκε ένα σφάλμα",
         variant: "destructive"
       });
     } finally {
@@ -87,11 +86,11 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
           <div className="flex justify-between items-start mb-4">
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                {document.title || `Document #${document.id}`}
+                {document.title || `Έγγραφο #${document.id}`}
               </h3>
               <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                 <User className="h-3 w-3" />
-                <span>ID: {document.generated_by}</span>
+                <span>Κωδικός: {document.generated_by}</span>
               </div>
             </div>
             <Badge variant={document.status === 'completed' ? 'default' : 'secondary'}>
@@ -100,7 +99,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
               ) : (
                 <Clock className="h-3 w-3 mr-1" />
               )}
-              {document.status === 'completed' ? 'Completed' : 'Pending'}
+              {document.status === 'completed' ? 'Ολοκληρώθηκε' : 'Σε Εκκρεμότητα'}
             </Badge>
           </div>
 
@@ -111,9 +110,9 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
                   <DollarSign className="h-4 w-4 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Amount</p>
+                  <p className="text-sm font-medium text-gray-600">Συνολικό Ποσό</p>
                   <p className="text-lg font-semibold text-gray-900">
-                    {document.total_amount.toLocaleString('en-US', {
+                    {document.total_amount.toLocaleString('el-GR', {
                       style: 'currency',
                       currency: 'EUR'
                     })}
@@ -121,22 +120,22 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-600">Recipients</p>
+                <p className="text-sm font-medium text-gray-600">Παραλήπτες</p>
                 <p className="text-lg font-semibold text-gray-900">{document.recipients?.length || 0}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white/60 rounded-lg p-4">
-                <p className="text-sm font-medium text-gray-600">Unit</p>
-                <p className="text-base font-semibold text-gray-900 truncate" title={document.unit || 'N/A'}>
-                  {document.unit || 'N/A'}
+                <p className="text-sm font-medium text-gray-600">Μονάδα</p>
+                <p className="text-base font-semibold text-gray-900 truncate" title={document.unit || 'Μη διαθέσιμο'}>
+                  {document.unit || 'Μη διαθέσιμο'}
                 </p>
               </div>
               <div className="bg-white/60 rounded-lg p-4">
-                <p className="text-sm font-medium text-gray-600">NA853</p>
-                <p className="text-base font-semibold text-gray-900 truncate" title={document.project_na853 || 'N/A'}>
-                  {document.project_na853 || 'N/A'}
+                <p className="text-sm font-medium text-gray-600">ΝΑ853</p>
+                <p className="text-base font-semibold text-gray-900 truncate" title={document.project_na853 || 'Μη διαθέσιμο'}>
+                  {document.project_na853 || 'Μη διαθέσιμο'}
                 </p>
               </div>
             </div>
@@ -150,13 +149,13 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
                 e.stopPropagation();
                 handleButtonClick(
                   async () => await onEdit(document.id),
-                  "Document opened for editing"
+                  "Το έγγραφο άνοιξε για επεξεργασία"
                 );
               }}
               disabled={isLoading}
             >
               <FileEdit className="h-3 w-3 mr-1" />
-              Edit
+              Επεξεργασία
             </Button>
             <Button
               variant="outline"
@@ -165,13 +164,13 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
                 e.stopPropagation();
                 handleButtonClick(
                   async () => await onExport(document.id),
-                  "Document exported successfully"
+                  "Το έγγραφο εξήχθη επιτυχώς"
                 );
               }}
               disabled={isLoading}
             >
               <Download className="h-3 w-3 mr-1" />
-              Export
+              Εξαγωγή
             </Button>
             {document.status !== 'completed' && (
               <Button
@@ -181,13 +180,13 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
                   e.stopPropagation();
                   handleButtonClick(
                     async () => await onView(document.id),
-                    "Protocol form opened"
+                    "Η φόρμα πρωτοκόλλου άνοιξε"
                   );
                 }}
                 disabled={isLoading}
               >
                 <ClipboardCheck className="h-3 w-3 mr-1" />
-                Add Protocol
+                Προσθήκη Πρωτοκόλλου
               </Button>
             )}
           </div>
@@ -196,9 +195,9 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
         <div className="flip-card-back">
           <div className="h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-bold text-gray-900">Recipients List</h4>
+              <h4 className="text-lg font-bold text-gray-900">Λίστα Παραληπτών</h4>
               <span className="text-sm text-gray-600 border border-gray-300 px-3 py-1 rounded-full">
-                {document.recipients?.length || 0} Recipients
+                {document.recipients?.length || 0} Παραλήπτες
               </span>
             </div>
             <div className="flex-grow overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
@@ -209,7 +208,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
                       {recipient.lastname} {recipient.firstname}
                     </div>
                     <div className="text-sm font-medium text-blue-600">
-                      {recipient.amount.toLocaleString('en-US', {
+                      {recipient.amount.toLocaleString('el-GR', {
                         style: 'currency',
                         currency: 'EUR'
                       })}
@@ -217,12 +216,12 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
                   </div>
                   <div className="text-sm text-gray-600">
                     <span className="inline-block bg-gray-100 px-2 py-1 rounded">
-                      AFM: {recipient.afm}
+                      ΑΦΜ: {recipient.afm}
                     </span>
                   </div>
                 </div>
               )) : (
-                <p className="text-center text-gray-500 mt-4">No recipients added yet</p>
+                <p className="text-center text-gray-500 mt-4">Δεν έχουν προστεθεί παραλήπτες</p>
               )}
             </div>
           </div>
