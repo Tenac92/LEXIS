@@ -18,6 +18,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRef } from "react";
+import { Header } from "@/components/header";
+import { FAB } from "@/components/ui/fab";
 
 interface APIResponse<T = any> {
   ok: boolean;
@@ -146,126 +148,130 @@ export default function ProjectsPage() {
   });
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-        <h1 className="text-3xl font-bold">Projects</h1>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setView(view === "grid" ? "list" : "grid")}
-          >
-            {view === "grid" ? (
-              <><LayoutList className="mr-2 h-4 w-4" /> List View</>
-            ) : (
-              <><LayoutGrid className="mr-2 h-4 w-4" /> Grid View</>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="container mx-auto px-4 py-6">
+        <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <h1 className="text-3xl font-bold">Projects</h1>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setView(view === "grid" ? "list" : "grid")}
+            >
+              {view === "grid" ? (
+                <><LayoutList className="mr-2 h-4 w-4" /> List View</>
+              ) : (
+                <><LayoutGrid className="mr-2 h-4 w-4" /> Grid View</>
+              )}
+            </Button>
+            {isAdmin && (
+              <>
+                <Link href="/projects/new">
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Project
+                  </Button>
+                </Link>
+                <Button variant="secondary" onClick={handleExport}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+                <Link href="/projects/bulk-update">
+                  <Button variant="outline">
+                    <FileEdit className="mr-2 h-4 w-4" />
+                    Bulk Update
+                  </Button>
+                </Link>
+                <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload CSV
+                </Button>
+              </>
             )}
-          </Button>
-          {isAdmin && (
-            <>
-              <Link href="/projects/new">
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Project
-                </Button>
-              </Link>
-              <Button variant="secondary" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-              <Link href="/projects/bulk-update">
-                <Button variant="outline">
-                  <FileEdit className="mr-2 h-4 w-4" />
-                  Bulk Update
-                </Button>
-              </Link>
-              <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Upload CSV
-              </Button>
-            </>
+          </div>
+        </div>
+
+        <div className="mt-8 space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row">
+            <Input
+              placeholder="Search by MIS, description, region..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="md:w-96"
+            />
+            <Select
+              value={status}
+              onValueChange={setStatus}
+            >
+              <SelectTrigger className="md:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="pending_reallocation">Pending Reallocation</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isLoading ? (
+            <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+              {[...Array(6)].map((_, i) => (
+                <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          ) : filteredProjects?.length ? (
+            <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+              {filteredProjects.map((project) => (
+                <ProjectCard
+                  key={`${project.id}-${project.mis}`}
+                  project={project}
+                  view={view}
+                  isAdmin={isAdmin}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-lg border-2 border-dashed p-8 text-center">
+              <p className="text-muted-foreground">No projects found</p>
+            </div>
           )}
         </div>
-      </div>
 
-      <div className="mt-8 space-y-4">
-        <div className="flex flex-col gap-4 md:flex-row">
-          <Input
-            placeholder="Search by MIS, description, region..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="md:w-96"
-          />
-          <Select
-            value={status}
-            onValueChange={setStatus}
-          >
-            <SelectTrigger className="md:w-48">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="pending_reallocation">Pending Reallocation</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {isLoading ? (
-          <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-            {[...Array(6)].map((_, i) => (
-              <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-gray-100 animate-pulse" />
-            ))}
-          </div>
-        ) : filteredProjects?.length ? (
-          <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-            {filteredProjects.map((project) => (
-              <ProjectCard
-                key={`${project.id}-${project.mis}`}
-                project={project}
-                view={view}
-                isAdmin={isAdmin}
+        {/* Add CSV Upload Dialog */}
+        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upload CSV</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".csv"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleFileUpload(file);
+                  }
+                }}
+                className="hidden"
               />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border-2 border-dashed p-8 text-center">
-            <p className="text-muted-foreground">No projects found</p>
-          </div>
-        )}
-      </div>
-
-      {/* Add CSV Upload Dialog */}
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Upload CSV</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".csv"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleFileUpload(file);
-                }
-              }}
-              className="hidden"
-            />
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Select CSV File
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Select CSV File
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </main>
+      <FAB />
     </div>
   );
 }
