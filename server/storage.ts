@@ -1,4 +1,4 @@
-import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog, type BudgetNA853Split, type BudgetValidation, type BudgetValidationResponse, type BudgetHistory, type InsertBudgetHistory } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog, type BudgetNA853Split, type BudgetValidation, type BudgetValidationResponse, type BudgetHistory, type InsertBudgetHistory, type Attachment, attachments } from "@shared/schema";
 import { db } from "./db";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -21,6 +21,7 @@ export interface IStorage {
   createBudgetHistoryEntry(historyEntry: InsertBudgetHistory): Promise<BudgetHistory>;
   getBudgetHistory(projectId: string): Promise<BudgetHistory[]>;
   sessionStore: session.Store;
+  listAttachments(): Promise<Attachment[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -263,6 +264,20 @@ export class DatabaseStorage implements IStorage {
       return data?.map(item => item.unit) || [];
     } catch (error) {
       console.error('[Storage] Error fetching user units:', error);
+      throw error;
+    }
+  }
+  async listAttachments(): Promise<Attachment[]> {
+    try {
+      const { data, error } = await db
+        .from('attachments')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error listing attachments:', error);
       throw error;
     }
   }

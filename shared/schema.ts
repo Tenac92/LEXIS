@@ -106,6 +106,16 @@ export const budgetHistory = pgTable("budget_history", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// Add attachments table definition
+export const attachments = pgTable("attachments", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  description: text("description"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow()
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
@@ -113,6 +123,7 @@ export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
 export type BudgetHistory = typeof budgetHistory.$inferSelect;
 export type BudgetNotification = typeof budgetNotifications.$inferSelect;
+export type Attachment = typeof attachments.$inferSelect;
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users);
@@ -153,7 +164,6 @@ export const insertBudgetNotificationSchema = createInsertSchema(budgetNotificat
   status: z.enum(["pending", "approved", "rejected"]).default("pending"),
 }).omit({ id: true, created_at: true, updated_at: true });
 
-// Rest of the schemas remain unchanged
 export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
   recipients: z.array(z.object({
     firstname: z.string().min(2, "First name must be at least 2 characters"),
@@ -167,10 +177,17 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
   expenditure_type: z.string().min(1, "Expenditure type is required")
 });
 
-export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({ 
+export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({
   id: true,
-  created_at: true 
+  created_at: true
 });
+
+export const insertAttachmentSchema = createInsertSchema(attachments).omit({
+  id: true,
+  created_at: true,
+  updated_at: true
+});
+
 
 // Export types for insert operations
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -180,6 +197,7 @@ export type BudgetValidation = z.infer<typeof budgetValidationSchema>;
 export type BudgetValidationResponse = z.infer<typeof budgetValidationResponseSchema>;
 export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
 export type InsertBudgetNotification = z.infer<typeof insertBudgetNotificationSchema>;
+export type InsertAttachment = z.infer<typeof insertAttachmentSchema>;
 
 // Export database type
 export type Database = {
@@ -189,4 +207,5 @@ export type Database = {
   budgetNA853Split: BudgetNA853Split;
   budgetHistory: BudgetHistory;
   budgetNotifications: BudgetNotification;
+  attachments: Attachment;
 };
