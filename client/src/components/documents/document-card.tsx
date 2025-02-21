@@ -1,10 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  FileText, 
-  User, 
-  Calendar, 
-  DollarSign, 
+import {
+  FileText,
+  User,
+  Calendar,
+  DollarSign,
   CheckCircle,
   Clock,
   MoreVertical,
@@ -58,7 +58,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
   };
 
   const handleButtonClick = async (
-    action: () => Promise<void>, 
+    action: () => Promise<void>,
     successMessage: string
   ) => {
     try {
@@ -141,10 +141,12 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end gap-2">
+          {/* Fixed button layout */}
+          <div className="mt-6 grid grid-cols-2 sm:flex sm:justify-end gap-2">
             <Button
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto text-xs sm:text-sm whitespace-nowrap"
               onClick={(e) => {
                 e.stopPropagation();
                 handleButtonClick(
@@ -160,6 +162,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
             <Button
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto text-xs sm:text-sm whitespace-nowrap"
               onClick={(e) => {
                 e.stopPropagation();
                 handleButtonClick(
@@ -176,6 +179,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
               <Button
                 variant="outline"
                 size="sm"
+                className="w-full col-span-2 sm:w-auto text-xs sm:text-sm whitespace-nowrap"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleButtonClick(
