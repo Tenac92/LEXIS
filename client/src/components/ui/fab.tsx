@@ -1,8 +1,8 @@
 import { Plus } from 'lucide-react';
 import { Button } from './button';
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CreateDocumentDialog } from '../documents/create-document-dialog';
 import {
   Tooltip,
   TooltipContent,
@@ -79,20 +79,6 @@ const tooltipVariants = {
   }
 };
 
-interface CreateDocumentFormProps {
-  onClose: () => void;
-}
-
-const CreateDocumentForm: React.FC<CreateDocumentFormProps> = ({ onClose }) => {
-  // Create document form implementation will go here
-  return (
-    <div className="space-y-4">
-      <p>Document creation form will be implemented here</p>
-      <Button onClick={onClose}>Close</Button>
-    </div>
-  );
-};
-
 export function FAB() {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -143,17 +129,10 @@ export function FAB() {
           </Tooltip>
         </TooltipProvider>
 
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Document</DialogTitle>
-              <DialogDescription>
-                Fill in the details to create a new document
-              </DialogDescription>
-            </DialogHeader>
-            <CreateDocumentForm onClose={() => setIsOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        <CreateDocumentDialog 
+          open={isOpen} 
+          onOpenChange={setIsOpen}
+        />
       </motion.div>
     </AnimatePresence>
   );
