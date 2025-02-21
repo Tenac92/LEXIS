@@ -26,11 +26,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.get('/api/catalog/:mis/expenditure-types', authenticateSession, getExpenditureTypes);
 
     // Budget routes
+    log('[Routes] Setting up budget routes...');
     app.get('/api/budget/:mis', authenticateSession, budgetController.getBudget);
     app.post('/api/budget/validate', authenticateSession, budgetController.validateBudget);
     app.patch('/api/budget/:mis', authenticateSession, budgetController.updateBudget);
-    // New budget history route
     app.get('/api/budget/:mis/history', authenticateSession, budgetController.getBudgetHistory);
+    log('[Routes] Budget routes setup complete');
 
     // Documents routes
     app.use('/api/documents', authenticateSession, documentsController);

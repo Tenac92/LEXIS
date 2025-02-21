@@ -28,7 +28,10 @@ export async function getBudget(req: Request, res: Response) {
   try {
     const { mis } = req.params;
 
+    console.log(`[Budget] Fetching budget data for MIS ${mis}`);
+
     if (!mis) {
+      console.log('[Budget] Missing MIS parameter');
       return res.status(400).json({ 
         message: "MIS parameter is required",
         status: "error" 
@@ -36,6 +39,7 @@ export async function getBudget(req: Request, res: Response) {
     }
 
     // First get the NA853 code from project_catalog
+    console.log(`[Budget] Looking up NA853 code for MIS ${mis}`);
     const { data: projectData, error: projectError } = await supabase
       .from("project_catalog")
       .select("na853, budget_na853")
@@ -43,11 +47,14 @@ export async function getBudget(req: Request, res: Response) {
       .single();
 
     if (projectError) {
-      console.error("Project fetch error:", projectError);
+      console.error("[Budget] Project fetch error:", projectError);
       throw projectError;
     }
 
+    console.log(`[Budget] Found project data:`, projectData);
+
     if (!projectData?.na853) {
+      console.log(`[Budget] No NA853 code found for MIS ${mis}, returning default values`);
       return res.json({
         user_view: 0,
         ethsia_pistosi: 0,
@@ -61,6 +68,7 @@ export async function getBudget(req: Request, res: Response) {
     }
 
     // Then get the budget data using the NA853 code
+    console.log(`[Budget] Fetching budget data for NA853 ${projectData.na853}`);
     const { data: budgetData, error: budgetError } = await supabase
       .from("budget_na853_split")
       .select("*")
@@ -68,9 +76,11 @@ export async function getBudget(req: Request, res: Response) {
       .single();
 
     if (budgetError) {
-      console.error("Budget fetch error:", budgetError);
+      console.error("[Budget] Budget fetch error:", budgetError);
       throw budgetError;
     }
+
+    console.log(`[Budget] Found budget data:`, budgetData);
 
     const response = {
       user_view: budgetData?.user_view?.toString() || budgetData?.katanomes_etous?.toString() || projectData.budget_na853?.toString() || '0',
@@ -83,13 +93,15 @@ export async function getBudget(req: Request, res: Response) {
       current_budget: budgetData?.current_budget?.toString() || budgetData?.katanomes_etous?.toString() || projectData.budget_na853?.toString() || '0'
     };
 
+    console.log(`[Budget] Sending response:`, response);
     return res.json(response);
 
   } catch (error) {
-    console.error("Budget fetch error:", error);
+    console.error("[Budget] Budget fetch error:", error);
     return res.status(500).json({ 
       message: "Failed to fetch budget data",
-      status: "error"
+      status: "error",
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 }
