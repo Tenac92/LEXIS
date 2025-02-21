@@ -2,6 +2,38 @@ import { pgTable, text, serial, boolean, timestamp, jsonb, numeric, integer } fr
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Updated Budget NA853 Split table with quarterly fields
+export const budgetNA853Split = pgTable("budget_na853_split", {
+  id: serial("id").primaryKey(),
+  mis: text("mis").notNull(),
+  na853: text("na853").notNull(),
+  user_view: numeric("user_view").default("0"),
+  proip: numeric("proip").default("0"),
+  ethsia_pistosi: numeric("ethsia_pistosi").default("0"),
+  katanomes_etous: numeric("katanomes_etous").default("0"),
+  q1: numeric("q1").default("0"),
+  q2: numeric("q2").default("0"),
+  q3: numeric("q3").default("0"),
+  q4: numeric("q4").default("0"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// New Budget Notifications table
+export const budgetNotifications = pgTable("budget_notifications", {
+  id: serial("id").primaryKey(),
+  mis: text("mis").notNull(),
+  type: text("type").notNull(), // 'funding' or 'reallocation'
+  amount: numeric("amount").notNull(),
+  current_budget: numeric("current_budget").notNull(),
+  ethsia_pistosi: numeric("ethsia_pistosi").notNull(),
+  reason: text("reason"),
+  status: text("status").default("pending"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+  created_by: integer("created_by").references(() => users.id),
+});
+
 // Users table matching the actual database structure
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -36,17 +68,6 @@ export const projectCatalog = pgTable("project_catalog", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// Budget NA853 Split table
-export const budgetNA853Split = pgTable("budget_na853_split", {
-  id: serial("id").primaryKey(),
-  mis: text("mis").notNull(),
-  user_view: numeric("user_view").default("0"),
-  proip: numeric("proip").default("0"),
-  ethsia_pistosi: numeric("ethsia_pistosi").default("0"),
-  katanomes_etous: numeric("katanomes_etous").default("0"),
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at").defaultNow(),
-});
 
 // Generated Documents table
 export const generatedDocuments = pgTable("generated_documents", {
@@ -90,37 +111,49 @@ export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
-// New types for budget history
 export type BudgetHistory = typeof budgetHistory.$inferSelect;
+export type BudgetNotification = typeof budgetNotifications.$inferSelect;
 
 // Insert Schemas
 export const insertUserSchema = createInsertSchema(users);
 export const insertProjectCatalogSchema = createInsertSchema(projectCatalog, {
   implementing_agency: z.array(z.string()).min(1, "At least one implementing agency is required"),
-  budget_na853: z.coerce.number().min(0, "Budget NA853 must be non-negative").nullable(),
-  budget_e069: z.coerce.number().min(0, "Budget E069 must be non-negative").nullable(),
-  budget_na271: z.coerce.number().min(0, "Budget NA271 must be non-negative").nullable(),
-  ethsia_pistosi: z.coerce.number().min(0, "Annual credit must be non-negative")
-    .nullable()
-    .transform(val => isNaN(val) ? null : val),
-  status: z.enum(["active", "pending", "pending_reallocation", "completed"]).nullable().default("pending"),
+  budget_na853: z.coerce.number().min(0, "Budget NA853 must be non-negative"),
+  budget_e069: z.coerce.number().min(0, "Budget E069 must be non-negative"),
+  budget_na271: z.coerce.number().min(0, "Budget NA271 must be non-negative"),
+  ethsia_pistosi: z.coerce.number().min(0, "Annual credit must be non-negative"),
+  status: z.enum(["active", "pending", "pending_reallocation", "pending_funding", "completed"]).default("pending"),
   event_type: z.string().nullable(),
-  event_year: z.array(z.coerce.string()).nullable(),
+  event_year: z.array(z.string()).nullable(),
   procedures: z.string().nullable(),
 }).omit({ id: true, created_at: true, updated_at: true });
 
-// Budget validation schema
+// Budget validation schemas
 export const budgetValidationSchema = z.object({
   mis: z.string().min(1, "Project ID is required"),
   amount: z.number().min(0, "Amount must be non-negative"),
+  type: z.enum(["funding", "reallocation"]).optional(),
 });
 
 export const budgetValidationResponseSchema = z.object({
   status: z.enum(["success", "warning", "error"]),
   message: z.string().optional(),
   canCreate: z.boolean(),
+  requiresNotification: z.boolean().optional(),
+  notificationType: z.enum(["funding", "reallocation", "exceeded_proip"]).optional(),
+  allowDocx: z.boolean().optional(),
 });
 
+// New Budget Notification Schema
+export const insertBudgetNotificationSchema = createInsertSchema(budgetNotifications, {
+  type: z.enum(["funding", "reallocation"]),
+  amount: z.number().min(0, "Amount must be non-negative"),
+  current_budget: z.number().min(0, "Current budget must be non-negative"),
+  ethsia_pistosi: z.number().min(0, "Annual credit must be non-negative"),
+  status: z.enum(["pending", "approved", "rejected"]).default("pending"),
+}).omit({ id: true, created_at: true, updated_at: true });
+
+// Rest of the schemas remain unchanged
 export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
   recipients: z.array(z.object({
     firstname: z.string().min(2, "First name must be at least 2 characters"),
@@ -146,6 +179,7 @@ export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSche
 export type BudgetValidation = z.infer<typeof budgetValidationSchema>;
 export type BudgetValidationResponse = z.infer<typeof budgetValidationResponseSchema>;
 export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
+export type InsertBudgetNotification = z.infer<typeof insertBudgetNotificationSchema>;
 
 // Export database type
 export type Database = {
@@ -154,4 +188,5 @@ export type Database = {
   generatedDocuments: GeneratedDocument;
   budgetNA853Split: BudgetNA853Split;
   budgetHistory: BudgetHistory;
+  budgetNotifications: BudgetNotification;
 };

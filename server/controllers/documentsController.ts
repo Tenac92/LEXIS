@@ -3,8 +3,7 @@ import { supabase } from "../db";
 import { z } from "zod";
 import { Document, Paragraph, Packer, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } from "docx";
 import { insertGeneratedDocumentSchema } from "@shared/schema";
-import type { Database } from "@shared/schema";
-import type { User } from "@shared/schema";
+import type { Database, User } from "@shared/schema";
 import { validateBudget, updateBudget } from "./budgetController";
 
 // Initialize router at the top level
@@ -22,6 +21,13 @@ interface Recipient {
 
 interface AuthRequest extends Request {
   user?: User;
+}
+
+interface BudgetValidationResponse {
+  canCreate: boolean;
+  message?: string;
+  requiresNotification?: boolean;
+  notificationType?: string;
 }
 
 // Authentication middleware
@@ -367,9 +373,8 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// Add the document creation route after the existing routes
-// Document creation route
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
+// Update the document creation route
+router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -382,19 +387,35 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     });
 
     // First validate budget
-    const budgetValidation = await validateBudget({
-      ...req,
-      body: {
-        mis: validatedData.project_id,
-        amount: validatedData.total_amount
-      }
-    } as AuthRequest, res);
+    const budgetValidationResult = await new Promise<BudgetValidationResponse>((resolve, reject) => {
+      validateBudget({
+        ...req,
+        body: {
+          mis: validatedData.project_id,
+          amount: validatedData.total_amount
+        }
+      } as AuthRequest, {
+        json: resolve,
+        status: (code: number) => ({
+          json: (data: BudgetValidationResponse) => {
+            if (code >= 400) {
+              reject(new Error(data.message));
+            } else {
+              resolve(data);
+            }
+          }
+        })
+      } as Response);
+    });
 
-    if (budgetValidation.statusCode === 400) {
-      return budgetValidation;
+    if (!budgetValidationResult.canCreate) {
+      return res.status(400).json({
+        status: 'error',
+        message: budgetValidationResult.message || 'Budget validation failed'
+      });
     }
 
-    // Start transaction
+    // Create document
     const { data: document, error } = await supabase
       .from('generated_documents')
       .insert(validatedData)
@@ -404,25 +425,41 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     if (error) throw error;
 
     // Update budget
-    const budgetUpdate = await updateBudget({
-      ...req,
-      params: { mis: validatedData.project_id },
-      body: { amount: validatedData.total_amount }
-    } as AuthRequest, res);
+    const budgetUpdateResult = await new Promise<{ status: string; data?: any }>((resolve, reject) => {
+      updateBudget({
+        ...req,
+        params: { mis: validatedData.project_id },
+        body: { amount: validatedData.total_amount }
+      } as AuthRequest, {
+        json: resolve,
+        status: (code: number) => ({
+          json: (data: any) => {
+            if (code >= 400) {
+              reject(new Error(data.message));
+            } else {
+              resolve(data);
+            }
+          }
+        })
+      } as Response);
+    });
 
-    if (budgetUpdate.statusCode === 500) {
+    if (budgetUpdateResult.status !== 'success') {
       throw new Error('Failed to update budget');
     }
 
-    const { notifications } = budgetUpdate.body?.data || { notifications: [] };
-
     res.status(201).json({
       ...document,
-      notifications: notifications?.length > 0 ? notifications : undefined
+      budget: budgetUpdateResult.data,
+      notifications: budgetValidationResult.requiresNotification ? [{
+        type: budgetValidationResult.notificationType,
+        message: budgetValidationResult.message
+      }] : undefined
     });
+
   } catch (error) {
     console.error('Error creating document:', error);
-    if (error.name === 'ZodError') {
+    if (error instanceof z.ZodError) {
       return res.status(400).json({
         message: 'Validation error',
         errors: error.errors

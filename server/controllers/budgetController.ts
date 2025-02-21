@@ -1,48 +1,14 @@
 import { Request, Response } from "express";
 import { supabase } from "../db";
 import { z } from "zod";
-import type { Database } from "@shared/schema";
-import type { User } from "@shared/schema";
+import type { Database, User, BudgetValidation, BudgetValidationResponse } from "@shared/schema";
 import { storage } from "../storage";
 
 interface AuthRequest extends Request {
   user?: User;
 }
 
-// Document recipient schema
-const recipientSchema = z.object({
-  firstname: z.string(),
-  lastname: z.string(),
-  afm: z.string(),
-  amount: z.number(),
-  installment: z.number()
-});
-
-const documentSchema = z.object({
-  unit: z.string(),
-  project_id: z.string(),
-  expenditure_type: z.string(),
-  recipients: z.array(recipientSchema),
-  total_amount: z.number(),
-  status: z.enum(['draft', 'pending', 'completed'])
-});
-
-// Budget notification schema
-const budgetNotificationSchema = z.object({
-  mis: z.string(),
-  type: z.enum(['funding', 'reallocation']),
-  amount: z.number(),
-  current_budget: z.number(),
-  ethsia_pistosi: z.number(),
-  reason: z.string(),
-  status: z.enum(['pending', 'approved', 'rejected']).default('pending'),
-  user_id: z.string(),
-  created_at: z.string()
-});
-
-type BudgetNotification = z.infer<typeof budgetNotificationSchema>;
-
-export async function getBudget(req: Request, res: Response) {
+export async function getBudget(req: AuthRequest, res: Response) {
   try {
     const { mis } = req.params;
 
@@ -74,14 +40,17 @@ export async function getBudget(req: Request, res: Response) {
     if (!projectData?.na853) {
       console.log(`[Budget] No NA853 code found for MIS ${mis}, returning default values`);
       return res.json({
-        user_view: 0,
-        ethsia_pistosi: 0,
-        q1: 0,
-        q2: 0,
-        q3: 0,
-        q4: 0,
-        total_spent: 0,
-        current_budget: projectData?.budget_na853 || 0
+        status: 'success',
+        data: {
+          user_view: 0,
+          ethsia_pistosi: 0,
+          q1: 0,
+          q2: 0,
+          q3: 0,
+          q4: 0,
+          total_spent: 0,
+          current_budget: projectData?.budget_na853 || 0
+        }
       });
     }
 
@@ -101,14 +70,17 @@ export async function getBudget(req: Request, res: Response) {
     console.log(`[Budget] Found budget data:`, budgetData);
 
     const response = {
-      user_view: budgetData?.user_view?.toString() || budgetData?.katanomes_etous?.toString() || projectData.budget_na853?.toString() || '0',
-      ethsia_pistosi: budgetData?.ethsia_pistosi?.toString() || '0',
-      q1: budgetData?.q1?.toString() || '0',
-      q2: budgetData?.q2?.toString() || '0',
-      q3: budgetData?.q3?.toString() || '0',
-      q4: budgetData?.q4?.toString() || '0',
-      total_spent: budgetData?.total_spent?.toString() || '0',
-      current_budget: budgetData?.current_budget?.toString() || budgetData?.katanomes_etous?.toString() || projectData.budget_na853?.toString() || '0'
+      status: 'success',
+      data: {
+        user_view: budgetData?.user_view?.toString() || budgetData?.katanomes_etous?.toString() || projectData.budget_na853?.toString() || '0',
+        ethsia_pistosi: budgetData?.ethsia_pistosi?.toString() || '0',
+        q1: budgetData?.q1?.toString() || '0',
+        q2: budgetData?.q2?.toString() || '0',
+        q3: budgetData?.q3?.toString() || '0',
+        q4: budgetData?.q4?.toString() || '0',
+        total_spent: budgetData?.total_spent?.toString() || '0',
+        current_budget: budgetData?.current_budget?.toString() || budgetData?.katanomes_etous?.toString() || projectData.budget_na853?.toString() || '0'
+      }
     };
 
     console.log(`[Budget] Sending response:`, response);
@@ -117,8 +89,8 @@ export async function getBudget(req: Request, res: Response) {
   } catch (error) {
     console.error("[Budget] Budget fetch error:", error);
     return res.status(500).json({ 
-      message: "Failed to fetch budget data",
       status: "error",
+      message: "Failed to fetch budget data",
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
@@ -126,8 +98,8 @@ export async function getBudget(req: Request, res: Response) {
 
 export async function validateBudget(req: AuthRequest, res: Response) {
   try {
-    const { mis, amount } = req.body;
-    const requestedAmount = parseFloat(amount);
+    const { mis, amount } = req.body as BudgetValidation;
+    const requestedAmount = parseFloat(amount.toString());
 
     if (!mis) {
       return res.status(400).json({ 
@@ -135,7 +107,7 @@ export async function validateBudget(req: AuthRequest, res: Response) {
         message: "MIS parameter is required",
         canCreate: false,
         allowDocx: false
-      });
+      } as BudgetValidationResponse);
     }
 
     if (isNaN(requestedAmount) || requestedAmount <= 0) {
@@ -144,7 +116,7 @@ export async function validateBudget(req: AuthRequest, res: Response) {
         message: "Valid amount parameter is required",
         canCreate: false,
         allowDocx: false
-      });
+      } as BudgetValidationResponse);
     }
 
     const { data: budgetData, error } = await supabase
@@ -160,7 +132,7 @@ export async function validateBudget(req: AuthRequest, res: Response) {
         message: 'Budget not found',
         canCreate: false,
         allowDocx: false
-      });
+      } as BudgetValidationResponse);
     }
 
     const userView = parseFloat(budgetData.user_view?.toString() || '0');
@@ -173,7 +145,7 @@ export async function validateBudget(req: AuthRequest, res: Response) {
         message: 'Amount exceeds available budget',
         canCreate: false,
         allowDocx: false
-      });
+      } as BudgetValidationResponse);
     }
 
     const remainingEthsiaPistosi = ethsiaPistosi - requestedAmount;
@@ -189,7 +161,7 @@ export async function validateBudget(req: AuthRequest, res: Response) {
         requiresNotification: true,
         notificationType: 'funding',
         allowDocx: true
-      });
+      } as BudgetValidationResponse);
     }
 
     // Third check: Below 20% of katanomes_etous
@@ -201,14 +173,14 @@ export async function validateBudget(req: AuthRequest, res: Response) {
         requiresNotification: true,
         notificationType: 'reallocation',
         allowDocx: true
-      });
+      } as BudgetValidationResponse);
     }
 
     return res.json({
       status: 'success',
       canCreate: true,
       allowDocx: true
-    });
+    } as BudgetValidationResponse);
 
   } catch (error) {
     console.error("Budget validation error:", error);
@@ -217,21 +189,15 @@ export async function validateBudget(req: AuthRequest, res: Response) {
       message: "Failed to validate budget",
       canCreate: false,
       allowDocx: false
-    });
+    } as BudgetValidationResponse);
   }
 }
 
 export async function updateBudget(req: AuthRequest, res: Response) {
   try {
     const { mis } = req.params;
-    const { amount, document_id } = req.body;
+    const { amount } = req.body;
     const userId = req.user?.id;
-
-    console.log(`[Budget Update] Starting budget update for MIS ${mis}`, {
-      amount,
-      document_id,
-      userId
-    });
 
     if (!mis || !amount || !userId) {
       return res.status(400).json({
@@ -240,7 +206,7 @@ export async function updateBudget(req: AuthRequest, res: Response) {
       });
     }
 
-    const requestedAmount = parseFloat(amount);
+    const requestedAmount = parseFloat(amount.toString());
     if (isNaN(requestedAmount) || requestedAmount <= 0) {
       return res.status(400).json({
         status: 'error',
@@ -260,49 +226,19 @@ export async function updateBudget(req: AuthRequest, res: Response) {
       throw new Error('Failed to fetch budget data');
     }
 
-    console.log('[Budget Update] Current budget data:', budgetData);
-
     const currentUserView = parseFloat(budgetData.user_view?.toString() || '0');
     const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-    const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
 
     // Calculate new amounts
     const newUserView = Math.max(0, currentUserView - requestedAmount);
     const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - requestedAmount);
 
-    console.log('[Budget Update] Creating budget history entry', {
-      previous_amount: currentUserView,
-      new_amount: newUserView,
-      document_id
-    });
-
-    // Create budget history entry in Supabase
-    const { error: historyError } = await supabase
-      .from('budget_history')
-      .insert({
-        mis,
-        previous_amount: currentUserView.toString(),
-        new_amount: newUserView.toString(),
-        change_type: 'document_creation',
-        change_reason: 'Document creation reduced available budget',
-        document_id,
-        created_by: userId,
-        created_at: new Date().toISOString()
-      });
-
-    if (historyError) {
-      console.error('[Budget Update] Failed to create history entry:', historyError);
-      // Continue with budget update even if history creation fails
-    } else {
-      console.log('[Budget Update] Successfully created history entry');
-    }
-
     // Update budget amounts
     const { error: updateError } = await supabase
       .from('budget_na853_split')
       .update({
-        user_view: newUserView,
-        ethsia_pistosi: newEthsiaPistosi,
+        user_view: newUserView.toString(),
+        ethsia_pistosi: newEthsiaPistosi.toString(),
         updated_at: new Date().toISOString()
       })
       .eq('mis', mis);
@@ -312,7 +248,23 @@ export async function updateBudget(req: AuthRequest, res: Response) {
       throw new Error('Failed to update budget amounts');
     }
 
-    console.log('[Budget Update] Successfully updated budget amounts');
+    // Create budget history entry
+    const { error: historyError } = await supabase
+      .from('budget_history')
+      .insert({
+        mis,
+        previous_amount: currentUserView.toString(),
+        new_amount: newUserView.toString(),
+        change_type: 'document_creation',
+        change_reason: 'Document creation reduced available budget',
+        created_by: userId,
+        created_at: new Date().toISOString()
+      });
+
+    if (historyError) {
+      console.error('Failed to create history entry:', historyError);
+      // Continue even if history creation fails
+    }
 
     return res.json({
       status: 'success',

@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import { type Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import apiRouter from "./controllers";
