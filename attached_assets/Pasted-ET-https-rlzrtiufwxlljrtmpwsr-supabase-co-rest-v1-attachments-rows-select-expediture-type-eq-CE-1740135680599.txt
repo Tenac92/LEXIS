@@ -1,0 +1,60 @@
+ET https://rlzrtiufwxlljrtmpwsr.supabase.co/rest/v1/attachments_rows?select=*&expediture_type=eq.%CE%94%CE%9A%CE%91+%CE%91%CE%9D%CE%91%CE%9A%CE%91%CE%A4%CE%91%CE%A3%CE%9A%CE%95%CE%A5%CE%97&installment=eq.1 404 (Not Found)
+(ανώνυμες) @ @supabase_supabase-js.js?v=52647a4c:3865
+(ανώνυμες) @ @supabase_supabase-js.js?v=52647a4c:3886
+fulfilled @ @supabase_supabase-js.js?v=52647a4c:3838
+Promise.then
+step @ @supabase_supabase-js.js?v=52647a4c:3851
+(ανώνυμες) @ @supabase_supabase-js.js?v=52647a4c:3853
+__awaiter6 @ @supabase_supabase-js.js?v=52647a4c:3835
+(ανώνυμες) @ @supabase_supabase-js.js?v=52647a4c:3876
+then @ @supabase_supabase-js.js?v=52647a4c:89
+Εμφάνιση 8 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:348 Error fetching attachments: {code: '42P01', details: null, hint: null, message: 'relation "public.attachments_rows" does not exist'}
+queryFn @ create-document-dialog.tsx:348
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=52647a4c:840
+run @ @tanstack_react-query.js?v=52647a4c:494
+start @ @tanstack_react-query.js?v=52647a4c:536
+fetch @ @tanstack_react-query.js?v=52647a4c:926
+executeFetch_fn @ @tanstack_react-query.js?v=52647a4c:2211
+setOptions @ @tanstack_react-query.js?v=52647a4c:1955
+(ανώνυμες) @ @tanstack_react-query.js?v=52647a4c:3032
+commitHookEffectListMount @ chunk-276SZO74.js?v=52647a4c:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=52647a4c:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=52647a4c:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=52647a4c:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=52647a4c:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=52647a4c:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=52647a4c:19447
+commitRootImpl @ chunk-276SZO74.js?v=52647a4c:19416
+commitRoot @ chunk-276SZO74.js?v=52647a4c:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=52647a4c:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=52647a4c:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=52647a4c:18627
+Εμφάνιση 19 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:363 Error fetching attachments: {code: '42P01', details: null, hint: null, message: 'relation "public.attachments_rows" does not exist'}
+queryFn @ create-document-dialog.tsx:363
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=52647a4c:840
+run @ @tanstack_react-query.js?v=52647a4c:494
+start @ @tanstack_react-query.js?v=52647a4c:536
+fetch @ @tanstack_react-query.js?v=52647a4c:926
+executeFetch_fn @ @tanstack_react-query.js?v=52647a4c:2211
+setOptions @ @tanstack_react-query.js?v=52647a4c:1955
+(ανώνυμες) @ @tanstack_react-query.js?v=52647a4c:3032
+commitHookEffectListMount @ chunk-276SZO74.js?v=52647a4c:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=52647a4c:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=52647a4c:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=52647a4c:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=52647a4c:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=52647a4c:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=52647a4c:19447
+commitRootImpl @ chunk-276SZO74.js?v=52647a4c:19416
+commitRoot @ chunk-276SZO74.js?v=52647a4c:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=52647a4c:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=52647a4c:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=52647a4c:18627
+Εμφάνιση 19 ακόμη πλαισίων
+Εμφάνιση λιγότερων
