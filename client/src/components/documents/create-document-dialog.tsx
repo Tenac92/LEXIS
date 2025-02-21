@@ -76,8 +76,8 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
 
 interface Attachment {
   id: string;
-  name: string;
-  type: string;
+  title: string;
+  file_type: string;
   description?: string;
 }
 
@@ -256,8 +256,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
       try {
         const { data, error } = await supabase
           .from('attachments')
-          .select('*')
-          .order('name');
+          .select('*');
 
         if (error) throw error;
         return data as Attachment[];
@@ -703,7 +702,7 @@ export function CreateDocumentDialog({ open, onOpenChange }: CreateDocumentDialo
                             htmlFor={`attachment-${attachment.id}`}
                             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                           >
-                            {attachment.name}
+                            {attachment.title}
                           </label>
                           {attachment.description && (
                             <p className="text-sm text-muted-foreground">
