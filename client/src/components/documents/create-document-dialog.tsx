@@ -394,10 +394,23 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           })
         });
 
+        // Show warning toast if there's a warning message
+        if (response.status === 'warning' && response.message) {
+          toast({
+            title: "Warning",
+            description: response.message,
+            variant: "warning"
+          });
+        }
+
         return response;
       } catch (error) {
         console.error('Budget validation error:', error);
-        // Return a default response instead of throwing
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : 'Budget validation failed',
+          variant: "destructive"
+        });
         return {
           status: 'error',
           canCreate: false,
@@ -408,12 +421,23 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     enabled: Boolean(selectedProjectId) && currentAmount > 0
   });
 
+  // Disable form submission if validation fails
+  const isSubmitDisabled = validationResult?.status === 'error' || !validationResult?.canCreate;
+
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   const handleSubmit = async (data: CreateDocumentForm) => {
     try {
+      if (isSubmitDisabled) {
+        toast({
+          title: "Error",
+          description: validationResult?.message || "Cannot submit form due to validation errors",
+          variant: "destructive"
+        });
+        return;
+      }
       setLoading(true);
-      console.log('Έναρξη υποβολής φόρμας', data);
+      console.log('Έναρξη υποβολής φόρμας', data); φόρμας', data);
 
       // Validate project selection
       if (!data.project_id) {
