@@ -44,7 +44,7 @@ export default function DocumentsPage() {
   const { toast } = useToast();
 
   const [filters, setFilters] = useState({
-    unit: user?.role === 'user' ? user.unit : 'all',
+    unit: user?.role === 'user' ? user?.unit : 'all',
     status: 'all',
     user: 'all',
     dateFrom: '',
@@ -58,15 +58,31 @@ export default function DocumentsPage() {
   const { data: documents, refetch, isLoading } = useQuery({
     queryKey: ['/api/documents', filters],
     queryFn: async () => {
-      const searchParams = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value && value !== 'all') {
-          searchParams.append(key, value);
+      try {
+        const searchParams = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value && value !== 'all') {
+            searchParams.append(key, value);
+          }
+        });
+
+        // Always include user's unit if they are a regular user
+        if (user?.role === 'user' && user?.unit) {
+          searchParams.set('unit', user.unit);
         }
-      });
-      const response = await fetch(`/api/documents?${searchParams.toString()}`);
-      if (!response.ok) throw new Error('Αποτυχία λήψης εγγράφων');
-      return response.json();
+
+        const response = await fetch(`/api/documents?${searchParams.toString()}`);
+        if (!response.ok) throw new Error('Αποτυχία λήψης εγγράφων');
+        return response.json();
+      } catch (error) {
+        console.error('Error fetching documents:', error);
+        toast({
+          title: "Σφάλμα",
+          description: "Αποτυχία λήψης εγγράφων",
+          variant: "destructive",
+        });
+        return [];
+      }
     }
   });
 

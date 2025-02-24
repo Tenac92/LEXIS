@@ -49,28 +49,24 @@ export function Header() {
         </Link>
       </motion.div>
       <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-      {isRegularUser && (
-        <>
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-            whileHover={{ scale: 1.02 }}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        whileHover={{ scale: 1.02 }}
+      >
+        <Link href="/documents">
+          <Button 
+            variant="ghost" 
+            className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
           >
-            <Link href="/documents">
-              <Button 
-                variant="ghost" 
-                className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
-              >
-                <FileText className="h-4 w-4" />
-                <span className="hidden lg:inline">Δημιουργία Εγγράφων</span>
-                <span className="lg:hidden">Έγγραφα</span>
-              </Button>
-            </Link>
-          </motion.div>
-          <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-        </>
-      )}
+            <FileText className="h-4 w-4" />
+            <span className="hidden lg:inline">{isRegularUser ? 'Δημιουργία Εγγράφων' : 'Προβολή Εγγράφων'}</span>
+            <span className="lg:hidden">Έγγραφα</span>
+          </Button>
+        </Link>
+      </motion.div>
+      <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}

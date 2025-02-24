@@ -107,15 +107,24 @@ router.post('/', async (req: Request, res: Response) => {
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { status, unit, dateFrom, dateTo, amountFrom, amountTo, user } = req.query;
+
+    console.log('Document List Request:', {
+      userRole: req.user?.role,
+      userUnit: req.user?.unit,
+      requestedUnit: unit,
+      filters: { status, dateFrom, dateTo, amountFrom, amountTo, user }
+    });
+
     let query = supabase
       .from('generated_documents')
       .select('*');
 
-    // Apply unit-based filtering for regular users
-    if (req.user?.role === 'user') {
+    // Filter by unit based on user role
+    if (req.user?.role === 'user' && req.user?.unit) {
+      console.log('Applying user unit filter:', req.user.unit);
       query = query.eq('unit', req.user.unit);
     } else if (unit && unit !== 'all') {
-      // For admin/manager, allow filtering by specific unit
+      console.log('Applying requested unit filter:', unit);
       query = query.eq('unit', unit);
     }
 
@@ -136,18 +145,20 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
       query = query.lte('total_amount', Number(amountTo));
     }
 
-    if (user) {
-      const searchTerm = user.toString().toLowerCase().trim();
-      if (searchTerm) {
-        query = query.textSearch('recipients', searchTerm);
-      }
+    if (user && user !== 'all') {
+      query = query.textSearch('recipients', user.toString().toLowerCase().trim());
     }
 
     query = query.order('created_at', { ascending: false });
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database query error:', error);
+      throw error;
+    }
+
+    console.log('Documents found:', data?.length || 0);
 
     res.json(data || []);
   } catch (error) {
