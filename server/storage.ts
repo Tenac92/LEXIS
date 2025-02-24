@@ -268,6 +268,8 @@ export class DatabaseStorage implements IStorage {
   }
   async getBudgetNotifications(): Promise<BudgetNotification[]> {
     try {
+      console.log('[Storage] Fetching budget notifications...');
+
       const { data, error } = await db
         .from('budget_notifications')
         .select('*')
@@ -275,8 +277,12 @@ export class DatabaseStorage implements IStorage {
 
       if (error) {
         console.error('[Storage] Error fetching budget notifications:', error);
-        throw error;
+        throw new Error(`Database error: ${error.message}`);
       }
+
+      console.log('[Storage] Successfully fetched notifications:', {
+        count: data?.length || 0
+      });
 
       return data || [];
     } catch (error) {

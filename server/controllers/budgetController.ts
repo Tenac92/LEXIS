@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { supabase } from "../config/db";
 import { storage } from "../storage";
-import type { BudgetResponse } from "@shared/schema";
 import type { User, BudgetValidation } from "@shared/schema";
 import { BudgetService } from "../services/budgetService";
 
@@ -9,30 +8,27 @@ interface AuthRequest extends Request {
   user?: User;
 }
 
-export async function getBudgetNotifications(req: Request, res: Response) {
+export async function getBudgetNotifications(req: AuthRequest, res: Response) {
   try {
-    const { data: notifications, error } = await supabase
-      .from('budget_notifications')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching notifications:', error);
-      return res.status(500).json({
+    if (!req.user?.id) {
+      return res.status(401).json({
         status: 'error',
-        message: 'Failed to fetch notifications'
+        message: 'Authentication required'
       });
     }
 
+    const notifications = await storage.getBudgetNotifications();
+
     return res.json({
       status: 'success',
-      notifications: notifications || []
+      notifications
     });
   } catch (error) {
-    console.error('Unexpected error in getBudgetNotifications:', error);
+    console.error('Error fetching notifications:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch notifications'
+      message: 'Failed to fetch notifications',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 }
@@ -115,7 +111,6 @@ export async function updateBudget(req: AuthRequest, res: Response) {
   }
 }
 
-
 export async function getBudgetHistory(req: AuthRequest, res: Response) {
   try {
     const { mis } = req.params;
@@ -143,4 +138,4 @@ export async function getBudgetHistory(req: AuthRequest, res: Response) {
   }
 }
 
-export default { validateBudget, updateBudget, getBudget, getBudgetNotifications, getBudgetHistory };
+export default { getBudgetNotifications, validateBudget, updateBudget, getBudget, getBudgetHistory };
