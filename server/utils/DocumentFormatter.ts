@@ -1,27 +1,7 @@
-import { Document, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, WidthType, AlignmentType, VerticalAlign } from 'docx';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, WidthType, AlignmentType, VerticalAlign } from 'docx';
+import { supabase } from '../config/db';
 
 export class DocumentFormatter {
-  static formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  }
-
-  static formatDate(date: string | Date): string {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
-
-  static formatDocumentNumber(number: string | number): string {
-    return number.toString().padStart(6, '0');
-  }
-
   static getDefaultMargins() {
     return {
       top: 850,
@@ -31,7 +11,7 @@ export class DocumentFormatter {
     };
   }
 
-  static createHeader(text: string, size = 24, bold = true): Paragraph {
+  static createHeader(text: string, size = 24, bold = true) {
     return new Paragraph({
       children: [new TextRun({ text, size, bold })],
       alignment: AlignmentType.CENTER,
@@ -39,7 +19,7 @@ export class DocumentFormatter {
     });
   }
 
-  static createContactField(label: string, value: string): Paragraph {
+  static createContactField(label: string, value: string) {
     return new Paragraph({
       children: [
         new TextRun({ text: label, size: 24 }),
@@ -51,7 +31,7 @@ export class DocumentFormatter {
     });
   }
 
-  static createPaymentTable(documents: any[]): Table {
+  static createPaymentTable(documents: any[]) {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
@@ -69,7 +49,7 @@ export class DocumentFormatter {
     });
   }
 
-  static createTableHeader(headers: string[]): TableRow {
+  static createTableHeader(headers: string[]) {
     return new TableRow({
       children: headers.map(header => 
         new TableCell({
@@ -83,7 +63,7 @@ export class DocumentFormatter {
     });
   }
 
-  static createTableRows(documents: any[]): TableRow[] {
+  static createTableRows(documents: any[]) {
     return documents.map((doc, index) => 
       new TableRow({
         children: [
@@ -97,16 +77,17 @@ export class DocumentFormatter {
     );
   }
 
-  static createTableCell(text: string, alignment: AlignmentType): TableCell {
+  static createTableCell(text: string, alignment: AlignmentType) {
     return new TableCell({
-      children: [new Paragraph({ 
-        text,
+      children: [new Paragraph({
+        children: [new TextRun({ text, size: 24 })],
         alignment
-      })]
+      })],
+      verticalAlign: VerticalAlign.CENTER
     });
   }
 
-  static createDocumentHeader(req: any, unitDetails: any = {}): Table {
+  static createDocumentHeader(req: any, unitDetails: any = {}) {
     const defaultEmail = unitDetails?.email || 'daefkke@civilprotection.gr';
 
     const headerInfo = [
@@ -133,7 +114,7 @@ export class DocumentFormatter {
     return this.createHeaderTable(headerInfo, rightColumnInfo);
   }
 
-  static createHeaderTable(headerInfo: Array<{ text: string; bold: boolean }>, rightColumnInfo: Array<{ text: string; bold: boolean }>): Table {
+  static createHeaderTable(headerInfo: Array<{ text: string; bold: boolean }>, rightColumnInfo: Array<{ text: string; bold: boolean }>) {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: { top: {}, bottom: {}, left: {}, right: {}, insideVertical: {} },
@@ -141,7 +122,7 @@ export class DocumentFormatter {
     });
   }
 
-  static createHeaderRow(headerInfo: Array<{ text: string; bold: boolean }>, rightColumnInfo: Array<{ text: string; bold: boolean }>): TableRow {
+  static createHeaderRow(headerInfo: Array<{ text: string; bold: boolean }>, rightColumnInfo: Array<{ text: string; bold: boolean }>) {
     return new TableRow({
       children: [
         this.createHeaderColumn(headerInfo, 65),
@@ -150,7 +131,7 @@ export class DocumentFormatter {
     });
   }
 
-  static createHeaderColumn(info: Array<{ text: string; bold: boolean }>, width: number): TableCell {
+  static createHeaderColumn(info: Array<{ text: string; bold: boolean }>, width: number) {
     return new TableCell({
       children: info.map(item => new Paragraph({
         children: [new TextRun({ text: item.text, size: 20, bold: item.bold })],
@@ -161,15 +142,17 @@ export class DocumentFormatter {
     });
   }
 
-  static createDocumentFooter(): Table {
-    const attachments = [
-      'Η σε ορθή επανάληψη έγκριση Σ.Σ για ανακατ. κτιρίου',
-      'Οι εκδοθείσες άδειες επισκευής κτιρίου',
-      'Οι εγκρίσεις Σ.Σ για ανακατασκευή άδειες επισκευής',
-      'Υπεύθυνες δηλώσεις δικαιούχων',
-      'Φωτοτυπίες των βιβλιαρίων',
-      'Φωτοτυπίες ΑΔΤ των δικαιούχων',
-      'Ένας συγκεντρωτικός πίνακας των δικαιούχων'
+  static async createDocumentFooter(document: any = {}) {
+    const { data: attachmentData } = await supabase
+      .from('attachments')
+      .select('*')
+      .eq('expediture_type', document.expenditure_type)
+      .eq('installment', document.recipients?.[0]?.installment || 1)
+      .single();
+
+    const attachments = attachmentData?.attachments || [
+      'Διαβιβαστικό',
+      'ΔΚΑ'
     ];
 
     const notifications = [
@@ -186,13 +169,7 @@ export class DocumentFormatter {
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: { 
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE }
-      },
+      borders: { top: {}, bottom: {}, left: {}, right: {}, insideVertical: {} },
       rows: [
         new TableRow({
           children: [
@@ -248,67 +225,11 @@ export class DocumentFormatter {
     });
   }
 
-  static createListItems(items: string[]): Paragraph[] {
+  static createListItems(items: string[]) {
     return items.map((item, index) => new Paragraph({
       children: [new TextRun({ text: `${index + 1}. ${item}` })],
       indent: { left: 240 },
       spacing: { before: 60, after: 60 }
     }));
-  }
-
-  static createDistributionSection(): Paragraph[] {
-    const notifications = [
-      'Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας',
-      'Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής',
-      'Γ.Δ.Α.Ε.Φ.Κ.'
-    ];
-
-    const internalDist = [
-      'Χρονολογικό Αρχείο',
-      'Τμήμα Β/20.51',
-      'Αβραμόπουλο Ι.'
-    ];
-
-    return [
-      new Paragraph({
-        children: [new TextRun({ text: 'ΚΟΙΝΟΠΟΙΗΣΗ', bold: true, size: 24 })],
-        spacing: { before: 360, after: 120 }
-      }),
-      ...notifications.map((item, index) => new Paragraph({
-        children: [new TextRun({ text: `${index + 1}. ${item}`, size: 24 })],
-        spacing: { before: 60, after: 60 }
-      })),
-      new Paragraph({
-        children: [new TextRun({ text: 'ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ', bold: true, size: 24 })],
-        spacing: { before: 240, after: 120 }
-      }),
-      ...internalDist.map((item, index) => new Paragraph({
-        children: [new TextRun({ text: `${index + 1}. ${item}`, size: 24 })],
-        spacing: { before: 60, after: 60 }
-      }))
-    ];
-  }
-
-  static createMetadataSection(protocolNumber?: string, protocolDate?: string): Paragraph[] {
-    const formattedDate = protocolDate ? this.formatDate(protocolDate) : this.formatDate(new Date());
-
-    return [
-      new Paragraph({
-        children: [
-          new TextRun({ text: 'Αθήνα, ', size: 24 }),
-          new TextRun({ text: formattedDate, size: 24 })
-        ],
-        alignment: AlignmentType.RIGHT,
-        spacing: { before: 240, after: 120 }
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({ text: 'Αρ. Πρωτ.: ', size: 24 }),
-          new TextRun({ text: protocolNumber || '', size: 24 })
-        ],
-        alignment: AlignmentType.RIGHT,
-        spacing: { before: 120, after: 240 }
-      })
-    ];
   }
 }

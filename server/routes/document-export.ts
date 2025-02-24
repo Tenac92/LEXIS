@@ -22,7 +22,7 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Create document using DocumentFormatter
+    // Create document with proper structure
     const doc = new Document({
       sections: [{
         properties: {
@@ -39,7 +39,7 @@ export async function exportDocument(req: Request, res: Response) {
           }),
           DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ'),
           DocumentFormatter.createPaymentTable(document.recipients || []),
-          DocumentFormatter.createDocumentFooter()
+          await DocumentFormatter.createDocumentFooter(document)
         ]
       }]
     });
@@ -47,7 +47,7 @@ export async function exportDocument(req: Request, res: Response) {
     const buffer = await Packer.toBuffer(doc);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
+    res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
     res.send(buffer);
 
   } catch (error) {

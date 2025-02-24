@@ -1,5 +1,6 @@
 
 const docx = require('docx');
+const { supabase } = require('../config/db');
 
 class DocumentFormatter {
   static getDefaultMargins() {
@@ -141,15 +142,17 @@ class DocumentFormatter {
     });
   }
 
-  static createDocumentFooter(unitDetails = {}) {
-    const attachments = [
-      'Η σε ορθή επανάληψη έγκριση Σ.Σ για ανακατ. κτιρίου',
-      'Οι εκδοθείσες άδειες επισκευής κτιρίου',
-      'Οι εγκρίσεις Σ.Σ για ανακατασκευή άδειες επισκευής',
-      'Υπεύθυνες δηλώσεις δικαιούχων',
-      'Φωτοτυπίες των βιβλιαρίων',
-      'Φωτοτυπίες ΑΔΤ των δικαιούχων',
-      'Ένας συγκεντρωτικός πίνακας των δικαιούχων'
+  static async createDocumentFooter(document = {}, unitDetails = {}) {
+    const { data: attachmentData } = await supabase
+      .from('attachments')
+      .select('*')
+      .eq('expediture_type', document.expenditure_type)
+      .eq('installment', document.recipients?.[0]?.installment || 1)
+      .single();
+
+    const attachments = attachmentData?.attachments || [
+      'Διαβιβαστικό',
+      'ΔΚΑ'
     ];
 
     const notifications = [
