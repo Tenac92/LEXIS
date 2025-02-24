@@ -84,12 +84,13 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
       .from('users')
       .select(`
         id,
-        email,
-        name,
+        username,
+        full_name,
         role,
         unit,
-        telephone,
-        department
+        active,
+        name,
+        created_at
       `)
       .order('id');
 
