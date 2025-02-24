@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import type { User, BudgetValidation } from "@shared/schema";
 import { BudgetService } from "../services/budgetService";
 import { supabase } from "../db";
+import { storage } from "../storage";
 
 interface AuthRequest extends Request {
   user?: User;
@@ -130,4 +131,31 @@ export async function getNotifications(req: AuthRequest, res: Response) {
   }
 }
 
-export default { validateBudget, updateBudget, getBudget, getNotifications };
+export async function getBudgetHistory(req: AuthRequest, res: Response) {
+  try {
+    const { mis } = req.params;
+
+    if (!req.user?.id) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    const history = await storage.getBudgetHistory(mis);
+
+    return res.json({
+      status: 'success',
+      history
+    });
+  } catch (error) {
+    console.error('[Budget] Error fetching budget history:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch budget history',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+export default { validateBudget, updateBudget, getBudget, getNotifications, getBudgetHistory };
