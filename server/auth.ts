@@ -26,7 +26,8 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
     console.log('[Auth] Checking session:', {
       hasSession: !!req.session,
       hasUser: !!req.session?.user,
-      sessionID: req.sessionID
+      sessionID: req.sessionID,
+      cookies: req.headers.cookie
     });
 
     if (!req.session?.user) {
@@ -41,7 +42,8 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
     console.log('[Auth] User authenticated:', {
       id: req.user.id,
       role: req.user.role,
-      sessionID: req.sessionID
+      sessionID: req.sessionID,
+      path: req.path
     });
 
     next();
@@ -115,7 +117,8 @@ export async function setupAuth(app: Express) {
       console.log('[Auth] Login successful for user:', {
         id: userData.id,
         role: userData.role,
-        sessionID: req.sessionID
+        sessionID: req.sessionID,
+        cookies: res.getHeader('set-cookie')
       });
 
       res.json(userData);
@@ -155,7 +158,8 @@ export async function setupAuth(app: Express) {
   app.get("/api/user", authenticateSession, (req: Request, res: Response) => {
     console.log('[Auth] User data requested:', {
       hasUser: !!req.user,
-      sessionID: req.sessionID
+      sessionID: req.sessionID,
+      cookies: req.headers.cookie
     });
     res.json(req.user);
   });

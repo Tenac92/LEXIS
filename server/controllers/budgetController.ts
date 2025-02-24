@@ -66,66 +66,62 @@ export async function updateBudget(req: AuthRequest, res: Response) {
   }
 }
 
-export async function getBudgetHistory(req: Request, res: Response) {
-  try {
-    const { data: history, error } = await supabase
-      .from('budget_history')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('[Budget History] Database error:', error);
-      throw error;
-    }
-
-    console.log(`[Budget History] Found ${history?.length || 0} entries`);
-
-    return res.json({
-      status: 'success',
-      data: history || []
-    });
-  } catch (error) {
-    console.error('Error fetching budget history:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch budget history',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-}
-
 export async function getNotifications(req: AuthRequest, res: Response) {
   try {
-    if (req.user?.role !== 'admin') {
+    console.log('[Budget] Auth check for notifications:', {
+      user: req.user,
+      role: req.user?.role,
+      sessionId: req.sessionID,
+      headers: req.headers
+    });
+
+    if (!req.user) {
+      console.log('[Budget] No user found in request');
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    if (req.user.role !== 'admin') {
+      console.log('[Budget] User not admin:', req.user.role);
       return res.status(403).json({
         status: 'error',
         message: 'Admin access required'
       });
     }
 
+    console.log('[Budget] Attempting to fetch notifications');
     const { data: notifications, error } = await supabase
       .from('budget_notifications')
-      .select(`
-        *,
-        user:user_id (
-          id,
-          name,
-          email
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[Budget] Notifications fetch error:', error);
-      throw error;
+      console.error('[Budget] Supabase query error:', {
+        error,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      return res.status(500).json({
+        status: 'error',
+        message: 'Database query failed',
+        error: error.message
+      });
     }
+
+    console.log('[Budget] Successfully fetched notifications:', {
+      count: notifications?.length || 0,
+      sample: notifications?.[0]
+    });
 
     return res.json({
       status: 'success',
       notifications: notifications || []
     });
   } catch (error) {
-    console.error('[Budget] Get notifications error:', error);
+    console.error('[Budget] Unexpected error in getNotifications:', error);
     return res.status(500).json({
       status: 'error',
       message: 'Failed to fetch notifications',
@@ -134,4 +130,4 @@ export async function getNotifications(req: AuthRequest, res: Response) {
   }
 }
 
-export default { validateBudget, updateBudget, getBudgetHistory, getBudget, getNotifications };
+export default { validateBudget, updateBudget, getBudget, getNotifications };

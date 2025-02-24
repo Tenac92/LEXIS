@@ -1,7 +1,7 @@
 import { FC, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, AlertTriangle, AlertCircle, Info } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Bell, AlertTriangle, AlertCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import {
   Card,
   CardContent,
@@ -57,8 +57,13 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
   // Update the WebSocket connection logic
   useEffect(() => {
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
+      if (!host) {
+        console.error('No host found in window.location');
+        return;
+      }
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${host}/ws/notifications`;
 
       console.log('Attempting WebSocket connection to:', wsUrl);
