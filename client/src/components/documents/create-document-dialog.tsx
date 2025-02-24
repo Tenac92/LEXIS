@@ -15,10 +15,11 @@ import type { BudgetValidationResponse } from "@shared/schema";
 import { Checkbox } from "@/components/ui/checkbox";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, BadgeProps } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { AlertCircle, Check, ChevronRight, FileText, Plus, Trash2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
@@ -51,6 +52,8 @@ interface BudgetIndicatorProps {
   currentAmount: number;
 }
 
+type BadgeVariant = BadgeProps["variant"] | "warning";
+
 const stepVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? 1000 : -1000,
@@ -72,12 +75,18 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
   const availableBudget = budgetData.current_budget - currentAmount;
   const percentageUsed = (currentAmount / budgetData.current_budget) * 100;
 
+  const getBadgeVariant = (percentage: number): BadgeVariant => {
+    if (percentage > 90) return "destructive";
+    if (percentage > 70) return "secondary";
+    return "default";
+  };
+
   return (
     <Card className="p-6 bg-gradient-to-br from-background/50 to-background border-primary/20">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Επισκόπηση Προϋπολογισμού</h3>
-          <Badge variant={percentageUsed > 90 ? "destructive" : percentageUsed > 70 ? "warning" : "default"}>
+          <Badge variant={getBadgeVariant(percentageUsed)}>
             {percentageUsed.toFixed(1)}% Χρησιμοποιημένο
           </Badge>
         </div>
@@ -437,7 +446,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return;
       }
       setLoading(true);
-      console.log('Έναρξη υποβολής φόρμας', data); φόρμας', data);
+      console.log('Starting form submission', data);
 
       // Validate project selection
       if (!data.project_id) {
@@ -461,7 +470,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       // Validate recipient data
       const invalidRecipients = data.recipients.some(r =>
-        !r.firstname || !r.lastname || !r.afm || !r.amount || !r.installment
+        !r.firstname || !r.lastname || !r.afm || typeof r.amount !== 'number' || !r.installment
       );
 
       if (invalidRecipients) {
@@ -473,7 +482,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return;
       }
 
-      const totalAmount = data.recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
+      const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
 
       // Prepare payload with all required fields
       const payload = {
@@ -495,15 +504,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       console.log('Sending payload:', payload);
 
       // Make API request
-      const response = await apiRequest('/api/documents', {
+      const response = await apiRequest<{ id: string }>('/api/documents', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
-
-      console.log('API Response:', response);
 
       if (!response || !response.id) {
         throw new Error('Failed to create document: Invalid response');
@@ -522,9 +529,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       setCurrentStep(0);
       onClose();
     } catch (error) {
-      console.error('Σφάλμα δημιουργίας εγγράφου:', error);
+      console.error('Document creation error:', error);
       const errorMessage = error instanceof Error ? error.message :
-        typeof error === 'object' && error !== null && 'message' in error ? error.message :
+        typeof error === 'object' && error !== null && 'message' in error ? String(error.message) :
           "Αποτυχία δημιουργίας εγγράφου";
 
       toast({
@@ -933,34 +940,46 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Δημιουργία Εγγράφου</DialogTitle>
+          <DialogTitle>Δημιουργία Νέου Εγγράφου</DialogTitle>
           <DialogDescription>
-            Συμπληρώστε τα στοιχεία του εγγράφου. Όλα τα πεδία είναι υποχρεωτικά.
+            Συμπληρώστε τα απαραίτητα στοιχεία για τη δημιουργία του εγγράφου
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)}>
-            <StepIndicator currentStep={currentStep} />
-            {renderStepContent()}
+        <StepIndicator currentStep={currentStep} />
 
-            <div className="mt-6 flex justify-between">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <ScrollArea className="flex-1 px-2 py-4">
+              {renderStepContent()}
+            </ScrollArea>
+
+            <div className="flex justify-between items-center gap-4 pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handlePrevious}
-                disabled={currentStep === 0}
+                disabled={currentStep === 0 || loading}
               >
                 Προηγούμενο
               </Button>
               <Button
                 type="button"
                 onClick={handleNextOrSubmit}
-                disabled={loading}
+                disabled={loading || isSubmitDisabled}
               >
-                {currentStep === 3 ? (loading ? "Αποθήκευση..." : "Αποθήκευση") : "Επόμενο"}
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    Επεξεργασία...
+                  </div>
+                ) : currentStep === 3 ? (
+                  'Υποβολή'
+                ) : (
+                  'Επόμενο'
+                )}
               </Button>
             </div>
           </form>
