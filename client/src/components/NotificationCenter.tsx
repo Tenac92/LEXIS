@@ -173,6 +173,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       {notifications.map((notification) => {
         const Icon = typeIcons[notification.type as keyof typeof typeIcons] || Bell;
         const styles = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
+        const createdAt = notification.created_at ? new Date(notification.created_at) : new Date();
 
         return (
           <Card
@@ -192,7 +193,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
                   {notification.type.replace('_', ' ').toUpperCase()}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                  {formatDistanceToNow(createdAt, { addSuffix: true })}
                 </CardDescription>
               </div>
               <Badge variant="outline" className={cn(styles.badge)}>
