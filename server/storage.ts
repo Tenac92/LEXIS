@@ -1,8 +1,7 @@
-import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog, type BudgetNA853Split, type BudgetValidation, type BudgetValidationResponse, type BudgetHistory, type InsertBudgetHistory } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog, type BudgetNA853Split, type BudgetValidation, type BudgetValidationResponse, type BudgetHistory, type InsertBudgetHistory, type BudgetNotification } from "@shared/schema";
 import { db } from "./db";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import { PostgrestError } from '@supabase/supabase-js';
 
 const MemoryStoreSession = MemoryStore(session);
 
@@ -20,6 +19,7 @@ export interface IStorage {
   validateBudget(validation: BudgetValidation): Promise<BudgetValidationResponse>;
   createBudgetHistoryEntry(historyEntry: InsertBudgetHistory): Promise<BudgetHistory>;
   getBudgetHistory(projectId: string): Promise<BudgetHistory[]>;
+  getBudgetNotifications(): Promise<BudgetNotification[]>;
   sessionStore: session.Store;
 }
 
@@ -263,6 +263,24 @@ export class DatabaseStorage implements IStorage {
       return data?.map(item => item.unit) || [];
     } catch (error) {
       console.error('[Storage] Error fetching user units:', error);
+      throw error;
+    }
+  }
+  async getBudgetNotifications(): Promise<BudgetNotification[]> {
+    try {
+      const { data, error } = await db
+        .from('budget_notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[Storage] Error fetching budget notifications:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getBudgetNotifications:', error);
       throw error;
     }
   }
