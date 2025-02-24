@@ -447,15 +447,46 @@ export default function UsersPage() {
               <FormField
                 control={form.control}
                 name="department"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter department" autoComplete="off" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const selectedUnits = form.watch('units') || [];
+                  const { data: departments = [] } = useQuery({
+                    queryKey: ['departments', selectedUnits],
+                    queryFn: async () => {
+                      if (selectedUnits.length === 0) return [];
+                      const params = new URLSearchParams();
+                      selectedUnits.forEach(unit => params.append('units', unit));
+                      const response = await fetch(`/api/users/units/parts?${params}`);
+                      if (!response.ok) throw new Error('Failed to fetch departments');
+                      return response.json();
+                    },
+                    enabled: selectedUnits.length > 0
+                  });
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={departments.length === 0}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {departments.map((dept) => (
+                            <SelectItem key={dept} value={dept}>
+                              {dept}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <DialogFooter>
                 <Button

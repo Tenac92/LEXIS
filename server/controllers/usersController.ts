@@ -11,6 +11,48 @@ interface AuthenticatedRequest extends Request {
 
 const router = Router();
 
+// Get parts for selected units
+router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { units } = req.query;
+    
+    if (!units) {
+      return res.status(400).json({ message: 'Units parameter is required' });
+    }
+
+    const unitsList = Array.isArray(units) ? units : [units];
+
+    const { data, error } = await supabase
+      .from('unit_det')
+      .select('parts')
+      .in('unit_name', unitsList);
+
+    if (error) {
+      console.error('[Units] Error fetching parts:', error);
+      throw error;
+    }
+
+    // Combine all parts from selected units
+    const allParts = data?.reduce((acc: string[], unit) => {
+      if (unit.parts && Array.isArray(unit.parts)) {
+        return [...acc, ...unit.parts];
+      }
+      return acc;
+    }, []);
+
+    // Remove duplicates
+    const uniqueParts = [...new Set(allParts)];
+
+    res.json(uniqueParts.sort());
+  } catch (error) {
+    console.error('[Units] Error fetching unit parts:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch unit parts',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get all units
 router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res: Response) => {
   try {
