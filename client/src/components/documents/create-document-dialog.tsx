@@ -82,45 +82,45 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
   };
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-background/50 to-background border-primary/20">
-      <div className="space-y-6">
+    <Card className="p-3 bg-gradient-to-br from-background/50 to-background border-primary/20">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Επισκόπηση Προϋπολογισμού</h3>
-          <Badge variant={getBadgeVariant(percentageUsed)}>
-            {percentageUsed.toFixed(1)}% Χρησιμοποιημένο
+          <h3 className="text-sm font-medium">Προϋπολογισμός</h3>
+          <Badge variant={getBadgeVariant(percentageUsed)} className="text-xs">
+            {percentageUsed.toFixed(1)}% Χρήση
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Διαθέσιμος Προϋπολογισμός</p>
-            <p className="text-2xl font-bold text-primary">
+        <div className="grid grid-cols-3 gap-3 text-xs">
+          <div>
+            <p className="text-muted-foreground">Διαθέσιμος</p>
+            <p className="font-medium text-primary">
               {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Συνολικός Προϋπολογισμός</p>
-            <p className="text-2xl font-bold">
+          <div>
+            <p className="text-muted-foreground">Συνολικός</p>
+            <p className="font-medium">
               {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Ετήσια Κατανομή</p>
-            <p className="text-2xl font-bold">
+          <div>
+            <p className="text-muted-foreground">Ετήσιος</p>
+            <p className="font-medium">
               {budgetData.katanomes_etous.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div>
+          <div className="h-1 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full bg-primary transition-all duration-500 ease-in-out"
               style={{ width: `${Math.min(percentageUsed, 100)}%` }}
             />
           </div>
-          <p className="text-sm text-muted-foreground text-right">
-            Τρέχον Ποσό: {currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+          <p className="text-[10px] text-muted-foreground text-right mt-0.5">
+            Τρέχον: {currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
           </p>
         </div>
       </div>
@@ -898,15 +898,15 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                           </div>
                         </div>
                         <div className="mt-1 pl-8 text-xs text-destructive">
-                          {form.formState.errors.recipients?.[index]?.firstname && 
+                          {form.formState.errors.recipients?.[index]?.firstname &&
                             <span className="block">{form.formState.errors.recipients[index]?.firstname?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.lastname && 
+                          {form.formState.errors.recipients?.[index]?.lastname &&
                             <span className="block">{form.formState.errors.recipients[index]?.lastname?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.afm && 
+                          {form.formState.errors.recipients?.[index]?.afm &&
                             <span className="block">{form.formState.errors.recipients[index]?.afm?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.amount && 
+                          {form.formState.errors.recipients?.[index]?.amount &&
                             <span className="block">{form.formState.errors.recipients[index]?.amount?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.installment && 
+                          {form.formState.errors.recipients?.[index]?.installment &&
                             <span className="block">{form.formState.errors.recipients[index]?.installment?.message}</span>}
                         </div>
                       </Card>
@@ -917,7 +917,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             </div>
           )}
 
-          {currentStep=== 3 && (
+          {currentStep === 3 && (
             <div className="spacey-4">
               <div>
                 <h3 className="text-lg font-medium mb-2">Συνημμένα Έγγραφα</h3>
