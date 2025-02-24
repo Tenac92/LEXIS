@@ -24,8 +24,10 @@ import { ViewDocumentModal, EditDocumentModal, DeleteDocumentModal } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
 import { FAB } from "@/components/ui/fab";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function DocumentsPage() {
+  const { user } = useAuth();
   const [isAdvancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
@@ -42,7 +44,7 @@ export default function DocumentsPage() {
   const { toast } = useToast();
 
   const [filters, setFilters] = useState({
-    unit: 'all',
+    unit: user?.role === 'user' ? user.unit : 'all',
     status: 'all',
     user: 'all',
     dateFrom: '',
@@ -107,21 +109,23 @@ export default function DocumentsPage() {
           <div className="p-4">
             {/* Basic Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Μονάδα</label>
-                <Select 
-                  value={filters.unit}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Επιλέξτε μονάδα" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Όλες οι Μονάδες</SelectItem>
-                    {/* Add units dynamically */}
-                  </SelectContent>
-                </Select>
-              </div>
+              {user?.role !== 'user' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Μονάδα</label>
+                  <Select 
+                    value={filters.unit}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Επιλέξτε μονάδα" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Όλες οι Μονάδες</SelectItem>
+                      {/* Add units dynamically */}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Κατάσταση</label>
                 <Select 
@@ -314,7 +318,7 @@ export default function DocumentsPage() {
         }}
       />
 
-      <FAB />
+      {user?.role === 'user' && <FAB />}
     </div>
   );
 }

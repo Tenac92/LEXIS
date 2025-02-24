@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { CreateDocumentDialog } from "@/components/documents/create-document-dialog";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 const tooltipVariants = {
   initial: { opacity: 0, scale: 0.8, y: 10 },
@@ -32,8 +33,14 @@ const buttonVariants = {
 };
 
 export function FAB() {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+
+  // Only show FAB for users with 'user' role
+  if (user?.role !== 'user') {
+    return null;
+  }
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);

@@ -111,16 +111,17 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
       .from('generated_documents')
       .select('*');
 
-    if (req.user?.role !== 'admin' && req.user?.id) {
-      query = query.eq('generated_by', req.user.id);
+    // Apply unit-based filtering for regular users
+    if (req.user?.role === 'user') {
+      query = query.eq('unit', req.user.unit);
+    } else if (unit && unit !== 'all') {
+      // For admin/manager, allow filtering by specific unit
+      query = query.eq('unit', unit);
     }
 
-    // Apply filters
+    // Apply other filters
     if (status && status !== 'all') {
       query = query.eq('status', status);
-    }
-    if (unit && unit !== 'all') {
-      query = query.eq('unit', unit);
     }
     if (dateFrom) {
       query = query.gte('created_at', dateFrom);
