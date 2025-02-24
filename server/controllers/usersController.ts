@@ -3,6 +3,7 @@ import { supabase } from '../db';
 import { authenticateSession } from '../auth';
 import { Request, Response } from 'express';
 import type { User } from '@shared/schema';
+import bcrypt from 'bcrypt';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -108,13 +109,17 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       return res.status(400).json({ message: 'Email already exists' });
     }
 
+    // Hash password before storing
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+
     const { data: newUser, error } = await supabase
       .from('users')
       .insert([{
         email: req.body.email,
         name: req.body.name,
         role: req.body.role,
-        password: req.body.password,
+        password: hashedPassword, // Store hashed password
         units: Array.isArray(req.body.units) ? req.body.units : [],
         telephone: req.body.telephone || null,
         department: req.body.department || null
@@ -127,7 +132,9 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       throw error;
     }
 
-    res.status(201).json(newUser);
+    // Remove password from response
+    const { password, ...userWithoutPassword } = newUser;
+    res.status(201).json(userWithoutPassword);
   } catch (error) {
     console.error('[Users] User creation error:', error);
     res.status(500).json({ 
