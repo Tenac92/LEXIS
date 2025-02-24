@@ -31,6 +31,14 @@ export interface BudgetValidationResult {
 export class BudgetService {
   static async getBudget(mis: string): Promise<BudgetResponse> {
     try {
+      // Special case for notifications endpoint
+      if (mis === 'notifications') {
+        return {
+          status: 'success',
+          data: []
+        };
+      }
+
       if (!mis) {
         return {
           status: 'error',
