@@ -839,84 +839,85 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   </Button>
                 </div>
 
-                <div className="space-y-2">
-                  {recipients.map((_, index) => (
-                    <Card key={index} className="p-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium min-w-[24px] text-center">{index + 1}</span>
-                        <div className="grid grid-cols-6 gap-2 flex-1">
-                          <Input
-                            {...form.register(`recipients.${index}.firstname`)}
-                            placeholder="Όνομα"
-                            className="col-span-1"
-                          />
-                          <Input
-                            {...form.register(`recipients.${index}.lastname`)}
-                            placeholder="Επώνυμο"
-                            className="col-span-1"
-                          />
-                          <Input
-                            {...form.register(`recipients.${index}.afm`)}
-                            placeholder="ΑΦΜ"
-                            maxLength={9}
-                            className="col-span-1"
-                          />
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...form.register(`recipients.${index}.amount`, {
-                              valueAsNumber: true,
-                              min: 0.01
-                            })}
-                            placeholder="Ποσό"
-                            className="col-span-2"
-                          />
-                          <div className="flex items-center gap-2">
+                <ScrollArea className="h-[400px] pr-4">
+                  <div className="space-y-2">
+                    {recipients.map((_, index) => (
+                      <Card key={index} className="p-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium min-w-[24px] text-center">{index + 1}</span>
+                          <div className="grid grid-cols-6 gap-2 flex-1">
+                            <Input
+                              {...form.register(`recipients.${index}.firstname`)}
+                              placeholder="Όνομα"
+                              className="col-span-1"
+                            />
+                            <Input
+                              {...form.register(`recipients.${index}.lastname`)}
+                              placeholder="Επώνυμο"
+                              className="col-span-1"
+                            />
+                            <Input
+                              {...form.register(`recipients.${index}.afm`)}
+                              placeholder="ΑΦΜ"
+                              maxLength={9}
+                              className="col-span-1"
+                            />
                             <Input
                               type="number"
-                              min={1}
-                              max={12}
-                              {...form.register(`recipients.${index}.installment`, {
+                              step="0.01"
+                              {...form.register(`recipients.${index}.amount`, {
                                 valueAsNumber: true,
-                                min: 1,
-                                max: 12
+                                min: 0.01
                               })}
-                              placeholder="Δόση"
-                              className="w-20"
+                              placeholder="Ποσό"
+                              className="col-span-2"
                             />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="px-2"
-                              onClick={() => removeRecipient(index)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min={1}
+                                max={12}
+                                {...form.register(`recipients.${index}.installment`, {
+                                  valueAsNumber: true,
+                                  min: 1,
+                                  max: 12
+                                })}
+                                placeholder="Δόση"
+                                className="w-20"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="px-2"
+                                onClick={() => removeRecipient(index)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      {/* Show form errors if any */}
-                      <div className="mt-1 pl-8 text-xs text-destructive">
-                        {form.formState.errors.recipients?.[index]?.firstname && 
-                          <span className="block">{form.formState.errors.recipients[index]?.firstname?.message}</span>}
-                        {form.formState.errors.recipients?.[index]?.lastname && 
-                          <span className="block">{form.formState.errors.recipients[index]?.lastname?.message}</span>}
-                        {form.formState.errors.recipients?.[index]?.afm && 
-                          <span className="block">{form.formState.errors.recipients[index]?.afm?.message}</span>}
-                        {form.formState.errors.recipients?.[index]?.amount && 
-                          <span className="block">{form.formState.errors.recipients[index]?.amount?.message}</span>}
-                        {form.formState.errors.recipients?.[index]?.installment && 
-                          <span className="block">{form.formState.errors.recipients[index]?.installment?.message}</span>}
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+                        <div className="mt-1 pl-8 text-xs text-destructive">
+                          {form.formState.errors.recipients?.[index]?.firstname && 
+                            <span className="block">{form.formState.errors.recipients[index]?.firstname?.message}</span>}
+                          {form.formState.errors.recipients?.[index]?.lastname && 
+                            <span className="block">{form.formState.errors.recipients[index]?.lastname?.message}</span>}
+                          {form.formState.errors.recipients?.[index]?.afm && 
+                            <span className="block">{form.formState.errors.recipients[index]?.afm?.message}</span>}
+                          {form.formState.errors.recipients?.[index]?.amount && 
+                            <span className="block">{form.formState.errors.recipients[index]?.amount?.message}</span>}
+                          {form.formState.errors.recipients?.[index]?.installment && 
+                            <span className="block">{form.formState.errors.recipients[index]?.installment?.message}</span>}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
             </div>
           )}
 
-          {currentStep === 3 && (
+          {currentStep=== 3 && (
             <div className="spacey-4">
               <div>
                 <h3 className="text-lg font-medium mb-2">Συνημμένα Έγγραφα</h3>
@@ -962,7 +963,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] h-auto max-h-[85vh]">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] h-auto overflow-hidden">
         <DialogHeader className="pb-4">
           <DialogTitle>Δημιουργία Νέου Εγγράφου</DialogTitle>
           <DialogDescription>
@@ -974,7 +975,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <div className="relative flex-1 px-1">
+            <div className="px-1">
               {renderStepContent()}
             </div>
 
