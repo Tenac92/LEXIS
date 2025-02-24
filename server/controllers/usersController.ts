@@ -150,75 +150,81 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    if (!req.body.email || !req.body.name || !req.body.password || !req.body.role || !req.body.units || !req.body.department) {
-      return res.status(400).json({ 
+    const { email, name, password, role, units, department, telephone } = req.body;
+
+    // Validate required fields
+    const requiredFields = { email, name, password, role, units, department };
+    const missingFields = Object.entries(requiredFields)
+      .filter(([_, value]) => !value)
+      .map(([key]) => key);
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
         message: 'Missing required fields',
-        details: {
-          email: !req.body.email ? 'Email is required' : null,
-          name: !req.body.name ? 'Name is required' : null,
-          password: !req.body.password ? 'Password is required' : null,
-          role: !req.body.role ? 'Role is required' : null,
-          units: !req.body.units ? 'Units are required' : null,
-          department: !req.body.department ? 'Department is required' : null
-        }
+        details: missingFields.reduce((acc, field) => ({
+          ...acc,
+          [field]: `${field} is required`
+        }), {})
       });
     }
 
-    // Verify that all selected units exist
+    // Verify units exist
+    console.log('[Users] Verifying units:', units);
     const { data: unitData, error: unitError } = await supabase
       .from('unit_det')
       .select('unit_name, parts')
-      .in('unit_name', req.body.units);
+      .in('unit_name', units);
 
-    if (unitError || !unitData || unitData.length !== req.body.units.length) {
-      console.error('[Users] Invalid units:', req.body.units, unitError);
-      return res.status(400).json({ 
+    if (unitError || !unitData || unitData.length !== units.length) {
+      console.error('[Users] Invalid units:', units, unitError);
+      return res.status(400).json({
         message: 'One or more invalid units selected',
-        error: unitError?.message 
+        error: unitError?.message
       });
     }
 
-    // Verify that the department exists in at least one of the selected units' parts
-    const allParts = unitData.reduce((acc, unit) => [...acc, ...(unit.parts || [])], []);
-    if (!allParts.includes(req.body.department)) {
-      console.error('[Users] Invalid department:', req.body.department, 'Available parts:', allParts);
-      return res.status(400).json({ 
+    // Verify department exists in units' parts
+    const allParts = Array.from(new Set(
+      unitData.flatMap(unit => unit.parts || [])
+    ));
+
+    if (!allParts.includes(department)) {
+      console.error('[Users] Invalid department:', department, 'Available parts:', allParts);
+      return res.status(400).json({
         message: 'Selected department is not valid for the selected units',
         validDepartments: allParts
       });
     }
 
-    // This validation is already handled above with the units array check
-
-    // Check if email already exists
+    // Check if email exists
     const { data: existingUser } = await supabase
       .from('users')
       .select('id')
-      .eq('email', req.body.email)
+      .eq('email', email)
       .single();
 
     if (existingUser) {
       return res.status(400).json({ message: 'Email already exists' });
     }
 
-    // Hash password before storing
+    // Hash password
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    const newUserData = {
-      email: req.body.email,
-      name: req.body.name,
-      role: req.body.role,
-      password: hashedPassword,
-      unit: JSON.stringify(req.body.units), // Convert array to JSON string
-      department: req.body.department,
-      telephone: req.body.telephone || null
-    };
-
+    // Create user
+    console.log('[Users] Creating new user:', { email, name, role, units, department });
     const { data: newUser, error } = await supabase
       .from('users')
-      .insert([newUserData])
-      .select('id, email, name, role, unit, department, telephone')
+      .insert([{
+        email,
+        name,
+        role,
+        password: hashedPassword,
+        units, // Changed from 'unit' to 'units' to match schema
+        department,
+        telephone: telephone || null
+      }])
+      .select('id, email, name, role, units, department, telephone')
       .single();
 
     if (error) {
@@ -230,11 +236,12 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       throw new Error('Failed to create user - no data returned');
     }
 
+    console.log('[Users] Successfully created user:', newUser.id);
     res.status(201).json(newUser);
   } catch (error) {
     console.error('[Users] User creation error:', error);
-    res.status(500).json({ 
-      message: 'Failed to create user', 
+    res.status(500).json({
+      message: 'Failed to create user',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
