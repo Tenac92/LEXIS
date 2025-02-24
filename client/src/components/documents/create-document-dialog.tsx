@@ -839,80 +839,78 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   </Button>
                 </div>
 
-                <ScrollArea className="h-[400px] pr-4">
-                  <div className="space-y-2">
-                    {recipients.map((_, index) => (
-                      <Card key={index} className="p-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium min-w-[24px] text-center">{index + 1}</span>
-                          <div className="grid grid-cols-6 gap-2 flex-1">
-                            <Input
-                              {...form.register(`recipients.${index}.firstname`)}
-                              placeholder="Όνομα"
-                              className="col-span-1"
-                            />
-                            <Input
-                              {...form.register(`recipients.${index}.lastname`)}
-                              placeholder="Επώνυμο"
-                              className="col-span-1"
-                            />
-                            <Input
-                              {...form.register(`recipients.${index}.afm`)}
-                              placeholder="ΑΦΜ"
-                              maxLength={9}
-                              className="col-span-1"
-                            />
+                <div className="space-y-2">
+                  {recipients.map((_, index) => (
+                    <Card key={index} className="p-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium min-w-[24px] text-center">{index + 1}</span>
+                        <div className="grid grid-cols-6 gap-2 flex-1">
+                          <Input
+                            {...form.register(`recipients.${index}.firstname`)}
+                            placeholder="Όνομα"
+                            className="col-span-1"
+                          />
+                          <Input
+                            {...form.register(`recipients.${index}.lastname`)}
+                            placeholder="Επώνυμο"
+                            className="col-span-1"
+                          />
+                          <Input
+                            {...form.register(`recipients.${index}.afm`)}
+                            placeholder="ΑΦΜ"
+                            maxLength={9}
+                            className="col-span-1"
+                          />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...form.register(`recipients.${index}.amount`, {
+                              valueAsNumber: true,
+                              min: 0.01
+                            })}
+                            placeholder="Ποσό"
+                            className="col-span-2"
+                          />
+                          <div className="flex items-center gap-2">
                             <Input
                               type="number"
-                              step="0.01"
-                              {...form.register(`recipients.${index}.amount`, {
+                              min={1}
+                              max={12}
+                              {...form.register(`recipients.${index}.installment`, {
                                 valueAsNumber: true,
-                                min: 0.01
+                                min: 1,
+                                max: 12
                               })}
-                              placeholder="Ποσό"
-                              className="col-span-2"
+                              placeholder="Δόση"
+                              className="w-20"
                             />
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min={1}
-                                max={12}
-                                {...form.register(`recipients.${index}.installment`, {
-                                  valueAsNumber: true,
-                                  min: 1,
-                                  max: 12
-                                })}
-                                placeholder="Δόση"
-                                className="w-20"
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="px-2"
-                                onClick={() => removeRecipient(index)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="px-2"
+                              onClick={() => removeRecipient(index)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="mt-1 pl-8 text-xs text-destructive">
-                          {form.formState.errors.recipients?.[index]?.firstname &&
-                            <span className="block">{form.formState.errors.recipients[index]?.firstname?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.lastname &&
-                            <span className="block">{form.formState.errors.recipients[index]?.lastname?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.afm &&
-                            <span className="block">{form.formState.errors.recipients[index]?.afm?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.amount &&
-                            <span className="block">{form.formState.errors.recipients[index]?.amount?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.installment &&
-                            <span className="block">{form.formState.errors.recipients[index]?.installment?.message}</span>}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
+                      </div>
+                      <div className="mt-1 pl-8 text-xs text-destructive">
+                        {form.formState.errors.recipients?.[index]?.firstname &&
+                          <span className="block">{form.formState.errors.recipients[index]?.firstname?.message}</span>}
+                        {form.formState.errors.recipients?.[index]?.lastname &&
+                          <span className="block">{form.formState.errors.recipients[index]?.lastname?.message}</span>}
+                        {form.formState.errors.recipients?.[index]?.afm &&
+                          <span className="block">{form.formState.errors.recipients[index]?.afm?.message}</span>}
+                        {form.formState.errors.recipients?.[index]?.amount &&
+                          <span className="block">{form.formState.errors.recipients[index]?.amount?.message}</span>}
+                        {form.formState.errors.recipients?.[index]?.installment &&
+                          <span className="block">{form.formState.errors.recipients[index]?.installment?.message}</span>}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -963,7 +961,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] h-auto overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col">
         <DialogHeader className="pb-4">
           <DialogTitle>Δημιουργία Νέου Εγγράφου</DialogTitle>
           <DialogDescription>
@@ -974,12 +972,257 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         <StepIndicator currentStep={currentStep} />
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
-            <div className="flex-1 overflow-hidden">
-              <ScrollArea className="h-[calc(65vh-100px)] px-1">
-                {renderStepContent()}
-              </ScrollArea>
-            </div>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1">
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-4 pb-4">
+                {currentStep === 2 && budgetData && (
+                  <BudgetIndicator
+                    budgetData={budgetData}
+                    currentAmount={currentAmount}
+                  />
+                )}
+
+                {currentStep === 0 && (
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="unit"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Επιλογή Μονάδας</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={unitsLoading}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Επιλέξτε μονάδα" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {units.map((unit: any) => (
+                                <SelectItem key={unit.id} value={unit.id}>
+                                  {unit.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {currentStep === 1 && (
+                  <div className="space-y-4">
+                    {budgetData && (
+                      <BudgetIndicator
+                        budgetData={budgetData}
+                        currentAmount={currentAmount}
+                      />
+                    )}
+
+                    <div className="grid gap-4">
+                      <FormField
+                        control={form.control}
+                        name="project_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Έργο</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              disabled={!selectedUnit || projectsLoading}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Επιλέξτε έργο" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {projects.map((project) => (
+                                  <SelectItem key={project.id} value={project.id}>
+                                    {project.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {selectedProject && (
+                        <FormField
+                          control={form.control}
+                          name="expenditure_type"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Τύπος Δαπάνης</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                                disabled={!selectedProject?.expenditure_types?.length}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Επιλέξτε τύπο" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {selectedProject?.expenditure_types?.map((type: string) => (
+                                    <SelectItem key={type} value={type}>
+                                      {type}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {currentStep === 2 && (
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h3 className="text-lg font-medium">Παραλήπτες</h3>
+                        <p className="text-sm text-muted-foreground">Προσθήκη έως 10 παραληπτών</p>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={addRecipient}
+                        disabled={recipients.length >= 10}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Προσθήκη Παραλήπτη
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {recipients.map((_, index) => (
+                        <Card key={index} className="p-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium min-w-[24px] text-center">{index + 1}</span>
+                            <div className="grid grid-cols-6 gap-2 flex-1">
+                              <Input
+                                {...form.register(`recipients.${index}.firstname`)}
+                                placeholder="Όνομα"
+                                className="col-span-1"
+                              />
+                              <Input
+                                {...form.register(`recipients.${index}.lastname`)}
+                                placeholder="Επώνυμο"
+                                className="col-span-1"
+                              />
+                              <Input
+                                {...form.register(`recipients.${index}.afm`)}
+                                placeholder="ΑΦΜ"
+                                maxLength={9}
+                                className="col-span-1"
+                              />
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...form.register(`recipients.${index}.amount`, {
+                                  valueAsNumber: true,
+                                  min: 0.01
+                                })}
+                                placeholder="Ποσό"
+                                className="col-span-2"
+                              />
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={12}
+                                  {...form.register(`recipients.${index}.installment`, {
+                                    valueAsNumber: true,
+                                    min: 1,
+                                    max: 12
+                                  })}
+                                  placeholder="Δόση"
+                                  className="w-20"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="px-2"
+                                  onClick={() => removeRecipient(index)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-1 pl-8 text-xs text-destructive">
+                            {form.formState.errors.recipients?.[index]?.firstname &&
+                              <span className="block">{form.formState.errors.recipients[index]?.firstname?.message}</span>}
+                            {form.formState.errors.recipients?.[index]?.lastname &&
+                              <span className="block">{form.formState.errors.recipients[index]?.lastname?.message}</span>}
+                            {form.formState.errors.recipients?.[index]?.afm &&
+                              <span className="block">{form.formState.errors.recipients[index]?.afm?.message}</span>}
+                            {form.formState.errors.recipients?.[index]?.amount &&
+                              <span className="block">{form.formState.errors.recipients[index]?.amount?.message}</span>}
+                            {form.formState.errors.recipients?.[index]?.installment &&
+                              <span className="block">{form.formState.errors.recipients[index]?.installment?.message}</span>}
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {currentStep === 3 && (
+                  <div className="spacey-4">
+                    <div>
+                      <h3 className="text-lg font-medium mb-2">Συνημμένα Έγγραφα</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {attachments.map((attachment) => (
+                          <Card key={attachment.id} className="p-3">
+                            <FormField
+                              control={form.control}
+                              name="selectedAttachments"
+                              render={({ field }) => (
+                                <FormItem className="flex items-start space-x-3 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(attachment.id)}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        const newValue = checked
+                                          ? [...current, attachment.id]
+                                          : current.filter((id) => id !== attachment.id);
+                                        field.onChange(newValue);
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1">
+                                    <div className="text-sm font-medium">{attachment.title}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {attachment.description}
+                                    </div>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
 
             <div className="flex justify-between items-center gap-4 pt-4 mt-4 border-t">
               <Button
