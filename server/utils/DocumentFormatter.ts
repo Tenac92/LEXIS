@@ -430,7 +430,7 @@ export class DocumentFormatter {
     return `#${document.id}`;
   }
 
-  clearCache() {
-    this.cache.clear();
+  static clearCache() {
+    return; // Placeholder for cache clearing if needed
   }
 }
