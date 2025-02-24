@@ -59,12 +59,12 @@ export class DocumentFormatter {
                     children: [
                       new TextRun({
                         text: item.text,
-                        size: 24,
+                        size: 20, // Adjusted size
                         bold: item.bold,
                       }),
                     ],
                     alignment: AlignmentType.LEFT,
-                    spacing: { before: 120, after: 120 },
+                    spacing: { before: 100, after: 100 }, // Adjusted spacing
                   }),
               ),
               width: { size: 65, type: WidthType.PERCENTAGE },
@@ -82,12 +82,12 @@ export class DocumentFormatter {
                     children: [
                       new TextRun({
                         text: item.text,
-                        size: 24,
+                        size: 20, // Adjusted size
                         bold: item.bold,
                       }),
                     ],
                     alignment: AlignmentType.RIGHT,
-                    spacing: { before: 120, after: 120 },
+                    spacing: { before: 100, after: 100 }, // Adjusted spacing
                   }),
               ),
               width: { size: 35, type: WidthType.PERCENTAGE },
@@ -104,6 +104,79 @@ export class DocumentFormatter {
     });
   }
 
+  static createDefaultHeader(unitDetails: any = {}) {
+    const headerInfo = [
+      { text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ", bold: true },
+      { text: "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ &", bold: true },
+      { text: "ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ", bold: true },
+      { text: "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ", bold: true },
+      { text: "ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ", bold: true },
+      { text: unitDetails?.unit_name || "", bold: true },
+      { text: "Ταχ. Δ/νση\t:\tΔημοκρίτου 2", bold: false },
+      { text: "Ταχ. Κώδικας\t:\t115 23, Μαρούσι", bold: false },
+      { text: `Πληροφορίες\t:\t${unitDetails?.user_name || ""}`, bold: false },
+      { text: `Τηλέφωνο\t:\t${unitDetails?.phone || ""}`, bold: false },
+      { text: `e-mail\t:\t${unitDetails?.email || ""}`, bold: false },
+    ];
+
+    const rightColumnInfo = [
+      { text: `Αθήνα, ${new Date().toLocaleDateString("el-GR")}`, bold: false },
+      { text: "Αρ. Πρωτ.: ......................", bold: true },
+      { text: "" },
+      { text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών", bold: false },
+      { text: "Διεύθυνση Οικονομικής Διαχείρησης", bold: false },
+      { text: "Τμήμα Ελέγχου Εκκαθάρισης και", bold: false },
+      { text: "Λογιστικής Παρακολούθησης Δαπανών", bold: false },
+      { text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)", bold: false },
+    ];
+
+    return this.createHeaderTable(headerInfo, rightColumnInfo);
+  }
+
+  static createReferenceSection() {
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε, συμπληρώθηκε και ισχύει.",
+            size: 20,
+          }),
+        ],
+        spacing: { before: 300, after: 200 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε. , σύμφωνα με τα κάτωθι στοιχεία.",
+            size: 20,
+          }),
+        ],
+        spacing: { before: 200, after: 200 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: "ΑΡ. ΕΡΓΟΥ\t:\t", size: 20, bold: true }),
+          new TextRun({ text: "2024ΝΑ85300084  της ΣΑΝΑ 853 (ΤΕ 2023ΝΑ27100228)", size: 20 }),
+        ],
+        spacing: { before: 200, after: 200 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: "ΑΛΕ\t:\t", size: 20, bold: true }),
+          new TextRun({ text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.", size: 20 }),
+        ],
+        spacing: { before: 200, after: 200 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: "ΤΟΜΕΑΣ\t:\t", size: 20, bold: true }),
+          new TextRun({ text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών", size: 20 }),
+        ],
+        spacing: { before: 200, after: 300 },
+      }),
+    ];
+  }
+
   static createPaymentTable(recipients: any[]) {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -116,7 +189,6 @@ export class DocumentFormatter {
         insideVertical: { style: BorderStyle.SINGLE, size: 1 },
       },
       rows: [
-        // Header row
         new TableRow({
           children: [
             this.createTableHeaderCell("Α/Α"),
@@ -127,34 +199,21 @@ export class DocumentFormatter {
             this.createTableHeaderCell("ΠΟΣΟ (€)"),
           ],
         }),
-        // Data rows
         ...recipients.map(
           (recipient, index) =>
             new TableRow({
               children: [
-                this.createTableCell(
-                  (index + 1).toString(),
-                  AlignmentType.CENTER,
-                ),
-                this.createTableCell(
-                  recipient.lastname || "",
-                  AlignmentType.LEFT,
-                ),
-                this.createTableCell(
-                  recipient.firstname || "",
-                  AlignmentType.LEFT,
-                ),
-                this.createTableCell(
-                  recipient.fathername || "",
-                  AlignmentType.LEFT,
-                ),
+                this.createTableCell((index + 1).toString(), AlignmentType.CENTER),
+                this.createTableCell(recipient.lastname || "", AlignmentType.LEFT),
+                this.createTableCell(recipient.firstname || "", AlignmentType.LEFT),
+                this.createTableCell(recipient.fathername || "", AlignmentType.LEFT),
                 this.createTableCell(recipient.afm || "", AlignmentType.CENTER),
                 this.createTableCell(
                   this.formatCurrency(recipient.amount || 0),
-                  AlignmentType.RIGHT,
+                  AlignmentType.RIGHT
                 ),
               ],
-            }),
+            })
         ),
       ],
     });
@@ -164,7 +223,7 @@ export class DocumentFormatter {
     return new TableCell({
       children: [
         new Paragraph({
-          children: [new TextRun({ text, bold: true, size: 24 })],
+          children: [new TextRun({ text, bold: true, size: 20 })],
           alignment: AlignmentType.CENTER,
         }),
       ],
@@ -176,7 +235,7 @@ export class DocumentFormatter {
     return new TableCell({
       children: [
         new Paragraph({
-          children: [new TextRun({ text, size: 24 })],
+          children: [new TextRun({ text, size: 20 })],
           alignment,
         }),
       ],
@@ -184,37 +243,15 @@ export class DocumentFormatter {
     });
   }
 
-  static createDefaultHeader(unitDetails: any = {}) {
-    const headerInfo = [
-      { text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ", bold: true },
-      { text: "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ &", bold: true },
-      { text: "ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ", bold: true },
-      { text: "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ", bold: true },
-      { text: "ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ", bold: true },
-      { text: unitDetails?.unit_name || "", bold: true },
-      { text: "Ταχ. Δ/νση	:	Δημοκρίτου 2"},
-       { text: "Ταχ. Κώδικας	:	115 23, Μαρούσι"},
-         { text: `Πληροφορίες\t:\t${unitDetails?.user_name || ""}`},
-           { text: `Τηλέφωνο\t:\t${unitDetails?.phone || ""}` },
-           { text: `e-mail	:	${unitDetails?.email || ""}`}      
-    ];
-
-    const rightColumnInfo = [
-      { text: `Αθήνα, ${new Date().toLocaleDateString("el-GR")}`, bold: false },
-      { text: "Αρ. Πρωτ.: ......................", bold: true },
-      { text: "" },
-      { text: "" },
-      { text: "" },
-      { text: "" },
-      { text: "ΠΡΟΣ:  Γενική Δ/νση Οικονομικών Υπηρεσιών" },
-      { text: "Διεύθυνση Οικονομικής Διαχείρησης" },
-      {
-        text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησησς Δαπανών",
-      },
-      { text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)"},
-    ];
-
-    return this.createHeaderTable(headerInfo, rightColumnInfo);
+  static createListItems(items: string[]) {
+    return items.map(
+      (item, index) =>
+        new Paragraph({
+          children: [new TextRun({ text: `${index + 1}. ${item}`, size: 20 })],
+          indent: { left: 360 },
+          spacing: { before: 100, after: 100 },
+        })
+    );
   }
 
   static async createFooter(document: any = {}) {
@@ -251,21 +288,20 @@ export class DocumentFormatter {
       rows: [
         new TableRow({
           children: [
-            // Left column: Attachments and distributions
             new TableCell({
               children: [
                 new Paragraph({
                   children: [
-                    new TextRun({ text: "ΣΥΝΗΜΜΕΝΑ:", bold: true, size: 24 }),
+                    new TextRun({ text: "ΣΥΝΗΜΜΕΝΑ:", bold: true, size: 20 }),
                   ],
-                  spacing: { before: 240, after: 240 },
+                  spacing: { before: 200, after: 200 },
                 }),
                 ...this.createListItems(attachments),
                 new Paragraph({
                   children: [
-                    new TextRun({ text: "ΚΟΙΝΟΠΟΙΗΣΗ:", bold: true, size: 24 }),
+                    new TextRun({ text: "ΚΟΙΝΟΠΟΙΗΣΗ:", bold: true, size: 20 }),
                   ],
-                  spacing: { before: 240, after: 240 },
+                  spacing: { before: 200, after: 200 },
                 }),
                 ...this.createListItems(notifications),
                 new Paragraph({
@@ -273,16 +309,15 @@ export class DocumentFormatter {
                     new TextRun({
                       text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ:",
                       bold: true,
-                      size: 24,
+                      size: 20,
                     }),
                   ],
-                  spacing: { before: 240, after: 240 },
+                  spacing: { before: 200, after: 200 },
                 }),
                 ...this.createListItems(internalDist),
               ],
               width: { size: 60, type: WidthType.PERCENTAGE },
             }),
-            // Right column: Signature
             new TableCell({
               children: [
                 new Paragraph({
@@ -290,7 +325,7 @@ export class DocumentFormatter {
                     new TextRun({
                       text: "Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ Δ.Α.Ε.Φ.Κ.",
                       bold: true,
-                      size: 24,
+                      size: 20,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
@@ -305,13 +340,13 @@ export class DocumentFormatter {
                     new TextRun({
                       text: "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ",
                       bold: true,
-                      size: 24,
+                      size: 20,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
                 }),
                 new Paragraph({
-                  children: [new TextRun({ text: "ΠΟΛ. ΜΗΧΑΝΙΚΟΣ", size: 24 })],
+                  children: [new TextRun({ text: "ΠΟΛ. ΜΗΧΑΝΙΚΟΣ", size: 20 })],
                   alignment: AlignmentType.CENTER,
                 }),
               ],
@@ -323,16 +358,5 @@ export class DocumentFormatter {
     });
 
     return footerTable;
-  }
-
-  static createListItems(items: string[]) {
-    return items.map(
-      (item, index) =>
-        new Paragraph({
-          children: [new TextRun({ text: `${index + 1}. ${item}`, size: 24 })],
-          indent: { left: 360 },
-          spacing: { before: 120, after: 120 },
-        }),
-    );
   }
 }
