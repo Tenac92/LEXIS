@@ -22,8 +22,10 @@ export interface BudgetValidationResult {
   status: 'success' | 'error' | 'warning';
   message?: string;
   requiresNotification?: boolean;
-  notificationType?: 'funding' | 'reallocation' | 'low_budget';
+  notificationType?: 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning';
   allowDocx?: boolean;
+  priority?: 'high' | 'medium' | 'low';
+  metadata?: Record<string, unknown>;
 }
 
 export class BudgetService {
@@ -127,17 +129,32 @@ export class BudgetService {
       const userView = parseFloat(budgetData.user_view?.toString() || '0');
       const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
       const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
-      const twentyPercentThreshold = katanomesEtous * 0.2;
 
-      // Check if current user_view is already below 20% threshold
-      if (userView <= twentyPercentThreshold) {
+      // Enhanced threshold checks
+      const thresholds = {
+        critical: katanomesEtous * 0.1,  // 10% threshold
+        warning: katanomesEtous * 0.2,   // 20% threshold
+        attention: katanomesEtous * 0.3   // 30% threshold
+      };
+
+      // Current amount percentage of annual budget
+      const percentageOfAnnual = (amount / katanomesEtous) * 100;
+
+      // Check if current user_view is already below critical threshold
+      if (userView <= thresholds.critical) {
         return {
           status: 'warning',
           canCreate: true,
-          message: 'Current budget is below 20% of annual allocation',
+          message: 'CRITICAL: Current budget is below 10% of annual allocation',
           requiresNotification: true,
           notificationType: 'low_budget',
-          allowDocx: true
+          allowDocx: true,
+          priority: 'high',
+          metadata: {
+            threshold: 'critical',
+            currentPercentage: (userView / katanomesEtous) * 100,
+            recommendedAction: 'Immediate budget review required'
+          }
         };
       }
 
@@ -146,40 +163,78 @@ export class BudgetService {
           status: 'error',
           canCreate: false,
           message: 'Amount exceeds available budget',
-          allowDocx: false
+          allowDocx: false,
+          metadata: {
+            available: userView,
+            requested: amount,
+            shortfall: amount - userView
+          }
         };
       }
 
       const remainingEthsiaPistosi = ethsiaPistosi - amount;
       const remainingUserView = userView - amount;
 
-      if (remainingEthsiaPistosi <= 0) {
+      // Enhanced notification logic with priority levels
+      if (remainingEthsiaPistosi <= thresholds.critical) {
         return {
           status: 'warning',
           canCreate: true,
-          message: 'This amount will deplete the annual budget',
+          message: 'This amount will critically deplete the annual budget',
           requiresNotification: true,
           notificationType: 'funding',
-          allowDocx: true
+          allowDocx: true,
+          priority: 'high',
+          metadata: {
+            threshold: 'critical',
+            remaining: remainingEthsiaPistosi,
+            recommendedAction: 'Immediate funding request required'
+          }
         };
       }
 
-      // Check if the transaction would bring user_view below 20% threshold
-      if (remainingUserView <= twentyPercentThreshold) {
+      if (remainingUserView <= thresholds.warning) {
         return {
           status: 'warning',
           canCreate: true,
           message: 'This amount will reduce the budget below 20% of annual allocation',
           requiresNotification: true,
           notificationType: 'reallocation',
-          allowDocx: true
+          allowDocx: true,
+          priority: 'medium',
+          metadata: {
+            threshold: 'warning',
+            remaining: remainingUserView,
+            recommendedAction: 'Budget reallocation review recommended'
+          }
+        };
+      }
+
+      if (remainingUserView <= thresholds.attention) {
+        return {
+          status: 'warning',
+          canCreate: true,
+          message: 'Budget approaching low threshold',
+          requiresNotification: true,
+          notificationType: 'threshold_warning',
+          allowDocx: true,
+          priority: 'low',
+          metadata: {
+            threshold: 'attention',
+            remaining: remainingUserView,
+            recommendedAction: 'Monitor budget levels'
+          }
         };
       }
 
       return {
         status: 'success',
         canCreate: true,
-        allowDocx: true
+        allowDocx: true,
+        metadata: {
+          remainingAfterOperation: remainingUserView,
+          percentageUsed: ((katanomesEtous - remainingUserView) / katanomesEtous) * 100
+        }
       };
     } catch (error) {
       console.error('[BudgetService] Budget validation error:', error);
@@ -189,6 +244,56 @@ export class BudgetService {
         message: 'Failed to validate budget',
         allowDocx: false
       };
+    }
+  }
+
+  static async createBudgetNotification(notificationData: {
+    mis: string;
+    type: 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning';
+    amount: number;
+    current_budget: number;
+    ethsia_pistosi: number;
+    reason?: string;
+    priority: 'high' | 'medium' | 'low';
+    metadata?: Record<string, unknown>;
+    created_by: number;
+    action_deadline?: Date;
+  }) {
+    try {
+      const { data: notification, error } = await supabase
+        .from('budget_notifications')
+        .insert([{
+          ...notificationData,
+          status: 'pending',
+          action_required: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Create audit log entry
+      await supabase
+        .from('budget_history')
+        .insert([{
+          mis: notificationData.mis,
+          change_type: 'notification_created',
+          change_reason: `Budget notification created: ${notificationData.type}`,
+          created_by: notificationData.created_by,
+          created_at: new Date().toISOString(),
+          metadata: {
+            notification_id: notification.id,
+            notification_type: notificationData.type,
+            priority: notificationData.priority
+          }
+        }]);
+
+      return notification;
+    } catch (error) {
+      console.error('[BudgetService] Create notification error:', error);
+      throw error;
     }
   }
 

@@ -23,15 +23,21 @@ export const budgetNA853Split = pgTable("budget_na853_split", {
 export const budgetNotifications = pgTable("budget_notifications", {
   id: serial("id").primaryKey(),
   mis: text("mis").notNull(),
-  type: text("type").notNull(), // 'funding' or 'reallocation'
+  type: text("type").notNull(), // 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning'
   amount: numeric("amount").notNull(),
   current_budget: numeric("current_budget").notNull(),
   ethsia_pistosi: numeric("ethsia_pistosi").notNull(),
   reason: text("reason"),
-  status: text("status").default("pending"),
+  priority: text("priority").default("medium"), // 'high' | 'medium' | 'low'
+  status: text("status").default("pending"), // 'pending' | 'approved' | 'rejected' | 'in_review'
+  metadata: jsonb("metadata"), // Additional context data
+  action_required: boolean("action_required").default(true),
+  action_deadline: timestamp("action_deadline"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
   created_by: integer("created_by").references(() => users.id),
+  reviewed_by: integer("reviewed_by").references(() => users.id),
+  review_notes: text("review_notes"),
 });
 
 // Users table matching the actual database structure
@@ -188,13 +194,18 @@ export const budgetValidationResponseSchema = z.object({
   allowDocx: z.boolean().optional(),
 });
 
-// New Budget Notification Schema
+// Enhanced Budget Notification Schema
 export const insertBudgetNotificationSchema = createInsertSchema(budgetNotifications, {
-  type: z.enum(["funding", "reallocation"]),
+  type: z.enum(["funding", "reallocation", "low_budget", "threshold_warning"]),
   amount: z.number().min(0, "Amount must be non-negative"),
   current_budget: z.number().min(0, "Current budget must be non-negative"),
   ethsia_pistosi: z.number().min(0, "Annual credit must be non-negative"),
-  status: z.enum(["pending", "approved", "rejected"]).default("pending"),
+  priority: z.enum(["high", "medium", "low"]).default("medium"),
+  status: z.enum(["pending", "approved", "rejected", "in_review"]).default("pending"),
+  metadata: z.record(z.unknown()).optional(),
+  action_required: z.boolean().default(true),
+  action_deadline: z.date().optional(),
+  review_notes: z.string().optional()
 }).omit({ id: true, created_at: true, updated_at: true });
 
 // Enhanced recipient schema with better validation

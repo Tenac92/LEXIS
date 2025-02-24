@@ -3,6 +3,9 @@ const router = express.Router();
 const { supabase } = require('../config/db.js');
 const { authenticateToken } = require('../middleware/authMiddleware.js');
 const { ApiError } = require('../utils/apiErrorHandler.js');
+const { validateBudgetData } = require('../utils/validation');
+const auditLogger = require('../utils/auditLogger'); // Assuming this is defined elsewhere
+const BudgetService = require('../services/budgetService'); // Assuming this is defined elsewhere
 
 // Helper functions
 const sanitizeMIS = (mis) => mis?.toString().trim() || '';
@@ -77,8 +80,8 @@ router.post('/bulk-update', authenticateToken, async (req, res) => {
 
       const { error } = await supabase
         .from('budget_na853_split')
-        .upsert({ na853, ...sanitizedData, updated_at: new Date().toISOString() }, 
-                { onConflict: 'na853', returning: 'minimal' });
+        .upsert({ na853, ...sanitizedData, updated_at: new Date().toISOString() },
+          { onConflict: 'na853', returning: 'minimal' });
 
       if (error) throw error;
       results.success.push(na853);
@@ -131,15 +134,31 @@ router.post('/:mis/update-amount', authenticateToken, async (req, res) => {
   }
 });
 
-const { validateBudgetData } = require('../utils/validation');
 
 router.post('/notify-admin', authenticateToken, async (req, res) => {
   try {
-    const { type, mis, amount, current_budget, ethsia_pistosi, reason } = req.body;
+    const {
+      type,
+      mis,
+      amount,
+      current_budget,
+      ethsia_pistosi,
+      reason,
+      priority = 'medium',
+      metadata = {},
+      action_deadline
+    } = req.body;
     const user = req.user;
 
     // Enhanced validation
-    const validationResult = validateBudgetData({ type, mis, amount, current_budget, ethsia_pistosi });
+    const validationResult = validateBudgetData({
+      type,
+      mis,
+      amount,
+      current_budget,
+      ethsia_pistosi
+    });
+
     if (!validationResult.isValid) {
       return res.status(400).json({
         status: 'error',
@@ -152,80 +171,49 @@ router.post('/notify-admin', authenticateToken, async (req, res) => {
     await auditLogger.log({
       action: 'BUDGET_NOTIFICATION',
       user_id: user.id,
-      details: { mis, type, amount }
+      details: {
+        mis,
+        type,
+        amount,
+        priority,
+        metadata
+      }
     });
 
-    // Enhanced input validation
-    const validations = {
-      type: !type || !['funding', 'reallocation'].includes(type),
-      mis: !mis?.toString().trim(),
-      amount: isNaN(parseFloat(amount)) || parseFloat(amount) <= 0,
-      current_budget: isNaN(parseFloat(current_budget)),
-      ethsia_pistosi: isNaN(parseFloat(ethsia_pistosi))
-    };
-
-    const failedValidations = Object.entries(validations)
-      .filter(([_, failed]) => failed)
-      .map(([field]) => field);
-
-    if (failedValidations.length > 0) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid parameters',
-        details: failedValidations
-      });
-    }
-
-    // Validate numeric values
-    if ([amount, current_budget, ethsia_pistosi].some(val => isNaN(parseFloat(val)))) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid numeric values provided'
-      });
-    }
-
-    // Check project existence
-    const { data: project, error: projectCheckError } = await supabase
-      .from('project_catalog')
-      .select('*')
-      .eq('mis', mis)
-      .single();
-
-    if (projectCheckError || !project) {
-      return res.status(404).json({
-        status: 'error',
-        message: `Project with MIS ${mis} not found`
-      });
-    }
-
-    // Create notification
-    const notification = {
+    // Create notification with enhanced data
+    const notification = await BudgetService.createBudgetNotification({
       mis,
       type,
       amount: parseFloat(amount),
       current_budget: parseFloat(current_budget),
       ethsia_pistosi: parseFloat(ethsia_pistosi),
       reason,
-      status: 'pending',
-      created_at: new Date().toISOString()
-    };
+      priority,
+      metadata: {
+        ...metadata,
+        source_ip: req.ip,
+        user_agent: req.headers['user-agent'],
+        notification_context: {
+          budget_percentage: (parseFloat(amount) / parseFloat(current_budget)) * 100,
+          annual_budget_impact: (parseFloat(amount) / parseFloat(ethsia_pistosi)) * 100
+        }
+      },
+      created_by: user.id,
+      action_deadline: action_deadline ? new Date(action_deadline) : undefined
+    });
 
-    const { data: insertedNotification, error: notificationError } = await supabase
-      .from('budget_notifications')
-      .insert([notification])
-      .select()
-      .single();
+    // Update project status with more specific states
+    const projectStatus = type === 'funding' ? 'pending_funding' :
+      type === 'reallocation' ? 'pending_reallocation' :
+        type === 'low_budget' ? 'budget_warning' :
+          'budget_review_needed';
 
-    if (notificationError || !insertedNotification) {
-      throw new Error(notificationError?.message || 'Failed to create notification record');
-    }
-
-    // Update project status
-    // Only update the status column
     const { error: updateError } = await supabase
       .from('project_catalog')
       .update({
-        status: type === 'funding' ? 'pending_funding' : 'pending_reallocation'
+        status: projectStatus,
+        last_notification_date: new Date().toISOString(),
+        notification_count: supabase.raw('notification_count + 1')
       })
       .eq('mis', mis);
 
@@ -233,17 +221,134 @@ router.post('/notify-admin', authenticateToken, async (req, res) => {
       throw new Error(`Failed to update project status: ${updateError.message}`);
     }
 
-    res.json({ 
-      status: 'success', 
+    // Send response with enhanced information
+    res.json({
+      status: 'success',
       message: 'Admin notification submitted successfully',
-      notification_id: insertedNotification.id,
-      project_status: updates.status
+      notification: {
+        id: notification.id,
+        type: notification.type,
+        priority: notification.priority,
+        status: notification.status,
+        action_required: notification.action_required,
+        action_deadline: notification.action_deadline
+      },
+      project_status: projectStatus,
+      metadata: notification.metadata
     });
   } catch (error) {
     console.error('Admin notification error:', error);
     res.status(500).json({
       status: 'error',
-      message: error.message || 'Failed to process notification'
+      message: error.message || 'Failed to process notification',
+      error_code: error.code,
+      error_details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Add new endpoint for retrieving notifications with filtering and sorting
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    const {
+      status,
+      priority,
+      type,
+      from_date,
+      to_date,
+      mis,
+      limit = 10,
+      offset = 0,
+      sort_by = 'created_at',
+      sort_order = 'desc'
+    } = req.query;
+
+    let query = supabase
+      .from('budget_notifications')
+      .select('*, created_by(id, name)', { count: 'exact' });
+
+    // Apply filters
+    if (status) query = query.eq('status', status);
+    if (priority) query = query.eq('priority', priority);
+    if (type) query = query.eq('type', type);
+    if (mis) query = query.eq('mis', mis);
+    if (from_date) query = query.gte('created_at', from_date);
+    if (to_date) query = query.lte('created_at', to_date);
+
+    // Apply sorting
+    query = query.order(sort_by, { ascending: sort_order === 'asc' });
+
+    // Apply pagination
+    query = query.range(offset, offset + limit - 1);
+
+    const { data: notifications, error, count } = await query;
+
+    if (error) throw error;
+
+    res.json({
+      status: 'success',
+      data: notifications,
+      pagination: {
+        total: count,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        has_more: count > (offset + limit)
+      }
+    });
+  } catch (error) {
+    console.error('Fetch notifications error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch notifications',
+      error_details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Add endpoint for updating notification status
+router.patch('/notifications/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, review_notes } = req.body;
+    const user = req.user;
+
+    const { data: notification, error } = await supabase
+      .from('budget_notifications')
+      .update({
+        status,
+        review_notes,
+        reviewed_by: user.id,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Create audit log entry for the status update
+    await auditLogger.log({
+      action: 'NOTIFICATION_STATUS_UPDATE',
+      user_id: user.id,
+      details: {
+        notification_id: id,
+        old_status: notification.status,
+        new_status: status,
+        review_notes
+      }
+    });
+
+    res.json({
+      status: 'success',
+      message: 'Notification updated successfully',
+      notification
+    });
+  } catch (error) {
+    console.error('Update notification error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to update notification',
+      error_details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
