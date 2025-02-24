@@ -112,11 +112,11 @@ export class DocumentFormatter {
       { text: "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ", bold: true },
       { text: "ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ", bold: true },
       { text: unitDetails?.unit_name || "", bold: true },
-      { text: "Ταχ. Δ/νση\t:\tΔημοκρίτου 2", bold: false },
-      { text: "Ταχ. Κώδικας\t:\t115 23, Μαρούσι", bold: false },
-      { text: `Πληροφορίες\t:\t${unitDetails?.user_name || ""}`, bold: false },
-      { text: `Τηλέφωνο\t:\t${unitDetails?.phone || ""}`, bold: false },
-      { text: `e-mail\t:\t${unitDetails?.email || ""}`, bold: false },
+      { text: "Ταχ. Δ/νση: Δημοκρίτου 2", bold: false },
+      { text: "Ταχ. Κώδικας: 115 23, Μαρούσι", bold: false },
+      { text: `Πληροφορίες: ${unitDetails?.contact_person || ""}`, bold: false },
+      { text: `Τηλέφωνο: ${unitDetails?.phone_number || ""}`, bold: false },
+      { text: `E-mail: ${unitDetails?.email || "daefkke@civilprotection.gr"}`, bold: false },
     ];
 
     const rightColumnInfo = [
@@ -155,21 +155,21 @@ export class DocumentFormatter {
       }),
       new Paragraph({
         children: [
-          new TextRun({ text: "ΑΡ. ΕΡΓΟΥ\t:\t", size: 20, bold: true }),
+          new TextRun({ text: "ΑΡ. ΕΡΓΟΥ: ", size: 20, bold: true }),
           new TextRun({ text: "2024ΝΑ85300084  της ΣΑΝΑ 853 (ΤΕ 2023ΝΑ27100228)", size: 20 }),
         ],
         spacing: { before: 200, after: 200 },
       }),
       new Paragraph({
         children: [
-          new TextRun({ text: "ΑΛΕ\t:\t", size: 20, bold: true }),
+          new TextRun({ text: "ΑΛΕ: ", size: 20, bold: true }),
           new TextRun({ text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.", size: 20 }),
         ],
         spacing: { before: 200, after: 200 },
       }),
       new Paragraph({
         children: [
-          new TextRun({ text: "ΤΟΜΕΑΣ\t:\t", size: 20, bold: true }),
+          new TextRun({ text: "ΤΟΜΕΑΣ: ", size: 20, bold: true }),
           new TextRun({ text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών", size: 20 }),
         ],
         spacing: { before: 200, after: 300 },
