@@ -203,7 +203,7 @@ router.post('/bulk-upload', authenticateToken, upload.single('file'), async (req
 // Add this route after the existing routes
 router.put('/bulk-update', authenticateToken, async (req, res) => {
   try {
-    console.log('[Projects] Starting bulk update');
+    console.log('[Projects] Starting bulk update for budget_na853_split');
 
     const { updates } = req.body;
 
@@ -218,8 +218,8 @@ router.put('/bulk-update', authenticateToken, async (req, res) => {
     for (const update of updates) {
       const { mis, data } = update;
 
-      if (!mis || !data) {
-        throw new Error(`Invalid update data: missing mis or data fields`);
+      if (!mis || !data?.budget_na853_split) {
+        throw new Error(`Invalid update data: missing mis or budget_na853_split value`);
       }
 
       // Validate MIS exists
@@ -233,17 +233,17 @@ router.put('/bulk-update', authenticateToken, async (req, res) => {
         throw new Error(`Project with MIS ${mis} not found`);
       }
 
-      // Update the project
+      // Update only the budget_na853_split field
       const { error: updateError } = await supabase
         .from('project_catalog')
-        .update(data)
+        .update({ budget_na853_split: data.budget_na853_split })
         .eq('mis', mis);
 
       if (updateError) {
         throw new Error(`Failed to update project ${mis}: ${updateError.message}`);
       }
 
-      console.log(`[Projects] Successfully updated project ${mis}`);
+      console.log(`[Projects] Successfully updated budget split for project ${mis}`);
     }
 
     res.json({ 
