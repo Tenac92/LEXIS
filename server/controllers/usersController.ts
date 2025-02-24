@@ -87,7 +87,7 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
         email,
         name,
         role,
-        units,
+        unit,
         telephone,
         department
       `)
@@ -130,7 +130,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    // Verify that the department belongs to the selected unit
+    // Verify that the unit exists and get its parts
     const { data: unitData, error: unitError } = await supabase
       .from('unit_det')
       .select('parts')
@@ -138,13 +138,23 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       .single();
 
     if (unitError || !unitData) {
-      return res.status(400).json({ message: 'Invalid unit selected' });
+      console.error('[Users] Invalid unit:', req.body.unit, unitError);
+      return res.status(400).json({ 
+        message: 'Invalid unit selected',
+        error: unitError?.message 
+      });
     }
 
-    if (!unitData.parts.includes(req.body.department)) {
-      return res.status(400).json({ message: 'Selected department does not belong to the chosen unit' });
+    // Verify that the department is one of the parts
+    if (!Array.isArray(unitData.parts) || !unitData.parts.includes(req.body.department)) {
+      console.error('[Users] Invalid department:', req.body.department, 'Available parts:', unitData.parts);
+      return res.status(400).json({ 
+        message: 'Selected department is not valid for this unit',
+        validDepartments: unitData.parts 
+      });
     }
 
+    // Check if email already exists
     const { data: existingUser } = await supabase
       .from('users')
       .select('id')
