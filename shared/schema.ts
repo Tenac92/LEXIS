@@ -90,6 +90,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   protocol_number_input: text("protocol_number_input"),
   expenditure_type: text("expenditure_type").notNull(),
   project_id: text("project_id").notNull(),
+  attachments: text("attachments").array(),
 });
 
 // Budget History table for tracking changes
