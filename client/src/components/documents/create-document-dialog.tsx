@@ -1005,9 +1005,18 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               <Button
                 type="button"
                 onClick={handleNextOrSubmit}
-                disabled={loading || isSubmitDisabled}
+                disabled={loading || (currentStep === 3 && isSubmitDisabled)}
               >
-                {currentStep === 3 ? "Αποθήκευση" : "Επόμενο"}
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <span>Επεξεργασία...</span>
+                  </div>
+                ) : currentStep === 3 ? (
+                  'Αποθήκευση'
+                ) : (
+                  'Επόμενο'
+                )}
               </Button>
             </div>
           </form>
