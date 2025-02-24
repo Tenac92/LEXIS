@@ -71,13 +71,28 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     }
   });
 
-  // Set up WebSocket connection for real-time updates
+  // Update the WebSocket connection logic
   useEffect(() => {
-    const ws = new WebSocket(`wss://${window.location.host}/ws/notifications`);
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/notifications`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('WebSocket connection established');
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      toast({
+        title: "Connection Error",
+        description: "Failed to connect to notification service. Please refresh the page.",
+        variant: "destructive"
+      });
+    };
 
     ws.onmessage = (event) => {
       const notification = JSON.parse(event.data) as BudgetNotification;
-      const styles = notificationStyles[notification.priority];
+      const styles = notificationStyles[notification.priority || 'medium'];
 
       // Show toast notification
       toast({
@@ -90,7 +105,11 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       queryClient.invalidateQueries({ queryKey: ['/api/budget/notifications'] });
     };
 
-    return () => ws.close();
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
   }, [queryClient]);
 
   if (!notifications?.length) {
@@ -112,7 +131,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
         const styles = notificationStyles[notification.priority];
 
         return (
-          <Card 
+          <Card
             key={notification.id}
             className={cn(
               'cursor-pointer transition-colors hover:shadow-md',

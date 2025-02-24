@@ -10,6 +10,7 @@ import DocumentsPage from "@/pages/documents-page";
 import ProjectsPage from "@/pages/projects";
 import UsersPage from "@/pages/users";
 import BudgetHistoryPage from "@/pages/budget-history-page";
+import NotificationsPage from "@/pages/NotificationsPage";
 import { ProtectedRoute } from "./lib/protected-route";
 import { PageTransition } from "@/components/ui/page-transition";
 
@@ -22,6 +23,7 @@ function Router() {
         <ProtectedRoute path="/projects" component={ProjectsPage} />
         <ProtectedRoute path="/users" component={UsersPage} />
         <ProtectedRoute path="/budget-history" component={BudgetHistoryPage} />
+        <ProtectedRoute path="/notifications" component={NotificationsPage} />
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
       </Switch>

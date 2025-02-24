@@ -1,3 +1,13 @@
+export interface User {
+  id: number;
+  name: string;
+  username?: string;
+  email: string;
+  role: 'admin' | 'user';
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface BudgetData {
   user_view: number;
   total_budget: number;

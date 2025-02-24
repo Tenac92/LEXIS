@@ -1,8 +1,13 @@
 import { createContext, ReactNode, useContext } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { User, LoginCredentials } from "@shared/schema";
+import type { User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+
+interface LoginCredentials {
+  email: string;
+  password: string;
+}
 
 type AuthContextType = {
   user: User | null;
@@ -20,8 +25,9 @@ function useLoginMutation() {
       try {
         console.log('Attempting login with:', credentials.email);
 
-        const response = await fetch('/api/login', {  
+        const response = await fetch('/api/auth/login', {  
           method: 'POST',
+          credentials: 'include', // Add credentials
           headers: {
             'Content-Type': 'application/json',
           },
@@ -50,7 +56,7 @@ function useLoginMutation() {
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
         title: "Login successful",
-        description: `Welcome back, ${user.email}!`,
+        description: `Welcome back, ${user.name}!`,
       });
     },
     onError: (error: Error) => {
@@ -69,7 +75,10 @@ function useLogoutMutation() {
 
   return useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/logout', { method: 'POST' });
+      const response = await fetch('/api/auth/logout', { 
+        method: 'POST',
+        credentials: 'include' // Add credentials
+      });
       if (!response.ok) {
         throw new Error('Logout failed');
       }
@@ -77,6 +86,10 @@ function useLogoutMutation() {
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account."
+      });
     },
     onError: (error: Error) => {
       toast({
@@ -95,7 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/user');
+        const response = await fetch('/api/user', {
+          credentials: 'include' // Add credentials
+        });
         if (!response.ok) {
           if (response.status === 401) return null;
           throw new Error('Failed to fetch user data');
