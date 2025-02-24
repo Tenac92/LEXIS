@@ -48,11 +48,7 @@ export async function exportDocument(req: Request, res: Response) {
           }
         },
         children: [
-          DocumentFormatter.createDocumentHeader(req, {
-            unit_name: document.unit,
-            email: document.contact_email,
-            parts: document.unit_parts || []
-          }),
+          await DocumentFormatter.createDefaultHeader(document),
           DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ'),
           DocumentFormatter.createPaymentTable(document.recipients || []),
           await DocumentFormatter.createDocumentFooter(document)
