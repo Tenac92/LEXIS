@@ -17,18 +17,31 @@ router.get('/records', authenticateToken, async (req, res) => {
     if (error) {
       console.error('[Budget] Error fetching records:', error);
       return res.status(500).json({ 
-        success: false, 
-        message: error.message || 'Failed to fetch records'
+        status: 'error',
+        message: 'Failed to fetch budget records',
+        details: error.message
       });
     }
 
-    console.log(`[Budget] Successfully fetched ${data?.length || 0} records`);
-    res.json(data || []);
+    if (!data) {
+      return res.json([]);
+    }
+
+    console.log(`[Budget] Successfully fetched ${data.length} records`);
+    return res.json({
+      status: 'success',
+      data: data.map(record => ({
+        mis: record.mis,
+        na853: record.na853
+      }))
+    });
+
   } catch (error) {
-    console.error('[Budget] Error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error instanceof Error ? error.message : 'Failed to fetch records' 
+    console.error('[Budget] Unexpected error:', error);
+    return res.status(500).json({ 
+      status: 'error',
+      message: 'Failed to fetch budget records',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
