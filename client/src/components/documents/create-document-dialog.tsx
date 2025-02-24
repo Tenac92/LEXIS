@@ -580,20 +580,53 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   }, [selectedProjectId, form]);
 
   const handleNext = async () => {
-    const isValid = await form.trigger(
-      currentStep === 0 ? ["unit"] :
-        currentStep === 1 ? ["project_id", "expenditure_type"] :
-          currentStep === 2 ? ["recipients"] :
-            ["selectedAttachments"]
-    );
+    try {
+      let fieldsToValidate: Array<keyof CreateDocumentForm> = [];
 
-    if (isValid) {
-      setDirection(1);
-      setCurrentStep((prev) => Math.min(prev + 1, 3));
-    } else {
+      switch (currentStep) {
+        case 0:
+          fieldsToValidate = ["unit"];
+          break;
+        case 1:
+          fieldsToValidate = ["project_id", "expenditure_type"];
+          break;
+        case 2:
+          fieldsToValidate = ["recipients"];
+          // Additional validation for recipients
+          const recipients = form.getValues("recipients");
+          if (!recipients || recipients.length === 0) {
+            toast({
+              title: "Validation Error",
+              description: "Please add at least one recipient",
+              variant: "destructive"
+            });
+            return;
+          }
+          break;
+        case 3:
+          fieldsToValidate = ["selectedAttachments"];
+          break;
+      }
+
+      const isValid = await form.trigger(fieldsToValidate);
+
+      if (isValid) {
+        setDirection(1);
+        setCurrentStep((prev) => Math.min(prev + 1, 3));
+      } else {
+        const errors = form.formState.errors;
+        const errorMessage = Object.values(errors)[0]?.message || "Please fill in all required fields correctly.";
+        toast({
+          title: "Validation Error",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
       toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields correctly.",
+        title: "Error",
+        description: "An error occurred while proceeding to the next step",
         variant: "destructive"
       });
     }
@@ -602,12 +635,22 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const handleNextOrSubmit = async () => {
     try {
       if (currentStep === 3) {
-        await form.handleSubmit(handleSubmit)();
+        // For the final step, validate all fields before submission
+        const isValid = await form.trigger();
+        if (isValid) {
+          await form.handleSubmit(handleSubmit)();
+        } else {
+          toast({
+            title: "Validation Error",
+            description: "Please check all fields are filled correctly",
+            variant: "destructive"
+          });
+        }
       } else {
         await handleNext();
       }
     } catch (error) {
-      console.error('Form submission error:', error);
+      console.error('Form navigation/submission error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "An error occurred",
@@ -952,7 +995,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <ScrollArea className="flex-1 px-2 py-4">
+            <ScrollArea className="flex-1 px-2 py-4 min-h-[400px]">
               {renderStepContent()}
             </ScrollArea>
 
@@ -968,7 +1011,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               <Button
                 type="button"
                 onClick={handleNextOrSubmit}
-                disabled={loading || isSubmitDisabled}
+                disabled={loading || (currentStep === 3 && isSubmitDisabled)}
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
