@@ -2,15 +2,15 @@ import { Request, Response } from 'express';
 import { Document, Packer } from 'docx';
 import { supabase } from '../config/db';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
-import { TemplateManager } from '../utils/TemplateManager';
-import { VersionController } from '../utils/VersionController';
 
 export async function exportDocument(req: Request, res: Response) {
   try {
     const { id } = req.params;
+    const { format = 'docx', include_attachments = true } = req.body;
+
     const { data: document, error } = await supabase
       .from('generated_documents')
-      .select('*, template_id, expenditure_type')
+      .select('*, recipients, attachments')
       .eq('id', id)
       .single();
 
@@ -23,68 +23,49 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Create a new version if it's modified
-    if (req.user?.id && document.recipients) {
-      await VersionController.createVersion(
-        document.id,
-        document.recipients,
-        req.user.id,
-        { reason: 'Document export' }
-      );
-    }
+    // Create document using DocumentFormatter
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            ...DocumentFormatter.getDefaultMargins(),
+            size: { width: 11906, height: 16838 }
+          }
+        },
+        children: [
+          ...DocumentFormatter.createDocumentHeader(req, {
+            unit_name: document.unit,
+            email: document.contact_email,
+            parts: document.unit_parts || []
+          }),
+          ...DocumentFormatter.createMetadataSection({
+            protocol_number: document.protocol_number,
+            protocol_date: document.protocol_date,
+            document_number: document.id
+          }),
+          DocumentFormatter.createPaymentTable(document.recipients || []),
+          DocumentFormatter.createTotalSection((document.recipients || []).reduce(
+            (sum: number, recipient: any) => sum + (parseFloat(recipient.amount) || 0),
+            0
+          )),
+          ...(include_attachments && document.attachments?.length 
+            ? DocumentFormatter.createAttachmentSection(document.attachments)
+            : []),
+          ...DocumentFormatter.createDocumentFooter({
+            signatory: document.signatory,
+            department: document.department,
+            contact_person: document.contact_person
+          })
+        ]
+      }]
+    });
 
-    let template = null;
-    if (document.template_id) {
-      // Use specifically assigned template if it exists
-      template = await TemplateManager.getTemplate(document.template_id);
-    } else {
-      // Get template based on expenditure type
-      template = await TemplateManager.getTemplateForExpenditure(document.expenditure_type);
-    }
+    const buffer = await Packer.toBuffer(doc);
 
-    if (template) {
-      // Use template if available
-      const buffer = await TemplateManager.generatePreview(
-        template.id,
-        { recipients: document.recipients }
-      );
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
-      return res.send(buffer);
-    } else {
-      // Fallback to default formatting
-      const recipients = Array.isArray(document.recipients) 
-        ? document.recipients.map(recipient => ({
-            firstname: recipient.firstname || '',
-            lastname: recipient.lastname || '',
-            afm: recipient.afm || '',
-            amount: Number(recipient.amount) || 0,
-            installment: Number(recipient.installment) || 1
-          }))
-        : [];
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
+    res.send(buffer);
 
-      const doc = new Document({
-        sections: [{
-          properties: { 
-            page: { 
-              ...DocumentFormatter.getDefaultMargins(),
-              size: { width: 11906, height: 16838 }
-            }
-          },
-          children: [
-            DocumentFormatter.createDocumentHeader(),
-            DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ ΣΤΕΓΑΣΤΙΚΗΣ ΣΥΝΔΡΟΜΗΣ'),
-            DocumentFormatter.createPaymentTable(recipients),
-            DocumentFormatter.createDocumentFooter()
-          ]
-        }]
-      });
-
-      const buffer = await Packer.toBuffer(doc);
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
-      res.send(buffer);
-    }
   } catch (error) {
     console.error('Export error:', error);
     res.status(500).json({ 
