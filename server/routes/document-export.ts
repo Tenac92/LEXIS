@@ -1,11 +1,22 @@
-import { Request, Response } from 'express';
+import { Request, Response, Router } from 'express';
 import { Document, Packer } from 'docx';
 import { supabase } from '../config/db';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
+import { authenticateSession } from '../middleware/auth';
+
+export const documentExportRouter = Router();
+
+// Protect the export route with authentication
+documentExportRouter.use(authenticateSession);
 
 export async function exportDocument(req: Request, res: Response) {
   try {
     const { id } = req.params;
+
+    // Verify user session
+    if (!req.session?.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
 
     const { data: document, error } = await supabase
       .from('generated_documents')
@@ -58,3 +69,5 @@ export async function exportDocument(req: Request, res: Response) {
     });
   }
 }
+
+documentExportRouter.get('/:id/export', exportDocument);
