@@ -1,0 +1,84 @@
+Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+NotificationCenter.tsx:68 [NotificationCenter] Fetch error: Error: Failed to fetch budget data
+    at queryFn (NotificationCenter.tsx:62:17)
+queryFn @ NotificationCenter.tsx:68
+2NotificationCenter.tsx:91 WebSocket connection established
+NotificationCenter.tsx:56 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/budget/notifications 500 (Internal Server Error)
+queryFn @ NotificationCenter.tsx:56
+fetchFn @ @tanstack_react-query.js?v=24a5d502:840
+run @ @tanstack_react-query.js?v=24a5d502:494
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+Εμφάνιση 3 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+NotificationCenter.tsx:68 [NotificationCenter] Fetch error: Error: Failed to fetch budget data
+    at queryFn (NotificationCenter.tsx:62:17)
+queryFn @ NotificationCenter.tsx:68
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=24a5d502:840
+run @ @tanstack_react-query.js?v=24a5d502:494
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+Εμφάνιση 3 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+NotificationCenter.tsx:56 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/budget/notifications 500 (Internal Server Error)
+queryFn @ NotificationCenter.tsx:56
+fetchFn @ @tanstack_react-query.js?v=24a5d502:840
+run @ @tanstack_react-query.js?v=24a5d502:494
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:515
+Promise.catch
+run @ @tanstack_react-query.js?v=24a5d502:498
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+Εμφάνιση 6 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+NotificationCenter.tsx:68 [NotificationCenter] Fetch error: Error: Failed to fetch budget data
+    at queryFn (NotificationCenter.tsx:62:17)
+queryFn @ NotificationCenter.tsx:68
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=24a5d502:840
+run @ @tanstack_react-query.js?v=24a5d502:494
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:515
+Promise.catch
+run @ @tanstack_react-query.js?v=24a5d502:498
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+Εμφάνιση 6 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+NotificationCenter.tsx:56  GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/budget/notifications 500 (Internal Server Error)
+queryFn @ NotificationCenter.tsx:56
+fetchFn @ @tanstack_react-query.js?v=24a5d502:840
+run @ @tanstack_react-query.js?v=24a5d502:494
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:515
+Promise.catch
+run @ @tanstack_react-query.js?v=24a5d502:498
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:515
+Promise.catch
+run @ @tanstack_react-query.js?v=24a5d502:498
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+NotificationCenter.tsx:68 [NotificationCenter] Fetch error: 
+queryFn @ NotificationCenter.tsx:68
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=24a5d502:840
+run @ @tanstack_react-query.js?v=24a5d502:494
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:515
+Promise.catch
+run @ @tanstack_react-query.js?v=24a5d502:498
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:515
+Promise.catch
+run @ @tanstack_react-query.js?v=24a5d502:498
+(ανώνυμες) @ @tanstack_react-query.js?v=24a5d502:519

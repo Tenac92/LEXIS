@@ -16,7 +16,7 @@ router.use('/auth', authController);
 router.get('/budget/:mis', authenticateSession, budgetController.getBudget);
 router.post('/budget/validate', authenticateSession, budgetController.validateBudget);
 router.patch('/budget/:mis', authenticateSession, budgetController.updateBudget);
-router.get('/budget/notifications', authenticateSession, budgetController.getNotifications);
+router.get('/budget/notifications', authenticateSession, budgetController.getBudgetNotifications);
 
 // Mount other controllers with authentication middleware
 router.use('/documents', authenticateSession, documentsController);
