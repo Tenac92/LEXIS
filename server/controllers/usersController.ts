@@ -150,7 +150,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    if (!req.body.email || !req.body.name || !req.body.password || !req.body.role || !req.body.unit || !req.body.department) {
+    if (!req.body.email || !req.body.name || !req.body.password || !req.body.role || !req.body.units || !req.body.department) {
       return res.status(400).json({ 
         message: 'Missing required fields',
         details: {
@@ -158,9 +158,33 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
           name: !req.body.name ? 'Name is required' : null,
           password: !req.body.password ? 'Password is required' : null,
           role: !req.body.role ? 'Role is required' : null,
-          unit: !req.body.unit ? 'Unit is required' : null,
+          units: !req.body.units ? 'Units are required' : null,
           department: !req.body.department ? 'Department is required' : null
         }
+      });
+    }
+
+    // Verify that all selected units exist
+    const { data: unitData, error: unitError } = await supabase
+      .from('unit_det')
+      .select('unit_name, parts')
+      .in('unit_name', req.body.units);
+
+    if (unitError || !unitData || unitData.length !== req.body.units.length) {
+      console.error('[Users] Invalid units:', req.body.units, unitError);
+      return res.status(400).json({ 
+        message: 'One or more invalid units selected',
+        error: unitError?.message 
+      });
+    }
+
+    // Verify that the department exists in at least one of the selected units' parts
+    const allParts = unitData.reduce((acc, unit) => [...acc, ...(unit.parts || [])], []);
+    if (!allParts.includes(req.body.department)) {
+      console.error('[Users] Invalid department:', req.body.department, 'Available parts:', allParts);
+      return res.status(400).json({ 
+        message: 'Selected department is not valid for the selected units',
+        validDepartments: allParts
       });
     }
 
