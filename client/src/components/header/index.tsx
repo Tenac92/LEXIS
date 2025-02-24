@@ -18,6 +18,8 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const isAdmin = user?.role === 'admin';
+  const isManager = user?.role === 'manager';
+  const isRegularUser = user?.role === 'user';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -47,24 +49,28 @@ export function Header() {
         </Link>
       </motion.div>
       <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
-        whileHover={{ scale: 1.02 }}
-      >
-        <Link href="/documents">
-          <Button 
-            variant="ghost" 
-            className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
+      {isRegularUser && (
+        <>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            whileHover={{ scale: 1.02 }}
           >
-            <FileText className="h-4 w-4" />
-            <span className="hidden lg:inline">Δημιουργημένα Έγγραφα</span>
-            <span className="lg:hidden">Έγγραφα</span>
-          </Button>
-        </Link>
-      </motion.div>
-      <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
+            <Link href="/documents">
+              <Button 
+                variant="ghost" 
+                className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="hidden lg:inline">Δημιουργία Εγγράφων</span>
+                <span className="lg:hidden">Έγγραφα</span>
+              </Button>
+            </Link>
+          </motion.div>
+          <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
+        </>
+      )}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -82,24 +88,28 @@ export function Header() {
           </Button>
         </Link>
       </motion.div>
-      <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.3 }}
-        whileHover={{ scale: 1.02 }}
-      >
-        <Link href="/budget-history">
-          <Button 
-            variant="ghost" 
-            className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
+      {(isManager || isAdmin) && (
+        <>
+          <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            whileHover={{ scale: 1.02 }}
           >
-            <History className="h-4 w-4" />
-            <span className="hidden lg:inline">Ιστορικό Προϋπολογισμού</span>
-            <span className="lg:hidden">Ιστορικό</span>
-          </Button>
-        </Link>
-      </motion.div>
+            <Link href="/budget-history">
+              <Button 
+                variant="ghost" 
+                className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
+              >
+                <History className="h-4 w-4" />
+                <span className="hidden lg:inline">Ιστορικό Προϋπολογισμού</span>
+                <span className="lg:hidden">Ιστορικό</span>
+              </Button>
+            </Link>
+          </motion.div>
+        </>
+      )}
       {isAdmin && (
         <>
           <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
