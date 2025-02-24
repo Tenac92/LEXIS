@@ -1,10 +1,11 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { supabase } from "../config/db";
 import { z } from "zod";
-import { Document, Paragraph, Packer, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle } from "docx";
+import { Document, Packer } from "docx";
 import { insertGeneratedDocumentSchema } from "@shared/schema";
 import type { Database, User } from "@shared/schema";
 import { validateBudget, updateBudget } from "./budgetController";
+import { DocumentFormatter } from "../utils/DocumentFormatter";
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
       });
     }
@@ -86,9 +87,9 @@ router.post('/', async (req: Request, res: Response) => {
 
     if (error) {
       console.error('Document creation error:', error);
-      return res.status(500).json({ 
+      return res.status(500).json({
         message: 'Failed to create document',
-        error: error.message 
+        error: error.message
       });
     }
 
@@ -96,7 +97,7 @@ router.post('/', async (req: Request, res: Response) => {
     return res.status(201).json(data);
   } catch (error) {
     console.error('Error creating document:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: 'Failed to create document',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -213,10 +214,11 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// Update the document creation route
+// Update the document export route
 router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const { format = 'docx', include_attachments = true } = req.query;
 
     const { data: document, error } = await supabase
       .from('generated_documents')
@@ -241,6 +243,7 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
       ? document.recipients.map((recipient: any) => ({
           lastname: String(recipient.lastname || '').trim(),
           firstname: String(recipient.firstname || '').trim(),
+          fathername: String(recipient.fathername || '').trim(),
           amount: parseFloat(recipient.amount) || 0,
           installment: parseInt(recipient.installment) || 1,
           afm: String(recipient.afm || '').trim()
@@ -248,9 +251,9 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
       : [];
 
     // Calculate total amount
-    const totalAmount = recipients.reduce((sum, recipient) => sum + recipient.amount, 0);
+    const totalAmount = recipients.reduce((sum: number, recipient: any) => sum + recipient.amount, 0);
 
-    // Create document
+    // Create document using DocumentFormatter
     const doc = new Document({
       sections: [{
         properties: {
@@ -260,16 +263,27 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
           }
         },
         children: [
-          ...DocumentFormatter.createDocumentHeader(document.unit_details),
-          ...DocumentFormatter.createMetadataSection(document),
-          new Paragraph({
-            text: 'ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ',
-            spacing: { before: 240, after: 240 },
-            alignment: AlignmentType.CENTER
+          ...DocumentFormatter.createDocumentHeader(req, {
+            unit_name: document.unit,
+            email: document.contact_email,
+            parts: document.unit_parts || []
           }),
+          ...DocumentFormatter.createMetadataSection({
+            protocol_number: document.protocol_number,
+            protocol_date: document.protocol_date,
+            document_number: document.id
+          }),
+          DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ'),
           DocumentFormatter.createPaymentTable(recipients),
           DocumentFormatter.createTotalSection(totalAmount),
-          ...DocumentFormatter.createDocumentFooter(document.signatory)
+          ...(include_attachments && document.attachments?.length
+            ? DocumentFormatter.createAttachmentSection(document.attachments)
+            : []),
+          ...DocumentFormatter.createDocumentFooter({
+            signatory: document.signatory,
+            department: document.department,
+            contact_person: document.contact_person
+          })
         ]
       }]
     });
@@ -289,168 +303,5 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
     });
   }
 });
-
-class DocumentFormatter {
-  static getDefaultMargins() {
-    return {
-      top: 1440,
-      right: 1440,
-      bottom: 1440,
-      left: 1440
-    };
-  }
-
-  static createDocumentHeader(unitDetails?: any) {
-    return [
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: unitDetails?.title || "ΥΠΟΥΡΓΕΙΟ ΕΘΝΙΚΗΣ ΑΜΥΝΑΣ",
-            bold: true,
-            size: 28
-          })
-        ],
-        spacing: { before: 240, after: 120 },
-        alignment: AlignmentType.CENTER
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: unitDetails?.subtitle || "",
-            size: 24
-          })
-        ],
-        spacing: { before: 120, after: 240 },
-        alignment: AlignmentType.CENTER
-      })
-    ];
-  }
-
-  static createMetadataSection(data: any) {
-    return [
-      new Paragraph({
-        children: [
-          new TextRun({ text: `Αριθμός Πρωτοκόλλου: `, bold: true }),
-          new TextRun({ text: data.protocol_number || "N/A" }),
-        ],
-        spacing: { before: 240, after: 120 }
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({ text: `Ημερομηνία: `, bold: true }),
-          new TextRun({ text: new Date().toLocaleDateString('el-GR') }),
-        ],
-        spacing: { before: 120, after: 240 }
-      })
-    ];
-  }
-
-  static createPaymentTable(recipients: Recipient[]) {
-    const tableRows = [
-      new TableRow({
-        children: [
-          new TableCell({
-            children: [new Paragraph({ text: "Επώνυμο", alignment: AlignmentType.CENTER })],
-            width: { size: 20, type: WidthType.PERCENTAGE }
-          }),
-          new TableCell({
-            children: [new Paragraph({ text: "Όνομα", alignment: AlignmentType.CENTER })],
-            width: { size: 20, type: WidthType.PERCENTAGE }
-          }),
-          new TableCell({
-            children: [new Paragraph({ text: "Πατρώνυμο", alignment: AlignmentType.CENTER })],
-            width: { size: 20, type: WidthType.PERCENTAGE }
-          }),
-          new TableCell({
-            children: [new Paragraph({ text: "ΑΦΜ", alignment: AlignmentType.CENTER })],
-            width: { size: 20, type: WidthType.PERCENTAGE }
-          }),
-          new TableCell({
-            children: [new Paragraph({ text: "Ποσό (€)", alignment: AlignmentType.CENTER })],
-            width: { size: 20, type: WidthType.PERCENTAGE }
-          })
-        ]
-      }),
-      ...recipients.map(recipient =>
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [new Paragraph({ text: recipient.lastname })],
-              width: { size: 20, type: WidthType.PERCENTAGE }
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: recipient.firstname })],
-              width: { size: 20, type: WidthType.PERCENTAGE }
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: recipient.fathername })],
-              width: { size: 20, type: WidthType.PERCENTAGE }
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: recipient.afm })],
-              width: { size: 20, type: WidthType.PERCENTAGE }
-            }),
-            new TableCell({
-              children: [new Paragraph({
-                text: recipient.amount.toFixed(2),
-                alignment: AlignmentType.RIGHT
-              })],
-              width: { size: 20, type: WidthType.PERCENTAGE }
-            })
-          ]
-        })
-      )
-    ];
-
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: tableRows,
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
-        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-        insideVertical: { style: BorderStyle.SINGLE, size: 1 }
-      }
-    });
-  }
-
-  static createTotalSection(total: number) {
-    return new Paragraph({
-      children: [
-        new TextRun({ text: "Σύνολο: ", bold: true }),
-        new TextRun({ text: `${total.toFixed(2)}€` })
-      ],
-      spacing: { before: 360, after: 360 },
-      alignment: AlignmentType.RIGHT
-    });
-  }
-
-  static createDocumentFooter(signatory?: string) {
-    return [
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "Ο ΔΙΕΥΘΥΝΤΗΣ",
-            bold: true
-          })
-        ],
-        spacing: { before: 720, after: 720 },
-        alignment: AlignmentType.RIGHT
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: signatory || "",
-            bold: true
-          })
-        ],
-        spacing: { before: 360 },
-        alignment: AlignmentType.RIGHT
-      })
-    ];
-  }
-}
 
 export default router;
