@@ -37,14 +37,82 @@ interface FooterDetails {
 
 export class DocumentFormatter {
   private static readonly DEFAULT_EMAIL = 'daefkke@civilprotection.gr';
+  private static readonly DEFAULT_ADDRESS = 'Κηφισίας 124 & Ιατρίδου 2';
+  private static readonly DEFAULT_POSTAL_CODE = '11526';
+  private static readonly DEFAULT_CITY = 'Αθήνα';
 
   static getDefaultMargins(): DocumentMargins {
     return {
-      top: 850,
-      right: 1000,
-      bottom: 850,
-      left: 1000
+      top: 1440,
+      right: 1440,
+      bottom: 1440,
+      left: 1440
     };
+  }
+
+  static createDocumentHeader(req: Request, unitDetails: UnitDetails = {}): Paragraph[] {
+    const defaultEmail = unitDetails?.email || this.DEFAULT_EMAIL;
+
+    const headerInfo = [
+      new Paragraph({
+        children: [new TextRun({ text: 'ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ', bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 120 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: 'ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ', bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 120, after: 120 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: '& ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ', bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 120, after: 120 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: 'ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ', bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 120, after: 120 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: 'ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ', bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 120, after: 240 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: 'Δ/ΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ', bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 120, after: 120 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: 'ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ', bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 120, after: 240 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: 'Ταχ. Δ/νση    : ', size: 24 }),
+          new TextRun({ text: this.DEFAULT_ADDRESS, size: 24 })
+        ],
+        spacing: { before: 120, after: 120 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: 'Ταχ. Κώδικας : ', size: 24 }),
+          new TextRun({ text: this.DEFAULT_POSTAL_CODE + ', ' + this.DEFAULT_CITY, size: 24 })
+        ],
+        spacing: { before: 120, after: 120 }
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({ text: 'Email               : ', size: 24 }),
+          new TextRun({ text: defaultEmail, size: 24 })
+        ],
+        spacing: { before: 120, after: 120 }
+      })
+    ];
+
+    return headerInfo;
   }
 
   static createMetadataSection(metadata: MetadataSection): Paragraph[] {
@@ -53,16 +121,18 @@ export class DocumentFormatter {
     return [
       new Paragraph({
         children: [
-          new TextRun({ text: 'Αριθμός Πρωτοκόλλου: ', bold: true, size: 24 }),
-          new TextRun({ text: metadata.protocol_number || '', size: 24 })
+          new TextRun({ text: this.DEFAULT_CITY + ', ', size: 24 }),
+          new TextRun({ text: metadata.protocol_date || today, size: 24 })
         ],
+        alignment: AlignmentType.RIGHT,
         spacing: { before: 240, after: 120 }
       }),
       new Paragraph({
         children: [
-          new TextRun({ text: 'Ημερομηνία: ', bold: true, size: 24 }),
-          new TextRun({ text: metadata.protocol_date || today, size: 24 })
+          new TextRun({ text: 'Αρ. Πρωτ.: ', size: 24 }),
+          new TextRun({ text: metadata.protocol_number || '', size: 24 })
         ],
+        alignment: AlignmentType.RIGHT,
         spacing: { before: 120, after: 240 }
       })
     ];
@@ -84,6 +154,97 @@ export class DocumentFormatter {
         ...this.createTableRows(recipients)
       ]
     });
+  }
+
+  static createTotalSection(total: number): Paragraph {
+    return new Paragraph({
+      children: [
+        new TextRun({ text: 'ΣΥΝΟΛΙΚΟ ΠΟΣΟ: ', bold: true, size: 24 }),
+        new TextRun({
+          text: total.toLocaleString('el-GR', {
+            style: 'currency',
+            currency: 'EUR',
+            minimumFractionDigits: 2
+          }),
+          size: 24
+        })
+      ],
+      spacing: { before: 360, after: 360 },
+      alignment: AlignmentType.RIGHT
+    });
+  }
+
+  static createAttachmentSection(attachments: string[]): Paragraph[] {
+    return [
+      new Paragraph({
+        children: [new TextRun({ text: 'ΣΥΝΗΜΜΕΝΑ', bold: true, size: 24 })],
+        spacing: { before: 360, after: 120 }
+      }),
+      ...attachments.map((attachment, index) =>
+        new Paragraph({
+          children: [new TextRun({
+            text: `${index + 1}. ${attachment}`,
+            size: 24
+          })],
+          spacing: { before: 120, after: 120 },
+          indent: { left: 720 }
+        })
+      ),
+      this.createDistributionSection()
+    ];
+  }
+
+  private static createDistributionSection(): Paragraph {
+    const notifications = [
+      'Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας',
+      'Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής',
+      'Γ.Δ.Α.Ε.Φ.Κ.'
+    ];
+
+    const internalDist = [
+      'Χρονολογικό Αρχείο',
+      'Τμήμα Β/20.51',
+      'Αβραμόπουλο Ι.'
+    ];
+
+    return new Paragraph({
+      children: [
+        new TextRun({ text: '\nΚΟΙΝΟΠΟΙΗΣΗ\n', bold: true, size: 24 }),
+        ...notifications.map((item, index) => 
+          new TextRun({ text: `${index + 1}. ${item}\n`, size: 24 })),
+        new TextRun({ text: '\nΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ\n', bold: true, size: 24 }),
+        ...internalDist.map((item, index) => 
+          new TextRun({ text: `${index + 1}. ${item}\n`, size: 24 }))
+      ],
+      spacing: { before: 360, after: 360 }
+    });
+  }
+
+  static createDocumentFooter(details: FooterDetails): Paragraph[] {
+    return [
+      new Paragraph({
+        children: [new TextRun({ text: details.department || '', bold: true, size: 24 })],
+        spacing: { before: 360, after: 120 },
+        alignment: AlignmentType.CENTER
+      }),
+      new Paragraph({ text: '', spacing: { before: 360 } }),
+      new Paragraph({
+        children: [new TextRun({ text: 'Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ Δ.Α.Ε.Φ.Κ.', bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 240, after: 240 }
+      }),
+      new Paragraph({ text: '', spacing: { before: 720 } }),
+      new Paragraph({
+        children: [new TextRun({ text: 'ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ', bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 120, after: 120 }
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: 'ΠΟΛ. ΜΗΧΑΝΙΚΟΣ', size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 120, after: 120 }
+      })
+    ];
   }
 
   private static createTableHeader(headers: string[]): TableRow {
@@ -123,112 +284,6 @@ export class DocumentFormatter {
     );
   }
 
-  static createAttachmentSection(attachments: string[]): Paragraph[] {
-    if (!attachments.length) return [];
-
-    return [
-      new Paragraph({
-        children: [new TextRun({ text: 'ΣΥΝΗΜΜΕΝΑ', bold: true, size: 24 })],
-        spacing: { before: 360, after: 240 }
-      }),
-      ...attachments.map((attachment, index) =>
-        new Paragraph({
-          children: [new TextRun({
-            text: `${index + 1}. ${attachment}`,
-            size: 24
-          })],
-          spacing: { before: 120, after: 120 },
-          indent: { left: 720 }
-        })
-      )
-    ];
-  }
-
-  static createTotalSection(total: number): Paragraph {
-    return new Paragraph({
-      children: [
-        new TextRun({ text: 'ΣΥΝΟΛΙΚΟ ΠΟΣΟ: ', bold: true, size: 24 }),
-        new TextRun({
-          text: total.toLocaleString('el-GR', {
-            style: 'currency',
-            currency: 'EUR',
-            minimumFractionDigits: 2
-          }),
-          size: 24
-        })
-      ],
-      spacing: { before: 360, after: 360 },
-      alignment: AlignmentType.RIGHT
-    });
-  }
-
-  static createDocumentHeader(req: Request, unitDetails: UnitDetails = {}): Paragraph[] {
-    const defaultEmail = unitDetails?.email || this.DEFAULT_EMAIL;
-
-    const headerInfo = [
-      { text: 'ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ', bold: true },
-      { text: 'ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ', bold: true },
-      { text: 'ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ', bold: true },
-      { text: 'ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ', bold: true },
-      { text: unitDetails?.unit_name || '', bold: true },
-      ...(unitDetails?.parts || []).map(part => ({ text: part, bold: true }))
-    ];
-
-    return headerInfo.map(info =>
-      new Paragraph({
-        children: [new TextRun({
-          text: info.text,
-          bold: info.bold,
-          size: 24
-        })],
-        alignment: AlignmentType.CENTER,
-        spacing: { before: 120, after: 120 }
-      })
-    );
-  }
-
-  static createDocumentFooter(details: FooterDetails): Paragraph[] {
-    const footerParagraphs: Paragraph[] = [];
-
-    // Contact information
-    if (details.contact_person) {
-      footerParagraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({ text: 'Πληροφορίες: ', size: 24 }),
-            new TextRun({ text: details.contact_person, size: 24 })
-          ],
-          spacing: { before: 240, after: 120 }
-        })
-      );
-    }
-
-    // Department
-    if (details.department) {
-      footerParagraphs.push(
-        new Paragraph({
-          children: [new TextRun({ text: details.department, bold: true, size: 24 })],
-          spacing: { before: 240, after: 120 },
-          alignment: AlignmentType.CENTER
-        })
-      );
-    }
-
-    // Signatory
-    if (details.signatory) {
-      footerParagraphs.push(
-        new Paragraph({ text: '', spacing: { before: 360 } }),
-        new Paragraph({
-          children: [new TextRun({ text: details.signatory, bold: true, size: 24 })],
-          alignment: AlignmentType.RIGHT,
-          spacing: { before: 120, after: 120 }
-        })
-      );
-    }
-
-    return footerParagraphs;
-  }
-
   private static createTableCell(text: string, alignment: AlignmentType): TableCell {
     return new TableCell({
       children: [new Paragraph({
@@ -238,7 +293,6 @@ export class DocumentFormatter {
       verticalAlign: VerticalAlign.CENTER
     });
   }
-
   static createHeader(text: string, size: number = 24, bold: boolean = true): Paragraph {
     return new Paragraph({
       children: [new TextRun({ text, size, bold })],
