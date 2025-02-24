@@ -85,13 +85,13 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
     <Card className="p-3 bg-gradient-to-br from-background/50 to-background border-primary/20">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">Προϋπολογισμός</h3>
-          <Badge variant={getBadgeVariant(percentageUsed)} className="text-xs">
+          <h3 className="text-base font-medium">Προϋπολογισμός</h3>
+          <Badge variant={getBadgeVariant(percentageUsed)} className="text-sm">
             {percentageUsed.toFixed(1)}% Χρήση
           </Badge>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 text-xs">
+        <div className="grid grid-cols-3 gap-3 text-sm">
           <div>
             <p className="text-muted-foreground">Διαθέσιμος</p>
             <p className="font-medium text-primary">
@@ -119,7 +119,7 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
               style={{ width: `${Math.min(percentageUsed, 100)}%` }}
             />
           </div>
-          <p className="text-[10px] text-muted-foreground text-right mt-0.5">
+          <p className="text-sm text-muted-foreground text-right mt-1">
             Τρέχον: {currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
           </p>
         </div>
@@ -922,8 +922,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               <div>
                 <h3 className="text-lg font-medium mb-2">Συνημμένα Έγγραφα</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  {attachments.map((attachment) => (
-                    <Card key={attachment.id} className="p-3">
+                  {attachments.map((attachment) => (                    <Card key={attachment.id} className="p-3">
                       <FormField
                         control={form.control}
                         name="selectedAttachments"
