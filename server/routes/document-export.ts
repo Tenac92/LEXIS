@@ -1,6 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { supabase } from '../db';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
+import { TemplateManager } from '../utils/TemplateManager';
 import { authenticateSession } from '../middleware/auth';
 
 export const documentExportRouter = Router();
@@ -11,7 +12,8 @@ documentExportRouter.use(authenticateSession);
 export async function exportDocument(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    console.log(`Starting document export for ID: ${id}`);
+    const exportConfig = req.body;
+    console.log(`Starting document export for ID: ${id} with config:`, exportConfig);
 
     // Verify user session
     if (!req.session?.user) {
@@ -36,11 +38,39 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    console.log('Generating document...');
-    const buffer = await DocumentFormatter.generateDocument(document);
+    // Get appropriate template
+    const template = await TemplateManager.getTemplateForExpenditure(document.expenditure_type);
+    if (!template) {
+      console.error('No template found for expenditure type:', document.expenditure_type);
+      return res.status(400).json({ message: 'No template found for this expenditure type' });
+    }
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${DocumentFormatter.formatDocumentNumber(parseInt(id))}.docx`);
+    console.log('Generating document using template...');
+    const formatConfig = {
+      format: exportConfig.format || 'docx',
+      margins: exportConfig.margins || {
+        top: 850,
+        right: 1000,
+        bottom: 850,
+        left: 1000
+      },
+      unit_details: exportConfig.unit_details,
+      contact_info: exportConfig.contact_info,
+      include_attachments: exportConfig.include_attachments !== false,
+      include_signatures: exportConfig.include_signatures !== false
+    };
+
+    const buffer = await DocumentFormatter.generateDocument(document, template, formatConfig);
+
+    const contentType = formatConfig.format === 'pdf' 
+      ? 'application/pdf'
+      : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader(
+      'Content-Disposition', 
+      `attachment; filename=document-${document.document_number || id}.${formatConfig.format}`
+    );
 
     console.log('Sending document response');
     res.send(buffer);
@@ -54,5 +84,6 @@ export async function exportDocument(req: Request, res: Response) {
   }
 }
 
-// Register the export route
+// Register both GET and POST routes for backward compatibility
 documentExportRouter.get('/:id/export', exportDocument);
+documentExportRouter.post('/:id/export', exportDocument);
