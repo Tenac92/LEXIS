@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import type { User, BudgetValidation } from "@shared/schema";
 import { BudgetService } from "../services/budgetService";
-import { supabase } from "../db";
 import { storage } from "../storage";
 
 interface AuthRequest extends Request {
@@ -76,26 +75,7 @@ export async function getNotifications(req: AuthRequest, res: Response) {
       });
     }
 
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Admin access required'
-      });
-    }
-
-    const { data: notifications, error } = await supabase
-      .from('budget_notifications')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('[Budget] Supabase query error:', error);
-      return res.status(500).json({
-        status: 'error',
-        message: 'Database query failed',
-        error: error.message
-      });
-    }
+    const notifications = await storage.getBudgetNotifications();
 
     return res.json({
       status: 'success',

@@ -1,7 +1,7 @@
 import { FC, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, AlertTriangle, AlertCircle } from 'lucide-react';
-import { useToast, toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import {
   Card,
   CardContent,
@@ -28,7 +28,7 @@ const notificationStyles = {
     badge: 'bg-yellow-100 text-yellow-800',
     toastVariant: 'default' as const
   },
-  default: { // Add default style
+  default: {
     bg: 'bg-blue-50',
     border: 'border-blue-200',
     badge: 'bg-blue-100 text-blue-800',
@@ -47,21 +47,32 @@ interface NotificationCenterProps {
 
 export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotificationClick }) => {
   const queryClient = useQueryClient();
-  const { toast: showToast } = useToast(); // Get toast function from hook
+  const { toast } = useToast();
 
-  const { data: notifications, error } = useQuery({
+  const { data: notifications, error, isError, isLoading } = useQuery({
     queryKey: ['/api/budget/notifications'],
     queryFn: async () => {
-      const response = await fetch('/api/budget/notifications', {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Failed to fetch notifications');
-      const data = await response.json();
-      return data.notifications as BudgetNotification[];
-    }
+      try {
+        const response = await fetch('/api/budget/notifications', {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch notifications');
+        }
+
+        const data = await response.json();
+        return data.notifications as BudgetNotification[];
+      } catch (error) {
+        console.error('[NotificationCenter] Fetch error:', error);
+        throw error;
+      }
+    },
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000)
   });
 
-  // Update the WebSocket connection logic
   useEffect(() => {
     try {
       const host = window.location.host;
@@ -82,10 +93,10 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-        showToast({
-          title: "Connection Error",
-          description: "Failed to connect to notification service. Please refresh the page.",
-          variant: "destructive"
+        toast({
+          title: "Connection Warning",
+          description: "Real-time updates may be delayed. Please refresh for latest notifications.",
+          variant: "default"
         });
       };
 
@@ -94,7 +105,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
           const notification = JSON.parse(event.data) as BudgetNotification;
           const styles = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
 
-          showToast({
+          toast({
             title: `New Budget Notification`,
             description: notification.reason || `${notification.type} notification received`,
             variant: styles.toastVariant
@@ -114,14 +125,30 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     } catch (error) {
       console.error('Failed to setup WebSocket:', error);
     }
-  }, [queryClient, showToast]); // Added showToast to dependency array
+  }, [queryClient, toast]);
 
-  if (error) {
+  if (isLoading) {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardContent className="pt-6">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card className="w-full max-w-md mx-auto border-destructive">
+        <CardContent className="pt-6">
           <div className="text-center text-destructive">
-            Failed to load notifications
+            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+            <p>Failed to load notifications</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {error instanceof Error ? error.message : 'An unexpected error occurred'}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -133,6 +160,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       <Card className="w-full max-w-md mx-auto">
         <CardContent className="pt-6">
           <div className="text-center text-muted-foreground">
+            <Bell className="h-8 w-8 mx-auto mb-2" />
             No notifications
           </div>
         </CardContent>
@@ -144,7 +172,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     <div className="space-y-4">
       {notifications.map((notification) => {
         const Icon = typeIcons[notification.type as keyof typeof typeIcons] || Bell;
-        const styles = notificationStyles[notification.type as keyof typeof notificationStyles];
+        const styles = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
 
         return (
           <Card
@@ -164,7 +192,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
                   {notification.type.replace('_', ' ').toUpperCase()}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {formatDistanceToNow(new Date(notification.created_at || new Date()), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                 </CardDescription>
               </div>
               <Badge variant="outline" className={cn(styles.badge)}>
