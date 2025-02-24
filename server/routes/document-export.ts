@@ -6,11 +6,10 @@ import { DocumentFormatter } from '../utils/DocumentFormatter';
 export async function exportDocument(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { format = 'docx', include_attachments = true } = req.body;
 
     const { data: document, error } = await supabase
       .from('generated_documents')
-      .select('*, recipients, attachments')
+      .select('*, recipients')
       .eq('id', id)
       .single();
 
@@ -33,29 +32,14 @@ export async function exportDocument(req: Request, res: Response) {
           }
         },
         children: [
-          ...DocumentFormatter.createDocumentHeader(req, {
+          DocumentFormatter.createDocumentHeader(req, {
             unit_name: document.unit,
             email: document.contact_email,
             parts: document.unit_parts || []
           }),
-          ...DocumentFormatter.createMetadataSection({
-            protocol_number: document.protocol_number,
-            protocol_date: document.protocol_date,
-            document_number: document.id
-          }),
+          DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ'),
           DocumentFormatter.createPaymentTable(document.recipients || []),
-          DocumentFormatter.createTotalSection((document.recipients || []).reduce(
-            (sum: number, recipient: any) => sum + (parseFloat(recipient.amount) || 0),
-            0
-          )),
-          ...(include_attachments && document.attachments?.length 
-            ? DocumentFormatter.createAttachmentSection(document.attachments)
-            : []),
-          ...DocumentFormatter.createDocumentFooter({
-            signatory: document.signatory,
-            department: document.department,
-            contact_person: document.contact_person
-          })
+          DocumentFormatter.createDocumentFooter()
         ]
       }]
     });
