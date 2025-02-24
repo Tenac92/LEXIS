@@ -188,29 +188,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    // Verify that the unit exists and get its parts
-    const { data: unitData, error: unitError } = await supabase
-      .from('unit_det')
-      .select('parts')
-      .eq('unit_name', req.body.unit)
-      .single();
-
-    if (unitError || !unitData) {
-      console.error('[Users] Invalid unit:', req.body.unit, unitError);
-      return res.status(400).json({ 
-        message: 'Invalid unit selected',
-        error: unitError?.message 
-      });
-    }
-
-    // Verify that the department is one of the parts
-    if (!Array.isArray(unitData.parts) || !unitData.parts.includes(req.body.department)) {
-      console.error('[Users] Invalid department:', req.body.department, 'Available parts:', unitData.parts);
-      return res.status(400).json({ 
-        message: 'Selected department is not valid for this unit',
-        validDepartments: unitData.parts 
-      });
-    }
+    // This validation is already handled above with the units array check
 
     // Check if email already exists
     const { data: existingUser } = await supabase
