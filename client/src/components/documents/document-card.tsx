@@ -141,61 +141,61 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
             </div>
           </div>
 
-          {/* Fixed button layout */
-          <div className="mt-6 grid grid-cols-2 sm:flex sm:justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto text-xs sm:text-sm whitespace-nowrap"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleButtonClick(
-                  async () => await onEdit(document.id),
-                  "Το έγγραφο άνοιξε για επεξεργασία"
-                );
-              }}
-              disabled={isLoading}
-            >
-              <FileEdit className="h-3 w-3 mr-1" />
-              Επεξεργασία
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto text-xs sm:text-sm whitespace-nowrap"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleButtonClick(
-                  async () => await onExport(document.id),
-                  "Το έγγραφο εξήχθη επιτυχώς"
-                );
-              }}
-              disabled={isLoading}
-            >
-              <Download className="h-3 w-3 mr-1" />
-              Εξαγωγή
-            </Button>
-          </div>
-          {document.status !== 'completed' && (
-          <div className="mt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto text-xs sm:text-sm whitespace-nowrap"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleButtonClick(
-                  async () => await onView(document.id),
-                  "Η φόρμα πρωτοκόλλου άνοιξε"
-                );
-              }}
-              disabled={isLoading}
-            >
-              <ClipboardCheck className="h-3 w-3 mr-1" />
-              Προσθήκη Πρωτοκόλλου
-            </Button>
-          </div>
+          {/* Actions */}
+          <div className="mt-6 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-sm font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleButtonClick(
+                    async () => await onEdit(document.id),
+                    "Το έγγραφο άνοιξε για επεξεργασία"
+                  );
+                }}
+                disabled={isLoading}
+              >
+                <FileEdit className="h-4 w-4" />
+                Επεξεργασία
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-sm font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleButtonClick(
+                    async () => await onExport(document.id),
+                    "Το έγγραφο εξήχθη επιτυχώς"
+                  );
+                }}
+                disabled={isLoading}
+              >
+                <Download className="h-4 w-4" />
+                Εξαγωγή
+              </Button>
+            </div>
+            {document.status !== 'completed' && (
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full text-sm font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleButtonClick(
+                    async () => await onView(document.id),
+                    "Η φόρμα πρωτοκόλλου άνοιξε"
+                  );
+                }}
+                disabled={isLoading}
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Προσθήκη Πρωτοκόλλου
+              </Button>
             )}
+          </div>
           </div>
         </div>
 
