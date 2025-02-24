@@ -43,6 +43,35 @@ router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res
   }
 });
 
+// Get parts for a specific unit
+router.get('/units/:unitName/parts', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { unitName } = req.params;
+
+    console.log('[Units] Fetching parts for unit:', unitName);
+    const { data: unitData, error } = await supabase
+      .from('unit_det')
+      .select('parts')
+      .eq('unit_name', unitName)
+      .single();
+
+    if (error) {
+      console.error('[Units] Supabase query error:', error);
+      throw error;
+    }
+
+    const parts = unitData?.parts || [];
+    console.log('[Units] Found parts:', parts);
+    res.json(parts);
+  } catch (error) {
+    console.error('[Units] Parts fetch error:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch parts', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
 // Get all users
 router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -87,16 +116,33 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    if (!req.body.email || !req.body.name || !req.body.password || !req.body.role) {
+    if (!req.body.email || !req.body.name || !req.body.password || !req.body.role || !req.body.unit || !req.body.department) {
       return res.status(400).json({ 
         message: 'Missing required fields',
         details: {
           email: !req.body.email ? 'Email is required' : null,
           name: !req.body.name ? 'Name is required' : null,
           password: !req.body.password ? 'Password is required' : null,
-          role: !req.body.role ? 'Role is required' : null
+          role: !req.body.role ? 'Role is required' : null,
+          unit: !req.body.unit ? 'Unit is required' : null,
+          department: !req.body.department ? 'Department is required' : null
         }
       });
+    }
+
+    // Verify that the department belongs to the selected unit
+    const { data: unitData, error: unitError } = await supabase
+      .from('unit_det')
+      .select('parts')
+      .eq('unit_name', req.body.unit)
+      .single();
+
+    if (unitError || !unitData) {
+      return res.status(400).json({ message: 'Invalid unit selected' });
+    }
+
+    if (!unitData.parts.includes(req.body.department)) {
+      return res.status(400).json({ message: 'Selected department does not belong to the chosen unit' });
     }
 
     const { data: existingUser } = await supabase
@@ -117,16 +163,16 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       email: req.body.email,
       name: req.body.name,
       role: req.body.role,
-      password: hashedPassword, // Store hashed password
-      units: Array.isArray(req.body.units) ? req.body.units : [],
-      telephone: req.body.telephone || null,
-      department: req.body.department || null
+      password: hashedPassword,
+      unit: req.body.unit,
+      department: req.body.department,
+      telephone: req.body.telephone || null
     };
 
     const { data: newUser, error } = await supabase
       .from('users')
       .insert([newUserData])
-      .select(`id, email, name, role, units, telephone, department`)
+      .select(`id, email, name, role, unit, department, telephone`)
       .single();
 
     if (error) {
