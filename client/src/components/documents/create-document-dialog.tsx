@@ -867,66 +867,80 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   </Button>
                 </div>
 
-                <div className="space-y-3">
-                  {recipients.map((_, index) => (
-                    <Card key={index} className="p-4">
-                      <div className="flex items-start gap-4">
-                        <span className="text-sm font-medium min-w-[24px] text-center mt-2">{index + 1}</span>
-                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 flex-1">
-                          <Input
-                            {...form.register(`recipients.${index}.firstname`)}
-                            placeholder="Όνομα"
-                            className="md:col-span-1"
-                          />
-                          <Input
-                            {...form.register(`recipients.${index}.lastname`)}
-                            placeholder="Επώνυμο"
-                            className="md:col-span-1"
-                          />
-                          <Input
-                            {...form.register(`recipients.${index}.afm`)}
-                            placeholder="ΑΦΜ"
-                            maxLength={9}
-                            className="md:col-span-1"
-                          />
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...form.register(`recipients.${index}.amount`, {
-                              valueAsNumber: true,
-                              min: 0.01
-                            })}
-                            placeholder="Ποσό"
-                            className="md:col-span-2"
-                          />
-                          <div className="flex items-center gap-2 md:col-span-1">
+                <ScrollArea className="h-[calc(60vh-200px)] w-full pr-4">
+                  <div className="space-y-3">
+                    {recipients.map((_, index) => (
+                      <Card key={index} className="p-4">
+                        <div className="flex items-start gap-4">
+                          <span className="text-sm font-medium min-w-[24px] text-center mt-2">{index + 1}</span>
+                          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 flex-1">
+                            <Input
+                              {...form.register(`recipients.${index}.firstname`)}
+                              placeholder="Όνομα"
+                              className="md:col-span-1"
+                            />
+                            <Input
+                              {...form.register(`recipients.${index}.lastname`)}
+                              placeholder="Επώνυμο"
+                              className="md:col-span-1"
+                            />
+                            <Input
+                              {...form.register(`recipients.${index}.afm`)}
+                              placeholder="ΑΦΜ"
+                              maxLength={9}
+                              className="md:col-span-1"
+                            />
                             <Input
                               type="number"
-                              min={1}
-                              max={12}
-                              {...form.register(`recipients.${index}.installment`, {
+                              step="0.01"
+                              {...form.register(`recipients.${index}.amount`, {
                                 valueAsNumber: true,
-                                min: 1,
-                                max: 12
+                                min: 0.01
                               })}
-                              placeholder="Δόση"
-                              className="w-20"
+                              placeholder="Ποσό"
+                              className="md:col-span-2"
                             />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="px-2"
-                              onClick={() => removeRecipient(index)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className="flex items-center gap-2 md:col-span-1">
+                              <Input
+                                type="number"
+                                min={1}
+                                max={12}
+                                {...form.register(`recipients.${index}.installment`, {
+                                  valueAsNumber: true,
+                                  min: 1,
+                                  max: 12
+                                })}
+                                placeholder="Δόση"
+                                className="w-20"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="px-2"
+                                onClick={() => removeRecipient(index)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+                        <div className="mt-2 pl-8 text-xs text-destructive">
+                          {form.formState.errors.recipients?.[index]?.firstname && 
+                            <span className="block">{form.formState.errors.recipients[index]?.firstname?.message}</span>}
+                          {form.formState.errors.recipients?.[index]?.lastname && 
+                            <span className="block">{form.formState.errors.recipients[index]?.lastname?.message}</span>}
+                          {form.formState.errors.recipients?.[index]?.afm && 
+                            <span className="block">{form.formState.errors.recipients[index]?.afm?.message}</span>}
+                          {form.formState.errors.recipients?.[index]?.amount && 
+                            <span className="block">{form.formState.errors.recipients[index]?.amount?.message}</span>}
+                          {form.formState.errors.recipients?.[index]?.installment && 
+                            <span className="block">{form.formState.errors.recipients[index]?.installment?.message}</span>}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
             </div>
           )}
