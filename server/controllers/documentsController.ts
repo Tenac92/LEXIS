@@ -263,25 +263,22 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
           }
         },
         children: [
-          ...DocumentFormatter.createDocumentHeader(req, {
-            unit_name: document.unit,
-            email: document.contact_email,
-            parts: document.unit_parts || []
-          }),
+          DocumentFormatter.createHeader("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+          DocumentFormatter.createHeader("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
+          DocumentFormatter.createHeader("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
+          DocumentFormatter.createHeader("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
           ...DocumentFormatter.createMetadataSection({
             protocol_number: document.protocol_number,
             protocol_date: document.protocol_date,
             document_number: document.id
           }),
-          DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ'),
+          DocumentFormatter.createHeader("ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ"),
           DocumentFormatter.createPaymentTable(recipients),
           DocumentFormatter.createTotalSection(totalAmount),
-          ...(include_attachments && document.attachments?.length
-            ? DocumentFormatter.createAttachmentSection(document.attachments)
-            : []),
+          ...(include_attachments ? DocumentFormatter.createAttachmentSection(document.attachments || []) : []),
           ...DocumentFormatter.createDocumentFooter({
-            signatory: document.signatory,
-            department: document.department,
+            department: "ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.)",
+            signatory: "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ",
             contact_person: document.contact_person
           })
         ]
