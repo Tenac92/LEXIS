@@ -141,8 +141,6 @@ export class DocumentFormatter {
     ];
 
     const rightColumnInfo = [
-      { text: 'ΑΝΑΡΤΗΤΕΑ ΣΤΟ ΔΙΑΔΙΚΤΥΟ', bold: true },
-      { text: '', bold: false },
       { text: 'Αθήνα, ........................', bold: true },
       { text: 'Αρ. Πρωτ.: ......................', bold: true }
     ];
