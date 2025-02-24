@@ -61,56 +61,79 @@ interface NotificationCenterProps {
 export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotificationClick }) => {
   const queryClient = useQueryClient();
 
-  const { data: notifications } = useQuery({
+  const { data: notifications, error } = useQuery({
     queryKey: ['/api/budget/notifications'],
     queryFn: async () => {
-      const response = await fetch('/api/budget/notifications');
+      const response = await fetch('/api/budget/notifications', {
+        credentials: 'include' // Add credentials
+      });
       if (!response.ok) throw new Error('Failed to fetch notifications');
       const data = await response.json();
-      return data.data as BudgetNotification[];
+      return data.notifications as BudgetNotification[];
     }
   });
 
   // Update the WebSocket connection logic
   useEffect(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/notifications`;
-    const ws = new WebSocket(wsUrl);
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}/ws/notifications`;
 
-    ws.onopen = () => {
-      console.log('WebSocket connection established');
-    };
+      console.log('Attempting WebSocket connection to:', wsUrl);
+      const ws = new WebSocket(wsUrl);
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      toast({
-        title: "Connection Error",
-        description: "Failed to connect to notification service. Please refresh the page.",
-        variant: "destructive"
-      });
-    };
+      ws.onopen = () => {
+        console.log('WebSocket connection established');
+      };
 
-    ws.onmessage = (event) => {
-      const notification = JSON.parse(event.data) as BudgetNotification;
-      const styles = notificationStyles[notification.priority || 'medium'];
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        toast({
+          title: "Connection Error",
+          description: "Failed to connect to notification service. Please refresh the page.",
+          variant: "destructive"
+        });
+      };
 
-      // Show toast notification
-      toast({
-        title: `New Budget Notification`,
-        description: notification.reason || `${notification.type} notification received`,
-        variant: styles.toastVariant
-      });
+      ws.onmessage = (event) => {
+        try {
+          const notification = JSON.parse(event.data) as BudgetNotification;
+          const styles = notificationStyles[notification.priority || 'medium'];
 
-      // Invalidate notifications cache to trigger refresh
-      queryClient.invalidateQueries({ queryKey: ['/api/budget/notifications'] });
-    };
+          toast({
+            title: `New Budget Notification`,
+            description: notification.reason || `${notification.type} notification received`,
+            variant: styles.toastVariant
+          });
 
-    return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
-    };
+          queryClient.invalidateQueries({ queryKey: ['/api/budget/notifications'] });
+        } catch (error) {
+          console.error('Error processing notification:', error);
+        }
+      };
+
+      return () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
+      };
+    } catch (error) {
+      console.error('Failed to setup WebSocket:', error);
+    }
   }, [queryClient]);
+
+  if (error) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardContent className="pt-6">
+          <div className="text-center text-destructive">
+            Failed to load notifications
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!notifications?.length) {
     return (
@@ -128,7 +151,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     <div className="space-y-4">
       {notifications.map((notification) => {
         const Icon = typeIcons[notification.type as keyof typeof typeIcons] || Bell;
-        const styles = notificationStyles[notification.priority];
+        const styles = notificationStyles[notification.priority || 'medium'];
 
         return (
           <Card
@@ -152,7 +175,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
                 </CardDescription>
               </div>
               <Badge variant="outline" className={cn(styles.badge)}>
-                {notification.priority}
+                {notification.priority || 'medium'}
               </Badge>
             </CardHeader>
             <CardContent>

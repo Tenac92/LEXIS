@@ -94,4 +94,44 @@ export async function getBudgetHistory(req: Request, res: Response) {
   }
 }
 
-export default { validateBudget, updateBudget, getBudgetHistory, getBudget };
+export async function getNotifications(req: AuthRequest, res: Response) {
+  try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Admin access required'
+      });
+    }
+
+    const { data: notifications, error } = await supabase
+      .from('budget_notifications')
+      .select(`
+        *,
+        created_by (
+          id,
+          name,
+          email
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[Budget] Notifications fetch error:', error);
+      throw error;
+    }
+
+    return res.json({
+      status: 'success',
+      notifications: notifications || []
+    });
+  } catch (error) {
+    console.error('[Budget] Get notifications error:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch notifications',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+export default { validateBudget, updateBudget, getBudgetHistory, getBudget, getNotifications };

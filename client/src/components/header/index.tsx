@@ -22,28 +22,32 @@ export function Header() {
       <Link href="/">
         <Button variant="ghost" className="flex items-center gap-2">
           <LayoutDashboard className="h-4 w-4" />
-          Πίνακας Ελέγχου
+          <span className="hidden lg:inline">Πίνακας Ελέγχου</span>
+          <span className="lg:hidden">Αρχική</span>
         </Button>
       </Link>
       <Separator orientation="vertical" className="h-8 mx-2" />
       <Link href="/documents">
         <Button variant="ghost" className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
-          Δημιουργημένα Έγγραφα
+          <span className="hidden lg:inline">Δημιουργημένα Έγγραφα</span>
+          <span className="lg:hidden">Έγγραφα</span>
         </Button>
       </Link>
       <Separator orientation="vertical" className="h-8 mx-2" />
       <Link href="/projects">
         <Button variant="ghost" className="flex items-center gap-2">
           <FolderKanban className="h-4 w-4" />
-          Έργα
+          <span className="hidden lg:inline">Έργα</span>
+          <span className="lg:hidden">Έργα</span>
         </Button>
       </Link>
       <Separator orientation="vertical" className="h-8 mx-2" />
       <Link href="/budget-history">
         <Button variant="ghost" className="flex items-center gap-2">
           <History className="h-4 w-4" />
-          Ιστορικό Προϋπολογισμού
+          <span className="hidden lg:inline">Ιστορικό Προϋπολογισμού</span>
+          <span className="lg:hidden">Ιστορικό</span>
         </Button>
       </Link>
       {isAdmin && (
@@ -52,14 +56,16 @@ export function Header() {
           <Link href="/users">
             <Button variant="ghost" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Χρήστες
+              <span className="hidden lg:inline">Χρήστες</span>
+              <span className="lg:hidden">Χρήστες</span>
             </Button>
           </Link>
           <Separator orientation="vertical" className="h-8 mx-2" />
           <Link href="/notifications">
             <Button variant="ghost" className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
-              Ειδοποιήσεις
+              <span className="hidden lg:inline">Ειδοποιήσεις</span>
+              <span className="lg:hidden">Ειδοπ.</span>
             </Button>
           </Link>
         </>
@@ -72,7 +78,8 @@ export function Header() {
         className="flex items-center gap-2"
       >
         <LogOut className="h-4 w-4" />
-        Αποσύνδεση
+        <span className="hidden lg:inline">Αποσύνδεση</span>
+        <span className="lg:hidden">Έξοδος</span>
       </Button>
     </>
   );
