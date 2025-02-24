@@ -107,7 +107,7 @@ export async function getNotifications(req: AuthRequest, res: Response) {
       .from('budget_notifications')
       .select(`
         *,
-        created_by (
+        user:user_id (
           id,
           name,
           email

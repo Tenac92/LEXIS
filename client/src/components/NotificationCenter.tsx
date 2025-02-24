@@ -6,52 +6,33 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { BudgetNotification } from '@shared/schema';
 
-interface NotificationStyles {
-  [key: string]: {
-    bg: string;
-    border: string;
-    badge: string;
-    toastVariant: 'default' | 'destructive';
-  };
-}
-
-// Priority-based styling
-const notificationStyles: NotificationStyles = {
-  high: {
+// Styling based on notification type
+const notificationStyles = {
+  funding: {
     bg: 'bg-red-50',
     border: 'border-red-200',
     badge: 'bg-red-100 text-red-800',
-    toastVariant: 'destructive'
+    toastVariant: 'destructive' as const
   },
-  medium: {
+  reallocation: {
     bg: 'bg-yellow-50',
     border: 'border-yellow-200',
     badge: 'bg-yellow-100 text-yellow-800',
-    toastVariant: 'default'
-  },
-  low: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    badge: 'bg-blue-100 text-blue-800',
-    toastVariant: 'default'
+    toastVariant: 'default' as const
   }
 };
 
 const typeIcons = {
   funding: AlertCircle,
-  reallocation: AlertTriangle,
-  low_budget: Info,
-  threshold_warning: Bell
+  reallocation: AlertTriangle
 } as const;
 
 interface NotificationCenterProps {
@@ -65,7 +46,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     queryKey: ['/api/budget/notifications'],
     queryFn: async () => {
       const response = await fetch('/api/budget/notifications', {
-        credentials: 'include' // Add credentials
+        credentials: 'include'
       });
       if (!response.ok) throw new Error('Failed to fetch notifications');
       const data = await response.json();
@@ -99,7 +80,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       ws.onmessage = (event) => {
         try {
           const notification = JSON.parse(event.data) as BudgetNotification;
-          const styles = notificationStyles[notification.priority || 'medium'];
+          const styles = notificationStyles[notification.type as keyof typeof notificationStyles];
 
           toast({
             title: `New Budget Notification`,
@@ -151,7 +132,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     <div className="space-y-4">
       {notifications.map((notification) => {
         const Icon = typeIcons[notification.type as keyof typeof typeIcons] || Bell;
-        const styles = notificationStyles[notification.priority || 'medium'];
+        const styles = notificationStyles[notification.type as keyof typeof notificationStyles];
 
         return (
           <Card
@@ -175,7 +156,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
                 </CardDescription>
               </div>
               <Badge variant="outline" className={cn(styles.badge)}>
-                {notification.priority || 'medium'}
+                {notification.status}
               </Badge>
             </CardHeader>
             <CardContent>
@@ -184,13 +165,6 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
                 MIS: {notification.mis} • Amount: €{notification.amount.toLocaleString()}
               </div>
             </CardContent>
-            {notification.action_required && (
-              <CardFooter className="bg-background/10 pt-2">
-                <Button variant="outline" size="sm" className="ml-auto">
-                  Take Action
-                </Button>
-              </CardFooter>
-            )}
           </Card>
         );
       })}

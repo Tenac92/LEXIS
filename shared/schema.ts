@@ -19,26 +19,41 @@ export const budgetNA853Split = pgTable("budget_na853_split", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// New Budget Notifications table
+// Budget Notifications table matching existing Supabase structure
 export const budgetNotifications = pgTable("budget_notifications", {
   id: serial("id").primaryKey(),
   mis: text("mis").notNull(),
-  type: text("type").notNull(), // 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning'
+  type: text("type").notNull(), // 'funding' | 'reallocation'
   amount: numeric("amount").notNull(),
   current_budget: numeric("current_budget").notNull(),
   ethsia_pistosi: numeric("ethsia_pistosi").notNull(),
   reason: text("reason"),
-  priority: text("priority").default("medium"), // 'high' | 'medium' | 'low'
-  status: text("status").default("pending"), // 'pending' | 'approved' | 'rejected' | 'in_review'
-  metadata: jsonb("metadata"), // Additional context data
-  action_required: boolean("action_required").default(true),
-  action_deadline: timestamp("action_deadline"),
+  status: text("status").default("pending"), // 'pending' | 'approved' | 'rejected'
+  user_id: integer("user_id").references(() => users.id),
   created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at").defaultNow(),
-  created_by: integer("created_by").references(() => users.id),
-  reviewed_by: integer("reviewed_by").references(() => users.id),
-  review_notes: text("review_notes"),
+  updated_at: timestamp("updated_at").defaultNow()
 });
+
+// New Budget Notifications table
+//export const budgetNotifications = pgTable("budget_notifications", {
+//  id: serial("id").primaryKey(),
+//  mis: text("mis").notNull(),
+//  type: text("type").notNull(), // 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning'
+//  amount: numeric("amount").notNull(),
+//  current_budget: numeric("current_budget").notNull(),
+//  ethsia_pistosi: numeric("ethsia_pistosi").notNull(),
+//  reason: text("reason"),
+//  priority: text("priority").default("medium"), // 'high' | 'medium' | 'low'
+//  status: text("status").default("pending"), // 'pending' | 'approved' | 'rejected' | 'in_review'
+//  metadata: jsonb("metadata"), // Additional context data
+//  action_required: boolean("action_required").default(true),
+//  action_deadline: timestamp("action_deadline"),
+//  created_at: timestamp("created_at").defaultNow(),
+//  updated_at: timestamp("updated_at").defaultNow(),
+//  created_by: integer("created_by").references(() => users.id),
+//  reviewed_by: integer("reviewed_by").references(() => users.id),
+//  review_notes: text("review_notes"),
+//});
 
 // Users table matching the actual database structure
 export const users = pgTable("users", {
@@ -194,18 +209,13 @@ export const budgetValidationResponseSchema = z.object({
   allowDocx: z.boolean().optional(),
 });
 
-// Enhanced Budget Notification Schema
+// Update the notification schema to match the table
 export const insertBudgetNotificationSchema = createInsertSchema(budgetNotifications, {
-  type: z.enum(["funding", "reallocation", "low_budget", "threshold_warning"]),
+  type: z.enum(["funding", "reallocation"]),
   amount: z.number().min(0, "Amount must be non-negative"),
   current_budget: z.number().min(0, "Current budget must be non-negative"),
   ethsia_pistosi: z.number().min(0, "Annual credit must be non-negative"),
-  priority: z.enum(["high", "medium", "low"]).default("medium"),
-  status: z.enum(["pending", "approved", "rejected", "in_review"]).default("pending"),
-  metadata: z.record(z.unknown()).optional(),
-  action_required: z.boolean().default(true),
-  action_deadline: z.date().optional(),
-  review_notes: z.string().optional()
+  status: z.enum(["pending", "approved", "rejected"]).default("pending")
 }).omit({ id: true, created_at: true, updated_at: true });
 
 // Enhanced recipient schema with better validation
