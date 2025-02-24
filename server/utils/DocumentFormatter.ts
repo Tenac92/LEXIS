@@ -11,7 +11,7 @@ import {
   AlignmentType,
   VerticalAlign,
 } from "docx";
-import { supabase } from "../config/db";
+import { supabase } from "../db";
 
 export class DocumentFormatter {
   static getDefaultMargins() {
@@ -24,59 +24,85 @@ export class DocumentFormatter {
   }
 
   static formatCurrency(amount: number): string {
-    return new Intl.NumberFormat("el-GR", {
-      style: "currency",
-      currency: "EUR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
+    try {
+      return new Intl.NumberFormat("el-GR", {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    } catch (error) {
+      console.error("Error formatting currency:", error);
+      return `${amount} €`;
+    }
   }
 
   static async getUnitDetails(unitCode: string) {
     try {
+      console.log("Fetching unit details for:", unitCode);
+
       const { data: unitData, error: unitError } = await supabase
         .from('unit_det')
         .select('*')
         .eq('unit', unitCode)
         .single();
 
-      if (unitError) throw unitError;
+      if (unitError) {
+        console.error("Error fetching unit details:", unitError);
+        return null;
+      }
+
+      console.log("Unit details fetched:", unitData);
       return unitData;
     } catch (error) {
-      console.error('Error fetching unit details:', error);
+      console.error('Error in getUnitDetails:', error);
       return null;
     }
   }
 
   static async createDefaultHeader(documentData: any = {}) {
-    const unitDetails = await this.getUnitDetails(documentData.unit);
+    try {
+      console.log("Creating header with document data:", documentData);
+      const unitDetails = await this.getUnitDetails(documentData.unit);
 
-    const headerInfo = [
-      { text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ", bold: true },
-      { text: "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ &", bold: true },
-      { text: "ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ", bold: true },
-      { text: "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ", bold: true },
-      { text: "ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ", bold: true },
-      { text: unitDetails?.unit_name || "", bold: true },
-      { text: "Ταχ. Δ/νση: Δημοκρίτου 2", bold: false },
-      { text: "Ταχ. Κώδικας: 115 23, Μαρούσι", bold: false },
-      { text: `Πληροφορίες: ${unitDetails?.manager?.split(' ')[0] || ""}`, bold: false },
-      { text: `Τηλέφωνο: ${documentData.telephone || ""}`, bold: false },
-      { text: `E-mail: ${unitDetails?.email || "daefkke@civilprotection.gr"}`, bold: false },
-    ];
+      if (!unitDetails) {
+        console.warn("No unit details found for unit:", documentData.unit);
+      }
 
-    const rightColumnInfo = [
-      { text: `Αθήνα, ${new Date().toLocaleDateString("el-GR")}`, bold: false },
-      { text: "Αρ. Πρωτ.: ......................", bold: true },
-      { text: "" },
-      { text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών", bold: false },
-      { text: "Διεύθυνση Οικονομικής Διαχείρησης", bold: false },
-      { text: "Τμήμα Ελέγχου Εκκαθάρισης και", bold: false },
-      { text: "Λογιστικής Παρακολούθησης Δαπανών", bold: false },
-      { text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)", bold: false },
-    ];
+      const managerName = unitDetails?.manager ? 
+        unitDetails.manager.split(' ΠΟΛ')[0].trim() : 
+        "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ";
 
-    return this.createHeaderTable(headerInfo, rightColumnInfo);
+      const headerInfo = [
+        { text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ", bold: true },
+        { text: "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ &", bold: true },
+        { text: "ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ", bold: true },
+        { text: "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ", bold: true },
+        { text: "ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ", bold: true },
+        { text: unitDetails?.unit_name || "", bold: true },
+        { text: "Ταχ. Δ/νση: Δημοκρίτου 2", bold: false },
+        { text: "Ταχ. Κώδικας: 115 23, Μαρούσι", bold: false },
+        { text: `Πληροφορίες: ${managerName}`, bold: false },
+        { text: `Τηλέφωνο: ${documentData.telephone || ""}`, bold: false },
+        { text: `E-mail: ${unitDetails?.email || "daefkke@civilprotection.gr"}`, bold: false },
+      ];
+
+      const rightColumnInfo = [
+        { text: `Αθήνα, ${new Date().toLocaleDateString("el-GR")}`, bold: false },
+        { text: "Αρ. Πρωτ.: ......................", bold: true },
+        { text: "" },
+        { text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών", bold: false },
+        { text: "Διεύθυνση Οικονομικής Διαχείρησης", bold: false },
+        { text: "Τμήμα Ελέγχου Εκκαθάρισης και", bold: false },
+        { text: "Λογιστικής Παρακολούθησης Δαπανών", bold: false },
+        { text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)", bold: false },
+      ];
+
+      return this.createHeaderTable(headerInfo, rightColumnInfo);
+    } catch (error) {
+      console.error("Error creating header:", error);
+      throw error;
+    }
   }
 
   static createReferenceSection() {
@@ -124,111 +150,125 @@ export class DocumentFormatter {
   }
 
   static async createFooter(document: any = {}) {
-    const unitDetails = await this.getUnitDetails(document.unit);
+    try {
+      console.log("Creating footer with document:", document);
+      const unitDetails = await this.getUnitDetails(document.unit);
 
-    const { data: attachmentData } = await supabase
-      .from("attachments")
-      .select("*")
-      .eq("expediture_type", document.expenditure_type)
-      .eq("installment", document.recipients?.[0]?.installment || 1)
-      .single();
+      const { data: attachmentData, error: attachmentError } = await supabase
+        .from("attachments")
+        .select("*")
+        .eq("expediture_type", document.expenditure_type)
+        .eq("installment", document.recipients?.[0]?.installment || 1)
+        .single();
 
-    const attachments = attachmentData?.attachments || [""];
+      if (attachmentError) {
+        console.error("Error fetching attachments:", attachmentError);
+      }
 
-    const notifications = [
-      "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
-      "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
-      "Γ.Δ.Α.Ε.Φ.Κ.",
-    ];
+      const attachments = attachmentData?.attachments || [""];
 
-    const internalDist = [
-      "Χρονολογικό Αρχείο",
-      "Τμήμα Β/20.51",
-      "Αβραμόπουλο Ι.",
-    ];
+      const notifications = [
+        "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+        "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+        "Γ.Δ.Α.Ε.Φ.Κ.",
+      ];
 
-    const footerTable = new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.NONE, size: 0 },
-        bottom: { style: BorderStyle.NONE, size: 0 },
-        left: { style: BorderStyle.NONE, size: 0 },
-        right: { style: BorderStyle.NONE, size: 0 },
-        insideVertical: { style: BorderStyle.NONE, size: 0 },
-      },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({ text: "ΣΥΝΗΜΜΕΝΑ:", bold: true, size: 20 }),
-                  ],
-                  spacing: { before: 200, after: 200 },
-                }),
-                ...this.createListItems(attachments),
-                new Paragraph({
-                  children: [
-                    new TextRun({ text: "ΚΟΙΝΟΠΟΙΗΣΗ:", bold: true, size: 20 }),
-                  ],
-                  spacing: { before: 200, after: 200 },
-                }),
-                ...this.createListItems(notifications),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ:",
-                      bold: true,
-                      size: 20,
-                    }),
-                  ],
-                  spacing: { before: 200, after: 200 },
-                }),
-                ...this.createListItems(internalDist),
-              ],
-              width: { size: 60, type: WidthType.PERCENTAGE },
-            }),
-            new TableCell({
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: `Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ ${unitDetails?.unit_name || 'Δ.Α.Ε.Φ.Κ.'}`,
-                      bold: true,
-                      size: 20,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                  spacing: { before: 1440 },
-                }),
-                new Paragraph({
-                  text: "",
-                  spacing: { before: 720, after: 720 },
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: unitDetails?.manager?.split(' ΠΟΛ')[0] || "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ",
-                      bold: true,
-                      size: 20,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: "ΠΟΛ. ΜΗΧΑΝΙΚΟΣ", size: 20 })],
-                  alignment: AlignmentType.CENTER,
-                }),
-              ],
-              width: { size: 40, type: WidthType.PERCENTAGE },
-            }),
-          ],
-        }),
-      ],
-    });
+      const internalDist = [
+        "Χρονολογικό Αρχείο",
+        "Τμήμα Β/20.51",
+        "Αβραμόπουλο Ι.",
+      ];
 
-    return footerTable;
+      const managerName = unitDetails?.manager ? 
+        unitDetails.manager.split(' ΠΟΛ')[0].trim() : 
+        "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ";
+
+      const footerTable = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.NONE, size: 0 },
+          bottom: { style: BorderStyle.NONE, size: 0 },
+          left: { style: BorderStyle.NONE, size: 0 },
+          right: { style: BorderStyle.NONE, size: 0 },
+          insideVertical: { style: BorderStyle.NONE, size: 0 },
+        },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: "ΣΥΝΗΜΜΕΝΑ:", bold: true, size: 20 }),
+                    ],
+                    spacing: { before: 200, after: 200 },
+                  }),
+                  ...this.createListItems(attachments),
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: "ΚΟΙΝΟΠΟΙΗΣΗ:", bold: true, size: 20 }),
+                    ],
+                    spacing: { before: 200, after: 200 },
+                  }),
+                  ...this.createListItems(notifications),
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ:",
+                        bold: true,
+                        size: 20,
+                      }),
+                    ],
+                    spacing: { before: 200, after: 200 },
+                  }),
+                  ...this.createListItems(internalDist),
+                ],
+                width: { size: 60, type: WidthType.PERCENTAGE },
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: `Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ ${unitDetails?.unit_name || 'Δ.Α.Ε.Φ.Κ.'}`,
+                        bold: true,
+                        size: 20,
+                      }),
+                    ],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 1440 },
+                  }),
+                  new Paragraph({
+                    text: "",
+                    spacing: { before: 720, after: 720 },
+                  }),
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: managerName,
+                        bold: true,
+                        size: 20,
+                      }),
+                    ],
+                    alignment: AlignmentType.CENTER,
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: "ΠΟΛ. ΜΗΧΑΝΙΚΟΣ", size: 20 })],
+                    alignment: AlignmentType.CENTER,
+                  }),
+                ],
+                width: { size: 40, type: WidthType.PERCENTAGE },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      return footerTable;
+    } catch (error) {
+      console.error("Error creating footer:", error);
+      throw error;
+    }
   }
 
   static createHeaderTable(headerInfo: Array<{ text: string; bold: boolean }>, rightColumnInfo: Array<{ text: string; bold: boolean }>) {
@@ -297,45 +337,50 @@ export class DocumentFormatter {
   }
 
   static createPaymentTable(recipients: any[]) {
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
-        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-        insideVertical: { style: BorderStyle.SINGLE, size: 1 },
-      },
-      rows: [
-        new TableRow({
-          children: [
-            this.createTableHeaderCell("Α/Α"),
-            this.createTableHeaderCell("ΕΠΩΝΥΜΟ"),
-            this.createTableHeaderCell("ΟΝΟΜΑ"),
-            this.createTableHeaderCell("ΠΑΤΡΩΝΥΜΟ"),
-            this.createTableHeaderCell("ΑΦΜ"),
-            this.createTableHeaderCell("ΠΟΣΟ (€)"),
-          ],
-        }),
-        ...recipients.map(
-          (recipient, index) =>
-            new TableRow({
-              children: [
-                this.createTableCell((index + 1).toString(), AlignmentType.CENTER),
-                this.createTableCell(recipient.lastname || "", AlignmentType.LEFT),
-                this.createTableCell(recipient.firstname || "", AlignmentType.LEFT),
-                this.createTableCell(recipient.fathername || "", AlignmentType.LEFT),
-                this.createTableCell(recipient.afm || "", AlignmentType.CENTER),
-                this.createTableCell(
-                  this.formatCurrency(recipient.amount || 0),
-                  AlignmentType.RIGHT
-                ),
-              ],
-            })
-        ),
-      ],
-    });
+    try {
+      return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 1 },
+          bottom: { style: BorderStyle.SINGLE, size: 1 },
+          left: { style: BorderStyle.SINGLE, size: 1 },
+          right: { style: BorderStyle.SINGLE, size: 1 },
+          insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+          insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+        },
+        rows: [
+          new TableRow({
+            children: [
+              this.createTableHeaderCell("Α/Α"),
+              this.createTableHeaderCell("ΕΠΩΝΥΜΟ"),
+              this.createTableHeaderCell("ΟΝΟΜΑ"),
+              this.createTableHeaderCell("ΠΑΤΡΩΝΥΜΟ"),
+              this.createTableHeaderCell("ΑΦΜ"),
+              this.createTableHeaderCell("ΠΟΣΟ (€)"),
+            ],
+          }),
+          ...recipients.map(
+            (recipient, index) =>
+              new TableRow({
+                children: [
+                  this.createTableCell((index + 1).toString(), AlignmentType.CENTER),
+                  this.createTableCell(recipient.lastname || "", AlignmentType.LEFT),
+                  this.createTableCell(recipient.firstname || "", AlignmentType.LEFT),
+                  this.createTableCell(recipient.fathername || "", AlignmentType.LEFT),
+                  this.createTableCell(recipient.afm || "", AlignmentType.CENTER),
+                  this.createTableCell(
+                    this.formatCurrency(recipient.amount || 0),
+                    AlignmentType.RIGHT
+                  ),
+                ],
+              })
+          ),
+        ],
+      });
+    } catch (error) {
+      console.error("Error creating payment table:", error);
+      throw error;
+    }
   }
 
   static createTableHeaderCell(text: string) {
