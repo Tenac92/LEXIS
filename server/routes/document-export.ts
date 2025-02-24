@@ -1,6 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { Document, Packer } from 'docx';
-import { supabase } from '../config/db';
+import { supabase } from '../db';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
 import { authenticateSession } from '../middleware/auth';
 
@@ -38,6 +38,10 @@ export async function exportDocument(req: Request, res: Response) {
     }
 
     console.log('Creating document with formatter');
+
+    // Get unit details for the document
+    const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
+
     // Create document with proper structure
     const doc = new Document({
       sections: [{
@@ -48,10 +52,9 @@ export async function exportDocument(req: Request, res: Response) {
           }
         },
         children: [
-          await DocumentFormatter.createDefaultHeader(document),
-          DocumentFormatter.createHeader('ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ'),
+          await DocumentFormatter.createHeader(document, unitDetails),
           DocumentFormatter.createPaymentTable(document.recipients || []),
-          await DocumentFormatter.createDocumentFooter(document)
+          await DocumentFormatter.createFooter(document)
         ]
       }]
     });
@@ -60,7 +63,7 @@ export async function exportDocument(req: Request, res: Response) {
     const buffer = await Packer.toBuffer(doc);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
+    res.setHeader('Content-Disposition', `attachment; filename=document-${DocumentFormatter.formatDocumentNumber(parseInt(id))}.docx`);
 
     console.log('Sending document response');
     res.send(buffer);

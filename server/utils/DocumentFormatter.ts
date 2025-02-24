@@ -44,7 +44,7 @@ export class DocumentFormatter {
       const { data: unitData, error: unitError } = await supabase
         .from('unit_det')
         .select('*')
-        .eq('unit', unitCode)
+        .eq('unit', unitCode as string)
         .single();
 
       if (unitError) {
@@ -157,36 +157,7 @@ export class DocumentFormatter {
         ],
       });
 
-      // Add the protocol number and date
-      const protocolSection = new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                children: [new Paragraph({ text: "" })],
-                width: { size: 60, type: WidthType.PERCENTAGE },
-              }),
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    children: [new TextRun({ text: `Αθήνα, ${new Date().toLocaleDateString("el-GR")}`, size: 20 })],
-                    alignment: AlignmentType.RIGHT,
-                  }),
-                  new Paragraph({
-                    children: [new TextRun({ text: "Αρ. Πρωτ.: ......................", bold: true, size: 20 })],
-                    alignment: AlignmentType.RIGHT,
-                  }),
-                ],
-                width: { size: 40, type: WidthType.PERCENTAGE },
-              }),
-            ],
-          }),
-        ],
-      });
-
-      return [...headerParagraphs, contactTable, protocolSection];
+      return [...headerParagraphs, contactTable];
     } catch (error) {
       console.error("Error creating header:", error);
       throw error;
@@ -311,7 +282,7 @@ export class DocumentFormatter {
     });
   }
 
-  static createTableCell(text: string, alignment: AlignmentType) {
+  static createTableCell(text: string, alignment: typeof AlignmentType) {
     return new TableCell({
       children: [
         new Paragraph({
@@ -336,19 +307,6 @@ export class DocumentFormatter {
 
   static async createFooter(document: any, unitDetails: any) {
     try {
-      const { data: attachmentData, error: attachmentError } = await supabase
-        .from("attachments")
-        .select("*")
-        .eq("expediture_type", document.expenditure_type)
-        .eq("installment", document.recipients?.[0]?.installment || 1)
-        .single();
-
-      if (attachmentError) {
-        console.error("Error fetching attachments:", attachmentError);
-      }
-
-      const attachments = attachmentData?.attachments || [""];
-
       const notifications = [
         "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
         "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
@@ -377,32 +335,6 @@ export class DocumentFormatter {
         rows: [
           new TableRow({
             children: [
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    children: [new TextRun({ text: "ΣΥΝΗΜΜΕΝΑ:", bold: true, size: 20 })],
-                    spacing: { before: 200, after: 200 },
-                  }),
-                  ...this.createListItems(attachments),
-                  new Paragraph({
-                    children: [new TextRun({ text: "ΚΟΙΝΟΠΟΙΗΣΗ:", bold: true, size: 20 })],
-                    spacing: { before: 200, after: 200 },
-                  }),
-                  ...this.createListItems(notifications),
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ:",
-                        bold: true,
-                        size: 20,
-                      }),
-                    ],
-                    spacing: { before: 200, after: 200 },
-                  }),
-                  ...this.createListItems(internalDist),
-                ],
-                width: { size: 60, type: WidthType.PERCENTAGE },
-              }),
               new TableCell({
                 children: [
                   new Paragraph({
@@ -435,7 +367,7 @@ export class DocumentFormatter {
                     alignment: AlignmentType.CENTER,
                   }),
                 ],
-                width: { size: 40, type: WidthType.PERCENTAGE },
+                width: { size: 100, type: WidthType.PERCENTAGE },
               }),
             ],
           }),
@@ -445,5 +377,9 @@ export class DocumentFormatter {
       console.error("Error creating footer:", error);
       throw error;
     }
+  }
+
+  static formatDocumentNumber(id: number): string {
+    return `${id.toString().padStart(6, '0')}`;
   }
 }

@@ -233,6 +233,9 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
       return res.status(404).json({ message: 'Document not found' });
     }
 
+    // Get unit details
+    const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
+
     // Format recipients
     const recipients = Array.isArray(document.recipients)
       ? document.recipients.map((recipient: any) => ({
@@ -248,14 +251,6 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
     // Calculate total amount
     const totalAmount = recipients.reduce((sum: number, recipient: any) => sum + recipient.amount, 0);
 
-    // Default attachments (can be customized based on document type)
-    const attachments = [
-      'Διαβιβαστικό έγγραφο',
-      'Κατάσταση πληρωμής',
-      'Δελτίο ελέγχου',
-      'Φορολογική ενημερότητα'
-    ];
-
     // Create the document
     const doc = new Document({
       sections: [{
@@ -265,41 +260,8 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
           }
         },
         children: [
-          // Header
-          DocumentFormatter.createDefaultHeader({
-            unit_name: document.unit || '',
-            email: 'daefkke@civilprotection.gr'
-          }),
-
-          // Add some spacing
-          new Paragraph({ text: '', spacing: { before: 360, after: 360 } }),
-
-          // Subject line
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'ΘΕΜΑ: ', bold: true, size: 24 }),
-              new TextRun({
-                text: `Έγκριση πληρωμής ${DocumentFormatter.formatCurrency(totalAmount)} για το έργο ${document.project_id}`,
-                size: 24
-              })
-            ],
-            spacing: { before: 240, after: 240 }
-          }),
-
-          // Recipients table
+          await DocumentFormatter.createHeader(document, unitDetails),
           DocumentFormatter.createPaymentTable(recipients),
-
-          // Total amount
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'ΣΥΝΟΛΙΚΟ ΠΟΣΟ: ', bold: true, size: 24 }),
-              new TextRun({ text: DocumentFormatter.formatCurrency(totalAmount), size: 24 })
-            ],
-            alignment: AlignmentType.RIGHT,
-            spacing: { before: 240, after: 240 }
-          }),
-
-          // Footer with attachments and signatures
           await DocumentFormatter.createFooter(document),
         ]
       }]
@@ -310,7 +272,7 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
 
     // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${DocumentFormatter.formatDocumentNumber(document.id)}.docx`);
+    res.setHeader('Content-Disposition', `attachment; filename=document-${DocumentFormatter.formatDocumentNumber(parseInt(id))}.docx`);
     res.send(buffer);
 
   } catch (error) {
