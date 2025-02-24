@@ -141,7 +141,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
             </div>
           </div>
 
-          {/* Fixed button layout */}
+          {/* Fixed button layout */
           <div className="mt-6 grid grid-cols-2 sm:flex sm:justify-end gap-2">
             <Button
               variant="outline"
@@ -175,23 +175,26 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
               <Download className="h-3 w-3 mr-1" />
               Εξαγωγή
             </Button>
-            {document.status !== 'completed' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full col-span-2 sm:w-auto text-xs sm:text-sm whitespace-nowrap"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleButtonClick(
-                    async () => await onView(document.id),
-                    "Η φόρμα πρωτοκόλλου άνοιξε"
-                  );
-                }}
-                disabled={isLoading}
-              >
-                <ClipboardCheck className="h-3 w-3 mr-1" />
-                Προσθήκη Πρωτοκόλλου
-              </Button>
+          </div>
+          {document.status !== 'completed' && (
+          <div className="mt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto text-xs sm:text-sm whitespace-nowrap"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleButtonClick(
+                  async () => await onView(document.id),
+                  "Η φόρμα πρωτοκόλλου άνοιξε"
+                );
+              }}
+              disabled={isLoading}
+            >
+              <ClipboardCheck className="h-3 w-3 mr-1" />
+              Προσθήκη Πρωτοκόλλου
+            </Button>
+          </div>
             )}
           </div>
         </div>
