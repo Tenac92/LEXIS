@@ -417,4 +417,20 @@ export class DocumentFormatter {
         })
     );
   }
+
+  static formatDocumentNumber(document: any): string {
+    if (!document) return '';
+
+    // Format based on protocol number if available
+    if (document.protocol_number_input) {
+      return document.protocol_number_input.toString();
+    }
+
+    // Otherwise use document ID
+    return `#${document.id}`;
+  }
+
+  clearCache() {
+    this.cache.clear();
+  }
 }
