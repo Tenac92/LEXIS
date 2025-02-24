@@ -4,6 +4,31 @@ import { supabase } from '../db';
 
 const router = Router();
 
+// Get available MIS and NA853 combinations
+router.get('/records', authenticateToken, async (req, res) => {
+  try {
+    console.log('[Budget] Fetching available MIS and NA853 combinations');
+
+    const { data, error } = await supabase
+      .from('budget_na853_split')
+      .select('mis, na853')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[Budget] Error fetching records:', error);
+      throw error;
+    }
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('[Budget] Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Failed to fetch records' 
+    });
+  }
+});
+
 router.put('/bulk-update', authenticateToken, async (req, res) => {
   try {
     console.log('[Budget] Starting bulk update for budget splits');

@@ -3,12 +3,16 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { PlusIcon, TrashIcon } from "@radix-ui/react-icons";
+import { PlusIcon, TrashIcon, CheckIcon } from "@radix-ui/react-icons";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Header } from "@/components/header";
 import { useAuth } from "@/hooks/use-auth";
 import { Label } from "@/components/ui/label";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 interface UpdateItem {
   mis: string;
@@ -22,6 +26,11 @@ interface UpdateItem {
     katanomes_etous: number;
     user_view: number;
   };
+}
+
+interface BudgetSplitRecord {
+  mis: string;
+  na853: string;
 }
 
 export default function BulkUpdatePage() {
@@ -42,6 +51,12 @@ export default function BulkUpdatePage() {
     } 
   }]);
   const { user } = useAuth();
+
+  // Fetch available MIS and NA853 combinations
+  const { data: budgetRecords } = useQuery<BudgetSplitRecord[]>({
+    queryKey: ['/api/budget/records'],
+    queryFn: () => apiRequest('/api/budget/records').then(res => res.json())
+  });
 
   // Check if user is admin
   if (!user?.role || user.role !== "admin") {
@@ -74,10 +89,11 @@ export default function BulkUpdatePage() {
 
   const handleUpdateChange = (index: number, field: string, value: string | number) => {
     const newUpdates = [...updates];
-    if (field === 'mis') {
-      newUpdates[index].mis = value as string;
-    } else if (field === 'na853') {
-      newUpdates[index].na853 = value as string;
+    if (field === 'mis' || field === 'na853') {
+      newUpdates[index] = {
+        ...newUpdates[index],
+        [field]: value as string
+      };
     } else {
       newUpdates[index].data = {
         ...newUpdates[index].data,
@@ -158,24 +174,78 @@ export default function BulkUpdatePage() {
                 <div className="grid gap-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor={`mis-${index}`}>MIS Number *</Label>
-                      <Input
-                        id={`mis-${index}`}
-                        value={update.mis}
-                        onChange={(e) => handleUpdateChange(index, 'mis', e.target.value)}
-                        placeholder="Enter MIS number"
-                        required
-                      />
+                      <Label>MIS Number *</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between"
+                          >
+                            {update.mis || "Select MIS..."}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <Command>
+                            <CommandInput placeholder="Search MIS..." />
+                            <CommandEmpty>No MIS found.</CommandEmpty>
+                            <CommandGroup>
+                              {budgetRecords?.map((record) => (
+                                <CommandItem
+                                  key={record.mis}
+                                  value={record.mis}
+                                  onSelect={() => handleUpdateChange(index, 'mis', record.mis)}
+                                >
+                                  <CheckIcon
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      update.mis === record.mis ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {record.mis}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div>
-                      <Label htmlFor={`na853-${index}`}>NA853 Code *</Label>
-                      <Input
-                        id={`na853-${index}`}
-                        value={update.na853}
-                        onChange={(e) => handleUpdateChange(index, 'na853', e.target.value)}
-                        placeholder="e.g., 2024ΝΑ85300140"
-                        required
-                      />
+                      <Label>NA853 Code *</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between"
+                          >
+                            {update.na853 || "Select NA853..."}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <Command>
+                            <CommandInput placeholder="Search NA853..." />
+                            <CommandEmpty>No NA853 found.</CommandEmpty>
+                            <CommandGroup>
+                              {budgetRecords?.map((record) => (
+                                <CommandItem
+                                  key={record.na853}
+                                  value={record.na853}
+                                  onSelect={() => handleUpdateChange(index, 'na853', record.na853)}
+                                >
+                                  <CheckIcon
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      update.na853 === record.na853 ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {record.na853}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
 
