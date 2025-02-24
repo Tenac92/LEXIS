@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { supabase } from '../config/db';
+import { supabase } from '../db';
 import bcrypt from 'bcrypt';
 import type { User } from '@shared/schema';
 
@@ -39,14 +39,14 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Create session
-    const userData: User = {
+    // Create session with user data
+    const userData: Partial<User> = {
       id: user.id,
-      email: user.email,
       name: user.name,
       role: user.role,
       unit: user.unit,
-      department: user.department
+      department: user.department,
+      isAdmin: user.role === 'admin'
     };
 
     req.session.user = userData;

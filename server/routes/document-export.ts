@@ -1,5 +1,4 @@
 import { Request, Response, Router } from 'express';
-import { Document, Packer } from 'docx';
 import { supabase } from '../db';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
 import { authenticateSession } from '../middleware/auth';
@@ -37,30 +36,8 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    console.log('Creating document with formatter');
-
-    // Get unit details for the document
-    const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
-
-    // Create document with proper structure
-    const doc = new Document({
-      sections: [{
-        properties: {
-          page: {
-            ...DocumentFormatter.getDefaultMargins(),
-            size: { width: 11906, height: 16838 }
-          }
-        },
-        children: [
-          await DocumentFormatter.createHeader(document, unitDetails),
-          DocumentFormatter.createPaymentTable(document.recipients || []),
-          await DocumentFormatter.createFooter(document)
-        ]
-      }]
-    });
-
-    console.log('Generating document buffer');
-    const buffer = await Packer.toBuffer(doc);
+    console.log('Generating document...');
+    const buffer = await DocumentFormatter.generateDocument(document);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename=document-${DocumentFormatter.formatDocumentNumber(parseInt(id))}.docx`);

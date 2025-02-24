@@ -3,6 +3,12 @@ import type { User } from '@shared/schema';
 
 declare module 'express-session' {
   interface SessionData {
-    user: User;
+    user?: Partial<User>;
+  }
+}
+
+declare module 'express' {
+  interface Request {
+    user?: Partial<User>;
   }
 }

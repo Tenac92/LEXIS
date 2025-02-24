@@ -34,7 +34,7 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
 }
 
 export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  if (req.user?.role !== "admin") {
+  if (!req.session?.user?.role || req.session.user.role !== "admin") {
     return res.status(403).json({ message: "Admin access required" });
   }
   next();
