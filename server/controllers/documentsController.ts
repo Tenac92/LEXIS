@@ -1,11 +1,10 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { supabase } from "../config/db";
-import { z } from "zod";
-import { Document, Packer, Paragraph, TextRun, AlignmentType } from "docx"; // Added import for docx modules
-import { insertGeneratedDocumentSchema } from "@shared/schema";
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, WidthType, AlignmentType } from "docx";
 import type { Database, User } from "@shared/schema";
-import { validateBudget, updateBudget } from "./budgetController";
 import { DocumentFormatter } from "../utils/DocumentFormatter";
+import { DocumentValidator } from "../utils/DocumentValidator";
+import { DocumentManager } from "../utils/DocumentManager";
 
 const router = Router();
 
@@ -234,37 +233,92 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Format recipients
+    // Format recipients using DocumentManager validation
+    const documentManager = new DocumentManager();
+    await documentManager.validateDocument(document);
+
     const recipients = Array.isArray(document.recipients)
-      ? document.recipients.map((recipient: any) => ({
-          lastname: String(recipient.lastname || '').trim(),
-          firstname: String(recipient.firstname || '').trim(),
-          fathername: String(recipient.fathername || '').trim(),
-          amount: parseFloat(recipient.amount) || 0,
-          installment: parseInt(recipient.installment) || 1,
-          afm: String(recipient.afm || '').trim()
-        }))
+      ? document.recipients.map((recipient: any) => {
+          const validation = DocumentValidator.validateRecipient(recipient);
+          if (!validation.isValid) {
+            throw new Error(`Invalid recipient data: ${validation.errors.join(', ')}`);
+          }
+          return {
+            lastname: String(recipient.lastname || '').trim(),
+            firstname: String(recipient.firstname || '').trim(),
+            fathername: String(recipient.fathername || '').trim(),
+            amount: parseFloat(recipient.amount) || 0,
+            installment: parseInt(recipient.installment) || 1,
+            afm: String(recipient.afm || '').trim()
+          };
+        })
       : [];
 
-    // Calculate total
+    // Calculate total amount using formatted values
     const totalAmount = recipients.reduce((sum: number, recipient: any) => sum + recipient.amount, 0);
+    const formattedTotal = DocumentFormatter.formatCurrency(totalAmount);
 
-    // Create document
+    // Create the document with the formatted values
     const doc = new Document({
       sections: [{
         properties: {
           page: {
-            ...DocumentFormatter.getDefaultMargins(),
-            size: { width: 11906, height: 16838 }
+            margin: {
+              top: 1440,
+              right: 1440,
+              bottom: 1440,
+              left: 1440
+            }
           }
         },
         children: [
-          ...DocumentFormatter.createDocumentHeader(),
-          DocumentFormatter.createPaymentTable(recipients),
+          // Header
+          new Paragraph({
+            children: [new TextRun({ text: 'ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ', bold: true, size: 24 })],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 0, after: 120 }
+          }),
+          // Recipients Table
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.SINGLE, size: 1 },
+              right: { style: BorderStyle.SINGLE, size: 1 },
+              insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+              insideVertical: { style: BorderStyle.SINGLE, size: 1 }
+            },
+            rows: [
+              new TableRow({
+                children: [
+                  new TableCell({ children: [new Paragraph({ text: "Α/Α" })] }),
+                  new TableCell({ children: [new Paragraph({ text: "ΕΠΩΝΥΜΟ" })] }),
+                  new TableCell({ children: [new Paragraph({ text: "ΟΝΟΜΑ" })] }),
+                  new TableCell({ children: [new Paragraph({ text: "ΠΑΤΡΩΝΥΜΟ" })] }),
+                  new TableCell({ children: [new Paragraph({ text: "ΑΦΜ" })] }),
+                  new TableCell({ children: [new Paragraph({ text: "ΠΟΣΟ (€)" })] })
+                ]
+              }),
+              ...recipients.map((recipient, index) => 
+                new TableRow({
+                  children: [
+                    new TableCell({ children: [new Paragraph({ text: (index + 1).toString() })] }),
+                    new TableCell({ children: [new Paragraph({ text: recipient.lastname })] }),
+                    new TableCell({ children: [new Paragraph({ text: recipient.firstname })] }),
+                    new TableCell({ children: [new Paragraph({ text: recipient.fathername || '' })] }),
+                    new TableCell({ children: [new Paragraph({ text: recipient.afm })] }),
+                    new TableCell({ children: [new Paragraph({ text: DocumentFormatter.formatCurrency(recipient.amount) })] })
+                  ]
+                })
+              )
+            ]
+          }),
+          // Total Amount
           new Paragraph({
             children: [
-              new TextRun({ text: 'ΣΥΝΟΛΙΚΟ ΠΟΣΟ: ', bold: true, size: 24 }),
-              new TextRun({ text: DocumentFormatter.formatCurrency(totalAmount), size: 24 })
+              new TextRun({ text: 'ΣΥΝΟΛΙΚΟ ΠΟΣΟ: ', bold: true }),
+              new TextRun({ text: formattedTotal })
             ],
             alignment: AlignmentType.RIGHT,
             spacing: { before: 240, after: 240 }

@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, WidthType, AlignmentType, VerticalAlign, IBorderOptions } from 'docx';
+import { Document, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, WidthType, AlignmentType, VerticalAlign } from 'docx';
 
 interface DocumentMargins {
   top: number;
@@ -34,7 +34,7 @@ export class DocumentFormatter {
     });
   }
 
-  static formatDocumentNumber(number: string): string {
+  static formatDocumentNumber(number: string | number): string {
     return number.toString().padStart(6, '0');
   }
 
@@ -72,9 +72,35 @@ export class DocumentFormatter {
     ];
   }
 
-  static createPaymentTable(recipients: Recipient[]): Table {
+  static createPaymentTable(recipients: any[]): Table {
+    const tableRows = [
+      new TableRow({
+        children: [
+          new TableCell({ children: [new Paragraph({ text: "Α/Α" })], width: { size: 10, type: WidthType.PERCENTAGE } }),
+          new TableCell({ children: [new Paragraph({ text: "ΕΠΩΝΥΜΟ" })], width: { size: 20, type: WidthType.PERCENTAGE } }),
+          new TableCell({ children: [new Paragraph({ text: "ΟΝΟΜΑ" })], width: { size: 20, type: WidthType.PERCENTAGE } }),
+          new TableCell({ children: [new Paragraph({ text: "ΠΑΤΡΩΝΥΜΟ" })], width: { size: 15, type: WidthType.PERCENTAGE } }),
+          new TableCell({ children: [new Paragraph({ text: "ΑΦΜ" })], width: { size: 15, type: WidthType.PERCENTAGE } }),
+          new TableCell({ children: [new Paragraph({ text: "ΠΟΣΟ (€)" })], width: { size: 20, type: WidthType.PERCENTAGE } })
+        ]
+      }),
+      ...recipients.map((recipient, index) =>
+        new TableRow({
+          children: [
+            new TableCell({ children: [new Paragraph({ text: (index + 1).toString() })], width: { size: 10, type: WidthType.PERCENTAGE } }),
+            new TableCell({ children: [new Paragraph({ text: recipient.lastname })], width: { size: 20, type: WidthType.PERCENTAGE } }),
+            new TableCell({ children: [new Paragraph({ text: recipient.firstname })], width: { size: 20, type: WidthType.PERCENTAGE } }),
+            new TableCell({ children: [new Paragraph({ text: recipient.fathername || '' })], width: { size: 15, type: WidthType.PERCENTAGE } }),
+            new TableCell({ children: [new Paragraph({ text: recipient.afm })], width: { size: 15, type: WidthType.PERCENTAGE } }),
+            new TableCell({ children: [new Paragraph({ text: this.formatCurrency(recipient.amount) })], width: { size: 20, type: WidthType.PERCENTAGE } })
+          ]
+        })
+      )
+    ];
+
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: tableRows,
       borders: {
         top: { style: BorderStyle.SINGLE, size: 1 },
         bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -82,54 +108,10 @@ export class DocumentFormatter {
         right: { style: BorderStyle.SINGLE, size: 1 },
         insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
         insideVertical: { style: BorderStyle.SINGLE, size: 1 }
-      } as { [key: string]: IBorderOptions },
-      rows: [
-        this.createTableHeader(['Α/Α', 'ΕΠΩΝΥΜΟ', 'ΟΝΟΜΑ', 'ΠΑΤΡΩΝΥΜΟ', 'ΑΦΜ', 'ΠΟΣΟ (€)', 'ΔΟΣΗ']),
-        ...this.createTableRows(recipients)
-      ]
+      }
     });
   }
 
-  private static createTableHeader(headers: string[]): TableRow {
-    return new TableRow({
-      tableHeader: true,
-      children: headers.map(header =>
-        new TableCell({
-          children: [new Paragraph({
-            children: [new TextRun({ text: header, bold: true, size: 24 })],
-            alignment: AlignmentType.CENTER
-          })],
-          verticalAlign: VerticalAlign.CENTER
-        })
-      )
-    });
-  }
-
-  private static createTableRows(recipients: Recipient[]): TableRow[] {
-    return recipients.map((recipient, index) =>
-      new TableRow({
-        children: [
-          this.createTableCell((index + 1).toString(), AlignmentType.CENTER),
-          this.createTableCell(recipient.lastname, AlignmentType.LEFT),
-          this.createTableCell(recipient.firstname, AlignmentType.LEFT),
-          this.createTableCell(recipient.fathername || '', AlignmentType.LEFT),
-          this.createTableCell(recipient.afm, AlignmentType.CENTER),
-          this.createTableCell(this.formatCurrency(recipient.amount), AlignmentType.RIGHT),
-          this.createTableCell(recipient.installment.toString(), AlignmentType.CENTER)
-        ]
-      })
-    );
-  }
-
-  private static createTableCell(text: string, alignment: AlignmentType): TableCell {
-    return new TableCell({
-      children: [new Paragraph({
-        children: [new TextRun({ text, size: 24 })],
-        alignment
-      })],
-      verticalAlign: VerticalAlign.CENTER
-    });
-  }
   static createDistributionSection(): Paragraph[] {
     const notifications = [
       'Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας',
@@ -169,7 +151,7 @@ export class DocumentFormatter {
     return [
       new Paragraph({
         children: [
-          new TextRun({ text: this.DEFAULT_CITY + ', ', size: 24 }),
+          new TextRun({ text: 'Αθήνα, ', size: 24 }),
           new TextRun({ text: formattedDate, size: 24 })
         ],
         alignment: AlignmentType.RIGHT,
@@ -232,7 +214,7 @@ export class DocumentFormatter {
     });
   }
   
-  private static createListItems(items: string[]): Paragraph[] {
+  static createListItems(items: string[]): Paragraph[] {
     return items.map((item, index) => new Paragraph({
       children: [new TextRun({ text: `${index + 1}. ${item}` })],
       indent: { left: 240 },
