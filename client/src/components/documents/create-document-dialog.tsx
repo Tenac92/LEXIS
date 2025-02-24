@@ -922,7 +922,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               <div>
                 <h3 className="text-lg font-medium mb-2">Συνημμένα Έγγραφα</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  {attachments.map((attachment) => (                    <Card key={attachment.id} className="p-3">
+                  {attachments.map((attachment) => (
+                    <Card key={attachment.id} className="p-3">
                       <FormField
                         control={form.control}
                         name="selectedAttachments"
@@ -962,7 +963,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] h-auto overflow-hidden">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] h-auto overflow-hidden flex flex-col">
         <DialogHeader className="pb-4">
           <DialogTitle>Δημιουργία Νέου Εγγράφου</DialogTitle>
           <DialogDescription>
@@ -973,12 +974,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         <StepIndicator currentStep={currentStep} />
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <div className="px-1">
-              {renderStepContent()}
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea className="h-[calc(65vh-100px)] px-1">
+                {renderStepContent()}
+              </ScrollArea>
             </div>
 
-            <div className="flex justify-between items-center gap-4 pt-4 border-t">
+            <div className="flex justify-between items-center gap-4 pt-4 mt-4 border-t">
               <Button
                 type="button"
                 variant="outline"
