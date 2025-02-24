@@ -1,10 +1,16 @@
-import { Document, Packer, Paragraph, TextRun, ISectionOptions } from 'docx';
+import { Document, Packer, Paragraph, TextRun, ISectionOptions, PageOrientation } from 'docx';
 import { type DocumentTemplate } from '@shared/schema';
 import { supabase } from '../config/db';
 
 interface TemplateData {
   sections: Array<{
-    properties: ISectionOptions;
+    properties: {
+      page: {
+        size: { width: number; height: number };
+        margins: { top: number; right: number; bottom: number; left: number };
+        orientation?: PageOrientation;
+      };
+    };
     children: any[];
   }>;
   metadata?: Record<string, any>;
@@ -105,28 +111,20 @@ export class TemplateManager {
       const template = await this.getTemplate(templateId);
       const templateData = template.template_data as TemplateData;
 
-      // Apply preview modifications if needed
-      if (options.watermark) {
-        // Add watermark to the template
-        templateData.sections = templateData.sections.map(section => ({
-          ...section,
-          properties: {
-            ...section.properties,
-            watermark: {
-              text: 'PREVIEW',
-              color: '808080',
-              opacity: 0.3
-            }
+      // Transform template sections to match docx library format
+      const sections = templateData.sections.map(section => ({
+        properties: {
+          page: {
+            ...section.properties.page,
+            orientation: section.properties.page.orientation || PageOrientation.PORTRAIT
           }
-        }));
-      }
+        },
+        children: this.processTemplateChildren(section.children, previewData)
+      }));
 
       // Create document from template
       const doc = new Document({
-        sections: templateData.sections.map(section => ({
-          ...section,
-          children: this.processTemplateChildren(section.children, previewData)
-        }))
+        sections: sections
       });
 
       return await Packer.toBuffer(doc);
@@ -139,10 +137,12 @@ export class TemplateManager {
   private static processTemplateChildren(children: any[], data: any): any[] {
     return children.map(child => {
       if (typeof child === 'string') {
-        return this.replacePlaceholders(child, data);
+        return new TextRun(this.replacePlaceholders(child, data));
       }
       if (Array.isArray(child)) {
-        return this.processTemplateChildren(child, data);
+        return new Paragraph({
+          children: this.processTemplateChildren(child, data)
+        });
       }
       if (child.children) {
         return {
@@ -218,26 +218,29 @@ export class TemplateManager {
           properties: {
             page: {
               size: { width: 11906, height: 16838 },
-              margins: { top: 850, right: 1000, bottom: 850, left: 1000 }
+              margins: { top: 850, right: 1000, bottom: 850, left: 1000 },
+              orientation: PageOrientation.PORTRAIT
             }
           },
           children: [
-            // Your default template structure here
+            new Paragraph({
+              children: [
+                new TextRun('Default Template Content')
+              ]
+            })
           ]
         }]
       },
       is_default: true,
       structure_version: '1.0',
-      is_active: true, 
-      created_by: userId, 
-      expenditure_type: null 
+      is_active: true,
+      created_by: userId,
+      expenditure_type: null
     };
 
     const { data, error } = await supabase
       .from('document_templates')
-      .insert({
-        ...defaultTemplate
-      })
+      .insert(defaultTemplate)
       .select()
       .single();
 
