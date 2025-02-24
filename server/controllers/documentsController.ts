@@ -278,7 +278,7 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
           new Paragraph({
             children: [
               new TextRun({ text: 'ΘΕΜΑ: ', bold: true, size: 24 }),
-              new TextRun({ 
+              new TextRun({
                 text: `Έγκριση πληρωμής ${DocumentFormatter.formatCurrency(totalAmount)} για το έργο ${document.project_id}`,
                 size: 24
               })
@@ -300,19 +300,7 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
           }),
 
           // Footer with attachments and signatures
-          DocumentFormatter.createFooter(
-            attachments,
-            [
-              'Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας',
-              'Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών',
-              'Γ.Δ.Α.Ε.Φ.Κ.'
-            ],
-            [
-              'Χρονολογικό Αρχείο',
-              'Τμήμα Προγραμματισμού Αποκατάστασης & Εκπαίδευσης',
-              'Φάκελος έργου'
-            ]
-          )
+          await DocumentFormatter.createFooter(document),
         ]
       }]
     });
@@ -327,7 +315,7 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
 
   } catch (error) {
     console.error('Export error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Failed to export document',
       error: error instanceof Error ? error.message : 'Unknown error'
     });

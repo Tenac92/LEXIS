@@ -184,11 +184,7 @@ export class DocumentFormatter {
       'Αβραμόπουλο Ι.'
     ];
 
-    return this.createFooterTable(attachments, notifications, internalDist);
-  }
-
-    static createFooterTable(attachments: string[] = [], notifications: string[] = [], internalDist: string[] = []) {
-    return new Table({
+    const footerTable = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
@@ -248,6 +244,8 @@ export class DocumentFormatter {
         })
       ]
     });
+
+    return footerTable;
   }
 
   static createListItems(items: string[]) {
