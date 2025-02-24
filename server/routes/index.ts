@@ -6,6 +6,7 @@ import documentsController from '../controllers/documentsController';
 import recipientsController from '../controllers/recipientsController';
 import statsController from '../controllers/statsController';
 import usersController from '../controllers/usersController';
+import budgetRouter from './budget';
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.use('/documents', authenticateSession, documentsController);
 router.use('/recipients', authenticateSession, recipientsController);
 router.use('/stats', authenticateSession, statsController);
 router.use('/users', authenticateSession, usersController);
+router.use('/budget', authenticateSession, budgetRouter);
 
 // Document export routes 
 router.get('/documents/generated/:id/export', authenticateSession, exportDocument);

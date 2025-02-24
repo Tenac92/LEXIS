@@ -12,8 +12,15 @@ import { Label } from "@/components/ui/label";
 
 interface UpdateItem {
   mis: string;
+  na853: string;
   data: {
-    budget_na853_split: number;
+    ethsia_pistosi: number;
+    q1: number;
+    q2: number;
+    q3: number;
+    q4: number;
+    katanomes_etous: number;
+    user_view: number;
   };
 }
 
@@ -21,7 +28,19 @@ export default function BulkUpdatePage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [loading, setLoading] = useState(false);
-  const [updates, setUpdates] = useState<UpdateItem[]>([{ mis: '', data: { budget_na853_split: 0 } }]);
+  const [updates, setUpdates] = useState<UpdateItem[]>([{ 
+    mis: '', 
+    na853: '',
+    data: { 
+      ethsia_pistosi: 0,
+      q1: 0,
+      q2: 0,
+      q3: 0,
+      q4: 0,
+      katanomes_etous: 0,
+      user_view: 0
+    } 
+  }]);
   const { user } = useAuth();
 
   // Check if user is admin
@@ -34,7 +53,19 @@ export default function BulkUpdatePage() {
   }
 
   const handleAddUpdate = () => {
-    setUpdates([...updates, { mis: '', data: { budget_na853_split: 0 } }]);
+    setUpdates([...updates, { 
+      mis: '', 
+      na853: '',
+      data: { 
+        ethsia_pistosi: 0,
+        q1: 0,
+        q2: 0,
+        q3: 0,
+        q4: 0,
+        katanomes_etous: 0,
+        user_view: 0
+      } 
+    }]);
   };
 
   const handleRemoveUpdate = (index: number) => {
@@ -45,9 +76,12 @@ export default function BulkUpdatePage() {
     const newUpdates = [...updates];
     if (field === 'mis') {
       newUpdates[index].mis = value as string;
+    } else if (field === 'na853') {
+      newUpdates[index].na853 = value as string;
     } else {
       newUpdates[index].data = {
-        budget_na853_split: Number(value) || 0
+        ...newUpdates[index].data,
+        [field]: Number(value) || 0
       };
     }
     setUpdates(newUpdates);
@@ -58,12 +92,12 @@ export default function BulkUpdatePage() {
       setLoading(true);
 
       // Validate updates
-      const invalidUpdates = updates.filter(update => !update.mis || !update.data.budget_na853_split);
+      const invalidUpdates = updates.filter(update => !update.mis || !update.na853);
       if (invalidUpdates.length > 0) {
-        throw new Error('All updates must have a MIS number and budget split amount');
+        throw new Error('All updates must have both MIS and NA853 numbers');
       }
 
-      const response = await apiRequest('/api/projects/bulk-update', {
+      const response = await apiRequest('/api/budget/bulk-update', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -78,14 +112,14 @@ export default function BulkUpdatePage() {
 
       toast({
         title: "Success",
-        description: "Projects updated successfully",
+        description: "Budget splits updated successfully",
       });
 
       setLocation('/projects');
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update projects",
+        description: error instanceof Error ? error.message : "Failed to update budget splits",
         variant: "destructive",
       });
     } finally {
@@ -122,26 +156,103 @@ export default function BulkUpdatePage() {
                 </div>
 
                 <div className="grid gap-4">
-                  <div>
-                    <Label htmlFor={`mis-${index}`}>MIS Number *</Label>
-                    <Input
-                      id={`mis-${index}`}
-                      value={update.mis}
-                      onChange={(e) => handleUpdateChange(index, 'mis', e.target.value)}
-                      placeholder="Enter MIS number"
-                      required
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor={`mis-${index}`}>MIS Number *</Label>
+                      <Input
+                        id={`mis-${index}`}
+                        value={update.mis}
+                        onChange={(e) => handleUpdateChange(index, 'mis', e.target.value)}
+                        placeholder="Enter MIS number"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`na853-${index}`}>NA853 Code *</Label>
+                      <Input
+                        id={`na853-${index}`}
+                        value={update.na853}
+                        onChange={(e) => handleUpdateChange(index, 'na853', e.target.value)}
+                        placeholder="e.g., 2024ΝΑ85300140"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor={`ethsia-pistosi-${index}`}>Annual Credit</Label>
+                      <Input
+                        id={`ethsia-pistosi-${index}`}
+                        type="number"
+                        value={update.data.ethsia_pistosi || ''}
+                        onChange={(e) => handleUpdateChange(index, 'ethsia_pistosi', e.target.value)}
+                        placeholder="Enter annual credit amount"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`user-view-${index}`}>User View Amount</Label>
+                      <Input
+                        id={`user-view-${index}`}
+                        type="number"
+                        value={update.data.user_view || ''}
+                        onChange={(e) => handleUpdateChange(index, 'user_view', e.target.value)}
+                        placeholder="Enter user view amount"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-4">
+                    <div>
+                      <Label htmlFor={`q1-${index}`}>Q1</Label>
+                      <Input
+                        id={`q1-${index}`}
+                        type="number"
+                        value={update.data.q1 || ''}
+                        onChange={(e) => handleUpdateChange(index, 'q1', e.target.value)}
+                        placeholder="Q1 amount"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`q2-${index}`}>Q2</Label>
+                      <Input
+                        id={`q2-${index}`}
+                        type="number"
+                        value={update.data.q2 || ''}
+                        onChange={(e) => handleUpdateChange(index, 'q2', e.target.value)}
+                        placeholder="Q2 amount"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`q3-${index}`}>Q3</Label>
+                      <Input
+                        id={`q3-${index}`}
+                        type="number"
+                        value={update.data.q3 || ''}
+                        onChange={(e) => handleUpdateChange(index, 'q3', e.target.value)}
+                        placeholder="Q3 amount"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`q4-${index}`}>Q4</Label>
+                      <Input
+                        id={`q4-${index}`}
+                        type="number"
+                        value={update.data.q4 || ''}
+                        onChange={(e) => handleUpdateChange(index, 'q4', e.target.value)}
+                        placeholder="Q4 amount"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <Label htmlFor={`budget-${index}`}>Budget NA853 Split *</Label>
+                    <Label htmlFor={`katanomes-etous-${index}`}>Yearly Distribution</Label>
                     <Input
-                      id={`budget-${index}`}
+                      id={`katanomes-etous-${index}`}
                       type="number"
-                      value={update.data.budget_na853_split || ''}
-                      onChange={(e) => handleUpdateChange(index, 'budget_na853_split', e.target.value)}
-                      placeholder="Enter budget split amount"
-                      required
+                      value={update.data.katanomes_etous || ''}
+                      onChange={(e) => handleUpdateChange(index, 'katanomes_etous', e.target.value)}
+                      placeholder="Enter yearly distribution amount"
                     />
                   </div>
                 </div>
