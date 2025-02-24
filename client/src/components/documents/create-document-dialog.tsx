@@ -483,6 +483,25 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
 
+      // First, try to update the budget
+      const budgetUpdateResponse = await supabase
+        .from('budget_na853_split')
+        .update({
+          user_view: budgetData ? budgetData.current_budget - totalAmount : 0
+        })
+        .eq('mis', data.project_id)
+        .select();
+
+      if (budgetUpdateResponse.error) {
+        console.error('Budget update error:', budgetUpdateResponse.error);
+        toast({
+          title: "Σφάλμα",
+          description: "Αποτυχία ενημέρωσης προϋπολογισμού",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const payload = {
         unit: data.unit,
         project_id: data.project_id,
@@ -511,13 +530,22 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         throw new Error('Failed to create document: Invalid response');
       }
 
-      // Invalidate relevant queries to refresh data
-      await queryClient.invalidateQueries({ queryKey: ["documents"] });
-      await queryClient.invalidateQueries({ queryKey: ["budget"] });
-      await queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] });
+      // Invalidate all relevant queries to refresh data
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents"] }),
+        queryClient.invalidateQueries({ queryKey: ["budget"] }),
+        queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] }),
+        // Add specific invalidation for the budget_na853_split table
+        queryClient.invalidateQueries({ 
+          queryKey: ["budget-validation", data.project_id, totalAmount] 
+        })
+      ]);
 
-      // Force refetch budget data
-      await queryClient.refetchQueries({ queryKey: ["budget", data.project_id] });
+      // Force refetch budget data immediately
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["budget", data.project_id] }),
+        queryClient.refetchQueries({ queryKey: ["budget-validation", data.project_id, totalAmount] })
+      ]);
 
       toast({
         title: "Επιτυχία",
