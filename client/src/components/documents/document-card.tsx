@@ -197,7 +197,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete, onExport }: D
             )}
           </div>
           </div>
-        </div>
+       
 
         <div className="flip-card-back">
           <div className="h-full flex flex-col">
