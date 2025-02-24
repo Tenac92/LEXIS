@@ -138,4 +138,23 @@ export async function getBudgetHistory(req: AuthRequest, res: Response) {
   }
 }
 
-export default { getBudgetNotifications, validateBudget, updateBudget, getBudget, getBudgetHistory };
+export async function getUsers(req: Request, res: Response) {
+  try {
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, name, email, role, units, telephone, department');
+
+    if (error) {
+      console.error("Error fetching users:", error);
+      return res.status(500).json({ status: 'error', message: 'Failed to fetch users' });
+    }
+
+    return res.json({ status: 'success', users });
+  } catch (error) {
+    console.error("Unexpected error fetching users:", error);
+    return res.status(500).json({ status: 'error', message: 'Failed to fetch users' });
+  }
+}
+
+
+export default { getBudgetNotifications, validateBudget, updateBudget, getBudget, getBudgetHistory, getUsers };
