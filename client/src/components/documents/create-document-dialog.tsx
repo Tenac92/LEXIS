@@ -608,12 +608,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           }
 
           // Validate each recipient's required fields
-          const invalidRecipient = recipients.find(r => 
-            !r.firstname?.trim() || 
-            !r.lastname?.trim() || 
-            !r.afm?.trim() || 
-            typeof r.amount !== 'number' || 
-            !r.amount || 
+          const invalidRecipient = recipients.find(r =>
+            !r.firstname?.trim() ||
+            !r.lastname?.trim() ||
+            !r.afm?.trim() ||
+            typeof r.amount !== 'number' ||
+            !r.amount ||
             !r.installment
           );
 
@@ -708,7 +708,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           }}
         >
           {currentStep === 0 && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <FormField
                 control={form.control}
                 name="unit"
@@ -741,7 +741,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           )}
 
           {currentStep === 1 && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {budgetData && (
                 <BudgetIndicator
                   budgetData={budgetData}
@@ -749,7 +749,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                 />
               )}
 
-              <div className="grid gap-6">
+              <div className="grid gap-4">
                 <FormField
                   control={form.control}
                   name="project_id"
@@ -814,7 +814,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           )}
 
           {currentStep === 2 && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {budgetData && (
                 <BudgetIndicator
                   budgetData={budgetData}
@@ -822,8 +822,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                 />
               )}
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
+              <div>
+                <div className="flex justify-between items-center mb-4">
                   <div>
                     <h3 className="text-lg font-medium">Παραλήπτες</h3>
                     <p className="text-sm text-muted-foreground">Προσθήκη έως 10 παραληπτών</p>
@@ -840,18 +840,17 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-2">
                   {recipients.map((_, index) => (
-                    <Card key={index} className="p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-sm font-medium min-w-[100px]">Παραλήπτης #{index + 1}</span>
-                        <div className="flex-1 grid grid-cols-5 gap-4">
+                    <Card key={index} className="p-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium whitespace-nowrap">#{index + 1}</span>
+                        <div className="grid grid-cols-5 gap-3 flex-1">
                           <FormField
                             control={form.control}
                             name={`recipients.${index}.firstname`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">Όνομα</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="Όνομα" />
                                 </FormControl>
@@ -864,7 +863,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             name={`recipients.${index}.lastname`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">Επώνυμο</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="Επώνυμο" />
                                 </FormControl>
@@ -877,7 +875,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             name={`recipients.${index}.afm`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">ΑΦΜ</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="ΑΦΜ" maxLength={9} />
                                 </FormControl>
@@ -890,7 +887,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             name={`recipients.${index}.amount`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">Ποσό</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
@@ -909,15 +905,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             name={`recipients.${index}.installment`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="sr-only">Δόση</FormLabel>
                                 <FormControl>
                                   <Input
                                     type="number"
+                                    min={1}
+                                    max={12}
                                     {...field}
                                     placeholder="Δόση"
                                     onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                    min={1}
-                                    max={12}
                                   />
                                 </FormControl>
                                 <FormMessage />
@@ -929,10 +924,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                           type="button"
                           variant="ghost"
                           size="sm"
+                          className="px-2"
                           onClick={() => removeRecipient(index)}
-                          className="text-destructive hover:text-destructive/90"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </div>
                     </Card>
@@ -943,65 +938,42 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           )}
 
           {currentStep === 3 && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-medium">Απαιτούμενα Συνημμένα</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Επιλέξτε τα έγγραφα που θα συμπεριληφθούν
-                  </p>
-                </div>
-              </div>
-
-              {attachmentsLoading ? (
-                <div className="flex items-center justify-center p-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                </div>
-              ) : attachments.length === 0 ? (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Δεν απαιτούνται συνημμένα για αυτόν τον τύπο εγγράφου.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <div className="space-y-4">
+            <div className="spacey-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Συνημμένα Έγγραφα</h3>
+                <div className="grid grid-cols-2 gap-4">
                   {attachments.map((attachment) => (
-                    <Card key={attachment.id} className="p-4">
-                      <div className="flex items-start space-x-4">
-                        <Checkbox
-                          checked={form.watch("selectedAttachments").includes(attachment.id)}
-                          onCheckedChange={(checked) => {
-                            const currentSelected = form.watch("selectedAttachments");
-                            if (checked) {
-                              form.setValue("selectedAttachments", [...currentSelected, attachment.id]);
-                            } else {
-                              form.setValue(
-                                "selectedAttachments",
-                                currentSelected.filter(id => id !== attachment.id)
-                              );
-                            }
-                          }}
-                          id={`attachment-${attachment.id}`}
-                        />
-                        <div className="space-y-1.5">
-                          <label
-                            htmlFor={`attachment-${attachment.id}`}
-                            className="text-sm font-medium leading-none cursor-pointer"
-                          >
-                            {attachment.title}
-                          </label>
-                          {attachment.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {attachment.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                    <Card key={attachment.id} className="p-3">
+                      <FormField
+                        control={form.control}
+                        name="selectedAttachments"
+                        render={({ field }) => (
+                          <FormItem className="flex items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(attachment.id)}
+                                onCheckedChange={(checked) => {
+                                  const current = field.value || [];
+                                  const newValue = checked
+                                    ? [...current, attachment.id]
+                                    : current.filter((id) => id !== attachment.id);
+                                  field.onChange(newValue);
+                                }}
+                              />
+                            </FormControl>
+                            <div className="space-y-1">
+                              <div className="text-sm font-medium">{attachment.title}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {attachment.description}
+                              </div>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
                     </Card>
                   ))}
                 </div>
-              )}
+              </div>
             </div>
           )}
         </motion.div>
@@ -1011,8 +983,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[900px] h-auto max-h-[85vh]">
+        <DialogHeader className="pb-4">
           <DialogTitle>Δημιουργία Νέου Εγγράφου</DialogTitle>
           <DialogDescription>
             Συμπληρώστε τα απαραίτητα στοιχεία για τη δημιουργία του εγγράφου
@@ -1022,10 +994,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         <StepIndicator currentStep={currentStep} />
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <ScrollArea className="flex-1 px-2 py-4 min-h-[400px]">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div className="relative flex-1 px-1">
               {renderStepContent()}
-            </ScrollArea>
+            </div>
 
             <div className="flex justify-between items-center gap-4 pt-4 border-t">
               <Button
