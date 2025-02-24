@@ -11,6 +11,19 @@ export class DocumentFormatter {
     };
   }
 
+  static formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('el-GR', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  }
+
+  static formatDocumentNumber(id: number): string {
+    return `DOC-${String(id).padStart(6, '0')}`;
+  }
+
   static createHeader(text: string, size = 24, bold = true) {
     return new Paragraph({
       children: [new TextRun({ text, size, bold })],
@@ -51,7 +64,7 @@ export class DocumentFormatter {
 
   static createTableHeader(headers: string[]) {
     return new TableRow({
-      children: headers.map(header => 
+      children: headers.map(header =>
         new TableCell({
           children: [new Paragraph({
             children: [new TextRun({ text: header, bold: true, size: 24 })],
@@ -64,7 +77,7 @@ export class DocumentFormatter {
   }
 
   static createTableRows(documents: any[]) {
-    return documents.map((doc, index) => 
+    return documents.map((doc, index) =>
       new TableRow({
         children: [
           this.createTableCell((index + 1).toString() + '.', AlignmentType.CENTER),
@@ -77,7 +90,7 @@ export class DocumentFormatter {
     );
   }
 
-  static createTableCell(text: string, alignment: AlignmentType) {
+  static createTableCell(text: string, alignment: typeof AlignmentType) {
     return new TableCell({
       children: [new Paragraph({
         children: [new TextRun({ text, size: 24 })],
@@ -117,7 +130,13 @@ export class DocumentFormatter {
   static createHeaderTable(headerInfo: Array<{ text: string; bold: boolean }>, rightColumnInfo: Array<{ text: string; bold: boolean }>) {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: { top: {}, bottom: {}, left: {}, right: {}, insideVertical: {} },
+      borders: {
+        top: { style: BorderStyle.NONE, size: 0 },
+        bottom: { style: BorderStyle.NONE, size: 0 },
+        left: { style: BorderStyle.NONE, size: 0 },
+        right: { style: BorderStyle.NONE, size: 0 },
+        insideVertical: { style: BorderStyle.NONE, size: 0 }
+      },
       rows: [this.createHeaderRow(headerInfo, rightColumnInfo)]
     });
   }
