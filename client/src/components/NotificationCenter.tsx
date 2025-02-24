@@ -1,7 +1,7 @@
 import { FC, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, AlertTriangle, AlertCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast, toast } from '@/hooks/use-toast';
 import {
   Card,
   CardContent,
@@ -41,6 +41,7 @@ interface NotificationCenterProps {
 
 export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotificationClick }) => {
   const queryClient = useQueryClient();
+  const { toast: showToast } = useToast(); // Get toast function from hook
 
   const { data: notifications, error } = useQuery({
     queryKey: ['/api/budget/notifications'],
@@ -75,7 +76,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-        toast({
+        showToast({
           title: "Connection Error",
           description: "Failed to connect to notification service. Please refresh the page.",
           variant: "destructive"
@@ -87,7 +88,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
           const notification = JSON.parse(event.data) as BudgetNotification;
           const styles = notificationStyles[notification.type as keyof typeof notificationStyles];
 
-          toast({
+          showToast({
             title: `New Budget Notification`,
             description: notification.reason || `${notification.type} notification received`,
             variant: styles.toastVariant
@@ -107,7 +108,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     } catch (error) {
       console.error('Failed to setup WebSocket:', error);
     }
-  }, [queryClient]);
+  }, [queryClient, showToast]); // Added showToast to dependency array
 
   if (error) {
     return (
