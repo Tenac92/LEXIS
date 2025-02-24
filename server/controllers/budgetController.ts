@@ -69,15 +69,7 @@ export async function updateBudget(req: AuthRequest, res: Response) {
 
 export async function getNotifications(req: AuthRequest, res: Response) {
   try {
-    console.log('[Budget] Auth check for notifications:', {
-      user: req.user,
-      role: req.user?.role,
-      sessionId: req.sessionID,
-      headers: req.headers
-    });
-
     if (!req.user) {
-      console.log('[Budget] No user found in request');
       return res.status(401).json({
         status: 'error',
         message: 'Authentication required'
@@ -85,37 +77,25 @@ export async function getNotifications(req: AuthRequest, res: Response) {
     }
 
     if (req.user.role !== 'admin') {
-      console.log('[Budget] User not admin:', req.user.role);
       return res.status(403).json({
         status: 'error',
         message: 'Admin access required'
       });
     }
 
-    console.log('[Budget] Attempting to fetch notifications');
     const { data: notifications, error } = await supabase
       .from('budget_notifications')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[Budget] Supabase query error:', {
-        error,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-      });
+      console.error('[Budget] Supabase query error:', error);
       return res.status(500).json({
         status: 'error',
         message: 'Database query failed',
         error: error.message
       });
     }
-
-    console.log('[Budget] Successfully fetched notifications:', {
-      count: notifications?.length || 0,
-      sample: notifications?.[0]
-    });
 
     return res.json({
       status: 'success',

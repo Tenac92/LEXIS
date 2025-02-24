@@ -27,6 +27,12 @@ const notificationStyles = {
     border: 'border-yellow-200',
     badge: 'bg-yellow-100 text-yellow-800',
     toastVariant: 'default' as const
+  },
+  default: { // Add default style
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    badge: 'bg-blue-100 text-blue-800',
+    toastVariant: 'default' as const
   }
 };
 
@@ -86,7 +92,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       ws.onmessage = (event) => {
         try {
           const notification = JSON.parse(event.data) as BudgetNotification;
-          const styles = notificationStyles[notification.type as keyof typeof notificationStyles];
+          const styles = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
 
           showToast({
             title: `New Budget Notification`,
