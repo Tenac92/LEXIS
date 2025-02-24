@@ -15,7 +15,7 @@ const router = Router();
 router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { units } = req.query;
-    
+
     if (!units) {
       return res.status(400).json({ message: 'Units parameter is required' });
     }
@@ -210,7 +210,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       name: req.body.name,
       role: req.body.role,
       password: hashedPassword,
-      unit: req.body.unit,
+      unit: JSON.stringify(req.body.units), // Convert array to JSON string
       department: req.body.department,
       telephone: req.body.telephone || null
     };
