@@ -82,16 +82,7 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     console.log('[Users] Fetching users list');
     const { data: users, error } = await supabase
       .from('users')
-      .select(`
-        id,
-        username,
-        full_name,
-        role,
-        unit,
-        active,
-        name,
-        created_at
-      `)
+      .select('id, username, full_name, role, unit, active, name, created_at')
       .order('id');
 
     if (error) {
@@ -99,7 +90,7 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
       throw error;
     }
 
-    console.log('[Users] Successfully fetched users:', users?.length);
+    console.log('[Users] Successfully fetched users:', users?.length || 0);
     res.json(users || []);
   } catch (error) {
     console.error('[Users] Users fetch error:', error);
@@ -183,7 +174,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const { data: newUser, error } = await supabase
       .from('users')
       .insert([newUserData])
-      .select(`id, email, name, role, unit, department, telephone`)
+      .select('id, email, name, role, unit, department, telephone')
       .single();
 
     if (error) {
