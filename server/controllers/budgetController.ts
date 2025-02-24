@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import type { User, BudgetValidation } from "@shared/schema";
 import { BudgetService } from "../services/budgetService";
 import { storage } from "../storage";
+import { supabase } from '../supabaseClient'; // Assuming supabase client is available
 
 interface AuthRequest extends Request {
   user?: User;
@@ -66,23 +67,21 @@ export async function updateBudget(req: AuthRequest, res: Response) {
   }
 }
 
-export async function getNotifications(req: AuthRequest, res: Response) {
+export async function getNotifications(req: Request, res: Response) {
   try {
-    if (!req.user) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Authentication required'
-      });
-    }
+    const { data: notifications, error } = await supabase
+      .from('budget_notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    const notifications = await storage.getBudgetNotifications();
+    if (error) throw error;
 
-    return res.json({
+    return res.json({ 
       status: 'success',
-      notifications: notifications || []
+      notifications: notifications || [] 
     });
   } catch (error) {
-    console.error('[Budget] Unexpected error in getNotifications:', error);
+    console.error('[Budget] Error fetching notifications:', error);
     return res.status(500).json({
       status: 'error',
       message: 'Failed to fetch notifications',

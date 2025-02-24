@@ -2,6 +2,34 @@ import { WebSocket, WebSocketServer } from 'ws';
 import type { Server } from 'http';
 import type { BudgetNotification } from '@shared/schema';
 
+let port = 5001; // Use a different port
+const maxRetries = 3;
+
+export function createWebSocketServer(server: Server) {
+  let retries = 0;
+  let wss: WebSocketServer | null = null;
+
+  while (retries < maxRetries && !wss) {
+    try {
+      wss = new WebSocketServer({ 
+        server,
+        path: '/ws/notifications'
+      });
+      console.log(`[WebSocket] Server initialized on path: /ws/notifications`);
+    } catch (error) {
+      console.error(`[WebSocket] Failed to initialize on port ${port}:`, error);
+      port++;
+      retries++;
+    }
+  }
+
+  if (!wss) {
+    throw new Error('[WebSocket] Failed to initialize after maximum retries');
+  }
+
+  return wss;
+}
+
 let wss: WebSocketServer;
 
 export const setupWebSocket = (server: Server) => {
