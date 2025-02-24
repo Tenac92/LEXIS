@@ -6,18 +6,21 @@ import { authenticateSession } from '../middleware/auth';
 
 export const documentExportRouter = Router();
 
-// Protect the export route with authentication
+// Protect all export routes with authentication
 documentExportRouter.use(authenticateSession);
 
 export async function exportDocument(req: Request, res: Response) {
   try {
     const { id } = req.params;
+    console.log(`Starting document export for ID: ${id}`);
 
     // Verify user session
     if (!req.session?.user) {
+      console.log('Export attempt without authentication');
       return res.status(401).json({ message: 'Authentication required' });
     }
 
+    console.log('Fetching document data from database');
     const { data: document, error } = await supabase
       .from('generated_documents')
       .select('*, recipients')
@@ -30,9 +33,11 @@ export async function exportDocument(req: Request, res: Response) {
     }
 
     if (!document) {
+      console.log('Document not found:', id);
       return res.status(404).json({ message: 'Document not found' });
     }
 
+    console.log('Creating document with formatter');
     // Create document with proper structure
     const doc = new Document({
       sections: [{
@@ -55,10 +60,13 @@ export async function exportDocument(req: Request, res: Response) {
       }]
     });
 
+    console.log('Generating document buffer');
     const buffer = await Packer.toBuffer(doc);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
+
+    console.log('Sending document response');
     res.send(buffer);
 
   } catch (error) {
@@ -70,4 +78,5 @@ export async function exportDocument(req: Request, res: Response) {
   }
 }
 
+// Register the export route
 documentExportRouter.get('/:id/export', exportDocument);
