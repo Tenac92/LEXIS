@@ -70,7 +70,7 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     }
 
     console.log('[Users] Successfully fetched users:', users?.length);
-    res.json(users);
+    res.json(users || []);
   } catch (error) {
     console.error('[Users] Users fetch error:', error);
     res.status(500).json({ 
@@ -113,18 +113,20 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
 
+    const newUserData = {
+      email: req.body.email,
+      name: req.body.name,
+      role: req.body.role,
+      password: hashedPassword, // Store hashed password
+      units: Array.isArray(req.body.units) ? req.body.units : [],
+      telephone: req.body.telephone || null,
+      department: req.body.department || null
+    };
+
     const { data: newUser, error } = await supabase
       .from('users')
-      .insert([{
-        email: req.body.email,
-        name: req.body.name,
-        role: req.body.role,
-        password: hashedPassword, // Store hashed password
-        units: Array.isArray(req.body.units) ? req.body.units : [],
-        telephone: req.body.telephone || null,
-        department: req.body.department || null
-      }])
-      .select()
+      .insert([newUserData])
+      .select(`id, email, name, role, units, telephone, department`)
       .single();
 
     if (error) {
@@ -132,9 +134,11 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       throw error;
     }
 
-    // Remove password from response
-    const { password, ...userWithoutPassword } = newUser;
-    res.status(201).json(userWithoutPassword);
+    if (!newUser) {
+      throw new Error('Failed to create user - no data returned');
+    }
+
+    res.status(201).json(newUser);
   } catch (error) {
     console.error('[Users] User creation error:', error);
     res.status(500).json({ 
@@ -156,7 +160,10 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
       .delete()
       .eq('id', req.params.id);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
+
     res.status(200).json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('[Users] User deletion error:', error);
