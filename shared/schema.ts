@@ -5,7 +5,7 @@ import { z } from "zod";
 // Updated Budget NA853 Split table with quarterly fields
 export const budgetNA853Split = pgTable("budget_na853_split", {
   id: serial("id").primaryKey(),
-  mis: text("mis").notNull(),
+  mis: text("mis").notNull().unique(),
   na853: text("na853").notNull(),
   user_view: numeric("user_view").default("0"),
   proip: numeric("proip").default("0"),
