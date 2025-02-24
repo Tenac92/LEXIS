@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { securityHeaders } from "./middleware/securityHeaders";
+import { setupWebSocket } from './websocket';
 
 // Verify required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_KEY'];
@@ -80,6 +81,10 @@ app.use((req, res, next) => {
     log('[Startup] Initializing Express server...');
     server = await registerRoutes(app);
     log('[Startup] Routes registered successfully');
+
+    // Set up WebSocket server
+    setupWebSocket(server);
+    log('[Startup] WebSocket server initialized');
 
     // Error handling middleware
     app.use(errorMiddleware);
