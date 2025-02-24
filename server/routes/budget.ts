@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/authMiddleware';
-import { supabase } from '../db';
+import { supabase } from '../config/db';
 
 const router = Router();
 
@@ -16,9 +16,13 @@ router.get('/records', authenticateToken, async (req, res) => {
 
     if (error) {
       console.error('[Budget] Error fetching records:', error);
-      throw error;
+      return res.status(500).json({ 
+        success: false, 
+        message: error.message || 'Failed to fetch records'
+      });
     }
 
+    console.log(`[Budget] Successfully fetched ${data?.length || 0} records`);
     res.json(data || []);
   } catch (error) {
     console.error('[Budget] Error:', error);
@@ -31,7 +35,7 @@ router.get('/records', authenticateToken, async (req, res) => {
 
 router.put('/bulk-update', authenticateToken, async (req, res) => {
   try {
-    console.log('[Budget] Starting bulk update for budget splits');
+    console.log('[Budget] Starting bulk update for budget_na853_split');
 
     const { updates } = req.body;
 
