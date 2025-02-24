@@ -200,4 +200,63 @@ router.post('/bulk-upload', authenticateToken, upload.single('file'), async (req
   }
 });
 
+// Add this route after the existing routes
+router.put('/bulk-update', authenticateToken, async (req, res) => {
+  try {
+    console.log('[Projects] Starting bulk update');
+
+    const { updates } = req.body;
+
+    if (!Array.isArray(updates)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Updates must be an array'
+      });
+    }
+
+    // Process each update sequentially
+    for (const update of updates) {
+      const { mis, data } = update;
+
+      if (!mis || !data) {
+        throw new Error(`Invalid update data: missing mis or data fields`);
+      }
+
+      // Validate MIS exists
+      const { data: existing, error: checkError } = await supabase
+        .from('project_catalog')
+        .select('id')
+        .eq('mis', mis)
+        .single();
+
+      if (checkError || !existing) {
+        throw new Error(`Project with MIS ${mis} not found`);
+      }
+
+      // Update the project
+      const { error: updateError } = await supabase
+        .from('project_catalog')
+        .update(data)
+        .eq('mis', mis);
+
+      if (updateError) {
+        throw new Error(`Failed to update project ${mis}: ${updateError.message}`);
+      }
+
+      console.log(`[Projects] Successfully updated project ${mis}`);
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Successfully updated ${updates.length} projects` 
+    });
+  } catch (error) {
+    console.error('[Projects] Bulk update error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Failed to process bulk update' 
+    });
+  }
+});
+
 export default router;
