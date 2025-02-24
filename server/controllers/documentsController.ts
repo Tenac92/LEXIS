@@ -233,102 +233,94 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Format recipients using DocumentManager validation
-    const documentManager = new DocumentManager();
-    await documentManager.validateDocument(document);
-
+    // Format recipients
     const recipients = Array.isArray(document.recipients)
-      ? document.recipients.map((recipient: any) => {
-          const validation = DocumentValidator.validateRecipient(recipient);
-          if (!validation.isValid) {
-            throw new Error(`Invalid recipient data: ${validation.errors.join(', ')}`);
-          }
-          return {
-            lastname: String(recipient.lastname || '').trim(),
-            firstname: String(recipient.firstname || '').trim(),
-            fathername: String(recipient.fathername || '').trim(),
-            amount: parseFloat(recipient.amount) || 0,
-            installment: parseInt(recipient.installment) || 1,
-            afm: String(recipient.afm || '').trim()
-          };
-        })
+      ? document.recipients.map((recipient: any) => ({
+          lastname: String(recipient.lastname || '').trim(),
+          firstname: String(recipient.firstname || '').trim(),
+          fathername: String(recipient.fathername || '').trim(),
+          amount: parseFloat(recipient.amount) || 0,
+          installment: parseInt(recipient.installment) || 1,
+          afm: String(recipient.afm || '').trim()
+        }))
       : [];
 
-    // Calculate total amount using formatted values
+    // Calculate total amount
     const totalAmount = recipients.reduce((sum: number, recipient: any) => sum + recipient.amount, 0);
-    const formattedTotal = DocumentFormatter.formatCurrency(totalAmount);
 
-    // Create the document with the formatted values
+    // Default attachments (can be customized based on document type)
+    const attachments = [
+      'Διαβιβαστικό έγγραφο',
+      'Κατάσταση πληρωμής',
+      'Δελτίο ελέγχου',
+      'Φορολογική ενημερότητα'
+    ];
+
+    // Create the document
     const doc = new Document({
       sections: [{
         properties: {
           page: {
-            margin: {
-              top: 1440,
-              right: 1440,
-              bottom: 1440,
-              left: 1440
-            }
+            margin: DocumentFormatter.getDefaultMargins()
           }
         },
         children: [
           // Header
-          new Paragraph({
-            children: [new TextRun({ text: 'ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ', bold: true, size: 24 })],
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 0, after: 120 }
+          DocumentFormatter.createDefaultHeader({
+            unit_name: document.unit || '',
+            email: 'daefkke@civilprotection.gr'
           }),
-          // Recipients Table
-          new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.SINGLE, size: 1 },
-              right: { style: BorderStyle.SINGLE, size: 1 },
-              insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-              insideVertical: { style: BorderStyle.SINGLE, size: 1 }
-            },
-            rows: [
-              new TableRow({
-                children: [
-                  new TableCell({ children: [new Paragraph({ text: "Α/Α" })] }),
-                  new TableCell({ children: [new Paragraph({ text: "ΕΠΩΝΥΜΟ" })] }),
-                  new TableCell({ children: [new Paragraph({ text: "ΟΝΟΜΑ" })] }),
-                  new TableCell({ children: [new Paragraph({ text: "ΠΑΤΡΩΝΥΜΟ" })] }),
-                  new TableCell({ children: [new Paragraph({ text: "ΑΦΜ" })] }),
-                  new TableCell({ children: [new Paragraph({ text: "ΠΟΣΟ (€)" })] })
-                ]
-              }),
-              ...recipients.map((recipient, index) => 
-                new TableRow({
-                  children: [
-                    new TableCell({ children: [new Paragraph({ text: (index + 1).toString() })] }),
-                    new TableCell({ children: [new Paragraph({ text: recipient.lastname })] }),
-                    new TableCell({ children: [new Paragraph({ text: recipient.firstname })] }),
-                    new TableCell({ children: [new Paragraph({ text: recipient.fathername || '' })] }),
-                    new TableCell({ children: [new Paragraph({ text: recipient.afm })] }),
-                    new TableCell({ children: [new Paragraph({ text: DocumentFormatter.formatCurrency(recipient.amount) })] })
-                  ]
-                })
-              )
-            ]
-          }),
-          // Total Amount
+
+          // Add some spacing
+          new Paragraph({ text: '', spacing: { before: 360, after: 360 } }),
+
+          // Subject line
           new Paragraph({
             children: [
-              new TextRun({ text: 'ΣΥΝΟΛΙΚΟ ΠΟΣΟ: ', bold: true }),
-              new TextRun({ text: formattedTotal })
+              new TextRun({ text: 'ΘΕΜΑ: ', bold: true, size: 24 }),
+              new TextRun({ 
+                text: `Έγκριση πληρωμής ${DocumentFormatter.formatCurrency(totalAmount)} για το έργο ${document.project_id}`,
+                size: 24
+              })
+            ],
+            spacing: { before: 240, after: 240 }
+          }),
+
+          // Recipients table
+          DocumentFormatter.createPaymentTable(recipients),
+
+          // Total amount
+          new Paragraph({
+            children: [
+              new TextRun({ text: 'ΣΥΝΟΛΙΚΟ ΠΟΣΟ: ', bold: true, size: 24 }),
+              new TextRun({ text: DocumentFormatter.formatCurrency(totalAmount), size: 24 })
             ],
             alignment: AlignmentType.RIGHT,
             spacing: { before: 240, after: 240 }
-          })
+          }),
+
+          // Footer with attachments and signatures
+          DocumentFormatter.createFooter(
+            attachments,
+            [
+              'Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας',
+              'Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών',
+              'Γ.Δ.Α.Ε.Φ.Κ.'
+            ],
+            [
+              'Χρονολογικό Αρχείο',
+              'Τμήμα Προγραμματισμού Αποκατάστασης & Εκπαίδευσης',
+              'Φάκελος έργου'
+            ]
+          )
         ]
       }]
     });
 
+    // Generate the document buffer
     const buffer = await Packer.toBuffer(doc);
 
+    // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename=document-${DocumentFormatter.formatDocumentNumber(document.id)}.docx`);
     res.send(buffer);
