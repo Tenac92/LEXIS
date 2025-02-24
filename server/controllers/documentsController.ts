@@ -215,30 +215,26 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Update the document export route
-router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/generated/:id/export', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { format = 'docx' } = req.query;
 
     const { data: document, error } = await supabase
       .from('generated_documents')
-      .select('*')
+      .select('*, recipients')
       .eq('id', id)
       .single();
 
     if (error) {
-      console.error('Document fetch error:', error);
+      console.error('Database query error:', error);
       throw error;
     }
 
     if (!document) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Document not found'
-      });
+      return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Format recipients data
+    // Format recipients
     const recipients = Array.isArray(document.recipients)
       ? document.recipients.map((recipient: any) => ({
           lastname: String(recipient.lastname || '').trim(),
@@ -250,10 +246,10 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
         }))
       : [];
 
-    // Calculate total amount
+    // Calculate total
     const totalAmount = recipients.reduce((sum: number, recipient: any) => sum + recipient.amount, 0);
 
-    // Create document using DocumentFormatter
+    // Create document
     const doc = new Document({
       sections: [{
         properties: {
@@ -264,23 +260,15 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
         },
         children: [
           ...DocumentFormatter.createDocumentHeader(),
-          ...DocumentFormatter.createMetadataSection(document.protocol_number, document.protocol_date),
-          new Paragraph({
-            children: [new TextRun({ text: 'ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ', bold: true, size: 24 })],
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 240, after: 240 }
-          }),
           DocumentFormatter.createPaymentTable(recipients),
           new Paragraph({
             children: [
               new TextRun({ text: 'ΣΥΝΟΛΙΚΟ ΠΟΣΟ: ', bold: true, size: 24 }),
               new TextRun({ text: DocumentFormatter.formatCurrency(totalAmount), size: 24 })
             ],
-            spacing: { before: 360, after: 360 },
-            alignment: AlignmentType.RIGHT
-          }),
-          ...DocumentFormatter.createDistributionSection(),
-          ...DocumentFormatter.createDocumentFooter()
+            alignment: AlignmentType.RIGHT,
+            spacing: { before: 240, after: 240 }
+          })
         ]
       }]
     });
@@ -292,10 +280,9 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
     res.send(buffer);
 
   } catch (error) {
-    console.error('Document generation error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to generate document',
+    console.error('Export error:', error);
+    res.status(500).json({ 
+      message: 'Failed to export document',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
