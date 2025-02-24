@@ -1,26 +1,74 @@
 import { Request, Response } from "express";
+import { supabase } from "../config/db";
+import { storage } from "../storage";
+import type { BudgetResponse } from "@shared/schema";
 import type { User, BudgetValidation } from "@shared/schema";
 import { BudgetService } from "../services/budgetService";
-import { storage } from "../storage";
-import { supabase } from '../supabaseClient'; // Assuming supabase client is available
 
 interface AuthRequest extends Request {
   user?: User;
 }
 
-export async function getBudget(req: AuthRequest, res: Response) {
+export async function getBudgetNotifications(req: Request, res: Response) {
+  try {
+    const { data: notifications, error } = await supabase
+      .from('budget_notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching notifications:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch notifications'
+      });
+    }
+
+    return res.json({
+      status: 'success',
+      notifications: notifications || []
+    });
+  } catch (error) {
+    console.error('Unexpected error in getBudgetNotifications:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch notifications'
+    });
+  }
+}
+
+export async function getBudget(req: Request, res: Response) {
   try {
     const { mis } = req.params;
-    console.log(`[Budget] Fetching budget data for MIS ${mis}`);
+    if (!mis) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'MIS parameter is required'
+      });
+    }
 
-    const result = await BudgetService.getBudget(mis);
-    return res.status(result.status === 'error' ? 500 : 200).json(result);
+    const { data, error } = await supabase
+      .from('budget_na853_split')
+      .select('*')
+      .eq('mis', mis)
+      .single();
+
+    if (error) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch budget data'
+      });
+    }
+
+    return res.json({
+      status: 'success',
+      data
+    });
   } catch (error) {
-    console.error("[Budget] Budget fetch error:", error);
-    return res.status(500).json({ 
-      status: "error",
-      message: "Failed to fetch budget data",
-      error: error instanceof Error ? error.message : 'Unknown error'
+    console.error('Unexpected error in getBudget:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch budget data'
     });
   }
 }
@@ -67,28 +115,6 @@ export async function updateBudget(req: AuthRequest, res: Response) {
   }
 }
 
-export async function getNotifications(req: Request, res: Response) {
-  try {
-    const { data: notifications, error } = await supabase
-      .from('budget_notifications')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return res.json({ 
-      status: 'success',
-      notifications: notifications || [] 
-    });
-  } catch (error) {
-    console.error('[Budget] Error fetching notifications:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch notifications',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-}
 
 export async function getBudgetHistory(req: AuthRequest, res: Response) {
   try {
@@ -117,4 +143,4 @@ export async function getBudgetHistory(req: AuthRequest, res: Response) {
   }
 }
 
-export default { validateBudget, updateBudget, getBudget, getNotifications, getBudgetHistory };
+export default { validateBudget, updateBudget, getBudget, getBudgetNotifications, getBudgetHistory };
