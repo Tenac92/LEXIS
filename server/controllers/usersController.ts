@@ -82,7 +82,7 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     console.log('[Users] Fetching users list');
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, username, full_name, role, unit, active, name, created_at')
+      .select('id, email, name, role, units, telephone, department')
       .order('id');
 
     if (error) {
