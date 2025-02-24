@@ -173,10 +173,10 @@ const createDocumentSchema = z.object({
     afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
     amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
     installment: z.number().int().min(1).max(12, "Η δόση πρέπει να είναι μεταξύ 1 και 12")
-  })).min(1, "Απαιτείται τουλάχιστον ένας παραλήπτης"),
-  total_amount: z.number().min(0.01, "Το συνολικό ποσό πρέπει να είναι μεγαλύτερο από 0"),
+  })).optional().default([]),
+  total_amount: z.number().optional(),
   status: z.string().default("draft"),
-  selectedAttachments: z.array(z.string()).default([])
+  selectedAttachments: z.array(z.string()).optional().default([])
 });
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
@@ -583,6 +583,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     try {
       let fieldsToValidate: Array<keyof CreateDocumentForm> = [];
 
+      // Clear previous errors
+      form.clearErrors();
+
       switch (currentStep) {
         case 0:
           fieldsToValidate = ["unit"];
@@ -592,19 +595,39 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           break;
         case 2:
           fieldsToValidate = ["recipients"];
-          // Additional validation for recipients
           const recipients = form.getValues("recipients");
+
+          // Basic validation before schema validation
           if (!recipients || recipients.length === 0) {
             toast({
-              title: "Validation Error",
-              description: "Please add at least one recipient",
+              title: "Σφάλμα Επικύρωσης",
+              description: "Παρακαλώ προσθέστε τουλάχιστον έναν παραλήπτη",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          // Validate each recipient's required fields
+          const invalidRecipient = recipients.find(r => 
+            !r.firstname?.trim() || 
+            !r.lastname?.trim() || 
+            !r.afm?.trim() || 
+            typeof r.amount !== 'number' || 
+            !r.amount || 
+            !r.installment
+          );
+
+          if (invalidRecipient) {
+            toast({
+              title: "Σφάλμα Επικύρωσης",
+              description: "Παρακαλώ συμπληρώστε όλα τα πεδία για κάθε παραλήπτη",
               variant: "destructive"
             });
             return;
           }
           break;
         case 3:
-          fieldsToValidate = ["selectedAttachments"];
+          // No validation needed for attachments as they're optional
           break;
       }
 
@@ -614,10 +637,15 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         setDirection(1);
         setCurrentStep((prev) => Math.min(prev + 1, 3));
       } else {
+        // Get specific error messages
         const errors = form.formState.errors;
-        const errorMessage = Object.values(errors)[0]?.message || "Please fill in all required fields correctly.";
+        const errorFields = Object.keys(errors);
+        const errorMessage = errorFields.length > 0
+          ? `Παρακαλώ ελέγξτε τα πεδία: ${errorFields.join(", ")}`
+          : "Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία";
+
         toast({
-          title: "Validation Error",
+          title: "Σφάλμα Επικύρωσης",
           description: errorMessage,
           variant: "destructive"
         });
@@ -625,8 +653,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     } catch (error) {
       console.error('Navigation error:', error);
       toast({
-        title: "Error",
-        description: "An error occurred while proceeding to the next step",
+        title: "Σφάλμα",
+        description: "Προέκυψε σφάλμα κατά την μετάβαση στο επόμενο βήμα",
         variant: "destructive"
       });
     }
