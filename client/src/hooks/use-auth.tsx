@@ -27,7 +27,7 @@ function useLoginMutation() {
 
         const response = await fetch('/api/auth/login', {  
           method: 'POST',
-          credentials: 'include', // Add credentials
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -36,7 +36,7 @@ function useLoginMutation() {
 
         if (!response.ok) {
           const error = await response.json();
-          throw new Error(error.error?.message || 'Login failed');
+          throw new Error(error.message || 'Login failed');
         }
 
         const user = await response.json();
@@ -52,8 +52,8 @@ function useLoginMutation() {
     },
     onSuccess: (user) => {
       console.log('Login mutation succeeded, updating cache with user:', user);
-      queryClient.setQueryData(["/api/user"], user);
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.setQueryData(["/api/auth/me"], user);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Login successful",
         description: `Welcome back, ${user.name}!`,
@@ -77,15 +77,15 @@ function useLogoutMutation() {
     mutationFn: async () => {
       const response = await fetch('/api/auth/logout', { 
         method: 'POST',
-        credentials: 'include' // Add credentials
+        credentials: 'include'
       });
       if (!response.ok) {
         throw new Error('Logout failed');
       }
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/user"], null);
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.setQueryData(["/api/auth/me"], null);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account."
@@ -105,11 +105,11 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user, error, isLoading } = useQuery<User | null>({
-    queryKey: ["/api/user"],
+    queryKey: ["/api/auth/me"],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/user', {
-          credentials: 'include' // Add credentials
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include'
         });
         if (!response.ok) {
           if (response.status === 401) return null;

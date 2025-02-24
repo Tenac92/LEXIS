@@ -6,6 +6,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { securityHeaders } from "./middleware/securityHeaders";
 import { setupWebSocket } from './websocket';
+import { setupAuth, sessionMiddleware } from './auth';
 
 // Verify required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_KEY'];
@@ -27,6 +28,9 @@ app.use(securityHeaders);
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Session middleware must be applied before any routes
+app.use(sessionMiddleware);
 
 // Serve static files from the public directory
 app.use(express.static(join(__dirname, '../client/public')));
@@ -79,6 +83,13 @@ app.use((req, res, next) => {
   let server;
   try {
     log('[Startup] Initializing Express server...');
+
+    // Setup authentication before registering other routes
+    log('[Startup] Setting up authentication...');
+    await setupAuth(app);
+    log('[Startup] Authentication setup complete');
+
+    // Register other routes after auth is setup
     server = await registerRoutes(app);
     log('[Startup] Routes registered successfully');
 

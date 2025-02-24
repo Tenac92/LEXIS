@@ -1,25 +1,19 @@
 import { type Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
+import { authenticateSession } from "./auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
-import { authenticateSession } from "./auth";
 import documentsController from "./controllers/documentsController";
 import budgetController from "./controllers/budgetController";
 import generatedDocumentsRouter from "./controllers/generatedDocuments";
 import unitsController from "./controllers/unitsController";
-import usersController from "./controllers/usersController"; // Add this import
+import usersController from "./controllers/usersController";
 import projectsRouter from "./routes/projects";
 import templatePreviewRouter from "./routes/template-preview";
 import { log } from "./vite";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   try {
-    // Set up authentication routes and middleware
-    log('[Routes] Setting up authentication...');
-    await setupAuth(app);
-    log('[Routes] Authentication setup complete');
-
     // Mount users routes
     log('[Routes] Setting up users routes...');
     app.use('/api/users', authenticateSession, usersController);

@@ -40,15 +40,24 @@ export const setupWebSocket = (server: Server) => {
   });
 
   wss.on('connection', (ws, req) => {
-    console.log('[WebSocket] New connection established:', {
+    // Enhanced connection logging
+    const connectionInfo = {
       path: req.url,
       ip: req.socket.remoteAddress,
       headers: {
         origin: req.headers.origin,
         host: req.headers.host,
-        cookie: req.headers.cookie ? 'present' : 'missing'
-      }
-    });
+        cookie: req.headers.cookie ? 'present' : 'missing',
+        upgrade: req.headers.upgrade,
+        connection: req.headers.connection,
+        'sec-websocket-key': req.headers['sec-websocket-key'] ? 'present' : 'missing'
+      },
+      url: req.url,
+      method: req.method,
+      sessionPresent: req.headers.cookie?.includes('sid=')
+    };
+
+    console.log('[WebSocket] New connection attempt:', connectionInfo);
 
     // Send connection confirmation
     try {
@@ -57,6 +66,7 @@ export const setupWebSocket = (server: Server) => {
         message: 'Connected to notification service',
         timestamp: new Date().toISOString()
       }));
+      console.log('[WebSocket] Welcome message sent successfully');
     } catch (error) {
       console.error('[WebSocket] Failed to send welcome message:', error);
     }
@@ -64,7 +74,8 @@ export const setupWebSocket = (server: Server) => {
     ws.on('error', (error) => {
       console.error('[WebSocket] Client connection error:', {
         error,
-        ip: req.socket.remoteAddress
+        ip: req.socket.remoteAddress,
+        headers: connectionInfo.headers
       });
     });
 
@@ -72,8 +83,18 @@ export const setupWebSocket = (server: Server) => {
       console.log('[WebSocket] Client disconnected:', {
         code,
         reason: reason.toString(),
-        ip: req.socket.remoteAddress
+        ip: req.socket.remoteAddress,
+        headers: connectionInfo.headers
       });
+    });
+
+    // Handle incoming messages
+    ws.on('message', (data) => {
+      try {
+        console.log('[WebSocket] Received message:', data.toString());
+      } catch (error) {
+        console.error('[WebSocket] Error processing message:', error);
+      }
     });
   });
 

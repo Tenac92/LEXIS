@@ -5,6 +5,16 @@ import { storage } from "./storage";
 import type { User } from "@shared/schema";
 import bcrypt from "bcrypt";
 
+interface AuthenticatedRequest extends Request {
+  user?: User;
+}
+
+declare module 'express-session' {
+  interface SessionData {
+    user?: User;
+  }
+}
+
 // Session middleware with enhanced security
 export const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'document-manager-secret',
@@ -13,7 +23,7 @@ export const sessionMiddleware = session({
   store: storage.sessionStore,
   name: 'sid',
   cookie: {
-    secure: false, // Set to false for development
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax'
@@ -21,17 +31,9 @@ export const sessionMiddleware = session({
 });
 
 // Authentication middleware
-export const authenticateSession = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticateSession = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
-    console.log('[Auth] Checking session:', {
-      hasSession: !!req.session,
-      hasUser: !!req.session?.user,
-      sessionID: req.sessionID,
-      cookies: req.headers.cookie
-    });
-
     if (!req.session?.user) {
-      console.log('[Auth] No user in session');
       return res.status(401).json({
         message: 'Authentication required'
       });
@@ -39,12 +41,6 @@ export const authenticateSession = async (req: Request, res: Response, next: Nex
 
     // Add user to request
     req.user = req.session.user;
-    console.log('[Auth] User authenticated:', {
-      id: req.user.id,
-      role: req.user.role,
-      sessionID: req.sessionID
-    });
-
     next();
   } catch (error) {
     console.error('[Auth] Authentication error:', error);
@@ -71,18 +67,21 @@ export async function setupAuth(app: Express) {
 
       console.log('[Auth] Attempting login for email:', email);
 
-      const { data: user, error } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('email', email)
         .single();
 
-      if (error || !user) {
+      if (userError || !userData) {
         console.error('[Auth] No user found for email:', email);
         return res.status(401).json({
           message: 'Invalid credentials'
         });
       }
+
+      // Type assertion since we know the structure matches our User type
+      const user = userData as User;
 
       // Compare password
       const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -94,17 +93,17 @@ export async function setupAuth(app: Express) {
       }
 
       // Create session with user data
-      const userData: Partial<User> = {
+      const sessionUser: Partial<User> = {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
-        unit: user.unit,
+        units: user.units,
         department: user.department
       };
 
       // Store user data in session
-      req.session.user = userData;
+      req.session.user = sessionUser as User;
 
       // Save session explicitly
       await new Promise<void>((resolve, reject) => {
@@ -115,12 +114,12 @@ export async function setupAuth(app: Express) {
       });
 
       console.log('[Auth] Login successful:', {
-        id: userData.id,
-        role: userData.role,
+        id: sessionUser.id,
+        role: sessionUser.role,
         sessionID: req.sessionID
       });
 
-      res.json(userData);
+      res.json(sessionUser);
 
     } catch (error) {
       console.error('[Auth] Login error:', error);
@@ -150,7 +149,7 @@ export async function setupAuth(app: Express) {
   });
 
   // Get current user route
-  app.get("/api/auth/me", authenticateSession, (req, res) => {
+  app.get("/api/auth/me", authenticateSession, (req: AuthenticatedRequest, res) => {
     res.json(req.session?.user);
   });
 }

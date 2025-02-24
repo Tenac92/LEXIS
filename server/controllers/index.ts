@@ -5,12 +5,8 @@ import budgetController from './budgetController';
 import recipientsController from './recipientsController';
 import statsController from './statsController';
 import usersController from './usersController';
-import authController from './authController';
 
 const router = express.Router();
-
-// Mount auth controller without authentication middleware
-router.use('/auth', authController);
 
 // Mount budget routes
 router.get('/budget/:mis', authenticateSession, budgetController.getBudget);
