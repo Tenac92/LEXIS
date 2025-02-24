@@ -1,0 +1,51 @@
+Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+documents-page.tsx:91 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents/generated/110/export 500 (Internal Server Error)
+handleExport @ documents-page.tsx:91
+(ανώνυμες) @ document-card.tsx:170
+handleButtonClick @ document-card.tsx:66
+onClick @ document-card.tsx:169
+callCallback2 @ chunk-276SZO74.js?v=be374a4b:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=be374a4b:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=be374a4b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=be374a4b:3736
+executeDispatch @ chunk-276SZO74.js?v=be374a4b:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=be374a4b:7034
+processDispatchQueue @ chunk-276SZO74.js?v=be374a4b:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=be374a4b:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=be374a4b:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=be374a4b:18913
+batchedUpdates @ chunk-276SZO74.js?v=be374a4b:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=be374a4b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=be374a4b:5478
+dispatchEvent @ chunk-276SZO74.js?v=be374a4b:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=be374a4b:5449
+Εμφάνιση 15 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+documents-page.tsx:91 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents/generated/104/export 500 (Internal Server Error)
+handleExport @ documents-page.tsx:91
+(ανώνυμες) @ document-card.tsx:170
+handleButtonClick @ document-card.tsx:66
+onClick @ document-card.tsx:169
+callCallback2 @ chunk-276SZO74.js?v=be374a4b:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=be374a4b:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=be374a4b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=be374a4b:3736
+executeDispatch @ chunk-276SZO74.js?v=be374a4b:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=be374a4b:7034
+processDispatchQueue @ chunk-276SZO74.js?v=be374a4b:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=be374a4b:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=be374a4b:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=be374a4b:18913
+batchedUpdates @ chunk-276SZO74.js?v=be374a4b:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=be374a4b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=be374a4b:5478
+dispatchEvent @ chunk-276SZO74.js?v=be374a4b:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=be374a4b:5449
+Εμφάνιση 15 ακόμη πλαισίων
+Εμφάνιση λιγότερων
