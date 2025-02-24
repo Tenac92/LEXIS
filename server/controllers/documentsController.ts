@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { supabase } from "../config/db";
 import { z } from "zod";
-import { Document, Packer } from "docx";
+import { Document, Packer, Paragraph, TextRun, AlignmentType } from "docx"; // Added import for docx modules
 import { insertGeneratedDocumentSchema } from "@shared/schema";
 import type { Database, User } from "@shared/schema";
 import { validateBudget, updateBudget } from "./budgetController";
@@ -218,7 +218,7 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
 router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { format = 'docx', include_attachments = true } = req.query;
+    const { format = 'docx' } = req.query;
 
     const { data: document, error } = await supabase
       .from('generated_documents')
@@ -263,24 +263,24 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
           }
         },
         children: [
-          DocumentFormatter.createHeader("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
-          DocumentFormatter.createHeader("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
-          DocumentFormatter.createHeader("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
-          DocumentFormatter.createHeader("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
-          ...DocumentFormatter.createMetadataSection({
-            protocol_number: document.protocol_number,
-            protocol_date: document.protocol_date,
-            document_number: document.id
+          ...DocumentFormatter.createDocumentHeader(),
+          ...DocumentFormatter.createMetadataSection(document.protocol_number, document.protocol_date),
+          new Paragraph({
+            children: [new TextRun({ text: 'ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ', bold: true, size: 24 })],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 240, after: 240 }
           }),
-          DocumentFormatter.createHeader("ΠΙΝΑΚΑΣ ΔΙΚΑΙΟΥΧΩΝ"),
           DocumentFormatter.createPaymentTable(recipients),
-          DocumentFormatter.createTotalSection(totalAmount),
-          ...(include_attachments ? DocumentFormatter.createAttachmentSection(document.attachments || []) : []),
-          ...DocumentFormatter.createDocumentFooter({
-            department: "ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.)",
-            signatory: "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ",
-            contact_person: document.contact_person
-          })
+          new Paragraph({
+            children: [
+              new TextRun({ text: 'ΣΥΝΟΛΙΚΟ ΠΟΣΟ: ', bold: true, size: 24 }),
+              new TextRun({ text: DocumentFormatter.formatCurrency(totalAmount), size: 24 })
+            ],
+            spacing: { before: 360, after: 360 },
+            alignment: AlignmentType.RIGHT
+          }),
+          ...DocumentFormatter.createDistributionSection(),
+          ...DocumentFormatter.createDocumentFooter()
         ]
       }]
     });
@@ -288,7 +288,7 @@ router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, 
     const buffer = await Packer.toBuffer(doc);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
+    res.setHeader('Content-Disposition', `attachment; filename=document-${DocumentFormatter.formatDocumentNumber(document.id)}.docx`);
     res.send(buffer);
 
   } catch (error) {

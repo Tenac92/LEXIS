@@ -6,12 +6,31 @@ interface AuthenticatedRequest extends Request {
 }
 
 export function authenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  // Check if there's a user object in the session
-  if (!req.session?.user) {
-    return res.status(401).json({ message: "Authentication required" });
+  try {
+    console.log('[Auth] Checking session:', {
+      hasSession: !!req.session,
+      hasUser: !!req.session?.user,
+      sessionID: req.sessionID
+    });
+
+    if (!req.session?.user) {
+      console.log('[Auth] No user in session');
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Add user to request
+    req.user = req.session.user;
+    console.log('[Auth] User authenticated:', {
+      id: req.user.id,
+      role: req.user.role,
+      sessionID: req.sessionID
+    });
+
+    next();
+  } catch (error) {
+    console.error('[Auth] Authentication error:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
-  req.user = req.session.user;
-  next();
 }
 
 export function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction) {

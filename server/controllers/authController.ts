@@ -1,37 +1,102 @@
-
 import { Router } from 'express';
 import { supabase } from '../config/db';
+import bcrypt from 'bcrypt';
+import type { User } from '@shared/schema';
 
 const router = Router();
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { email, password } = req.body;
 
-    if (error) {
-      return res.status(401).json({ message: error.message });
+    if (!email || !password) {
+      return res.status(400).json({
+        message: 'Email and password are required'
+      });
     }
 
-    // Extract user data from Supabase session
-    const user = data.session?.user;
-    if (!user) {
-      return res.status(401).json({ message: 'No user data in session' });
+    console.log('[Auth] Attempting login for email:', email);
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error || !user) {
+      console.error('[Auth] No user found for email:', email);
+      return res.status(401).json({
+        message: 'Invalid credentials'
+      });
     }
 
-    res.json({
+    // Compare password using bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      console.error('[Auth] Password validation failed for user:', email);
+      return res.status(401).json({
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Create session
+    const userData: User = {
       id: user.id,
       email: user.email,
+      name: user.name,
       role: user.role,
-      session: data.session
+      unit: user.unit,
+      department: user.department
+    };
+
+    req.session.user = userData;
+
+    // Save session explicitly
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
     });
+
+    console.log('[Auth] Login successful:', {
+      id: userData.id,
+      role: userData.role,
+      sessionID: req.sessionID
+    });
+
+    res.json(userData);
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('[Auth] Login error:', error);
+    res.status(500).json({
+      message: 'Login failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+router.post('/logout', (req, res) => {
+  if (req.session) {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('[Auth] Logout error:', err);
+        return res.status(500).json({
+          message: 'Logout failed'
+        });
+      }
+      res.clearCookie('sid');
+      res.json({ message: 'Logged out successfully' });
+    });
+  } else {
+    res.json({ message: 'Already logged out' });
+  }
+});
+
+router.get('/me', (req, res) => {
+  if (req.session?.user) {
+    res.json(req.session.user);
+  } else {
+    res.status(401).json({ message: 'Not authenticated' });
   }
 });
 
