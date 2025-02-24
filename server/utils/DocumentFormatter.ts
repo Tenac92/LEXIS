@@ -60,49 +60,152 @@ export class DocumentFormatter {
     }
   }
 
-  static async createDefaultHeader(documentData: any = {}) {
+  static async generateDocument(documentData: any) {
     try {
-      console.log("Creating header with document data:", documentData);
+      console.log("Starting document generation with data:", documentData);
+
+      // Get unit details first
       const unitDetails = await this.getUnitDetails(documentData.unit);
+      console.log("Unit details for document:", unitDetails);
 
-      if (!unitDetails) {
-        console.warn("No unit details found for unit:", documentData.unit);
-      }
+      // Create document sections
+      const headerSection = await this.createHeader(documentData, unitDetails);
+      const referenceSection = this.createReferenceSection();
+      const paymentTable = this.createPaymentTable(documentData.recipients || []);
+      const footerSection = await this.createFooter(documentData, unitDetails);
 
+      // Create document with all sections
+      const doc = new Document({
+        sections: [
+          {
+            properties: {
+              page: {
+                margin: this.getDefaultMargins(),
+              },
+            },
+            children: [
+              ...headerSection, // Spread the header paragraphs
+              new Paragraph({ text: "", spacing: { before: 400, after: 400 } }),
+              ...referenceSection,
+              new Paragraph({ text: "", spacing: { before: 400, after: 400 } }),
+              paymentTable,
+              new Paragraph({ text: "", spacing: { before: 400, after: 400 } }),
+              footerSection,
+            ],
+          },
+        ],
+      });
+
+      console.log("Document generation completed, packing to buffer");
+      return await Packer.toBuffer(doc);
+    } catch (error) {
+      console.error("Error generating document:", error);
+      throw error;
+    }
+  }
+
+  static async createHeader(documentData: any, unitDetails: any) {
+    try {
       const managerName = unitDetails?.manager ? 
         unitDetails.manager.split(' ΠΟΛ')[0].trim() : 
         "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ";
 
-      const headerInfo = [
-        { text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ", bold: true },
-        { text: "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ &", bold: true },
-        { text: "ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ", bold: true },
-        { text: "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ", bold: true },
-        { text: "ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ", bold: true },
-        { text: unitDetails?.unit_name || "", bold: true },
-        { text: "Ταχ. Δ/νση: Δημοκρίτου 2", bold: false },
-        { text: "Ταχ. Κώδικας: 115 23, Μαρούσι", bold: false },
-        { text: `Πληροφορίες: ${managerName}`, bold: false },
-        { text: `Τηλέφωνο: ${documentData.telephone || ""}`, bold: false },
-        { text: `E-mail: ${unitDetails?.email || "daefkke@civilprotection.gr"}`, bold: false },
+      // Create header content as array of paragraphs
+      const headerParagraphs = [
+        new Paragraph({
+          children: [new TextRun({ text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ", bold: true, size: 20 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 200 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ &", bold: true, size: 20 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 200 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: "ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ", bold: true, size: 20 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 200 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ", bold: true, size: 20 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 200 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: "ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ", bold: true, size: 20 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 200 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: unitDetails?.unit_name || "", bold: true, size: 20 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 400 },
+        }),
       ];
 
-      const rightColumnInfo = [
-        { text: `Αθήνα, ${new Date().toLocaleDateString("el-GR")}`, bold: false },
-        { text: "Αρ. Πρωτ.: ......................", bold: true },
-        { text: "" },
-        { text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών", bold: false },
-        { text: "Διεύθυνση Οικονομικής Διαχείρησης", bold: false },
-        { text: "Τμήμα Ελέγχου Εκκαθάρισης και", bold: false },
-        { text: "Λογιστικής Παρακολούθησης Δαπανών", bold: false },
-        { text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)", bold: false },
-      ];
+      // Create contact information table
+      const contactTable = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+        rows: [
+          this.createContactRow("Ταχ. Δ/νση", "Δημοκρίτου 2"),
+          this.createContactRow("Ταχ. Κώδικας", "115 23, Μαρούσι"),
+          this.createContactRow("Πληροφορίες", managerName),
+          this.createContactRow("Τηλέφωνο", documentData.telephone || ""),
+          this.createContactRow("E-mail", unitDetails?.email || "daefkke@civilprotection.gr"),
+        ],
+      });
 
-      return this.createHeaderTable(headerInfo, rightColumnInfo);
+      // Add the protocol number and date
+      const protocolSection = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [new Paragraph({ text: "" })],
+                width: { size: 60, type: WidthType.PERCENTAGE },
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: `Αθήνα, ${new Date().toLocaleDateString("el-GR")}`, size: 20 })],
+                    alignment: AlignmentType.RIGHT,
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: "Αρ. Πρωτ.: ......................", bold: true, size: 20 })],
+                    alignment: AlignmentType.RIGHT,
+                  }),
+                ],
+                width: { size: 40, type: WidthType.PERCENTAGE },
+              }),
+            ],
+          }),
+        ],
+      });
+
+      return [...headerParagraphs, contactTable, protocolSection];
     } catch (error) {
       console.error("Error creating header:", error);
       throw error;
     }
+  }
+
+  private static createContactRow(label: string, value: string) {
+    return new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: label + ":", size: 20 })] })],
+          width: { size: 30, type: WidthType.PERCENTAGE },
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: value, size: 20 })] })],
+          width: { size: 70, type: WidthType.PERCENTAGE },
+        }),
+      ],
+    });
   }
 
   static createReferenceSection() {
@@ -147,193 +250,6 @@ export class DocumentFormatter {
         spacing: { before: 200, after: 300 },
       }),
     ];
-  }
-
-  static async createFooter(document: any = {}) {
-    try {
-      console.log("Creating footer with document:", document);
-      const unitDetails = await this.getUnitDetails(document.unit);
-
-      const { data: attachmentData, error: attachmentError } = await supabase
-        .from("attachments")
-        .select("*")
-        .eq("expediture_type", document.expenditure_type)
-        .eq("installment", document.recipients?.[0]?.installment || 1)
-        .single();
-
-      if (attachmentError) {
-        console.error("Error fetching attachments:", attachmentError);
-      }
-
-      const attachments = attachmentData?.attachments || [""];
-
-      const notifications = [
-        "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
-        "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
-        "Γ.Δ.Α.Ε.Φ.Κ.",
-      ];
-
-      const internalDist = [
-        "Χρονολογικό Αρχείο",
-        "Τμήμα Β/20.51",
-        "Αβραμόπουλο Ι.",
-      ];
-
-      const managerName = unitDetails?.manager ? 
-        unitDetails.manager.split(' ΠΟΛ')[0].trim() : 
-        "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ";
-
-      const footerTable = new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: {
-          top: { style: BorderStyle.NONE, size: 0 },
-          bottom: { style: BorderStyle.NONE, size: 0 },
-          left: { style: BorderStyle.NONE, size: 0 },
-          right: { style: BorderStyle.NONE, size: 0 },
-          insideVertical: { style: BorderStyle.NONE, size: 0 },
-        },
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    children: [
-                      new TextRun({ text: "ΣΥΝΗΜΜΕΝΑ:", bold: true, size: 20 }),
-                    ],
-                    spacing: { before: 200, after: 200 },
-                  }),
-                  ...this.createListItems(attachments),
-                  new Paragraph({
-                    children: [
-                      new TextRun({ text: "ΚΟΙΝΟΠΟΙΗΣΗ:", bold: true, size: 20 }),
-                    ],
-                    spacing: { before: 200, after: 200 },
-                  }),
-                  ...this.createListItems(notifications),
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ:",
-                        bold: true,
-                        size: 20,
-                      }),
-                    ],
-                    spacing: { before: 200, after: 200 },
-                  }),
-                  ...this.createListItems(internalDist),
-                ],
-                width: { size: 60, type: WidthType.PERCENTAGE },
-              }),
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: `Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ ${unitDetails?.unit_name || 'Δ.Α.Ε.Φ.Κ.'}`,
-                        bold: true,
-                        size: 20,
-                      }),
-                    ],
-                    alignment: AlignmentType.CENTER,
-                    spacing: { before: 1440 },
-                  }),
-                  new Paragraph({
-                    text: "",
-                    spacing: { before: 720, after: 720 },
-                  }),
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: managerName,
-                        bold: true,
-                        size: 20,
-                      }),
-                    ],
-                    alignment: AlignmentType.CENTER,
-                  }),
-                  new Paragraph({
-                    children: [new TextRun({ text: "ΠΟΛ. ΜΗΧΑΝΙΚΟΣ", size: 20 })],
-                    alignment: AlignmentType.CENTER,
-                  }),
-                ],
-                width: { size: 40, type: WidthType.PERCENTAGE },
-              }),
-            ],
-          }),
-        ],
-      });
-
-      return footerTable;
-    } catch (error) {
-      console.error("Error creating footer:", error);
-      throw error;
-    }
-  }
-
-  static createHeaderTable(headerInfo: Array<{ text: string; bold: boolean }>, rightColumnInfo: Array<{ text: string; bold: boolean }>) {
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.NONE, size: 0 },
-        bottom: { style: BorderStyle.NONE, size: 0 },
-        left: { style: BorderStyle.NONE, size: 0 },
-        right: { style: BorderStyle.NONE, size: 0 },
-        insideVertical: { style: BorderStyle.NONE, size: 0 },
-      },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              children: headerInfo.map(
-                (item) =>
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: item.text,
-                        size: 20,
-                        bold: item.bold,
-                      }),
-                    ],
-                    alignment: AlignmentType.LEFT,
-                    spacing: { before: 100, after: 100 },
-                  }),
-              ),
-              width: { size: 65, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-            }),
-            new TableCell({
-              children: rightColumnInfo.map(
-                (item) =>
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: item.text,
-                        size: 20,
-                        bold: item.bold,
-                      }),
-                    ],
-                    alignment: AlignmentType.RIGHT,
-                    spacing: { before: 100, after: 100 },
-                  }),
-              ),
-              width: { size: 35, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-            }),
-          ],
-        }),
-      ],
-    });
   }
 
   static createPaymentTable(recipients: any[]) {
@@ -418,19 +334,116 @@ export class DocumentFormatter {
     );
   }
 
-  static formatDocumentNumber(document: any): string {
-    if (!document) return '';
+  static async createFooter(document: any, unitDetails: any) {
+    try {
+      const { data: attachmentData, error: attachmentError } = await supabase
+        .from("attachments")
+        .select("*")
+        .eq("expediture_type", document.expenditure_type)
+        .eq("installment", document.recipients?.[0]?.installment || 1)
+        .single();
 
-    // Format based on protocol number if available
-    if (document.protocol_number_input) {
-      return document.protocol_number_input.toString();
+      if (attachmentError) {
+        console.error("Error fetching attachments:", attachmentError);
+      }
+
+      const attachments = attachmentData?.attachments || [""];
+
+      const notifications = [
+        "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+        "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+        "Γ.Δ.Α.Ε.Φ.Κ.",
+      ];
+
+      const internalDist = [
+        "Χρονολογικό Αρχείο",
+        "Τμήμα Β/20.51",
+        "Αβραμόπουλο Ι.",
+      ];
+
+      const managerName = unitDetails?.manager ? 
+        unitDetails.manager.split(' ΠΟΛ')[0].trim() : 
+        "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ";
+
+      return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.NONE },
+          bottom: { style: BorderStyle.NONE },
+          left: { style: BorderStyle.NONE },
+          right: { style: BorderStyle.NONE },
+          insideVertical: { style: BorderStyle.NONE },
+        },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: "ΣΥΝΗΜΜΕΝΑ:", bold: true, size: 20 })],
+                    spacing: { before: 200, after: 200 },
+                  }),
+                  ...this.createListItems(attachments),
+                  new Paragraph({
+                    children: [new TextRun({ text: "ΚΟΙΝΟΠΟΙΗΣΗ:", bold: true, size: 20 })],
+                    spacing: { before: 200, after: 200 },
+                  }),
+                  ...this.createListItems(notifications),
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ:",
+                        bold: true,
+                        size: 20,
+                      }),
+                    ],
+                    spacing: { before: 200, after: 200 },
+                  }),
+                  ...this.createListItems(internalDist),
+                ],
+                width: { size: 60, type: WidthType.PERCENTAGE },
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: `Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ ${unitDetails?.unit_name || 'Δ.Α.Ε.Φ.Κ.'}`,
+                        bold: true,
+                        size: 20,
+                      }),
+                    ],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 1440 },
+                  }),
+                  new Paragraph({
+                    text: "",
+                    spacing: { before: 720, after: 720 },
+                  }),
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: managerName,
+                        bold: true,
+                        size: 20,
+                      }),
+                    ],
+                    alignment: AlignmentType.CENTER,
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: "ΠΟΛ. ΜΗΧΑΝΙΚΟΣ", size: 20 })],
+                    alignment: AlignmentType.CENTER,
+                  }),
+                ],
+                width: { size: 40, type: WidthType.PERCENTAGE },
+              }),
+            ],
+          }),
+        ],
+      });
+    } catch (error) {
+      console.error("Error creating footer:", error);
+      throw error;
     }
-
-    // Otherwise use document ID
-    return `#${document.id}`;
-  }
-
-  static clearCache() {
-    return; // Placeholder for cache clearing if needed
   }
 }
