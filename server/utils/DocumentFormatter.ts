@@ -108,6 +108,9 @@ export class DocumentFormatter {
     template: DocumentTemplate,
     config: GenerateDocumentConfig = {}
   ): Promise<Buffer> {
+    if (!documentData || !template) {
+      throw new Error('Missing required document data or template');
+    }
     try {
       // Log input data for debugging
       console.log("Starting document generation with data:", {

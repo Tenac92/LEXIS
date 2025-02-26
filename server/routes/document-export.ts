@@ -53,14 +53,16 @@ export async function exportDocument(req: Request, res: Response) {
 
     // Set headers and send response
     const filename = `document-${document.id.toString().padStart(6, '0')}.docx`;
-
+    
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     res.setHeader('Content-Length', buffer.length);
-    res.setHeader('Cache-Control', 'no-cache');
-
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     // Send buffer
-    res.end(buffer);
+    res.send(buffer);
 
   } catch (error) {
     console.error('Document export error:', error);
