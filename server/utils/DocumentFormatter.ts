@@ -34,6 +34,14 @@ interface Recipient {
 }
 
 export class DocumentFormatter {
+  static createHeader(text: string) {
+    return new Paragraph({
+      children: [new TextRun({ text, bold: true, size: 24 })],
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 200, after: 200 },
+    });
+  }
+
   static getDefaultMargins() {
     return {
       top: convertInchesToTwip(1),
