@@ -64,8 +64,12 @@ export class DocumentFormatter {
   ): Promise<Buffer> {
     try {
       // Validate input data
-      if (!documentData?.id || !template?.id) {
-        throw new Error('Invalid document or template data');
+      if (!documentData?.id) {
+        throw new Error('Invalid document data: missing document ID');
+      }
+
+      if (!template?.id) {
+        throw new Error('Invalid template data: missing template ID');
       }
 
       // Log start of document generation
@@ -77,7 +81,7 @@ export class DocumentFormatter {
       // Get unit details
       const unitDetails = await this.getUnitDetails(documentData.unit);
       if (!unitDetails) {
-        console.warn('Unit details not found, proceeding with defaults');
+        console.warn('Unit details not found for unit:', documentData.unit);
       }
 
       // Validate and prepare recipients
@@ -158,16 +162,17 @@ export class DocumentFormatter {
         },
       });
 
-      // Generate buffer with error handling
-      try {
-        console.log("Generating document buffer...");
-        const buffer = await Packer.toBuffer(doc);
-        console.log("Document buffer generated successfully, size:", buffer.length);
-        return buffer;
-      } catch (error) {
-        console.error("Error generating document buffer:", error);
-        throw new Error("Failed to generate document buffer");
+      // Generate buffer with proper error handling
+      console.log("Document object created, generating buffer...");
+      const buffer = await Packer.toBuffer(doc);
+
+      if (!buffer || buffer.length === 0) {
+        throw new Error('Generated document buffer is empty');
       }
+
+      console.log("Document buffer generated successfully, size:", buffer.length);
+      return buffer;
+
     } catch (error) {
       console.error("Error in document generation:", error);
       throw error;
