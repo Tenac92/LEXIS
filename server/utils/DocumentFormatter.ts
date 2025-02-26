@@ -34,12 +34,36 @@ interface Recipient {
 }
 
 export class DocumentFormatter {
-  static createHeader(text: string) {
-    return new Paragraph({
-      children: [new TextRun({ text, bold: true, size: 24 })],
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 200, after: 200 },
-    });
+  static async createHeader(document: any, unitDetails?: any) {
+    const headerParagraphs = [
+      new Paragraph({
+        children: [new TextRun({ text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ", bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 200, after: 200 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ &", bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 200, after: 200 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: "ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ", bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 200, after: 400 },
+      })
+    ];
+
+    if (unitDetails?.unit_name) {
+      headerParagraphs.push(
+        new Paragraph({
+          children: [new TextRun({ text: unitDetails.unit_name, bold: true, size: 24 })],
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 400 },
+        })
+      );
+    }
+
+    return headerParagraphs;
   }
 
   static getDefaultMargins() {
