@@ -63,20 +63,30 @@ export class DocumentFormatter {
     config: GenerateDocumentConfig = {}
   ): Promise<Buffer> {
     try {
-      // Validate input data
-      if (!documentData?.id) {
-        throw new Error('Invalid document data: missing document ID');
-      }
-
-      if (!template?.id) {
-        throw new Error('Invalid template data: missing template ID');
-      }
-
-      // Log start of document generation
-      console.log("Starting document generation", {
-        documentId: documentData.id,
-        templateId: template.id,
+      // Log input data for debugging
+      console.log("Starting document generation with data:", {
+        documentId: documentData?.id,
+        templateId: template?.id,
+        unit: documentData?.unit,
+        recipientsCount: documentData?.recipients?.length
       });
+
+      // Validate document data
+      if (!documentData?.id) {
+        throw new Error('Missing document ID');
+      }
+
+      if (!documentData.unit) {
+        throw new Error('Missing unit information');
+      }
+
+      if (!Array.isArray(documentData.recipients)) {
+        throw new Error('Recipients must be an array');
+      }
+
+      if (documentData.recipients.length === 0) {
+        throw new Error('Document must have at least one recipient');
+      }
 
       // Get unit details
       const unitDetails = await this.getUnitDetails(documentData.unit);
@@ -84,19 +94,25 @@ export class DocumentFormatter {
         console.warn('Unit details not found for unit:', documentData.unit);
       }
 
-      // Validate and prepare recipients
-      if (!Array.isArray(documentData.recipients) || documentData.recipients.length === 0) {
-        throw new Error('Document must have at least one recipient');
-      }
+      // Validate and prepare recipients data
+      const recipients: Recipient[] = documentData.recipients.map((r: any, index: number) => {
+        if (!r.lastname || !r.firstname || !r.afm) {
+          throw new Error(`Invalid recipient data at index ${index}`);
+        }
+        return {
+          lastname: String(r.lastname).trim(),
+          firstname: String(r.firstname).trim(),
+          fathername: String(r.fathername || '').trim(),
+          amount: parseFloat(String(r.amount)) || 0,
+          installment: parseInt(String(r.installment)) || 1,
+          afm: String(r.afm).trim()
+        };
+      });
 
-      const recipients: Recipient[] = documentData.recipients.map((r: any) => ({
-        lastname: String(r.lastname || '').trim(),
-        firstname: String(r.firstname || '').trim(),
-        fathername: String(r.fathername || '').trim(),
-        amount: parseFloat(String(r.amount)) || 0,
-        installment: parseInt(String(r.installment)) || 1,
-        afm: String(r.afm || '').trim()
-      }));
+      console.log("Prepared recipients data:", {
+        count: recipients.length,
+        totalAmount: recipients.reduce((sum, r) => sum + r.amount, 0)
+      });
 
       // Create document with proper configurations
       const doc = new Document({
@@ -162,8 +178,8 @@ export class DocumentFormatter {
         },
       });
 
-      // Generate buffer with proper error handling
-      console.log("Document object created, generating buffer...");
+      // Generate buffer
+      console.log("Generating document buffer...");
       const buffer = await Packer.toBuffer(doc);
 
       if (!buffer || buffer.length === 0) {

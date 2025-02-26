@@ -491,29 +491,43 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
 
   if (!document) return null;
 
-  const handleExport = () => {
+  const handleExport = async () => {
     try {
       setLoading(true);
-      console.log('Starting document download...');
+      console.log('Starting document export process...');
 
-      // Direct download using window.open in a new tab
-      window.open(`/api/documents/generated/${document.id}/export`, '_blank');
+      // Test document generation first
+      const testResponse = await fetch(`/api/documents/generated/${document.id}/test`);
+      const testResult = await testResponse.json();
 
-      // Show success message after a short delay
-      setTimeout(() => {
-        setLoading(false);
-        toast({
-          title: "Success",
-          description: "Document download initiated",
-        });
-        onClose();
-      }, 1000);
+      if (!testResult.success) {
+        throw new Error(testResult.message || 'Document validation failed');
+      }
+
+      console.log('Document validation passed:', testResult);
+
+      // Create a download link and trigger download
+      const downloadUrl = `/api/documents/generated/${document.id}/export`;
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `document-${document.id}.docx`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Success",
+        description: "Document download started",
+      });
+
+      setTimeout(() => setLoading(false), 1000);
+      onClose();
 
     } catch (error) {
       console.error('Export error:', error);
       toast({
         title: "Error",
-        description: "Failed to download document. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to download document",
         variant: "destructive",
       });
       setLoading(false);
@@ -538,7 +552,7 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
             disabled={loading}
             className="min-w-[100px]"
           >
-            {loading ? "Downloading..." : "Download"}
+            {loading ? "Processing..." : "Download"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,119 +2,111 @@ import { Request, Response, Router } from 'express';
 import { supabase } from '../config/db';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
 import { TemplateManager } from '../utils/TemplateManager';
-import { authenticateSession } from '../middleware/auth';
 
 export const documentExportRouter = Router();
 
 export async function exportDocument(req: Request, res: Response) {
-  const startTime = Date.now();
-  console.log(`[${startTime}] Starting document export process`);
-
   try {
     const { id } = req.params;
+    console.log('Starting document export for ID:', id);
 
+    // Validate ID
     if (!id || isNaN(parseInt(id))) {
-      console.error('Invalid document ID:', id);
       return res.status(400).json({ message: 'Invalid document ID' });
     }
 
-    const documentId = parseInt(id);
-    console.log(`Processing document export for ID: ${documentId}`);
-
-    // Fetch document data with recipients
+    // Fetch document
     const { data: document, error: docError } = await supabase
       .from('generated_documents')
       .select('*, recipients')
-      .eq('id', documentId)
+      .eq('id', parseInt(id))
       .single();
 
     if (docError) {
       console.error('Database query error:', docError);
-      return res.status(500).json({ 
-        message: 'Error fetching document data',
-        error: docError.message 
-      });
+      return res.status(500).json({ message: 'Error fetching document' });
     }
 
     if (!document) {
-      console.log('Document not found:', documentId);
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    console.log('Document found:', {
+    // Log document data for debugging
+    console.log('Document data:', {
       id: document.id,
-      expenditure_type: document.expenditure_type,
-      recipients: document.recipients?.length || 0
+      hasRecipients: Boolean(document.recipients),
+      recipientCount: document.recipients?.length,
+      unit: document.unit,
+      expenditureType: document.expenditure_type
     });
 
-    // Get appropriate template
+    // Get template
     const template = await TemplateManager.getTemplateForExpenditure(document.expenditure_type);
-    if (!template) {
-      console.error('No template found for:', document.expenditure_type);
-      return res.status(400).json({ message: 'No template found for this expenditure type' });
-    }
 
-    console.log('Template found:', {
-      id: template.id,
-      name: template.name
-    });
+    if (!template) {
+      return res.status(400).json({ message: 'Template not found' });
+    }
 
     // Generate document buffer
-    try {
-      const buffer = await DocumentFormatter.generateDocument(document, template, {
-        margins: {
-          top: convertInchesToTwip(1),
-          right: convertInchesToTwip(1),
-          bottom: convertInchesToTwip(1),
-          left: convertInchesToTwip(1)
-        }
-      });
+    console.log('Generating document...');
+    const buffer = await DocumentFormatter.generateDocument(document, template);
 
-      if (!buffer || buffer.length === 0) {
-        console.error('Generated document buffer is empty');
-        return res.status(500).json({ message: 'Failed to generate document content' });
-      }
+    // Set headers and send response
+    const filename = `document-${document.id.toString().padStart(6, '0')}.docx`;
 
-      console.log(`Document buffer generated successfully, size: ${buffer.length} bytes`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
 
-      // Set response headers for binary download
-      const filename = `document-${documentId.toString().padStart(6, '0')}.docx`;
-      console.log('Setting download headers for:', filename);
-
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-      res.setHeader('Content-Length', buffer.length);
-      res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-      res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
-
-      // Send the document buffer
-      console.log('Sending document buffer to client');
-      res.write(buffer);
-      res.end();
-
-      const endTime = Date.now();
-      console.log(`[${endTime}] Document export completed successfully. Duration: ${endTime - startTime}ms`);
-
-    } catch (genError) {
-      console.error('Document generation error:', genError);
-      return res.status(500).json({
-        message: 'Failed to generate document',
-        error: genError instanceof Error ? genError.message : 'Unknown error'
-      });
-    }
+    // Send buffer
+    res.end(buffer);
 
   } catch (error) {
-    console.error('Export error:', error);
-    return res.status(500).json({
-      message: 'Failed to export document',
+    console.error('Document export error:', error);
+    res.status(500).json({
+      message: 'Failed to generate document',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 }
 
-// Register only GET route for document export
+// Test endpoint
+documentExportRouter.get('/:id/test', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    console.log('Testing document generation for ID:', id);
+
+    const { data: document } = await supabase
+      .from('generated_documents')
+      .select('*, recipients')
+      .eq('id', parseInt(id))
+      .single();
+
+    if (!document) {
+      return res.json({ success: false, message: 'Document not found' });
+    }
+
+    res.json({
+      success: true,
+      document: {
+        id: document.id,
+        hasRecipients: Boolean(document.recipients),
+        recipientCount: document.recipients?.length,
+        unit: document.unit,
+        expenditureType: document.expenditure_type
+      }
+    });
+
+  } catch (error) {
+    res.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Export endpoint
 documentExportRouter.get('/:id/export', exportDocument);
 
 function convertInchesToTwip(inches: number): number {
