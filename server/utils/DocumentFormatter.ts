@@ -11,7 +11,7 @@ import {
   AlignmentType,
   VerticalAlign,
   convertInchesToTwip,
-  IPropertiesOptions,
+  IDocumentProperties,
 } from "docx";
 import { supabase } from "../config/db";
 import type { DocumentTemplate } from '@shared/schema';
@@ -130,7 +130,7 @@ export class DocumentFormatter {
         : [];
 
       // Document properties
-      const docProperties: IPropertiesOptions = {
+      const docProperties: IDocumentProperties = {
         title: `Document-${documentData.id}`,
         description: `Generated Document ${documentData.id}`,
         creator: "Document Export System",
@@ -187,8 +187,7 @@ export class DocumentFormatter {
         },
         compatibility: {
           doNotExpandShiftReturn: true,
-          doNotUseHTMLParagraphAutoSpacing: true,
-          useWord2013TrackBottomHyphenation: true
+          doNotUseHTMLParagraphAutoSpacing: true
         }
       });
 
@@ -234,14 +233,14 @@ export class DocumentFormatter {
         ...recipients.map((recipient, index) =>
           new TableRow({
             children: [
-              this.createTableCell((index + 1).toString(), AlignmentType.CENTER),
-              this.createTableCell(recipient.lastname, AlignmentType.LEFT),
-              this.createTableCell(recipient.firstname, AlignmentType.LEFT),
-              this.createTableCell(recipient.fathername || "", AlignmentType.LEFT),
-              this.createTableCell(recipient.afm, AlignmentType.CENTER),
+              this.createTableCell((index + 1).toString(), "center"),
+              this.createTableCell(recipient.lastname, "left"),
+              this.createTableCell(recipient.firstname, "left"),
+              this.createTableCell(recipient.fathername || "", "left"),
+              this.createTableCell(recipient.afm, "center"),
               this.createTableCell(
                 this.formatCurrency(recipient.amount),
-                AlignmentType.RIGHT
+                "right"
               ),
             ],
           })
@@ -262,12 +261,18 @@ export class DocumentFormatter {
     });
   }
 
-  static createTableCell(text: string, alignment: AlignmentType) {
+  static createTableCell(text: string, alignment: "left" | "center" | "right") {
+    const alignmentMap = {
+      left: AlignmentType.LEFT,
+      center: AlignmentType.CENTER,
+      right: AlignmentType.RIGHT
+    };
+
     return new TableCell({
       children: [
         new Paragraph({
           children: [new TextRun({ text, size: 24 })],
-          alignment,
+          alignment: alignmentMap[alignment],
         }),
       ],
       verticalAlign: VerticalAlign.CENTER,
