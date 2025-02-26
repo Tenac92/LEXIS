@@ -12,8 +12,36 @@ import {
   VerticalAlign,
   convertInchesToTwip,
 } from "docx";
-import { supabase } from "../db";
+import { supabase } from "../config/db";
 import type { DocumentTemplate } from '@shared/schema';
+
+interface GenerateDocumentConfig {
+  margins?: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+  unit_details?: {
+    unit_name?: string;
+    manager?: string;
+    email?: string;
+  };
+  contact_info?: {
+    address?: string;
+    postal_code?: string;
+    city?: string;
+  };
+}
+
+interface Recipient {
+  lastname: string;
+  firstname: string;
+  fathername?: string;
+  amount: number;
+  installment: number;
+  afm: string;
+}
 
 export class DocumentFormatter {
   static getDefaultMargins() {
@@ -35,37 +63,50 @@ export class DocumentFormatter {
       }).format(amount);
     } catch (error) {
       console.error("Error formatting currency:", error);
-      return `${amount} €`;
+      return `${amount.toFixed(2)} €`;
     }
   }
 
-  static async generateDocument(documentData: any, template: DocumentTemplate, config: any = {}) {
+  static async generateDocument(
+    documentData: any,
+    template: DocumentTemplate,
+    config: GenerateDocumentConfig = {}
+  ): Promise<Buffer> {
     try {
-      console.log("Starting document generation with data:", { documentId: documentData.id, template: template.id });
+      console.log("Starting document generation with data:", {
+        documentId: documentData.id,
+        templateId: template.id,
+        config
+      });
 
       const unitDetails = await this.getUnitDetails(documentData.unit);
-      console.log("Unit details for document:", unitDetails);
+      console.log("Unit details fetched:", unitDetails);
 
-      // Prepare recipients data
-      const recipients = Array.isArray(documentData.recipients)
-        ? documentData.recipients.map((recipient: any) => ({
-            lastname: String(recipient.lastname || '').trim(),
-            firstname: String(recipient.firstname || '').trim(),
-            fathername: String(recipient.fathername || '').trim(),
-            amount: parseFloat(recipient.amount) || 0,
-            installment: parseInt(recipient.installment) || 1,
-            afm: String(recipient.afm || '').trim()
+      // Prepare recipients data with validation
+      const recipients: Recipient[] = Array.isArray(documentData.recipients)
+        ? documentData.recipients.map((r: any) => ({
+            lastname: String(r.lastname || '').trim(),
+            firstname: String(r.firstname || '').trim(),
+            fathername: String(r.fathername || '').trim(),
+            amount: parseFloat(String(r.amount)) || 0,
+            installment: parseInt(String(r.installment)) || 1,
+            afm: String(r.afm || '').trim()
           }))
         : [];
 
+      if (recipients.length === 0) {
+        throw new Error('Document must have at least one recipient');
+      }
+
+      // Create document sections with proper margins
       const sections = [{
         properties: {
           page: {
             margin: {
-              top: config.margins?.top || convertInchesToTwip(1),
-              right: config.margins?.right || convertInchesToTwip(1),
-              bottom: config.margins?.bottom || convertInchesToTwip(1),
-              left: config.margins?.left || convertInchesToTwip(1),
+              top: config.margins?.top || this.getDefaultMargins().top,
+              right: config.margins?.right || this.getDefaultMargins().right,
+              bottom: config.margins?.bottom || this.getDefaultMargins().bottom,
+              left: config.margins?.left || this.getDefaultMargins().left,
             },
             size: {
               width: 11906,  // Standard A4 width in twips
@@ -74,6 +115,7 @@ export class DocumentFormatter {
           },
         },
         children: [
+          // Header
           new Paragraph({
             children: [new TextRun({ text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ", bold: true, size: 24 })],
             alignment: AlignmentType.CENTER,
@@ -89,6 +131,8 @@ export class DocumentFormatter {
             alignment: AlignmentType.CENTER,
             spacing: { before: 200, after: 400 },
           }),
+
+          // Unit Details
           ...(unitDetails?.unit_name ? [
             new Paragraph({
               children: [new TextRun({ text: unitDetails.unit_name, bold: true, size: 24 })],
@@ -96,8 +140,14 @@ export class DocumentFormatter {
               spacing: { before: 200, after: 400 },
             })
           ] : []),
+
+          // Spacing
           new Paragraph({ text: "", spacing: { before: 400, after: 400 } }),
+
+          // Recipients Table
           this.createPaymentTable(recipients),
+
+          // Footer
           new Paragraph({ text: "", spacing: { before: 400, after: 400 } }),
           new Paragraph({
             children: [
@@ -123,21 +173,34 @@ export class DocumentFormatter {
         ]
       }];
 
+      // Create document with metadata
       const doc = new Document({
         sections: sections,
         creator: "Document Export System",
-        description: "Generated Document",
+        description: `Generated Document ${documentData.id}`,
         title: `Document-${documentData.id}`,
+        lastModifiedBy: "System",
+        revision: "1",
+        styles: {
+          default: {
+            document: {
+              run: {
+                font: "Calibri",
+              },
+            },
+          },
+        },
       });
 
+      console.log("Document object created, preparing to generate buffer");
       return await Packer.toBuffer(doc);
     } catch (error) {
       console.error("Error generating document:", error);
-      throw error;
+      throw new Error(`Failed to generate document: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  static createPaymentTable(recipients: any[]) {
+  static createPaymentTable(recipients: Recipient[]) {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
@@ -163,12 +226,12 @@ export class DocumentFormatter {
           new TableRow({
             children: [
               this.createTableCell((index + 1).toString(), AlignmentType.CENTER),
-              this.createTableCell(recipient.lastname || "", AlignmentType.LEFT),
-              this.createTableCell(recipient.firstname || "", AlignmentType.LEFT),
+              this.createTableCell(recipient.lastname, AlignmentType.LEFT),
+              this.createTableCell(recipient.firstname, AlignmentType.LEFT),
               this.createTableCell(recipient.fathername || "", AlignmentType.LEFT),
-              this.createTableCell(recipient.afm || "", AlignmentType.CENTER),
+              this.createTableCell(recipient.afm, AlignmentType.CENTER),
               this.createTableCell(
-                this.formatCurrency(recipient.amount || 0),
+                this.formatCurrency(recipient.amount),
                 AlignmentType.RIGHT
               ),
             ],
@@ -224,6 +287,7 @@ export class DocumentFormatter {
       return null;
     }
   }
+
   static formatDocumentNumber(id: number): string {
     return `${id.toString().padStart(6, '0')}`;
   }

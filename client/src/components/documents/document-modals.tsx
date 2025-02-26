@@ -556,7 +556,6 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
 
   useEffect(() => {
     if (document) {
-      // Initialize with document data if available
       setUnitDetails(prev => ({
         ...prev,
         unit_name: document.unit || '',
@@ -574,45 +573,68 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
   const handleExport = async () => {
     try {
       setLoading(true);
+      console.log('Starting document export process');
 
-      const formData = new FormData();
-      formData.append('format', format);
-      formData.append('document_id', document.id);
-      formData.append('unit_details', JSON.stringify(unitDetails));
-      formData.append('contact_info', JSON.stringify(contactInfo));
-      formData.append('margins', JSON.stringify({
-        top: 850,
-        right: 1000,
-        bottom: 850,
-        left: 1000
-      }));
-      formData.append('include_attachments', format === 'docx' ? 'true' : 'false');
-      formData.append('include_signatures', 'true');
+      const exportConfig = {
+        format,
+        document_id: document.id,
+        unit_details: unitDetails,
+        contact_info: contactInfo,
+        margins: {
+          top: 850,
+          right: 1000,
+          bottom: 850,
+          left: 1000
+        },
+        include_attachments: format === 'docx',
+        include_signatures: true
+      };
 
-      const response = await apiRequest(`/api/documents/generated/${document.id}/export`, {
+      console.log('Sending export request with config:', exportConfig);
+
+      const response = await fetch(`/api/documents/generated/${document.id}/export`, {
         method: 'POST',
-        body: formData
-      }) as APIResponse;
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(exportConfig)
+      });
 
+      if (!response.ok) {
+        throw new Error(`Export failed with status: ${response.status}`);
+      }
+
+      // Get the blob from the response
       const blob = await response.blob();
+
+      if (!blob || blob.size === 0) {
+        throw new Error('Received empty document from server');
+      }
+
+      // Create a download link and trigger download
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `document-${document.document_number || document.id}.${format}`;
+      a.download = `document-${document.id}.${format}`;
       document.body.appendChild(a);
       a.click();
+
+      // Cleanup
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
+      console.log('Document download completed');
       toast({
         title: "Success",
         description: "Document exported successfully",
       });
+
       onClose();
     } catch (error) {
+      console.error('Export error:', error);
       toast({
         title: "Error",
-        description: "Failed to export document",
+        description: error instanceof Error ? error.message : "Failed to export document",
         variant: "destructive",
       });
     } finally {
@@ -736,7 +758,11 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleExport} disabled={loading}>
+          <Button 
+            onClick={handleExport} 
+            disabled={loading}
+            className="min-w-[100px]"
+          >
             {loading ? "Exporting..." : "Export"}
           </Button>
         </DialogFooter>
