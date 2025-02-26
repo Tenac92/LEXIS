@@ -111,7 +111,19 @@ export class DocumentFormatter {
     if (!documentData || !template) {
       throw new Error('Missing required document data or template');
     }
+
+    // Set maximum buffer size
+    const maxBufferSize = 50 * 1024 * 1024; // 50MB
+    
     try {
+      // Enable compatibility mode for MS Office
+      const options = {
+        compatibility: {
+          doNotUseMicrosoftWordCompatibilityMode: false,
+          useWordEncodingForSymbols: true
+        }
+      };
+
       // Log input data for debugging
       console.log("Starting document generation with data:", {
         documentId: documentData?.id,
