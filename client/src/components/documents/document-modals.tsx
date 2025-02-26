@@ -573,60 +573,52 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
   const handleExport = async () => {
     try {
       setLoading(true);
-      console.log('Starting document export process');
+      console.log('Starting document export process...');
 
-      const exportConfig = {
-        format,
-        document_id: document.id,
-        unit_details: unitDetails,
-        contact_info: contactInfo,
-        margins: {
-          top: 850,
-          right: 1000,
-          bottom: 850,
-          left: 1000
-        },
-        include_attachments: format === 'docx',
-        include_signatures: true
-      };
-
-      console.log('Sending export request with config:', exportConfig);
-
+      // Make the export request - using GET for binary downloads
       const response = await fetch(`/api/documents/generated/${document.id}/export`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(exportConfig)
+          'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        }
       });
 
       if (!response.ok) {
-        throw new Error(`Export failed with status: ${response.status}`);
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Export failed with status: ${response.status}`);
       }
 
-      // Get the blob from the response
-      const blob = await response.blob();
+      // Get the filename from the Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const filenameMatch = contentDisposition?.match(/filename="([^"]*?)"/);
+      const filename = filenameMatch ? filenameMatch[1] : `document-${document.id}.docx`;
 
+      // Create blob from response
+      const blob = await response.blob();
       if (!blob || blob.size === 0) {
         throw new Error('Received empty document from server');
       }
 
-      // Create a download link and trigger download
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `document-${document.id}.${format}`;
-      document.body.appendChild(a);
-      a.click();
+      console.log('Document blob received, size:', blob.size);
+
+      // Create object URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([blob], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
 
       // Cleanup
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      document.body.removeChild(link);
 
       console.log('Document download completed');
       toast({
         title: "Success",
-        description: "Document exported successfully",
+        description: "Document downloaded successfully",
       });
 
       onClose();
