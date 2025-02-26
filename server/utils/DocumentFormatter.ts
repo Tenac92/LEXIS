@@ -34,6 +34,20 @@ interface Recipient {
 }
 
 export class DocumentFormatter {
+  static createFooter(unitDetails: any) {
+    return new Paragraph({
+      children: [
+        new TextRun({ 
+          text: unitDetails?.manager || "Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΔΙΕΥΘΥΝΣΗΣ",
+          bold: true,
+          size: 24
+        })
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 720, after: 720 },
+    });
+  }
+
   static async createHeader(document: any, unitDetails?: any) {
     const headerParagraphs = [
       new Paragraph({
