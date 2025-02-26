@@ -31,15 +31,6 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Log document data for debugging
-    console.log('Document data:', {
-      id: document.id,
-      hasRecipients: Boolean(document.recipients),
-      recipientCount: document.recipients?.length,
-      unit: document.unit,
-      expenditureType: document.expenditure_type
-    });
-
     // Get template
     const template = await TemplateManager.getTemplateForExpenditure(document.expenditure_type);
 
@@ -51,20 +42,19 @@ export async function exportDocument(req: Request, res: Response) {
     console.log('Generating document...');
     const buffer = await DocumentFormatter.generateDocument(document, template);
 
-    // Set headers and send response
+    // Set proper headers for Word document
     const filename = `document-${document.id.toString().padStart(6, '0')}.docx`;
-    
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     res.setHeader('Content-Length', buffer.length);
-    res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Content-Transfer-Encoding', 'binary');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    
+
     // Send buffer
-    res.send(buffer);
+    res.end(buffer);
 
   } catch (error) {
     console.error('Document export error:', error);
