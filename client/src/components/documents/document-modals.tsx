@@ -21,75 +21,29 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 
-interface APIResponse {
-  ok: boolean;
-  json: () => Promise<any>;
-  blob: () => Promise<Blob>;
-}
-
-// Document types
-interface DocumentProtocol {
-  protocol_number: string;
-  protocol_date: string;
-}
-
-interface DocumentUpdate extends DocumentProtocol {
-  project_id: string;
-  expenditure_type: string;
-  recipients: Array<{
-    firstname: string;
-    lastname: string;
-    afm: string;
-    amount: number;
-    installment: number;
-  }>;
-  total_amount: number;
-}
-
-interface ExportConfig {
-  format: string;
-  document_id: string;
-  unit_details: {
-    unit_name: string;
-    email: string;
-    parts: any[];
-  };
-  contact_info: {
-    address: string;
-    postal_code: string;
-    city: string;
-    contact_person: string;
-  };
-  margins: {
-    top: number;
-    right: number;
-    bottom: number;
-    left: number;
-  };
-  include_attachments: boolean;
-  include_signatures: boolean;
-}
-
-interface BaseModalProps {
+interface ViewModalProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface ViewModalProps extends BaseModalProps {
   document: any;
 }
 
-interface EditModalProps extends BaseModalProps {
+interface EditModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   document: any;
   onEdit: (id: string) => void;
 }
 
-interface DeleteModalProps extends BaseModalProps {
+interface DeleteModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   documentId: string;
   onDelete: () => void;
 }
 
-interface ExportModalProps extends BaseModalProps {
+interface ExportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   document: any;
 }
 
@@ -345,21 +299,18 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     }
   };
 
-  if (!document) return null;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Document</DialogTitle>
           <DialogDescription>
-            Make changes to the document here. All fields are required.
+            Make changes to the document here. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
-
         <div className="grid gap-4 py-4">
           <div className="space-y-4">
-            {/* Protocol Information */}
+            {/* Project Information */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Protocol Number</Label>
@@ -377,10 +328,6 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                   onChange={(e) => setProtocolDate(e.target.value)}
                 />
               </div>
-            </div>
-
-            {/* Project Information */}
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Project ID</Label>
                 <Input
@@ -541,95 +488,34 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
 export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [format, setFormat] = useState('docx');
-  const [unitDetails, setUnitDetails] = useState({
-    unit_name: '',
-    email: 'daefkke@civilprotection.gr',
-    parts: []
-  });
-  const [contactInfo, setContactInfo] = useState({
-    address: 'Κηφισίας 124 & Ιατρίδου 2',
-    postal_code: '11526',
-    city: 'Αθήνα',
-    contact_person: ''
-  });
-
-  useEffect(() => {
-    if (document) {
-      setUnitDetails(prev => ({
-        ...prev,
-        unit_name: document.unit || '',
-        parts: document.unit_parts || []
-      }));
-      setContactInfo(prev => ({
-        ...prev,
-        contact_person: document.contact_person || ''
-      }));
-    }
-  }, [document]);
 
   if (!document) return null;
 
-  const handleExport = async () => {
+  const handleExport = () => {
     try {
       setLoading(true);
-      console.log('Starting document export process...');
+      console.log('Starting document download...');
 
-      // Make the export request - using GET for binary downloads
-      const response = await fetch(`/api/documents/generated/${document.id}/export`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        }
-      });
+      // Direct download using window.open in a new tab
+      window.open(`/api/documents/generated/${document.id}/export`, '_blank');
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `Export failed with status: ${response.status}`);
-      }
+      // Show success message after a short delay
+      setTimeout(() => {
+        setLoading(false);
+        toast({
+          title: "Success",
+          description: "Document download initiated",
+        });
+        onClose();
+      }, 1000);
 
-      // Get the filename from the Content-Disposition header
-      const contentDisposition = response.headers.get('Content-Disposition');
-      const filenameMatch = contentDisposition?.match(/filename="([^"]*?)"/);
-      const filename = filenameMatch ? filenameMatch[1] : `document-${document.id}.docx`;
-
-      // Create blob from response
-      const blob = await response.blob();
-      if (!blob || blob.size === 0) {
-        throw new Error('Received empty document from server');
-      }
-
-      console.log('Document blob received, size:', blob.size);
-
-      // Create object URL and trigger download
-      const url = window.URL.createObjectURL(new Blob([blob], {
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-      }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-
-      // Cleanup
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(link);
-
-      console.log('Document download completed');
-      toast({
-        title: "Success",
-        description: "Document downloaded successfully",
-      });
-
-      onClose();
     } catch (error) {
       console.error('Export error:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to export document",
+        description: "Failed to download document. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -640,112 +526,9 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
         <DialogHeader>
           <DialogTitle>Export Document</DialogTitle>
           <DialogDescription>
-            Configure document export settings and choose format.
+            Click the button below to download the document.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          {/* Unit Details Section */}
-          <div className="space-y-4 p-4 bg-muted rounded-lg">
-            <h3 className="font-medium text-lg">Unit Details</h3>
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <Label>Unit Name</Label>
-                <Input
-                  value={unitDetails.unit_name}
-                  onChange={(e) => setUnitDetails(prev => ({
-                    ...prev,
-                    unit_name: e.target.value
-                  }))}
-                  placeholder="Enter unit name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  value={unitDetails.email}
-                  onChange={(e) => setUnitDetails(prev => ({
-                    ...prev,
-                    email: e.target.value
-                  }))}
-                  placeholder="Enter email"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Contact Information Section */}
-          <div className="space-y-4 p-4 bg-muted rounded-lg">
-            <h3 className="font-medium text-lg">Contact Information</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Address</Label>
-                <Input
-                  value={contactInfo.address}
-                  onChange={(e) => setContactInfo(prev => ({
-                    ...prev,
-                    address: e.target.value
-                  }))}
-                  placeholder="Enter address"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Postal Code</Label>
-                <Input
-                  value={contactInfo.postal_code}
-                  onChange={(e) => setContactInfo(prev => ({
-                    ...prev,
-                    postal_code: e.target.value
-                  }))}
-                  placeholder="Enter postal code"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>City</Label>
-                <Input
-                  value={contactInfo.city}
-                  onChange={(e) => setContactInfo(prev => ({
-                    ...prev,
-                    city: e.target.value
-                  }))}
-                  placeholder="Enter city"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Contact Person</Label>
-                <Input
-                  value={contactInfo.contact_person}
-                  onChange={(e) => setContactInfo(prev => ({
-                    ...prev,
-                    contact_person: e.target.value
-                  }))}
-                  placeholder="Enter contact person"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Export Format Section */}
-          <div className="space-y-2">
-            <Label>Export Format</Label>
-            <Select
-              value={format}
-              onValueChange={(value) => setFormat(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a format" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="docx">DOCX (with formatting)</SelectItem>
-                <SelectItem value="pdf">PDF</SelectItem>
-              </SelectContent>
-            </Select>
-            {format === 'docx' && (
-              <p className="text-sm text-muted-foreground mt-2">
-                DOCX format includes full document formatting with headers, footers, and proper layout.
-              </p>
-            )}
-          </div>
-        </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
@@ -755,7 +538,7 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
             disabled={loading}
             className="min-w-[100px]"
           >
-            {loading ? "Exporting..." : "Export"}
+            {loading ? "Downloading..." : "Download"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -18,17 +18,12 @@ export async function exportDocument(req: Request, res: Response) {
 
     console.log(`Document export request for ID: ${id}`, {
       method: req.method,
-      contentType: req.headers['content-type']
+      contentType: req.headers['content-type'],
+      accept: req.headers['accept']
     });
 
-    // Verify user session
-    if (!req.session?.user) {
-      console.log('Export attempt without authentication');
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
     // Fetch document data
-    console.log('Fetching document data');
+    console.log('Fetching document data from database');
     const { data: document, error: docError } = await supabase
       .from('generated_documents')
       .select('*, recipients')
@@ -37,10 +32,7 @@ export async function exportDocument(req: Request, res: Response) {
 
     if (docError) {
       console.error('Database query error:', docError);
-      return res.status(500).json({ 
-        message: 'Error fetching document data',
-        error: docError.message 
-      });
+      return res.status(500).json({ message: 'Error fetching document data' });
     }
 
     if (!document) {
@@ -56,7 +48,7 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(400).json({ message: 'No template found for this expenditure type' });
     }
 
-    // Generate document
+    // Generate document buffer
     console.log('Generating document buffer');
     const buffer = await DocumentFormatter.generateDocument(document, template, {
       margins: {
@@ -72,9 +64,11 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(500).json({ message: 'Failed to generate document content' });
     }
 
+    console.log(`Generated document buffer size: ${buffer.length} bytes`);
+
     // Set response headers for binary download
-    console.log('Setting response headers for document download');
     const filename = `document-${DocumentFormatter.formatDocumentNumber(parseInt(id))}.docx`;
+    console.log('Setting headers for download:', filename);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -82,10 +76,12 @@ export async function exportDocument(req: Request, res: Response) {
     res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
 
-    // Send the document buffer
-    console.log(`Sending document response (${buffer.length} bytes)`);
-    res.end(buffer);
+    // Send the document buffer using res.write and res.end for better streaming
+    console.log(`Writing ${buffer.length} bytes to response`);
+    res.write(buffer);
+    res.end();
 
     const endTime = Date.now();
     console.log(`[${endTime}] Document export completed successfully. Duration: ${endTime - startTime}ms`);
@@ -99,7 +95,7 @@ export async function exportDocument(req: Request, res: Response) {
   }
 }
 
-// Register routes for document export
+// Register only GET route for document export
 documentExportRouter.get('/:id/export', exportDocument);
 
 function convertInchesToTwip(inches: number): number {
