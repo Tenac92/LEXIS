@@ -22,15 +22,15 @@ export async function exportDocument(req: Request, res: Response) {
     }
 
     console.log('Fetching document data from database');
-    const { data: document, error } = await supabase
+    const { data: document, error: docError } = await supabase
       .from('generated_documents')
       .select('*, recipients')
-      .eq('id', id)
+      .eq('id', parseInt(id))
       .single();
 
-    if (error) {
-      console.error('Database query error:', error);
-      throw error;
+    if (docError) {
+      console.error('Database query error:', docError);
+      return res.status(500).json({ message: 'Error fetching document data' });
     }
 
     if (!document) {
@@ -49,10 +49,10 @@ export async function exportDocument(req: Request, res: Response) {
     const formatConfig = {
       format: exportConfig.format || 'docx',
       margins: exportConfig.margins || {
-        top: 850,
-        right: 1000,
-        bottom: 850,
-        left: 1000
+        top: convertInchesToTwip(1),
+        right: convertInchesToTwip(1),
+        bottom: convertInchesToTwip(1),
+        left: convertInchesToTwip(1)
       },
       unit_details: exportConfig.unit_details,
       contact_info: exportConfig.contact_info,
@@ -62,15 +62,11 @@ export async function exportDocument(req: Request, res: Response) {
 
     const buffer = await DocumentFormatter.generateDocument(document, template, formatConfig);
 
-    const contentType = formatConfig.format === 'pdf' 
-      ? 'application/pdf'
-      : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-
-    res.setHeader('Content-Type', contentType);
-    res.setHeader(
-      'Content-Disposition', 
-      `attachment; filename=document-${document.document_number || id}.${formatConfig.format}`
-    );
+    // Set proper headers for DOCX file
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename=document-${document.id}.docx`);
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Cache-Control', 'no-cache');
 
     console.log('Sending document response');
     res.send(buffer);
@@ -84,6 +80,10 @@ export async function exportDocument(req: Request, res: Response) {
   }
 }
 
-// Register both GET and POST routes for backward compatibility
+// Register routes for document export
 documentExportRouter.get('/:id/export', exportDocument);
 documentExportRouter.post('/:id/export', exportDocument);
+
+function convertInchesToTwip(inches: number): number {
+  return Math.round(inches * 1440);
+}
