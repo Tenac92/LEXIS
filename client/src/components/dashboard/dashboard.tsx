@@ -24,24 +24,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
-// Define the stats type
-type DashboardStats = {
-  totalDocuments: number;
-  pendingDocuments: number;
-  completedDocuments: number;
-  projectStats: {
-    active: number;
-    pending: number;
-    completed: number;
-    pending_reallocation: number;
-  };
-  recentActivity: Array<{
-    id: number;
-    type: string;
-    description: string;
-    date: string;
-  }>;
-};
+import type { DashboardStats } from "@/lib/dashboard";
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -49,13 +32,8 @@ export function Dashboard() {
 
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
-    queryFn: async () => {
-      const response = await fetch('/api/dashboard/stats');
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard stats');
-      }
-      return response.json();
-    }
+    retry: 2,
+    refetchOnWindowFocus: false
   });
 
   // Format data for the chart
@@ -69,15 +47,19 @@ export function Dashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-border" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (error) {
+  if (error || !stats) {
     return (
-      <div className="p-4 text-red-600 bg-red-50 rounded-lg">
-        Failed to load dashboard data
+      <div className="p-6 text-red-600 bg-red-50 rounded-lg">
+        <h3 className="text-lg font-semibold mb-2">Error Loading Dashboard</h3>
+        <p>Failed to load dashboard data. Please try refreshing the page.</p>
+        {error instanceof Error && (
+          <p className="mt-2 text-sm">{error.message}</p>
+        )}
       </div>
     );
   }
@@ -118,7 +100,7 @@ export function Dashboard() {
             </div>
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Total Documents</h3>
-              <p className="text-2xl font-bold mt-1">{stats?.totalDocuments || 0}</p>
+              <p className="text-2xl font-bold mt-1">{stats.totalDocuments}</p>
             </div>
           </div>
         </Card>
@@ -130,7 +112,7 @@ export function Dashboard() {
             </div>
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Pending Documents</h3>
-              <p className="text-2xl font-bold mt-1">{stats?.pendingDocuments || 0}</p>
+              <p className="text-2xl font-bold mt-1">{stats.pendingDocuments}</p>
             </div>
           </div>
         </Card>
@@ -142,7 +124,7 @@ export function Dashboard() {
             </div>
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Completed Documents</h3>
-              <p className="text-2xl font-bold mt-1">{stats?.completedDocuments || 0}</p>
+              <p className="text-2xl font-bold mt-1">{stats.completedDocuments}</p>
             </div>
           </div>
         </Card>
@@ -154,33 +136,35 @@ export function Dashboard() {
             </div>
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Active Projects</h3>
-              <p className="text-2xl font-bold mt-1">{stats?.projectStats?.active || 0}</p>
+              <p className="text-2xl font-bold mt-1">{stats.projectStats.active}</p>
             </div>
           </div>
         </Card>
       </div>
 
       {/* Project Status Distribution Chart */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
-          Project Status Distribution
-        </h3>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#3b82f6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
+      {chartData.length > 0 && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Project Status Distribution
+          </h3>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      )}
 
       {/* Recent Activity */}
-      {stats?.recentActivity && (
+      {stats.recentActivity && stats.recentActivity.length > 0 && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
           <div className="space-y-4">
