@@ -3,11 +3,10 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { 
-  Loader2, 
-  FileText, 
-  Users, 
-  AlertCircle, 
+import {
+  Loader2,
+  FileText,
+  AlertCircle,
   CheckCircle2,
   PlusCircle,
   Download,
@@ -15,27 +14,20 @@ import {
   BarChart3,
   Euro
 } from "lucide-react";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
-  Cell
+  Legend
 } from 'recharts';
 
 import type { DashboardStats } from "@/lib/dashboard";
+import { getDashboardChartConfig } from "@/lib/dashboard";
 import { formatCurrency } from "@/lib/services/dashboard";
-
-const STATUS_COLORS = {
-  active: '#22c55e',
-  pending: '#f59e0b',
-  pending_reallocation: '#8b5cf6',
-  completed: '#3b82f6',
-  pending_funding: '#f59e0b'
-};
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -46,15 +38,6 @@ export function Dashboard() {
     retry: 2,
     refetchOnWindowFocus: false
   });
-
-  // Format data for the chart - include budget information
-  const chartData = stats ? Object.entries(stats.projectStats).map(([status, count]) => ({
-    name: status.replace('_', ' ').split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' '),
-    count: count,
-    budget: stats.budgetTotals?.[status] || 0
-  })) : [];
 
   if (isLoading) {
     return (
@@ -75,6 +58,8 @@ export function Dashboard() {
       </div>
     );
   }
+
+  const chartConfig = getDashboardChartConfig(stats);
 
   return (
     <div className="space-y-6">
@@ -156,59 +141,63 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Project Status Distribution Chart */}
-      {chartData.length > 0 && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Project Status Distribution
-          </h3>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                data={chartData} 
-                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                barSize={60}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name" 
-                  angle={-45} 
-                  textAnchor="end" 
-                  height={60} 
-                  interval={0}
-                />
-                <YAxis yAxisId="left" orientation="left" stroke="#666" />
-                <YAxis yAxisId="right" orientation="right" stroke="#666" />
-                <Tooltip 
-                  formatter={(value: any, name: string) => {
-                    if (name === 'budget') return formatCurrency(value);
-                    return value;
-                  }}
-                />
-                <Bar 
-                  yAxisId="left" 
-                  dataKey="count" 
-                  name="Projects"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={STATUS_COLORS[entry.name.toLowerCase().replace(' ', '_') as keyof typeof STATUS_COLORS] || '#666'} 
-                    />
-                  ))}
-                </Bar>
-                <Bar 
-                  yAxisId="right" 
-                  dataKey="budget" 
-                  name="Budget" 
-                  fill="#8884d8" 
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      )}
+      {/* Project Status and Budget Chart */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Project Status and Budget Distribution
+        </h3>
+        <div className="h-[400px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartConfig.data.datasets[0].data.map((count, i) => ({
+                name: chartConfig.data.labels[i],
+                count,
+                budget: chartConfig.data.datasets[1].data[i]
+              }))}
+              margin={{ top: 20, right: 60, left: 20, bottom: 60 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="name"
+                angle={-45}
+                textAnchor="end"
+                height={60}
+                interval={0}
+              />
+              <YAxis
+                yAxisId="count"
+                orientation="left"
+                label={{ value: 'Number of Projects', angle: -90, position: 'insideLeft' }}
+              />
+              <YAxis
+                yAxisId="budget"
+                orientation="right"
+                label={{ value: 'Budget Amount (€)', angle: 90, position: 'insideRight' }}
+              />
+              <Tooltip
+                formatter={(value: any, name: string) => {
+                  if (name === 'budget') return formatCurrency(value);
+                  return value;
+                }}
+              />
+              <Legend />
+              <Bar
+                dataKey="count"
+                name="Projects Count"
+                yAxisId="count"
+                fill={chartConfig.data.datasets[0].backgroundColor[0]}
+              />
+              <Bar
+                dataKey="budget"
+                name="Budget Amount"
+                yAxisId="budget"
+                fill={chartConfig.data.datasets[1].backgroundColor}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
 
       {/* Recent Activity */}
       {stats.recentActivity && stats.recentActivity.length > 0 && (

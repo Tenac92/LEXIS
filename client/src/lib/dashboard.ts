@@ -10,6 +10,7 @@ export const statsSchema = z.object({
     completed: z.number(),
     pending_reallocation: z.number()
   }),
+  budgetTotals: z.record(z.string(), z.number()).optional(),
   recentActivity: z.array(z.object({
     id: z.number(),
     type: z.string(),
@@ -58,68 +59,62 @@ const baseConfig = {
   }
 } as const;
 
-export const getDashboardChartConfig = (stats: DashboardStats, isAdmin: boolean) => {
-  const adminCharts = {
-    projects: {
-      id: 'projectsChart',
-      type: 'doughnut' as const,
-      data: {
-        labels: ['Active', 'Pending', 'Completed', 'Pending Reallocation'],
-        datasets: [{
-          data: [stats.projectStats.active, stats.projectStats.pending, stats.projectStats.completed, stats.projectStats.pending_reallocation],
-          backgroundColor: [chartColors.blue, chartColors.yellow, chartColors.green, chartColors.purple],
-          borderWidth: 2,
-          borderColor: '#ffffff',
-          hoverOffset: 4
-        }]
-      },
-      options: {
-        ...baseConfig,
-        cutout: '70%'
-      }
+export const getDashboardChartConfig = (stats: DashboardStats) => {
+  const chartData = Object.entries(stats.projectStats).map(([status, count]) => ({
+    name: status.replace('_', ' ').split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' '),
+    count,
+    budget: stats.budgetTotals?.[status] || 0
+  }));
+
+  return {
+    id: 'projectsChart',
+    type: 'bar' as const,
+    data: {
+      labels: chartData.map(d => d.name),
+      datasets: [
+        {
+          label: 'Projects Count',
+          data: chartData.map(d => d.count),
+          backgroundColor: [
+            chartColors.blue,
+            chartColors.yellow,
+            chartColors.purple,
+            chartColors.green
+          ],
+          yAxisID: 'count'
+        },
+        {
+          label: 'Budget Amount',
+          data: chartData.map(d => d.budget),
+          backgroundColor: chartColors.gray,
+          yAxisID: 'budget'
+        }
+      ]
     },
-    documents: {
-      id: 'documentsChart',
-      type: 'doughnut' as const,
-      data: {
-        labels: ['Completed', 'Pending'],
-        datasets: [{
-          data: [stats.completedDocuments, stats.pendingDocuments],
-          backgroundColor: [chartColors.green, chartColors.yellow],
-          borderWidth: 2,
-          borderColor: '#ffffff',
-          hoverOffset: 4
-        }]
-      },
-      options: {
-        ...baseConfig,
-        cutout: '70%'
+    options: {
+      ...baseConfig,
+      scales: {
+        count: {
+          type: 'linear' as const,
+          position: 'left' as const,
+          title: {
+            display: true,
+            text: 'Number of Projects'
+          }
+        },
+        budget: {
+          type: 'linear' as const,
+          position: 'right' as const,
+          title: {
+            display: true,
+            text: 'Budget Amount (€)'
+          }
+        }
       }
     }
   };
-
-  const userCharts = {
-    documents: {
-      id: 'documentsChart',
-      type: 'doughnut' as const,
-      data: {
-        labels: ['Completed', 'Pending'],
-        datasets: [{
-          data: [stats.completedDocuments, stats.pendingDocuments],
-          backgroundColor: [chartColors.green, chartColors.yellow],
-          borderWidth: 2,
-          borderColor: '#ffffff',
-          hoverOffset: 4
-        }]
-      },
-      options: {
-        ...baseConfig,
-        cutout: '70%'
-      }
-    }
-  };
-
-  return isAdmin ? adminCharts : userCharts;
 };
 
 export { chartColors, baseConfig };

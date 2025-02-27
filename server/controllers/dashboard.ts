@@ -16,18 +16,18 @@ export async function getDashboardStats(req: Request, res: Response) {
       throw documentsError;
     }
 
-    // Get project status counts from projects table
-    console.log('[Dashboard] Attempting to fetch projects data...');
-    const { data: projectsData, error: projectsError } = await supabase
-      .from('projects')
-      .select('status, budget_na853');
+    // Get budget data from budget_na853_split table
+    console.log('[Dashboard] Attempting to fetch budget data...');
+    const { data: budgetData, error: budgetError } = await supabase
+      .from('budget_na853_split')
+      .select('*');
 
-    if (projectsError) {
-      console.error('[Dashboard] Error fetching projects:', projectsError);
-      throw projectsError;
+    if (budgetError) {
+      console.error('[Dashboard] Error fetching budget data:', budgetError);
+      throw budgetError;
     }
 
-    // Calculate document totals based on actual status values in schema
+    // Calculate document totals based on actual status values
     const totalDocuments = documentsData?.length || 0;
     const pendingDocuments = documentsData?.filter(doc => 
       ['draft', 'pending'].includes(doc.status || '')
@@ -36,25 +36,29 @@ export async function getDashboardStats(req: Request, res: Response) {
       doc.status === 'approved'
     ).length || 0;
 
-    // Calculate project status totals with correct status values from schema
+    // Calculate budget statistics
     const projectStats = {
-      active: projectsData?.filter(proj => proj.status === 'active').length || 0,
-      pending: projectsData?.filter(proj => 
-        ['pending', 'pending_funding'].includes(proj.status || '')
-      ).length || 0,
-      pending_reallocation: projectsData?.filter(proj => 
-        proj.status === 'pending_reallocation'
-      ).length || 0,
-      completed: projectsData?.filter(proj => proj.status === 'completed').length || 0
+      active: budgetData?.filter(b => parseFloat(b.user_view?.toString() || '0') > 0).length || 0,
+      pending: budgetData?.filter(b => parseFloat(b.user_view?.toString() || '0') === 0 && parseFloat(b.proip?.toString() || '0') > 0).length || 0,
+      pending_reallocation: budgetData?.filter(b => parseFloat(b.katanomes_etous?.toString() || '0') > parseFloat(b.user_view?.toString() || '0')).length || 0,
+      completed: budgetData?.filter(b => parseFloat(b.user_view?.toString() || '0') === parseFloat(b.katanomes_etous?.toString() || '0')).length || 0
     };
 
-    // Calculate total budget values for projects
-    const budgetTotals = projectsData?.reduce((acc, proj) => {
-      const budget = parseFloat(proj.budget_na853 || '0');
-      const status = proj.status || 'unknown';
+    // Calculate budget totals for different statuses
+    const budgetTotals = budgetData?.reduce((acc, budget) => {
+      const userView = parseFloat(budget.user_view?.toString() || '0');
+      const proip = parseFloat(budget.proip?.toString() || '0');
+      const katanomesEtous = parseFloat(budget.katanomes_etous?.toString() || '0');
+
+      let status = 'unknown';
+      if (userView > 0) status = 'active';
+      else if (userView === 0 && proip > 0) status = 'pending';
+      else if (katanomesEtous > userView) status = 'pending_reallocation';
+      else if (userView === katanomesEtous) status = 'completed';
+
       return {
         ...acc,
-        [status]: (acc[status] || 0) + budget
+        [status]: (acc[status] || 0) + userView
       };
     }, {} as Record<string, number>);
 
