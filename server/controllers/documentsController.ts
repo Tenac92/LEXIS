@@ -91,7 +91,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 });
 
 // Get single document
-router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+import { authenticateToken } from '../middleware/authMiddleware';
+
+router.get('/:id', authenticateSession, async (req: AuthRequest, res: Response) => {
   try {
     const { data: document, error } = await supabase
       .from('generated_documents')
