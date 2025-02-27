@@ -11,7 +11,7 @@ import {
   AlignmentType,
   VerticalAlign,
   convertInchesToTwip,
-  IDocumentProperties,
+  IDocumentOptions,
 } from "docx";
 import { supabase } from "../config/db";
 import type { DocumentTemplate } from '@shared/schema';
@@ -36,7 +36,6 @@ interface Recipient {
 
 export class DocumentFormatter {
   static getDefaultMargins() {
-    // Using standard A4 margins (1 inch = 1440 twips)
     return {
       top: convertInchesToTwip(1),
       right: convertInchesToTwip(1),
@@ -82,27 +81,15 @@ export class DocumentFormatter {
           }))
         : [];
 
-      const docProperties: IDocumentProperties = {
-        title: `Document-${documentData.id}`,
-        description: `Generated Document ${documentData.id}`,
-        creator: "Document Export System",
-        lastModifiedBy: "System",
-        revision: "1",
-        lastPrinted: new Date(),
-        created: new Date(),
-        modified: new Date(),
-        language: "el-GR"
-      };
-
-      // Create document with MS Office compatibility settings
+      // Create document with basic settings
       const doc = new Document({
         sections: [{
           properties: {
             page: {
               margin: config.margins || this.getDefaultMargins(),
               size: {
-                width: 11906, // Standard A4 width in twips (210mm)
-                height: 16838, // Standard A4 height in twips (297mm)
+                width: 11906,  // A4 width in twips
+                height: 16838, // A4 height in twips
               },
             },
           },
@@ -114,28 +101,18 @@ export class DocumentFormatter {
             this.createFooter(unitDetails)
           ]
         }],
-        creator: docProperties.creator,
-        description: docProperties.description,
-        title: docProperties.title,
-        lastModifiedBy: docProperties.lastModifiedBy,
         styles: {
           default: {
             document: {
               run: {
                 font: "Times New Roman",
-                size: 24, // 12pt in half-points
+                size: 24, // 12pt
               },
               paragraph: {
-                spacing: {
-                  after: 120, // 6pt in twips
-                  before: 120,
-                },
+                spacing: { after: 120, before: 120 },
               },
             },
           },
-        },
-        features: {
-          updateFields: true
         },
         compatibility: {
           doNotExpandShiftReturn: true,
@@ -143,12 +120,10 @@ export class DocumentFormatter {
           doNotBreakWrappedTables: true,
           useNormalStyleForList: true,
           doNotUseIndentAsNumberingTabStop: true,
-          useAltKinsokuLineBreakRules: true,
-          doNotSuppressIndentation: true,
         }
       });
 
-      console.log("Generating document buffer with compatibility settings...");
+      console.log("Generating document buffer...");
       const buffer = await Packer.toBuffer(doc);
 
       if (!buffer || buffer.length === 0) {
