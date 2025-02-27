@@ -27,79 +27,93 @@ export async function getDashboardStats(req: Request, res: Response) {
       throw budgetError;
     }
 
-    // Calculate document totals based on actual status values
-    const totalDocuments = documentsData?.length || 0;
-    const pendingDocuments = documentsData?.filter(doc => 
-      ['draft', 'pending'].includes(doc.status || '')
-    ).length || 0;
-    const completedDocuments = documentsData?.filter(doc => 
-      doc.status === 'approved'
-    ).length || 0;
+    console.log('[Dashboard] Successfully fetched data:', {
+      documentsCount: documentsData?.length || 0,
+      budgetDataCount: budgetData?.length || 0
+    });
 
-    // Calculate budget statistics
-    const projectStats = {
-      active: budgetData?.filter(b => parseFloat(b.user_view?.toString() || '0') > 0).length || 0,
-      pending: budgetData?.filter(b => parseFloat(b.user_view?.toString() || '0') === 0 && parseFloat(b.proip?.toString() || '0') > 0).length || 0,
-      pending_reallocation: budgetData?.filter(b => parseFloat(b.katanomes_etous?.toString() || '0') > parseFloat(b.user_view?.toString() || '0')).length || 0,
-      completed: budgetData?.filter(b => parseFloat(b.user_view?.toString() || '0') === parseFloat(b.katanomes_etous?.toString() || '0')).length || 0
-    };
-
-    // Calculate budget totals for different statuses
-    const budgetTotals = budgetData?.reduce((acc, budget) => {
-      const userView = parseFloat(budget.user_view?.toString() || '0');
-      const proip = parseFloat(budget.proip?.toString() || '0');
-      const katanomesEtous = parseFloat(budget.katanomes_etous?.toString() || '0');
-
-      let status = 'unknown';
-      if (userView > 0) status = 'active';
-      else if (userView === 0 && proip > 0) status = 'pending';
-      else if (katanomesEtous > userView) status = 'pending_reallocation';
-      else if (userView === katanomesEtous) status = 'completed';
-
-      return {
-        ...acc,
-        [status]: (acc[status] || 0) + userView
-      };
-    }, {} as Record<string, number>);
-
-    // Get recent activity from budget_history
-    let recentActivity = [];
     try {
-      console.log('[Dashboard] Attempting to fetch recent activity...');
-      const { data: activityData, error: activityError } = await supabase
+      // Calculate document totals
+      const totalDocuments = documentsData?.length || 0;
+      const pendingDocuments = documentsData?.filter(doc => 
+        ['draft', 'pending'].includes(doc.status || '')
+      ).length || 0;
+      const completedDocuments = documentsData?.filter(doc => 
+        doc.status === 'approved'
+      ).length || 0;
+
+      // Calculate budget statistics with safe number parsing
+      const parseAmount = (value: any): number => {
+        const parsed = parseFloat(value?.toString() || '0');
+        return isNaN(parsed) ? 0 : parsed;
+      };
+
+      const projectStats = {
+        active: budgetData?.filter(b => parseAmount(b.user_view) > 0).length || 0,
+        pending: budgetData?.filter(b => parseAmount(b.user_view) === 0 && parseAmount(b.proip) > 0).length || 0,
+        pending_reallocation: budgetData?.filter(b => parseAmount(b.katanomes_etous) > parseAmount(b.user_view)).length || 0,
+        completed: budgetData?.filter(b => parseAmount(b.user_view) === parseAmount(b.katanomes_etous) && parseAmount(b.user_view) > 0).length || 0
+      };
+
+      // Calculate budget totals
+      const budgetTotals = budgetData?.reduce((acc, budget) => {
+        const userView = parseAmount(budget.user_view);
+        const proip = parseAmount(budget.proip);
+        const katanomesEtous = parseAmount(budget.katanomes_etous);
+
+        let status = 'unknown';
+        if (userView > 0) status = 'active';
+        else if (userView === 0 && proip > 0) status = 'pending';
+        else if (katanomesEtous > userView) status = 'pending_reallocation';
+        else if (userView === katanomesEtous && userView > 0) status = 'completed';
+
+        return {
+          ...acc,
+          [status]: (acc[status] || 0) + userView
+        };
+      }, {} as Record<string, number>) || {};
+
+      // Get recent budget history
+      console.log('[Dashboard] Attempting to fetch budget history...');
+      const { data: historyData, error: historyError } = await supabase
         .from('budget_history')
         .select('id, change_type, mis, previous_amount, new_amount, created_at')
         .order('created_at', { ascending: false })
         .limit(5);
 
-      if (!activityError && activityData) {
-        recentActivity = activityData.map(activity => ({
-          id: activity.id,
-          type: activity.change_type,
-          description: `Project ${activity.mis}: Budget changed from ${activity.previous_amount} to ${activity.new_amount}`,
-          date: activity.created_at
-        }));
+      if (historyError) {
+        console.error('[Dashboard] Error fetching budget history:', historyError);
+        throw historyError;
       }
-    } catch (activityError) {
-      console.error('[Dashboard] Error fetching activity (non-critical):', activityError);
+
+      const recentActivity = historyData?.map(activity => ({
+        id: activity.id,
+        type: activity.change_type,
+        description: `Project ${activity.mis}: Budget changed from ${activity.previous_amount} to ${activity.new_amount}`,
+        date: activity.created_at
+      })) || [];
+
+      const response = {
+        totalDocuments,
+        pendingDocuments,
+        completedDocuments,
+        projectStats,
+        budgetTotals,
+        recentActivity
+      };
+
+      console.log('[Dashboard] Successfully compiled stats:', {
+        documents: { total: totalDocuments, pending: pendingDocuments, completed: completedDocuments },
+        projects: projectStats,
+        budgets: Object.keys(budgetTotals)
+      });
+
+      res.json(response);
+
+    } catch (calculationError) {
+      console.error('[Dashboard] Error during statistics calculation:', calculationError);
+      throw calculationError;
     }
-
-    const response = {
-      totalDocuments,
-      pendingDocuments,
-      completedDocuments,
-      projectStats,
-      budgetTotals,
-      recentActivity
-    };
-
-    console.log('[Dashboard] Successfully compiled stats:', {
-      documents: { total: totalDocuments, pending: pendingDocuments, completed: completedDocuments },
-      projects: projectStats,
-      budgets: budgetTotals
-    });
-
-    res.json(response);
 
   } catch (error) {
     console.error('[Dashboard] Unexpected error:', error);
