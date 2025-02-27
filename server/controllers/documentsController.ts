@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
 import type { GeneratedDocument, User } from "@shared/schema";
-import { DocumentFormatter } from "../utils/DocumentFormatter";
 
 interface AuthRequest extends Request {
   user?: User;
@@ -19,75 +18,71 @@ interface DocumentQueryParams {
 
 const router = Router();
 
-// Middleware to check auth status
-const authenticateToken = (req: AuthRequest, res: Response, next: any) => {
-  if (!req.session?.user) {
-    console.log('[Documents] No authenticated user found');
-    return res.status(401).json({ message: "Authentication required" });
-  }
-  req.user = req.session.user;
-  next();
-};
-
 // List documents with filters
-router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    console.log('[Documents] Request received:', {
-      query: req.query,
-      user: req.user ? { id: req.user.id, role: req.user.role, units: req.user.units } : 'No user'
-    });
+    console.log('[Documents] Starting document fetch request');
 
-    // Start building the query
-    let query = supabase.from('generated_documents').select();
+    // Log query parameters
+    console.log('[Documents] Query parameters:', req.query);
 
-    // Log the initial query state
-    console.log('[Documents] Initial query state');
+    // Test Supabase connection first
+    const { data: testData, error: testError } = await supabase
+      .from('generated_documents')
+      .select('id')
+      .limit(1);
 
-    // Apply unit filter based on user role
-    if (req.user?.role === 'user' && req.user?.units?.length) {
-      const userUnit = req.user.units[0];
-      console.log('[Documents] Applying user unit filter:', userUnit);
-      query = query.eq('unit', userUnit);
-    } else {
-      const filterUnit = req.query.unit as string;
-      if (filterUnit && filterUnit !== 'all') {
-        console.log('[Documents] Applying unit filter:', filterUnit);
-        query = query.eq('unit', filterUnit);
-      }
+    if (testError) {
+      console.error('[Documents] Supabase connection test failed:', testError);
+      throw testError;
     }
 
-    // Apply status filter
-    const filterStatus = req.query.status as string;
-    if (filterStatus && filterStatus !== 'all') {
-      console.log('[Documents] Applying status filter:', filterStatus);
-      query = query.eq('status', filterStatus);
+    console.log('[Documents] Supabase connection test successful');
+
+    // Build main query
+    let query = supabase
+      .from('generated_documents')
+      .select(`
+        id,
+        unit,
+        project_id,
+        project_na853,
+        expenditure_type,
+        status,
+        recipients,
+        total_amount,
+        created_at,
+        updated_at
+      `);
+
+    // Apply filters if they exist
+    if (req.query.unit && req.query.unit !== 'all') {
+      query = query.eq('unit', req.query.unit);
+    }
+    if (req.query.status && req.query.status !== 'all') {
+      query = query.eq('status', req.query.status);
     }
 
     // Always order by created_at descending
     query = query.order('created_at', { ascending: false });
 
-    // Execute the query
-    console.log('[Documents] Executing query...');
+    console.log('[Documents] Executing main query...');
+
     const { data, error } = await query;
 
     if (error) {
-      console.error('[Documents] Database error:', error);
+      console.error('[Documents] Query error:', error);
       throw error;
     }
 
-    console.log('[Documents] Query results:', {
-      success: true,
+    console.log('[Documents] Query successful:', {
       count: data?.length || 0,
-      firstDocument: data?.[0] ? {
-        id: data[0].id,
-        unit: data[0].unit,
-        status: data[0].status
-      } : null
+      sample: data?.[0] ? { id: data[0].id, unit: data[0].unit } : null
     });
 
     return res.json(data || []);
   } catch (error) {
-    console.error('[Documents] Error in list documents:', error);
+    console.error('[Documents] Error fetching documents:', error);
     return res.status(500).json({
       message: 'Failed to fetch documents',
       error: error instanceof Error ? error.message : 'Unknown error'

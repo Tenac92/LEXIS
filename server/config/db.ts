@@ -1,21 +1,22 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@shared/schema';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+  throw new Error('SUPABASE_URL and SUPABASE_KEY must be set in environment variables');
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
+export const supabase = createClient<Database>(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
   }
-});
+);
+
+export default supabase;

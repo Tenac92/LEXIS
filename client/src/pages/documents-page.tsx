@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -8,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { FileText, Filter, RefreshCcw, LayoutGrid, List } from "lucide-react";
 import {
@@ -25,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 import type { GeneratedDocument } from "@shared/schema";
 
 interface Filters {
@@ -69,31 +68,43 @@ export default function DocumentsPage() {
     queryKey: ['/api/documents', filters],
     queryFn: async () => {
       try {
-        console.log('[Documents] Fetching documents...');
-        const searchParams = new URLSearchParams();
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value && value !== 'all') {
-            searchParams.append(key, value);
-          }
+        console.log('[Documents] Fetching documents with filters:', filters);
+
+        // Create query
+        let query = supabase
+          .from('generated_documents')
+          .select()
+          .order('created_at', { ascending: false });
+
+        // Apply filters
+        if (user?.role === 'user' && user?.units?.length) {
+          console.log('[Documents] Applying user unit filter:', user.units[0]);
+          query = query.eq('unit', user.units[0]);
+        } else if (filters.unit && filters.unit !== 'all') {
+          console.log('[Documents] Applying unit filter:', filters.unit);
+          query = query.eq('unit', filters.unit);
+        }
+
+        if (filters.status && filters.status !== 'all') {
+          query = query.eq('status', filters.status);
+        }
+
+        console.log('[Documents] Executing Supabase query...');
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('[Documents] Supabase query error:', error);
+          throw error;
+        }
+
+        console.log('[Documents] Documents fetched successfully:', {
+          count: data?.length || 0,
+          sample: data?.[0] ? { id: data[0].id, unit: data[0].unit } : null
         });
 
-        // Always include user's unit if they are a regular user
-        if (user?.role === 'user' && user?.units?.length) {
-          searchParams.set('unit', user.units[0]);
-        }
-
-        const response = await fetch(`/api/documents?${searchParams.toString()}`);
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Failed to fetch documents');
-        }
-
-        const data = await response.json();
-        console.log('[Documents] Fetched documents:', { count: data?.length || 0 });
-        return data;
+        return data || [];
       } catch (error) {
-        console.error('[Documents] Fetch error:', error);
+        console.error('[Documents] Error fetching documents:', error);
         toast({
           title: "Error",
           description: error instanceof Error ? error.message : "Failed to fetch documents",
@@ -162,20 +173,6 @@ export default function DocumentsPage() {
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">User</label>
-                <Select
-                  value={filters.user}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, user: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select user" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Users</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

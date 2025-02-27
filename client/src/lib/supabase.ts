@@ -8,7 +8,7 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-console.log('Initializing Supabase client with URL:', supabaseUrl);
+console.log('[Supabase] Initializing client...');
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
@@ -22,10 +22,28 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
 });
 
 // Add debug helper
-export async function debugAuthState() {
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  console.log('Current session:', session, 'Session error:', sessionError);
+export async function debugSupabaseConnection() {
+  try {
+    console.log('[Supabase] Testing connection...');
+    const { data, error } = await supabase
+      .from('generated_documents')
+      .select('id')
+      .limit(1);
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  console.log('Current user:', user, 'User error:', userError);
+    if (error) {
+      console.error('[Supabase] Connection error:', error);
+      return false;
+    }
+
+    console.log('[Supabase] Connection successful, found records:', data?.length || 0);
+    return true;
+  } catch (err) {
+    console.error('[Supabase] Connection test failed:', err);
+    return false;
+  }
 }
+
+// Test connection on init
+debugSupabaseConnection().then(success => {
+  console.log('[Supabase] Initial connection test:', success ? 'successful' : 'failed');
+});
