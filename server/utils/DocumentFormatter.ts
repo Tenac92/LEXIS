@@ -43,6 +43,10 @@ export class DocumentFormatter {
     left: 1000
   };
 
+  static getDefaultMargins() {
+    return this.DEFAULT_MARGINS;
+  }
+
   private static validateDocumentData(data: DocumentData): void {
     if (!data.unit) {
       throw new Error('Unit is required');
