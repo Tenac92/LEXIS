@@ -70,10 +70,24 @@ export default function DocumentsPage() {
       try {
         console.log('[Documents] Fetching documents with filters:', filters);
 
-        // Create query
+        // Create query with explicit column selection
         let query = supabase
           .from('generated_documents')
-          .select()
+          .select(`
+            id,
+            unit,
+            status,
+            project_id,
+            project_na853,
+            total_amount,
+            recipients,
+            protocol_number_input,
+            protocol_date,
+            created_at,
+            updated_at,
+            department,
+            attachments
+          `)
           .order('created_at', { ascending: false });
 
         // Apply filters

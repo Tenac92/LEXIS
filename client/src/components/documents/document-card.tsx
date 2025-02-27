@@ -14,13 +14,21 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { GeneratedDocument } from "@shared/schema"; // Assuming this import is correct
+import type { GeneratedDocument } from "@shared/schema";
 
 interface DocumentCardProps {
   document: GeneratedDocument;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+}
+
+interface Recipient {
+  firstname: string;
+  lastname: string;
+  afm: string;
+  amount: number;
+  installment: number;
 }
 
 export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCardProps) {
@@ -47,13 +55,11 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `document-${document.id}.docx`;
-      document.body.appendChild(a);
-      a.click();
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `document-${document.id}.docx`;
+      link.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
 
       toast({
         description: "Document exported successfully",
@@ -87,7 +93,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
           ) : (
             <Clock className="h-3 w-3 mr-1" />
           )}
-          {document.status.charAt(0).toUpperCase() + document.status.slice(1)}
+          {document.status || 'Pending'}
         </Badge>
       </div>
 
@@ -99,7 +105,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
         <div className="space-y-1">
           <span className="text-sm text-muted-foreground">Total Amount</span>
           <p className="font-medium">
-            {parseFloat(document.total_amount).toLocaleString('en-US', {
+            {parseFloat(document.total_amount?.toString() || '0').toLocaleString('en-US', {
               style: 'currency',
               currency: 'EUR'
             })}
@@ -110,14 +116,14 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
       <div className="flex flex-col space-y-2">
         <div className="text-sm text-muted-foreground">Recipients</div>
         <div className="space-y-2">
-          {document.recipients.slice(0, 2).map((recipient, index) => (
+          {(document.recipients as Recipient[])?.slice(0, 2).map((recipient, index) => (
             <div key={index} className="text-sm">
               {recipient.firstname} {recipient.lastname} ({recipient.afm})
             </div>
           ))}
-          {document.recipients.length > 2 && (
+          {(document.recipients as Recipient[])?.length > 2 && (
             <div className="text-sm text-muted-foreground">
-              +{document.recipients.length - 2} more recipients
+              +{(document.recipients as Recipient[]).length - 2} more recipients
             </div>
           )}
         </div>
