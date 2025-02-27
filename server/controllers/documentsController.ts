@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
 import type { GeneratedDocument, User } from "@shared/schema";
+import { authenticateSession } from '../auth';
+import { DocumentFormatter } from '../utils/DocumentFormatter';
 
 interface AuthRequest extends Request {
   user?: User;
@@ -19,7 +21,7 @@ interface DocumentQueryParams {
 const router = Router();
 
 // List documents with filters
-router.get('/', async (req: AuthRequest, res: Response) => {
+router.get('/', authenticateSession, async (req: AuthRequest, res: Response) => {
   try {
     console.log('[Documents] Starting document fetch request');
 
@@ -91,8 +93,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 });
 
 // Get single document
-import { authenticateSession } from '../auth';
-
 router.get('/:id', authenticateSession, async (req: AuthRequest, res: Response) => {
   try {
     const { data: document, error } = await supabase
@@ -155,72 +155,55 @@ router.patch('/:id', authenticateSession, async (req: AuthRequest, res: Response
 });
 
 // Export document
-router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, res: Response) => {
-    const { id } = req.params;
+router.get('/generated/:id/export', authenticateSession, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
 
-    try {
-        const { data: document, error } = await supabase
-          .from('generated_documents')
-          .select()
-          .eq('id', parseInt(id))
-          .single();
-    
-        if (error) {
-          console.error('Database query error:', error);
-          throw error;
-        }
-    
-        if (!document) {
-          return res.status(404).json({ error: 'Document not found' });
-        }
-    
-        // Check access rights
-        if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
-          return res.status(403).json({ error: 'Access denied to this document' });
-        }
-    
-        // Get unit details
-        const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
-        if (!unitDetails) {
-          throw new Error('Unit details not found');
-        }
-    
-        // Create document
-        const doc = new Document({
-          sections: [{
-            properties: {
-              page: {
-                margin: DocumentFormatter.getDefaultMargins()
-              }
-            },
-            children: [
-              await DocumentFormatter.createHeader(document, unitDetails),
-              DocumentFormatter.createPaymentTable(document.recipients),
-              await DocumentFormatter.createFooter(document)
-            ]
-          }]
-        });
-    
-        // Generate buffer
-        const buffer = await Packer.toBuffer(doc);
-    
-        // Set response headers
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
-        res.send(buffer);
-    
-      } catch (error) {
-        console.error('Export error:', error);
-        res.status(500).json({
-          error: 'Failed to export document',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        });
-      }
+  try {
+    const { data: document, error } = await supabase
+      .from('generated_documents')
+      .select()
+      .eq('id', parseInt(id))
+      .single();
+
+    if (error) {
+      console.error('Database query error:', error);
+      throw error;
+    }
+
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    // Check access rights
+    if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
+      return res.status(403).json({ error: 'Access denied to this document' });
+    }
+
+    // Get unit details
+    const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
+    if (!unitDetails) {
+      throw new Error('Unit details not found');
+    }
+
+    // Create and send document
+    const buffer = await DocumentFormatter.generateDocument(document, unitDetails);
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({
+      error: 'Failed to export document',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
-
 // Create document
-router.post('/', authenticateToken, async (req: Request, res: Response) => {
+router.post('/', authenticateSession, async (req: AuthRequest, res: Response) => {
   try {
     const { unit, project_id, expenditure_type, status, recipients, total_amount } = req.body;
 
