@@ -9,9 +9,10 @@ interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
+// Properly extend express-session types
 declare module 'express-session' {
   interface SessionData {
-    user?: User;
+    user: User;
   }
 }
 
@@ -39,8 +40,8 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
       sessionID: req.sessionID 
     });
 
-    if (!req.session?.user) {
-      console.log('[Auth] No user in session');
+    if (!req.session?.user?.id) {
+      console.log('[Auth] No valid user in session');
       return res.status(401).json({
         message: 'Authentication required'
       });
@@ -81,7 +82,7 @@ export async function setupAuth(app: Express) {
 
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('*')
+        .select('id, email, name, role, units, department, telephone, password')
         .eq('email', email)
         .single();
 
@@ -165,9 +166,13 @@ export async function setupAuth(app: Express) {
 
   // Get current user route
   app.get("/api/auth/me", authenticateSession, (req: AuthenticatedRequest, res) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     console.log('[Auth] Returning current user:', { 
-      id: req.user?.id,
-      role: req.user?.role 
+      id: req.user.id,
+      role: req.user.role 
     });
     res.json(req.user);
   });

@@ -55,17 +55,18 @@ export const budgetNotifications = pgTable("budget_notifications", {
 //  review_notes: text("review_notes"),
 //});
 
-// Users table matching the actual database structure
+// Update the users table definition to match the actual database structure
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  full_name: text("full_name").notNull(),
+  name: text("name").notNull(),
   role: text("role").notNull(),
-  unit: text("unit"),
-  active: boolean("active").default(true),
-  name: text("name"),
+  units: text("units").array(),
+  department: text("department"),
+  telephone: text("telephone"),
   created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
 });
 
 // Project Catalog table matching Supabase structure
@@ -165,7 +166,15 @@ export const documentTemplates = pgTable("document_templates", {
 });
 
 // Types
-export type User = typeof users.$inferSelect;
+export type User = {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  units?: string[];
+  department?: string;
+  telephone?: string;
+};
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
@@ -180,7 +189,19 @@ export type InsertDocumentTemplate = typeof documentTemplates.$inferInsert;
 
 
 // Insert Schemas
-export const insertUserSchema = createInsertSchema(users);
+export const insertUserSchema = createInsertSchema(users, {
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  role: z.enum(["admin", "manager", "user"]),
+  units: z.array(z.string()).optional(),
+  department: z.string().optional(),
+  telephone: z.string().optional(),
+}).omit({ 
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
 export const insertProjectCatalogSchema = createInsertSchema(projectCatalog, {
   implementing_agency: z.array(z.string()).min(1, "At least one implementing agency is required"),
   budget_na853: z.coerce.number().min(0, "Budget NA853 must be non-negative"),
