@@ -1,5 +1,5 @@
 import { Router, type Request } from 'express';
-import { supabase } from '../db';
+import { supabase } from '../config/db';
 import type { Database } from '@shared/schema';
 import type { User } from '@shared/schema';
 

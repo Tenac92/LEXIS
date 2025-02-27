@@ -1,5 +1,5 @@
 import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog, type BudgetNA853Split, type BudgetValidation, type BudgetValidationResponse, type BudgetHistory, type InsertBudgetHistory, type BudgetNotification } from "@shared/schema";
-import { db } from "./db";
+import { supabase } from "./config/db";
 import session from "express-session";
 import MemoryStore from "memorystore";
 
@@ -34,7 +34,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUser(id: string): Promise<User | undefined> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', id)
@@ -50,7 +50,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('email', email)
@@ -66,7 +66,7 @@ export class DatabaseStorage implements IStorage {
 
   async createGeneratedDocument(doc: InsertGeneratedDocument): Promise<GeneratedDocument> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('generated_documents')
         .insert([doc])
         .select()
@@ -84,7 +84,7 @@ export class DatabaseStorage implements IStorage {
 
   async getGeneratedDocument(id: number): Promise<GeneratedDocument | undefined> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('generated_documents')
         .select('*')
         .eq('id', id.toString())
@@ -100,7 +100,7 @@ export class DatabaseStorage implements IStorage {
 
   async listGeneratedDocuments(): Promise<GeneratedDocument[]> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('generated_documents')
         .select('*')
         .order('created_at');
@@ -115,7 +115,7 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectCatalog(): Promise<ProjectCatalog[]> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('project_catalog')
         .select('*')
         .order('mis');
@@ -130,7 +130,7 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectCatalogByUnit(unit: string): Promise<ProjectCatalog[]> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('project_catalog')
         .select('*')
         .contains('implementing_agency', [unit])
@@ -146,7 +146,7 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectExpenditureTypes(projectId: string): Promise<string[]> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('project_catalog')
         .select('expenditure_type')
         .eq('mis', projectId)
@@ -162,7 +162,7 @@ export class DatabaseStorage implements IStorage {
 
   async getBudgetData(projectId: string): Promise<BudgetNA853Split | undefined> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('budget_na853_split')
         .select('*')
         .eq('mis', projectId)
@@ -221,7 +221,7 @@ export class DatabaseStorage implements IStorage {
 
   async createBudgetHistoryEntry(historyEntry: InsertBudgetHistory): Promise<BudgetHistory> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('budget_history')
         .insert([historyEntry])
         .select()
@@ -239,7 +239,7 @@ export class DatabaseStorage implements IStorage {
 
   async getBudgetHistory(projectId: string): Promise<BudgetHistory[]> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('budget_history')
         .select('*')
         .eq('mis', projectId)
@@ -254,7 +254,7 @@ export class DatabaseStorage implements IStorage {
   }
   async getUserUnits(userId: string): Promise<string[]> {
     try {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('unit_det')
         .select('unit, unit_name')
         .order('unit');
@@ -270,7 +270,7 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('[Storage] Fetching budget notifications...');
 
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('budget_notifications')
         .select('*')
         .order('created_at', { ascending: false });

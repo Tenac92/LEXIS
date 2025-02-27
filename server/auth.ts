@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction, Express } from "express";
-import { supabase } from "./db";
+import { supabase } from "./config/db";
 import session from "express-session";
 import { storage } from "./storage";
 import type { User } from "@shared/schema";
@@ -64,8 +64,11 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
 };
 
 export async function setupAuth(app: Express) {
+  console.log('[Auth] Starting authentication setup...');
+
   // Apply session middleware
   app.use(sessionMiddleware);
+  console.log('[Auth] Session middleware applied');
 
   // Login route
   app.post("/api/auth/login", async (req, res) => {
@@ -176,4 +179,6 @@ export async function setupAuth(app: Express) {
     });
     res.json(req.user);
   });
+
+  console.log('[Auth] Authentication setup completed successfully');
 }

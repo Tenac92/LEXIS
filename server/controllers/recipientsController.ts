@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { supabase } from '../config/db';
-import { recipients } from '@shared/schema';
+import type { User } from '@shared/schema';
+
+interface AuthRequest extends Request {
+  user?: User;
+}
 
 const router = Router();
 
@@ -30,7 +34,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', async (req: AuthRequest, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
