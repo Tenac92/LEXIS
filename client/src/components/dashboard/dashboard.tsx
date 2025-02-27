@@ -22,12 +22,22 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend
+  Legend,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 
 import type { DashboardStats } from "@/lib/dashboard";
-import { getDashboardChartConfig } from "@/lib/dashboard";
 import { formatCurrency } from "@/lib/services/dashboard";
+
+// Define chart colors
+const CHART_COLORS = {
+  active: '#22c55e',      // Green
+  pending: '#f59e0b',     // Amber
+  pending_reallocation: '#8b5cf6', // Purple
+  completed: '#3b82f6'    // Blue
+};
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -59,7 +69,14 @@ export function Dashboard() {
     );
   }
 
-  const chartConfig = getDashboardChartConfig(stats);
+  // Prepare chart data
+  const chartData = Object.entries(stats.projectStats).map(([status, count]) => ({
+    name: status.replace('_', ' ').split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' '),
+    count,
+    budget: stats.budgetTotals?.[status] || 0
+  }));
 
   return (
     <div className="space-y-6">
@@ -141,63 +158,84 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Project Status and Budget Chart */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <BarChart3 className="h-5 w-5" />
-          Project Status and Budget Distribution
-        </h3>
-        <div className="h-[400px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartConfig.data.datasets[0].data.map((count, i) => ({
-                name: chartConfig.data.labels[i],
-                count,
-                budget: chartConfig.data.datasets[1].data[i]
-              }))}
-              margin={{ top: 20, right: 60, left: 20, bottom: 60 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="name"
-                angle={-45}
-                textAnchor="end"
-                height={60}
-                interval={0}
-              />
-              <YAxis
-                yAxisId="count"
-                orientation="left"
-                label={{ value: 'Number of Projects', angle: -90, position: 'insideLeft' }}
-              />
-              <YAxis
-                yAxisId="budget"
-                orientation="right"
-                label={{ value: 'Budget Amount (€)', angle: 90, position: 'insideRight' }}
-              />
-              <Tooltip
-                formatter={(value: any, name: string) => {
-                  if (name === 'budget') return formatCurrency(value);
-                  return value;
-                }}
-              />
-              <Legend />
-              <Bar
-                dataKey="count"
-                name="Projects Count"
-                yAxisId="count"
-                fill={chartConfig.data.datasets[0].backgroundColor[0]}
-              />
-              <Bar
-                dataKey="budget"
-                name="Budget Amount"
-                yAxisId="budget"
-                fill={chartConfig.data.datasets[1].backgroundColor}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
+      {/* Project Status and Budget Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Project Status Distribution */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-6">Project Status Distribution</h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  dataKey="count"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label={({ name, percent }) => 
+                    `${name}: ${(percent * 100).toFixed(0)}%`
+                  }
+                  labelLine={true}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`}
+                      fill={CHART_COLORS[entry.name.toLowerCase().replace(' ', '_') as keyof typeof CHART_COLORS]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value: any) => [`${value} Projects`, ``]}
+                />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Budget Distribution */}
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-6">Budget Distribution</h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                <XAxis
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  interval={0}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  tickFormatter={(value) => formatCurrency(value)}
+                  tick={{ fontSize: 12 }}
+                />
+                <Tooltip
+                  formatter={(value: any) => [formatCurrency(value), "Budget"]}
+                />
+                <Bar
+                  dataKey="budget"
+                  fill="#8b5cf6"
+                  radius={[4, 4, 0, 0]}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`}
+                      fill={CHART_COLORS[entry.name.toLowerCase().replace(' ', '_') as keyof typeof CHART_COLORS]}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
 
       {/* Recent Activity */}
       {stats.recentActivity && stats.recentActivity.length > 0 && (
