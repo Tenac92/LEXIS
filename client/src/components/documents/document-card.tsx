@@ -9,7 +9,8 @@ import {
   Clock,
   FileEdit,
   Download,
-  ClipboardCheck
+  ClipboardCheck,
+  Users
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -76,102 +77,150 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
     }
   };
 
+  const recipients = document.recipients as Recipient[];
+
   return (
-    <Card className="p-6 space-y-4">
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="text-lg font-semibold">
-            Document #{document.id}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Unit: {document.unit}
-          </p>
-        </div>
-        <Badge variant={document.status === 'approved' ? 'default' : 'secondary'}>
-          {document.status === 'approved' ? (
-            <CheckCircle className="h-3 w-3 mr-1" />
-          ) : (
-            <Clock className="h-3 w-3 mr-1" />
-          )}
-          {document.status || 'Pending'}
-        </Badge>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <span className="text-sm text-muted-foreground">Project</span>
-          <p className="font-medium">{document.project_id}</p>
-        </div>
-        <div className="space-y-1">
-          <span className="text-sm text-muted-foreground">Total Amount</span>
-          <p className="font-medium">
-            {parseFloat(document.total_amount?.toString() || '0').toLocaleString('en-US', {
-              style: 'currency',
-              currency: 'EUR'
-            })}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col space-y-2">
-        <div className="text-sm text-muted-foreground">Recipients</div>
-        <div className="space-y-2">
-          {(document.recipients as Recipient[])?.slice(0, 2).map((recipient, index) => (
-            <div key={index} className="text-sm">
-              {recipient.firstname} {recipient.lastname} ({recipient.afm})
+    <div className="document-card" onClick={handleCardClick}>
+      <div className={`flip-card-inner ${isFlipped ? 'is-flipped' : ''}`}>
+        {/* Front of the card */}
+        <div className="flip-card-front">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-lg font-semibold">
+                Document #{document.id}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Unit: {document.unit}
+              </p>
             </div>
-          ))}
-          {(document.recipients as Recipient[])?.length > 2 && (
-            <div className="text-sm text-muted-foreground">
-              +{(document.recipients as Recipient[]).length - 2} more recipients
-            </div>
-          )}
-        </div>
-      </div>
+            <Badge variant={document.status === 'approved' ? 'default' : 'secondary'}>
+              {document.status === 'approved' ? (
+                <CheckCircle className="h-3 w-3 mr-1" />
+              ) : (
+                <Clock className="h-3 w-3 mr-1" />
+              )}
+              {document.status || 'Pending'}
+            </Badge>
+          </div>
 
-      <div className="pt-4 flex flex-col gap-2">
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            disabled={isLoading}
-          >
-            <FileEdit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleExport();
-            }}
-            disabled={isLoading}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground">Project</span>
+              <p className="font-medium">{document.project_id}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground">Total Amount</span>
+              <p className="font-medium">
+                {parseFloat(document.total_amount?.toString() || '0').toLocaleString('en-US', {
+                  style: 'currency',
+                  currency: 'EUR'
+                })}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 text-center text-sm text-muted-foreground">
+            <Users className="h-4 w-4 mx-auto mb-1" />
+            Click to see {recipients?.length || 0} recipients
+          </div>
+
+          <div className="absolute bottom-6 left-6 right-6">
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                disabled={isLoading}
+              >
+                <FileEdit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleExport();
+                }}
+                disabled={isLoading}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full"
+              onClick={(e) => {
+                e.stopPropagation();
+                onView();
+              }}
+              disabled={isLoading || document.status === 'approved'}
+            >
+              <ClipboardCheck className="h-4 w-4 mr-2" />
+              Add Protocol
+            </Button>
+          </div>
         </div>
-        <Button
-          variant="default"
-          size="sm"
-          className="w-full"
-          onClick={(e) => {
-            e.stopPropagation();
-            onView();
-          }}
-          disabled={isLoading || document.status === 'approved'}
-        >
-          <ClipboardCheck className="h-4 w-4 mr-2" />
-          Add Protocol
-        </Button>
+
+        {/* Back of the card */}
+        <div className="flip-card-back">
+          <div className="h-full flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Recipients</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsFlipped(false);
+                }}
+              >
+                Back to Details
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              {recipients?.map((recipient, index) => (
+                <div
+                  key={index}
+                  className="mb-4 p-3 bg-muted/50 rounded-lg"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-medium">
+                      {recipient.firstname} {recipient.lastname}
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      Installment {recipient.installment}
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    AFM: {recipient.afm}
+                  </div>
+                  <div className="text-sm font-medium mt-1">
+                    Amount: {recipient.amount.toLocaleString('en-US', {
+                      style: 'currency',
+                      currency: 'EUR'
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {(!recipients || recipients.length === 0) && (
+                <div className="text-center text-muted-foreground">
+                  No recipients found
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 }
