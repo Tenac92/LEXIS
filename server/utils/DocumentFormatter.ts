@@ -10,6 +10,7 @@ import {
   WidthType,
   AlignmentType,
   VerticalAlign,
+  TableBorders,
 } from "docx";
 import { supabase } from "../config/db";
 
@@ -41,13 +42,13 @@ interface UnitDetails {
 }
 
 export class DocumentFormatter {
-  private static readonly DEFAULT_FONT_SIZE = 24; // 12pt
+  private static readonly DEFAULT_FONT_SIZE = 22; // 11pt
   private static readonly DEFAULT_FONT = "Times New Roman";
   private static readonly DEFAULT_MARGINS = {
-    top: 850,
-    right: 1000,
-    bottom: 850,
-    left: 1000,
+    top: 426,    // 0.3 inches
+    right: 1133, // 0.79 inches
+    bottom: 1440, // 1 inch
+    left: 1134,  // 0.79 inches
   };
 
   static async generateDocument(documentData: DocumentData): Promise<Buffer> {
@@ -62,15 +63,15 @@ export class DocumentFormatter {
             page: {
               margin: this.DEFAULT_MARGINS,
               size: {
-                width: 11906,  // A4 width in twips
-                height: 16838, // A4 height in twips
+                width: 11906,  // A4 width
+                height: 16838, // A4 height
               },
             },
           },
           children: [
-            ...this.createHeaderSection(documentData, unitDetails),
-            ...this.createMainContentSection(documentData),
-            this.createPaymentTableSection(documentData.recipients || []),
+            this.createHeaderTable(documentData, unitDetails),
+            ...this.createMainContent(documentData),
+            this.createRecipientsTable(documentData.recipients || []),
             ...this.createFooterSection(documentData, unitDetails),
           ]
         }],
@@ -86,165 +87,200 @@ export class DocumentFormatter {
         },
       });
 
-      // Generate buffer
       return await Packer.toBuffer(doc);
-
     } catch (error) {
       console.error("Error generating document:", error);
       throw error;
     }
   }
 
-  private static createHeaderSection(documentData: DocumentData, unitDetails?: UnitDetails) {
-    return [
-      // Header table containing organization details and protocol info
+  private static createHeaderTable(documentData: DocumentData, unitDetails?: UnitDetails): Table {
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: this.getNoBorders(),
+      rows: [
+        new TableRow({
+          children: [
+            // Left column - Organization details
+            new TableCell({
+              width: { size: 65, type: WidthType.PERCENTAGE },
+              borders: this.getNoBorders(),
+              children: [
+                // Logo placeholder
+                new Paragraph({ text: "" }),
+                // Organization details
+                this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+                this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
+                this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
+                this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
+                this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
+                new Paragraph({ text: "" }),
+                // Contact details
+                this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
+                this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
+                this.createContactDetail("Πληροφορίες", unitDetails?.manager || "-"),
+                this.createContactDetail("Email", unitDetails?.email || "daefkke@civilprotection.gr"),
+              ],
+            }),
+            // Right column - Protocol info
+            new TableCell({
+              width: { size: 35, type: WidthType.PERCENTAGE },
+              borders: this.getNoBorders(),
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΑΝΑΡΤΗΤΕΑ ΣΤΟ ΔΙΑΔΙΚΤΥΟ",
+                      bold: true,
+                    }),
+                  ],
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({ text: "" }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Αθήνα, ${documentData.protocol_date || '........................'}`,
+                    }),
+                  ],
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
+                      bold: true,
+                    }),
+                  ],
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({ text: "" }),
+                new Paragraph({
+                  text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών",
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                  alignment: AlignmentType.RIGHT,
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  private static createMainContent(documentData: DocumentData): Paragraph[] {
+    const content: Paragraph[] = [];
+
+    // Subject section
+    content.push(
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
-        borders: this.getNoBorders(),
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 4, color: "auto" },
+          bottom: { style: BorderStyle.SINGLE, size: 4, color: "auto" },
+        },
         rows: [
           new TableRow({
             children: [
-              // Left column with organization details
               new TableCell({
+                width: { size: 10, type: WidthType.PERCENTAGE },
                 children: [
-                  ...this.createOrganizationHeader(),
-                  ...this.createContactDetails(documentData, unitDetails),
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "ΘΕΜΑ:",
+                        bold: true,
+                        italics: true,
+                      }),
+                    ],
+                  }),
                 ],
-                width: { size: 65, type: WidthType.PERCENTAGE },
               }),
-              // Right column with web posting and protocol
               new TableCell({
+                width: { size: 90, type: WidthType.PERCENTAGE },
                 children: [
                   new Paragraph({
-                    children: [new TextRun({ text: "ΑΝΑΡΤΗΤΕΑ ΣΤΟ ΔΙΑΔΙΚΤΥΟ", bold: true })],
-                    alignment: AlignmentType.RIGHT,
-                  }),
-                  new Paragraph({ text: "" }),
-                  new Paragraph({
-                    children: [new TextRun({ 
-                      text: `Αθήνα, ${documentData.protocol_date || '........................'}` 
-                    })],
-                    alignment: AlignmentType.RIGHT,
-                  }),
-                  new Paragraph({
-                    children: [new TextRun({ 
-                      text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
-                      bold: true
-                    })],
-                    alignment: AlignmentType.RIGHT,
+                    children: [
+                      new TextRun({
+                        text: "Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+                        italics: true,
+                      }),
+                    ],
                   }),
                 ],
-                width: { size: 35, type: WidthType.PERCENTAGE },
               }),
             ],
           }),
         ],
       }),
-      new Paragraph({ text: "", spacing: { before: 240, after: 240 } }),
-    ];
-  }
+    );
 
-  private static createOrganizationHeader(): Paragraph[] {
-    const headerLines = [
-      "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ",
-      "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ &",
-      "ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ",
-      "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ",
-      "ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ",
-      "ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
-    ];
-
-    return headerLines.map(line => new Paragraph({
-      children: [new TextRun({ text: line, bold: true })],
-      alignment: AlignmentType.LEFT,
-      spacing: { before: 120, after: 120 },
-    }));
-  }
-
-  private static createContactDetails(documentData: DocumentData, unitDetails?: UnitDetails): Paragraph[] {
-    return [
+    // References section
+    content.push(
       new Paragraph({
-        children: [new TextRun({ text: unitDetails?.unit_name || documentData.unit, bold: true })],
+        text: "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε, συμπληρώθηκε και ισχύει.",
         spacing: { before: 240, after: 240 },
       }),
-      new Paragraph({
-        children: [new TextRun({ text: "Ταχ. Δ/νση: Κηφισίας 124 & Ιατρίδου 2" })],
-      }),
-      new Paragraph({
-        children: [new TextRun({ text: "Ταχ. Κώδικας: 11526, Αθήνα" })],
-      }),
-      new Paragraph({
-        children: [new TextRun({ text: `Πληροφορίες: ${unitDetails?.manager || "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ"}` })],
-      }),
-      new Paragraph({
-        children: [new TextRun({ text: `Email: ${unitDetails?.email || "daefkke@civilprotection.gr"}` })],
-      }),
-    ];
-  }
+    );
 
-  private static createMainContentSection(documentData: DocumentData): Paragraph[] {
-    return [
-      // Subject
+    // Main text
+    content.push(
+      new Paragraph({
+        text: "Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε. , σύμφωνα με τα κάτωθι στοιχεία.",
+        spacing: { before: 240, after: 240 },
+      }),
+    );
+
+    // Project details
+    content.push(
       new Paragraph({
         children: [
-          new TextRun({ text: "ΘΕΜΑ: ", bold: true }),
-          new TextRun({ 
-            text: "Έγκριση καταβολής Στεγαστικής Συνδρομής για την αποκατάσταση της κτηριακής βλάβης που προκλήθηκε από τον σεισμό της 27ης Σεπτεμβρίου 2021 στον Δήμο Μινώα Πεδιάδας της Περιφερειακής Ενότητας Ηρακλείου της Περιφέρειας Κρήτης" 
-          }),
+          new TextRun({ text: "ΑΡ. ΕΡΓΟΥ", bold: true }),
+          new TextRun({ text: ": " }),
+          new TextRun({ text: documentData.project_na853 || "(na853)" }),
+          new TextRun({ text: " της ΣΑΝΑ 853 (ΤΕ 2023ΝΑ27100228)" }),
         ],
-        spacing: { before: 360, after: 360 },
-      }),
-
-      // References section
-      new Paragraph({
-        children: [new TextRun({ text: "Έχοντας υπόψη:", bold: true })],
         spacing: { before: 240, after: 240 },
       }),
+    );
 
-      new Paragraph({
-        children: [new TextRun({ 
-          text: "1. Το ν. 867/1979 (Α΄ 24) «Περί κυρώσεως, τροποποιήσεως και συμπληρώσεως της από 28.7.1978 Πράξεως Νομοθετικού Περιεχομένου του Προέδρου της Δημοκρατίας «περί αποκαταστάσεως ζημιών εκ των σεισμών 1978 εις περιοχή Βορείου Ελλάδος κ.λπ. και ρυθμίσεως ετέρων τινών συναφών θεμάτων»"
-        })],
-        spacing: { before: 120, after: 120 },
-      }),
-
-      new Paragraph({
-        children: [new TextRun({ 
-          text: "2. Την υπό στοιχεία Δ.Α.Ε.Φ.Κ.-Κ.Ε./οικ.18450/Α321/20.10.2021 (Β΄4882) απόφαση των Υπουργών Οικονομικών, Ανάπτυξης και Επενδύσεων και Υποδομών και Μεταφορών"
-        })],
-        spacing: { before: 120, after: 120 },
-      }),
-
+    content.push(
       new Paragraph({
         children: [
-          new TextRun({ text: "3. Το από " }),
-          new TextRun({ text: documentData.project_na853 || "(NA853)", bold: true }),
-          new TextRun({ text: " χρηματικό ένταλμα ύψους " }),
-          new TextRun({ 
-            text: `${parseFloat(documentData.total_amount?.toString() || '0').toLocaleString('el-GR', { minimumFractionDigits: 2 })} €`,
-            bold: true 
-          }),
+          new TextRun({ text: "ΑΛΕ", bold: true }),
+          new TextRun({ text: ": " }),
+          new TextRun({ text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ." }),
         ],
-        spacing: { before: 120, after: 360 },
-      }),
-
-      // Approval section
-      new Paragraph({
-        children: [new TextRun({ text: "Εγκρίνουμε", bold: true })],
-        alignment: AlignmentType.CENTER,
-        spacing: { before: 360, after: 360 },
-      }),
-
-      new Paragraph({
-        children: [new TextRun({ 
-          text: "την καταβολή Στεγαστικής Συνδρομής για την αποκατάσταση των πληγέντων κτηρίων από τον σεισμό της 27ης Σεπτεμβρίου 2021 που έπληξε περιοχές της Περιφερειακής Ενότητας Ηρακλείου της Περιφέρειας Κρήτης, στους παρακάτω δικαιούχους:"
-        })],
         spacing: { before: 240, after: 240 },
       }),
-    ];
+    );
+
+    content.push(
+      new Paragraph({
+        children: [
+          new TextRun({ text: "ΤΟΜΕΑΣ", bold: true }),
+          new TextRun({ text: ": " }),
+          new TextRun({ text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών" }),
+        ],
+        spacing: { before: 240, after: 240 },
+      }),
+    );
+
+    return content;
   }
 
-  private static createPaymentTableSection(recipients: DocumentData['recipients']) {
+  private static createRecipientsTable(recipients: DocumentData['recipients']): Table {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
@@ -259,138 +295,243 @@ export class DocumentFormatter {
         // Header row
         new TableRow({
           children: [
-            this.createTableHeaderCell("Α/Α"),
-            this.createTableHeaderCell("ΕΠΩΝΥΜΟ"),
-            this.createTableHeaderCell("ΟΝΟΜΑ"),
-            this.createTableHeaderCell("ΠΑΤΡΩΝΥΜΟ"),
-            this.createTableHeaderCell("ΑΦΜ"),
-            this.createTableHeaderCell("ΠΟΣΟ (€)"),
-            this.createTableHeaderCell("ΔΟΣΗ"),
+            this.createTableHeaderCell("Α.Α.", 7),
+            this.createTableHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", 43),
+            this.createTableHeaderCell("ΠΟΣΟ (€)", 15),
+            this.createTableHeaderCell("ΔΟΣΗ", 12),
+            this.createTableHeaderCell("ΑΦΜ", 18),
           ],
         }),
         // Data rows
-        ...recipients.map((recipient, index) => 
+        ...recipients.map((recipient, index) =>
           new TableRow({
             children: [
-              this.createTableCell((index + 1).toString(), "center"),
-              this.createTableCell(recipient.lastname, "left"),
-              this.createTableCell(recipient.firstname, "left"),
-              this.createTableCell(recipient.fathername || "", "left"),
-              this.createTableCell(recipient.afm, "center"),
-              this.createTableCell(
-                recipient.amount.toLocaleString('el-GR', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                }),
-                "right"
-              ),
+              this.createTableCell((index + 1).toString() + ".", "center"),
+              this.createTableCell(`${recipient.lastname} ${recipient.firstname} ${recipient.fathername || ''}`.trim(), "left"),
+              this.createTableCell(recipient.amount.toLocaleString('el-GR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }), "right"),
               this.createTableCell(recipient.installment.toString(), "center"),
+              this.createTableCell(recipient.afm, "center"),
             ],
           })
         ),
+        // Total row
+        new TableRow({
+          children: [
+            this.createTableCell("ΣΥΝΟΛΟ:", "left", 2, true),
+            this.createTableCell(
+              recipients.reduce((sum, recipient) => sum + recipient.amount, 0).toLocaleString('el-GR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }),
+              "right",
+              1,
+              true
+            ),
+            this.createTableCell("", "center", 2),
+          ],
+        }),
       ],
     });
   }
 
-  private static createFooterSection(documentData: DocumentData, unitDetails?: UnitDetails) {
-    const sections: Paragraph[] = [];
+  private static createFooterSection(documentData: DocumentData, unitDetails?: UnitDetails): Paragraph[] {
+    const footer: Paragraph[] = [];
 
-    // Attachments section
-    sections.push(
+    // Final note
+    footer.push(
       new Paragraph({
-        children: [new TextRun({ text: "ΣΥΝΗΜΜΕΝΑ:", bold: true })],
-        spacing: { before: 360, after: 240 },
+        text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσίας μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+        spacing: { before: 240, after: 240 },
       })
     );
 
-    const attachments = [
-      "1. Διαβιβαστικό",
-      "2. ΔΚΑ",
-    ];
-
-    attachments.forEach(attachment => {
-      sections.push(
-        new Paragraph({
-          children: [new TextRun({ text: attachment })],
-          indent: { left: 720 },
-          spacing: { before: 120, after: 120 },
-        })
-      );
-    });
-
-    // Notifications section
-    sections.push(
-      new Paragraph({
-        children: [new TextRun({ text: "ΚΟΙΝΟΠΟΙΗΣΗ:", bold: true })],
-        spacing: { before: 360, after: 240 },
+    // Attachments and distribution sections using tables
+    footer.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: this.getNoBorders(),
+        rows: [
+          new TableRow({
+            children: [
+              // Left column - Attachments and distributions
+              new TableCell({
+                width: { size: 60, type: WidthType.PERCENTAGE },
+                borders: this.getNoBorders(),
+                children: [
+                  this.createSectionHeading("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)"),
+                  ...["Διαβιβαστικό", "ΔΚΑ"].map((item, index) =>
+                    this.createListItem(`${index + 1}. ${item}`)
+                  ),
+                  new Paragraph({ text: "" }),
+                  this.createSectionHeading("ΚΟΙΝΟΠΟΙΗΣΗ"),
+                  ...this.createNotificationsList(),
+                  new Paragraph({ text: "" }),
+                  this.createSectionHeading("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
+                  ...this.createInternalDistributionList(),
+                ],
+              }),
+              // Right column - Signature
+              new TableCell({
+                width: { size: 40, type: WidthType.PERCENTAGE },
+                borders: this.getNoBorders(),
+                children: [
+                  new Paragraph({ text: "", spacing: { before: 720 } }),
+                  this.createSignatureBlock(unitDetails),
+                ],
+              }),
+            ],
+          }),
+        ],
       })
     );
 
-    const notifications = [
-      "1. Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
-      "2. Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
-      "3. Γ.Δ.Α.Ε.Φ.Κ.",
-    ];
+    return footer;
+  }
 
-    notifications.forEach(notification => {
-      sections.push(
-        new Paragraph({
-          children: [new TextRun({ text: notification })],
-          indent: { left: 720 },
-          spacing: { before: 120, after: 120 },
-        })
-      );
+  private static createSectionHeading(text: string): Paragraph {
+    return new Paragraph({
+      children: [
+        new TextRun({
+          text,
+          bold: true,
+          underline: { type: "single" },
+        }),
+      ],
+      spacing: { before: 240, after: 240 },
     });
+  }
 
-    // Internal distribution section
-    sections.push(
+  private static createNotificationsList(): Paragraph[] {
+    return [
+      "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+      "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+      "Γ.Δ.Α.Ε.Φ.Κ.",
+    ].map((text, index) => this.createListItem(`${index + 1}. ${text}`));
+  }
+
+  private static createInternalDistributionList(): Paragraph[] {
+    return [
+      "Χρονολογικό Αρχείο",
+      "Τμήμα Β/20.51",
+      "Αβραμόπουλο Ι.",
+    ].map((text, index) => this.createListItem(`${index + 1}. ${text}`));
+  }
+
+  private static createSignatureBlock(unitDetails?: UnitDetails): Paragraph[] {
+    return [
       new Paragraph({
-        children: [new TextRun({ text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ:", bold: true })],
-        spacing: { before: 360, after: 240 },
-      })
-    );
-
-    const internalDist = [
-      "1. Χρονολογικό Αρχείο",
-      "2. Τμήμα Β/20.51",
-      "3. Αβραμόπουλο Ι.",
-    ];
-
-    internalDist.forEach(dist => {
-      sections.push(
-        new Paragraph({
-          children: [new TextRun({ text: dist })],
-          indent: { left: 720 },
-          spacing: { before: 120, after: 120 },
-        })
-      );
-    });
-
-    // Signature block
-    sections.push(
-      new Paragraph({ text: "", spacing: { before: 720 } }),
+        children: [
+          new TextRun({
+            text: "ΜΕ ΕΝΤΟΛΗ ΠΡΟΪΣΤΑΜΕΝΗΣ Γ.Δ.Α.Ε.Φ.Κ.",
+            bold: true,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+      }),
       new Paragraph({
-        children: [new TextRun({ 
-          text: `Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ ${unitDetails?.unit_name || 'Δ.Α.Ε.Φ.Κ.'}`,
-          bold: true 
-        })],
+        children: [
+          new TextRun({
+            text: "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+            bold: true,
+          }),
+        ],
         alignment: AlignmentType.CENTER,
       }),
       new Paragraph({ text: "", spacing: { before: 720 } }),
       new Paragraph({
-        children: [new TextRun({ 
-          text: unitDetails?.manager?.split(' ΠΟΛ')[0].trim() || "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ",
-          bold: true 
-        })],
+        children: [
+          new TextRun({
+            text: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
+            bold: true,
+          }),
+        ],
         alignment: AlignmentType.CENTER,
       }),
       new Paragraph({
-        children: [new TextRun({ text: "ΠΟΛ. ΜΗΧΑΝΙΚΟΣ" })],
+        text: "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α΄ β.",
         alignment: AlignmentType.CENTER,
-      })
-    );
+      }),
+    ];
+  }
 
-    return sections;
+  private static createBoldParagraph(text: string): Paragraph {
+    return new Paragraph({
+      children: [
+        new TextRun({
+          text,
+          bold: true,
+        }),
+      ],
+    });
+  }
+
+  private static createContactDetail(label: string, value: string): Paragraph {
+    return new Paragraph({
+      children: [
+        new TextRun({ text: label }),
+        new TextRun({ text: ": " }),
+        new TextRun({ text: value }),
+      ],
+    });
+  }
+
+  private static createListItem(text: string): Paragraph {
+    return new Paragraph({
+      text,
+      indent: { left: 720 },
+      spacing: { before: 120, after: 120 },
+    });
+  }
+
+  private static createTableHeaderCell(text: string, widthPercent: number): TableCell {
+    return new TableCell({
+      width: { size: widthPercent, type: WidthType.PERCENTAGE },
+      children: [
+        new Paragraph({
+          children: [new TextRun({ text, bold: true })],
+          alignment: AlignmentType.CENTER,
+        }),
+      ],
+      verticalAlign: VerticalAlign.CENTER,
+    });
+  }
+
+  private static createTableCell(
+    text: string,
+    alignment: "left" | "center" | "right",
+    colSpan: number = 1,
+    bold: boolean = false
+  ): TableCell {
+    const alignmentMap = {
+      left: AlignmentType.LEFT,
+      center: AlignmentType.CENTER,
+      right: AlignmentType.RIGHT,
+    };
+
+    return new TableCell({
+      columnSpan: colSpan,
+      children: [
+        new Paragraph({
+          children: [new TextRun({ text, bold })],
+          alignment: alignmentMap[alignment],
+        }),
+      ],
+      verticalAlign: VerticalAlign.CENTER,
+    });
+  }
+
+  private static getNoBorders(): TableBorders {
+    return {
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE },
+    };
   }
 
   private static async getUnitDetails(unitCode: string): Promise<UnitDetails | null> {
@@ -411,44 +552,5 @@ export class DocumentFormatter {
       console.error('Error in getUnitDetails:', error);
       return null;
     }
-  }
-
-  private static createTableHeaderCell(text: string) {
-    return new TableCell({
-      children: [
-        new Paragraph({
-          children: [new TextRun({ text, bold: true })],
-          alignment: AlignmentType.CENTER,
-        }),
-      ],
-      verticalAlign: VerticalAlign.CENTER,
-    });
-  }
-
-  private static createTableCell(text: string, alignment: "left" | "center" | "right") {
-    const alignmentMap = {
-      left: AlignmentType.LEFT,
-      center: AlignmentType.CENTER,
-      right: AlignmentType.RIGHT
-    };
-
-    return new TableCell({
-      children: [
-        new Paragraph({
-          children: [new TextRun({ text })],
-          alignment: alignmentMap[alignment],
-        }),
-      ],
-      verticalAlign: VerticalAlign.CENTER,
-    });
-  }
-
-  private static getNoBorders() {
-    return {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE }
-    };
   }
 }
