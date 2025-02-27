@@ -27,7 +27,7 @@ export async function debugSupabaseConnection() {
     console.log('[Supabase] Testing connection...');
     const { data, error } = await supabase
       .from('generated_documents')
-      .select('id')
+      .select('id, unit, status')
       .limit(1);
 
     if (error) {
@@ -35,7 +35,10 @@ export async function debugSupabaseConnection() {
       return false;
     }
 
-    console.log('[Supabase] Connection successful, found records:', data?.length || 0);
+    console.log('[Supabase] Connection successful, found records:', {
+      count: data?.length || 0,
+      sample: data?.[0] ? { id: data[0].id, unit: data[0].unit } : null
+    });
     return true;
   } catch (err) {
     console.error('[Supabase] Connection test failed:', err);

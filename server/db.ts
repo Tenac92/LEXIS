@@ -5,4 +5,4 @@ import type { Database } from '@shared/schema';
 console.log('[Database] Initializing Supabase client');
 
 // Export the database instance
-export const db = supabase;
+export { supabase };
