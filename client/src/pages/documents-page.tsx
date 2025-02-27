@@ -25,12 +25,25 @@ import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
+import type { GeneratedDocument } from "@shared/schema";
+
+interface Filters {
+  unit: string;
+  status: string;
+  user: string;
+  dateFrom: string;
+  dateTo: string;
+  amountFrom: string;
+  amountTo: string;
+  recipient: string;
+  afm: string;
+}
 
 export default function DocumentsPage() {
   const { user } = useAuth();
   const [isAdvancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedDocument, setSelectedDocument] = useState<GeneratedDocument | null>(null);
   const [modalState, setModalState] = useState<{
     view: boolean;
     edit: boolean;
@@ -43,8 +56,8 @@ export default function DocumentsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [filters, setFilters] = useState({
-    unit: user?.role === 'user' ? user?.unit : 'all',
+  const [filters, setFilters] = useState<Filters>({
+    unit: user?.units?.[0] || 'all',
     status: 'all',
     user: 'all',
     dateFrom: '',
@@ -55,7 +68,7 @@ export default function DocumentsPage() {
     afm: ''
   });
 
-  const { data: documents, refetch, isLoading } = useQuery({
+  const { data: documents, refetch, isLoading } = useQuery<GeneratedDocument[]>({
     queryKey: ['/api/documents', filters],
     queryFn: async () => {
       try {
@@ -67,18 +80,18 @@ export default function DocumentsPage() {
         });
 
         // Always include user's unit if they are a regular user
-        if (user?.role === 'user' && user?.unit) {
-          searchParams.set('unit', user.unit);
+        if (user?.role === 'user' && user?.units?.length) {
+          searchParams.set('unit', user.units[0]);
         }
 
         const response = await fetch(`/api/documents?${searchParams.toString()}`);
-        if (!response.ok) throw new Error('Αποτυχία λήψης εγγράφων');
+        if (!response.ok) throw new Error('Failed to fetch documents');
         return response.json();
       } catch (error) {
         console.error('Error fetching documents:', error);
         toast({
-          title: "Σφάλμα",
-          description: "Αποτυχία λήψης εγγράφων",
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to fetch documents",
           variant: "destructive",
         });
         return [];
@@ -92,26 +105,26 @@ export default function DocumentsPage() {
         method: 'GET',
       });
 
-      if (!response.ok) throw new Error('Αποτυχία εξαγωγής εγγράφου');
+      if (!response.ok) throw new Error('Failed to export document');
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `έγγραφο-${docId}.docx`;
+      a.download = `document-${docId}.docx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
       toast({
-        title: "Επιτυχία",
-        description: "Το έγγραφο εξήχθη επιτυχώς",
+        title: "Success",
+        description: "Document exported successfully",
       });
     } catch (error) {
       toast({
-        title: "Σφάλμα",
-        description: "Αποτυχία εξαγωγής εγγράφου",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to export document",
         variant: "destructive",
       });
     }
@@ -127,118 +140,120 @@ export default function DocumentsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               {user?.role !== 'user' && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Μονάδα</label>
+                  <label className="text-sm font-medium text-foreground">Unit</label>
                   <Select 
                     value={filters.unit}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Επιλέξτε μονάδα" />
+                      <SelectValue placeholder="Select unit" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Όλες οι Μονάδες</SelectItem>
-                      {/* Add units dynamically */}
+                      <SelectItem value="all">All Units</SelectItem>
+                      {user?.units?.map(unit => (
+                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               )}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Κατάσταση</label>
+                <label className="text-sm font-medium text-foreground">Status</label>
                 <Select 
                   value={filters.status}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Επιλέξτε κατάσταση" />
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Όλες οι Καταστάσεις</SelectItem>
-                    <SelectItem value="pending">Σε Εκκρεμότητα</SelectItem>
-                    <SelectItem value="completed">Ολοκληρωμένα</SelectItem>
-                  </SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Χρήστης</label>
+                <label className="text-sm font-medium text-foreground">User</label>
                 <Select 
                   value={filters.user}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, user: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Επιλέξτε χρήστη" />
+                    <SelectValue placeholder="Select user" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Όλοι οι Χρήστες</SelectItem>
-                    {/* Add users dynamically */}
+                    <SelectItem value="all">All Users</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* Advanced Filters Button */}
+            {/* Advanced Filters Sheet */}
             <Sheet open={isAdvancedFiltersOpen} onOpenChange={setAdvancedFiltersOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" className="w-full flex justify-between items-center">
                   <span className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
-                    Προχωρημένα Φίλτρα
+                    Advanced Filters
                   </span>
                   <span className="text-muted-foreground">⌘K</span>
                 </Button>
               </SheetTrigger>
               <SheetContent>
                 <SheetHeader>
-                  <SheetTitle>Προχωρημένα Φίλτρα</SheetTitle>
+                  <SheetTitle>Advanced Filters</SheetTitle>
                 </SheetHeader>
                 <div className="grid grid-cols-1 gap-4 py-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Εύρος Ημερομηνιών</label>
+                    <label className="text-sm font-medium">Date Range</label>
                     <div className="grid grid-cols-2 gap-2">
                       <Input 
                         type="date" 
                         value={filters.dateFrom}
                         onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                        placeholder="Από" 
+                        placeholder="From" 
                       />
                       <Input 
                         type="date"
                         value={filters.dateTo}
                         onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                        placeholder="Έως" 
+                        placeholder="To" 
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Εύρος Ποσού</label>
+                    <label className="text-sm font-medium">Amount Range</label>
                     <div className="grid grid-cols-2 gap-2">
                       <Input 
                         type="number"
                         value={filters.amountFrom}
                         onChange={(e) => setFilters(prev => ({ ...prev, amountFrom: e.target.value }))}
-                        placeholder="Ελάχιστο Ποσό" 
+                        placeholder="Min Amount" 
                       />
                       <Input 
                         type="number"
                         value={filters.amountTo}
                         onChange={(e) => setFilters(prev => ({ ...prev, amountTo: e.target.value }))}
-                        placeholder="Μέγιστο Ποσό" 
+                        placeholder="Max Amount" 
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Παραλήπτης</label>
+                    <label className="text-sm font-medium">Recipient</label>
                     <Input 
                       value={filters.recipient}
                       onChange={(e) => setFilters(prev => ({ ...prev, recipient: e.target.value }))}
-                      placeholder="Αναζήτηση παραλήπτη" 
+                      placeholder="Search recipient" 
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">ΑΦΜ</label>
+                    <label className="text-sm font-medium">AFM</label>
                     <Input 
                       value={filters.afm}
                       onChange={(e) => setFilters(prev => ({ ...prev, afm: e.target.value }))}
-                      placeholder="Αναζήτηση ΑΦΜ" 
+                      placeholder="Search AFM" 
                       maxLength={9} 
                     />
                   </div>
@@ -255,7 +270,7 @@ export default function DocumentsPage() {
                 disabled={isLoading}
               >
                 <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                Ανανέωση
+                Refresh
               </Button>
               <Button
                 variant="outline"
@@ -278,19 +293,19 @@ export default function DocumentsPage() {
                 <Card key={index} className="h-[200px] animate-pulse bg-muted" />
               ))
             ) : documents?.length > 0 ? (
-              documents.map((doc: any) => (
+              documents.map((doc) => (
                 <DocumentCard
                   key={doc.id}
                   document={doc}
-                  onView={(id) => {
+                  onView={() => {
                     setSelectedDocument(doc);
                     setModalState(prev => ({ ...prev, view: true }));
                   }}
-                  onEdit={(id) => {
+                  onEdit={() => {
                     setSelectedDocument(doc);
                     setModalState(prev => ({ ...prev, edit: true }));
                   }}
-                  onDelete={(id) => {
+                  onDelete={() => {
                     setSelectedDocument(doc);
                     setModalState(prev => ({ ...prev, delete: true }));
                   }}
@@ -300,7 +315,7 @@ export default function DocumentsPage() {
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mb-4" />
-                <p>Δεν βρέθηκαν έγγραφα</p>
+                <p>No documents found</p>
               </div>
             )}
           </div>

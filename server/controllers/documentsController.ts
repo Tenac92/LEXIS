@@ -1,10 +1,29 @@
-import { Router, Request, Response, NextFunction } from "express";
+import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, WidthType, AlignmentType } from "docx";
-import type { Database, User } from "@shared/schema";
+import { Document, Packer } from "docx";
+import type { GeneratedDocument, User } from "@shared/schema";
 import { DocumentFormatter } from "../utils/DocumentFormatter";
 import { DocumentValidator } from "../utils/DocumentValidator";
-import { DocumentManager } from "../utils/DocumentManager";
+
+interface AuthRequest extends Request {
+  user?: User;
+}
+
+interface DocumentQueryParams {
+  unit?: string;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  amountFrom?: string;
+  amountTo?: string;
+  user?: string;
+}
+
+// Authentication middleware
+const authenticateToken = (req: AuthRequest, res: Response, next: any) => {
+  // For now, we'll allow all requests through since auth is handled by Supabase
+  next();
+};
 
 const router = Router();
 
@@ -18,15 +37,6 @@ interface Recipient {
   afm: string;
 }
 
-interface AuthRequest extends Request {
-  user?: User;
-}
-
-// Authentication middleware
-const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-  // For now, we'll allow all requests through since auth is handled by Supabase
-  next();
-};
 
 // Document creation route
 router.post('/', async (req: Request, res: Response) => {
@@ -104,15 +114,44 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // List documents with filters
-router.get('/', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+    await listDocuments(req, res);
+});
+
+// Get single document
+router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+    await getDocument(req, res);
+});
+
+// Update document
+router.patch('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+    await updateDocument(req, res);
+});
+
+// Export document
+router.get('/generated/:id/export', authenticateToken, async (req: AuthRequest, res: Response) => {
+    await exportDocument(req, res);
+});
+
+
+// List documents with filters
+async function listDocuments(req: AuthRequest, res: Response) {
   try {
-    const { status, unit, dateFrom, dateTo, amountFrom, amountTo, user } = req.query;
+    const { 
+      status, 
+      unit, 
+      dateFrom, 
+      dateTo, 
+      amountFrom, 
+      amountTo, 
+      user: recipientSearch 
+    } = req.query as DocumentQueryParams;
 
     console.log('Document List Request:', {
       userRole: req.user?.role,
-      userUnit: req.user?.unit,
+      userUnits: req.user?.units,
       requestedUnit: unit,
-      filters: { status, dateFrom, dateTo, amountFrom, amountTo, user }
+      filters: { status, dateFrom, dateTo, amountFrom, amountTo, recipientSearch }
     });
 
     let query = supabase
@@ -120,9 +159,9 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
       .select('*');
 
     // Filter by unit based on user role
-    if (req.user?.role === 'user' && req.user?.unit) {
-      console.log('Applying user unit filter:', req.user.unit);
-      query = query.eq('unit', req.user.unit);
+    if (req.user?.role === 'user' && req.user?.units?.length) {
+      console.log('Applying user unit filter:', req.user.units[0]);
+      query = query.eq('unit', req.user.units[0]);
     } else if (unit && unit !== 'all') {
       console.log('Applying requested unit filter:', unit);
       query = query.eq('unit', unit);
@@ -145,8 +184,8 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
       query = query.lte('total_amount', Number(amountTo));
     }
 
-    if (user && user !== 'all') {
-      query = query.textSearch('recipients', user.toString().toLowerCase().trim());
+    if (recipientSearch && recipientSearch !== 'all') {
+      query = query.textSearch('recipients', recipientSearch.toString().toLowerCase().trim());
     }
 
     query = query.order('created_at', { ascending: false });
@@ -163,12 +202,15 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
     res.json(data || []);
   } catch (error) {
     console.error('Error fetching documents:', error);
-    res.status(500).json({ message: 'Failed to fetch documents' });
+    res.status(500).json({ 
+      error: 'Failed to fetch documents',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
-});
+}
 
 // Get single document
-router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
+async function getDocument(req: AuthRequest, res: Response) {
   try {
     const { data: document, error } = await supabase
       .from('generated_documents')
@@ -178,23 +220,36 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
 
     if (error) throw error;
     if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    // Check if user has access to this document's unit
+    if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
+      return res.status(403).json({ error: 'Access denied to this document' });
     }
 
     res.json(document);
   } catch (error) {
     console.error('Error fetching document:', error);
-    res.status(500).json({ message: 'Failed to fetch document' });
+    res.status(500).json({ 
+      error: 'Failed to fetch document',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
-});
+}
 
 // Update document
-router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
+async function updateDocument(req: AuthRequest, res: Response) {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
     const { data: document, error } = await supabase
       .from('generated_documents')
       .update({
         ...req.body,
+        updated_by: req.user.id,
         updated_at: new Date()
       })
       .eq('id', parseInt(req.params.id))
@@ -203,25 +258,28 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res) => {
 
     if (error) throw error;
     if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
+      return res.status(404).json({ error: 'Document not found' });
     }
 
     res.json(document);
   } catch (error) {
     console.error('Error updating document:', error);
-    res.status(500).json({ message: 'Failed to update document' });
+    res.status(500).json({ 
+      error: 'Failed to update document',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
-});
+}
 
-// Update the document export route
-router.get('/generated/:id/export', authenticateToken, async (req: Request, res: Response) => {
+// Export document
+async function exportDocument(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
 
     const { data: document, error } = await supabase
       .from('generated_documents')
-      .select('*, recipients')
-      .eq('id', id)
+      .select('*')
+      .eq('id', parseInt(id))
       .single();
 
     if (error) {
@@ -230,28 +288,21 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
     }
 
     if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    // Check access rights
+    if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
+      return res.status(403).json({ error: 'Access denied to this document' });
     }
 
     // Get unit details
     const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
+    if (!unitDetails) {
+      throw new Error('Unit details not found');
+    }
 
-    // Format recipients
-    const recipients = Array.isArray(document.recipients)
-      ? document.recipients.map((recipient: any) => ({
-          lastname: String(recipient.lastname || '').trim(),
-          firstname: String(recipient.firstname || '').trim(),
-          fathername: String(recipient.fathername || '').trim(),
-          amount: parseFloat(recipient.amount) || 0,
-          installment: parseInt(recipient.installment) || 1,
-          afm: String(recipient.afm || '').trim()
-        }))
-      : [];
-
-    // Calculate total amount
-    const totalAmount = recipients.reduce((sum: number, recipient: any) => sum + recipient.amount, 0);
-
-    // Create the document
+    // Create document
     const doc = new Document({
       sections: [{
         properties: {
@@ -261,27 +312,27 @@ router.get('/generated/:id/export', authenticateToken, async (req: Request, res:
         },
         children: [
           await DocumentFormatter.createHeader(document, unitDetails),
-          DocumentFormatter.createPaymentTable(recipients),
-          await DocumentFormatter.createFooter(document),
+          DocumentFormatter.createPaymentTable(document.recipients),
+          await DocumentFormatter.createFooter(document)
         ]
       }]
     });
 
-    // Generate the document buffer
+    // Generate buffer
     const buffer = await Packer.toBuffer(doc);
 
     // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${DocumentFormatter.formatDocumentNumber(parseInt(id))}.docx`);
+    res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
     res.send(buffer);
 
   } catch (error) {
     console.error('Export error:', error);
     res.status(500).json({
-      message: 'Failed to export document',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to export document',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+}
 
 export default router;
