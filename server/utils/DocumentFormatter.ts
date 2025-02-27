@@ -211,28 +211,21 @@ export class DocumentFormatter {
       rows: [
         new TableRow({
           height: { value: 400, rule: HeightRule.EXACT },
+          tableHeader: true,
           children: [
             new TableCell({
-              width: { size: 888, type: WidthType.DXA },
+              shading: {
+                fill: "E6E6E6", // Light gray background
+                val: "clear",
+              },
+              columnSpan: 2,
               children: [
                 new Paragraph({
+                  alignment: AlignmentType.CENTER,
                   children: [
                     new TextRun({
-                      text: "ΘΕΜΑ:",
+                      text: "ΘΕΜΑ: Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
                       bold: true,
-                      italics: true,
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            new TableCell({
-              width: { size: 8606, type: WidthType.DXA },
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
                       italics: true,
                     }),
                   ],
