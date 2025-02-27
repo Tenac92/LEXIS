@@ -5,8 +5,8 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { securityHeaders } from "./middleware/securityHeaders";
-import { setupWebSocket } from './websocket';
 import { setupAuth, sessionMiddleware } from './auth';
+import { createWebSocketServer } from './websocket';
 
 // Verify required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_KEY'];
@@ -93,12 +93,12 @@ app.use((req, res, next) => {
     server = await registerRoutes(app);
     log('[Startup] Routes registered successfully');
 
-    // Set up WebSocket server
-    setupWebSocket(server);
-    log('[Startup] WebSocket server initialized');
-
     // Error handling middleware
     app.use(errorMiddleware);
+
+    // Create WebSocket server with the correct path
+    const wss = createWebSocketServer(server);
+    log('[Startup] WebSocket server initialized on /ws');
 
     // importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
