@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, AlignmentType, WidthType, BorderStyle, VerticalAlign, HeightRule, ITableBordersOptions, PageOrientation } from 'docx';
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, AlignmentType, WidthType, BorderStyle, VerticalAlign, HeightRule, ITableBordersOptions } from 'docx';
 import { supabase } from '../config/db';
 
 interface UnitDetails {
@@ -199,35 +199,55 @@ export class DocumentFormatter {
 
   private static createSubject(): Table {
     return new Table({
-      width: { size: 9000, type: WidthType.DXA },
+      width: { size: 9253, type: WidthType.DXA },
       borders: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
-        insideVertical: { style: BorderStyle.SINGLE, size: 1 },
-        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+        top: { style: BorderStyle.SINGLE, size: 4 },
+        bottom: { style: BorderStyle.SINGLE, size: 4 },
+        left: { style: BorderStyle.SINGLE, size: 4 },
+        right: { style: BorderStyle.SINGLE, size: 4 },
       },
       rows: [
         new TableRow({
           height: { value: 400, rule: HeightRule.EXACT },
-          tableHeader: true,
           children: [
             new TableCell({
-              shading: {
-                fill: "E6E6E6", // Light gray background
-                val: "clear",
+              width: { size: 888, type: WidthType.DXA },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 4 },
+                bottom: { style: BorderStyle.SINGLE, size: 4 },
+                left: { style: BorderStyle.SINGLE, size: 4 },
+                right: { style: BorderStyle.SINGLE, size: 4 },
               },
               children: [
                 new Paragraph({
-                  alignment: AlignmentType.CENTER,
                   children: [
                     new TextRun({
-                      text: "ΘΕΜΑ: Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+                      text: "ΘΕΜΑ:",
                       bold: true,
                       italics: true,
                     }),
                   ],
+                  spacing: { line: 20, lineRule: "atLeast" },
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 8365, type: WidthType.DXA },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 4 },
+                bottom: { style: BorderStyle.SINGLE, size: 4 },
+                left: { style: BorderStyle.SINGLE, size: 4 },
+                right: { style: BorderStyle.SINGLE, size: 4 },
+              },
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+                      italics: true,
+                    }),
+                  ],
+                  spacing: { line: 20, lineRule: "atLeast" },
                 }),
               ],
             }),
