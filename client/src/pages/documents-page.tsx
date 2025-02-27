@@ -110,9 +110,9 @@ export default function DocumentsPage() {
         }
 
         // Apply user filter
-        if (filters.user && filters.user !== 'all') {
-          console.log('[Documents] Applying user filter:', filters.user);
-          query = query.eq('generated_by', filters.user);
+        if (filters.user === 'current' && user?.id) {
+          console.log('[Documents] Applying current user filter:', user.id);
+          query = query.eq('generated_by', user.id);
         }
 
         // Apply date range filters
