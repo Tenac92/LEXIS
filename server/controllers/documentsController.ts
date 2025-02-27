@@ -122,7 +122,7 @@ router.get('/:id', authenticateSession, async (req: AuthRequest, res: Response) 
 });
 
 // Update document
-router.patch('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.patch('/:id', authenticateSession, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
