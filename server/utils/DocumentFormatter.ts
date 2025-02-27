@@ -199,7 +199,7 @@ export class DocumentFormatter {
 
   private static createSubject(): Table {
     return new Table({
-      width: { size: 9253, type: WidthType.DXA },
+      width: { size: 9629, type: WidthType.DXA }, // Match header table width
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -211,7 +211,7 @@ export class DocumentFormatter {
           height: { value: 400, rule: HeightRule.EXACT },
           children: [
             new TableCell({
-              width: { size: 888, type: WidthType.DXA },
+              width: { size: 888, type: WidthType.DXA }, // Match first column of header
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 4 },
                 bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -232,7 +232,7 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              width: { size: 8365, type: WidthType.DXA },
+              width: { size: 8741, type: WidthType.DXA }, // Combined width of remaining header columns
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 4 },
                 bottom: { style: BorderStyle.SINGLE, size: 4 },
