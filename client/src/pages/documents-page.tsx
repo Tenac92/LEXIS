@@ -7,6 +7,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { FileText, Filter, RefreshCcw, LayoutGrid, List } from "lucide-react";
 import { DocumentCard } from "@/components/documents/document-card";
@@ -100,6 +109,32 @@ export default function DocumentsPage() {
           query = query.eq('status', filters.status);
         }
 
+        // Apply user filter
+        if (filters.user && filters.user !== 'all') {
+          console.log('[Documents] Applying user filter:', filters.user);
+          query = query.eq('generated_by', filters.user);
+        }
+
+        // Apply date range filters
+        if (filters.dateFrom) {
+          console.log('[Documents] Applying date from filter:', filters.dateFrom);
+          query = query.gte('created_at', filters.dateFrom);
+        }
+        if (filters.dateTo) {
+          console.log('[Documents] Applying date to filter:', filters.dateTo);
+          query = query.lte('created_at', filters.dateTo);
+        }
+
+        // Apply amount range filters
+        if (filters.amountFrom) {
+          console.log('[Documents] Applying amount from filter:', filters.amountFrom);
+          query = query.gte('total_amount', parseFloat(filters.amountFrom));
+        }
+        if (filters.amountTo) {
+          console.log('[Documents] Applying amount to filter:', filters.amountTo);
+          query = query.lte('total_amount', parseFloat(filters.amountTo));
+        }
+
         // Execute query with error handling
         console.log('[Documents] Executing Supabase query...');
         const { data, error } = await query;
@@ -159,7 +194,7 @@ export default function DocumentsPage() {
         <Card className="bg-card">
           <div className="p-4">
             {/* Basic Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Unit</label>
                 <Select
@@ -200,7 +235,111 @@ export default function DocumentsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">User</label>
+                <Select
+                  value={filters.user}
+                  onValueChange={(value) => {
+                    console.log('[Documents] Changing user filter to:', value);
+                    setFilters(prev => ({ ...prev, user: value }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="current">My Documents</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
+            {/* Advanced Filters */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="w-full flex justify-between items-center">
+                  <span className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    Advanced Filters
+                  </span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>Advanced Filters</SheetTitle>
+                </SheetHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Date Range</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs text-muted-foreground">From</label>
+                        <Input
+                          type="date"
+                          value={filters.dateFrom}
+                          onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">To</label>
+                        <Input
+                          type="date"
+                          value={filters.dateTo}
+                          onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Amount Range</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-xs text-muted-foreground">From</label>
+                        <Input
+                          type="number"
+                          placeholder="Min amount"
+                          value={filters.amountFrom}
+                          onChange={(e) => setFilters(prev => ({ ...prev, amountFrom: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">To</label>
+                        <Input
+                          type="number"
+                          placeholder="Max amount"
+                          value={filters.amountTo}
+                          onChange={(e) => setFilters(prev => ({ ...prev, amountTo: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Recipient Search</label>
+                    <Input
+                      placeholder="Search by recipient name"
+                      value={filters.recipient}
+                      onChange={(e) => setFilters(prev => ({ ...prev, recipient: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">AFM</label>
+                    <Input
+                      placeholder="Search by AFM"
+                      value={filters.afm}
+                      onChange={(e) => setFilters(prev => ({ ...prev, afm: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <SheetClose asChild>
+                  <Button className="w-full mt-4">Apply Filters</Button>
+                </SheetClose>
+              </SheetContent>
+            </Sheet>
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
