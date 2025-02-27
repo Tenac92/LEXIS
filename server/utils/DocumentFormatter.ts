@@ -116,7 +116,7 @@ export class DocumentFormatter {
           children: [
             new TableCell({
               width: { size: 5524, type: WidthType.DXA },
-              gridSpan: 2,
+              columnSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -140,7 +140,7 @@ export class DocumentFormatter {
             }),
             new TableCell({
               width: { size: 4105, type: WidthType.DXA },
-              gridSpan: 2,
+              columnSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -255,28 +255,28 @@ export class DocumentFormatter {
       }),
       new Paragraph({
         text: "Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε. , σύμφωνα με τα κάτωθι στοιχεία.",
-        spacing: { before: 360, after: 360 },
+        spacing: { before: 180, after: 180 },
       }),
       new Paragraph({
         children: [
           new TextRun({ text: "ΑΡ. ΕΡΓΟΥ: ", bold: true }),
           new TextRun({ text: `${documentData.project_na853 || "(na853)"} της ΣΑΝΑ 853 (ΤΕ 2023ΝΑ27100228)` }),
         ],
-        spacing: { after: 360 },
+        spacing: { after: 180 },
       }),
       new Paragraph({
         children: [
           new TextRun({ text: "ΑΛΕ: ", bold: true }),
           new TextRun({ text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ." }),
         ],
-        spacing: { after: 360 },
+        spacing: { after: 180 },
       }),
       new Paragraph({
         children: [
           new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true }),
           new TextRun({ text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών" }),
         ],
-        spacing: { before: 360, after: 360 },
+        spacing: { before: 180, after: 180 },
       }),
     ];
   }
@@ -338,7 +338,7 @@ export class DocumentFormatter {
   private static createNote(): Paragraph {
     return new Paragraph({
       text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσίας μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
-      spacing: { before: 480, after: 480 },
+      spacing: { before: 180, after: 180 },
     });
   }
 
@@ -405,8 +405,8 @@ export class DocumentFormatter {
                 new Paragraph({ text: "", spacing: { before: 720 } }),
                 new Paragraph({
                   text: "ΜΕ ΕΝΤΟΛΗ ΠΡΟΪΣΤΑΜΕΝΗΣ Γ.Δ.Α.Ε.Φ.Κ.",
+                  bold: true,
                   alignment: AlignmentType.CENTER,
-                  style: { run: { bold: true } },
                 }),
                 new Paragraph({
                   text: "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
