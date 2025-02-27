@@ -199,7 +199,7 @@ export class DocumentFormatter {
 
   private static createSubject(): Table {
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      width: { size: 9000, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.SINGLE, size: 1 },
         bottom: { style: BorderStyle.SINGLE, size: 1 },
