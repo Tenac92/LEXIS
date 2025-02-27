@@ -46,27 +46,49 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
   const handleExport = async () => {
     try {
       setIsLoading(true);
+      console.log('[DocumentCard] Starting document export for ID:', document.id);
+
       const response = await fetch(`/api/documents/generated/${document.id}/export`, {
         method: 'GET',
+        headers: {
+          'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        },
       });
 
+      console.log('[DocumentCard] Export response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to export document');
+        const errorText = await response.text();
+        console.error('[DocumentCard] Export failed:', errorText);
+        throw new Error(`Failed to export document: ${response.statusText}`);
       }
 
+      const contentType = response.headers.get('content-type');
+      console.log('[DocumentCard] Response content type:', contentType);
+
       const blob = await response.blob();
+      console.log('[DocumentCard] Blob size:', blob.size);
+
+      if (blob.size === 0) {
+        throw new Error('Received empty document');
+      }
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = `document-${document.id}.docx`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
+      console.log('[DocumentCard] Document exported successfully');
       toast({
         description: "Document exported successfully",
         variant: "default"
       });
     } catch (error) {
+      console.error('[DocumentCard] Export error:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to export document",
