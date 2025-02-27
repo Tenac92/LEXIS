@@ -1,7 +1,6 @@
 import { Router } from 'express';
-import { supabase } from '../db';
+import { supabase } from '../config/db';
 import { authenticateSession } from '../auth';
-import { Request, Response } from 'express';
 import type { User } from '@shared/schema';
 import bcrypt from 'bcrypt';
 
