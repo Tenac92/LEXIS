@@ -9,15 +9,8 @@ import {
 } from "@/components/ui/select";
 import { useState } from "react";
 import { FileText, Filter, RefreshCcw, LayoutGrid, List } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { DocumentCard } from "@/components/documents/document-card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ViewDocumentModal, EditDocumentModal, DeleteDocumentModal } from "@/components/documents/document-modals";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
@@ -41,6 +34,7 @@ interface Filters {
 export default function DocumentsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedDocument, setSelectedDocument] = useState<GeneratedDocument | null>(null);
   const [modalState, setModalState] = useState<{
@@ -52,8 +46,10 @@ export default function DocumentsPage() {
     edit: false,
     delete: false,
   });
+
+  // Initialize filters
   const [filters, setFilters] = useState<Filters>({
-    unit: 'all',
+    unit: user?.unit || 'all',
     status: 'all',
     user: 'all',
     dateFrom: '',
@@ -64,13 +60,14 @@ export default function DocumentsPage() {
     afm: ''
   });
 
-  const { data: documents, isLoading, error } = useQuery<GeneratedDocument[]>({
+  // Query for documents with debugging
+  const { data: documents, isLoading, error, refetch } = useQuery<GeneratedDocument[]>({
     queryKey: ['/api/documents', filters],
     queryFn: async () => {
       try {
-        console.log('[Documents] Fetching documents with filters:', filters);
+        console.log('[Documents] Starting document fetch with filters:', filters);
 
-        // Create query with explicit column selection
+        // Build query with explicit column selection
         let query = supabase
           .from('generated_documents')
           .select(`
@@ -91,16 +88,19 @@ export default function DocumentsPage() {
           `)
           .order('created_at', { ascending: false });
 
-        // Apply filters
+        // Apply unit filter
         if (filters.unit && filters.unit !== 'all') {
           console.log('[Documents] Applying unit filter:', filters.unit);
           query = query.eq('unit', filters.unit);
         }
 
+        // Apply status filter
         if (filters.status && filters.status !== 'all') {
+          console.log('[Documents] Applying status filter:', filters.status);
           query = query.eq('status', filters.status);
         }
 
+        // Execute query with error handling
         console.log('[Documents] Executing Supabase query...');
         const { data, error } = await query;
 
@@ -109,14 +109,15 @@ export default function DocumentsPage() {
           throw error;
         }
 
-        console.log('[Documents] Documents fetched successfully:', {
+        // Log success with sample data
+        console.log('[Documents] Query successful:', {
           count: data?.length || 0,
           sample: data?.[0] ? { id: data[0].id, unit: data[0].unit } : null
         });
 
         return data || [];
       } catch (error) {
-        console.error('[Documents] Error fetching documents:', error);
+        console.error('[Documents] Error in document fetch:', error);
         toast({
           title: "Error",
           description: error instanceof Error ? error.message : "Failed to fetch documents",
@@ -126,6 +127,12 @@ export default function DocumentsPage() {
       }
     }
   });
+
+  // Handle document refresh
+  const handleRefresh = () => {
+    console.log('[Documents] Manually refreshing documents...');
+    refetch();
+  };
 
   if (isLoading) {
     return (
@@ -140,6 +147,7 @@ export default function DocumentsPage() {
       <div className="flex flex-col items-center justify-center min-h-screen text-destructive">
         <FileText className="h-12 w-12 mb-4" />
         <p>Failed to load documents</p>
+        {error instanceof Error && <p className="text-sm mt-2">{error.message}</p>}
       </div>
     );
   }
@@ -151,12 +159,35 @@ export default function DocumentsPage() {
         <Card className="bg-card">
           <div className="p-4">
             {/* Basic Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Unit</label>
+                <Select
+                  value={filters.unit}
+                  onValueChange={(value) => {
+                    console.log('[Documents] Changing unit filter to:', value);
+                    setFilters(prev => ({ ...prev, unit: value }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Units</SelectItem>
+                    <SelectItem value="ΔΑΕΦΚ-ΚΕ">ΔΑΕΦΚ-ΚΕ</SelectItem>
+                    <SelectItem value="ΓΔΑΕΦΚ">ΓΔΑΕΦΚ</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Status</label>
                 <Select
                   value={filters.status}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+                  onValueChange={(value) => {
+                    console.log('[Documents] Changing status filter to:', value);
+                    setFilters(prev => ({ ...prev, status: value }));
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
@@ -176,7 +207,7 @@ export default function DocumentsPage() {
               <Button
                 variant="default"
                 className="flex items-center gap-2"
-                onClick={() => {}}
+                onClick={handleRefresh}
                 disabled={isLoading}
               >
                 <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -237,14 +268,18 @@ export default function DocumentsPage() {
         isOpen={modalState.edit}
         onClose={() => setModalState(prev => ({ ...prev, edit: false }))}
         document={selectedDocument}
-        onEdit={() => {}}
+        onEdit={(id: string) => {
+          queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+        }}
       />
 
       <DeleteDocumentModal
         isOpen={modalState.delete}
         onClose={() => setModalState(prev => ({ ...prev, delete: false }))}
-        documentId={selectedDocument?.id.toString()}
-        onDelete={() => {}}
+        documentId={selectedDocument?.id.toString() || ''}
+        onDelete={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+        }}
       />
 
       {user?.role === 'user' && <FAB />}
