@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/authMiddleware';
-import { supabase } from '../db';
+import { supabase } from '../config/db';
+import { authenticateToken } from '../middleware/authMiddleware'; //Preserving the original middleware
 import { ProjectCatalog } from '@shared/schema';
 import * as xlsx from 'xlsx';
 import multer from 'multer';
@@ -27,8 +27,8 @@ router.get('/', authenticateToken, async (req, res) => {
     res.json(projects || []);
   } catch (error) {
     console.error('[Projects] Get projects error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to fetch projects',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -110,8 +110,8 @@ router.get('/export/xlsx', authenticateToken, async (req, res) => {
       Region: project.region || '',
       Regional_Unit: project.regional_unit || '',
       Municipality: project.municipality || '',
-      Implementing_Agency: Array.isArray(project.implementing_agency) 
-        ? project.implementing_agency.join(', ') 
+      Implementing_Agency: Array.isArray(project.implementing_agency)
+        ? project.implementing_agency.join(', ')
         : project.implementing_agency || '',
       Budget_NA853: project.budget_na853?.toString() || '0',
       Budget_E069: project.budget_e069?.toString() || '0',
@@ -139,8 +139,8 @@ router.get('/export/xlsx', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('[Projects] Export error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to export projects',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -150,9 +150,9 @@ router.get('/export/xlsx', authenticateToken, async (req, res) => {
 // Bulk upload
 router.post('/bulk-upload', authenticateToken, upload.single('file'), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'No file uploaded' 
+    return res.status(400).json({
+      success: false,
+      message: 'No file uploaded'
     });
   }
 
@@ -163,9 +163,9 @@ router.post('/bulk-upload', authenticateToken, upload.single('file'), async (req
         columns: true,
         skip_empty_lines: true
       })
-      .on('data', (data) => results.push(data))
-      .on('end', () => resolve(results))
-      .on('error', reject);
+        .on('data', (data) => results.push(data))
+        .on('end', () => resolve(results))
+        .on('error', reject);
     });
 
     // Process each record
@@ -186,14 +186,14 @@ router.post('/bulk-upload', authenticateToken, upload.single('file'), async (req
       if (error) throw error;
     }
 
-    res.json({ 
-      success: true, 
-      message: `Successfully processed ${records.length} records` 
+    res.json({
+      success: true,
+      message: `Successfully processed ${records.length} records`
     });
   } catch (error) {
     console.error('[Projects] Bulk upload error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to process bulk upload',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -246,15 +246,15 @@ router.put('/bulk-update', authenticateToken, async (req, res) => {
       console.log(`[Projects] Successfully updated budget split for project ${mis}`);
     }
 
-    res.json({ 
-      success: true, 
-      message: `Successfully updated ${updates.length} projects` 
+    res.json({
+      success: true,
+      message: `Successfully updated ${updates.length} projects`
     });
   } catch (error) {
     console.error('[Projects] Bulk update error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error instanceof Error ? error.message : 'Failed to process bulk update' 
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to process bulk update'
     });
   }
 });
