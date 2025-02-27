@@ -12,7 +12,8 @@ import {
   PlusCircle,
   Download,
   Upload,
-  BarChart3
+  BarChart3,
+  Euro
 } from "lucide-react";
 import { 
   BarChart, 
@@ -21,10 +22,20 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  Cell
 } from 'recharts';
 
 import type { DashboardStats } from "@/lib/dashboard";
+import { formatCurrency } from "@/lib/services/dashboard";
+
+const STATUS_COLORS = {
+  active: '#22c55e',
+  pending: '#f59e0b',
+  pending_reallocation: '#8b5cf6',
+  completed: '#3b82f6',
+  pending_funding: '#f59e0b'
+};
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -36,13 +47,14 @@ export function Dashboard() {
     refetchOnWindowFocus: false
   });
 
-  // Format data for the chart
-  const chartData = stats?.projectStats ? [
-    { name: 'Active', value: stats.projectStats.active },
-    { name: 'Pending', value: stats.projectStats.pending },
-    { name: 'Pending Reallocation', value: stats.projectStats.pending_reallocation },
-    { name: 'Completed', value: stats.projectStats.completed },
-  ] : [];
+  // Format data for the chart - include budget information
+  const chartData = stats ? Object.entries(stats.projectStats).map(([status, count]) => ({
+    name: status.replace('_', ' ').split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' '),
+    count: count,
+    budget: stats.budgetTotals?.[status] || 0
+  })) : [];
 
   if (isLoading) {
     return (
@@ -132,11 +144,13 @@ export function Dashboard() {
         <Card className="p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-purple-100 rounded-full">
-              <Users className="h-6 w-6 text-purple-600" />
+              <Euro className="h-6 w-6 text-purple-600" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Active Projects</h3>
-              <p className="text-2xl font-bold mt-1">{stats.projectStats.active}</p>
+              <h3 className="text-sm font-medium text-muted-foreground">Total Budget</h3>
+              <p className="text-2xl font-bold mt-1">
+                {formatCurrency(Object.values(stats.budgetTotals || {}).reduce((a, b) => a + b, 0))}
+              </p>
             </div>
           </div>
         </Card>
@@ -151,12 +165,45 @@ export function Dashboard() {
           </h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+              <BarChart 
+                data={chartData} 
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                barSize={60}
+              >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" />
+                <XAxis 
+                  dataKey="name" 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={60} 
+                  interval={0}
+                />
+                <YAxis yAxisId="left" orientation="left" stroke="#666" />
+                <YAxis yAxisId="right" orientation="right" stroke="#666" />
+                <Tooltip 
+                  formatter={(value: any, name: string) => {
+                    if (name === 'budget') return formatCurrency(value);
+                    return value;
+                  }}
+                />
+                <Bar 
+                  yAxisId="left" 
+                  dataKey="count" 
+                  name="Projects"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={STATUS_COLORS[entry.name.toLowerCase().replace(' ', '_') as keyof typeof STATUS_COLORS] || '#666'} 
+                    />
+                  ))}
+                </Bar>
+                <Bar 
+                  yAxisId="right" 
+                  dataKey="budget" 
+                  name="Budget" 
+                  fill="#8884d8" 
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
