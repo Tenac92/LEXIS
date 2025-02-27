@@ -1,17 +1,20 @@
 import { z } from "zod";
 
 export const statsSchema = z.object({
-  userTrend: z.array(z.object({
-    date: z.string(),
-    count: z.number()
-  })).optional(),
-  completedDocs: z.number().optional(),
-  pendingDocs: z.number().optional(),
-  activeProjects: z.number().optional(),
-  completedProjects: z.number().optional(),
-  performanceTrend: z.array(z.object({
-    date: z.string(),
-    value: z.number()
+  totalDocuments: z.number(),
+  pendingDocuments: z.number(),
+  completedDocuments: z.number(),
+  projectStats: z.object({
+    active: z.number(),
+    pending: z.number(),
+    completed: z.number(),
+    pending_reallocation: z.number()
+  }),
+  recentActivity: z.array(z.object({
+    id: z.number(),
+    type: z.string(),
+    description: z.string(),
+    date: z.string()
   })).optional()
 });
 
@@ -57,27 +60,22 @@ const baseConfig = {
 
 export const getDashboardChartConfig = (stats: DashboardStats, isAdmin: boolean) => {
   const adminCharts = {
-    users: {
-      id: 'usersChart',
-      type: 'line' as const,
+    projects: {
+      id: 'projectsChart',
+      type: 'doughnut' as const,
       data: {
-        labels: stats.userTrend?.map(d => d.date) || [],
+        labels: ['Active', 'Pending', 'Completed', 'Pending Reallocation'],
         datasets: [{
-          label: 'Active Users',
-          data: stats.userTrend?.map(d => d.count) || [],
-          borderColor: chartColors.blue,
-          tension: 0.4,
-          fill: false
+          data: [stats.projectStats.active, stats.projectStats.pending, stats.projectStats.completed, stats.projectStats.pending_reallocation],
+          backgroundColor: [chartColors.blue, chartColors.yellow, chartColors.green, chartColors.purple],
+          borderWidth: 2,
+          borderColor: '#ffffff',
+          hoverOffset: 4
         }]
       },
       options: {
         ...baseConfig,
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { precision: 0 }
-          }
-        }
+        cutout: '70%'
       }
     },
     documents: {
@@ -86,7 +84,7 @@ export const getDashboardChartConfig = (stats: DashboardStats, isAdmin: boolean)
       data: {
         labels: ['Completed', 'Pending'],
         datasets: [{
-          data: [stats.completedDocs || 0, stats.pendingDocs || 0],
+          data: [stats.completedDocuments, stats.pendingDocuments],
           backgroundColor: [chartColors.green, chartColors.yellow],
           borderWidth: 2,
           borderColor: '#ffffff',
@@ -107,7 +105,7 @@ export const getDashboardChartConfig = (stats: DashboardStats, isAdmin: boolean)
       data: {
         labels: ['Completed', 'Pending'],
         datasets: [{
-          data: [stats.completedDocs || 0, stats.pendingDocs || 0],
+          data: [stats.completedDocuments, stats.pendingDocuments],
           backgroundColor: [chartColors.green, chartColors.yellow],
           borderWidth: 2,
           borderColor: '#ffffff',
