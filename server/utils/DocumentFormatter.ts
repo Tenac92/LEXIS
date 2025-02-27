@@ -20,7 +20,6 @@ interface DocumentData {
   recipients?: Array<{
     firstname: string;
     lastname: string;
-    fathername?: string;
     afm: string;
     amount: number;
     installment: number;
@@ -68,6 +67,9 @@ export class DocumentFormatter {
                 font: this.DEFAULT_FONT,
                 size: this.DEFAULT_FONT_SIZE,
               },
+              paragraph: {
+                spacing: { line: 360, lineRule: "atLeast" },
+              },
             },
           },
           paragraphStyles: [
@@ -79,10 +81,7 @@ export class DocumentFormatter {
                 size: this.DEFAULT_FONT_SIZE,
               },
               paragraph: {
-                spacing: {
-                  line: 360,
-                  lineRule: "atLeast",
-                },
+                spacing: { line: 360, lineRule: "atLeast" },
               },
             },
           ],
@@ -98,36 +97,34 @@ export class DocumentFormatter {
 
   private static createHeader(documentData: DocumentData, unitDetails?: UnitDetails): Table {
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      width: { size: 9629, type: WidthType.DXA },
       borders: {
-        top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
       },
       rows: [
         new TableRow({
           children: [
             new TableCell({
               width: { size: 5524, type: WidthType.DXA },
-              columnSpan: 2,
+              gridSpan: 2,
               borders: {
-                top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
               },
               children: [
-                // Organization header
                 this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
                 this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                 this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
-                new Paragraph({ text: "" }),
-                // Contact details
+                new Paragraph({ text: "", spacing: { after: 240 } }),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
                 this.createContactDetail("Πληροφορίες", unitDetails?.manager || "-"),
@@ -136,15 +133,14 @@ export class DocumentFormatter {
             }),
             new TableCell({
               width: { size: 4105, type: WidthType.DXA },
-              columnSpan: 2,
+              gridSpan: 2,
               borders: {
-                top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
               },
               children: [
-                // Web posting notice and protocol info
                 new Paragraph({
                   children: [
                     new TextRun({
@@ -199,7 +195,7 @@ export class DocumentFormatter {
 
   private static createSubject(): Table {
     return new Table({
-      width: { size: 9629, type: WidthType.DXA }, // Match header table width
+      width: { size: 9629, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -211,7 +207,7 @@ export class DocumentFormatter {
           height: { value: 400, rule: HeightRule.EXACT },
           children: [
             new TableCell({
-              width: { size: 888, type: WidthType.DXA }, // Match first column of header
+              width: { size: 888, type: WidthType.DXA },
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 4 },
                 bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -225,6 +221,7 @@ export class DocumentFormatter {
                       text: "ΘΕΜΑ:",
                       bold: true,
                       italics: true,
+                      size: this.DEFAULT_FONT_SIZE,
                     }),
                   ],
                   spacing: { line: 20, lineRule: "atLeast" },
@@ -232,7 +229,7 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              width: { size: 8741, type: WidthType.DXA }, // Combined width of remaining header columns
+              width: { size: 8741, type: WidthType.DXA },
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 4 },
                 bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -245,6 +242,7 @@ export class DocumentFormatter {
                     new TextRun({
                       text: "Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
                       italics: true,
+                      size: this.DEFAULT_FONT_SIZE,
                     }),
                   ],
                   spacing: { line: 20, lineRule: "atLeast" },
@@ -286,7 +284,7 @@ export class DocumentFormatter {
           new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true }),
           new TextRun({ text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών" }),
         ],
-        spacing: { before: 180, after: 180 },
+        spacing: { before: 180, after: 360 },
       }),
     ];
   }
@@ -302,10 +300,11 @@ export class DocumentFormatter {
     };
 
     return new Table({
-      width: { size: 9253, type: WidthType.DXA },
+      width: { size: 9629, type: WidthType.DXA },
       borders: tableBorders,
       rows: [
         new TableRow({
+          height: { value: 360, rule: HeightRule.EXACT },
           children: [
             this.createHeaderCell("Α.Α.", 666),
             this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", 4366),
@@ -314,11 +313,12 @@ export class DocumentFormatter {
             this.createHeaderCell("ΑΦΜ", 1615),
           ],
         }),
-        ...(recipients || []).map((recipient, index) =>
+        ...recipients.map((recipient, index) =>
           new TableRow({
+            height: { value: 360, rule: HeightRule.EXACT },
             children: [
               this.createTableCell((index + 1).toString() + ".", "center"),
-              this.createTableCell(`${recipient.lastname} ${recipient.firstname} ${recipient.fathername || ''}`.trim(), "left"),
+              this.createTableCell(`${recipient.lastname} ${recipient.firstname}`.trim(), "left"),
               this.createTableCell(recipient.amount.toLocaleString('el-GR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -329,10 +329,11 @@ export class DocumentFormatter {
           })
         ),
         new TableRow({
+          height: { value: 360, rule: HeightRule.EXACT },
           children: [
             this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
             this.createTableCell(
-              (recipients || []).reduce((sum, recipient) => sum + recipient.amount, 0).toLocaleString('el-GR', {
+              recipients.reduce((sum, recipient) => sum + recipient.amount, 0).toLocaleString('el-GR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               }) + " €",
@@ -348,7 +349,7 @@ export class DocumentFormatter {
   private static createNote(): Paragraph {
     return new Paragraph({
       text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσίας μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
-      spacing: { before: 180, after: 180 },
+      spacing: { before: 360, after: 360 },
     });
   }
 
@@ -356,12 +357,10 @@ export class DocumentFormatter {
     return new Table({
       width: { size: 11478, type: WidthType.DXA },
       borders: {
-        top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
       },
       rows: [
         new TableRow({
@@ -369,10 +368,10 @@ export class DocumentFormatter {
             new TableCell({
               width: { size: 6663, type: WidthType.DXA },
               borders: {
-                top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
               },
               children: [
                 this.createBoldUnderlinedParagraph("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)"),
@@ -408,41 +407,40 @@ export class DocumentFormatter {
             new TableCell({
               width: { size: 4815, type: WidthType.DXA },
               borders: {
-                top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-                right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
               },
               children: [
                 new Paragraph({ text: "", spacing: { before: 720 } }),
                 new Paragraph({
-                  text: "ΜΕ ΕΝΤΟΛΗ ΠΡΟΪΣΤΑΜΕΝΗΣ Γ.Δ.Α.Ε.Φ.Κ.",
-                  alignment: AlignmentType.CENTER,
                   children: [
                     new TextRun({
                       text: "ΜΕ ΕΝΤΟΛΗ ΠΡΟΪΣΤΑΜΕΝΗΣ Γ.Δ.Α.Ε.Φ.Κ.",
                       bold: true,
                     }),
                   ],
+                  alignment: AlignmentType.CENTER,
                 }),
                 new Paragraph({
-                  alignment: AlignmentType.CENTER,
                   children: [
                     new TextRun({
                       text: "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
                       bold: true,
                     }),
                   ],
+                  alignment: AlignmentType.CENTER,
                 }),
                 new Paragraph({ text: "", spacing: { before: 720 } }),
                 new Paragraph({
-                  alignment: AlignmentType.CENTER,
                   children: [
                     new TextRun({
                       text: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
                       bold: true,
                     }),
                   ],
+                  alignment: AlignmentType.CENTER,
                 }),
                 new Paragraph({
                   text: "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α΄ β.",
@@ -464,6 +462,7 @@ export class DocumentFormatter {
           bold: true,
         }),
       ],
+      spacing: { before: 120, after: 120 },
     });
   }
 
@@ -487,6 +486,7 @@ export class DocumentFormatter {
         new TextRun({ text: ": " }),
         new TextRun({ text: value }),
       ],
+      spacing: { before: 120, after: 120 },
     });
   }
 
@@ -495,7 +495,7 @@ export class DocumentFormatter {
       width: { size: width, type: WidthType.DXA },
       children: [
         new Paragraph({
-          children: [new TextRun({ text, bold: true })],
+          children: [new TextRun({ text, bold: true, size: this.DEFAULT_FONT_SIZE })],
           alignment: AlignmentType.CENTER,
         }),
       ],
@@ -506,7 +506,7 @@ export class DocumentFormatter {
   private static createTableCell(
     text: string,
     alignment: "left" | "center" | "right",
-    colSpan?: number,
+    colSpan?: number
   ): TableCell {
     const alignmentMap = {
       left: AlignmentType.LEFT,
@@ -518,7 +518,7 @@ export class DocumentFormatter {
       columnSpan: colSpan,
       children: [
         new Paragraph({
-          children: [new TextRun({ text })],
+          children: [new TextRun({ text, size: this.DEFAULT_FONT_SIZE })],
           alignment: alignmentMap[alignment],
         }),
       ],
