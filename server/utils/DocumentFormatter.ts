@@ -42,29 +42,27 @@ interface UnitDetails {
 }
 
 export class DocumentFormatter {
-  private static readonly DEFAULT_FONT_SIZE = 22; // 11pt
+  private static readonly DEFAULT_FONT_SIZE = 22; // 11pt in half-points
   private static readonly DEFAULT_FONT = "Times New Roman";
   private static readonly DEFAULT_MARGINS = {
-    top: 426,    // 0.3 inches
-    right: 1133, // 0.79 inches
-    bottom: 1440, // 1 inch
-    left: 1134,  // 0.79 inches
+    top: 426,    // 0.3 inches in twips
+    right: 1133, // 0.79 inches in twips
+    bottom: 1440, // 1 inch in twips
+    left: 1134,  // 0.79 inches in twips
   };
 
   static async generateDocument(documentData: DocumentData): Promise<Buffer> {
     try {
-      // Get unit details
       const unitDetails = await this.getUnitDetails(documentData.unit);
 
-      // Create document with specific sections
       const doc = new Document({
         sections: [{
           properties: {
             page: {
               margin: this.DEFAULT_MARGINS,
               size: {
-                width: 11906,
-                height: 16838,
+                width: 11906,  // A4 width in twips
+                height: 16838, // A4 height in twips
               },
             },
           },
@@ -83,6 +81,14 @@ export class DocumentFormatter {
               run: {
                 font: this.DEFAULT_FONT,
                 size: this.DEFAULT_FONT_SIZE,
+              },
+            },
+          },
+          a6: {
+            paragraph: {
+              spacing: {
+                line: 360,
+                lineRule: "atLeast",
               },
             },
           },
@@ -109,7 +115,8 @@ export class DocumentFormatter {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 60, type: WidthType.PERCENTAGE },
+              width: { size: 5524, type: WidthType.DXA },
+              gridSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -117,12 +124,14 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               children: [
+                // Organization header
                 this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
                 this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                 this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
                 new Paragraph({ text: "" }),
+                // Contact details
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
                 this.createContactDetail("Πληροφορίες", unitDetails?.manager || "-"),
@@ -130,7 +139,8 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              width: { size: 40, type: WidthType.PERCENTAGE },
+              width: { size: 4105, type: WidthType.DXA },
+              gridSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -138,6 +148,7 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               children: [
+                // Web posting notice and protocol info
                 new Paragraph({
                   children: [
                     new TextRun({
@@ -147,7 +158,7 @@ export class DocumentFormatter {
                   ],
                   alignment: AlignmentType.RIGHT,
                 }),
-                new Paragraph({ text: "" }),
+                new Paragraph({ text: "", spacing: { before: 240, after: 240 } }),
                 new Paragraph({
                   children: [
                     new TextRun({
@@ -165,7 +176,7 @@ export class DocumentFormatter {
                   ],
                   alignment: AlignmentType.RIGHT,
                 }),
-                new Paragraph({ text: "" }),
+                new Paragraph({ text: "", spacing: { before: 240, after: 240 } }),
                 new Paragraph({
                   text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών",
                   alignment: AlignmentType.RIGHT,
@@ -204,7 +215,7 @@ export class DocumentFormatter {
           height: { value: 400, rule: HeightRule.EXACT },
           children: [
             new TableCell({
-              width: { size: 15, type: WidthType.PERCENTAGE },
+              width: { size: 888, type: WidthType.DXA },
               children: [
                 new Paragraph({
                   children: [
@@ -218,7 +229,7 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              width: { size: 85, type: WidthType.PERCENTAGE },
+              width: { size: 8606, type: WidthType.DXA },
               children: [
                 new Paragraph({
                   children: [
@@ -240,55 +251,57 @@ export class DocumentFormatter {
     return [
       new Paragraph({
         text: "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε, συμπληρώθηκε και ισχύει.",
-        spacing: { before: 240, after: 240 },
+        spacing: { line: 360, lineRule: "atLeast" },
       }),
       new Paragraph({
         text: "Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε. , σύμφωνα με τα κάτωθι στοιχεία.",
-        spacing: { before: 240, after: 240 },
+        spacing: { before: 360, after: 360 },
       }),
       new Paragraph({
         children: [
           new TextRun({ text: "ΑΡ. ΕΡΓΟΥ: ", bold: true }),
           new TextRun({ text: `${documentData.project_na853 || "(na853)"} της ΣΑΝΑ 853 (ΤΕ 2023ΝΑ27100228)` }),
         ],
-        spacing: { before: 240, after: 240 },
+        spacing: { after: 360 },
       }),
       new Paragraph({
         children: [
           new TextRun({ text: "ΑΛΕ: ", bold: true }),
           new TextRun({ text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ." }),
         ],
-        spacing: { before: 240, after: 240 },
+        spacing: { after: 360 },
       }),
       new Paragraph({
         children: [
           new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true }),
           new TextRun({ text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών" }),
         ],
-        spacing: { before: 240, after: 480 },
+        spacing: { before: 360, after: 360 },
       }),
     ];
   }
 
   private static createPaymentTable(recipients: DocumentData['recipients']): Table {
+    const tableBorders: ITableBordersOptions = {
+      top: { style: BorderStyle.SINGLE, size: 1 },
+      bottom: { style: BorderStyle.SINGLE, size: 1 },
+      left: { style: BorderStyle.SINGLE, size: 1 },
+      right: { style: BorderStyle.SINGLE, size: 1 },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+    };
+
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
-        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-        insideVertical: { style: BorderStyle.SINGLE, size: 1 },
-      },
+      width: { size: 9253, type: WidthType.DXA },
+      borders: tableBorders,
       rows: [
         new TableRow({
           children: [
-            this.createHeaderCell("Α.Α.", 10),
-            this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", 40),
-            this.createHeaderCell("ΠΟΣΟ (€)", 20),
-            this.createHeaderCell("ΔΟΣΗ", 15),
-            this.createHeaderCell("ΑΦΜ", 15),
+            this.createHeaderCell("Α.Α.", 666),
+            this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", 4366),
+            this.createHeaderCell("ΠΟΣΟ (€)", 1409),
+            this.createHeaderCell("ΔΟΣΗ", 1197),
+            this.createHeaderCell("ΑΦΜ", 1615),
           ],
         }),
         ...recipients.map((recipient, index) =>
@@ -307,14 +320,13 @@ export class DocumentFormatter {
         ),
         new TableRow({
           children: [
-            this.createTableCell("ΣΥΝΟΛΟ:", "right", 2, true),
+            this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
             this.createTableCell(
               recipients.reduce((sum, recipient) => sum + recipient.amount, 0).toLocaleString('el-GR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               }) + " €",
-              "right",
-              true
+              "right"
             ),
             this.createTableCell("", "center", 2),
           ],
@@ -332,7 +344,7 @@ export class DocumentFormatter {
 
   private static createFooter(documentData: DocumentData, unitDetails?: UnitDetails): Table {
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      width: { size: 11478, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -343,7 +355,7 @@ export class DocumentFormatter {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 60, type: WidthType.PERCENTAGE },
+              width: { size: 6663, type: WidthType.DXA },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -355,41 +367,34 @@ export class DocumentFormatter {
                 ...["Διαβιβαστικό", "ΔΚΑ"].map((item, index) =>
                   new Paragraph({
                     text: `${index + 1}. ${item}`,
-                    indent: { left: 720 },
+                    indent: { left: 426 },
+                    style: "a6",
                   })
                 ),
                 new Paragraph({ text: "" }),
                 this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"),
-                new Paragraph({
-                  text: "1. Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
-                  indent: { left: 720 },
-                }),
-                new Paragraph({
-                  text: "2. Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
-                  indent: { left: 720 },
-                }),
-                new Paragraph({
-                  text: "3. Γ.Δ.Α.Ε.Φ.Κ.",
-                  indent: { left: 720 },
-                }),
+                ...["Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+                  "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+                  "Γ.Δ.Α.Ε.Φ.Κ."].map((item, index) =>
+                  new Paragraph({
+                    text: `${index + 1}. ${item}`,
+                    indent: { left: 426 },
+                    style: "a6",
+                  })
+                ),
                 new Paragraph({ text: "" }),
                 this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
-                new Paragraph({
-                  text: "1. Χρονολογικό Αρχείο",
-                  indent: { left: 720 },
-                }),
-                new Paragraph({
-                  text: "2. Τμήμα Β/20.51",
-                  indent: { left: 720 },
-                }),
-                new Paragraph({
-                  text: "3. Αβραμόπουλο Ι.",
-                  indent: { left: 720 },
-                }),
+                ...["Χρονολογικό Αρχείο", "Τμήμα Β/20.51", "Αβραμόπουλο Ι."].map((item, index) =>
+                  new Paragraph({
+                    text: `${index + 1}. ${item}`,
+                    indent: { left: 426 },
+                    style: "a6",
+                  })
+                ),
               ],
             }),
             new TableCell({
-              width: { size: 40, type: WidthType.PERCENTAGE },
+              width: { size: 4815, type: WidthType.DXA },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -397,22 +402,22 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               children: [
-                new Paragraph({ text: "", spacing: { before: 480 } }),
+                new Paragraph({ text: "", spacing: { before: 720 } }),
                 new Paragraph({
                   text: "ΜΕ ΕΝΤΟΛΗ ΠΡΟΪΣΤΑΜΕΝΗΣ Γ.Δ.Α.Ε.Φ.Κ.",
                   alignment: AlignmentType.CENTER,
-                  bold: true,
+                  style: { run: { bold: true } },
                 }),
                 new Paragraph({
                   text: "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
                   alignment: AlignmentType.CENTER,
-                  bold: true,
+                  style: { run: { bold: true } },
                 }),
                 new Paragraph({ text: "", spacing: { before: 720 } }),
                 new Paragraph({
                   text: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
                   alignment: AlignmentType.CENTER,
-                  bold: true,
+                  style: { run: { bold: true } },
                 }),
                 new Paragraph({
                   text: "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α΄ β.",
@@ -460,9 +465,9 @@ export class DocumentFormatter {
     });
   }
 
-  private static createHeaderCell(text: string, widthPercent: number): TableCell {
+  private static createHeaderCell(text: string, width: number): TableCell {
     return new TableCell({
-      width: { size: widthPercent, type: WidthType.PERCENTAGE },
+      width: { size: width, type: WidthType.DXA },
       children: [
         new Paragraph({
           children: [new TextRun({ text, bold: true })],
@@ -477,7 +482,6 @@ export class DocumentFormatter {
     text: string,
     alignment: "left" | "center" | "right",
     colSpan?: number,
-    bold?: boolean
   ): TableCell {
     const alignmentMap = {
       left: AlignmentType.LEFT,
@@ -489,7 +493,7 @@ export class DocumentFormatter {
       columnSpan: colSpan,
       children: [
         new Paragraph({
-          children: [new TextRun({ text, bold: bold || false })],
+          children: [new TextRun({ text })],
           alignment: alignmentMap[alignment],
         }),
       ],
