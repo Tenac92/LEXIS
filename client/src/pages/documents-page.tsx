@@ -19,7 +19,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { DocumentCard } from "@/components/documents/document-card";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ViewDocumentModal, EditDocumentModal, DeleteDocumentModal } from "@/components/documents/document-modals";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
@@ -41,7 +41,7 @@ interface Filters {
 
 export default function DocumentsPage() {
   const { user } = useAuth();
-  const [isAdvancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedDocument, setSelectedDocument] = useState<GeneratedDocument | null>(null);
   const [modalState, setModalState] = useState<{
@@ -53,9 +53,6 @@ export default function DocumentsPage() {
     edit: false,
     delete: false,
   });
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
   const [filters, setFilters] = useState<Filters>({
     unit: user?.units?.[0] || 'all',
     status: 'all',
@@ -68,10 +65,11 @@ export default function DocumentsPage() {
     afm: ''
   });
 
-  const { data: documents, refetch, isLoading } = useQuery<GeneratedDocument[]>({
+  const { data: documents, isLoading, error } = useQuery<GeneratedDocument[]>({
     queryKey: ['/api/documents', filters],
     queryFn: async () => {
       try {
+        console.log('[Documents] Fetching documents...');
         const searchParams = new URLSearchParams();
         Object.entries(filters).forEach(([key, value]) => {
           if (value && value !== 'all') {
@@ -85,50 +83,43 @@ export default function DocumentsPage() {
         }
 
         const response = await fetch(`/api/documents?${searchParams.toString()}`);
-        if (!response.ok) throw new Error('Failed to fetch documents');
-        return response.json();
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Failed to fetch documents');
+        }
+
+        const data = await response.json();
+        console.log('[Documents] Fetched documents:', { count: data?.length || 0 });
+        return data;
       } catch (error) {
-        console.error('Error fetching documents:', error);
+        console.error('[Documents] Fetch error:', error);
         toast({
           title: "Error",
           description: error instanceof Error ? error.message : "Failed to fetch documents",
           variant: "destructive",
         });
-        return [];
+        throw error;
       }
     }
   });
 
-  const handleExport = async (docId: string) => {
-    try {
-      const response = await fetch(`/api/documents/generated/${docId}/export`, {
-        method: 'GET',
-      });
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <FileText className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-      if (!response.ok) throw new Error('Failed to export document');
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `document-${docId}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast({
-        title: "Success",
-        description: "Document exported successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to export document",
-        variant: "destructive",
-      });
-    }
-  };
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-destructive">
+        <FileText className="h-12 w-12 mb-4" />
+        <p>Failed to load documents</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -141,7 +132,7 @@ export default function DocumentsPage() {
               {user?.role !== 'user' && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Unit</label>
-                  <Select 
+                  <Select
                     value={filters.unit}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value }))}
                   >
@@ -159,7 +150,7 @@ export default function DocumentsPage() {
               )}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Status</label>
-                <Select 
+                <Select
                   value={filters.status}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
                 >
@@ -171,12 +162,12 @@ export default function DocumentsPage() {
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
-                    </SelectContent>
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">User</label>
-                <Select 
+                <Select
                   value={filters.user}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, user: value }))}
                 >
@@ -190,83 +181,24 @@ export default function DocumentsPage() {
               </div>
             </div>
 
-            {/* Advanced Filters Sheet */}
-            <Sheet open={isAdvancedFiltersOpen} onOpenChange={setAdvancedFiltersOpen}>
+            {/* Advanced Filters */}
+            <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" className="w-full flex justify-between items-center">
                   <span className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
                     Advanced Filters
                   </span>
-                  <span className="text-muted-foreground">⌘K</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>Advanced Filters</SheetTitle>
-                </SheetHeader>
-                <div className="grid grid-cols-1 gap-4 py-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Date Range</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input 
-                        type="date" 
-                        value={filters.dateFrom}
-                        onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                        placeholder="From" 
-                      />
-                      <Input 
-                        type="date"
-                        value={filters.dateTo}
-                        onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                        placeholder="To" 
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Amount Range</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input 
-                        type="number"
-                        value={filters.amountFrom}
-                        onChange={(e) => setFilters(prev => ({ ...prev, amountFrom: e.target.value }))}
-                        placeholder="Min Amount" 
-                      />
-                      <Input 
-                        type="number"
-                        value={filters.amountTo}
-                        onChange={(e) => setFilters(prev => ({ ...prev, amountTo: e.target.value }))}
-                        placeholder="Max Amount" 
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Recipient</label>
-                    <Input 
-                      value={filters.recipient}
-                      onChange={(e) => setFilters(prev => ({ ...prev, recipient: e.target.value }))}
-                      placeholder="Search recipient" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">AFM</label>
-                    <Input 
-                      value={filters.afm}
-                      onChange={(e) => setFilters(prev => ({ ...prev, afm: e.target.value }))}
-                      placeholder="Search AFM" 
-                      maxLength={9} 
-                    />
-                  </div>
-                </div>
-              </SheetContent>
             </Sheet>
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-              <Button 
-                variant="default" 
+              <Button
+                variant="default"
                 className="flex items-center gap-2"
-                onClick={() => refetch()}
+                onClick={() => {}}
                 disabled={isLoading}
               >
                 <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -288,31 +220,25 @@ export default function DocumentsPage() {
 
           {/* Documents Grid */}
           <div className={`grid ${viewMode === 'grid' ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1'} gap-6 p-6`}>
-            {isLoading ? (
-              Array.from({ length: 6 }).map((_, index) => (
-                <Card key={index} className="h-[200px] animate-pulse bg-muted" />
-              ))
-            ) : documents?.length > 0 ? (
-              documents.map((doc) => (
-                <DocumentCard
-                  key={doc.id}
-                  document={doc}
-                  onView={() => {
-                    setSelectedDocument(doc);
-                    setModalState(prev => ({ ...prev, view: true }));
-                  }}
-                  onEdit={() => {
-                    setSelectedDocument(doc);
-                    setModalState(prev => ({ ...prev, edit: true }));
-                  }}
-                  onDelete={() => {
-                    setSelectedDocument(doc);
-                    setModalState(prev => ({ ...prev, delete: true }));
-                  }}
-                  onExport={handleExport}
-                />
-              ))
-            ) : (
+            {documents?.map((doc) => (
+              <DocumentCard
+                key={doc.id}
+                document={doc}
+                onView={() => {
+                  setSelectedDocument(doc);
+                  setModalState(prev => ({ ...prev, view: true }));
+                }}
+                onEdit={() => {
+                  setSelectedDocument(doc);
+                  setModalState(prev => ({ ...prev, edit: true }));
+                }}
+                onDelete={() => {
+                  setSelectedDocument(doc);
+                  setModalState(prev => ({ ...prev, delete: true }));
+                }}
+              />
+            ))}
+            {(!documents || documents.length === 0) && (
               <div className="col-span-full flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mb-4" />
                 <p>No documents found</p>
@@ -333,20 +259,14 @@ export default function DocumentsPage() {
         isOpen={modalState.edit}
         onClose={() => setModalState(prev => ({ ...prev, edit: false }))}
         document={selectedDocument}
-        onEdit={() => {
-          queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
-          setModalState(prev => ({ ...prev, edit: false }));
-        }}
+        onEdit={() => {}}
       />
 
       <DeleteDocumentModal
         isOpen={modalState.delete}
         onClose={() => setModalState(prev => ({ ...prev, delete: false }))}
         documentId={selectedDocument?.id}
-        onDelete={() => {
-          queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
-          setModalState(prev => ({ ...prev, delete: false }));
-        }}
+        onDelete={() => {}}
       />
 
       {user?.role === 'user' && <FAB />}
