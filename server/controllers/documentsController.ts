@@ -91,7 +91,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 });
 
 // Get single document
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateSession } from '../auth';
 
 router.get('/:id', authenticateSession, async (req: AuthRequest, res: Response) => {
   try {
