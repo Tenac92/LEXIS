@@ -105,8 +105,12 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
 
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="space-y-1">
-              <span className="text-sm text-muted-foreground">Project</span>
+              <span className="text-sm text-muted-foreground">Project ID</span>
               <p className="font-medium">{document.project_id}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground">ΝΑ853</span>
+              <p className="font-medium">{document.project_na853 || '-'}</p>
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Total Amount</span>
@@ -116,6 +120,10 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
                   currency: 'EUR'
                 })}
               </p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground">Type</span>
+              <p className="font-medium">{document.expenditure_type || '-'}</p>
             </div>
           </div>
 
