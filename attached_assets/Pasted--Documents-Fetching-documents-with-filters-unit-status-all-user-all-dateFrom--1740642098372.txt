@@ -1,0 +1,68 @@
+[Documents] Fetching documents with filters: {unit: 'ΓΔΑΕΦΚ', status: 'all', user: 'all', dateFrom: '', dateTo: '', …}
+documents-page.tsx:95 [Documents] Applying user unit filter: ΓΔΑΕΦΚ
+documents-page.tsx:106 [Documents] Executing Supabase query...
+@supabase_supabase-js.js?v=e8e204d9:3865 
+        
+        
+       GET https://rlzrtiufwxlljrtmpwsr.supabase.co/rest/v1/generated_documents?select=id%2Cunit%2Cstatus%2Cproject_id%2Cproject_na853%2Ctotal_amount%2Crecipients%2Cprotocol_number_input%2Cprotocol_date%2Ccreated_at%2Cupdated_at%2Cdepartment%2Cattachments&order=created_at.desc&unit=eq.%CE%93%CE%94%CE%91%CE%95%CE%A6%CE%9A 400 (Bad Request)
+(ανώνυμες) @ @supabase_supabase-js.js?v=e8e204d9:3865
+(ανώνυμες) @ @supabase_supabase-js.js?v=e8e204d9:3886
+fulfilled @ @supabase_supabase-js.js?v=e8e204d9:3838
+Promise.then
+step @ @supabase_supabase-js.js?v=e8e204d9:3851
+(ανώνυμες) @ @supabase_supabase-js.js?v=e8e204d9:3853
+__awaiter6 @ @supabase_supabase-js.js?v=e8e204d9:3835
+(ανώνυμες) @ @supabase_supabase-js.js?v=e8e204d9:3876
+then @ @supabase_supabase-js.js?v=e8e204d9:89
+Εμφάνιση 8 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+documents-page.tsx:110 [Documents] Supabase query error: {code: '42703', details: null, hint: 'Perhaps you meant to reference the column "generated_documents.updated_by".', message: 'column generated_documents.updated_at does not exist'}
+queryFn @ documents-page.tsx:110
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=e8e204d9:840
+run @ @tanstack_react-query.js?v=e8e204d9:494
+start @ @tanstack_react-query.js?v=e8e204d9:536
+fetch @ @tanstack_react-query.js?v=e8e204d9:926
+executeFetch_fn @ @tanstack_react-query.js?v=e8e204d9:2211
+onSubscribe @ @tanstack_react-query.js?v=e8e204d9:1898
+subscribe @ @tanstack_react-query.js?v=e8e204d9:24
+(ανώνυμες) @ @tanstack_react-query.js?v=e8e204d9:3022
+subscribeToStore @ chunk-276SZO74.js?v=e8e204d9:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=e8e204d9:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=e8e204d9:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=e8e204d9:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=e8e204d9:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=e8e204d9:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=e8e204d9:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=e8e204d9:19447
+(ανώνυμες) @ chunk-276SZO74.js?v=e8e204d9:19328
+workLoop @ chunk-276SZO74.js?v=e8e204d9:197
+flushWork @ chunk-276SZO74.js?v=e8e204d9:176
+performWorkUntilDeadline @ chunk-276SZO74.js?v=e8e204d9:384
+Εμφάνιση 20 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+documents-page.tsx:121 [Documents] Error fetching documents: {code: '42703', details: null, hint: 'Perhaps you meant to reference the column "generated_documents.updated_by".', message: 'column generated_documents.updated_at does not exist'}
+queryFn @ documents-page.tsx:121
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=e8e204d9:840
+run @ @tanstack_react-query.js?v=e8e204d9:494
+start @ @tanstack_react-query.js?v=e8e204d9:536
+fetch @ @tanstack_react-query.js?v=e8e204d9:926
+executeFetch_fn @ @tanstack_react-query.js?v=e8e204d9:2211
+onSubscribe @ @tanstack_react-query.js?v=e8e204d9:1898
+subscribe @ @tanstack_react-query.js?v=e8e204d9:24
+(ανώνυμες) @ @tanstack_react-query.js?v=e8e204d9:3022
+subscribeToStore @ chunk-276SZO74.js?v=e8e204d9:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=e8e204d9:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=e8e204d9:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=e8e204d9:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=e8e204d9:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=e8e204d9:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=e8e204d9:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=e8e204d9:19447
+(ανώνυμες) @ chunk-276SZO74.js?v=e8e204d9:19328
+workLoop @ chunk-276SZO74.js?v=e8e204d9:197
+flushWork @ chunk-276SZO74.js?v=e8e204d9:176
+performWorkUntilDeadline @ chunk-276SZO74.js?v=e8e204d9:384
+Εμφάνιση 20 ακόμη πλαισίων
+Εμφάνιση λιγότερων
