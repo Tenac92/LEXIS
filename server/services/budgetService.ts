@@ -1,4 +1,4 @@
-import { supabase } from '../db';
+import { supabase } from '../config/db';
 import type { Database } from '@shared/schema';
 
 export interface BudgetResponse {
