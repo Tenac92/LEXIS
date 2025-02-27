@@ -201,12 +201,12 @@ export class DocumentFormatter {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
-        top: { style: BorderStyle.SINGLE, size: 4 },
-        bottom: { style: BorderStyle.SINGLE, size: 4 },
-        left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
-        insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+        top: { style: BorderStyle.SINGLE, size: 1 },
+        bottom: { style: BorderStyle.SINGLE, size: 1 },
+        left: { style: BorderStyle.SINGLE, size: 1 },
+        right: { style: BorderStyle.SINGLE, size: 1 },
+        insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
       },
       rows: [
         new TableRow({
@@ -218,7 +218,6 @@ export class DocumentFormatter {
                 fill: "E6E6E6", // Light gray background
                 val: "clear",
               },
-              columnSpan: 2,
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
