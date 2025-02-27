@@ -1,0 +1,372 @@
+GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/dashboard/stats 500 (Internal Server Error)
+(ανώνυμες) @ queryClient.ts:39
+fetchFn @ @tanstack_react-query.js?v=dd3b70e6:840
+run @ @tanstack_react-query.js?v=dd3b70e6:494
+start @ @tanstack_react-query.js?v=dd3b70e6:536
+fetch @ @tanstack_react-query.js?v=dd3b70e6:926
+executeFetch_fn @ @tanstack_react-query.js?v=dd3b70e6:2211
+onSubscribe @ @tanstack_react-query.js?v=dd3b70e6:1898
+subscribe @ @tanstack_react-query.js?v=dd3b70e6:24
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3022
+subscribeToStore @ chunk-276SZO74.js?v=dd3b70e6:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=dd3b70e6:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=dd3b70e6:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=dd3b70e6:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=dd3b70e6:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=dd3b70e6:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=dd3b70e6:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=dd3b70e6:19447
+commitRootImpl @ chunk-276SZO74.js?v=dd3b70e6:19416
+commitRoot @ chunk-276SZO74.js?v=dd3b70e6:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=dd3b70e6:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=dd3b70e6:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=dd3b70e6:555
+flush @ @tanstack_react-query.js?v=dd3b70e6:569
+batch @ @tanstack_react-query.js?v=dd3b70e6:587
+dispatch_fn @ @tanstack_react-query.js?v=dd3b70e6:996
+setData @ @tanstack_react-query.js?v=dd3b70e6:696
+setQueryData @ @tanstack_react-query.js?v=dd3b70e6:1661
+onSuccess @ use-auth.tsx:55
+execute @ @tanstack_react-query.js?v=dd3b70e6:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=dd3b70e6:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3295
+onSubmit @ auth-page.tsx:39
+(ανώνυμες) @ chunk-BW5TH624.js?v=dd3b70e6:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-276SZO74.js?v=dd3b70e6:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=dd3b70e6:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=dd3b70e6:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=dd3b70e6:3736
+executeDispatch @ chunk-276SZO74.js?v=dd3b70e6:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=dd3b70e6:7034
+processDispatchQueue @ chunk-276SZO74.js?v=dd3b70e6:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=dd3b70e6:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=dd3b70e6:18913
+batchedUpdates @ chunk-276SZO74.js?v=dd3b70e6:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=dd3b70e6:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=dd3b70e6:5478
+dispatchEvent @ chunk-276SZO74.js?v=dd3b70e6:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=dd3b70e6:5449
+Εμφάνιση 46 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:58 [Query] Το αίτημα απέτυχε: Error: Σφάλμα HTTP! κατάσταση: 500
+    at queryClient.ts:53:15
+(ανώνυμες) @ queryClient.ts:58
+await in (ανώνυμες)
+fetchFn @ @tanstack_react-query.js?v=dd3b70e6:840
+run @ @tanstack_react-query.js?v=dd3b70e6:494
+start @ @tanstack_react-query.js?v=dd3b70e6:536
+fetch @ @tanstack_react-query.js?v=dd3b70e6:926
+executeFetch_fn @ @tanstack_react-query.js?v=dd3b70e6:2211
+onSubscribe @ @tanstack_react-query.js?v=dd3b70e6:1898
+subscribe @ @tanstack_react-query.js?v=dd3b70e6:24
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3022
+subscribeToStore @ chunk-276SZO74.js?v=dd3b70e6:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=dd3b70e6:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=dd3b70e6:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=dd3b70e6:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=dd3b70e6:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=dd3b70e6:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=dd3b70e6:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=dd3b70e6:19447
+commitRootImpl @ chunk-276SZO74.js?v=dd3b70e6:19416
+commitRoot @ chunk-276SZO74.js?v=dd3b70e6:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=dd3b70e6:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=dd3b70e6:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=dd3b70e6:555
+flush @ @tanstack_react-query.js?v=dd3b70e6:569
+batch @ @tanstack_react-query.js?v=dd3b70e6:587
+dispatch_fn @ @tanstack_react-query.js?v=dd3b70e6:996
+setData @ @tanstack_react-query.js?v=dd3b70e6:696
+setQueryData @ @tanstack_react-query.js?v=dd3b70e6:1661
+onSuccess @ use-auth.tsx:55
+execute @ @tanstack_react-query.js?v=dd3b70e6:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=dd3b70e6:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3295
+onSubmit @ auth-page.tsx:39
+(ανώνυμες) @ chunk-BW5TH624.js?v=dd3b70e6:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-276SZO74.js?v=dd3b70e6:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=dd3b70e6:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=dd3b70e6:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=dd3b70e6:3736
+executeDispatch @ chunk-276SZO74.js?v=dd3b70e6:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=dd3b70e6:7034
+processDispatchQueue @ chunk-276SZO74.js?v=dd3b70e6:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=dd3b70e6:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=dd3b70e6:18913
+batchedUpdates @ chunk-276SZO74.js?v=dd3b70e6:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=dd3b70e6:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=dd3b70e6:5478
+dispatchEvent @ chunk-276SZO74.js?v=dd3b70e6:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=dd3b70e6:5449
+Εμφάνιση 46 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:39 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/dashboard/stats 500 (Internal Server Error)
+(ανώνυμες) @ queryClient.ts:39
+fetchFn @ @tanstack_react-query.js?v=dd3b70e6:840
+run @ @tanstack_react-query.js?v=dd3b70e6:494
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:515
+Promise.catch
+run @ @tanstack_react-query.js?v=dd3b70e6:498
+start @ @tanstack_react-query.js?v=dd3b70e6:536
+fetch @ @tanstack_react-query.js?v=dd3b70e6:926
+executeFetch_fn @ @tanstack_react-query.js?v=dd3b70e6:2211
+onSubscribe @ @tanstack_react-query.js?v=dd3b70e6:1898
+subscribe @ @tanstack_react-query.js?v=dd3b70e6:24
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3022
+subscribeToStore @ chunk-276SZO74.js?v=dd3b70e6:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=dd3b70e6:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=dd3b70e6:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=dd3b70e6:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=dd3b70e6:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=dd3b70e6:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=dd3b70e6:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=dd3b70e6:19447
+commitRootImpl @ chunk-276SZO74.js?v=dd3b70e6:19416
+commitRoot @ chunk-276SZO74.js?v=dd3b70e6:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=dd3b70e6:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=dd3b70e6:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=dd3b70e6:555
+flush @ @tanstack_react-query.js?v=dd3b70e6:569
+batch @ @tanstack_react-query.js?v=dd3b70e6:587
+dispatch_fn @ @tanstack_react-query.js?v=dd3b70e6:996
+setData @ @tanstack_react-query.js?v=dd3b70e6:696
+setQueryData @ @tanstack_react-query.js?v=dd3b70e6:1661
+onSuccess @ use-auth.tsx:55
+execute @ @tanstack_react-query.js?v=dd3b70e6:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=dd3b70e6:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3295
+onSubmit @ auth-page.tsx:39
+(ανώνυμες) @ chunk-BW5TH624.js?v=dd3b70e6:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-276SZO74.js?v=dd3b70e6:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=dd3b70e6:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=dd3b70e6:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=dd3b70e6:3736
+executeDispatch @ chunk-276SZO74.js?v=dd3b70e6:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=dd3b70e6:7034
+processDispatchQueue @ chunk-276SZO74.js?v=dd3b70e6:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=dd3b70e6:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=dd3b70e6:18913
+batchedUpdates @ chunk-276SZO74.js?v=dd3b70e6:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=dd3b70e6:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=dd3b70e6:5478
+dispatchEvent @ chunk-276SZO74.js?v=dd3b70e6:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=dd3b70e6:5449
+Εμφάνιση 49 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:58 [Query] Το αίτημα απέτυχε: Error: Σφάλμα HTTP! κατάσταση: 500
+    at queryClient.ts:53:15
+(ανώνυμες) @ queryClient.ts:58
+await in (ανώνυμες)
+fetchFn @ @tanstack_react-query.js?v=dd3b70e6:840
+run @ @tanstack_react-query.js?v=dd3b70e6:494
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:515
+Promise.catch
+run @ @tanstack_react-query.js?v=dd3b70e6:498
+start @ @tanstack_react-query.js?v=dd3b70e6:536
+fetch @ @tanstack_react-query.js?v=dd3b70e6:926
+executeFetch_fn @ @tanstack_react-query.js?v=dd3b70e6:2211
+onSubscribe @ @tanstack_react-query.js?v=dd3b70e6:1898
+subscribe @ @tanstack_react-query.js?v=dd3b70e6:24
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3022
+subscribeToStore @ chunk-276SZO74.js?v=dd3b70e6:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=dd3b70e6:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=dd3b70e6:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=dd3b70e6:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=dd3b70e6:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=dd3b70e6:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=dd3b70e6:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=dd3b70e6:19447
+commitRootImpl @ chunk-276SZO74.js?v=dd3b70e6:19416
+commitRoot @ chunk-276SZO74.js?v=dd3b70e6:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=dd3b70e6:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=dd3b70e6:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=dd3b70e6:555
+flush @ @tanstack_react-query.js?v=dd3b70e6:569
+batch @ @tanstack_react-query.js?v=dd3b70e6:587
+dispatch_fn @ @tanstack_react-query.js?v=dd3b70e6:996
+setData @ @tanstack_react-query.js?v=dd3b70e6:696
+setQueryData @ @tanstack_react-query.js?v=dd3b70e6:1661
+onSuccess @ use-auth.tsx:55
+execute @ @tanstack_react-query.js?v=dd3b70e6:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=dd3b70e6:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3295
+onSubmit @ auth-page.tsx:39
+(ανώνυμες) @ chunk-BW5TH624.js?v=dd3b70e6:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-276SZO74.js?v=dd3b70e6:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=dd3b70e6:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=dd3b70e6:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=dd3b70e6:3736
+executeDispatch @ chunk-276SZO74.js?v=dd3b70e6:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=dd3b70e6:7034
+processDispatchQueue @ chunk-276SZO74.js?v=dd3b70e6:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=dd3b70e6:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=dd3b70e6:18913
+batchedUpdates @ chunk-276SZO74.js?v=dd3b70e6:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=dd3b70e6:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=dd3b70e6:5478
+dispatchEvent @ chunk-276SZO74.js?v=dd3b70e6:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=dd3b70e6:5449
+Εμφάνιση 49 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:39 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/dashboard/stats 500 (Internal Server Error)
+(ανώνυμες) @ queryClient.ts:39
+fetchFn @ @tanstack_react-query.js?v=dd3b70e6:840
+run @ @tanstack_react-query.js?v=dd3b70e6:494
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:515
+Promise.catch
+run @ @tanstack_react-query.js?v=dd3b70e6:498
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:515
+Promise.catch
+run @ @tanstack_react-query.js?v=dd3b70e6:498
+start @ @tanstack_react-query.js?v=dd3b70e6:536
+fetch @ @tanstack_react-query.js?v=dd3b70e6:926
+executeFetch_fn @ @tanstack_react-query.js?v=dd3b70e6:2211
+onSubscribe @ @tanstack_react-query.js?v=dd3b70e6:1898
+subscribe @ @tanstack_react-query.js?v=dd3b70e6:24
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3022
+subscribeToStore @ chunk-276SZO74.js?v=dd3b70e6:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=dd3b70e6:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=dd3b70e6:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=dd3b70e6:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=dd3b70e6:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=dd3b70e6:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=dd3b70e6:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=dd3b70e6:19447
+commitRootImpl @ chunk-276SZO74.js?v=dd3b70e6:19416
+commitRoot @ chunk-276SZO74.js?v=dd3b70e6:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=dd3b70e6:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=dd3b70e6:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=dd3b70e6:555
+flush @ @tanstack_react-query.js?v=dd3b70e6:569
+batch @ @tanstack_react-query.js?v=dd3b70e6:587
+dispatch_fn @ @tanstack_react-query.js?v=dd3b70e6:996
+setData @ @tanstack_react-query.js?v=dd3b70e6:696
+setQueryData @ @tanstack_react-query.js?v=dd3b70e6:1661
+onSuccess @ use-auth.tsx:55
+execute @ @tanstack_react-query.js?v=dd3b70e6:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=dd3b70e6:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3295
+onSubmit @ auth-page.tsx:39
+(ανώνυμες) @ chunk-BW5TH624.js?v=dd3b70e6:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-276SZO74.js?v=dd3b70e6:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=dd3b70e6:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=dd3b70e6:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=dd3b70e6:3736
+executeDispatch @ chunk-276SZO74.js?v=dd3b70e6:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=dd3b70e6:7034
+processDispatchQueue @ chunk-276SZO74.js?v=dd3b70e6:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=dd3b70e6:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=dd3b70e6:18913
+batchedUpdates @ chunk-276SZO74.js?v=dd3b70e6:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=dd3b70e6:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=dd3b70e6:5478
+dispatchEvent @ chunk-276SZO74.js?v=dd3b70e6:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=dd3b70e6:5449
+Εμφάνιση 52 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:58 [Query] Το αίτημα απέτυχε: Error: Σφάλμα HTTP! κατάσταση: 500
+    at queryClient.ts:53:15
+(ανώνυμες) @ queryClient.ts:58
+await in (ανώνυμες)
+fetchFn @ @tanstack_react-query.js?v=dd3b70e6:840
+run @ @tanstack_react-query.js?v=dd3b70e6:494
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:515
+Promise.catch
+run @ @tanstack_react-query.js?v=dd3b70e6:498
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:519
+Promise.then
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:515
+Promise.catch
+run @ @tanstack_react-query.js?v=dd3b70e6:498
+start @ @tanstack_react-query.js?v=dd3b70e6:536
+fetch @ @tanstack_react-query.js?v=dd3b70e6:926
+executeFetch_fn @ @tanstack_react-query.js?v=dd3b70e6:2211
+onSubscribe @ @tanstack_react-query.js?v=dd3b70e6:1898
+subscribe @ @tanstack_react-query.js?v=dd3b70e6:24
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3022
+subscribeToStore @ chunk-276SZO74.js?v=dd3b70e6:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=dd3b70e6:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=dd3b70e6:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=dd3b70e6:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=dd3b70e6:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=dd3b70e6:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=dd3b70e6:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=dd3b70e6:19447
+commitRootImpl @ chunk-276SZO74.js?v=dd3b70e6:19416
+commitRoot @ chunk-276SZO74.js?v=dd3b70e6:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=dd3b70e6:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=dd3b70e6:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=dd3b70e6:555
+flush @ @tanstack_react-query.js?v=dd3b70e6:569
+batch @ @tanstack_react-query.js?v=dd3b70e6:587
+dispatch_fn @ @tanstack_react-query.js?v=dd3b70e6:996
+setData @ @tanstack_react-query.js?v=dd3b70e6:696
+setQueryData @ @tanstack_react-query.js?v=dd3b70e6:1661
+onSuccess @ use-auth.tsx:55
+execute @ @tanstack_react-query.js?v=dd3b70e6:1233
+await in execute
+mutate @ @tanstack_react-query.js?v=dd3b70e6:2630
+(ανώνυμες) @ @tanstack_react-query.js?v=dd3b70e6:3295
+onSubmit @ auth-page.tsx:39
+(ανώνυμες) @ chunk-BW5TH624.js?v=dd3b70e6:1675
+await in (ανώνυμες)
+callCallback2 @ chunk-276SZO74.js?v=dd3b70e6:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=dd3b70e6:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=dd3b70e6:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=dd3b70e6:3736
+executeDispatch @ chunk-276SZO74.js?v=dd3b70e6:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=dd3b70e6:7034
+processDispatchQueue @ chunk-276SZO74.js?v=dd3b70e6:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=dd3b70e6:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=dd3b70e6:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=dd3b70e6:18913
+batchedUpdates @ chunk-276SZO74.js?v=dd3b70e6:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=dd3b70e6:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=dd3b70e6:5478
+dispatchEvent @ chunk-276SZO74.js?v=dd3b70e6:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=dd3b70e6:5449
+Εμφάνιση 52 ακόμη πλαισίων
+Εμφάνιση λιγότερων
