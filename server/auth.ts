@@ -33,7 +33,14 @@ export const sessionMiddleware = session({
 // Authentication middleware
 export const authenticateSession = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    console.log('[Auth] Checking session:', { 
+      hasSession: !!req.session,
+      hasUser: !!req.session?.user,
+      sessionID: req.sessionID 
+    });
+
     if (!req.session?.user) {
+      console.log('[Auth] No user in session');
       return res.status(401).json({
         message: 'Authentication required'
       });
@@ -41,11 +48,16 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
 
     // Add user to request
     req.user = req.session.user;
+    console.log('[Auth] User authenticated:', { 
+      id: req.user.id,
+      role: req.user.role
+    });
     next();
   } catch (error) {
     console.error('[Auth] Authentication error:', error);
     return res.status(500).json({
-      message: 'Authentication failed'
+      message: 'Authentication failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };
@@ -80,11 +92,8 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      // Type assertion since we know the structure matches our User type
-      const user = userData as User;
-
       // Compare password
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      const isPasswordValid = await bcrypt.compare(password, userData.password);
       if (!isPasswordValid) {
         console.error('[Auth] Password validation failed for user:', email);
         return res.status(401).json({
@@ -92,18 +101,19 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      // Create session with user data
-      const sessionUser: Partial<User> = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        units: user.units,
-        department: user.department
+      // Create session with user data, excluding sensitive fields
+      const sessionUser: User = {
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        units: userData.units || [],
+        department: userData.department,
+        telephone: userData.telephone
       };
 
       // Store user data in session
-      req.session.user = sessionUser as User;
+      req.session.user = sessionUser;
 
       // Save session explicitly
       await new Promise<void>((resolve, reject) => {
@@ -132,6 +142,11 @@ export async function setupAuth(app: Express) {
 
   // Logout route
   app.post("/api/auth/logout", (req, res) => {
+    console.log('[Auth] Logging out user:', { 
+      sessionID: req.sessionID,
+      userId: req.session?.user?.id 
+    });
+
     if (req.session) {
       req.session.destroy((err) => {
         if (err) {
@@ -150,6 +165,10 @@ export async function setupAuth(app: Express) {
 
   // Get current user route
   app.get("/api/auth/me", authenticateSession, (req: AuthenticatedRequest, res) => {
-    res.json(req.session?.user);
+    console.log('[Auth] Returning current user:', { 
+      id: req.user?.id,
+      role: req.user?.role 
+    });
+    res.json(req.user);
   });
 }
