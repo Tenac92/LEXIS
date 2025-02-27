@@ -53,7 +53,7 @@ export default function DocumentsPage() {
     delete: false,
   });
   const [filters, setFilters] = useState<Filters>({
-    unit: user?.units?.[0] || 'all',
+    unit: 'all',
     status: 'all',
     user: 'all',
     dateFrom: '',
@@ -84,17 +84,15 @@ export default function DocumentsPage() {
             protocol_number_input,
             protocol_date,
             created_at,
-            updated_at,
             department,
-            attachments
+            attachments,
+            expenditure_type,
+            generated_by
           `)
           .order('created_at', { ascending: false });
 
         // Apply filters
-        if (user?.role === 'user' && user?.units?.length) {
-          console.log('[Documents] Applying user unit filter:', user.units[0]);
-          query = query.eq('unit', user.units[0]);
-        } else if (filters.unit && filters.unit !== 'all') {
+        if (filters.unit && filters.unit !== 'all') {
           console.log('[Documents] Applying unit filter:', filters.unit);
           query = query.eq('unit', filters.unit);
         }
@@ -154,25 +152,6 @@ export default function DocumentsPage() {
           <div className="p-4">
             {/* Basic Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              {user?.role !== 'user' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Unit</label>
-                  <Select
-                    value={filters.unit}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select unit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Units</SelectItem>
-                      {user?.units?.map(unit => (
-                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Status</label>
                 <Select
@@ -191,18 +170,6 @@ export default function DocumentsPage() {
                 </Select>
               </div>
             </div>
-
-            {/* Advanced Filters */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" className="w-full flex justify-between items-center">
-                  <span className="flex items-center gap-2">
-                    <Filter className="h-4 w-4" />
-                    Advanced Filters
-                  </span>
-                </Button>
-              </SheetTrigger>
-            </Sheet>
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
@@ -276,7 +243,7 @@ export default function DocumentsPage() {
       <DeleteDocumentModal
         isOpen={modalState.delete}
         onClose={() => setModalState(prev => ({ ...prev, delete: false }))}
-        documentId={selectedDocument?.id}
+        documentId={selectedDocument?.id.toString()}
         onDelete={() => {}}
       />
 
