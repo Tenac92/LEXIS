@@ -1,44 +1,31 @@
-import {
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  Table,
-  TableRow,
-  TableCell,
-  BorderStyle,
-  WidthType,
-  AlignmentType,
-  VerticalAlign,
-  ITableBordersOptions,
-  HeightRule,
-} from "docx";
-import { supabase } from "../config/db";
 
-interface DocumentData {
-  unit: string;
-  telephone?: string;
-  expenditure_type?: string;
-  recipients?: Array<{
-    lastname: string;
-    firstname: string;
-    fathername?: string;
-    amount: number;
-    installment: number;
-    afm: string;
-  }>;
-  project_na853?: string;
-  project_id?: string;
-  total_amount?: number;
-  id: number;
-  protocol_number?: string;
-  protocol_date?: string;
-}
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, AlignmentType, WidthType, BorderStyle, VerticalAlign, HeightRule, ITableBordersOptions, PageOrientation } from 'docx';
+import { supabase } from '../config/db';
 
 interface UnitDetails {
   unit_name?: string;
   manager?: string;
   email?: string;
+}
+
+interface DocumentData {
+  id: number;
+  unit: string;
+  project_id: string;
+  project_na853?: string;
+  expenditure_type: string;
+  status?: string;
+  total_amount?: number;
+  protocol_number?: string;
+  protocol_date?: string;
+  recipients?: Array<{
+    firstname: string;
+    lastname: string;
+    fathername?: string;
+    afm: string;
+    amount: number;
+    installment: number;
+  }>;
 }
 
 export class DocumentFormatter {
@@ -84,14 +71,22 @@ export class DocumentFormatter {
               },
             },
           },
-          a6: {
-            paragraph: {
-              spacing: {
-                line: 360,
-                lineRule: "atLeast",
+          paragraphStyles: [
+            {
+              id: "a6",
+              name: "A6 Style",
+              run: {
+                font: this.DEFAULT_FONT,
+                size: this.DEFAULT_FONT_SIZE,
+              },
+              paragraph: {
+                spacing: {
+                  line: 360,
+                  lineRule: "atLeast",
+                },
               },
             },
-          },
+          ],
         },
       });
 
@@ -304,7 +299,7 @@ export class DocumentFormatter {
             this.createHeaderCell("ΑΦΜ", 1615),
           ],
         }),
-        ...recipients.map((recipient, index) =>
+        ...(recipients || []).map((recipient, index) =>
           new TableRow({
             children: [
               this.createTableCell((index + 1).toString() + ".", "center"),
@@ -322,7 +317,7 @@ export class DocumentFormatter {
           children: [
             this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
             this.createTableCell(
-              recipients.reduce((sum, recipient) => sum + recipient.amount, 0).toLocaleString('el-GR', {
+              (recipients || []).reduce((sum, recipient) => sum + recipient.amount, 0).toLocaleString('el-GR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               }) + " €",
@@ -405,19 +400,32 @@ export class DocumentFormatter {
                 new Paragraph({ text: "", spacing: { before: 720 } }),
                 new Paragraph({
                   text: "ΜΕ ΕΝΤΟΛΗ ΠΡΟΪΣΤΑΜΕΝΗΣ Γ.Δ.Α.Ε.Φ.Κ.",
-                  bold: true,
                   alignment: AlignmentType.CENTER,
+                  children: [
+                    new TextRun({
+                      text: "ΜΕ ΕΝΤΟΛΗ ΠΡΟΪΣΤΑΜΕΝΗΣ Γ.Δ.Α.Ε.Φ.Κ.",
+                      bold: true,
+                    }),
+                  ],
                 }),
                 new Paragraph({
-                  text: "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
                   alignment: AlignmentType.CENTER,
-                  style: { run: { bold: true } },
+                  children: [
+                    new TextRun({
+                      text: "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+                      bold: true,
+                    }),
+                  ],
                 }),
                 new Paragraph({ text: "", spacing: { before: 720 } }),
                 new Paragraph({
-                  text: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
                   alignment: AlignmentType.CENTER,
-                  style: { run: { bold: true } },
+                  children: [
+                    new TextRun({
+                      text: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
+                      bold: true,
+                    }),
+                  ],
                 }),
                 new Paragraph({
                   text: "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α΄ β.",
