@@ -1,7 +1,6 @@
 import { Request, Response, Router } from 'express';
 import { supabase } from '../config/db';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
-import { TemplateManager } from '../utils/TemplateManager';
 
 export const documentExportRouter = Router();
 
@@ -31,16 +30,9 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    // Get template
-    const template = await TemplateManager.getTemplateForExpenditure(document.expenditure_type);
-
-    if (!template) {
-      return res.status(400).json({ message: 'Template not found' });
-    }
-
     // Generate document buffer
     console.log('Generating document...');
-    const buffer = await DocumentFormatter.generateDocument(document, template);
+    const buffer = await DocumentFormatter.generateDocument(document);
 
     // Set proper headers for Word document
     const filename = `document-${document.id.toString().padStart(6, '0')}.docx`;

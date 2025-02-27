@@ -25,12 +25,17 @@ interface DocumentData {
     installment: number;
     afm: string;
   }>;
+  project_na853?: string;
+  project_id?: string;
+  total_amount?: number;
+  id: number;
 }
 
 interface UnitDetails {
   unit_name?: string;
   manager?: string;
   email?: string;
+  parts?: string[];
 }
 
 export class DocumentFormatter {
@@ -42,10 +47,6 @@ export class DocumentFormatter {
     bottom: 850,
     left: 1000
   };
-
-  static getDefaultMargins() {
-    return this.DEFAULT_MARGINS;
-  }
 
   private static validateDocumentData(data: DocumentData): void {
     if (!data.unit) {
@@ -122,6 +123,29 @@ export class DocumentFormatter {
     }
   }
 
+  private static async getUnitDetails(unitCode: string): Promise<UnitDetails | null> {
+    try {
+      console.log("Fetching unit details for:", unitCode);
+
+      const { data: unitData, error: unitError } = await supabase
+        .from('unit_det')
+        .select('*')
+        .eq('unit', unitCode)
+        .single();
+
+      if (unitError) {
+        console.error("Error fetching unit details:", unitError);
+        return null;
+      }
+
+      console.log("Unit details fetched:", unitData);
+      return unitData;
+    } catch (error) {
+      console.error('Error in getUnitDetails:', error);
+      return null;
+    }
+  }
+
   private static async createHeader(documentData: DocumentData, unitDetails?: UnitDetails) {
     try {
       const managerName = unitDetails?.manager?.split(' ΠΟΛ')[0].trim() || "ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ";
@@ -145,8 +169,8 @@ export class DocumentFormatter {
         width: { size: 100, type: WidthType.PERCENTAGE },
         borders: this.getNoBorders(),
         rows: [
-          this.createContactRow("Ταχ. Δ/νση", "Δημοκρίτου 2"),
-          this.createContactRow("Ταχ. Κώδικας", "115 23, Μαρούσι"),
+          this.createContactRow("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
+          this.createContactRow("Ταχ. Κώδικας", "11526, Αθήνα"),
           this.createContactRow("Πληροφορίες", managerName),
           this.createContactRow("Τηλέφωνο", documentData.telephone || ""),
           this.createContactRow("E-mail", unitDetails?.email || "daefkke@civilprotection.gr"),
@@ -196,52 +220,6 @@ export class DocumentFormatter {
     }
   }
 
-  private static createCenteredParagraph(text: string, bold: boolean = false, spacing?: { before: number; after: number }) {
-    return new Paragraph({
-      children: [new TextRun({ 
-        text,
-        bold,
-        size: this.DEFAULT_FONT_SIZE 
-      })],
-      alignment: AlignmentType.CENTER,
-      spacing: spacing || { before: 200, after: 200 },
-    });
-  }
-
-  private static createContactRow(label: string, value: string) {
-    return new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph({ 
-            children: [new TextRun({ 
-              text: `${label}:`,
-              size: this.DEFAULT_FONT_SIZE 
-            })]
-          })],
-          width: { size: 30, type: WidthType.PERCENTAGE },
-        }),
-        new TableCell({
-          children: [new Paragraph({ 
-            children: [new TextRun({ 
-              text: value,
-              size: this.DEFAULT_FONT_SIZE 
-            })]
-          })],
-          width: { size: 70, type: WidthType.PERCENTAGE },
-        }),
-      ],
-    });
-  }
-
-  private static getNoBorders() {
-    return {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE }
-    };
-  }
-
   private static createPaymentTable(recipients: DocumentData['recipients'] = []) {
     const rows = [
       new TableRow({
@@ -287,66 +265,6 @@ export class DocumentFormatter {
       },
       rows,
     });
-  }
-
-  private static createTableHeaderCell(text: string) {
-    return new TableCell({
-      children: [
-        new Paragraph({
-          children: [new TextRun({ 
-            text,
-            bold: true,
-            size: this.DEFAULT_FONT_SIZE 
-          })],
-          alignment: AlignmentType.CENTER,
-        }),
-      ],
-      verticalAlign: VerticalAlign.CENTER,
-    });
-  }
-
-  private static createTableCell(text: string, alignment: "left" | "center" | "right") {
-    const alignmentMap = {
-      left: AlignmentType.LEFT,
-      center: AlignmentType.CENTER,
-      right: AlignmentType.RIGHT
-    };
-
-    return new TableCell({
-      children: [
-        new Paragraph({
-          children: [new TextRun({ 
-            text,
-            size: this.DEFAULT_FONT_SIZE 
-          })],
-          alignment: alignmentMap[alignment],
-        }),
-      ],
-      verticalAlign: VerticalAlign.CENTER,
-    });
-  }
-
-  private static async getUnitDetails(unitCode: string): Promise<UnitDetails | null> {
-    try {
-      console.log("Fetching unit details for:", unitCode);
-
-      const { data: unitData, error: unitError } = await supabase
-        .from('unit_det')
-        .select('*')
-        .eq('unit', unitCode)
-        .single();
-
-      if (unitError) {
-        console.error("Error fetching unit details:", unitError);
-        return null;
-      }
-
-      console.log("Unit details fetched:", unitData);
-      return unitData;
-    } catch (error) {
-      console.error('Error in getUnitDetails:', error);
-      return null;
-    }
   }
 
   private static async createFooter(documentData: DocumentData, unitDetails?: UnitDetails) {
@@ -395,14 +313,76 @@ export class DocumentFormatter {
     }
   }
 
+  private static createCenteredParagraph(text: string, bold: boolean = false, spacing?: { before: number; after: number }) {
+    return new Paragraph({
+      children: [new TextRun({ text, bold, size: this.DEFAULT_FONT_SIZE })],
+      alignment: AlignmentType.CENTER,
+      spacing: spacing || { before: 200, after: 200 },
+    });
+  }
+
   private static createParagraphWithSpacing(text: string, bold: boolean = false) {
     return new Paragraph({
-      children: [new TextRun({ 
-        text,
-        bold,
-        size: this.DEFAULT_FONT_SIZE 
-      })],
+      children: [new TextRun({ text, bold, size: this.DEFAULT_FONT_SIZE })],
       spacing: { before: 100, after: 100 },
     });
+  }
+
+  private static createContactRow(label: string, value: string) {
+    return new TableRow({
+      children: [
+        new TableCell({
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: label + ":", size: this.DEFAULT_FONT_SIZE })]
+          })],
+          width: { size: 30, type: WidthType.PERCENTAGE },
+        }),
+        new TableCell({
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: value, size: this.DEFAULT_FONT_SIZE })]
+          })],
+          width: { size: 70, type: WidthType.PERCENTAGE },
+        }),
+      ],
+    });
+  }
+
+  private static createTableHeaderCell(text: string) {
+    return new TableCell({
+      children: [
+        new Paragraph({
+          children: [new TextRun({ text, bold: true, size: this.DEFAULT_FONT_SIZE })],
+          alignment: AlignmentType.CENTER,
+        }),
+      ],
+      verticalAlign: VerticalAlign.CENTER,
+    });
+  }
+
+  private static createTableCell(text: string, alignment: "left" | "center" | "right") {
+    const alignmentMap = {
+      left: AlignmentType.LEFT,
+      center: AlignmentType.CENTER,
+      right: AlignmentType.RIGHT
+    };
+
+    return new TableCell({
+      children: [
+        new Paragraph({
+          children: [new TextRun({ text, size: this.DEFAULT_FONT_SIZE })],
+          alignment: alignmentMap[alignment],
+        }),
+      ],
+      verticalAlign: VerticalAlign.CENTER,
+    });
+  }
+
+  private static getNoBorders() {
+    return {
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE }
+    };
   }
 }
