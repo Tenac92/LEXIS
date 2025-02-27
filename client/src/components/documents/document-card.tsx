@@ -32,7 +32,7 @@ interface Recipient {
   installment: number;
 }
 
-export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCardProps) {
+export function DocumentCard({ document: doc, onView, onEdit, onDelete }: DocumentCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -46,9 +46,9 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
   const handleExport = async () => {
     try {
       setIsLoading(true);
-      console.log('[DocumentCard] Starting document export for ID:', document.id);
+      console.log('[DocumentCard] Starting document export for ID:', doc.id);
 
-      const response = await fetch(`/api/documents/generated/${document.id}/export`, {
+      const response = await fetch(`/api/documents/generated/${doc.id}/export`, {
         method: 'GET',
         headers: {
           'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -74,12 +74,12 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
       }
 
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = url;
-      link.download = `document-${document.id}.docx`;
-      document.body.appendChild(link);
+      link.download = `document-${doc.id}.docx`;
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
       console.log('[DocumentCard] Document exported successfully');
@@ -99,7 +99,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
     }
   };
 
-  const recipients = document.recipients as Recipient[];
+  const recipients = doc.recipients as Recipient[];
 
   return (
     <div className="document-card" onClick={handleCardClick}>
@@ -109,35 +109,35 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-lg font-semibold">
-                Document #{document.id}
+                Document #{doc.id}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Unit: {document.unit}
+                Unit: {doc.unit}
               </p>
             </div>
-            <Badge variant={document.status === 'approved' ? 'default' : 'secondary'}>
-              {document.status === 'approved' ? (
+            <Badge variant={doc.status === 'approved' ? 'default' : 'secondary'}>
+              {doc.status === 'approved' ? (
                 <CheckCircle className="h-3 w-3 mr-1" />
               ) : (
                 <Clock className="h-3 w-3 mr-1" />
               )}
-              {document.status || 'Pending'}
+              {doc.status || 'Pending'}
             </Badge>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Project ID</span>
-              <p className="font-medium">{document.project_id}</p>
+              <p className="font-medium">{doc.project_id}</p>
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">ΝΑ853</span>
-              <p className="font-medium">{document.project_na853 || '-'}</p>
+              <p className="font-medium">{doc.project_na853 || '-'}</p>
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Total Amount</span>
               <p className="font-medium">
-                {parseFloat(document.total_amount?.toString() || '0').toLocaleString('en-US', {
+                {parseFloat(doc.total_amount?.toString() || '0').toLocaleString('en-US', {
                   style: 'currency',
                   currency: 'EUR'
                 })}
@@ -145,7 +145,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Type</span>
-              <p className="font-medium">{document.expenditure_type || '-'}</p>
+              <p className="font-medium">{doc.expenditure_type || '-'}</p>
             </div>
           </div>
 
@@ -191,7 +191,7 @@ export function DocumentCard({ document, onView, onEdit, onDelete }: DocumentCar
                 e.stopPropagation();
                 onView();
               }}
-              disabled={isLoading || document.status === 'approved'}
+              disabled={isLoading || doc.status === 'approved'}
             >
               <ClipboardCheck className="h-4 w-4 mr-2" />
               Add Protocol
