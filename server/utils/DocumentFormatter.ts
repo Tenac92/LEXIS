@@ -37,10 +37,10 @@ interface Recipient {
 export class DocumentFormatter {
   static getDefaultMargins() {
     return {
-      top: convertInchesToTwip(1),
-      right: convertInchesToTwip(1),
-      bottom: convertInchesToTwip(1),
-      left: convertInchesToTwip(1),
+      top: 850,
+      right: 1000,
+      bottom: 850,
+      left: 1000
     };
   }
 
@@ -81,15 +81,15 @@ export class DocumentFormatter {
           }))
         : [];
 
-      // Create document with basic settings
+      // Create document with MS Office compatibility settings
       const doc = new Document({
         sections: [{
           properties: {
             page: {
               margin: config.margins || this.getDefaultMargins(),
               size: {
-                width: 11906,  // A4 width in twips
-                height: 16838, // A4 height in twips
+                width: 11906, // Standard A4 width in twips (210mm)
+                height: 16838, // Standard A4 height in twips (297mm)
               },
             },
           },
@@ -98,28 +98,30 @@ export class DocumentFormatter {
             new Paragraph({ text: "", spacing: { before: 400, after: 400 } }),
             this.createPaymentTable(recipients),
             new Paragraph({ text: "", spacing: { before: 400, after: 400 } }),
-            this.createFooter(unitDetails)
+            ...(await this.createFooter(documentData))
           ]
         }],
-        styles: {
-          default: {
-            document: {
-              run: {
-                font: "Times New Roman",
-                size: 24, // 12pt
-              },
-              paragraph: {
-                spacing: { after: 120, before: 120 },
-              },
-            },
-          },
-        },
         compatibility: {
           doNotExpandShiftReturn: true,
           doNotUseHTMLParagraphAutoSpacing: true,
           doNotBreakWrappedTables: true,
           useNormalStyleForList: true,
           doNotUseIndentAsNumberingTabStop: true,
+          useAltKinsokuLineBreakRules: true,
+          doNotSuppressIndentation: true,
+        },
+        styles: {
+          default: {
+            document: {
+              run: {
+                font: "Times New Roman",
+                size: 24, // 12pt in half-points
+              },
+              paragraph: {
+                spacing: { after: 200, before: 200 },
+              },
+            },
+          },
         }
       });
 
@@ -137,20 +139,6 @@ export class DocumentFormatter {
       console.error("Error in document generation:", error);
       throw error;
     }
-  }
-
-  static createFooter(unitDetails: any) {
-    return new Paragraph({
-      children: [
-        new TextRun({ 
-          text: unitDetails?.manager || "Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΔΙΕΥΘΥΝΣΗΣ",
-          bold: true,
-          size: 24
-        })
-      ],
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 720, after: 720 },
-    });
   }
 
   static async createHeader(document: any, unitDetails?: any) {
@@ -281,5 +269,16 @@ export class DocumentFormatter {
 
   static formatDocumentNumber(id: number): string {
     return `${id.toString().padStart(6, '0')}`;
+  }
+
+  static async createFooter(documentData: any) {
+    const footerParagraphs = [
+      new Paragraph({
+        children: [new TextRun({ text: "Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΔΙΕΥΘΥΝΣΗΣ", bold: true, size: 24 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 720, after: 720 },
+      })
+    ];
+    return footerParagraphs;
   }
 }
