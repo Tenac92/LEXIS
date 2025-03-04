@@ -271,18 +271,27 @@ export class DocumentFormatter {
       insideVertical: { style: BorderStyle.SINGLE, size: 1 },
     };
 
+    // Fixed column widths in DXA units, independent of header
+    const columnWidths = {
+      serialNumber: 800,
+      name: 4200,
+      amount: 1500,
+      installment: 1200,
+      afm: 1600
+    };
+
     return new Table({
-      width: { size: 9629, type: WidthType.DXA },
+      width: { size: 9300, type: WidthType.DXA },
       borders: tableBorders,
       rows: [
         new TableRow({
           height: { value: 360, rule: HeightRule.EXACT },
           children: [
-            this.createHeaderCell("Α.Α.", 666),
-            this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", 4366),
-            this.createHeaderCell("ΠΟΣΟ (€)", 1409),
-            this.createHeaderCell("ΔΟΣΗ", 1197),
-            this.createHeaderCell("ΑΦΜ", 1615),
+            this.createHeaderCell("Α.Α.", columnWidths.serialNumber),
+            this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", columnWidths.name),
+            this.createHeaderCell("ΠΟΣΟ (€)", columnWidths.amount),
+            this.createHeaderCell("ΔΟΣΗ", columnWidths.installment),
+            this.createHeaderCell("ΑΦΜ", columnWidths.afm),
           ],
         }),
         ...recipients.map((recipient, index) =>
@@ -460,7 +469,7 @@ export class DocumentFormatter {
 
   private static createHeaderCell(text: string, width: number): TableCell {
     return new TableCell({
-      width: { size: width, type: WidthType.PERCENTAGE },
+      width: { size: width, type: WidthType.DXA },
       children: [
         new Paragraph({
           children: [new TextRun({ text, bold: true, size: this.DEFAULT_FONT_SIZE })],
