@@ -57,7 +57,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         protocolDate: formattedDate 
       });
 
-      const response = await apiRequest<{ success: boolean; message: string }>(`/api/documents/generated/${document.id}/protocol`, {
+      const response = await apiRequest<{ success: boolean; message: string; error?: string }>(`/api/documents/generated/${document.id}/protocol`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -68,9 +68,8 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json() as { error: string };
-        throw new Error(errorData.error || 'Failed to update protocol');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to update protocol');
       }
 
       toast({
