@@ -1,4 +1,3 @@
-
 const docx = require('docx');
 const { supabase } = require('../config/db');
 
@@ -33,8 +32,17 @@ class DocumentFormatter {
   }
 
   static createPaymentTable(documents) {
+    const columnWidths = {
+      index: 10,
+      name: 35,
+      amount: 20,
+      installment: 15,
+      afm: 20
+    };
+
     return new docx.Table({
       width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      columnWidths: Object.values(columnWidths),
       borders: {
         top: { style: docx.BorderStyle.SINGLE, size: 1 },
         bottom: { style: docx.BorderStyle.SINGLE, size: 1 },
@@ -44,52 +52,56 @@ class DocumentFormatter {
         insideVertical: { style: docx.BorderStyle.SINGLE, size: 1 }
       },
       rows: [
-        this.createTableHeader(['Α.Α.', 'ΟΝΟΜΑΤΕΠΩΝΥΜΟ', 'ΠΟΣΟ (€)', 'ΔΟΣΗ', 'ΑΦΜ']),
-        ...this.createTableRows(documents)
+        this.createTableHeader(['Α.Α.', 'ΟΝΟΜΑΤΕΠΩΝΥΜΟ', 'ΠΟΣΟ (€)', 'ΔΟΣΗ', 'ΑΦΜ'], columnWidths),
+        ...this.createTableRows(documents, columnWidths)
       ]
     });
   }
 
-  static createTableHeader(headers) {
+  static createTableHeader(headers, columnWidths) {
+    const widthValues = Object.values(columnWidths);
     return new docx.TableRow({
-      children: headers.map(header => 
+      children: headers.map((header, index) => 
         new docx.TableCell({
           children: [new docx.Paragraph({
             children: [new docx.TextRun({ text: header, bold: true, size: 24 })],
             alignment: docx.AlignmentType.CENTER
           })],
-          verticalAlign: docx.VerticalAlign.CENTER
+          verticalAlign: docx.VerticalAlign.CENTER,
+          width: { size: widthValues[index], type: docx.WidthType.PERCENTAGE }
         })
       )
     });
   }
 
-  static createTableRows(documents) {
+  static createTableRows(documents, columnWidths) {
+    const widthValues = Object.values(columnWidths);
     return documents.map((doc, index) => 
       new docx.TableRow({
         children: [
-          this.createTableCell((index + 1).toString() + '.', docx.AlignmentType.CENTER),
-          this.createTableCell(`${doc.lastname} ${doc.firstname} ${doc.fathername || ''}`.trim(), docx.AlignmentType.LEFT),
-          this.createTableCell(parseFloat(doc.amount).toFixed(2), docx.AlignmentType.RIGHT),
-          this.createTableCell(doc.installment.toString(), docx.AlignmentType.CENTER),
-          this.createTableCell(doc.afm, docx.AlignmentType.CENTER)
+          this.createTableCell((index + 1).toString() + '.', docx.AlignmentType.CENTER, widthValues[0]),
+          this.createTableCell(`${doc.lastname} ${doc.firstname} ${doc.fathername || ''}`.trim(), docx.AlignmentType.LEFT, widthValues[1]),
+          this.createTableCell(parseFloat(doc.amount).toFixed(2), docx.AlignmentType.RIGHT, widthValues[2]),
+          this.createTableCell(doc.installment.toString(), docx.AlignmentType.CENTER, widthValues[3]),
+          this.createTableCell(doc.afm, docx.AlignmentType.CENTER, widthValues[4])
         ]
       })
     );
   }
 
-  static createTableCell(text, alignment) {
+  static createTableCell(text, alignment, width) {
     return new docx.TableCell({
       children: [new docx.Paragraph({ 
-        text,
+        children: [new docx.TextRun({ text, size: 24 })],
         alignment
-      })]
+      })],
+      width: { size: width, type: docx.WidthType.PERCENTAGE }
     });
   }
 
   static createDocumentHeader(req, unitDetails = {}) {
     const defaultEmail = unitDetails?.email || 'daefkke@civilprotection.gr';
-    
+
     const headerInfo = [
       { text: 'ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ', bold: true },
       { text: 'ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ', bold: true },
@@ -117,6 +129,7 @@ class DocumentFormatter {
   static createHeaderTable(headerInfo, rightColumnInfo) {
     return new docx.Table({
       width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      columnWidths: [65, 35],
       borders: { top: {}, bottom: {}, left: {}, right: {}, insideVertical: {} },
       rows: [this.createHeaderRow(headerInfo, rightColumnInfo)]
     });
@@ -169,6 +182,7 @@ class DocumentFormatter {
 
     return new docx.Table({
       width: { size: 100, type: docx.WidthType.PERCENTAGE },
+      columnWidths: [65, 35],
       borders: { top: {}, bottom: {}, left: {}, right: {}, insideVertical: {} },
       rows: [
         new docx.TableRow({
@@ -177,31 +191,31 @@ class DocumentFormatter {
               children: [
                 new docx.Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
                 new docx.Paragraph({
-                  children: [new docx.TextRun({ text: 'ΣΥΝΗΜΜΕΝΑ', bold: true })],
+                  children: [new docx.TextRun({ text: 'ΣΥΝΗΜΜΕΝΑ', bold: true, size: 24 })],
                   spacing: { before: 240, after: 240 }
                 }),
                 ...attachments.map((item, index) => new docx.Paragraph({
-                  children: [new docx.TextRun({ text: `${index + 1}. ${item}` })],
+                  children: [new docx.TextRun({ text: `${index + 1}. ${item}`, size: 24 })],
                   indent: { left: 240 },
                   spacing: { before: 60, after: 60 }
                 })),
                 new docx.Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
                 new docx.Paragraph({
-                  children: [new docx.TextRun({ text: 'ΚΟΙΝΟΠΟΙΗΣΗ', bold: true })],
+                  children: [new docx.TextRun({ text: 'ΚΟΙΝΟΠΟΙΗΣΗ', bold: true, size: 24 })],
                   spacing: { before: 60, after: 240 }
                 }),
                 ...notifications.map((item, index) => new docx.Paragraph({
-                  children: [new docx.TextRun({ text: `${index + 1}. ${item}` })],
+                  children: [new docx.TextRun({ text: `${index + 1}. ${item}`, size: 24 })],
                   indent: { left: 240 },
                   spacing: { before: 60, after: 60 }
                 })),
                 new docx.Paragraph({ text: '', spacing: { before: 240, after: 240 } }),
                 new docx.Paragraph({
-                  children: [new docx.TextRun({ text: 'ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ', bold: true })],
+                  children: [new docx.TextRun({ text: 'ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ', bold: true, size: 24 })],
                   spacing: { before: 60, after: 60 }
                 }),
                 ...internalDist.map((item, index) => new docx.Paragraph({
-                  children: [new docx.TextRun({ text: `${index + 1}. ${item}` })],
+                  children: [new docx.TextRun({ text: `${index + 1}. ${item}`, size: 24 })],
                   indent: { left: 240 },
                   spacing: { before: 60, after: 60 }
                 }))
@@ -212,9 +226,8 @@ class DocumentFormatter {
               children: [
                 new docx.Paragraph({ text: '', spacing: { before: 3000 } }),
                 new docx.Paragraph({
-                  text: 'Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ Δ.Α.Ε.Φ.Κ.',
-                  alignment: docx.AlignmentType.CENTER,
-                  bold: true
+                  children: [new docx.TextRun({ text: 'Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΗΣ Δ.Α.Ε.Φ.Κ.', bold: true, size: 24 })],
+                  alignment: docx.AlignmentType.CENTER
                 }),
                 new docx.Paragraph({
                   text: '',
@@ -222,12 +235,11 @@ class DocumentFormatter {
                   spacing: { before: 500 }
                 }),
                 new docx.Paragraph({
-                  text: 'ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ',
-                  alignment: docx.AlignmentType.CENTER,
-                  bold: true
+                  children: [new docx.TextRun({ text: 'ΓΕΩΡΓΙΟΣ ΛΑΖΑΡΟΥ', bold: true, size: 24 })],
+                  alignment: docx.AlignmentType.CENTER
                 }),
                 new docx.Paragraph({
-                  text: 'ΠΟΛ. ΜΗΧΑΝΙΚΟΣ',
+                  children: [new docx.TextRun({ text: 'ΠΟΛ. ΜΗΧΑΝΙΚΟΣ', size: 24 })],
                   alignment: docx.AlignmentType.CENTER
                 })
               ],
