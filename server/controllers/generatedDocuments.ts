@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/authMiddleware";
 import { supabase } from "../config/db";
+import { broadcastDocumentUpdate } from "../services/websocketService";
 
 const router = Router();
 
@@ -56,6 +57,13 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
+    // Broadcast the update
+    broadcastDocumentUpdate({
+      type: 'DOCUMENT_UPDATE',
+      documentId: data.id,
+      data
+    });
+
     return res.status(201).json(data);
   } catch (error) {
     console.error('Error creating document:', error);
@@ -95,6 +103,13 @@ router.patch('/:id/protocol', authenticateToken, async (req, res) => {
         error: error.message 
       });
     }
+
+    // Broadcast the protocol update
+    broadcastDocumentUpdate({
+      type: 'PROTOCOL_UPDATE',
+      documentId: parseInt(id),
+      data
+    });
 
     return res.json({ 
       success: true,

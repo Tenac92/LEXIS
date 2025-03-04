@@ -6,7 +6,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { securityHeaders } from "./middleware/securityHeaders";
 import { setupAuth, sessionMiddleware } from './auth';
-import { createWebSocketServer } from './websocket';
+import { setupWebSocketServer } from './services/websocketService';
 
 console.log('[Startup] Beginning server initialization');
 
@@ -79,7 +79,7 @@ try {
   app.use(errorMiddleware);
 
   // Create WebSocket server
-  const wss = createWebSocketServer(server);
+  const wss = setupWebSocketServer(server);
   console.log('[Startup] WebSocket server initialized on /ws');
 
   // Setup Vite or serve static files
