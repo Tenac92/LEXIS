@@ -109,8 +109,12 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-lg font-semibold">
-                {doc.protocol_number_input ? (
-                  `Protocol #${doc.protocol_number_input}`
+                {doc.protocol_number_input && doc.protocol_date ? (
+                  `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString('el-GR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: '2-digit'
+                  }).replace(/\//g, '.')}`
                 ) : (
                   `Document #${doc.id}`
                 )}

@@ -68,15 +68,18 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         })
       });
 
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to update protocol');
+      // Success case
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Protocol updated successfully",
+        });
+        onClose();
+      } else {
+        // Handle error case
+        throw new Error(response.error || response.message || 'Failed to update protocol');
       }
 
-      toast({
-        title: "Success",
-        description: "Protocol updated successfully",
-      });
-      onClose();
     } catch (error) {
       console.error('Protocol save error:', error);
       toast({
