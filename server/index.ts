@@ -96,8 +96,8 @@ try {
     res.sendFile(join(__dirname, '../client/index.html'));
   });
 
-  // Use port 5000 to match the expected configuration
-  const PORT = parseInt(process.env.PORT || '5000', 10);
+  // Use port 3000 to avoid conflict with port 5000 that's already in use
+  const PORT = parseInt(process.env.PORT || '3000', 10);
   const HOST = '0.0.0.0'; // Bind to all network interfaces
 
   // Add error handler for the server
