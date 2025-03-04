@@ -49,7 +49,7 @@ export class DocumentFormatter {
           properties: {},
           children: [
             this.createDocumentHeader(documentData, unitDetails || undefined),
-            ...this.createDocumentSubject(), // Now spreading the array of paragraphs
+            ...this.createDocumentSubject(), 
             ...this.createMainContent(documentData),
             this.createPaymentTable(documentData.recipients || []),
             this.createNote(),
@@ -87,29 +87,49 @@ export class DocumentFormatter {
     }
   }
   private static createDocumentSubject(): Paragraph[] {
+    const subjectText = [
+      {
+        text: "ΘΕΜΑ:",
+        bold: true,
+        italics: true,
+      },
+      {
+        text: " Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+        italics: true,
+      }
+    ];
+
     return [
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΘΕΜΑ:",
-            bold: true,
-            italics: true,
-            size: this.DEFAULT_FONT_SIZE,
-          }),
-          new TextRun({
-            text: " Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
-            italics: true,
-            size: this.DEFAULT_FONT_SIZE,
-          }),
-        ],
-        spacing: { before: 240, after: 240, line: 360, lineRule: "auto" },
-        border: {
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
           top: { style: BorderStyle.SINGLE, size: 4 },
           bottom: { style: BorderStyle.SINGLE, size: 4 },
           left: { style: BorderStyle.SINGLE, size: 4 },
           right: { style: BorderStyle.SINGLE, size: 4 },
         },
-        indent: { left: 720, right: 720 },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: subjectText.map(part => 
+                      new TextRun({
+                        text: part.text,
+                        bold: part.bold,
+                        italics: part.italics,
+                        size: this.DEFAULT_FONT_SIZE,
+                      })
+                    ),
+                    spacing: { before: 240, after: 240 },
+                  }),
+                ],
+                width: { size: 100, type: WidthType.PERCENTAGE },
+              }),
+            ],
+          }),
+        ],
       }),
       new Paragraph({
         text: "",
