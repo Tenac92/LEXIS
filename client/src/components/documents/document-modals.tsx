@@ -7,41 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 
 interface ViewModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  document: any;
-}
-
-interface EditModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  document: any;
-  onEdit: (id: string) => void;
-}
-
-interface DeleteModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  documentId: string;
-  onDelete: () => void;
-}
-
-interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
   document: any;
@@ -579,4 +551,24 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
       </DialogContent>
     </Dialog>
   );
+}
+
+interface EditModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  document: any;
+  onEdit: (id: string) => void;
+}
+
+interface DeleteModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  documentId: string;
+  onDelete: () => void;
+}
+
+interface ExportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  document: any;
 }

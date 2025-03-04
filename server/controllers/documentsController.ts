@@ -154,6 +154,80 @@ router.patch('/:id', authenticateSession, async (req: AuthRequest, res: Response
   }
 });
 
+// Update document protocol
+router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { protocol_number, protocol_date } = req.body;
+
+    console.log('[Documents] Updating protocol for document:', id, {
+      protocol_number,
+      protocol_date
+    });
+
+    if (!protocol_number?.trim()) {
+      return res.status(400).json({ 
+        error: 'Protocol number is required'
+      });
+    }
+
+    if (!protocol_date) {
+      return res.status(400).json({ 
+        error: 'Protocol date is required'
+      });
+    }
+
+    // Get the document first to check access rights
+    const { data: document, error: fetchError } = await supabase
+      .from('generated_documents')
+      .select('unit')
+      .eq('id', parseInt(id))
+      .single();
+
+    if (fetchError) {
+      console.error('[Documents] Error fetching document:', fetchError);
+      throw fetchError;
+    }
+
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    // Check if user has access to this document's unit
+    if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
+      return res.status(403).json({ error: 'Access denied to this document' });
+    }
+
+    // Update the document
+    const { data: updatedDocument, error: updateError } = await supabase
+      .from('generated_documents')
+      .update({
+        protocol_number_input: protocol_number.trim(),
+        protocol_date,
+        status: 'approved',
+        updated_at: new Date().toISOString(),
+        updated_by: req.user?.id
+      })
+      .eq('id', parseInt(id))
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('[Documents] Protocol update error:', updateError);
+      throw updateError;
+    }
+
+    console.log('[Documents] Protocol updated successfully for document:', id);
+    res.json(updatedDocument);
+  } catch (error) {
+    console.error('[Documents] Protocol update error:', error);
+    res.status(500).json({
+      error: 'Failed to update protocol',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Export document
 router.get('/generated/:id/export', authenticateSession, async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
