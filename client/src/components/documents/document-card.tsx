@@ -155,14 +155,6 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
               <span className="text-sm text-muted-foreground">Type</span>
               <p className="font-medium">{doc.expenditure_type || '-'}</p>
             </div>
-            {doc.protocol_date && (
-              <div className="space-y-1">
-                <span className="text-sm text-muted-foreground">Protocol Date</span>
-                <p className="font-medium">
-                  {new Date(doc.protocol_date).toLocaleDateString()}
-                </p>
-              </div>
-            )}
           </div>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">

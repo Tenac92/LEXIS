@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 
 interface ViewModalProps {
@@ -70,6 +71,9 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
 
       // Success case
       if (response.success) {
+        // Invalidate queries to refetch data
+        await queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
+
         toast({
           title: "Success",
           description: "Protocol updated successfully",
