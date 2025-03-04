@@ -73,19 +73,14 @@ export class DocumentFormatter {
               },
             },
           },
-          paragraphStyles: [
-            {
-              id: "a6",
-              name: "A6 Style",
-              run: {
-                font: this.DEFAULT_FONT,
-                size: this.DEFAULT_FONT_SIZE,
-              },
-              paragraph: {
-                spacing: { line: 360, lineRule: "atLeast" },
+          a6: {
+            paragraph: {
+              spacing: {
+                line: 360,
+                lineRule: "atLeast",
               },
             },
-          ],
+          },
         },
       });
 
@@ -124,6 +119,8 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                 this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
+                this.createBoldParagraph("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ"),
+                this.createBoldParagraph("ΦΥΣΙΚΩΝ ΚΑΤΑΣΡΟΦΩΝ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
                 new Paragraph({ text: "", spacing: { after: 240 } }),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
@@ -142,15 +139,6 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "ΑΝΑΡΤΗΤΕΑ ΣΤΟ ΔΙΑΔΙΚΤΥΟ",
-                      bold: true,
-                    }),
-                  ],
-                  alignment: AlignmentType.RIGHT,
-                }),
                 new Paragraph({ text: "", spacing: { before: 240, after: 240 } }),
                 new Paragraph({
                   children: [
