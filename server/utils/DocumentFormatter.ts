@@ -45,42 +45,40 @@ export class DocumentFormatter {
       const unitDetails = await this.getUnitDetails(documentData.unit);
 
       const doc = new Document({
-        sections: [
-          {
-            properties: {},
-            children: [
-              this.createDocumentHeader(documentData, unitDetails),
-              this.createDocumentSubject(), // using the newly created function
-              ...this.createMainContent(documentData),
-              this.createPaymentTable(documentData.recipients || []),
-              this.createNote(),
-              this.createFooter(documentData, unitDetails),
-            ]
-          }
-        ],
-      styles: {
-        default: {
-          document: {
-            run: {
-              font: this.DEFAULT_FONT,
-              size: this.DEFAULT_FONT_SIZE,
+        sections: [{
+          properties: {},
+          children: [
+            this.createDocumentHeader(documentData, unitDetails || undefined),
+            this.createDocumentSubject(),
+            ...this.createMainContent(documentData),
+            this.createPaymentTable(documentData.recipients || []),
+            this.createNote(),
+            this.createFooter(documentData, unitDetails || undefined),
+          ]
+        }],
+        styles: {
+          default: {
+            document: {
+              run: {
+                font: this.DEFAULT_FONT,
+                size: this.DEFAULT_FONT_SIZE,
+              },
             },
           },
-        },
-        paragraphStyles: [
-          {
-            id: "A6",
-            name: "A6",
-            basedOn: "Normal",
-            next: "Normal",
-            quickFormat: true,
-            paragraph: {
-              spacing: { line: 240, lineRule: "atLeast" },
+          paragraphStyles: [
+            {
+              id: "A6",
+              name: "A6",
+              basedOn: "Normal",
+              next: "Normal",
+              quickFormat: true,
+              paragraph: {
+                spacing: { line: 240, lineRule: "atLeast" },
+              },
             },
-          },
-        ],
+          ],
+        }
       });
-      
 
       return await Packer.toBuffer(doc);
     } catch (error) {
@@ -117,7 +115,6 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                 this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
-                this.createBoldParagraph("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΡΟΦΩΝ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
@@ -140,9 +137,9 @@ export class DocumentFormatter {
                   alignment: AlignmentType.RIGHT,
                 }),
                 new Paragraph({
-                  children: [new TextRun({ 
+                  children: [new TextRun({
                     text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
-                    bold: true 
+                    bold: true
                   })],
                   alignment: AlignmentType.RIGHT,
                 }),
@@ -330,7 +327,7 @@ export class DocumentFormatter {
 
   private static createFooter(documentData: DocumentData, unitDetails?: UnitDetails): Table {
     return new Table({
-       width: { size: 100, type: WidthType.PERCENTAGE },
+      width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -463,8 +460,8 @@ export class DocumentFormatter {
   }
 
   private static createHeaderCell(text: string, width: string | number): TableCell {
-    const widthSetting = width === "auto" 
-      ? undefined 
+    const widthSetting = width === "auto"
+      ? undefined
       : { size: width as number, type: WidthType.PERCENTAGE };
 
     return new TableCell({
@@ -533,9 +530,9 @@ export class DocumentFormatter {
                   alignment: AlignmentType.RIGHT,
                 }),
                 new Paragraph({
-                  children: [new TextRun({ 
+                  children: [new TextRun({
                     text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
-                    bold: true 
+                    bold: true
                   })],
                   alignment: AlignmentType.RIGHT,
                 }),
