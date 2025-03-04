@@ -39,28 +39,25 @@ export class DocumentFormatter {
 
   static async generateDocument(documentData: DocumentData): Promise<Buffer> {
     try {
+      console.log("Generating document for:", documentData);
+
+      // Fetch unit details
       const unitDetails = await this.getUnitDetails(documentData.unit);
 
       const doc = new Document({
-        sections: [{
-          properties: {
-            page: {
-              margin: this.DEFAULT_MARGINS,
-              size: {
-                width: 11906,  // A4 width in twips
-                height: 16838, // A4 height in twips
-              },
-            },
-          },
-          children: [
-            this.createHeader(documentData, unitDetails),
-            this.createSubject(),
-            ...this.createMainContent(documentData),
-            this.createPaymentTable(documentData.recipients || []),
-            this.createNote(),
-            this.createFooter(documentData, unitDetails),
-          ]
-        }],
+        sections: [
+          {
+            properties: {},
+            children: [
+              this.createHeader(documentData, unitDetails),
+              this.createDocumentSubject(), // using the newly created function
+              ...this.createMainContent(documentData),
+              this.createPaymentTable(documentData.recipients || []),
+              this.createNote(),
+              this.createFooter(documentData, unitDetails),
+            ]
+          }
+        ],
         styles: {
           default: {
             document: {
@@ -474,7 +471,7 @@ export class DocumentFormatter {
       verticalAlign: VerticalAlign.CENTER,
     });
   }
-  
+
   /**
    * Creates a document header with fixed width proportions 65% and 35%
    * @param documentData Document data containing information for the header
@@ -546,12 +543,12 @@ export class DocumentFormatter {
       ],
     });
   }
-  
+
   /**
    * Creates the subject box with fixed width DXA to avoid being affected by parent elements
    * @returns Table representing the document subject
    */
- 
+
 
   private static createTableCell(
     text: string,
