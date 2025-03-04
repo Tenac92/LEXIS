@@ -87,7 +87,7 @@ export class DocumentFormatter {
     }
   }
 
-  private static createHeader(documentData: DocumentData, unitDetails?: UnitDetails): Table {
+  private static createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Table {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
@@ -103,7 +103,6 @@ export class DocumentFormatter {
           children: [
             new TableCell({
               width: { size: 65, type: WidthType.PERCENTAGE },
-              columnSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -124,7 +123,6 @@ export class DocumentFormatter {
             }),
             new TableCell({
               width: { size: 35, type: WidthType.PERCENTAGE },
-              columnSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -132,6 +130,10 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               children: [
+                new Paragraph({
+                  text: "",
+                  spacing: { before: 360 },
+                }),
                 new Paragraph({
                   children: [new TextRun({ text: `Αθήνα, ${documentData.protocol_date || '........................'}` })],
                   alignment: AlignmentType.RIGHT,
@@ -171,9 +173,13 @@ export class DocumentFormatter {
     });
   }
 
+  /**
+   * Creates the subject box for the document with fixed width DXA
+   * @returns Table representing the document subject
+   */
   private static createDocumentSubject(): Table {
     return new Table({
-      width: { size: 11000, type: WidthType.DXA }, // Using fixed DXA width instead of percentage
+      width: { size: 11000, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -262,7 +268,7 @@ export class DocumentFormatter {
     ];
   }
 
-  private static createPaymentTable(recipients: DocumentData['recipients']): Table {
+  private static createPaymentTable(recipients: DocumentData['recipients'] = []): Table {
     const tableBorders: ITableBordersOptions = {
       top: { style: BorderStyle.SINGLE, size: 1 },
       bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -475,84 +481,6 @@ export class DocumentFormatter {
       verticalAlign: VerticalAlign.CENTER,
     });
   }
-
-  /**
-   * Creates a document header with fixed width proportions 65% and 35%
-   * @param documentData Document data containing information for the header
-   * @param unitDetails Optional unit details to populate header
-   * @returns Table representing the document header
-   */
-  private static createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Table {
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              width: { size: 65, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              children: [
-                this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
-                this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
-                this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
-                this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
-                this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
-                this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
-                this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
-                this.createContactDetail("Πληροφορίες", documentData.user_name || unitDetails?.manager || "-"),
-                this.createContactDetail("Email", unitDetails?.email || "daefkke@civilprotection.gr"),
-              ],
-            }),
-            new TableCell({
-              width: { size: 35, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              children: [
-                new Paragraph({
-                  children: [new TextRun({ text: `Αθήνα, ${documentData.protocol_date || '........................'}` })],
-                  alignment: AlignmentType.RIGHT,
-                }),
-                new Paragraph({
-                  children: [new TextRun({
-                    text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
-                    bold: true
-                  })],
-                  alignment: AlignmentType.RIGHT,
-                }),
-                new Paragraph({
-                  text: "",
-                  alignment: AlignmentType.RIGHT,
-                })
-              ],
-            }),
-          ],
-        }),
-      ],
-    });
-  }
-
-  /**
-   * Creates the subject box with fixed width DXA to avoid being affected by parent elements
-   * @returns Table representing the document subject
-   */
-
 
   private static createTableCell(
     text: string,
