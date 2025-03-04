@@ -51,13 +51,13 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
 
       // Ensure date is in ISO format YYYY-MM-DD
       const formattedDate = new Date(protocolDate).toISOString().split('T')[0];
-      
+
       console.log('Saving protocol with:', { 
         protocolNumber, 
         protocolDate: formattedDate 
       });
 
-      const response = await apiRequest(`/api/documents/generated/${document.id}/protocol`, {
+      const response = await apiRequest<{ success: boolean; message: string }>(`/api/documents/generated/${document.id}/protocol`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +69,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json() as { error: string };
         throw new Error(errorData.error || 'Failed to update protocol');
       }
 

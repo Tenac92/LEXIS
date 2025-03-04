@@ -52,7 +52,7 @@ interface BudgetIndicatorProps {
   currentAmount: number;
 }
 
-type BadgeVariant = BadgeProps["variant"] | "warning";
+type BadgeVariant = "default" | "destructive" | "outline" | "secondary";
 
 const stepVariants = {
   enter: (direction: number) => ({
@@ -408,7 +408,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           toast({
             title: "Warning",
             description: response.message,
-            variant: "warning"
+            variant: "destructive"
           });
         }
 

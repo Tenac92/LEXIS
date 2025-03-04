@@ -16,6 +16,7 @@ interface DocumentData {
   status?: string;
   total_amount?: number;
   protocol_number?: string;
+  protocol_number_input?: string;
   protocol_date?: string;
   user_name?: string;
   recipients?: Array<{
@@ -28,32 +29,33 @@ interface DocumentData {
 }
 
 export class DocumentFormatter {
-  private static readonly DEFAULT_FONT_SIZE = 22; // 11pt in half-points
+  private static readonly DEFAULT_FONT_SIZE = 22;
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
-    top: 426,    // 0.3 inches in twips
-    right: 1133, // 0.79 inches in twips
-    bottom: 1440, // 1 inch in twips
-    left: 1134,  // 0.79 inches in twips
+    top: 426,
+    right: 1133,
+    bottom: 1440,
+    left: 1134,
   };
 
-  static async generateDocument(documentData: DocumentData): Promise<Buffer> {
+  public static async generateDocument(documentData: DocumentData): Promise<Buffer> {
     try {
       console.log("Generating document for:", documentData);
 
       // Fetch unit details
       const unitDetails = await this.getUnitDetails(documentData.unit);
+      console.log("Unit details:", unitDetails);
 
       const doc = new Document({
         sections: [{
           properties: {},
           children: [
-            this.createDocumentHeader(documentData, unitDetails || undefined),
+            this.createDocumentHeader(documentData, unitDetails),
             ...this.createDocumentSubject(),
             ...this.createMainContent(documentData),
             this.createPaymentTable(documentData.recipients || []),
             this.createNote(),
-            this.createFooter(documentData, unitDetails || undefined),
+            this.createFooter(documentData, unitDetails),
           ]
         }],
         styles: {
@@ -174,7 +176,7 @@ export class DocumentFormatter {
     ];
   }
 
-  private static createPaymentTable(recipients: DocumentData['recipients']): Table {
+  private static createPaymentTable(recipients: NonNullable<DocumentData['recipients']>): Table {
     const tableBorders: ITableBordersOptions = {
       top: { style: BorderStyle.SINGLE, size: 1 },
       bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -184,50 +186,57 @@ export class DocumentFormatter {
       insideVertical: { style: BorderStyle.SINGLE, size: 1 },
     };
 
+    const rows = [
+      new TableRow({
+        height: { value: 360, rule: HeightRule.EXACT },
+        children: [
+          this.createHeaderCell("Α.Α.", "auto"),
+          this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
+          this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
+          this.createHeaderCell("ΔΟΣΗ", "auto"),
+          this.createHeaderCell("ΑΦΜ", "auto"),
+        ],
+      }),
+      ...recipients.map((recipient, index) =>
+        new TableRow({
+          height: { value: 360, rule: HeightRule.EXACT },
+          children: [
+            this.createTableCell((index + 1).toString() + ".", "center"),
+            this.createTableCell(`${recipient.lastname} ${recipient.firstname}`.trim(), "left"),
+            this.createTableCell(recipient.amount.toLocaleString('el-GR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }), "right"),
+            this.createTableCell(recipient.installment.toString(), "center"),
+            this.createTableCell(recipient.afm, "center"),
+          ],
+        })
+      ),
+    ];
+
+    // Add total row
+    const totalAmount = recipients.reduce((sum, recipient) => sum + recipient.amount, 0);
+    rows.push(
+      new TableRow({
+        height: { value: 360, rule: HeightRule.EXACT },
+        children: [
+          this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
+          this.createTableCell(
+            totalAmount.toLocaleString('el-GR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }) + " €",
+            "right"
+          ),
+          this.createTableCell("", "center", 2),
+        ],
+      })
+    );
+
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: tableBorders,
-      rows: [
-        new TableRow({
-          height: { value: 360, rule: HeightRule.EXACT },
-          children: [
-            this.createHeaderCell("Α.Α.", "auto"),
-            this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
-            this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
-            this.createHeaderCell("ΔΟΣΗ", "auto"),
-            this.createHeaderCell("ΑΦΜ", "auto"),
-          ],
-        }),
-        ...recipients.map((recipient, index) =>
-          new TableRow({
-            height: { value: 360, rule: HeightRule.EXACT },
-            children: [
-              this.createTableCell((index + 1).toString() + ".", "center"),
-              this.createTableCell(`${recipient.lastname} ${recipient.firstname}`.trim(), "left"),
-              this.createTableCell(recipient.amount.toLocaleString('el-GR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              }), "right"),
-              this.createTableCell(recipient.installment.toString(), "center"),
-              this.createTableCell(recipient.afm, "center"),
-            ],
-          })
-        ),
-        new TableRow({
-          height: { value: 360, rule: HeightRule.EXACT },
-          children: [
-            this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
-            this.createTableCell(
-              recipients.reduce((sum, recipient) => sum + recipient.amount, 0).toLocaleString('el-GR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              }) + " €",
-              "right"
-            ),
-            this.createTableCell("", "center", 2),
-          ],
-        }),
-      ],
+      rows,
     });
   }
 
@@ -445,8 +454,8 @@ export class DocumentFormatter {
               },
               children: [
                 new Paragraph({
-                  children: [new TextRun({ 
-                    text: `Αθήνα, ${documentData.protocol_date ? new Date(documentData.protocol_date).toLocaleDateString('el-GR') : '........................'}` 
+                  children: [new TextRun({
+                    text: `Αθήνα, ${documentData.protocol_date ? new Date(documentData.protocol_date).toLocaleDateString('el-GR') : '........................'}`
                   })],
                   alignment: AlignmentType.RIGHT,
                 }),
@@ -512,8 +521,9 @@ export class DocumentFormatter {
     });
   }
 
-  private static async getUnitDetails(unitCode: string): Promise<UnitDetails | null> {
+  public static async getUnitDetails(unitCode: string): Promise<UnitDetails | null> {
     try {
+      console.log("Fetching unit details for:", unitCode);
       const { data: unitData, error: unitError } = await supabase
         .from('unit_det')
         .select('*')
@@ -525,6 +535,7 @@ export class DocumentFormatter {
         return null;
       }
 
+      console.log("Unit details fetched:", unitData);
       return unitData;
     } catch (error) {
       console.error('Error in getUnitDetails:', error);
