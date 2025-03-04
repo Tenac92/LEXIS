@@ -459,7 +459,7 @@ export class DocumentFormatter {
   }
 
   private static createHeaderCell(text: string, width: string | number): TableCell {
-    const widthSetting = typeof width === "string" 
+    const widthSetting = width === "auto" 
       ? undefined 
       : { size: width as number, type: WidthType.PERCENTAGE };
 
