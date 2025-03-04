@@ -172,7 +172,7 @@ export class DocumentFormatter {
 
   private static createSubject(): Table {
     return new Table({
-       width: { size: 100, type: WidthType.PERCENTAGE },
+      width: { size: 9300, type: WidthType.DXA }, // Using fixed DXA width instead of percentage
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
