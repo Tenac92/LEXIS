@@ -100,7 +100,7 @@ export class DocumentFormatter {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 60, type: WidthType.PERCENTAGE },
+              width: { size: 65, type: WidthType.PERCENTAGE },
               columnSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
@@ -122,7 +122,7 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-               width: { size: 40, type: WidthType.PERCENTAGE },
+              width: { size: 35, type: WidthType.PERCENTAGE },
               columnSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
@@ -339,7 +339,7 @@ export class DocumentFormatter {
         new TableRow({
           children: [
             new TableCell({
-               width: { size: 65, type: WidthType.PERCENTAGE },
+              width: { size: 65, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -462,7 +462,7 @@ export class DocumentFormatter {
     const widthSetting = width === "auto" 
       ? undefined 
       : { size: width as number, type: WidthType.DXA };
-      
+
     return new TableCell({
       width: widthSetting,
       children: [
