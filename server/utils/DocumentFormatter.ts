@@ -68,17 +68,11 @@ export class DocumentFormatter {
                 font: this.DEFAULT_FONT,
                 size: this.DEFAULT_FONT_SIZE,
               },
-              paragraph: {
-                spacing: { line: 360, lineRule: "atLeast" },
-              },
             },
           },
           a6: {
             paragraph: {
-              spacing: {
-                line: 360,
-                lineRule: "atLeast",
-              },
+              spacing: { line: 240, lineRule: "atLeast" },
             },
           },
         },
@@ -122,7 +116,6 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ"),
                 this.createBoldParagraph("ΦΥΣΙΚΩΝ ΚΑΤΑΣΡΟΦΩΝ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
-                new Paragraph({ text: "", spacing: { after: 240 } }),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
                 this.createContactDetail("Πληροφορίες", documentData.user_name || unitDetails?.manager || "-"),
@@ -139,25 +132,17 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               children: [
-                new Paragraph({ text: "", spacing: { before: 240, after: 240 } }),
                 new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: `Αθήνα, ${documentData.protocol_date || '........................'}`,
-                    }),
-                  ],
+                  children: [new TextRun({ text: `Αθήνα, ${documentData.protocol_date || '........................'}` })],
                   alignment: AlignmentType.RIGHT,
                 }),
                 new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
-                      bold: true,
-                    }),
-                  ],
+                  children: [new TextRun({ 
+                    text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
+                    bold: true 
+                  })],
                   alignment: AlignmentType.RIGHT,
                 }),
-                new Paragraph({ text: "", spacing: { before: 240, after: 240 } }),
                 new Paragraph({
                   text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών",
                   alignment: AlignmentType.RIGHT,
@@ -248,32 +233,27 @@ export class DocumentFormatter {
     return [
       new Paragraph({
         text: "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε, συμπληρώθηκε και ισχύει.",
-        spacing: { line: 360, lineRule: "atLeast" },
       }),
       new Paragraph({
         text: "Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε. , σύμφωνα με τα κάτωθι στοιχεία.",
-        spacing: { before: 180, after: 180 },
       }),
       new Paragraph({
         children: [
           new TextRun({ text: "ΑΡ. ΕΡΓΟΥ: ", bold: true }),
           new TextRun({ text: `${documentData.project_na853 || "(na853)"} της ΣΑΝΑ 853 (ΤΕ 2023ΝΑ27100228)` }),
         ],
-        spacing: { after: 180 },
       }),
       new Paragraph({
         children: [
           new TextRun({ text: "ΑΛΕ: ", bold: true }),
           new TextRun({ text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ." }),
         ],
-        spacing: { after: 180 },
       }),
       new Paragraph({
         children: [
           new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true }),
           new TextRun({ text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών" }),
         ],
-        spacing: { before: 180, after: 360 },
       }),
     ];
   }
@@ -338,7 +318,6 @@ export class DocumentFormatter {
   private static createNote(): Paragraph {
     return new Paragraph({
       text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσίας μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
-      spacing: { before: 360, after: 360 },
     });
   }
 
@@ -373,7 +352,6 @@ export class DocumentFormatter {
                     style: "a6",
                   })
                 ),
-                new Paragraph({ text: "" }),
                 this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"),
                 ...["Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
                   "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
@@ -384,7 +362,6 @@ export class DocumentFormatter {
                     style: "a6",
                   })
                 ),
-                new Paragraph({ text: "" }),
                 this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
                 ...["Χρονολογικό Αρχείο", "Τμήμα Β/20.51", "Αβραμόπουλο Ι."].map((item, index) =>
                   new Paragraph({
@@ -404,7 +381,6 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               children: [
-                new Paragraph({ text: "", spacing: { before: 720 } }),
                 new Paragraph({
                   children: [
                     new TextRun({
@@ -453,7 +429,6 @@ export class DocumentFormatter {
           bold: true,
         }),
       ],
-      spacing: { before: 120, after: 120 },
     });
   }
 
@@ -477,7 +452,6 @@ export class DocumentFormatter {
         new TextRun({ text: ": " }),
         new TextRun({ text: value }),
       ],
-      spacing: { before: 120, after: 120 },
     });
   }
 
