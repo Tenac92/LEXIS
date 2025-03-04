@@ -461,7 +461,7 @@ export class DocumentFormatter {
   private static createHeaderCell(text: string, width: string | number): TableCell {
     const widthSetting = width === "auto" 
       ? undefined 
-      : { size: width as number, type: WidthType.DXA };
+      : { size: width as number, type: WidthType.PERCENTAGE };
 
     return new TableCell({
       width: widthSetting,
