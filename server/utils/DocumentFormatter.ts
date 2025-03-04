@@ -49,7 +49,7 @@ export class DocumentFormatter {
           properties: {},
           children: [
             this.createDocumentHeader(documentData, unitDetails || undefined),
-            ...this.createDocumentSubject(), 
+            ...this.createDocumentSubject(),
             ...this.createMainContent(documentData),
             this.createPaymentTable(documentData.recipients || []),
             this.createNote(),
@@ -86,7 +86,7 @@ export class DocumentFormatter {
       throw error;
     }
   }
-  private static createDocumentSubject(): Paragraph[] {
+  private static createDocumentSubject(): (Table | Paragraph)[] {
     const subjectText = [
       {
         text: "ΘΕΜΑ:",
@@ -101,7 +101,16 @@ export class DocumentFormatter {
 
     return [
       new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
+        width: {
+          size: 100,
+          type: WidthType.PERCENTAGE
+        },
+        margins: {
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0
+        },
         borders: {
           top: { style: BorderStyle.SINGLE, size: 4 },
           bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -112,9 +121,19 @@ export class DocumentFormatter {
           new TableRow({
             children: [
               new TableCell({
+                margins: {
+                  top: 120,
+                  bottom: 120,
+                  left: 120,
+                  right: 120
+                },
+                width: {
+                  size: 100,
+                  type: WidthType.PERCENTAGE
+                },
                 children: [
                   new Paragraph({
-                    children: subjectText.map(part => 
+                    children: subjectText.map(part =>
                       new TextRun({
                         text: part.text,
                         bold: part.bold,
@@ -122,10 +141,9 @@ export class DocumentFormatter {
                         size: this.DEFAULT_FONT_SIZE,
                       })
                     ),
-                    spacing: { before: 240, after: 240 },
+                    spacing: { before: 120, after: 120 },
                   }),
                 ],
-                width: { size: 100, type: WidthType.PERCENTAGE },
               }),
             ],
           }),
