@@ -1,6 +1,5 @@
 import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, AlignmentType, WidthType, BorderStyle, VerticalAlign, HeightRule, ITableBordersOptions } from 'docx';
 import { supabase } from '../config/db';
-import { User } from '@supabase/supabase-js';
 
 interface UnitDetails {
   unit_name?: string;
@@ -8,21 +7,17 @@ interface UnitDetails {
   email?: string;
 }
 
-interface user {
-  name?: string;
-  email?: string;
-  telephone?: string;
-}
 interface DocumentData {
   id: number;
   unit: string;
-  project_id: string;
+  project_id?: string;
   project_na853?: string;
   expenditure_type: string;
   status?: string;
   total_amount?: number;
   protocol_number?: string;
   protocol_date?: string;
+  user_name?: string;
   recipients?: Array<{
     firstname: string;
     lastname: string;
@@ -74,7 +69,7 @@ export class DocumentFormatter {
                 size: this.DEFAULT_FONT_SIZE,
               },
               paragraph: {
-                spacing: { line: 120, lineRule: "atLeast" },
+                spacing: { line: 360, lineRule: "atLeast" },
               },
             },
           },
@@ -87,7 +82,7 @@ export class DocumentFormatter {
                 size: this.DEFAULT_FONT_SIZE,
               },
               paragraph: {
-                spacing: { line: 120, lineRule: "atLeast" },
+                spacing: { line: 360, lineRule: "atLeast" },
               },
             },
           ],
@@ -101,7 +96,7 @@ export class DocumentFormatter {
     }
   }
 
-  private static createHeader(documentData: DocumentData, user: Users, unitDetails?: UnitDetails): Table {
+  private static createHeader(documentData: DocumentData, unitDetails?: UnitDetails): Table {
     return new Table({
       width: { size: 9629, type: WidthType.DXA },
       borders: {
@@ -117,7 +112,7 @@ export class DocumentFormatter {
           children: [
             new TableCell({
               width: { size: 5524, type: WidthType.DXA },
-              columnSpan: 2,
+              gridSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -129,19 +124,17 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                 this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
-                this.createBoldParagraph("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ"),
-                this.createBoldParagraph("ΦΥΣΙΚΩΝ ΚΑΤΑΣΡΟΦΩΝ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
-                new Paragraph({ text: "", spacing: { after: 30 } }),
+                new Paragraph({ text: "", spacing: { after: 240 } }),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
-                this.createContactDetail("Πληροφορίες", user.name || "-"),
-                this.createContactDetail("Email", unitDetails?.email || ""),
+                this.createContactDetail("Πληροφορίες", documentData.user_name || unitDetails?.manager || "-"),
+                this.createContactDetail("Email", unitDetails?.email || "daefkke@civilprotection.gr"),
               ],
             }),
             new TableCell({
               width: { size: 4105, type: WidthType.DXA },
-              columnSpan: 2,
+              gridSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -149,6 +142,15 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΑΝΑΡΤΗΤΕΑ ΣΤΟ ΔΙΑΔΙΚΤΥΟ",
+                      bold: true,
+                    }),
+                  ],
+                  alignment: AlignmentType.RIGHT,
+                }),
                 new Paragraph({ text: "", spacing: { before: 240, after: 240 } }),
                 new Paragraph({
                   children: [
@@ -360,6 +362,8 @@ export class DocumentFormatter {
         bottom: { style: BorderStyle.NONE },
         left: { style: BorderStyle.NONE },
         right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
       },
       rows: [
         new TableRow({
