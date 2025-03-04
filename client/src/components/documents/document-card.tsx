@@ -109,7 +109,11 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-lg font-semibold">
-                Document #{doc.id}
+                {doc.protocol_number_input ? (
+                  `Protocol #${doc.protocol_number_input}`
+                ) : (
+                  `Document #${doc.id}`
+                )}
               </h3>
               <p className="text-sm text-muted-foreground">
                 Unit: {doc.unit}
@@ -147,6 +151,14 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
               <span className="text-sm text-muted-foreground">Type</span>
               <p className="font-medium">{doc.expenditure_type || '-'}</p>
             </div>
+            {doc.protocol_date && (
+              <div className="space-y-1">
+                <span className="text-sm text-muted-foreground">Protocol Date</span>
+                <p className="font-medium">
+                  {new Date(doc.protocol_date).toLocaleDateString()}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">

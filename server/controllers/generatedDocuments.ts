@@ -1,4 +1,3 @@
-
 import { Router } from "express";
 import { authenticateToken } from "../middleware/authMiddleware";
 import { supabase } from "../config/db";
@@ -61,6 +60,54 @@ router.post('/', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error creating document:', error);
     return res.status(500).json({ message: 'Failed to create document' });
+  }
+});
+
+// Update protocol number and date
+router.patch('/:id/protocol', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { protocol_number, protocol_date } = req.body;
+
+    if (!protocol_number || !protocol_date) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Protocol number and date are required' 
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('generated_documents')
+      .update({
+        protocol_number_input: protocol_number,
+        protocol_date: protocol_date,
+        status: 'approved'
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Protocol update error:', error);
+      return res.status(500).json({ 
+        success: false,
+        message: 'Failed to update protocol',
+        error: error.message 
+      });
+    }
+
+    return res.json({ 
+      success: true,
+      message: 'Protocol updated successfully',
+      data 
+    });
+  } catch (error) {
+    console.error('Protocol update error:', error);
+    return res.status(500).json({ 
+      success: false,
+      message: 'Failed to update protocol',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
