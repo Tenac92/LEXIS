@@ -49,7 +49,7 @@ export class DocumentFormatter {
           {
             properties: {},
             children: [
-              this.createHeader(documentData, unitDetails),
+              this.createDocumentHeader(documentData, unitDetails),
               this.createDocumentSubject(), // using the newly created function
               ...this.createMainContent(documentData),
               this.createPaymentTable(documentData.recipients || []),
@@ -58,22 +58,29 @@ export class DocumentFormatter {
             ]
           }
         ],
-        styles: {
-          default: {
-            document: {
-              run: {
-                font: this.DEFAULT_FONT,
-                size: this.DEFAULT_FONT_SIZE,
-              },
+      styles: {
+        default: {
+          document: {
+            run: {
+              font: this.DEFAULT_FONT,
+              size: this.DEFAULT_FONT_SIZE,
             },
           },
-          a6: {
+        },
+        paragraphStyles: [
+          {
+            id: "A6",
+            name: "A6",
+            basedOn: "Normal",
+            next: "Normal",
+            quickFormat: true,
             paragraph: {
               spacing: { line: 240, lineRule: "atLeast" },
             },
           },
-        },
+        ],
       });
+      
 
       return await Packer.toBuffer(doc);
     } catch (error) {
@@ -169,7 +176,7 @@ export class DocumentFormatter {
 
   private static createDocumentSubject(): Table {
     return new Table({
-      width: { size: 9300, type: WidthType.DXA }, // Using fixed DXA width instead of percentage
+      width: { size: 11000, type: WidthType.DXA }, // Using fixed DXA width instead of percentage
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
