@@ -474,6 +474,144 @@ export class DocumentFormatter {
       verticalAlign: VerticalAlign.CENTER,
     });
   }
+  
+  /**
+   * Creates a document header with fixed width proportions 65% and 35%
+   * @param documentData Document data containing information for the header
+   * @param unitDetails Optional unit details to populate header
+   * @returns Table representing the document header
+   */
+  private static createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Table {
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 65, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              children: [
+                this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+                this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
+                this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
+                this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
+                this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
+                this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
+                this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
+                this.createContactDetail("Πληροφορίες", documentData.user_name || unitDetails?.manager || "-"),
+                this.createContactDetail("Email", unitDetails?.email || "daefkke@civilprotection.gr"),
+              ],
+            }),
+            new TableCell({
+              width: { size: 35, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              children: [
+                new Paragraph({
+                  children: [new TextRun({ text: `Αθήνα, ${documentData.protocol_date || '........................'}` })],
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  children: [new TextRun({ 
+                    text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
+                    bold: true 
+                  })],
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "",
+                  alignment: AlignmentType.RIGHT,
+                })
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+  
+  /**
+   * Creates the subject box with fixed width DXA to avoid being affected by parent elements
+   * @returns Table representing the document subject
+   */
+  private static createDocumentSubject(): Table {
+    return new Table({
+      width: { size: 9300, type: WidthType.DXA }, // Using fixed DXA width instead of percentage
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 4 },
+        bottom: { style: BorderStyle.SINGLE, size: 4 },
+        left: { style: BorderStyle.SINGLE, size: 4 },
+        right: { style: BorderStyle.SINGLE, size: 4 },
+      },
+      rows: [
+        new TableRow({
+          height: { value: 400, rule: HeightRule.EXACT },
+          children: [
+            new TableCell({
+              width: { size: 10, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 4 },
+                bottom: { style: BorderStyle.SINGLE, size: 4 },
+                left: { style: BorderStyle.SINGLE, size: 4 },
+                right: { style: BorderStyle.SINGLE, size: 4 },
+              },
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΘΕΜΑ:",
+                      bold: true,
+                      italics: true,
+                      size: this.DEFAULT_FONT_SIZE,
+                    }),
+                  ],
+                  spacing: { line: 20, lineRule: "atLeast" },
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 90, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 4 },
+                bottom: { style: BorderStyle.SINGLE, size: 4 },
+                left: { style: BorderStyle.SINGLE, size: 4 },
+                right: { style: BorderStyle.SINGLE, size: 4 },
+              },
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+                      italics: true,
+                      size: this.DEFAULT_FONT_SIZE,
+                    }),
+                  ],
+                  spacing: { line: 20, lineRule: "atLeast" },
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
 
   private static createTableCell(
     text: string,
