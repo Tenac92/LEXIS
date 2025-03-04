@@ -198,14 +198,13 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
       return res.status(403).json({ error: 'Access denied to this document' });
     }
 
-    // Update the document
+    // Update the document without updated_at field
     const { data: updatedDocument, error: updateError } = await supabase
       .from('generated_documents')
       .update({
         protocol_number_input: protocol_number.trim(),
         protocol_date,
         status: 'approved',
-        updated_at: new Date().toISOString(),
         updated_by: req.user?.id
       })
       .eq('id', parseInt(id))

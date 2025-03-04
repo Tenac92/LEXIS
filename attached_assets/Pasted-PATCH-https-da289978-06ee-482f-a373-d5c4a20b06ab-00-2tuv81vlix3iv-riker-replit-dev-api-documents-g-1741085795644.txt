@@ -1,0 +1,65 @@
+PATCH https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/documents/generated/112/protocol 500 (Internal Server Error)
+apiRequest @ queryClient.ts:13
+handleProtocolSave @ document-modals.tsx:54
+callCallback2 @ chunk-276SZO74.js?v=e8e204d9:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=e8e204d9:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=e8e204d9:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=e8e204d9:3736
+executeDispatch @ chunk-276SZO74.js?v=e8e204d9:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=e8e204d9:7034
+processDispatchQueue @ chunk-276SZO74.js?v=e8e204d9:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=e8e204d9:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=e8e204d9:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=e8e204d9:18913
+batchedUpdates @ chunk-276SZO74.js?v=e8e204d9:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=e8e204d9:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=e8e204d9:5478
+dispatchEvent @ chunk-276SZO74.js?v=e8e204d9:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=e8e204d9:5449
+Εμφάνιση 15 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:31 [API] Το αίτημα απέτυχε: Error: Σφάλμα HTTP! κατάσταση: 500
+    at apiRequest (queryClient.ts:26:13)
+    at async handleProtocolSave (document-modals.tsx:54:24)
+apiRequest @ queryClient.ts:31
+await in apiRequest
+handleProtocolSave @ document-modals.tsx:54
+callCallback2 @ chunk-276SZO74.js?v=e8e204d9:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=e8e204d9:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=e8e204d9:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=e8e204d9:3736
+executeDispatch @ chunk-276SZO74.js?v=e8e204d9:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=e8e204d9:7034
+processDispatchQueue @ chunk-276SZO74.js?v=e8e204d9:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=e8e204d9:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=e8e204d9:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=e8e204d9:18913
+batchedUpdates @ chunk-276SZO74.js?v=e8e204d9:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=e8e204d9:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=e8e204d9:5478
+dispatchEvent @ chunk-276SZO74.js?v=e8e204d9:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=e8e204d9:5449
+Εμφάνιση 15 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+document-modals.tsx:75 Protocol save error: Error: Σφάλμα HTTP! κατάσταση: 500
+    at apiRequest (queryClient.ts:26:13)
+    at async handleProtocolSave (document-modals.tsx:54:24)
+handleProtocolSave @ document-modals.tsx:75
+await in handleProtocolSave
+callCallback2 @ chunk-276SZO74.js?v=e8e204d9:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=e8e204d9:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=e8e204d9:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=e8e204d9:3736
+executeDispatch @ chunk-276SZO74.js?v=e8e204d9:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=e8e204d9:7034
+processDispatchQueue @ chunk-276SZO74.js?v=e8e204d9:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=e8e204d9:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=e8e204d9:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=e8e204d9:18913
+batchedUpdates @ chunk-276SZO74.js?v=e8e204d9:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=e8e204d9:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=e8e204d9:5478
+dispatchEvent @ chunk-276SZO74.js?v=e8e204d9:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=e8e204d9:5449
+Εμφάνιση 15 ακόμη πλαισίων
+Εμφάνιση λιγότερων
