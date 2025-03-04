@@ -45,42 +45,40 @@ export class DocumentFormatter {
       const unitDetails = await this.getUnitDetails(documentData.unit);
 
       const doc = new Document({
-        sections: [
-          {
-            properties: {},
-            children: [
-              this.createDocumentHeader(documentData, unitDetails),
-              this.createDocumentSubject(), // using the newly created function
-              ...this.createMainContent(documentData),
-              this.createPaymentTable(documentData.recipients || []),
-              this.createNote(),
-              this.createFooter(documentData, unitDetails),
-            ]
-          }
-        ],
-      styles: {
-        default: {
-          document: {
-            run: {
-              font: this.DEFAULT_FONT,
-              size: this.DEFAULT_FONT_SIZE,
+        sections: [{
+          properties: {},
+          children: [
+            this.createDocumentHeader(documentData, unitDetails || undefined),
+            ...this.createDocumentSubject(), // Now spreading the array of paragraphs
+            ...this.createMainContent(documentData),
+            this.createPaymentTable(documentData.recipients || []),
+            this.createNote(),
+            this.createFooter(documentData, unitDetails || undefined),
+          ]
+        }],
+        styles: {
+          default: {
+            document: {
+              run: {
+                font: this.DEFAULT_FONT,
+                size: this.DEFAULT_FONT_SIZE,
+              },
             },
           },
-        },
-        paragraphStyles: [
-          {
-            id: "A6",
-            name: "A6",
-            basedOn: "Normal",
-            next: "Normal",
-            quickFormat: true,
-            paragraph: {
-              spacing: { line: 240, lineRule: "atLeast" },
+          paragraphStyles: [
+            {
+              id: "A6",
+              name: "A6",
+              basedOn: "Normal",
+              next: "Normal",
+              quickFormat: true,
+              paragraph: {
+                spacing: { line: 240, lineRule: "atLeast" },
+              },
             },
-          },
-        ],
-      }});
-      
+          ],
+        }
+      });
 
       return await Packer.toBuffer(doc);
     } catch (error) {
@@ -88,66 +86,36 @@ export class DocumentFormatter {
       throw error;
     }
   }
-  private static createDocumentSubject(): Table {
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE }, // Using fixed DXA width instead of percentage
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 4 },
-        bottom: { style: BorderStyle.SINGLE, size: 4 },
-        left: { style: BorderStyle.SINGLE, size: 4 },
-        right: { style: BorderStyle.SINGLE, size: 4 },
-      },
-      rows: [
-        new TableRow({
-          height: { value: 400, rule: HeightRule.EXACT },
-          children: [
-            new TableCell({
-              width: { size: 10, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.SINGLE, size: 4 },
-                bottom: { style: BorderStyle.SINGLE, size: 4 },
-                left: { style: BorderStyle.SINGLE, size: 4 },
-                right: { style: BorderStyle.SINGLE, size: 4 },
-              },
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "ΘΕΜΑ:",
-                      bold: true,
-                      italics: true,
-                      size: this.DEFAULT_FONT_SIZE,
-                    }),
-                  ],
-                  spacing: { line: 20, lineRule: "atLeast" },
-                }),
-              ],
-            }),
-            new TableCell({
-              width: { size: 90, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.SINGLE, size: 4 },
-                bottom: { style: BorderStyle.SINGLE, size: 4 },
-                left: { style: BorderStyle.SINGLE, size: 4 },
-                right: { style: BorderStyle.SINGLE, size: 4 },
-              },
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
-                      italics: true,
-                      size: this.DEFAULT_FONT_SIZE,
-                    }),
-                  ],
-                  spacing: { line: 20, lineRule: "atLeast" },
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    });
+  private static createDocumentSubject(): Paragraph[] {
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΘΕΜΑ:",
+            bold: true,
+            italics: true,
+            size: this.DEFAULT_FONT_SIZE,
+          }),
+          new TextRun({
+            text: " Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+            italics: true,
+            size: this.DEFAULT_FONT_SIZE,
+          }),
+        ],
+        spacing: { before: 240, after: 240, line: 360, lineRule: "auto" },
+        border: {
+          top: { style: BorderStyle.SINGLE, size: 4 },
+          bottom: { style: BorderStyle.SINGLE, size: 4 },
+          left: { style: BorderStyle.SINGLE, size: 4 },
+          right: { style: BorderStyle.SINGLE, size: 4 },
+        },
+        indent: { left: 720, right: 720 },
+      }),
+      new Paragraph({
+        text: "",
+        spacing: { before: 240, after: 240 },
+      }),
+    ];
   }
 
   private static createMainContent(documentData: DocumentData): Paragraph[] {
@@ -244,7 +212,7 @@ export class DocumentFormatter {
 
   private static createFooter(documentData: DocumentData, unitDetails?: UnitDetails): Table {
     return new Table({
-       width: { size: 100, type: WidthType.PERCENTAGE },
+      width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -377,8 +345,8 @@ export class DocumentFormatter {
   }
 
   private static createHeaderCell(text: string, width: string | number): TableCell {
-    const widthSetting = width === "auto" 
-      ? undefined 
+    const widthSetting = width === "auto"
+      ? undefined
       : { size: width as number, type: WidthType.PERCENTAGE };
 
     return new TableCell({
@@ -394,7 +362,7 @@ export class DocumentFormatter {
   }
 
   /**
-   * Creates a document header with fixed width proportions 65% and 35%
+   * Creates the document header with fixed width proportions 65% and 35%
    * @param documentData Document data containing information for the header
    * @param unitDetails Optional unit details to populate header
    * @returns Table representing the document header
@@ -447,9 +415,9 @@ export class DocumentFormatter {
                   alignment: AlignmentType.RIGHT,
                 }),
                 new Paragraph({
-                  children: [new TextRun({ 
+                  children: [new TextRun({
                     text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
-                    bold: true 
+                    bold: true
                   })],
                   alignment: AlignmentType.RIGHT,
                 }),
@@ -484,11 +452,6 @@ export class DocumentFormatter {
       ],
     });
   }
-
-  /**
-   * Creates the subject box with fixed width DXA to avoid being affected by parent elements
-   * @returns Table representing the document subject
-   */
 
 
   private static createTableCell(
