@@ -51,6 +51,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
   const { toast } = useToast();
   const [protocolNumber, setProtocolNumber] = useState('');
   const [protocolDate, setProtocolDate] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (document) {
@@ -66,18 +67,32 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
 
   const handleProtocolSave = async () => {
     try {
-      if (!protocolNumber || !protocolDate) {
-        throw new Error('Protocol number and date are required');
+      setLoading(true);
+
+      if (!protocolNumber.trim()) {
+        throw new Error('Protocol number is required');
       }
 
-      const formData = new FormData();
-      formData.append('protocol_number', protocolNumber);
-      formData.append('protocol_date', protocolDate);
+      if (!protocolDate) {
+        throw new Error('Protocol date is required');
+      }
+
+      console.log('Saving protocol with:', { protocolNumber, protocolDate });
 
       const response = await apiRequest(`/api/documents/generated/${document.id}/protocol`, {
         method: 'PATCH',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          protocol_number: protocolNumber.trim(),
+          protocol_date: protocolDate
+        })
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to update protocol');
+      }
 
       toast({
         title: "Success",
@@ -85,11 +100,14 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       });
       onClose();
     } catch (error) {
+      console.error('Protocol save error:', error);
       toast({
         title: "Error",
-        description: "Failed to update protocol",
+        description: error instanceof Error ? error.message : "Failed to update protocol",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -111,6 +129,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
                     value={protocolNumber}
                     onChange={(e) => setProtocolNumber(e.target.value)}
                     placeholder="Enter protocol number"
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -119,14 +138,16 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
                     type="date"
                     value={protocolDate}
                     onChange={(e) => setProtocolDate(e.target.value)}
+                    required
                   />
                 </div>
               </div>
               <Button
-                className="mt-4"
+                className="mt-4 w-full"
                 onClick={handleProtocolSave}
+                disabled={loading}
               >
-                Save Protocol
+                {loading ? "Saving..." : "Save Protocol"}
               </Button>
             </div>
 
