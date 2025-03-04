@@ -29,7 +29,7 @@ interface DocumentData {
 
 export class DocumentFormatter {
   private static readonly DEFAULT_FONT_SIZE = 22; // 11pt in half-points
-  private static readonly DEFAULT_FONT = "Times New Roman";
+  private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
     top: 426,    // 0.3 inches in twips
     right: 1133, // 0.79 inches in twips
@@ -172,7 +172,7 @@ export class DocumentFormatter {
 
   private static createSubject(): Table {
     return new Table({
-      width: { size: 9300, type: WidthType.DXA }, // Using fixed DXA width instead of percentage
+      width: { size: 100, type: WidthType.PERCENTAGE }, 
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -459,7 +459,7 @@ export class DocumentFormatter {
   }
 
   private static createHeaderCell(text: string, width: string | number): TableCell {
-    const widthSetting = typeof width === "string" && width === "auto" 
+    const widthSetting = typeof width === "string" 
       ? undefined 
       : { size: width as number, type: WidthType.PERCENTAGE };
 
