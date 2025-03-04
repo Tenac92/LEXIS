@@ -45,40 +45,42 @@ export class DocumentFormatter {
       const unitDetails = await this.getUnitDetails(documentData.unit);
 
       const doc = new Document({
-        sections: [{
-          properties: {},
-          children: [
-            this.createDocumentHeader(documentData, unitDetails || undefined),
-            this.createDocumentSubject(),
-            ...this.createMainContent(documentData),
-            this.createPaymentTable(documentData.recipients || []),
-            this.createNote(),
-            this.createFooter(documentData, unitDetails || undefined),
-          ]
-        }],
-        styles: {
-          default: {
-            document: {
-              run: {
-                font: this.DEFAULT_FONT,
-                size: this.DEFAULT_FONT_SIZE,
-              },
+        sections: [
+          {
+            properties: {},
+            children: [
+              this.createDocumentHeader(documentData, unitDetails),
+              this.createDocumentSubject(), // using the newly created function
+              ...this.createMainContent(documentData),
+              this.createPaymentTable(documentData.recipients || []),
+              this.createNote(),
+              this.createFooter(documentData, unitDetails),
+            ]
+          }
+        ],
+      styles: {
+        default: {
+          document: {
+            run: {
+              font: this.DEFAULT_FONT,
+              size: this.DEFAULT_FONT_SIZE,
             },
           },
-          paragraphStyles: [
-            {
-              id: "A6",
-              name: "A6",
-              basedOn: "Normal",
-              next: "Normal",
-              quickFormat: true,
-              paragraph: {
-                spacing: { line: 240, lineRule: "atLeast" },
-              },
+        },
+        paragraphStyles: [
+          {
+            id: "A6",
+            name: "A6",
+            basedOn: "Normal",
+            next: "Normal",
+            quickFormat: true,
+            paragraph: {
+              spacing: { line: 240, lineRule: "atLeast" },
             },
-          ],
-        }
+          },
+        ],
       });
+      
 
       return await Packer.toBuffer(doc);
     } catch (error) {
@@ -86,100 +88,9 @@ export class DocumentFormatter {
       throw error;
     }
   }
-
-  private static createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Table {
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              width: { size: 65, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              children: [
-                this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
-                this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
-                this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
-                this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
-                this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
-                this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
-                this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
-                this.createContactDetail("Πληροφορίες", documentData.user_name || unitDetails?.manager || "-"),
-                this.createContactDetail("Email", unitDetails?.email || "daefkke@civilprotection.gr"),
-              ],
-            }),
-            new TableCell({
-              width: { size: 35, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              children: [
-                new Paragraph({
-                  text: "",
-                  spacing: { before: 360 },
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: `Αθήνα, ${documentData.protocol_date || '........................'}` })],
-                  alignment: AlignmentType.RIGHT,
-                }),
-                new Paragraph({
-                  children: [new TextRun({
-                    text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
-                    bold: true
-                  })],
-                  alignment: AlignmentType.RIGHT,
-                }),
-                new Paragraph({
-                  text: "",
-                  spacing: { before: 360 },
-                }),
-                new Paragraph({
-                  text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών",
-                  alignment: AlignmentType.RIGHT,
-                }),
-                new Paragraph({
-                  text: "Διεύθυνση Οικονομικής Διαχείρισης",
-                  alignment: AlignmentType.RIGHT,
-                }),
-                new Paragraph({
-                  text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-                  alignment: AlignmentType.RIGHT,
-                }),
-                new Paragraph({
-                  text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-                  alignment: AlignmentType.RIGHT,
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    });
-  }
-
-  /**
-   * Creates the subject box for the document with fixed width DXA
-   * @returns Table representing the document subject
-   */
   private static createDocumentSubject(): Table {
     return new Table({
-      width: { size: 11000, type: WidthType.DXA },
+      width: { size: 100, type: WidthType.PERCENTAGE }, // Using fixed DXA width instead of percentage
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -268,7 +179,7 @@ export class DocumentFormatter {
     ];
   }
 
-  private static createPaymentTable(recipients: DocumentData['recipients'] = []): Table {
+  private static createPaymentTable(recipients: DocumentData['recipients']): Table {
     const tableBorders: ITableBordersOptions = {
       top: { style: BorderStyle.SINGLE, size: 1 },
       bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -333,7 +244,7 @@ export class DocumentFormatter {
 
   private static createFooter(documentData: DocumentData, unitDetails?: UnitDetails): Table {
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -466,8 +377,8 @@ export class DocumentFormatter {
   }
 
   private static createHeaderCell(text: string, width: string | number): TableCell {
-    const widthSetting = width === "auto"
-      ? undefined
+    const widthSetting = width === "auto" 
+      ? undefined 
       : { size: width as number, type: WidthType.PERCENTAGE };
 
     return new TableCell({
@@ -481,6 +392,104 @@ export class DocumentFormatter {
       verticalAlign: VerticalAlign.CENTER,
     });
   }
+
+  /**
+   * Creates a document header with fixed width proportions 65% and 35%
+   * @param documentData Document data containing information for the header
+   * @param unitDetails Optional unit details to populate header
+   * @returns Table representing the document header
+   */
+  private static createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Table {
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 65, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              children: [
+                this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+                this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
+                this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
+                this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
+                this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
+                this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
+                this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
+                this.createContactDetail("Πληροφορίες", documentData.user_name || unitDetails?.manager || "-"),
+                this.createContactDetail("Email", unitDetails?.email || "daefkke@civilprotection.gr"),
+              ],
+            }),
+            new TableCell({
+              width: { size: 35, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              children: [
+                new Paragraph({
+                  children: [new TextRun({ text: `Αθήνα, ${documentData.protocol_date || '........................'}` })],
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  children: [new TextRun({ 
+                    text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
+                    bold: true 
+                  })],
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "",
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "",
+                  spacing: { before: 360 },
+                }),
+                new Paragraph({
+                  text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών",
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                  alignment: AlignmentType.RIGHT,
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  /**
+   * Creates the subject box with fixed width DXA to avoid being affected by parent elements
+   * @returns Table representing the document subject
+   */
+
 
   private static createTableCell(
     text: string,
