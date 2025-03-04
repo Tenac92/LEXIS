@@ -142,10 +142,6 @@ export class DocumentFormatter {
           }),
         ],
       }),
-      new Paragraph({
-        text: "",
-        spacing: { before: 240, after: 240 },
-      }),
     ];
   }
 
@@ -408,7 +404,7 @@ export class DocumentFormatter {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 65, type: WidthType.PERCENTAGE },
+              width: { size: 60, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -434,7 +430,7 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              width: { size: 35, type: WidthType.PERCENTAGE },
+              width: { size: 40, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
