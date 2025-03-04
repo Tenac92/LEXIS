@@ -79,7 +79,7 @@ export class DocumentFormatter {
             },
           },
         ],
-      });
+      }});
       
 
       return await Packer.toBuffer(doc);
