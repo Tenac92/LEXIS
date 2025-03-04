@@ -49,7 +49,13 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         throw new Error('Protocol date is required');
       }
 
-      console.log('Saving protocol with:', { protocolNumber, protocolDate });
+      // Ensure date is in ISO format YYYY-MM-DD
+      const formattedDate = new Date(protocolDate).toISOString().split('T')[0];
+      
+      console.log('Saving protocol with:', { 
+        protocolNumber, 
+        protocolDate: formattedDate 
+      });
 
       const response = await apiRequest(`/api/documents/generated/${document.id}/protocol`, {
         method: 'PATCH',
@@ -58,12 +64,13 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         },
         body: JSON.stringify({
           protocol_number: protocolNumber.trim(),
-          protocol_date: protocolDate
+          protocol_date: formattedDate
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update protocol');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to update protocol');
       }
 
       toast({

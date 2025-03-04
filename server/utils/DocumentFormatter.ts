@@ -445,12 +445,14 @@ export class DocumentFormatter {
               },
               children: [
                 new Paragraph({
-                  children: [new TextRun({ text: `Αθήνα, ${documentData.protocol_date || '........................'}` })],
+                  children: [new TextRun({ 
+                    text: `Αθήνα, ${documentData.protocol_date ? new Date(documentData.protocol_date).toLocaleDateString('el-GR') : '........................'}` 
+                  })],
                   alignment: AlignmentType.RIGHT,
                 }),
                 new Paragraph({
                   children: [new TextRun({
-                    text: `Αρ. Πρωτ.: ${documentData.protocol_number || '......................'}`,
+                    text: `Αρ. Πρωτ.: ${documentData.protocol_number_input || documentData.protocol_number || '......................'}`,
                     bold: true
                   })],
                   alignment: AlignmentType.RIGHT,
