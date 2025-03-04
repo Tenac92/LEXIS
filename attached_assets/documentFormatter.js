@@ -131,27 +131,28 @@ class DocumentFormatter {
       width: { size: 100, type: docx.WidthType.PERCENTAGE },
       columnWidths: [65, 35],
       borders: { top: {}, bottom: {}, left: {}, right: {}, insideVertical: {} },
-      rows: [this.createHeaderRow(headerInfo, rightColumnInfo)]
-    });
-  }
-
-  static createHeaderRow(headerInfo, rightColumnInfo) {
-    return new docx.TableRow({
-      children: [
-        this.createHeaderColumn(headerInfo, 65),
-        this.createHeaderColumn(rightColumnInfo, 35)
+      rows: [
+        new docx.TableRow({
+          children: [
+            new docx.TableCell({
+              children: headerInfo.map(item => new docx.Paragraph({
+                children: [new docx.TextRun({ text: item.text, size: 20, bold: item.bold })],
+                alignment: docx.AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 }
+              })),
+              width: { size: 65, type: docx.WidthType.PERCENTAGE }
+            }),
+            new docx.TableCell({
+              children: rightColumnInfo.map(item => new docx.Paragraph({
+                children: [new docx.TextRun({ text: item.text, size: 20, bold: item.bold })],
+                alignment: docx.AlignmentType.LEFT,
+                spacing: { before: 0, after: 0 }
+              })),
+              width: { size: 35, type: docx.WidthType.PERCENTAGE }
+            })
+          ]
+        })
       ]
-    });
-  }
-
-  static createHeaderColumn(info, width) {
-    return new docx.TableCell({
-      children: info.map(item => new docx.Paragraph({
-        children: [new docx.TextRun({ text: item.text, size: 20, bold: item.bold })],
-        alignment: docx.AlignmentType.LEFT,
-        spacing: { before: 0, after: 0 }
-      })),
-      width: { size: width, type: docx.WidthType.PERCENTAGE }
     });
   }
 
