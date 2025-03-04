@@ -101,16 +101,7 @@ export class DocumentFormatter {
 
     return [
       new Table({
-        width: {
-          size: 100,
-          type: WidthType.PERCENTAGE
-        },
-        margins: {
-          top: 0,
-          bottom: 0,
-          left: 0,
-          right: 0
-        },
+        width: { size: 100, type: WidthType.PERCENTAGE },
         borders: {
           top: { style: BorderStyle.SINGLE, size: 4 },
           bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -121,16 +112,19 @@ export class DocumentFormatter {
           new TableRow({
             children: [
               new TableCell({
+                borders: {
+                  top: { style: BorderStyle.SINGLE, size: 4 },
+                  bottom: { style: BorderStyle.SINGLE, size: 4 },
+                  left: { style: BorderStyle.SINGLE, size: 4 },
+                  right: { style: BorderStyle.SINGLE, size: 4 },
+                },
                 margins: {
-                  top: 120,
-                  bottom: 120,
-                  left: 120,
-                  right: 120
+                  top: 240,
+                  bottom: 240,
+                  left: 240,
+                  right: 240
                 },
-                width: {
-                  size: 100,
-                  type: WidthType.PERCENTAGE
-                },
+                width: { size: 100, type: WidthType.PERCENTAGE },
                 children: [
                   new Paragraph({
                     children: subjectText.map(part =>
@@ -141,7 +135,6 @@ export class DocumentFormatter {
                         size: this.DEFAULT_FONT_SIZE,
                       })
                     ),
-                    spacing: { before: 120, after: 120 },
                   }),
                 ],
               }),
@@ -399,15 +392,10 @@ export class DocumentFormatter {
     });
   }
 
-  /**
-   * Creates the document header with fixed width proportions 65% and 35%
-   * @param documentData Document data containing information for the header
-   * @param unitDetails Optional unit details to populate header
-   * @returns Table representing the document header
-   */
   private static createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Table {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [65, 35],
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -426,6 +414,12 @@ export class DocumentFormatter {
                 bottom: { style: BorderStyle.NONE },
                 left: { style: BorderStyle.NONE },
                 right: { style: BorderStyle.NONE },
+              },
+              margins: {
+                top: 120,
+                bottom: 120,
+                left: 120,
+                right: 120
               },
               children: [
                 this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
@@ -446,6 +440,12 @@ export class DocumentFormatter {
                 bottom: { style: BorderStyle.NONE },
                 left: { style: BorderStyle.NONE },
                 right: { style: BorderStyle.NONE },
+              },
+              margins: {
+                top: 120,
+                bottom: 120,
+                left: 120,
+                right: 120
               },
               children: [
                 new Paragraph({
@@ -490,7 +490,6 @@ export class DocumentFormatter {
       ],
     });
   }
-
 
   private static createTableCell(
     text: string,
