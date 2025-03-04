@@ -87,7 +87,7 @@ export class DocumentFormatter {
 
   private static createHeader(documentData: DocumentData, unitDetails?: UnitDetails): Table {
     return new Table({
-      width: { size: 9629, type: WidthType.DXA },
+      width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -100,8 +100,8 @@ export class DocumentFormatter {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 5524, type: WidthType.DXA },
-              gridSpan: 2,
+              width: { size: 60, type: WidthType.PERCENTAGE },
+              columnSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -113,8 +113,7 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚ/ΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                 this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
-                this.createBoldParagraph("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ"),
-                this.createBoldParagraph("ΦΥΣΙΚΩΝ ΚΑΤΑΣΡΟΦΩΝ"),
+                this.createBoldParagraph("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΡΟΦΩΝ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
@@ -123,8 +122,8 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              width: { size: 4105, type: WidthType.DXA },
-              gridSpan: 2,
+               width: { size: 40, type: WidthType.PERCENTAGE },
+              columnSpan: 2,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -142,6 +141,10 @@ export class DocumentFormatter {
                     bold: true 
                   })],
                   alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "",
+                  spacing: { before: 360 },
                 }),
                 new Paragraph({
                   text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών",
@@ -169,7 +172,7 @@ export class DocumentFormatter {
 
   private static createSubject(): Table {
     return new Table({
-      width: { size: 9629, type: WidthType.DXA },
+       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -181,7 +184,7 @@ export class DocumentFormatter {
           height: { value: 400, rule: HeightRule.EXACT },
           children: [
             new TableCell({
-              width: { size: 888, type: WidthType.DXA },
+               width: { size: 10, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 4 },
                 bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -203,7 +206,7 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              width: { size: 8741, type: WidthType.DXA },
+               width: { size: 90, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.SINGLE, size: 4 },
                 bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -323,7 +326,7 @@ export class DocumentFormatter {
 
   private static createFooter(documentData: DocumentData, unitDetails?: UnitDetails): Table {
     return new Table({
-      width: { size: 11478, type: WidthType.DXA },
+       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -336,7 +339,7 @@ export class DocumentFormatter {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 6663, type: WidthType.DXA },
+               width: { size: 65, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -373,7 +376,7 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              width: { size: 4815, type: WidthType.DXA },
+              width: { size: 35, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -457,7 +460,7 @@ export class DocumentFormatter {
 
   private static createHeaderCell(text: string, width: number): TableCell {
     return new TableCell({
-      width: { size: width, type: WidthType.DXA },
+      width: { size: width, type: WidthType.PERCENTAGE },
       children: [
         new Paragraph({
           children: [new TextRun({ text, bold: true, size: this.DEFAULT_FONT_SIZE })],
