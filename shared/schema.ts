@@ -70,29 +70,30 @@ export const projectCatalog = pgTable("project_catalog", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// Update the generated documents table to include the needed fields
+// Generated Documents table matching the actual database structure
 export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
   created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at").defaultNow(),
+  generated_by: integer("generated_by").references(() => users.id),
+  recipients: jsonb("recipients").notNull(),
+  protocol_date: timestamp("protocol_date"),
+  total_amount: numeric("total_amount").notNull(),
+  document_date: timestamp("document_date"),
   status: text("status").default("draft"),
-  unit: text("unit").notNull(),
+  protocol_number_input: text("protocol_number_input"),
+  expenditure_type: text("expenditure_type").notNull(),
   project_id: text("project_id").notNull(),
   project_na853: text("project_na853"),
-  expenditure_type: text("expenditure_type").notNull(),
-  recipients: jsonb("recipients").notNull(),
-  total_amount: numeric("total_amount").notNull(),
-  generated_by: integer("generated_by").references(() => users.id),
-  department: text("department"),
-  attachments: text("attachments").array(),
-  protocol_number_input: text("protocol_number_input"),
-  protocol_date: timestamp("protocol_date"),
+  unit: text("unit").notNull(),
   original_protocol_number: text("original_protocol_number"),
   original_protocol_date: timestamp("original_protocol_date"),
   is_correction: boolean("is_correction").default(false),
+  department: text("department"),
   comments: text("comments"),
-  original_document_id: integer("original_document_id").references(() => generatedDocuments.id),
-  updated_by: integer("updated_by").references(() => users.id),
+  original_document_id: integer("original_document_id"),
+  updated_by: integer("updated_by"),
+  attachments: text("attachments").array(),
+  updated_at: timestamp("updated_at").defaultNow()
 });
 
 // Update the budget history table to include metadata

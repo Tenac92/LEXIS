@@ -8,6 +8,8 @@ const router = Router();
 // Create new document
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    console.log('Creating document with data:', JSON.stringify(req.body, null, 2));
+
     const { unit, project_id, expenditure_type, status, recipients, total_amount, attachments } = req.body;
 
     if (!req.user?.id) {
@@ -40,65 +42,46 @@ router.post('/', authenticateToken, async (req, res) => {
       installment: parseInt(String(r.installment))
     }));
 
-    // Create document with all required fields
-    try {
-      // Validate recipients format
-      if (!formattedRecipients || !Array.isArray(formattedRecipients)) {
-        console.error('Invalid recipients format:', formattedRecipients);
-        return res.status(400).json({
-          message: 'Recipients must be a valid array'
-        });
-      }
+    const now = new Date().toISOString();
 
-      // Validate each recipient has required fields
-      for (const recipient of formattedRecipients) {
-        if (!recipient.afm || !recipient.firstname || !recipient.lastname || 
-            typeof recipient.amount !== 'number' || typeof recipient.installment !== 'number') {
-          console.error('Invalid recipient data:', recipient);
-          return res.status(400).json({
-            message: 'Invalid recipient data. Please check all required fields are provided.'
-          });
-        }
-      }
+    // Create document with exact schema match
+    const documentPayload = {
+      unit,
+      project_id,
+      project_na853: projectData.na853,
+      expenditure_type,
+      status: status || 'draft',
+      recipients: formattedRecipients,
+      total_amount: parseFloat(String(total_amount)) || 0,
+      generated_by: req.user.id,
+      department: req.user.department || null,
+      attachments: attachments || [],
+      created_at: now,
+      updated_at: now,
+      protocol_date: null,
+      document_date: null,
+      protocol_number_input: null,
+      original_protocol_number: null,
+      original_protocol_date: null,
+      is_correction: false,
+      comments: null,
+      original_document_id: null,
+      updated_by: null
+    };
 
-      const documentPayload = {
-        unit,
-        project_id,
-        project_na853: projectData.na853,
-        expenditure_type,
-        status: status || 'draft',
-        recipients: formattedRecipients,
-        total_amount: parseFloat(String(total_amount)) || 0,
-        generated_by: req.user.id,
-        department: req.user.department || null,
-        attachments: attachments || [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_correction: false,
-        comments: null,
-        original_document_id: null
-      };
+    console.log('Document payload:', JSON.stringify(documentPayload, null, 2));
 
-      console.log('Document payload:', JSON.stringify(documentPayload, null, 2));
+    const { data, error } = await supabase
+      .from('generated_documents')
+      .insert([documentPayload])
+      .select()
+      .single();
 
-      const { data, error } = await supabase
-        .from('generated_documents')
-        .insert([documentPayload])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Document creation error:', error);
-        return res.status(500).json({ 
-          message: 'Failed to create document',
-          error: error.message 
-        });
-      }
-    } catch (error) {
-      console.error('Unexpected error in document creation:', error);
-      return res.status(500).json({
-        message: 'An unexpected error occurred during document creation',
-        error: error instanceof Error ? error.message : String(error)
+    if (error) {
+      console.error('Document creation error:', error);
+      return res.status(500).json({ 
+        message: 'Failed to create document',
+        error: error.message 
       });
     }
 
@@ -112,7 +95,7 @@ router.post('/', authenticateToken, async (req, res) => {
             file_path: att.path,
             type: att.type,
             created_by: req.user?.id,
-            created_at: new Date().toISOString()
+            created_at: now
           }))
         );
 
