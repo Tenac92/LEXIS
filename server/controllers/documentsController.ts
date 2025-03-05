@@ -278,7 +278,11 @@ router.get('/generated/:id/export', authenticateSession, async (req: AuthRequest
 // Create document
 router.post('/', authenticateSession, async (req: AuthRequest, res: Response) => {
   try {
-    const { unit, project_id, expenditure_type, status, recipients, total_amount } = req.body;
+    const { unit, project_id, expenditure_type, status, recipients, total_amount, attachments } = req.body;
+
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
 
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
       return res.status(400).json({ 
@@ -313,7 +317,11 @@ router.post('/', authenticateSession, async (req: AuthRequest, res: Response) =>
           installment: parseInt(String(r.installment))
         })),
         total_amount: parseFloat(String(total_amount)) || 0,
+        generated_by: req.user.id,
+        department: req.user.department,
+        attachments: attachments || [],
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }])
       .select()
       .single();
@@ -324,6 +332,26 @@ router.post('/', authenticateSession, async (req: AuthRequest, res: Response) =>
         message: 'Failed to create document',
         error: error.message
       });
+    }
+
+    // If attachments were provided, create attachment records
+    if (attachments?.length && data?.id) {
+      const { error: attachError } = await supabase
+        .from('attachments')
+        .insert(
+          attachments.map((att: any) => ({
+            document_id: data.id,
+            file_path: att.path,
+            type: att.type,
+            created_by: req.user?.id,
+            created_at: new Date().toISOString()
+          }))
+        );
+
+      if (attachError) {
+        console.error('[Documents] Attachment creation error:', attachError);
+        // Continue even if attachment creation fails
+      }
     }
 
     return res.status(201).json(data);

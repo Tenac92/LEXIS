@@ -90,7 +90,7 @@ export const projectCatalog = pgTable("project_catalog", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// Generated Documents table
+// Update the generated documents table to include the needed fields
 export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
   created_at: timestamp("created_at").defaultNow(),
@@ -105,6 +105,14 @@ export const generatedDocuments = pgTable("generated_documents", {
   generated_by: integer("generated_by").references(() => users.id),
   department: text("department"),
   attachments: text("attachments").array(),
+  protocol_number_input: text("protocol_number_input"),
+  protocol_date: timestamp("protocol_date"),
+  original_protocol_number: text("original_protocol_number"),
+  original_protocol_date: timestamp("original_protocol_date"),
+  is_correction: boolean("is_correction").default(false),
+  comments: text("comments"),
+  original_document_id: integer("original_document_id").references(() => generatedDocuments.id),
+  updated_by: integer("updated_by").references(() => users.id),
 });
 
 // Budget History table for tracking changes
@@ -120,12 +128,14 @@ export const budgetHistory = pgTable("budget_history", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
-// Add the attachments_rows table schema
+// Update the attachments table schema within the existing file
 export const attachmentsRows = pgTable("attachments", {
   id: serial("id").primaryKey(),
-  expediture_type: text("expediture_type").notNull(),
-  installment: integer("installment").notNull(),
-  attachments: text("attachments").array(),
+  document_id: integer("document_id").references(() => generatedDocuments.id),
+  file_path: text("file_path").notNull(),
+  type: text("type").notNull(),
+  created_by: integer("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Add document version table definition
