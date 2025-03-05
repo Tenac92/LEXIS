@@ -19,6 +19,7 @@ interface DocumentData {
   protocol_number_input?: string;
   protocol_date?: string;
   user_name?: string;
+  attachments?: string;
   recipients?: Array<{
     firstname: string;
     lastname: string;
