@@ -61,7 +61,7 @@ class DocumentFormatter {
   static createTableHeader(headers, columnWidths) {
     const widthValues = Object.values(columnWidths);
     return new docx.TableRow({
-      children: headers.map((header, index) => 
+      children: headers.map((header, index) =>
         new docx.TableCell({
           children: [new docx.Paragraph({
             children: [new docx.TextRun({ text: header, bold: true, size: 24 })],
@@ -76,7 +76,7 @@ class DocumentFormatter {
 
   static createTableRows(documents, columnWidths) {
     const widthValues = Object.values(columnWidths);
-    return documents.map((doc, index) => 
+    return documents.map((doc, index) =>
       new docx.TableRow({
         children: [
           this.createTableCell((index + 1).toString() + '.', docx.AlignmentType.CENTER, widthValues[0]),
@@ -91,7 +91,7 @@ class DocumentFormatter {
 
   static createTableCell(text, alignment, width) {
     return new docx.TableCell({
-      children: [new docx.Paragraph({ 
+      children: [new docx.Paragraph({
         children: [new docx.TextRun({ text, size: 24 })],
         alignment
       })],
@@ -157,14 +157,7 @@ class DocumentFormatter {
   }
 
   static async createDocumentFooter(document = {}, unitDetails = {}) {
-    const { data: attachmentData } = await supabase
-      .from('attachments')
-      .select('*')
-      .eq('expediture_type', document.expenditure_type)
-      .eq('installment', document.recipients?.[0]?.installment || 1)
-      .single();
-
-    const attachments = attachmentData?.attachments || [
+    const attachments = document.attachments || [
       'Διαβιβαστικό',
       'ΔΚΑ'
     ];
