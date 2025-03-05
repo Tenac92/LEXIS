@@ -8,7 +8,7 @@ const router = Router();
 // Create new document
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { unit, project_id, expenditure_type, status, recipients, total_amount } = req.body;
+    const { unit, project_id, expenditure_type, status, recipients, total_amount, attachments } = req.body;
 
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -31,6 +31,16 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
+    // Format recipients data
+    const formattedRecipients = recipients.map(r => ({
+      firstname: String(r.firstname).trim(),
+      lastname: String(r.lastname).trim(),
+      afm: String(r.afm).trim(),
+      amount: parseFloat(String(r.amount)),
+      installment: parseInt(String(r.installment))
+    }));
+
+    // Create document with all required fields
     const { data, error } = await supabase
       .from('generated_documents')
       .insert([{
@@ -39,12 +49,16 @@ router.post('/', authenticateToken, async (req, res) => {
         project_na853: projectData.na853,
         expenditure_type,
         status: status || 'draft',
-        recipients,
-        total_amount: parseFloat(total_amount) || 0,
-        generated_by: req.user?.id,
+        recipients: formattedRecipients,
+        total_amount: parseFloat(String(total_amount)) || 0,
+        generated_by: req.user.id,
+        department: req.user.department || null,
+        attachments: attachments || [],
         created_at: new Date().toISOString(),
-        department: 'ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.)',
-        is_correction: false
+        updated_at: new Date().toISOString(),
+        is_correction: false,
+        comments: null,
+        original_document_id: null
       }])
       .select()
       .single();
@@ -57,7 +71,27 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    // Broadcast the update
+    // Create attachment records if provided
+    if (attachments?.length && data?.id) {
+      const { error: attachError } = await supabase
+        .from('attachments')
+        .insert(
+          attachments.map(att => ({
+            document_id: data.id,
+            file_path: att.path,
+            type: att.type,
+            created_by: req.user?.id,
+            created_at: new Date().toISOString()
+          }))
+        );
+
+      if (attachError) {
+        console.error('Attachment creation error:', attachError);
+        // Continue even if attachment creation fails
+      }
+    }
+
+    // Broadcast update
     broadcastDocumentUpdate({
       type: 'DOCUMENT_UPDATE',
       documentId: data.id,
