@@ -18,7 +18,6 @@ export async function getBudgetNotifications(req: AuthRequest, res: Response) {
     }
 
     const notifications = await storage.getBudgetNotifications();
-
     return res.json({
       status: 'success',
       notifications
@@ -43,23 +42,8 @@ export async function getBudget(req: Request, res: Response) {
       });
     }
 
-    const { data, error } = await supabase
-      .from('budget_na853_split')
-      .select('*')
-      .eq('mis', mis)
-      .single();
-
-    if (error) {
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch budget data'
-      });
-    }
-
-    return res.json({
-      status: 'success',
-      data
-    });
+    const result = await BudgetService.getBudget(mis);
+    return res.json(result);
   } catch (error) {
     console.error('Unexpected error in getBudget:', error);
     return res.status(500).json({
@@ -75,14 +59,39 @@ export async function validateBudget(req: AuthRequest, res: Response) {
     const requestedAmount = parseFloat(amount.toString());
 
     const result = await BudgetService.validateBudget(mis, requestedAmount);
-    return res.status(result.status === 'error' ? 400 : 200).json(result);
+
+    // If validation requires notification, create it
+    if (result.requiresNotification && result.notificationType && req.user?.id) {
+      try {
+        const budgetData = await storage.getBudgetData(mis);
+
+        await storage.createBudgetHistoryEntry({
+          mis,
+          change_type: 'notification_created',
+          change_reason: `Budget notification created: ${result.notificationType}`,
+          created_by: req.user.id,
+          created_at: new Date().toISOString(),
+          metadata: {
+            notification_type: result.notificationType,
+            priority: result.priority,
+            current_budget: budgetData?.user_view,
+            requested_amount: requestedAmount
+          }
+        });
+      } catch (notifError) {
+        console.error('Failed to create budget notification:', notifError);
+        // Continue with validation response even if notification creation fails
+      }
+    }
+
+    return res.json(result);
   } catch (error) {
     console.error("Budget validation error:", error);
     return res.status(500).json({ 
       status: 'error',
-      canCreate: false,
+      canCreate: true, // Still allow creation even on error
       message: "Failed to validate budget",
-      allowDocx: false
+      allowDocx: true
     });
   }
 }
@@ -101,7 +110,7 @@ export async function updateBudget(req: AuthRequest, res: Response) {
     }
 
     const result = await BudgetService.updateBudget(mis, parseFloat(amount.toString()), userId);
-    return res.status(result.status === 'error' ? 500 : 200).json(result);
+    return res.json(result);
   } catch (error) {
     console.error('Budget update error:', error);
     return res.status(500).json({
@@ -123,7 +132,6 @@ export async function getBudgetHistory(req: AuthRequest, res: Response) {
     }
 
     const history = await storage.getBudgetHistory(mis);
-
     return res.json({
       status: 'success',
       history
@@ -138,23 +146,4 @@ export async function getBudgetHistory(req: AuthRequest, res: Response) {
   }
 }
 
-export async function getUsers(req: Request, res: Response) {
-  try {
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('id, name, email, role, units, telephone, department');
-
-    if (error) {
-      console.error("Error fetching users:", error);
-      return res.status(500).json({ status: 'error', message: 'Failed to fetch users' });
-    }
-
-    return res.json({ status: 'success', users });
-  } catch (error) {
-    console.error("Unexpected error fetching users:", error);
-    return res.status(500).json({ status: 'error', message: 'Failed to fetch users' });
-  }
-}
-
-
-export default { getBudgetNotifications, validateBudget, updateBudget, getBudget, getBudgetHistory, getUsers };
+export default { getBudgetNotifications, validateBudget, updateBudget, getBudget, getBudgetHistory };

@@ -31,14 +31,6 @@ export interface BudgetValidationResult {
 export class BudgetService {
   static async getBudget(mis: string): Promise<BudgetResponse> {
     try {
-      // Special case for notifications endpoint
-      if (mis === 'notifications') {
-        return {
-          status: 'success',
-          data: []
-        };
-      }
-
       if (!mis) {
         return {
           status: 'error',
@@ -57,28 +49,11 @@ export class BudgetService {
         throw projectError;
       }
 
-      // If no NA853 code found, return default values
-      if (!projectData?.na853) {
-        return {
-          status: 'success',
-          data: {
-            user_view: '0',
-            ethsia_pistosi: '0',
-            q1: '0',
-            q2: '0',
-            q3: '0',
-            q4: '0',
-            total_spent: '0',
-            current_budget: (projectData?.budget_na853 || 0).toString()
-          }
-        };
-      }
-
       // Get budget data
       const { data: budgetData, error: budgetError } = await supabase
         .from('budget_na853_split')
         .select('*')
-        .eq('na853', projectData.na853)
+        .eq('na853', projectData?.na853)
         .single();
 
       if (budgetError) {
@@ -88,14 +63,14 @@ export class BudgetService {
       return {
         status: 'success',
         data: {
-          user_view: budgetData?.user_view?.toString() || budgetData?.katanomes_etous?.toString() || projectData.budget_na853?.toString() || '0',
+          user_view: budgetData?.user_view?.toString() || '0',
           ethsia_pistosi: budgetData?.ethsia_pistosi?.toString() || '0',
           q1: budgetData?.q1?.toString() || '0',
           q2: budgetData?.q2?.toString() || '0',
           q3: budgetData?.q3?.toString() || '0',
           q4: budgetData?.q4?.toString() || '0',
           total_spent: budgetData?.total_spent?.toString() || '0',
-          current_budget: budgetData?.current_budget?.toString() || budgetData?.katanomes_etous?.toString() || projectData.budget_na853?.toString() || '0'
+          current_budget: budgetData?.current_budget?.toString() || '0'
         }
       };
     } catch (error) {
@@ -113,9 +88,9 @@ export class BudgetService {
       if (!mis || isNaN(amount) || amount <= 0) {
         return {
           status: 'error',
-          canCreate: false,
+          canCreate: true, // Allow creation even with validation errors
           message: !mis ? 'MIS parameter is required' : 'Valid amount parameter is required',
-          allowDocx: false
+          allowDocx: true
         };
       }
 
@@ -128,109 +103,33 @@ export class BudgetService {
       if (error || !budgetData) {
         return {
           status: 'error',
-          canCreate: false,
+          canCreate: true,
           message: 'Budget not found',
-          allowDocx: false
+          allowDocx: true
         };
       }
 
       const userView = parseFloat(budgetData.user_view?.toString() || '0');
-      const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
       const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
 
-      // Enhanced threshold checks
-      const thresholds = {
-        critical: katanomesEtous * 0.1,  // 10% threshold
-        warning: katanomesEtous * 0.2,   // 20% threshold
-        attention: katanomesEtous * 0.3   // 30% threshold
-      };
+      // Calculate 20% threshold of katanomes_etous
+      const threshold = katanomesEtous * 0.2;
+      const remainingAfterOperation = userView - amount;
 
-      // Current amount percentage of annual budget
-      const percentageOfAnnual = (amount / katanomesEtous) * 100;
-
-      // Check if current user_view is already below critical threshold
-      if (userView <= thresholds.critical) {
+      // Check if remaining budget falls below 20% threshold
+      if (remainingAfterOperation <= threshold) {
         return {
           status: 'warning',
           canCreate: true,
-          message: 'CRITICAL: Current budget is below 10% of annual allocation',
+          message: 'Budget will fall below 20% of annual allocation. Admin notification required.',
           requiresNotification: true,
           notificationType: 'low_budget',
           allowDocx: true,
           priority: 'high',
           metadata: {
-            threshold: 'critical',
-            currentPercentage: (userView / katanomesEtous) * 100,
-            recommendedAction: 'Immediate budget review required'
-          }
-        };
-      }
-
-      if (amount > userView) {
-        return {
-          status: 'error',
-          canCreate: false,
-          message: 'Amount exceeds available budget',
-          allowDocx: false,
-          metadata: {
-            available: userView,
-            requested: amount,
-            shortfall: amount - userView
-          }
-        };
-      }
-
-      const remainingEthsiaPistosi = ethsiaPistosi - amount;
-      const remainingUserView = userView - amount;
-
-      // Enhanced notification logic with priority levels
-      if (remainingEthsiaPistosi <= thresholds.critical) {
-        return {
-          status: 'warning',
-          canCreate: true,
-          message: 'This amount will critically deplete the annual budget',
-          requiresNotification: true,
-          notificationType: 'funding',
-          allowDocx: true,
-          priority: 'high',
-          metadata: {
-            threshold: 'critical',
-            remaining: remainingEthsiaPistosi,
-            recommendedAction: 'Immediate funding request required'
-          }
-        };
-      }
-
-      if (remainingUserView <= thresholds.warning) {
-        return {
-          status: 'warning',
-          canCreate: true,
-          message: 'This amount will reduce the budget below 20% of annual allocation',
-          requiresNotification: true,
-          notificationType: 'reallocation',
-          allowDocx: true,
-          priority: 'medium',
-          metadata: {
-            threshold: 'warning',
-            remaining: remainingUserView,
-            recommendedAction: 'Budget reallocation review recommended'
-          }
-        };
-      }
-
-      if (remainingUserView <= thresholds.attention) {
-        return {
-          status: 'warning',
-          canCreate: true,
-          message: 'Budget approaching low threshold',
-          requiresNotification: true,
-          notificationType: 'threshold_warning',
-          allowDocx: true,
-          priority: 'low',
-          metadata: {
-            threshold: 'attention',
-            remaining: remainingUserView,
-            recommendedAction: 'Monitor budget levels'
+            remainingBudget: remainingAfterOperation,
+            threshold: threshold,
+            percentageRemaining: (remainingAfterOperation / katanomesEtous) * 100
           }
         };
       }
@@ -240,21 +139,112 @@ export class BudgetService {
         canCreate: true,
         allowDocx: true,
         metadata: {
-          remainingAfterOperation: remainingUserView,
-          percentageUsed: ((katanomesEtous - remainingUserView) / katanomesEtous) * 100
+          remainingBudget: remainingAfterOperation,
+          percentageRemaining: (remainingAfterOperation / katanomesEtous) * 100
         }
       };
     } catch (error) {
       console.error('[BudgetService] Budget validation error:', error);
       return {
         status: 'error',
-        canCreate: false,
+        canCreate: true, // Still allow creation
         message: 'Failed to validate budget',
-        allowDocx: false
+        allowDocx: true
       };
     }
   }
 
+  static async updateBudget(mis: string, amount: number, userId: number): Promise<BudgetResponse> {
+    try {
+      if (!mis || isNaN(amount) || amount <= 0 || !userId) {
+        return {
+          status: 'error',
+          message: 'Missing required parameters'
+        };
+      }
+
+      // Get current budget data
+      const { data: budgetData, error: fetchError } = await supabase
+        .from('budget_na853_split')
+        .select('*')
+        .eq('mis', mis)
+        .single();
+
+      if (fetchError || !budgetData) {
+        throw new Error('Failed to fetch budget data');
+      }
+
+      // Parse current values
+      const currentUserView = parseFloat(budgetData.user_view?.toString() || '0');
+      const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+
+      // Get current quarter
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1;
+      const quarterKey = `q${Math.ceil(currentMonth / 3)}` as 'q1' | 'q2' | 'q3' | 'q4';
+
+      // Parse current quarter value
+      const currentQuarterValue = parseFloat(budgetData[quarterKey]?.toString() || '0');
+
+      // Calculate new amounts
+      const newUserView = Math.max(0, currentUserView - amount);
+      const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - amount);
+      const newQuarterValue = Math.max(0, currentQuarterValue - amount);
+
+      // Update budget amounts
+      const { error: updateError } = await supabase
+        .from('budget_na853_split')
+        .update({
+          user_view: newUserView.toString(),
+          ethsia_pistosi: newEthsiaPistosi.toString(),
+          [quarterKey]: newQuarterValue.toString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('mis', mis);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Create budget history entry
+      await supabase
+        .from('budget_history')
+        .insert({
+          mis,
+          previous_amount: currentUserView.toString(),
+          new_amount: newUserView.toString(),
+          change_type: 'document_creation',
+          change_reason: 'Document creation reduced available budget',
+          created_by: userId,
+          created_at: new Date().toISOString(),
+          metadata: {
+            quarter: quarterKey,
+            quarter_previous: currentQuarterValue,
+            quarter_new: newQuarterValue
+          }
+        });
+
+      return {
+        status: 'success',
+        data: {
+          user_view: newUserView.toString(),
+          ethsia_pistosi: newEthsiaPistosi.toString(),
+          q1: quarterKey === 'q1' ? newQuarterValue.toString() : budgetData.q1?.toString() || '0',
+          q2: quarterKey === 'q2' ? newQuarterValue.toString() : budgetData.q2?.toString() || '0',
+          q3: quarterKey === 'q3' ? newQuarterValue.toString() : budgetData.q3?.toString() || '0',
+          q4: quarterKey === 'q4' ? newQuarterValue.toString() : budgetData.q4?.toString() || '0',
+          total_spent: (parseFloat(budgetData.total_spent?.toString() || '0') + amount).toString(),
+          current_budget: newUserView.toString()
+        }
+      };
+    } catch (error) {
+      console.error('[BudgetService] Budget update error:', error);
+      return {
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Failed to update budget'
+      };
+    }
+  }
   static async createBudgetNotification(notificationData: {
     mis: string;
     type: 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning';
@@ -302,87 +292,6 @@ export class BudgetService {
     } catch (error) {
       console.error('[BudgetService] Create notification error:', error);
       throw error;
-    }
-  }
-
-  static async updateBudget(mis: string, amount: number, userId: number): Promise<BudgetResponse> {
-    try {
-      if (!mis || isNaN(amount) || amount <= 0 || !userId) {
-        return {
-          status: 'error',
-          message: 'Missing required parameters'
-        };
-      }
-
-      // Get current budget data
-      const { data: budgetData, error: fetchError } = await supabase
-        .from('budget_na853_split')
-        .select('user_view, ethsia_pistosi, katanomes_etous')
-        .eq('mis', mis)
-        .single();
-
-      if (fetchError || !budgetData) {
-        throw new Error('Failed to fetch budget data');
-      }
-
-      const currentUserView = parseFloat(budgetData.user_view?.toString() || '0');
-      const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-
-      // Calculate new amounts
-      const newUserView = Math.max(0, currentUserView - amount);
-      const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - amount);
-
-      // Update budget amounts
-      const { error: updateError } = await supabase
-        .from('budget_na853_split')
-        .update({
-          user_view: newUserView.toString(),
-          ethsia_pistosi: newEthsiaPistosi.toString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('mis', mis);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // Create budget history entry
-      const { error: historyError } = await supabase
-        .from('budget_history')
-        .insert({
-          mis,
-          previous_amount: currentUserView.toString(),
-          new_amount: newUserView.toString(),
-          change_type: 'document_creation',
-          change_reason: 'Document creation reduced available budget',
-          created_by: userId,
-          created_at: new Date().toISOString()
-        });
-
-      if (historyError) {
-        console.error('Failed to create history entry:', historyError);
-        // Continue even if history creation fails
-      }
-
-      return {
-        status: 'success',
-        data: {
-          user_view: newUserView.toString(),
-          ethsia_pistosi: newEthsiaPistosi.toString(),
-          q1: '0',
-          q2: '0',
-          q3: '0',
-          q4: '0',
-          total_spent: '0',
-          current_budget: newUserView.toString()
-        }
-      };
-    } catch (error) {
-      console.error('[BudgetService] Budget update error:', error);
-      return {
-        status: 'error',
-        message: error instanceof Error ? error.message : 'Failed to update budget'
-      };
     }
   }
 }
