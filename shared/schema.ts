@@ -34,26 +34,6 @@ export const budgetNotifications = pgTable("budget_notifications", {
   updated_at: timestamp("updated_at").defaultNow()
 });
 
-// New Budget Notifications table
-//export const budgetNotifications = pgTable("budget_notifications", {
-//  id: serial("id").primaryKey(),
-//  mis: text("mis").notNull(),
-//  type: text("type").notNull(), // 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning'
-//  amount: numeric("amount").notNull(),
-//  current_budget: numeric("current_budget").notNull(),
-//  ethsia_pistosi: numeric("ethsia_pistosi").notNull(),
-//  reason: text("reason"),
-//  priority: text("priority").default("medium"), // 'high' | 'medium' | 'low'
-//  status: text("status").default("pending"), // 'pending' | 'approved' | 'rejected' | 'in_review'
-//  metadata: jsonb("metadata"), // Additional context data
-//  action_required: boolean("action_required").default(true),
-//  action_deadline: timestamp("action_deadline"),
-//  created_at: timestamp("created_at").defaultNow(),
-//  updated_at: timestamp("updated_at").defaultNow(),
-//  created_by: integer("created_by").references(() => users.id),
-//  reviewed_by: integer("reviewed_by").references(() => users.id),
-//  review_notes: text("review_notes"),
-//});
 
 // Update the users table definition to match the actual database structure
 export const users = pgTable("users", {
@@ -115,16 +95,17 @@ export const generatedDocuments = pgTable("generated_documents", {
   updated_by: integer("updated_by").references(() => users.id),
 });
 
-// Budget History table for tracking changes
+// Update the budget history table to include metadata
 export const budgetHistory = pgTable("budget_history", {
   id: serial("id").primaryKey(),
   mis: text("mis").notNull(),
-  previous_amount: numeric("previous_amount").notNull(),
-  new_amount: numeric("new_amount").notNull(),
+  previous_amount: text("previous_amount").notNull(),
+  new_amount: text("new_amount").notNull(),
   change_type: text("change_type").notNull(), // e.g., 'document_creation', 'manual_adjustment'
   change_reason: text("change_reason"),
   document_id: integer("document_id").references(() => generatedDocuments.id),
   created_by: integer("created_by").references(() => users.id),
+  metadata: jsonb("metadata"), // Add metadata column
   created_at: timestamp("created_at").defaultNow(),
 });
 
