@@ -248,7 +248,10 @@ export class DocumentFormatter {
   }
 
   private static createFooter(documentData: DocumentData, unitDetails?: UnitDetails): Table {
-    const attachments = documentData.attachments || [];
+    // Clean up attachments by removing the prefix and empty items
+    const attachments = (documentData.attachments || [])
+      .map(item => item.replace(/^\d+\-/, ''))
+      .filter(Boolean);
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
