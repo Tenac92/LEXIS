@@ -557,9 +557,30 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       onClose();
     } catch (error) {
       console.error('Document creation error:', error);
-      const errorMessage = error instanceof Error ? error.message :
-        typeof error === 'object' && error !== null && 'message' in error ? String(error.message) :
-          "Αποτυχία δημιουργίας εγγράφου";
+      
+      // Extract detailed error message from response if available
+      let errorMessage = "Αποτυχία δημιουργίας εγγράφου";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Try to parse JSON error response
+        if (error.message.includes('HTTP') && 'cause' in error) {
+          try {
+            const responseData = await (error.cause as Response).json();
+            if (responseData && responseData.message) {
+              errorMessage = responseData.message;
+            }
+            if (responseData && responseData.error) {
+              errorMessage += `: ${responseData.error}`;
+            }
+          } catch (e) {
+            console.error('Error parsing error response:', e);
+          }
+        }
+      } else if (typeof error === 'object' && error !== null && 'message' in error) {
+        errorMessage = String(error.message);
+      }
 
       toast({
         title: "Σφάλμα",

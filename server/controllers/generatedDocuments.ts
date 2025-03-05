@@ -41,9 +41,27 @@ router.post('/', authenticateToken, async (req, res) => {
     }));
 
     // Create document with all required fields
-    const { data, error } = await supabase
-      .from('generated_documents')
-      .insert([{
+    try {
+      // Validate recipients format
+      if (!formattedRecipients || !Array.isArray(formattedRecipients)) {
+        console.error('Invalid recipients format:', formattedRecipients);
+        return res.status(400).json({
+          message: 'Recipients must be a valid array'
+        });
+      }
+
+      // Validate each recipient has required fields
+      for (const recipient of formattedRecipients) {
+        if (!recipient.afm || !recipient.firstname || !recipient.lastname || 
+            typeof recipient.amount !== 'number' || typeof recipient.installment !== 'number') {
+          console.error('Invalid recipient data:', recipient);
+          return res.status(400).json({
+            message: 'Invalid recipient data. Please check all required fields are provided.'
+          });
+        }
+      }
+
+      const documentPayload = {
         unit,
         project_id,
         project_na853: projectData.na853,
@@ -59,15 +77,28 @@ router.post('/', authenticateToken, async (req, res) => {
         is_correction: false,
         comments: null,
         original_document_id: null
-      }])
-      .select()
-      .single();
+      };
 
-    if (error) {
-      console.error('Document creation error:', error);
-      return res.status(500).json({ 
-        message: 'Failed to create document',
-        error: error.message 
+      console.log('Document payload:', JSON.stringify(documentPayload, null, 2));
+
+      const { data, error } = await supabase
+        .from('generated_documents')
+        .insert([documentPayload])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Document creation error:', error);
+        return res.status(500).json({ 
+          message: 'Failed to create document',
+          error: error.message 
+        });
+      }
+    } catch (error) {
+      console.error('Unexpected error in document creation:', error);
+      return res.status(500).json({
+        message: 'An unexpected error occurred during document creation',
+        error: error instanceof Error ? error.message : String(error)
       });
     }
 

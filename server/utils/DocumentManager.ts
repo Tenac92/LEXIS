@@ -51,11 +51,29 @@ export class DocumentManager {
 
   async createDocument(documentData: any) {
     try {
+      console.log('Creating document with data:', JSON.stringify(documentData, null, 2));
+      
+      // Validate recipients array
+      if (documentData.recipients && Array.isArray(documentData.recipients)) {
+        for (const recipient of documentData.recipients) {
+          if (!recipient.afm || !recipient.firstname || !recipient.lastname || 
+              typeof recipient.amount !== 'number' || typeof recipient.installment !== 'number') {
+            console.error('Invalid recipient data:', recipient);
+            throw new Error('Invalid recipient data. Please check all required fields are provided.');
+          }
+        }
+      }
+
       const { data, error } = await supabase
         .from('generated_documents')
         .insert([documentData])
         .select()
         .single();
+      
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
 
       if (error) throw error;
       return data;
