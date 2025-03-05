@@ -19,7 +19,7 @@ interface DocumentData {
   protocol_number_input?: string;
   protocol_date?: string;
   user_name?: string;
-  attachments?: string;
+  attachments?: string[]; // Updated type to string[]
   recipients?: Array<{
     firstname: string;
     lastname: string;
@@ -248,6 +248,8 @@ export class DocumentFormatter {
   }
 
   private static createFooter(documentData: DocumentData, unitDetails?: UnitDetails): Table {
+    const attachments = documentData.attachments || [];
+
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
@@ -271,7 +273,7 @@ export class DocumentFormatter {
               },
               children: [
                 this.createBoldUnderlinedParagraph("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)"),
-                ...["Διαβιβαστικό", "ΔΚΑ"].map((item, index) =>
+                ...attachments.map((item, index) =>
                   new Paragraph({
                     text: `${index + 1}. ${item}`,
                     indent: { left: 426 },
