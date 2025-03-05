@@ -1,4 +1,4 @@
-import { pgTable, text, serial, boolean, timestamp, jsonb, numeric, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, numeric, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -70,30 +70,21 @@ export const projectCatalog = pgTable("project_catalog", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// Generated Documents table matching the actual database structure
+// Generated Documents table matching the database structure
 export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
+  status: text("status").default("draft").notNull(),
   created_at: timestamp("created_at").defaultNow(),
-  generated_by: integer("generated_by").references(() => users.id),
-  recipients: jsonb("recipients").notNull(),
-  protocol_date: timestamp("protocol_date"),
-  total_amount: numeric("total_amount").notNull(),
-  document_date: timestamp("document_date"),
-  status: text("status").default("draft"),
-  protocol_number_input: text("protocol_number_input"),
-  expenditure_type: text("expenditure_type").notNull(),
+  updated_at: timestamp("updated_at").defaultNow(),
+  unit: text("unit").notNull(),
   project_id: text("project_id").notNull(),
   project_na853: text("project_na853"),
-  unit: text("unit").notNull(),
-  original_protocol_number: text("original_protocol_number"),
-  original_protocol_date: timestamp("original_protocol_date"),
-  is_correction: boolean("is_correction").default(false),
+  expenditure_type: text("expenditure_type").notNull(),
+  recipients: jsonb("recipients").notNull(),
+  total_amount: numeric("total_amount").notNull(),
+  generated_by: integer("generated_by").references(() => users.id),
   department: text("department"),
-  comments: text("comments"),
-  original_document_id: integer("original_document_id"),
-  updated_by: integer("updated_by"),
   attachments: text("attachments").array(),
-  updated_at: timestamp("updated_at").defaultNow()
 });
 
 // Update the budget history table to include metadata
@@ -242,16 +233,6 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
   unit: z.string().min(1, "Unit is required"),
   expenditure_type: z.string().min(1, "Expenditure type is required"),
   status: z.enum(["draft", "pending", "approved", "rejected"]).default("draft")
-}).superRefine((data, ctx) => {
-  // Validate that total amount matches sum of recipient amounts
-  const totalFromRecipients = data.recipients.reduce((sum, recipient) => sum + recipient.amount, 0);
-  if (Math.abs(totalFromRecipients - Number(data.total_amount)) > 0.01) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Total amount must match sum of recipient amounts",
-      path: ["total_amount"]
-    });
-  }
 });
 
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({

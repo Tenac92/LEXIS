@@ -57,16 +57,7 @@ router.post('/', authenticateToken, async (req, res) => {
       department: req.user.department || null,
       attachments: attachments || [],
       created_at: now,
-      updated_at: now,
-      protocol_date: null,
-      document_date: null,
-      protocol_number_input: null,
-      original_protocol_number: null,
-      original_protocol_date: null,
-      is_correction: false,
-      comments: null,
-      original_document_id: null,
-      updated_by: null
+      updated_at: now
     };
 
     console.log('Document payload:', JSON.stringify(documentPayload, null, 2));
