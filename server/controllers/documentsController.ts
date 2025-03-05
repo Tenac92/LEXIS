@@ -167,13 +167,15 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
 
     if (!protocol_number?.trim()) {
       return res.status(400).json({ 
-        error: 'Protocol number is required'
+        success: false,
+        message: 'Protocol number is required'
       });
     }
 
     if (!protocol_date) {
       return res.status(400).json({ 
-        error: 'Protocol date is required'
+        success: false,
+        message: 'Protocol date is required'
       });
     }
 
@@ -190,12 +192,18 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
     }
 
     if (!document) {
-      return res.status(404).json({ error: 'Document not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'Document not found' 
+      });
     }
 
     // Check if user has access to this document's unit
     if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
-      return res.status(403).json({ error: 'Access denied to this document' });
+      return res.status(403).json({ 
+        success: false,
+        message: 'Access denied to this document' 
+      });
     }
 
     // Update the document without updated_at field
@@ -217,12 +225,17 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
     }
 
     console.log('[Documents] Protocol updated successfully for document:', id);
-    res.json(updatedDocument);
+    return res.json({ 
+      success: true,
+      message: 'Protocol updated successfully',
+      data: updatedDocument 
+    });
   } catch (error) {
     console.error('[Documents] Protocol update error:', error);
-    res.status(500).json({
-      error: 'Failed to update protocol',
-      details: error instanceof Error ? error.message : 'Unknown error'
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update protocol',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

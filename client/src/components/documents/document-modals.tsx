@@ -58,7 +58,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         protocolDate: formattedDate 
       });
 
-      const response = await apiRequest<{ success: boolean; message: string; error?: string }>(`/api/documents/generated/${document.id}/protocol`, {
+      const response = await apiRequest<{ success: boolean; message: string; data?: any }>(`/api/documents/generated/${document.id}/protocol`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -69,20 +69,19 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         })
       });
 
-      // Success case
-      if (response.success) {
-        // Invalidate queries to refetch data
-        await queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
-
-        toast({
-          title: "Success",
-          description: "Protocol updated successfully",
-        });
-        onClose();
-      } else {
-        // Handle error case
-        throw new Error(response.error || response.message || 'Failed to update protocol');
+      if (!response || response.success === false) {
+        throw new Error(response?.message || 'Failed to update protocol');
       }
+
+      // Invalidate queries to refetch data
+      await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
+
+      toast({
+        title: "Success",
+        description: response.message || "Protocol updated successfully",
+      });
+      onClose();
 
     } catch (error) {
       console.error('Protocol save error:', error);
