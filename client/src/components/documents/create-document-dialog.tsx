@@ -226,8 +226,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         if (error) {
           console.error('Error fetching units:', error);
           toast({
-            title: "Error",
-            description: "Failed to load units. Please try again.",
+            title: "Σφάλμα",
+            description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
             variant: "destructive"
           });
           throw error;
@@ -260,8 +260,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         if (error) {
           console.error('Error fetching projects:', error);
           toast({
-            title: "Error",
-            description: "Failed to load projects. Please try again.",
+            title: "Σφάλμα",
+            description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
             variant: "destructive"
           });
           throw error;
@@ -325,8 +325,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       } catch (error) {
         console.error('Budget fetch error:', error);
         toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load budget information.",
+          title: "Σφάλμα",
+          description: error instanceof Error ? error.message : "Αποτυχία φόρτωσης πληροφοριών προϋπολογισμού.",
           variant: "destructive"
         });
         return null;
@@ -355,8 +355,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         if (error) {
           console.error('Error fetching attachments:', error);
           toast({
-            title: "Error",
-            description: "Failed to load attachments",
+            title: "Σφάλμα",
+            description: "Αποτυχία φόρτωσης συνημμένων",
             variant: "destructive"
           });
           return [];
@@ -403,10 +403,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           })
         });
 
-        // Show warning toast if there's a warning message
         if (response.status === 'warning' && response.message) {
           toast({
-            title: "Warning",
+            title: "Προειδοποίηση",
             description: response.message,
             variant: "destructive"
           });
@@ -416,21 +415,20 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       } catch (error) {
         console.error('Budget validation error:', error);
         toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : 'Budget validation failed',
+          title: "Σφάλμα",
+          description: error instanceof Error ? error.message : 'Αποτυχία επικύρωσης προϋπολογισμού',
           variant: "destructive"
         });
         return {
           status: 'error',
           canCreate: false,
-          message: error instanceof Error ? error.message : 'Budget validation failed'
+          message: error instanceof Error ? error.message : 'Αποτυχία επικύρωσης προϋπολογισμού'
         };
       }
     },
     enabled: Boolean(selectedProjectId) && currentAmount > 0
   });
 
-  // Disable form submission if validation fails
   const isSubmitDisabled = validationResult?.status === 'error' || !validationResult?.canCreate;
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
@@ -439,15 +437,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     try {
       if (isSubmitDisabled) {
         toast({
-          title: "Error",
-          description: validationResult?.message || "Cannot submit form due to validation errors",
+          title: "Σφάλμα",
+          description: validationResult?.message || "Δεν είναι δυνατή η υποβολή της φόρμας λόγω σφαλμάτων επικύρωσης",
           variant: "destructive"
         });
         return;
       }
       setLoading(true);
 
-      // Validate project selection
       if (!data.project_id) {
         toast({
           title: "Σφάλμα",
@@ -457,7 +454,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return;
       }
 
-      // Validate recipients
       if (!data.recipients?.length) {
         toast({
           title: "Σφάλμα",
@@ -467,7 +463,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return;
       }
 
-      // Validate recipient data
       const invalidRecipients = data.recipients.some(r =>
         !r.firstname || !r.lastname || !r.afm || typeof r.amount !== 'number' || !r.installment
       );
@@ -483,7 +478,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
 
-      // First, try to update the budget
       const budgetUpdateResponse = await supabase
         .from('budget_na853_split')
         .update({
@@ -530,18 +524,15 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         throw new Error('Failed to create document: Invalid response');
       }
 
-      // Invalidate all relevant queries to refresh data
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["documents"] }),
         queryClient.invalidateQueries({ queryKey: ["budget"] }),
         queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] }),
-        // Add specific invalidation for the budget_na853_split table
         queryClient.invalidateQueries({
           queryKey: ["budget-validation", data.project_id, totalAmount]
         })
       ]);
 
-      // Force refetch budget data immediately
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ["budget", data.project_id] }),
         queryClient.refetchQueries({ queryKey: ["budget-validation", data.project_id, totalAmount] })
@@ -557,14 +548,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       onClose();
     } catch (error) {
       console.error('Document creation error:', error);
-      
-      // Extract detailed error message from response if available
+
       let errorMessage = "Αποτυχία δημιουργίας εγγράφου";
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
-        
-        // Try to parse JSON error response
+
         if (error.message.includes('HTTP') && 'cause' in error) {
           try {
             const responseData = await (error.cause as Response).json();
@@ -575,7 +564,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               errorMessage += `: ${responseData.error}`;
             }
           } catch (e) {
-            console.error('Error parsing error response:', e);
+            console.error('Σφάλμα ανάλυσης απάντησης σφάλματος:', e);
           }
         }
       } else if (typeof error === 'object' && error !== null && 'message' in error) {
@@ -631,7 +620,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     try {
       let fieldsToValidate: Array<keyof CreateDocumentForm> = [];
 
-      // Clear previous errors
       form.clearErrors();
 
       switch (currentStep) {
@@ -645,7 +633,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           fieldsToValidate = ["recipients"];
           const recipients = form.getValues("recipients");
 
-          // Basic validation before schema validation
           if (!recipients || recipients.length === 0) {
             toast({
               title: "Σφάλμα Επικύρωσης",
@@ -655,7 +642,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             return;
           }
 
-          // Validate each recipient's required fields
           const invalidRecipient = recipients.find(r =>
             !r.firstname?.trim() ||
             !r.lastname?.trim() ||
@@ -675,7 +661,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           }
           break;
         case 3:
-          // No validation needed for attachments as they're optional
           break;
       }
 
@@ -685,7 +670,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         setDirection(1);
         setCurrentStep((prev) => Math.min(prev + 1, 3));
       } else {
-        // Get specific error messages
         const errors = form.formState.errors;
         const errorFields = Object.keys(errors);
         const errorMessage = errorFields.length > 0
@@ -711,14 +695,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const handleNextOrSubmit = async () => {
     try {
       if (currentStep === 3) {
-        // For the final step, validate all fields before submission
         const isValid = await form.trigger();
         if (isValid) {
           await form.handleSubmit(handleSubmit)();
         } else {
           toast({
-            title: "Validation Error",
-            description: "Please check all fields are filled correctly",
+            title: "Σφάλμα Επικύρωσης",
+            description: "Παρακαλώ ελέγξτε ότι όλα τα πεδία είναι συμπληρωμένα σωστά",
             variant: "destructive"
           });
         }
@@ -728,8 +711,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     } catch (error) {
       console.error('Form navigation/submission error:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred",
+        title: "Σφάλμα",
+        description: error instanceof Error ? error.message : "Προέκυψε σφάλμα",
         variant: "destructive"
       });
     }
@@ -932,31 +915,18 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                   max: 12
                                 })}
                                 placeholder="Δόση"
-                                className="w-20"
+                                className="flex-1"
                               />
                               <Button
                                 type="button"
                                 variant="ghost"
-                                size="sm"
-                                className="px-2"
+                                size="icon"
                                 onClick={() => removeRecipient(index)}
                               >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
-                        </div>
-                        <div className="mt-2 pl-8 text-xs text-destructive">
-                          {form.formState.errors.recipients?.[index]?.firstname && 
-                            <span className="block">{form.formState.errors.recipients[index]?.firstname?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.lastname && 
-                            <span className="block">{form.formState.errors.recipients[index]?.lastname?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.afm && 
-                            <span className="block">{form.formState.errors.recipients[index]?.afm?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.amount && 
-                            <span className="block">{form.formState.errors.recipients[index]?.amount?.message}</span>}
-                          {form.formState.errors.recipients?.[index]?.installment && 
-                            <span className="block">{form.formState.errors.recipients[index]?.installment?.message}</span>}
                         </div>
                       </Card>
                     ))}
@@ -967,41 +937,42 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           )}
 
           {currentStep === 3 && (
-            <div className="spacey-4">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Συνημμένα Έγγραφα</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {attachments.map((attachment) => (
-                    <Card key={attachment.id} className="p-3">
-                      <FormField
-                        control={form.control}
-                        name="selectedAttachments"
-                        render={({ field }) => (
-                          <FormItem className="flex items-start space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(attachment.id)}
-                                onCheckedChange={(checked) => {
-                                  const current = field.value || [];
-                                  const newValue = checked
-                                    ? [...current, attachment.id]
-                                    : current.filter((id) => id !== attachment.id);
-                                  field.onChange(newValue);
-                                }}
-                              />
-                            </FormControl>
-                            <div className="space-y-1">
-                              <div className="text-sm font-medium">{attachment.title}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {attachment.description}
-                              </div>
-                            </div>
-                          </FormItem>
-                        )}
-                      />
-                    </Card>
-                  ))}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-lg font-medium">Συνημμένα Έγγραφα</h3>
+                  <p className="text-sm text-muted-foreground">Επιλέξτε τα απαιτούμενα έγγραφα</p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="flex items-start space-x-2">
+                    <Checkbox
+                      id={attachment.id}
+                      checked={form.watch('selectedAttachments')?.includes(attachment.id)}
+                      onCheckedChange={(checked) => {
+                        const current = form.watch('selectedAttachments') || [];
+                        if (checked) {
+                          form.setValue('selectedAttachments', [...current, attachment.id]);
+                        } else {
+                          form.setValue('selectedAttachments', current.filter(id => id !== attachment.id));
+                        }
+                      }}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <label
+                        htmlFor={attachment.id}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        {attachment.title}
+                      </label>
+                      <p className="text-sm text-muted-foreground">
+                        {attachment.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1203,109 +1174,98 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                     max: 12
                                   })}
                                   placeholder="Δόση"
-                                  className="w-20"
+                                  className="flex-1"
                                 />
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  size="sm"
-                                  className="px-2"
+                                  size="icon"
                                   onClick={() => removeRecipient(index)}
                                 >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
                           </div>
-                          <div className="mt-2 pl-8 text-xs text-destructive">
-                            {form.formState.errors.recipients?.[index]?.firstname && 
-                              <span className="block">{form.formState.errors.recipients[index]?.firstname?.message}</span>}
-                            {form.formState.errors.recipients?.[index]?.lastname && 
-                              <span className="block">{form.formState.errors.recipients[index]?.lastname?.message}</span>}
-                            {form.formState.errors.recipients?.[index]?.afm && 
-                              <span className="block">{form.formState.errors.recipients[index]?.afm?.message}</span>}
-                            {form.formState.errors.recipients?.[index]?.amount && 
-                              <span className="block">{form.formState.errors.recipients[index]?.amount?.message}</span>}
-                            {form.formState.errors.recipients?.[index]?.installment && 
-                              <span className="block">{form.formState.errors.recipients[index]?.installment?.message}</span>}
-                          </div>
                         </Card>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                {currentStep === 3 && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-medium mb-4">Συνημμένα Έγγραφα</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {attachments.map((attachment) => (
-                          <Card key={attachment.id} className="p-4">
-                            <FormField
-                              control={form.control}
-                              name="selectedAttachments"
-                              render={({ field }) => (
-                                <FormItem className="flex items-start space-x-3 space-y-0">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(attachment.id)}
-                                      onCheckedChange={(checked) => {
-                                        const current = field.value || [];
-                                        const newValue = checked
-                                          ? [...current, attachment.id]
-                                          : current.filter((id) => id !== attachment.id);
-                                        field.onChange(newValue);
-                                      }}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1">
-                                    <div className="text-sm font-medium">{attachment.title}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {attachment.description}
-                                    </div>
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  </ScrollArea>
+                </div>
               </div>
-            </ScrollArea>
+            )}
 
-            <div className="flex justify-between items-center pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handlePrevious}
-                disabled={currentStep === 0 || loading}
-              >
-                Προηγούμενο
-              </Button>
-              <Button
-                type="button"
-                onClick={handleNextOrSubmit}
-                disabled={loading || (currentStep === 3 && isSubmitDisabled)}
-              >
-                {loading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    <span>Επεξεργασία...</span>
+            {currentStep === 3 && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Συνημμένα Έγγραφα</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {attachments.map((attachment) => (
+                      <Card key={attachment.id} className="p-4">
+                        <FormField
+                          control={form.control}
+                          name="selectedAttachments"
+                          render={({ field }) => (
+                            <FormItem className="flex items-start space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(attachment.id)}
+                                  onCheckedChange={(checked) => {
+                                    const current = field.value || [];
+                                    const newValue = checked
+                                      ? [...current, attachment.id]
+                                      : current.filter((id) => id !== attachment.id);
+                                    field.onChange(newValue);
+                                  }}
+                                />
+                              </FormControl>
+                              <div className="space-y-1">
+                                <div className="text-sm font-medium">{attachment.title}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {attachment.description}
+                                </div>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                      </Card>
+                    ))}
                   </div>
-                ) : currentStep === 3 ? (
-                  'Αποθήκευση'
-                ) : (
-                  'Επόμενο'
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        <div className="flex justify-between items-center pt-4 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handlePrevious}
+            disabled={currentStep === 0 || loading}
+          >
+            Προηγούμενο
+          </Button>
+          <Button
+            type="button"
+            onClick={handleNextOrSubmit}
+            disabled={loading || (currentStep === 3 && isSubmitDisabled)}
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                <span>Επεξεργασία...</span>
+              </div>
+            ) : currentStep === 3 ? (
+              'Αποθήκευση'
+            ) : (
+              'Επόμενο'
+            )}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  </DialogContent>
+</Dialog>
+);
 }
