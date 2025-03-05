@@ -157,10 +157,8 @@ class DocumentFormatter {
   }
 
   static async createDocumentFooter(document = {}, unitDetails = {}) {
-    const attachments = document.attachments || [
-      'Διαβιβαστικό',
-      'ΔΚΑ'
-    ];
+    // Only use attachments from the document
+    const attachments = document.attachments || [];
 
     const notifications = [
       'Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας',
