@@ -8,71 +8,90 @@ export function createWebSocketServer(server: Server) {
   try {
     const wss = new WebSocketServer({ 
       server,
-      path: WS_PATH
+      path: WS_PATH,
+      clientTracking: true
     });
 
     console.log(`[WebSocket] Server initialized on path: ${WS_PATH}`);
 
     wss.on('connection', (ws, req) => {
+      const clientId = Math.random().toString(36).substring(7);
+      console.log(`[WebSocket] New client connected: ${clientId}`);
+
       // Enhanced connection logging
       const connectionInfo = {
+        clientId,
         path: req.url,
         ip: req.socket.remoteAddress,
-        headers: {
-          origin: req.headers.origin,
-          host: req.headers.host,
-          cookie: req.headers.cookie ? 'present' : 'missing',
-          upgrade: req.headers.upgrade,
-          connection: req.headers.connection,
-          'sec-websocket-key': req.headers['sec-websocket-key'] ? 'present' : 'missing'
-        },
-        url: req.url,
-        method: req.method,
-        sessionPresent: req.headers.cookie?.includes('sid=')
+        timestamp: new Date().toISOString()
       };
 
-      console.log('[WebSocket] New connection attempt:', connectionInfo);
+      console.log('[WebSocket] Connection details:', connectionInfo);
 
       // Send connection confirmation
       try {
         ws.send(JSON.stringify({ 
           type: 'connection',
           message: 'Connected to notification service',
+          clientId,
           timestamp: new Date().toISOString()
         }));
-        console.log('[WebSocket] Welcome message sent successfully');
       } catch (error) {
         console.error('[WebSocket] Failed to send welcome message:', error);
       }
 
+      // Heartbeat mechanism
+      const pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.ping();
+        }
+      }, 30000);
+
       ws.on('message', (data) => {
         try {
-          console.log('[WebSocket] Received message:', data.toString());
+          const message = JSON.parse(data.toString());
+          console.log(`[WebSocket] Received message from ${clientId}:`, message);
         } catch (error) {
           console.error('[WebSocket] Error processing message:', error);
         }
       });
 
       ws.on('error', (error) => {
-        console.error('[WebSocket] Client connection error:', {
-          error,
-          ip: req.socket.remoteAddress,
-          headers: connectionInfo.headers
+        console.error('[WebSocket] Client error:', {
+          clientId,
+          error: error.message,
+          timestamp: new Date().toISOString()
         });
       });
 
       ws.on('close', (code, reason) => {
+        clearInterval(pingInterval);
         console.log('[WebSocket] Client disconnected:', {
+          clientId,
           code,
           reason: reason.toString(),
-          ip: req.socket.remoteAddress,
-          headers: connectionInfo.headers
+          timestamp: new Date().toISOString()
         });
+      });
+
+      ws.on('pong', () => {
+        ws.isAlive = true;
       });
     });
 
-    wss.on('error', (error) => {
-      console.error('[WebSocket] Server error:', error);
+    // Cleanup dead connections
+    const interval = setInterval(() => {
+      wss.clients.forEach((ws: any) => {
+        if (ws.isAlive === false) {
+          return ws.terminate();
+        }
+        ws.isAlive = false;
+        ws.ping();
+      });
+    }, 30000);
+
+    wss.on('close', () => {
+      clearInterval(interval);
     });
 
     return wss;
@@ -88,14 +107,23 @@ export const broadcastNotification = (wss: WebSocketServer, notification: Budget
     return;
   }
 
-  const message = JSON.stringify(notification);
+  const message = JSON.stringify({
+    type: 'notification',
+    data: notification,
+    timestamp: new Date().toISOString()
+  });
+
+  let sentCount = 0;
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       try {
         client.send(message);
+        sentCount++;
       } catch (error) {
         console.error('[WebSocket] Failed to send to client:', error);
       }
     }
   });
+
+  console.log(`[WebSocket] Broadcast notification to ${sentCount} clients`);
 };
