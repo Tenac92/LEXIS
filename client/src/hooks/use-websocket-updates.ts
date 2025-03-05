@@ -14,10 +14,13 @@ export function useWebSocketUpdates() {
 
     function connect() {
       try {
+        // Get the correct WebSocket URL based on the current window location
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        const host = window.location.host;
+        const wsUrl = `${protocol}//${host}/ws`;
 
         console.log('[WebSocket] Attempting to connect:', wsUrl);
+
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
@@ -25,6 +28,12 @@ export function useWebSocketUpdates() {
           console.log('[WebSocket] Connected successfully');
           setIsConnected(true);
           retryCount = 0; // Reset retry count on successful connection
+
+          // Send initial connection message
+          ws.send(JSON.stringify({ 
+            type: 'connect',
+            timestamp: new Date().toISOString()
+          }));
         };
 
         ws.onmessage = (event) => {
@@ -32,15 +41,21 @@ export function useWebSocketUpdates() {
             const data = JSON.parse(event.data);
             console.log('[WebSocket] Received message:', data);
 
-            if (data.type === 'notification') {
-              // Handle notifications
-              queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
-
-              toast({
-                title: 'Ενημέρωση',
-                description: data.message || 'Νέα ενημέρωση διαθέσιμη',
-                variant: 'default'
-              });
+            // Handle different message types
+            switch (data.type) {
+              case 'notification':
+                queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
+                toast({
+                  title: 'Ενημέρωση',
+                  description: data.message || 'Νέα ενημέρωση διαθέσιμη',
+                  variant: 'default'
+                });
+                break;
+              case 'connection':
+                console.log('[WebSocket] Connection confirmed:', data);
+                break;
+              default:
+                console.log('[WebSocket] Unhandled message type:', data.type);
             }
           } catch (error) {
             console.error('[WebSocket] Error processing message:', error);
@@ -81,6 +96,7 @@ export function useWebSocketUpdates() {
 
     connect();
 
+    // Cleanup function
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);

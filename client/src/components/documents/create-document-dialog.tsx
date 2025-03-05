@@ -1129,143 +1129,143 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                       </Button>
                     </div>
 
-                    <div className="space-y-4">
-                      {recipients.map((_, index) => (
-                        <Card key={index} className="p-4">
-                          <div className="flex items-start gap-4">
-                            <span className="text-sm font-medium min-w-[24px] text-center mt-2">
-                              {index + 1}
-                            </span>
-                            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 flex-1">
-                              <Input
-                                {...form.register(`recipients.${index}.firstname`)}
-                                placeholder="Όνομα"
-                                className="md:col-span-1"
-                              />
-                              <Input
-                                {...form.register(`recipients.${index}.lastname`)}
-                                placeholder="Επώνυμο"
-                                className="md:col-span-1"
-                              />
-                              <Input
-                                {...form.register(`recipients.${index}.afm`)}
-                                placeholder="ΑΦΜ"
-                                maxLength={9}
-                                className="md:col-span-1"
-                              />
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...form.register(`recipients.${index}.amount`, {
-                                  valueAsNumber: true,
-                                  min: 0.01
-                                })}
-                                placeholder="Ποσό"
-                                className="md:col-span-2"
-                              />
-                              <div className="flex items-center gap-2 md:col-span-1">
+                    <ScrollArea className="h-[calc(60vh-200px)] w-full pr-4">
+                      <div className="space-y-4">
+                        {recipients.map((_, index) => (
+                          <Card key={index} className="p-4">
+                            <div className="flex items-start gap-4">
+                              <span className="text-sm font-medium min-w-[24px] text-center mt-2">
+                                {index + 1}
+                              </span>
+                              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 flex-1">
+                                <Input
+                                  {...form.register(`recipients.${index}.firstname`)}
+                                  placeholder="Όνομα"
+                                  className="md:col-span-1"
+                                />
+                                <Input
+                                  {...form.register(`recipients.${index}.lastname`)}
+                                  placeholder="Επώνυμο"
+                                  className="md:col-span-1"
+                                />
+                                <Input
+                                  {...form.register(`recipients.${index}.afm`)}
+                                  placeholder="ΑΦΜ"
+                                  maxLength={9}
+                                  className="md:col-span-1"
+                                />
                                 <Input
                                   type="number"
-                                  min={1}
-                                  max={12}
-                                  {...form.register(`recipients.${index}.installment`, {
+                                  step="0.01"
+                                  {...form.register(`recipients.${index}.amount`, {
                                     valueAsNumber: true,
-                                    min: 1,
-                                    max: 12
+                                    min: 0.01
                                   })}
-                                  placeholder="Δόση"
-                                  className="flex-1"
+                                  placeholder="Ποσό"
+                                  className="md:col-span-2"
                                 />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeRecipient(index)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              </div>
-            )}
-
-            {currentStep === 3 && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Συνημμένα Έγγραφα</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {attachments.map((attachment) => (
-                      <Card key={attachment.id} className="p-4">
-                        <FormField
-                          control={form.control}
-                          name="selectedAttachments"
-                          render={({ field }) => (
-                            <FormItem className="flex items-start space-x-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(attachment.id)}
-                                  onCheckedChange={(checked) => {
-                                    const current = field.value || [];
-                                    const newValue = checked
-                                      ? [...current, attachment.id]
-                                      : current.filter((id) => id !== attachment.id);
-                                    field.onChange(newValue);
-                                  }}
-                                />
-                              </FormControl>
-                              <div className="space-y-1">
-                                <div className="text-sm font-medium">{attachment.title}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {attachment.description}
+                                <div className="flex items-center gap-2 md:col-span-1">
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={12}
+                                    {...form.register(`recipients.${index}.installment`, {
+                                      valueAsNumber: true,
+                                      min: 1,
+                                      max: 12
+                                    })}
+                                    placeholder="Δόση"
+                                    className="flex-1"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeRecipient(index)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </div>
                               </div>
-                            </FormItem>
-                          )}
-                        />
-                      </Card>
-                    ))}
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
+                )}
 
-        <div className="flex justify-between items-center pt-4 border-t">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={currentStep === 0 || loading}
-          >
-            Προηγούμενο
-          </Button>
-          <Button
-            type="button"
-            onClick={handleNextOrSubmit}
-            disabled={loading || (currentStep === 3 && isSubmitDisabled)}
-          >
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                <span>Επεξεργασία...</span>
+                {currentStep === 3 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Συνημμένα Έγγραφα</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {attachments.map((attachment) => (
+                          <Card key={attachment.id} className="p-4">
+                            <FormField
+                              control={form.control}
+                              name="selectedAttachments"
+                              render={({ field }) => (
+                                <FormItem className="flex items-start space-x-3 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(attachment.id)}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        const newValue = checked
+                                          ? [...current, attachment.id]
+                                          : current.filter((id) => id !== attachment.id);
+                                        field.onChange(newValue);
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1">
+                                    <div className="text-sm font-medium">{attachment.title}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {attachment.description}
+                                    </div>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : currentStep === 3 ? (
-              'Αποθήκευση'
-            ) : (
-              'Επόμενο'
-            )}
-          </Button>
-        </div>
-      </form>
-    </Form>
-  </DialogContent>
-</Dialog>
-);
+            </ScrollArea>
+
+            <div className="flex justify-between items-center pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0 || loading}
+              >
+                Προηγούμενο
+              </Button>
+              <Button
+                type="button"
+                onClick={handleNextOrSubmit}
+                disabled={loading || (currentStep === 3 && isSubmitDisabled)}
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <span>Επεξεργασία...</span>
+                  </div>
+                ) : currentStep === 3 ? (
+                  'Αποθήκευση'
+                ) : (
+                  'Επόμενο'
+                )}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
 }

@@ -4,6 +4,10 @@ import type { BudgetNotification } from '@shared/schema';
 
 const WS_PATH = '/ws';
 
+interface ExtendedWebSocket extends WebSocket {
+  isAlive: boolean;
+}
+
 export function createWebSocketServer(server: Server) {
   try {
     const wss = new WebSocketServer({ 
@@ -14,21 +18,12 @@ export function createWebSocketServer(server: Server) {
 
     console.log(`[WebSocket] Server initialized on path: ${WS_PATH}`);
 
-    wss.on('connection', (ws, req) => {
+    wss.on('connection', (ws: ExtendedWebSocket, req) => {
       const clientId = Math.random().toString(36).substring(7);
       console.log(`[WebSocket] New client connected: ${clientId}`);
 
-      // Enhanced connection logging
-      const connectionInfo = {
-        clientId,
-        path: req.url,
-        ip: req.socket.remoteAddress,
-        timestamp: new Date().toISOString()
-      };
+      ws.isAlive = true;
 
-      console.log('[WebSocket] Connection details:', connectionInfo);
-
-      // Send connection confirmation
       try {
         ws.send(JSON.stringify({ 
           type: 'connection',
@@ -40,17 +35,20 @@ export function createWebSocketServer(server: Server) {
         console.error('[WebSocket] Failed to send welcome message:', error);
       }
 
-      // Heartbeat mechanism
-      const pingInterval = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.ping();
-        }
-      }, 30000);
+      ws.on('pong', () => {
+        ws.isAlive = true;
+      });
 
       ws.on('message', (data) => {
         try {
           const message = JSON.parse(data.toString());
           console.log(`[WebSocket] Received message from ${clientId}:`, message);
+
+          ws.send(JSON.stringify({
+            type: 'acknowledgment',
+            message: 'Message received',
+            timestamp: new Date().toISOString()
+          }));
         } catch (error) {
           console.error('[WebSocket] Error processing message:', error);
         }
@@ -65,7 +63,6 @@ export function createWebSocketServer(server: Server) {
       });
 
       ws.on('close', (code, reason) => {
-        clearInterval(pingInterval);
         console.log('[WebSocket] Client disconnected:', {
           clientId,
           code,
@@ -73,25 +70,22 @@ export function createWebSocketServer(server: Server) {
           timestamp: new Date().toISOString()
         });
       });
-
-      ws.on('pong', () => {
-        ws.isAlive = true;
-      });
     });
 
-    // Cleanup dead connections
-    const interval = setInterval(() => {
-      wss.clients.forEach((ws: any) => {
+    const heartbeatInterval = setInterval(() => {
+      (wss.clients as Set<ExtendedWebSocket>).forEach((ws) => {
         if (ws.isAlive === false) {
+          console.log('[WebSocket] Terminating inactive connection');
           return ws.terminate();
         }
+
         ws.isAlive = false;
         ws.ping();
       });
     }, 30000);
 
     wss.on('close', () => {
-      clearInterval(interval);
+      clearInterval(heartbeatInterval);
     });
 
     return wss;
