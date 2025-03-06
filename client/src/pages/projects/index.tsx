@@ -56,8 +56,8 @@ export default function ProjectsPage() {
   const handleExport = async () => {
     try {
       toast({
-        title: "Starting Export",
-        description: "Please wait while we prepare your file...",
+        title: "Έναρξη Εξαγωγής",
+        description: "Παρακαλώ περιμένετε όσο προετοιμάζεται το αρχείο σας...",
       });
 
       const response = await fetch("/api/projects/export/xlsx", {
@@ -68,10 +68,10 @@ export default function ProjectsPage() {
       });
 
       if (!response.ok) {
-        let errorMessage = 'Export failed';
+        let errorMessage = 'Η εξαγωγή απέτυχε';
         try {
           const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || 'Export failed';
+          errorMessage = errorData.message || errorData.error || 'Η εξαγωγή απέτυχε';
         } catch (e) {
           console.error('Error parsing error response:', e);
         }
@@ -89,14 +89,14 @@ export default function ProjectsPage() {
       window.URL.revokeObjectURL(url);
 
       toast({
-        title: "Export Successful",
-        description: "Projects data has been exported to Excel",
+        title: "Επιτυχής Εξαγωγή",
+        description: "Τα δεδομένα των έργων έχουν εξαχθεί σε Excel",
       });
     } catch (error) {
       console.error('Export error:', error);
       toast({
-        title: "Export Failed",
-        description: error instanceof Error ? error.message : "Failed to export projects data",
+        title: "Αποτυχία Εξαγωγής",
+        description: error instanceof Error ? error.message : "Αποτυχία εξαγωγής δεδομένων έργων",
         variant: "destructive",
       });
     }
@@ -114,21 +114,20 @@ export default function ProjectsPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || "Upload failed");
+        throw new Error(data.message || "Η μεταφόρτωση απέτυχε");
       }
 
       toast({
-        title: "Upload Successful",
-        description: "Projects have been updated successfully",
+        title: "Επιτυχής Μεταφόρτωση",
+        description: "Τα έργα ενημερώθηκαν με επιτυχία",
       });
 
-      // Invalidate projects query to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       setUploadDialogOpen(false);
     } catch (error) {
       toast({
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : "Failed to upload projects data",
+        title: "Αποτυχία Μεταφόρτωσης",
+        description: error instanceof Error ? error.message : "Αποτυχία μεταφόρτωσης δεδομένων έργων",
         variant: "destructive",
       });
     }
@@ -152,7 +151,7 @@ export default function ProjectsPage() {
       <Header />
       <main className="container mx-auto px-4 py-6">
         <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <h1 className="text-3xl font-bold">Projects</h1>
+          <h1 className="text-3xl font-bold">Έργα</h1>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
@@ -160,9 +159,9 @@ export default function ProjectsPage() {
               onClick={() => setView(view === "grid" ? "list" : "grid")}
             >
               {view === "grid" ? (
-                <><LayoutList className="mr-2 h-4 w-4" /> List View</>
+                <><LayoutList className="mr-2 h-4 w-4" /> Προβολή Λίστας</>
               ) : (
-                <><LayoutGrid className="mr-2 h-4 w-4" /> Grid View</>
+                <><LayoutGrid className="mr-2 h-4 w-4" /> Προβολή Πλέγματος</>
               )}
             </Button>
             {isAdmin && (
@@ -170,22 +169,22 @@ export default function ProjectsPage() {
                 <Link href="/projects/new">
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    New Project
+                    Νέο Έργο
                   </Button>
                 </Link>
                 <Button variant="secondary" onClick={handleExport}>
                   <Download className="mr-2 h-4 w-4" />
-                  Export
+                  Εξαγωγή
                 </Button>
                 <Link href="/projects/bulk-update">
                   <Button variant="outline">
                     <FileEdit className="mr-2 h-4 w-4" />
-                    Bulk Update
+                    Μαζική Ενημέρωση
                   </Button>
                 </Link>
                 <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
                   <Upload className="mr-2 h-4 w-4" />
-                  Upload CSV
+                  Μεταφόρτωση CSV
                 </Button>
               </>
             )}
@@ -195,7 +194,7 @@ export default function ProjectsPage() {
         <div className="mt-8 space-y-4">
           <div className="flex flex-col gap-4 md:flex-row">
             <Input
-              placeholder="Search by MIS, description, region..."
+              placeholder="Αναζήτηση με MIS, περιγραφή, περιοχή..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="md:w-96"
@@ -205,14 +204,14 @@ export default function ProjectsPage() {
               onValueChange={setStatus}
             >
               <SelectTrigger className="md:w-48">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder="Φιλτράρισμα κατά κατάσταση" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="pending_reallocation">Pending Reallocation</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="all">Όλες οι Καταστάσεις</SelectItem>
+                <SelectItem value="active">Ενεργό</SelectItem>
+                <SelectItem value="pending">Σε Εκκρεμότητα</SelectItem>
+                <SelectItem value="pending_reallocation">Σε Αναμονή Ανακατανομής</SelectItem>
+                <SelectItem value="completed">Ολοκληρωμένο</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -236,16 +235,16 @@ export default function ProjectsPage() {
             </div>
           ) : (
             <div className="rounded-lg border-2 border-dashed p-8 text-center">
-              <p className="text-muted-foreground">No projects found</p>
+              <p className="text-muted-foreground">Δεν βρέθηκαν έργα</p>
             </div>
           )}
         </div>
 
-        {/* Add CSV Upload Dialog */}
+        {/* CSV Upload Dialog */}
         <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Upload CSV</DialogTitle>
+              <DialogTitle>Μεταφόρτωση CSV</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <input
@@ -265,7 +264,7 @@ export default function ProjectsPage() {
                 className="w-full"
               >
                 <Upload className="mr-2 h-4 w-4" />
-                Select CSV File
+                Επιλογή Αρχείου CSV
               </Button>
             </div>
           </DialogContent>
