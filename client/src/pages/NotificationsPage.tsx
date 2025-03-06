@@ -18,8 +18,8 @@ export const NotificationsPage = () => {
   useEffect(() => {
     if (!userLoading && (!user || user.role !== 'admin')) {
       toast({
-        title: "Access Denied",
-        description: "You need admin privileges to access this page.",
+        title: "Απαγορευμένη Πρόσβαση",
+        description: "Χρειάζεστε δικαιώματα διαχειριστή για πρόσβαση σε αυτή τη σελίδα.",
         variant: "destructive"
       });
       setLocation('/');
@@ -32,7 +32,7 @@ export const NotificationsPage = () => {
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading...</p>
+            <p className="mt-4 text-muted-foreground">Φόρτωση...</p>
           </div>
         </div>
       </div>
@@ -46,7 +46,7 @@ export const NotificationsPage = () => {
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Budget Notifications</h1>
+        <h1 className="text-2xl font-bold">Ειδοποιήσεις Προϋπολογισμού</h1>
         <Button 
           variant="outline"
           onClick={() => {
@@ -54,13 +54,13 @@ export const NotificationsPage = () => {
             window.location.reload();
           }}
         >
-          Refresh Notifications
+          Ανανέωση Ειδοποιήσεων
         </Button>
       </div>
       <NotificationCenter 
         onNotificationClick={(notification) => {
           // Handle notification click - e.g., show details modal
-          console.log('Clicked notification:', notification);
+          console.log('Επιλεγμένη ειδοποίηση:', notification);
         }}
       />
     </div>
