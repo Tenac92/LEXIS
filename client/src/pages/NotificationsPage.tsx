@@ -13,9 +13,9 @@ export const NotificationsPage = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Check if user is admin
+  // Check if user is admin using the correct endpoint
   const { data: user, isLoading: userLoading, error: userError } = useQuery<User>({
-    queryKey: ['/api/user'],
+    queryKey: ['/api/auth/me'],
     retry: false
   });
 
