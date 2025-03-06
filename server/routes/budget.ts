@@ -126,6 +126,41 @@ router.get('/history', authenticateToken, async (req, res) => {
   }
 });
 
+// Get budget notifications
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    console.log('[Budget] Fetching budget notifications');
+    
+    const { data, error } = await supabase
+      .from('budget_notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error('[Budget] Error fetching notifications:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch notifications',
+        details: error.message
+      });
+    }
+    
+    if (!data) {
+      return res.json([]);
+    }
+    
+    return res.json(data);
+    
+  } catch (error) {
+    console.error('[Budget] Notifications fetch error:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch budget data',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 router.put('/bulk-update', authenticateToken, async (req, res) => {
   try {
     console.log('[Budget] Starting bulk update for budget_na853_split');

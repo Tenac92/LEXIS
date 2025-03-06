@@ -64,7 +64,20 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       const data = await response.json();
       console.log('[NotificationCenter] API Response:', data);
 
-      return data as BudgetNotification[];
+      // Check if the response is an error object
+      if (data && data.status === 'error') {
+        console.error('[NotificationCenter] Server returned error:', data);
+        throw new Error(data.message || 'Failed to fetch notifications');
+      }
+
+      // If we received an array, return it directly
+      if (Array.isArray(data)) {
+        return data as BudgetNotification[];
+      }
+
+      // If we got here but data is not an array, return empty array
+      console.warn('[NotificationCenter] Unexpected response format:', data);
+      return [] as BudgetNotification[];
     }
   });
 
