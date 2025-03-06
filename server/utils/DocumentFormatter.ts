@@ -440,7 +440,7 @@ export class DocumentFormatter {
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
-                this.createContactDetail("Πληροφορίες", documentData.user_name || unitDetails?.manager || "-"),
+                this.createContactDetail("Πληροφορίες", documentData.user_name || "-"),
                 this.createContactDetail("Email", unitDetails?.email || "daefkke@civilprotection.gr"),
               ],
             }),
