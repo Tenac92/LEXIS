@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { supabase } from '../config/db';
+import { BudgetService } from '../services/budgetService';
 
 const router = Router();
 
@@ -41,6 +42,76 @@ router.get('/records', authenticateToken, async (req, res) => {
     return res.status(500).json({ 
       status: 'error',
       message: 'Failed to fetch budget records',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get budget history with pagination
+router.get('/history', authenticateToken, async (req, res) => {
+  try {
+    console.log('[Budget] Fetching budget history');
+
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const offset = (page - 1) * limit;
+
+    // Get total count for pagination
+    const { count } = await supabase
+      .from('budget_history')
+      .select('*', { count: 'exact', head: true });
+
+    // Get paginated data with joins for user information
+    const { data, error } = await supabase
+      .from('budget_history')
+      .select(`
+        *,
+        created_by_user:users!budget_history_created_by_fkey(name),
+        document:generated_documents(id, status)
+      `)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) {
+      console.error('[Budget] Error fetching history:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch budget history',
+        details: error.message
+      });
+    }
+
+    // Format the response data
+    const formattedData = data?.map(entry => ({
+      id: entry.id,
+      mis: entry.mis,
+      previous_amount: entry.previous_amount,
+      new_amount: entry.new_amount,
+      change_type: entry.change_type,
+      change_reason: entry.change_reason,
+      document_id: entry.document_id,
+      document_status: entry.document?.[0]?.status,
+      created_by: entry.created_by_user?.name,
+      created_at: entry.created_at,
+      metadata: entry.metadata
+    }));
+
+    return res.json({
+      status: 'success',
+      data: formattedData,
+      pagination: {
+        total: count,
+        page,
+        limit,
+        pages: Math.ceil((count || 0) / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('[Budget] History fetch error:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch budget history',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
