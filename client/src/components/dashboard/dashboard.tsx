@@ -39,6 +39,14 @@ const CHART_COLORS = {
   completed: '#3b82f6'    // Blue
 };
 
+// Status translation mapping
+const STATUS_TRANSLATIONS: Record<string, string> = {
+  active: 'Ενεργό',
+  pending: 'Σε Εκκρεμότητα',
+  pending_reallocation: 'Σε Αναμονή Ανακατανομής',
+  completed: 'Ολοκληρωμένο'
+};
+
 export function Dashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -60,8 +68,8 @@ export function Dashboard() {
   if (error || !stats) {
     return (
       <div className="p-6 text-red-600 bg-red-50 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">Error Loading Dashboard</h3>
-        <p>Failed to load dashboard data. Please try refreshing the page.</p>
+        <h3 className="text-lg font-semibold mb-2">Σφάλμα Φόρτωσης</h3>
+        <p>Αποτυχία φόρτωσης δεδομένων. Παρακαλώ ανανεώστε τη σελίδα.</p>
         {error instanceof Error && (
           <p className="mt-2 text-sm">{error.message}</p>
         )}
@@ -69,11 +77,9 @@ export function Dashboard() {
     );
   }
 
-  // Prepare chart data
+  // Prepare chart data with Greek translations
   const chartData = Object.entries(stats.projectStats).map(([status, count]) => ({
-    name: status.replace('_', ' ').split(' ').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' '),
+    name: STATUS_TRANSLATIONS[status] || status,
     count,
     budget: stats.budgetTotals?.[status] || 0
   }));
@@ -82,24 +88,24 @@ export function Dashboard() {
     <div className="space-y-6">
       {/* Header with quick actions */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Dashboard Overview</h2>
+        <h2 className="text-2xl font-semibold">Επισκόπηση Πίνακα Ελέγχου</h2>
         {isAdmin && (
           <div className="flex gap-2">
             <Link href="/projects/new">
               <Button>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                New Project
+                Νέο Έργο
               </Button>
             </Link>
             <Link href="/projects/bulk-update">
               <Button variant="outline">
                 <Upload className="mr-2 h-4 w-4" />
-                Bulk Update
+                Μαζική Ενημέρωση
               </Button>
             </Link>
             <Button variant="secondary">
               <Download className="mr-2 h-4 w-4" />
-              Export Data
+              Εξαγωγή Δεδομένων
             </Button>
           </div>
         )}
@@ -113,7 +119,7 @@ export function Dashboard() {
               <FileText className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Total Documents</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Σύνολο Εγγράφων</h3>
               <p className="text-2xl font-bold mt-1">{stats.totalDocuments}</p>
             </div>
           </div>
@@ -125,7 +131,7 @@ export function Dashboard() {
               <AlertCircle className="h-6 w-6 text-yellow-600" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Pending Documents</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Εκκρεμή Έγγραφα</h3>
               <p className="text-2xl font-bold mt-1">{stats.pendingDocuments}</p>
             </div>
           </div>
@@ -137,7 +143,7 @@ export function Dashboard() {
               <CheckCircle2 className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Completed Documents</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Ολοκληρωμένα Έγγραφα</h3>
               <p className="text-2xl font-bold mt-1">{stats.completedDocuments}</p>
             </div>
           </div>
@@ -149,7 +155,7 @@ export function Dashboard() {
               <Euro className="h-6 w-6 text-purple-600" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Total Budget</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">Συνολικός Προϋπολογισμός</h3>
               <p className="text-2xl font-bold mt-1">
                 {formatCurrency(Object.values(stats.budgetTotals || {}).reduce((a, b) => a + b, 0))}
               </p>
@@ -162,7 +168,7 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Project Status Distribution */}
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-6">Project Status Distribution</h3>
+          <h3 className="text-lg font-semibold mb-6">Κατανομή Κατάστασης Έργων</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -186,7 +192,7 @@ export function Dashboard() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any) => [`${value} Projects`, ``]}
+                  formatter={(value: any) => [`${value} Έργα`, ``]}
                 />
                 <Legend verticalAlign="bottom" height={36} />
               </PieChart>
@@ -196,7 +202,7 @@ export function Dashboard() {
 
         {/* Budget Distribution */}
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-6">Budget Distribution</h3>
+          <h3 className="text-lg font-semibold mb-6">Κατανομή Προϋπολογισμού</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -217,7 +223,7 @@ export function Dashboard() {
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip
-                  formatter={(value: any) => [formatCurrency(value), "Budget"]}
+                  formatter={(value: any) => [formatCurrency(value), "Προϋπολογισμός"]}
                 />
                 <Bar
                   dataKey="budget"
@@ -240,7 +246,7 @@ export function Dashboard() {
       {/* Recent Activity */}
       {stats.recentActivity && stats.recentActivity.length > 0 && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
+          <h3 className="text-lg font-semibold mb-4">Πρόσφατη Δραστηριότητα</h3>
           <div className="space-y-4">
             {stats.recentActivity.map((activity) => (
               <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-0">
@@ -249,7 +255,7 @@ export function Dashboard() {
                   <p className="text-sm text-muted-foreground">{activity.type}</p>
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {new Date(activity.date).toLocaleDateString()}
+                  {new Date(activity.date).toLocaleDateString('el-GR')}
                 </span>
               </div>
             ))}

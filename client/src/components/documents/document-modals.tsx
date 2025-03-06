@@ -43,17 +43,16 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       setLoading(true);
 
       if (!protocolNumber.trim()) {
-        throw new Error('Protocol number is required');
+        throw new Error('Απαιτείται αριθμός πρωτοκόλλου');
       }
 
       if (!protocolDate) {
-        throw new Error('Protocol date is required');
+        throw new Error('Απαιτείται ημερομηνία πρωτοκόλλου');
       }
 
-      // Ensure date is in ISO format YYYY-MM-DD
       const formattedDate = new Date(protocolDate).toISOString().split('T')[0];
 
-      console.log('Saving protocol with:', { 
+      console.log('Αποθήκευση πρωτοκόλλου:', { 
         protocolNumber, 
         protocolDate: formattedDate 
       });
@@ -70,24 +69,23 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       });
 
       if (!response || response.success === false) {
-        throw new Error(response?.message || 'Failed to update protocol');
+        throw new Error(response?.message || 'Αποτυχία ενημέρωσης πρωτοκόλλου');
       }
 
-      // Invalidate queries to refetch data
       await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
 
       toast({
-        title: "Success",
-        description: response.message || "Protocol updated successfully",
+        title: "Επιτυχία",
+        description: response.message || "Το πρωτόκολλο ενημερώθηκε επιτυχώς",
       });
       onClose();
 
     } catch (error) {
-      console.error('Protocol save error:', error);
+      console.error('Σφάλμα αποθήκευσης πρωτοκόλλου:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update protocol",
+        title: "Σφάλμα",
+        description: error instanceof Error ? error.message : "Αποτυχία ενημέρωσης πρωτοκόλλου",
         variant: "destructive",
       });
     } finally {
@@ -99,25 +97,25 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Document Details</DialogTitle>
+          <DialogTitle>Λεπτομέρειες Εγγράφου</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-4">
             {/* Protocol Section */}
             <div className="p-4 bg-muted rounded-lg">
-              <h3 className="font-medium text-lg mb-4">Protocol Information</h3>
+              <h3 className="font-medium text-lg mb-4">Στοιχεία Πρωτοκόλλου</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Protocol Number</Label>
+                  <Label>Αριθμός Πρωτοκόλλου</Label>
                   <Input
                     value={protocolNumber}
                     onChange={(e) => setProtocolNumber(e.target.value)}
-                    placeholder="Enter protocol number"
+                    placeholder="Εισάγετε αριθμό πρωτοκόλλου"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Protocol Date</Label>
+                  <Label>Ημερομηνία Πρωτοκόλλου</Label>
                   <Input
                     type="date"
                     value={protocolDate}
@@ -131,28 +129,28 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
                 onClick={handleProtocolSave}
                 disabled={loading}
               >
-                {loading ? "Saving..." : "Save Protocol"}
+                {loading ? "Αποθήκευση..." : "Αποθήκευση Πρωτοκόλλου"}
               </Button>
             </div>
 
             {/* Document Information */}
             <div>
-              <h3 className="font-medium text-lg">Document Information</h3>
+              <h3 className="font-medium text-lg">Πληροφορίες Εγγράφου</h3>
               <div className="grid grid-cols-2 gap-4 mt-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <p className="font-medium capitalize">{document.status}</p>
+                  <p className="text-sm text-muted-foreground">Κατάσταση</p>
+                  <p className="font-medium capitalize">{document.status === 'approved' ? 'Εγκεκριμένο' : 'Σε εκκρεμότητα'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Created At</p>
+                  <p className="text-sm text-muted-foreground">Ημερομηνία Δημιουργίας</p>
                   <p className="font-medium">
-                    {new Date(document.created_at).toLocaleDateString()}
+                    {new Date(document.created_at).toLocaleDateString('el-GR')}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Amount</p>
+                  <p className="text-sm text-muted-foreground">Συνολικό Ποσό</p>
                   <p className="font-medium">
-                    {new Intl.NumberFormat('en-US', {
+                    {new Intl.NumberFormat('el-GR', {
                       style: 'currency',
                       currency: 'EUR'
                     }).format(document.total_amount || 0)}
@@ -164,7 +162,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
             {/* Recipients Section */}
             {document.recipients && document.recipients.length > 0 && (
               <div>
-                <h3 className="font-medium text-lg mb-2">Recipients</h3>
+                <h3 className="font-medium text-lg mb-2">Δικαιούχοι</h3>
                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
                   {document.recipients.map((recipient: any, index: number) => (
                     <div
@@ -177,11 +175,11 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
                             {recipient.lastname} {recipient.firstname}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            AFM: {recipient.afm}
+                            ΑΦΜ: {recipient.afm}
                           </p>
                         </div>
                         <p className="font-medium">
-                          {new Intl.NumberFormat('en-US', {
+                          {new Intl.NumberFormat('el-GR', {
                             style: 'currency',
                             currency: 'EUR'
                           }).format(recipient.amount || 0)}
@@ -196,7 +194,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Close
+            Κλείσιμο
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -308,9 +306,9 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Document</DialogTitle>
+          <DialogTitle>Επεξεργασία Εγγράφου</DialogTitle>
           <DialogDescription>
-            Make changes to the document here. Click save when you're done.
+            Κάντε αλλαγές στο έγγραφο εδώ. Πατήστε αποθήκευση όταν τελειώσετε.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -318,15 +316,15 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
             {/* Project Information */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Protocol Number</Label>
+                <Label>Αριθμός Πρωτοκόλλου</Label>
                 <Input
                   value={protocolNumber}
                   onChange={(e) => setProtocolNumber(e.target.value)}
-                  placeholder="Enter protocol number"
+                  placeholder="Εισάγετε αριθμό πρωτοκόλλου"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Protocol Date</Label>
+                <Label>Ημερομηνία Πρωτοκόλλου</Label>
                 <Input
                   type="date"
                   value={protocolDate}
@@ -334,19 +332,19 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                 />
               </div>
               <div className="space-y-2">
-                <Label>Project ID</Label>
+                <Label>ID Έργου</Label>
                 <Input
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
-                  placeholder="Enter project ID"
+                  placeholder="Εισάγετε ID έργου"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Expenditure Type</Label>
+                <Label>Τύπος Δαπάνης</Label>
                 <Input
                   value={expenditureType}
                   onChange={(e) => setExpenditureType(e.target.value)}
-                  placeholder="Enter expenditure type"
+                  placeholder="Εισάγετε τύπο δαπάνης"
                 />
               </div>
             </div>
@@ -354,58 +352,58 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
             {/* Recipients Section */}
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <Label>Recipients</Label>
+                <Label>Δικαιούχοι</Label>
                 <Button
                   onClick={addRecipient}
                   variant="outline"
                   size="sm"
                 >
-                  Add Recipient
+                  Προσθήκη Δικαιούχου
                 </Button>
               </div>
               <div className="space-y-4">
                 {recipients.map((recipient, index) => (
                   <div key={index} className="p-4 bg-muted rounded-lg">
                     <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium">Recipient #{index + 1}</span>
+                      <span className="text-sm font-medium">Δικαιούχος #{index + 1}</span>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeRecipient(index)}
                         className="text-destructive"
                       >
-                        Remove
+                        Αφαίρεση
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <Input
                         value={recipient.firstname}
                         onChange={(e) => handleRecipientChange(index, 'firstname', e.target.value)}
-                        placeholder="First Name"
+                        placeholder="Όνομα"
                       />
                       <Input
                         value={recipient.lastname}
                         onChange={(e) => handleRecipientChange(index, 'lastname', e.target.value)}
-                        placeholder="Last Name"
+                        placeholder="Επίθετο"
                       />
                       <Input
                         value={recipient.afm}
                         onChange={(e) => handleRecipientChange(index, 'afm', e.target.value)}
-                        placeholder="AFM"
+                        placeholder="ΑΦΜ"
                         maxLength={9}
                       />
                       <Input
                         value={recipient.amount}
                         type="number"
                         onChange={(e) => handleRecipientChange(index, 'amount', e.target.value)}
-                        placeholder="Amount"
+                        placeholder="Ποσό"
                         step="0.01"
                       />
                       <Input
                         value={recipient.installment}
                         type="number"
                         onChange={(e) => handleRecipientChange(index, 'installment', e.target.value)}
-                        placeholder="Installment"
+                        placeholder="Δόση"
                         min="1"
                       />
                     </div>
@@ -417,9 +415,9 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
             {/* Total Amount */}
             <div className="p-4 bg-muted rounded-lg">
               <div className="flex justify-between items-center">
-                <span className="font-medium">Total Amount:</span>
+                <span className="font-medium">Συνολικό Ποσό:</span>
                 <span className="text-lg font-bold">
-                  {new Intl.NumberFormat('en-US', {
+                  {new Intl.NumberFormat('el-GR', {
                     style: 'currency',
                     currency: 'EUR'
                   }).format(calculateTotalAmount())}
@@ -430,10 +428,10 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            Ακύρωση
           </Button>
           <Button onClick={handleEdit} disabled={loading}>
-            {loading ? "Saving..." : "Save Changes"}
+            {loading ? "Αποθήκευση..." : "Αποθήκευση Αλλαγών"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -452,15 +450,15 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
         method: 'DELETE'
       });
       toast({
-        title: "Success",
-        description: "Document deleted successfully",
+        title: "Επιτυχία",
+        description: "Το έγγραφο διαγράφηκε επιτυχώς",
       });
       onDelete();
       onClose();
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to delete document",
+        title: "Σφάλμα",
+        description: "Αποτυχία διαγραφής εγγράφου",
         variant: "destructive",
       });
     } finally {
@@ -472,17 +470,17 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Document</DialogTitle>
+          <DialogTitle>Διαγραφή Εγγράφου</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this document? This action cannot be undone.
+            Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτό το έγγραφο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            Ακύρωση
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-            {loading ? "Deleting..." : "Delete"}
+            {loading ? "Διαγραφή..." : "Διαγραφή"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -499,19 +497,17 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
   const handleExport = async () => {
     try {
       setLoading(true);
-      console.log('Starting document export process...');
+      console.log('Έναρξη διαδικασίας εξαγωγής εγγράφου...');
 
-      // Test document generation first
       const testResponse = await fetch(`/api/documents/generated/${document.id}/test`);
       const testResult = await testResponse.json();
 
       if (!testResult.success) {
-        throw new Error(testResult.message || 'Document validation failed');
+        throw new Error(testResult.message || 'Αποτυχία επικύρωσης εγγράφου');
       }
 
-      console.log('Document validation passed:', testResult);
+      console.log('Επικύρωση εγγράφου επιτυχής:', testResult);
 
-      // Create a download link and trigger download
       const downloadUrl = `/api/documents/generated/${document.id}/export`;
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -521,18 +517,18 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
       document.body.removeChild(link);
 
       toast({
-        title: "Success",
-        description: "Document download started",
+        title: "Επιτυχία",
+        description: "Η λήψη του εγγράφου ξεκίνησε",
       });
 
       setTimeout(() => setLoading(false), 1000);
       onClose();
 
     } catch (error) {
-      console.error('Export error:', error);
+      console.error('Σφάλμα εξαγωγής:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to download document",
+        title: "Σφάλμα",
+        description: error instanceof Error ? error.message : "Αποτυχία λήψης εγγράφου",
         variant: "destructive",
       });
       setLoading(false);
@@ -543,21 +539,21 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Export Document</DialogTitle>
+          <DialogTitle>Εξαγωγή Εγγράφου</DialogTitle>
           <DialogDescription>
-            Click the button below to download the document.
+            Πατήστε το κουμπί παρακάτω για να κατεβάσετε το έγγραφο.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            Ακύρωση
           </Button>
           <Button 
             onClick={handleExport} 
             disabled={loading}
             className="min-w-[100px]"
           >
-            {loading ? "Processing..." : "Download"}
+            {loading ? "Επεξεργασία..." : "Λήψη"}
           </Button>
         </DialogFooter>
       </DialogContent>
