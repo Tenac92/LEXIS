@@ -35,8 +35,9 @@ export async function getBudgetNotifications(req: AuthRequest, res: Response) {
       });
     }
 
-    if (!notifications) {
-      console.warn('[BudgetController] No notifications found');
+    // Return empty array if no notifications found
+    if (!notifications || notifications.length === 0) {
+      console.log('[BudgetController] No notifications found');
       return res.json([]);
     }
 

@@ -1,5 +1,5 @@
 import { FC } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Bell, AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { BudgetNotification } from '@/lib/types';
+import type { BudgetNotification } from '@shared/schema';
 import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
 
 // Styling based on notification type
@@ -46,11 +46,10 @@ interface NotificationCenterProps {
 }
 
 export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotificationClick }) => {
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { isConnected } = useWebSocketUpdates();
 
-  const { data, error, isError, isLoading, refetch } = useQuery({
+  const { data: notifications = [], error, isError, isLoading, refetch } = useQuery({
     queryKey: ['/api/budget/notifications'],
     queryFn: async () => {
       console.log('[NotificationCenter] Fetching notifications...');
@@ -64,11 +63,6 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
       const data = await response.json();
       console.log('[NotificationCenter] API Response:', data);
-
-      // Handle error response
-      if (data.status === 'error') {
-        throw new Error(data.message || 'Failed to fetch notifications');
-      }
 
       return data as BudgetNotification[];
     }
@@ -111,9 +105,6 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       </Card>
     );
   }
-
-  const notifications = data || [];
-  console.log('[NotificationCenter] Processed notifications:', notifications);
 
   if (!notifications.length) {
     return (
@@ -181,7 +172,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
             <CardContent>
               <p className="text-sm">{notification.reason}</p>
               <div className="mt-2 text-xs text-muted-foreground">
-                MIS: {notification.mis} • Budget: €{parseFloat(notification.current_budget).toLocaleString('en-US', { minimumFractionDigits: 2 })} • Amount: €{parseFloat(notification.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                MIS: {notification.mis} • Budget: €{notification.current_budget.toLocaleString('en-US', { minimumFractionDigits: 2 })} • Amount: €{notification.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </div>
             </CardContent>
           </Card>
