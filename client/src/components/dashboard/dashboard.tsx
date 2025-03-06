@@ -25,17 +25,19 @@ import {
   Legend,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Sector
 } from 'recharts';
+import React from 'react';
 
 import type { DashboardStats } from "@/lib/dashboard";
 import { formatCurrency } from "@/lib/services/dashboard";
 
-// Define chart colors
+// Define chart colors with better contrast
 const CHART_COLORS = {
-  active: '#22c55e',      // Green
+  active: '#10b981',      // Emerald
   pending: '#f59e0b',     // Amber
-  pending_reallocation: '#8b5cf6', // Purple
+  pending_reallocation: '#6366f1', // Indigo
   completed: '#3b82f6'    // Blue
 };
 
@@ -47,9 +49,50 @@ const STATUS_TRANSLATIONS: Record<string, string> = {
   completed: 'Ολοκληρωμένο'
 };
 
+// Custom active shape for pie chart
+const renderActiveShape = (props: any) => {
+  const {
+    cx, cy, innerRadius, outerRadius, startAngle, endAngle,
+    fill, payload, percent, value
+  } = props;
+
+  return (
+    <g>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+      <Sector
+        cx={cx}
+        cy={cy}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        innerRadius={outerRadius + 6}
+        outerRadius={outerRadius + 10}
+        fill={fill}
+      />
+      <text x={cx} y={cy} dy={-20} textAnchor="middle" fill="#888">
+        {payload.name}
+      </text>
+      <text x={cx} y={cy} dy={8} textAnchor="middle" fill="#333" className="text-lg font-semibold">
+        {value}
+      </text>
+      <text x={cx} y={cy} dy={25} textAnchor="middle" fill="#666">
+        {`(${(percent * 100).toFixed(1)}%)`}
+      </text>
+    </g>
+  );
+};
+
 export function Dashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const [activePieIndex, setActivePieIndex] = React.useState(0);
 
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
@@ -81,8 +124,27 @@ export function Dashboard() {
   const chartData = Object.entries(stats.projectStats).map(([status, count]) => ({
     name: STATUS_TRANSLATIONS[status] || status,
     count,
-    budget: stats.budgetTotals?.[status] || 0
+    budget: stats.budgetTotals?.[status] || 0,
+    fill: CHART_COLORS[status as keyof typeof CHART_COLORS]
   }));
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-4 shadow-lg rounded-lg border border-gray-200">
+          <p className="font-semibold mb-2">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {entry.name === 'budget' 
+                ? `Προϋπολογισμός: ${formatCurrency(entry.value)}`
+                : `Πλήθος: ${entry.value}`}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-6">
@@ -169,7 +231,7 @@ export function Dashboard() {
         {/* Project Status Distribution */}
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-6">Κατανομή Κατάστασης Έργων</h3>
-          <div className="h-[300px]">
+          <div className="h-[400px]"> {/* Increased height for better visibility */}
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -178,23 +240,28 @@ export function Dashboard() {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={100}
-                  label={({ name, percent }) => 
-                    `${name}: ${(percent * 100).toFixed(0)}%`
-                  }
-                  labelLine={true}
+                  innerRadius={80}
+                  outerRadius={120}
+                  activeIndex={activePieIndex}
+                  activeShape={renderActiveShape}
+                  onMouseEnter={(_, index) => setActivePieIndex(index)}
                 >
                   {chartData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`}
-                      fill={CHART_COLORS[entry.name.toLowerCase().replace(' ', '_') as keyof typeof CHART_COLORS]}
+                      fill={entry.fill}
+                      strokeWidth={1}
                     />
                   ))}
                 </Pie>
-                <Tooltip
-                  formatter={(value: any) => [`${value} Έργα`, ``]}
+                <Tooltip content={<CustomTooltip />} />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  formatter={(value) => (
+                    <span className="text-sm font-medium">{value}</span>
+                  )}
                 />
-                <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -203,13 +270,17 @@ export function Dashboard() {
         {/* Budget Distribution */}
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-6">Κατανομή Προϋπολογισμού</h3>
-          <div className="h-[300px]">
+          <div className="h-[400px]"> {/* Increased height for better visibility */}
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
               >
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  opacity={0.1} 
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="name"
                   angle={-45}
@@ -217,23 +288,27 @@ export function Dashboard() {
                   height={60}
                   interval={0}
                   tick={{ fontSize: 12 }}
+                  tickLine={false}
                 />
                 <YAxis
                   tickFormatter={(value) => formatCurrency(value)}
                   tick={{ fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
                 />
-                <Tooltip
-                  formatter={(value: any) => [formatCurrency(value), "Προϋπολογισμός"]}
+                <Tooltip 
+                  content={<CustomTooltip />}
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
                 />
                 <Bar
                   dataKey="budget"
-                  fill="#8b5cf6"
                   radius={[4, 4, 0, 0]}
+                  maxBarSize={60}
                 >
                   {chartData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`}
-                      fill={CHART_COLORS[entry.name.toLowerCase().replace(' ', '_') as keyof typeof CHART_COLORS]}
+                      fill={entry.fill}
                     />
                   ))}
                 </Bar>
