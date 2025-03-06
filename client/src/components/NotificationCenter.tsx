@@ -53,32 +53,43 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     queryKey: ['/api/budget/notifications'],
     queryFn: async () => {
       console.log('[NotificationCenter] Fetching notifications...');
-      const response = await fetch('/api/budget/notifications', {
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch notifications');
+      try {
+        const response = await fetch('/api/budget/notifications', {
+          credentials: 'include'
+        });
+  
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          console.error('[NotificationCenter] Server error response:', errorData);
+          throw new Error(errorData?.message || `Server returned ${response.status}`);
+        }
+  
+        const data = await response.json();
+        console.log('[NotificationCenter] API Response:', data);
+  
+        // If we received an error object with status
+        if (data && data.status === 'error') {
+          console.error('[NotificationCenter] Server returned error:', data);
+          throw new Error(data.message || 'Failed to fetch notifications');
+        }
+  
+        // Return empty array if no notifications
+        if (!data) return [];
+  
+        // If we received an array, return it directly
+        if (Array.isArray(data)) {
+          return data as BudgetNotification[];
+        }
+  
+        // If we got here but data is not an array, return empty array
+        console.warn('[NotificationCenter] Unexpected response format:', data);
+        return [] as BudgetNotification[];
+      } catch (err) {
+        console.error('[NotificationCenter] Fetch error:', err);
+        throw err;
       }
-
-      const data = await response.json();
-      console.log('[NotificationCenter] API Response:', data);
-
-      // Check if the response is an error object
-      if (data && data.status === 'error') {
-        console.error('[NotificationCenter] Server returned error:', data);
-        throw new Error(data.message || 'Failed to fetch notifications');
-      }
-
-      // If we received an array, return it directly
-      if (Array.isArray(data)) {
-        return data as BudgetNotification[];
-      }
-
-      // If we got here but data is not an array, return empty array
-      console.warn('[NotificationCenter] Unexpected response format:', data);
-      return [] as BudgetNotification[];
-    }
+    },
+    retry: 1
   });
 
   if (isLoading) {

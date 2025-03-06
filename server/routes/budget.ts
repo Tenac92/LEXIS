@@ -1,9 +1,123 @@
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/authMiddleware';
-import { supabase } from '../config/db';
+import { authenticateToken } from '../middleware/auth';
 import { BudgetService } from '../services/budgetService';
+import { storage } from '../storage';
+import { supabase } from '../config/db';
 
 const router = Router();
+
+// Get budget data by MIS
+router.get('/:mis', async (req, res) => {
+  try {
+    const { mis } = req.params;
+
+    if (!mis) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'MIS parameter is required'
+      });
+    }
+
+    const result = await BudgetService.getBudget(mis);
+    return res.json(result);
+  } catch (error) {
+    console.error('Unexpected error in getBudget:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch budget data'
+    });
+  }
+});
+
+// Validate budget for document
+router.post('/validate', authenticateToken, async (req, res) => {
+  try {
+    const { mis, amount } = req.body;
+    const requestedAmount = parseFloat(amount.toString());
+
+    const result = await BudgetService.validateBudget(mis, requestedAmount);
+
+    // If validation requires notification, create it
+    if (result.requiresNotification && result.notificationType && req.user?.id) {
+      try {
+        const budgetData = await storage.getBudgetData(mis);
+
+        await storage.createBudgetHistoryEntry({
+          mis,
+          change_type: 'notification_created',
+          change_reason: `Budget notification created: ${result.notificationType}`,
+          created_by: req.user.id,
+          created_at: new Date().toISOString(),
+          metadata: {
+            notification_type: result.notificationType,
+            priority: result.priority,
+            current_budget: budgetData?.user_view,
+            requested_amount: requestedAmount
+          }
+        });
+      } catch (notifError) {
+        console.error('Failed to create budget notification:', notifError);
+        // Continue with validation response even if notification creation fails
+      }
+    }
+
+    return res.json(result);
+  } catch (error) {
+    console.error("Budget validation error:", error);
+    return res.status(500).json({ 
+      status: 'error',
+      canCreate: true, // Still allow creation even on error
+      message: "Failed to validate budget",
+      allowDocx: true
+    });
+  }
+});
+
+// Get budget notifications
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    console.log('[BudgetController] Fetching notifications...');
+
+    // Fetch notifications ordered by creation date
+    const { data: notifications, error } = await supabase
+      .from('budget_notifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50); // Limit to latest 50 notifications
+
+    if (error) {
+      console.error('[BudgetController] Error fetching notifications:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch notifications',
+        error: error.message
+      });
+    }
+
+    // Return empty array if no notifications found
+    if (!notifications) {
+      console.log('[BudgetController] No notifications found');
+      return res.json([]);
+    }
+
+    console.log('[BudgetController] Successfully fetched notifications:', notifications.length);
+    return res.json(notifications);
+  } catch (error) {
+    console.error('[BudgetController] Error in getBudgetNotifications:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch notifications',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
 // Get available MIS and NA853 combinations
 router.get('/records', authenticateToken, async (req, res) => {
@@ -122,41 +236,6 @@ router.get('/history', authenticateToken, async (req, res) => {
       status: 'error',
       message: 'Failed to fetch budget history',
       details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get budget notifications
-router.get('/notifications', authenticateToken, async (req, res) => {
-  try {
-    console.log('[Budget] Fetching budget notifications');
-    
-    const { data, error } = await supabase
-      .from('budget_notifications')
-      .select('*')
-      .order('created_at', { ascending: false });
-      
-    if (error) {
-      console.error('[Budget] Error fetching notifications:', error);
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch notifications',
-        details: error.message
-      });
-    }
-    
-    if (!data) {
-      return res.json([]);
-    }
-    
-    return res.json(data);
-    
-  } catch (error) {
-    console.error('[Budget] Notifications fetch error:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch budget data',
-      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
