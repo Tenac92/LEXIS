@@ -27,7 +27,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
-// Add APIResponse type
 interface APIResponse<T = any> {
   ok: boolean;
   json(): Promise<T>;
@@ -47,8 +46,8 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({
-      title: "Copied!",
-      description: `${label} has been copied to clipboard`,
+      title: "Αντιγράφηκε!",
+      description: `${label} έχει αντιγραφεί στο πρόχειρο`,
     });
   };
 
@@ -60,7 +59,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to delete project");
+        throw new Error(error.message || "Αποτυχία διαγραφής έργου");
       }
 
       return response.json();
@@ -68,14 +67,14 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({
-        title: "Project Deleted",
-        description: "Project has been successfully deleted",
+        title: "Διαγραφή Έργου",
+        description: "Το έργο διαγράφηκε με επιτυχία",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Delete Failed",
-        description: error.message || "Failed to delete project",
+        title: "Αποτυχία Διαγραφής",
+        description: error.message || "Αποτυχία διαγραφής έργου",
         variant: "destructive",
       });
     },
@@ -137,7 +136,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
       <div className="mb-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="line-clamp-2 text-lg font-bold">
-            {project.event_description || "Untitled Project"}
+            {project.event_description || "Έργο χωρίς τίτλο"}
           </h3>
           <Badge variant="secondary" className={getStatusColor(project.status || '')}>
             {getStatusText(project.status || '')}
@@ -148,7 +147,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           <div className="space-y-2">
             <div className="flex items-center text-sm text-muted-foreground">
               <Calendar className="mr-2 h-4 w-4" />
-              Created: {formatDate(project.created_at)}
+              Δημιουργήθηκε: {formatDate(project.created_at)}
             </div>
             {project.region && (
               <div className="flex items-center text-sm text-muted-foreground">
@@ -159,11 +158,11 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           </div>
           <div className="space-y-2">
             <div className="font-medium">
-              Budget: {formatCurrency(project.budget_na853)}
+              Προϋπολογισμός: {formatCurrency(project.budget_na853)}
             </div>
             {project.ethsia_pistosi && (
               <div className="text-sm text-muted-foreground">
-                Annual Credit: {formatCurrency(project.ethsia_pistosi)}
+                Ετήσια Πίστωση: {formatCurrency(project.ethsia_pistosi)}
               </div>
             )}
           </div>
@@ -194,15 +193,15 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
 
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Project Details</DialogTitle>
+            <DialogTitle>Στοιχεία Έργου</DialogTitle>
             <DialogDescription>
-              Project {project.mis || 'N/A'} - {project.event_description || 'No description'}
+              Έργο {project.mis || 'N/A'} - {project.event_description || 'Χωρίς περιγραφή'}
             </DialogDescription>
           </DialogHeader>
           <DialogHeader>
             <DialogTitle>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{project.event_description || "Project Details"}</span>
+                <span className="text-2xl font-bold">{project.event_description || "Στοιχεία Έργου"}</span>
                 <Badge variant="secondary" className={`${getStatusColor(project.status || '')} px-4 py-1.5`}>
                   {getStatusText(project.status || '')}
                 </Badge>
@@ -211,11 +210,11 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           </DialogHeader>
 
           <div className="mt-6 space-y-8">
-            {/* Key Information Section */}
+            {/* Βασικές Πληροφορίες */}
             <section className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Key Information
+                Βασικές Πληροφορίες
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
@@ -224,7 +223,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                     <button
                       onClick={() => copyToClipboard(project.mis || '', 'MIS')}
                       className="text-gray-400 hover:text-gray-600"
-                      aria-label="Copy MIS number"
+                      aria-label="Αντιγραφή αριθμού MIS"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
@@ -237,7 +236,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                     <button
                       onClick={() => copyToClipboard(project.na853 || '', 'NA853')}
                       className="text-gray-400 hover:text-gray-600"
-                      aria-label="Copy NA853 number"
+                      aria-label="Αντιγραφή αριθμού NA853"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
@@ -245,81 +244,81 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                   <p className="text-gray-900 font-medium">{project.na853 || "N/A"}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Region</h4>
+                  <h4 className="font-semibold text-sm text-gray-600">Περιοχή</h4>
                   <p className="text-gray-900 font-medium">{project.region || "N/A"}</p>
                 </div>
               </div>
             </section>
 
-            {/* Budget Information Section */}
+            {/* Πληροφορίες Προϋπολογισμού */}
             <section className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Coins className="h-5 w-5" />
-                Budget Information
+                Πληροφορίες Προϋπολογισμού
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Budget NA853</h4>
+                  <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός NA853</h4>
                   <p className="text-gray-900 font-medium">{formatCurrency(project.budget_na853)}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Budget E069</h4>
+                  <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός E069</h4>
                   <p className="text-gray-900 font-medium">{formatCurrency(project.budget_e069)}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Budget NA271</h4>
+                  <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός NA271</h4>
                   <p className="text-gray-900 font-medium">{formatCurrency(project.budget_na271)}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Annual Credit</h4>
+                  <h4 className="font-semibold text-sm text-gray-600">Ετήσια Πίστωση</h4>
                   <p className="text-gray-900 font-medium">{formatCurrency(project.ethsia_pistosi)}</p>
                 </div>
               </div>
             </section>
 
-            {/* Additional Details Section */}
+            {/* Πρόσθετες Πληροφορίες */}
             <section className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                Additional Details
+                Πρόσθετες Πληροφορίες
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {project.implementing_agency && (
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Implementing Agency</h4>
+                    <h4 className="font-semibold text-sm text-gray-600">Φορέας Υλοποίησης</h4>
                     <p className="text-gray-900">{Array.isArray(project.implementing_agency) ? project.implementing_agency.join(", ") : project.implementing_agency}</p>
                   </div>
                 )}
                 {project.event_type && (
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Event Type</h4>
+                    <h4 className="font-semibold text-sm text-gray-600">Τύπος Συμβάντος</h4>
                     <p className="text-gray-900">{project.event_type}</p>
                   </div>
                 )}
                 {project.municipality && (
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Municipality</h4>
+                    <h4 className="font-semibold text-sm text-gray-600">Δήμος</h4>
                     <p className="text-gray-900">{project.municipality}</p>
                   </div>
                 )}
                 {project.procedures && (
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2 col-span-full">
-                    <h4 className="font-semibold text-sm text-gray-600">Procedures</h4>
+                    <h4 className="font-semibold text-sm text-gray-600">Διαδικασίες</h4>
                     <p className="text-gray-900 whitespace-pre-wrap">{project.procedures}</p>
                   </div>
                 )}
               </div>
             </section>
 
-            {/* Timestamps Section */}
+            {/* Χρονικά Στοιχεία */}
             <section className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Created At</h4>
+                  <h4 className="font-semibold text-sm text-gray-600">Ημερομηνία Δημιουργίας</h4>
                   <p className="text-gray-900">{formatDate(project.created_at)}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Last Updated</h4>
+                  <h4 className="font-semibold text-sm text-gray-600">Τελευταία Ενημέρωση</h4>
                   <p className="text-gray-900">{formatDate(project.updated_at)}</p>
                 </div>
               </div>
@@ -333,7 +332,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           <Link href={`/projects/${project.mis}/edit`}>
             <Button variant="outline" size="sm">
               <Edit className="mr-2 h-4 w-4" />
-              Edit
+              Επεξεργασία
             </Button>
           </Link>
 
@@ -341,23 +340,23 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                Διαγραφή
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                <AlertDialogTitle>Διαγραφή Έργου</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this project? This action cannot be undone.
+                  Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτό το έργο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => deleteMutation.mutate()}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  Delete
+                  Διαγραφή
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
