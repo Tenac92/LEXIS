@@ -65,9 +65,18 @@ router.get('/history', authenticateToken, async (req, res) => {
     const { data, error } = await supabase
       .from('budget_history')
       .select(`
-        *,
-        created_by_user:users!budget_history_created_by_fkey(name),
-        document:generated_documents(id, status)
+        id,
+        mis,
+        previous_amount,
+        new_amount,
+        change_type,
+        change_reason,
+        document_id,
+        created_by,
+        created_at,
+        metadata,
+        users(name),
+        generated_documents(id, status)
       `)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -90,8 +99,8 @@ router.get('/history', authenticateToken, async (req, res) => {
       change_type: entry.change_type,
       change_reason: entry.change_reason,
       document_id: entry.document_id,
-      document_status: entry.document?.[0]?.status,
-      created_by: entry.created_by_user?.name,
+      document_status: entry.generated_documents?.[0]?.status,
+      created_by: entry.users?.name || 'System',
       created_at: entry.created_at,
       metadata: entry.metadata
     }));
