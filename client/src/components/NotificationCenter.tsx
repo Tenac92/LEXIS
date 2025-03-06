@@ -1,4 +1,4 @@
-import { FC, useEffect } from 'react';
+import { FC } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, AlertTriangle, AlertCircle, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -32,20 +32,6 @@ const notificationStyles = {
     icon: AlertTriangle,
     toastVariant: 'default' as const
   },
-  increase: {
-    bg: 'bg-green-50 hover:bg-green-100',
-    border: 'border-green-200',
-    badge: 'bg-green-100 text-green-800',
-    icon: ArrowUp,
-    toastVariant: 'default' as const
-  },
-  decrease: {
-    bg: 'bg-blue-50 hover:bg-blue-100',
-    border: 'border-blue-200',
-    badge: 'bg-blue-100 text-blue-800',
-    icon: ArrowDown,
-    toastVariant: 'default' as const
-  },
   default: {
     bg: 'bg-gray-50 hover:bg-gray-100',
     border: 'border-gray-200',
@@ -67,34 +53,21 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
   const { data, error, isError, isLoading, refetch } = useQuery({
     queryKey: ['/api/budget/notifications'],
     queryFn: async () => {
-      try {
-        console.log('[NotificationCenter] Fetching notifications...');
-        const response = await fetch('/api/budget/notifications', {
-          credentials: 'include'
-        });
+      console.log('[NotificationCenter] Fetching notifications...');
+      const response = await fetch('/api/budget/notifications', {
+        credentials: 'include'
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('[NotificationCenter] API Error:', errorData);
-          throw new Error(errorData.message || 'Failed to fetch notifications');
-        }
-
-        const responseData = await response.json();
-        console.log('[NotificationCenter] API Response:', responseData);
-
-        // Handle both array and object response formats
-        const notifications = Array.isArray(responseData) 
-          ? responseData 
-          : responseData?.notifications || responseData?.data || [];
-
-        return notifications as BudgetNotification[];
-      } catch (error) {
-        console.error('[NotificationCenter] Fetch error:', error);
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[NotificationCenter] API Error:', errorData);
+        throw new Error(errorData.message || 'Failed to fetch notifications');
       }
-    },
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000)
+
+      const data = await response.json();
+      console.log('[NotificationCenter] API Response:', data);
+      return data as BudgetNotification[];
+    }
   });
 
   if (isLoading) {
@@ -203,11 +176,9 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
             </CardHeader>
             <CardContent>
               <p className="text-sm">{notification.reason}</p>
-              {notification.mis && (
-                <div className="mt-2 text-xs text-muted-foreground">
-                  MIS: {notification.mis} • Budget: €{parseFloat(notification.current_budget).toLocaleString('en-US', { minimumFractionDigits: 2 })} • Amount: €{parseFloat(notification.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </div>
-              )}
+              <div className="mt-2 text-xs text-muted-foreground">
+                MIS: {notification.mis} • Budget: €{parseFloat(notification.current_budget).toLocaleString('en-US', { minimumFractionDigits: 2 })} • Amount: €{parseFloat(notification.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </div>
             </CardContent>
           </Card>
         );
