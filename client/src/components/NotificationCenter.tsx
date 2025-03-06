@@ -64,21 +64,30 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
   const { toast } = useToast();
   const { isConnected } = useWebSocketUpdates();
 
-  const { data: notifications, error, isError, isLoading, refetch } = useQuery({
+  const { data, error, isError, isLoading, refetch } = useQuery({
     queryKey: ['/api/budget/notifications'],
     queryFn: async () => {
       try {
+        console.log('[NotificationCenter] Fetching notifications...');
         const response = await fetch('/api/budget/notifications', {
           credentials: 'include'
         });
 
         if (!response.ok) {
           const errorData = await response.json();
+          console.error('[NotificationCenter] API Error:', errorData);
           throw new Error(errorData.message || 'Failed to fetch notifications');
         }
 
-        const data = await response.json();
-        return (data?.notifications || []) as BudgetNotification[];
+        const responseData = await response.json();
+        console.log('[NotificationCenter] API Response:', responseData);
+
+        // Handle both array and object response formats
+        const notifications = Array.isArray(responseData) 
+          ? responseData 
+          : responseData?.notifications || responseData?.data || [];
+
+        return notifications as BudgetNotification[];
       } catch (error) {
         console.error('[NotificationCenter] Fetch error:', error);
         throw error;
@@ -126,9 +135,10 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     );
   }
 
-  const notificationsList = notifications || [];
+  const notifications = data || [];
+  console.log('[NotificationCenter] Processed notifications:', notifications);
 
-  if (!notificationsList.length) {
+  if (!notifications.length) {
     return (
       <Card className="w-full">
         <CardContent className="pt-6">
@@ -160,7 +170,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
           </Button>
         </div>
       )}
-      {notificationsList.map((notification) => {
+      {notifications.map((notification) => {
         const style = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
         const Icon = style.icon;
         const createdAt = notification.created_at ? new Date(notification.created_at) : new Date();
