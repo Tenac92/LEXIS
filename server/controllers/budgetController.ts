@@ -17,6 +17,8 @@ export async function getBudgetNotifications(req: AuthRequest, res: Response) {
       });
     }
 
+    console.log('[BudgetController] Fetching notifications...');
+
     // Fetch notifications ordered by creation date
     const { data: notifications, error } = await supabase
       .from('budget_notifications')
@@ -26,7 +28,11 @@ export async function getBudgetNotifications(req: AuthRequest, res: Response) {
 
     if (error) {
       console.error('[BudgetController] Error fetching notifications:', error);
-      throw error;
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch notifications',
+        error: error.message
+      });
     }
 
     if (!notifications) {
@@ -34,7 +40,7 @@ export async function getBudgetNotifications(req: AuthRequest, res: Response) {
       return res.json([]);
     }
 
-    console.log('[BudgetController] Fetched notifications:', notifications.length);
+    console.log('[BudgetController] Successfully fetched notifications:', notifications.length);
     return res.json(notifications);
   } catch (error) {
     console.error('[BudgetController] Error in getBudgetNotifications:', error);

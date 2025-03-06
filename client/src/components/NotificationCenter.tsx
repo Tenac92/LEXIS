@@ -1,6 +1,6 @@
 import { FC } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, AlertTriangle, AlertCircle, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react';
+import { Bell, AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -66,7 +66,9 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
       const data = await response.json();
       console.log('[NotificationCenter] API Response:', data);
-      return data as BudgetNotification[];
+
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
     }
   });
 
