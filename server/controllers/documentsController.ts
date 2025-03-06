@@ -114,7 +114,7 @@ router.get('/:id', authenticateSession, async (req: AuthRequest, res: Response) 
     res.json(document);
   } catch (error) {
     console.error('[Documents] Error fetching document:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to fetch document',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -147,7 +147,7 @@ router.patch('/:id', authenticateSession, async (req: AuthRequest, res: Response
     res.json(document);
   } catch (error) {
     console.error('[Documents] Error updating document:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to update document',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -166,14 +166,14 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
     });
 
     if (!protocol_number?.trim()) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         message: 'Protocol number is required'
       });
     }
 
     if (!protocol_date) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         message: 'Protocol date is required'
       });
@@ -192,17 +192,17 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
     }
 
     if (!document) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'Document not found' 
+        message: 'Document not found'
       });
     }
 
     // Check if user has access to this document's unit
     if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: 'Access denied to this document' 
+        message: 'Access denied to this document'
       });
     }
 
@@ -225,10 +225,10 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
     }
 
     console.log('[Documents] Protocol updated successfully for document:', id);
-    return res.json({ 
+    return res.json({
       success: true,
       message: 'Protocol updated successfully',
-      data: updatedDocument 
+      data: updatedDocument
     });
   } catch (error) {
     console.error('[Documents] Protocol update error:', error);
@@ -245,9 +245,15 @@ router.get('/generated/:id/export', authenticateSession, async (req: AuthRequest
   const { id } = req.params;
 
   try {
+    // Get document with user details
     const { data: document, error } = await supabase
       .from('generated_documents')
-      .select()
+      .select(`
+        *,
+        generated_by:users!generated_documents_generated_by_fkey (
+          name
+        )
+      `)
       .eq('id', parseInt(id))
       .single();
 
@@ -265,6 +271,12 @@ router.get('/generated/:id/export', authenticateSession, async (req: AuthRequest
       return res.status(403).json({ error: 'Access denied to this document' });
     }
 
+    // Prepare document data with user name
+    const documentData = {
+      ...document,
+      user_name: document.generated_by?.name || 'Unknown User'
+    };
+
     // Get unit details
     const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
     if (!unitDetails) {
@@ -272,7 +284,7 @@ router.get('/generated/:id/export', authenticateSession, async (req: AuthRequest
     }
 
     // Create and send document
-    const buffer = await DocumentFormatter.generateDocument(document, unitDetails);
+    const buffer = await DocumentFormatter.generateDocument(documentData, unitDetails);
 
     // Set response headers
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -298,7 +310,7 @@ router.post('/', authenticateSession, async (req: AuthRequest, res: Response) =>
     }
 
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
       });
     }
