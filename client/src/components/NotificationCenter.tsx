@@ -1,6 +1,6 @@
 import { FC, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, AlertTriangle, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react';
+import { Bell, AlertTriangle, AlertCircle, ArrowUp, ArrowDown, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { BudgetNotification } from '@shared/schema';
@@ -63,7 +64,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
   const { toast } = useToast();
   const { isConnected } = useWebSocketUpdates();
 
-  const { data: notifications, error, isError, isLoading } = useQuery({
+  const { data: notifications, error, isError, isLoading, refetch } = useQuery({
     queryKey: ['/api/budget/notifications'],
     queryFn: async () => {
       try {
@@ -77,7 +78,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
         }
 
         const data = await response.json();
-        return data.notifications as BudgetNotification[];
+        return (data?.notifications || []) as BudgetNotification[];
       } catch (error) {
         console.error('[NotificationCenter] Fetch error:', error);
         throw error;
@@ -111,13 +112,23 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
             <p className="text-sm text-muted-foreground mt-2">
               {error instanceof Error ? error.message : 'An unexpected error occurred'}
             </p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => refetch()}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!notifications?.length) {
+  const notificationsList = notifications || [];
+
+  if (!notificationsList.length) {
     return (
       <Card className="w-full">
         <CardContent className="pt-6">
@@ -140,9 +151,16 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       {!isConnected && (
         <div className="text-sm p-2 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-600 mb-4">
           ⚠️ Real-time updates disconnected. Some notifications may be delayed.
+          <Button
+            variant="link"
+            className="text-yellow-700 p-0 h-auto ml-2"
+            onClick={() => window.location.reload()}
+          >
+            Reconnect
+          </Button>
         </div>
       )}
-      {notifications.map((notification) => {
+      {notificationsList.map((notification) => {
         const style = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
         const Icon = style.icon;
         const createdAt = notification.created_at ? new Date(notification.created_at) : new Date();
@@ -175,9 +193,11 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
             </CardHeader>
             <CardContent>
               <p className="text-sm">{notification.reason}</p>
-              <div className="mt-2 text-xs text-muted-foreground">
-                MIS: {notification.mis} • Amount: €{notification.amount.toLocaleString()}
-              </div>
+              {notification.mis && notification.amount && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  MIS: {notification.mis} • Amount: €{notification.amount.toLocaleString()}
+                </div>
+              )}
             </CardContent>
           </Card>
         );

@@ -44,15 +44,18 @@ export function useWebSocketUpdates() {
             // Handle different message types
             switch (data.type) {
               case 'notification':
-                queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/budget/notifications'] });
                 toast({
-                  title: 'Ενημέρωση',
-                  description: data.message || 'Νέα ενημέρωση διαθέσιμη',
+                  title: 'New Notification',
+                  description: data.message || 'New notification received',
                   variant: 'default'
                 });
                 break;
               case 'connection':
                 console.log('[WebSocket] Connection confirmed:', data);
+                break;
+              case 'acknowledgment':
+                console.log('[WebSocket] Acknowledgment received:', data);
                 break;
               default:
                 console.log('[WebSocket] Unhandled message type:', data.type);
@@ -65,6 +68,11 @@ export function useWebSocketUpdates() {
         ws.onerror = (error) => {
           console.error('[WebSocket] Connection error:', error);
           setIsConnected(false);
+          toast({
+            title: 'Connection Error',
+            description: 'Failed to connect to notification service',
+            variant: 'destructive'
+          });
         };
 
         ws.onclose = (event) => {
@@ -82,8 +90,8 @@ export function useWebSocketUpdates() {
             }, timeout);
           } else {
             toast({
-              title: 'Σφάλμα Σύνδεσης',
-              description: 'Αδυναμία σύνδεσης στο διακομιστή. Παρακαλώ ανανεώστε τη σελίδα.',
+              title: 'Connection Lost',
+              description: 'Unable to connect to notification service. Please refresh the page.',
               variant: 'destructive'
             });
           }
