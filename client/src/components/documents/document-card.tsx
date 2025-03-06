@@ -84,14 +84,14 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
 
       console.log('[DocumentCard] Document exported successfully');
       toast({
-        description: "Document exported successfully",
+        description: "Το έγγραφο εξήχθη επιτυχώς",
         variant: "default"
       });
     } catch (error) {
       console.error('[DocumentCard] Export error:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to export document",
+        title: "Σφάλμα",
+        description: error instanceof Error ? error.message : "Αποτυχία εξαγωγής εγγράφου",
         variant: "destructive"
       });
     } finally {
@@ -116,11 +116,11 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                     year: '2-digit'
                   }).replace(/\//g, '.')}`
                 ) : (
-                  `Document #${doc.id}`
+                  `Έγγραφο #${doc.id}`
                 )}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Unit: {doc.unit}
+                Μονάδα: {doc.unit}
               </p>
             </div>
             <Badge variant={doc.status === 'approved' ? 'default' : 'secondary'}>
@@ -129,13 +129,13 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
               ) : (
                 <Clock className="h-3 w-3 mr-1" />
               )}
-              {doc.status || 'Pending'}
+              {doc.status === 'approved' ? 'Εγκεκριμένο' : 'Σε εκκρεμότητα'}
             </Badge>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="space-y-1">
-              <span className="text-sm text-muted-foreground">Project ID</span>
+              <span className="text-sm text-muted-foreground">Κωδικός Έργου</span>
               <p className="font-medium">{doc.project_id}</p>
             </div>
             <div className="space-y-1">
@@ -143,23 +143,23 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
               <p className="font-medium">{doc.project_na853 || '-'}</p>
             </div>
             <div className="space-y-1">
-              <span className="text-sm text-muted-foreground">Total Amount</span>
+              <span className="text-sm text-muted-foreground">Συνολικό Ποσό</span>
               <p className="font-medium">
-                {parseFloat(doc.total_amount?.toString() || '0').toLocaleString('en-US', {
+                {parseFloat(doc.total_amount?.toString() || '0').toLocaleString('el-GR', {
                   style: 'currency',
                   currency: 'EUR'
                 })}
               </p>
             </div>
             <div className="space-y-1">
-              <span className="text-sm text-muted-foreground">Type</span>
+              <span className="text-sm text-muted-foreground">Τύπος</span>
               <p className="font-medium">{doc.expenditure_type || '-'}</p>
             </div>
           </div>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
             <Users className="h-4 w-4 mx-auto mb-1" />
-            Click to see {recipients?.length || 0} recipients
+            Πατήστε για να δείτε {recipients?.length || 0} παραλήπτες
           </div>
 
           <div className="absolute bottom-6 left-6 right-6">
@@ -175,7 +175,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                 disabled={isLoading}
               >
                 <FileEdit className="h-4 w-4 mr-2" />
-                Edit
+                Επεξεργασία
               </Button>
               <Button
                 variant="outline"
@@ -188,7 +188,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                 disabled={isLoading}
               >
                 <Download className="h-4 w-4 mr-2" />
-                Export
+                Εξαγωγή
               </Button>
             </div>
             <Button
@@ -202,7 +202,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
               disabled={isLoading || doc.status === 'approved'}
             >
               <ClipboardCheck className="h-4 w-4 mr-2" />
-              Add Protocol
+              Προσθήκη Πρωτοκόλλου
             </Button>
           </div>
         </div>
@@ -211,7 +211,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
         <div className="flip-card-back">
           <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Recipients</h3>
+              <h3 className="text-lg font-semibold">Παραλήπτες</h3>
               <Button
                 variant="ghost"
                 size="sm"
@@ -220,7 +220,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                   setIsFlipped(false);
                 }}
               >
-                Back to Details
+                Επιστροφή στις Λεπτομέρειες
               </Button>
             </div>
 
@@ -235,14 +235,14 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                       {recipient.firstname} {recipient.lastname}
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      Installment {recipient.installment}
+                      Δόση {recipient.installment}
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    AFM: {recipient.afm}
+                    ΑΦΜ: {recipient.afm}
                   </div>
                   <div className="text-sm font-medium mt-1">
-                    Amount: {recipient.amount.toLocaleString('en-US', {
+                    Ποσό: {recipient.amount.toLocaleString('el-GR', {
                       style: 'currency',
                       currency: 'EUR'
                     })}
@@ -252,7 +252,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
 
               {(!recipients || recipients.length === 0) && (
                 <div className="text-center text-muted-foreground">
-                  No recipients found
+                  Δεν βρέθηκαν παραλήπτες
                 </div>
               )}
             </div>
