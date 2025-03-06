@@ -173,7 +173,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       {notifications.map((notification) => {
         const style = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
         const Icon = style.icon;
-        const createdAt = notification.created_at ? new Date(notification.created_at) : new Date();
+        const createdAt = new Date(notification.created_at);
 
         return (
           <Card
@@ -203,9 +203,9 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
             </CardHeader>
             <CardContent>
               <p className="text-sm">{notification.reason}</p>
-              {notification.mis && notification.amount && (
+              {notification.mis && (
                 <div className="mt-2 text-xs text-muted-foreground">
-                  MIS: {notification.mis} • Amount: €{notification.amount.toLocaleString()}
+                  MIS: {notification.mis} • Budget: €{parseFloat(notification.current_budget).toLocaleString('en-US', { minimumFractionDigits: 2 })} • Amount: €{parseFloat(notification.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                 </div>
               )}
             </CardContent>

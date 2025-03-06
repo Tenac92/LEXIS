@@ -19,7 +19,7 @@ export const budgetNA853Split = pgTable("budget_na853_split", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// Budget Notifications table matching existing Supabase structure
+// Updated Budget Notifications table matching existing Supabase structure
 export const budgetNotifications = pgTable("budget_notifications", {
   id: serial("id").primaryKey(),
   mis: text("mis").notNull(),
@@ -33,7 +33,6 @@ export const budgetNotifications = pgTable("budget_notifications", {
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow()
 });
-
 
 // Update the users table definition to match the actual database structure
 export const users = pgTable("users", {

@@ -17,11 +17,17 @@ export async function getBudgetNotifications(req: AuthRequest, res: Response) {
       });
     }
 
-    const notifications = await storage.getBudgetNotifications();
-    return res.json({
-      status: 'success',
-      notifications
-    });
+    const { data: notifications, error } = await supabase
+      .from('budget_notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching notifications:', error);
+      throw error;
+    }
+
+    return res.json(notifications);
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return res.status(500).json({
