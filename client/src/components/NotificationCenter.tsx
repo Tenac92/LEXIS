@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { BudgetNotification } from '@shared/schema';
+import type { BudgetNotification } from '@/lib/types';
 import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
 
 // Styling based on notification type
@@ -59,16 +59,18 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('[NotificationCenter] API Error:', errorData);
-        throw new Error(errorData.message || 'Failed to fetch notifications');
+        throw new Error('Failed to fetch notifications');
       }
 
       const data = await response.json();
       console.log('[NotificationCenter] API Response:', data);
 
-      // Ensure we always return an array
-      return Array.isArray(data) ? data : [];
+      // Handle error response
+      if (data.status === 'error') {
+        throw new Error(data.message || 'Failed to fetch notifications');
+      }
+
+      return data as BudgetNotification[];
     }
   });
 
