@@ -19,29 +19,9 @@ export async function getBudgetNotifications(req: AuthRequest, res: Response) {
 
     console.log('[BudgetController] Fetching notifications...');
 
-    // Fetch notifications ordered by creation date
-    const { data: notifications, error } = await supabase
-      .from('budget_notifications')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50); // Limit to latest 50 notifications
-
-    if (error) {
-      console.error('[BudgetController] Error fetching notifications:', error);
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch notifications',
-        error: error.message
-      });
-    }
-
-    // Return empty array if no notifications found
-    if (!notifications || notifications.length === 0) {
-      console.log('[BudgetController] No notifications found');
-      return res.json([]);
-    }
-
+    const notifications = await BudgetService.getNotifications();
     console.log('[BudgetController] Successfully fetched notifications:', notifications.length);
+
     return res.json(notifications);
   } catch (error) {
     console.error('[BudgetController] Error in getBudgetNotifications:', error);
@@ -88,10 +68,11 @@ export async function validateBudget(req: AuthRequest, res: Response) {
 
         await storage.createBudgetHistoryEntry({
           mis,
+          previous_amount: budgetData?.user_view?.toString() || '0',
+          new_amount: (parseFloat(budgetData?.user_view?.toString() || '0') - requestedAmount).toString(),
           change_type: 'notification_created',
           change_reason: `Budget notification created: ${result.notificationType}`,
           created_by: req.user.id,
-          created_at: new Date().toISOString(),
           metadata: {
             notification_type: result.notificationType,
             priority: result.priority,
@@ -110,9 +91,8 @@ export async function validateBudget(req: AuthRequest, res: Response) {
     console.error("Budget validation error:", error);
     return res.status(500).json({ 
       status: 'error',
-      canCreate: true, // Still allow creation even on error
-      message: "Failed to validate budget",
-      allowDocx: true
+      canCreate: false,
+      message: "Failed to validate budget"
     });
   }
 }

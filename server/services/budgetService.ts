@@ -77,9 +77,8 @@ export class BudgetService {
       if (!mis || isNaN(amount) || amount <= 0) {
         return {
           status: 'error',
-          canCreate: true,
-          message: !mis ? 'MIS parameter is required' : 'Valid amount parameter is required',
-          allowDocx: true
+          canCreate: false,
+          message: !mis ? 'MIS parameter is required' : 'Valid amount parameter is required'
         };
       }
 
@@ -93,9 +92,8 @@ export class BudgetService {
       if (error || !budgetData) {
         return {
           status: 'error',
-          canCreate: true,
-          message: 'Budget not found',
-          allowDocx: true
+          canCreate: false,
+          message: 'Budget not found'
         };
       }
 
@@ -114,7 +112,6 @@ export class BudgetService {
           message: 'Budget will fall below 20% of annual allocation. Admin notification required.',
           requiresNotification: true,
           notificationType: 'low_budget',
-          allowDocx: true,
           priority: 'high',
           metadata: {
             remainingBudget: remainingAfterOperation,
@@ -127,7 +124,6 @@ export class BudgetService {
       return {
         status: 'success',
         canCreate: true,
-        allowDocx: true,
         metadata: {
           remainingBudget: remainingAfterOperation,
           percentageRemaining: (remainingAfterOperation / katanomesEtous) * 100
@@ -137,9 +133,8 @@ export class BudgetService {
       console.error('[BudgetService] Budget validation error:', error);
       return {
         status: 'error',
-        canCreate: true,
-        message: 'Failed to validate budget',
-        allowDocx: true
+        canCreate: false,
+        message: 'Failed to validate budget'
       };
     }
   }
@@ -234,51 +229,24 @@ export class BudgetService {
       };
     }
   }
-  static async createBudgetNotification(notificationData: {
-    mis: string;
-    type: 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning';
-    amount: number;
-    current_budget: number;
-    ethsia_pistosi: number;
-    reason?: string;
-    priority: 'high' | 'medium' | 'low';
-    metadata?: Record<string, unknown>;
-    created_by: number;
-    action_deadline?: Date;
-  }) {
+
+  static async getNotifications() {
     try {
-      const { data: notification, error } = await supabase
+      console.log('[BudgetService] Fetching notifications...');
+
+      const { data, error } = await supabase
         .from('budget_notifications')
-        .insert([{
-          ...notificationData,
-          status: 'pending',
-          action_required: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[BudgetService] Error fetching notifications:', error);
+        throw error;
+      }
 
-      // Create audit log entry
-      await supabase
-        .from('budget_history')
-        .insert([{
-          mis: notificationData.mis,
-          change_type: 'notification_created',
-          change_reason: `Budget notification created: ${notificationData.type}`,
-          created_by: notificationData.created_by,
-          metadata: {
-            notification_id: notification.id,
-            notification_type: notificationData.type,
-            priority: notificationData.priority
-          }
-        }]);
-
-      return notification;
+      return data || [];
     } catch (error) {
-      console.error('[BudgetService] Create notification error:', error);
+      console.error('[BudgetService] Get notifications error:', error);
       throw error;
     }
   }
