@@ -159,7 +159,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
             <Users className="h-4 w-4 mx-auto mb-1" />
-            Πατήστε για να δείτε {recipients?.length || 0} παραλήπτες
+            Πατήστε για να δείτε {recipients?.length || 0} δικαιούχους
           </div>
 
           <div className="absolute bottom-6 left-6 right-6">
@@ -211,7 +211,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
         <div className="flip-card-back">
           <div className="h-full flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Παραλήπτες</h3>
+              <h3 className="text-lg font-semibold">Δικαιούχοι</h3>
               <Button
                 variant="ghost"
                 size="sm"
@@ -252,7 +252,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
 
               {(!recipients || recipients.length === 0) && (
                 <div className="text-center text-muted-foreground">
-                  Δεν βρέθηκαν παραλήπτες
+                  Δεν βρέθηκαν δικαιούχοι
                 </div>
               )}
             </div>
