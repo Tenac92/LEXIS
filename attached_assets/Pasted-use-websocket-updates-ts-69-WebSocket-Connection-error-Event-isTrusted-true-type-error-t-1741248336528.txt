@@ -1,0 +1,34 @@
+use-websocket-updates.ts:69 [WebSocket] Connection error: 
+Event {isTrusted: true, type: 'error', target: WebSocket, currentTarget: WebSocket, eventPhase: 2, …}
+use-websocket-updates.ts:79 [WebSocket] Connection closed: 1006
+use-websocket-updates.ts:85 [WebSocket] Attempting reconnect in 1000ms
+NotificationCenter.tsx:57 
+ GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/budget/notifications 500 (Internal Server Error)
+NotificationCenter.tsx:63 [NotificationCenter] API Error: 
+{status: 'error', message: 'Failed to fetch budget data'}
+use-websocket-updates.ts:28 [WebSocket] Connected successfully
+use-websocket-updates.ts:42 [WebSocket] Received message: 
+{type: 'connection', message: 'Connected to notification service', clientId: '5u2auu', timestamp: '2025-03-06T08:05:25.423Z'}
+use-websocket-updates.ts:55 [WebSocket] Connection confirmed: 
+{type: 'connection', message: 'Connected to notification service', clientId: '5u2auu', timestamp: '2025-03-06T08:05:25.423Z'}
+use-websocket-updates.ts:42 [WebSocket] Received message: 
+{type: 'acknowledgment', message: 'Message received', timestamp: '2025-03-06T08:05:25.583Z'}
+use-websocket-updates.ts:58 [WebSocket] Acknowledgment received: 
+{type: 'acknowledgment', message: 'Message received', timestamp: '2025-03-06T08:05:25.583Z'}
+use-websocket-updates.ts:22 [WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws
+use-websocket-updates.ts:28 [WebSocket] Connected successfully
+use-websocket-updates.ts:42 [WebSocket] Received message: 
+{type: 'connection', message: 'Connected to notification service', clientId: 'oktl6q', timestamp: '2025-03-06T08:05:26.405Z'}
+use-websocket-updates.ts:55 [WebSocket] Connection confirmed: 
+{type: 'connection', message: 'Connected to notification service', clientId: 'oktl6q', timestamp: '2025-03-06T08:05:26.405Z'}
+use-websocket-updates.ts:42 [WebSocket] Received message: 
+{type: 'acknowledgment', message: 'Message received', timestamp: '2025-03-06T08:05:26.560Z'}
+use-websocket-updates.ts:58 [WebSocket] Acknowledgment received: 
+{type: 'acknowledgment', message: 'Message received', timestamp: '2025-03-06T08:05:26.560Z'}
+NotificationCenter.tsx:56 [NotificationCenter] Fetching notifications...
+NotificationCenter.tsx:57 
+ GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/budget/notifications 500 (Internal Server Error)
+NotificationCenter.tsx:63 [NotificationCenter] API Error: 
+{status: 'error', message: 'Failed to fetch budget data'}
+﻿
+

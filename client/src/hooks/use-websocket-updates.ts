@@ -14,7 +14,6 @@ export function useWebSocketUpdates() {
 
     function connect() {
       try {
-        // Get the correct WebSocket URL based on the current window location
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host;
         const wsUrl = `${protocol}//${host}/ws`;

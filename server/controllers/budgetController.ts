@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { supabase } from "../config/db";
 import { storage } from "../storage";
 import type { User, BudgetValidation } from "@shared/schema";
+import { BudgetService } from "../services/budgetService";
 
 interface AuthRequest extends Request {
   user?: User;
@@ -16,19 +17,27 @@ export async function getBudgetNotifications(req: AuthRequest, res: Response) {
       });
     }
 
+    // Fetch notifications ordered by creation date
     const { data: notifications, error } = await supabase
       .from('budget_notifications')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50); // Limit to latest 50 notifications
 
     if (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('[BudgetController] Error fetching notifications:', error);
       throw error;
     }
 
+    if (!notifications) {
+      console.warn('[BudgetController] No notifications found');
+      return res.json([]);
+    }
+
+    console.log('[BudgetController] Fetched notifications:', notifications.length);
     return res.json(notifications);
   } catch (error) {
-    console.error('Error fetching notifications:', error);
+    console.error('[BudgetController] Error in getBudgetNotifications:', error);
     return res.status(500).json({
       status: 'error',
       message: 'Failed to fetch notifications',
