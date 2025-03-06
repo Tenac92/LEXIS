@@ -38,22 +38,11 @@ export class BudgetService {
         };
       }
 
-      // Get project data
-      const { data: projectData, error: projectError } = await supabase
-        .from('project_catalog')
-        .select('na853, budget_na853')
-        .eq('mis', mis)
-        .single();
-
-      if (projectError) {
-        throw projectError;
-      }
-
-      // Get budget data
+      // Get budget data directly using MIS
       const { data: budgetData, error: budgetError } = await supabase
         .from('budget_na853_split')
         .select('*')
-        .eq('na853', projectData?.na853)
+        .eq('mis', mis)
         .single();
 
       if (budgetError) {
@@ -88,12 +77,13 @@ export class BudgetService {
       if (!mis || isNaN(amount) || amount <= 0) {
         return {
           status: 'error',
-          canCreate: true, // Allow creation even with validation errors
+          canCreate: true,
           message: !mis ? 'MIS parameter is required' : 'Valid amount parameter is required',
           allowDocx: true
         };
       }
 
+      // Get current budget data
       const { data: budgetData, error } = await supabase
         .from('budget_na853_split')
         .select('user_view, ethsia_pistosi, katanomes_etous')
@@ -147,7 +137,7 @@ export class BudgetService {
       console.error('[BudgetService] Budget validation error:', error);
       return {
         status: 'error',
-        canCreate: true, // Still allow creation
+        canCreate: true,
         message: 'Failed to validate budget',
         allowDocx: true
       };
@@ -216,7 +206,6 @@ export class BudgetService {
           change_type: 'document_creation',
           change_reason: 'Document creation reduced available budget',
           created_by: userId,
-          created_at: new Date().toISOString(),
           metadata: {
             quarter: quarterKey,
             quarter_previous: currentQuarterValue,
@@ -280,7 +269,6 @@ export class BudgetService {
           change_type: 'notification_created',
           change_reason: `Budget notification created: ${notificationData.type}`,
           created_by: notificationData.created_by,
-          created_at: new Date().toISOString(),
           metadata: {
             notification_id: notification.id,
             notification_type: notificationData.type,
