@@ -33,6 +33,17 @@ import React from 'react';
 import type { DashboardStats } from "@/lib/dashboard";
 import { formatCurrency } from "@/lib/services/dashboard";
 
+// Custom number formatting function
+const formatLargeNumber = (value: number): string => {
+  if (value >= 1000000) {
+    return `${(value / 1000000).toFixed(1)}M €`;
+  } else if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}K €`;
+  }
+  return `${value.toFixed(0)} €`;
+};
+
+
 // Define chart colors with better contrast
 const CHART_COLORS = {
   active: '#10b981',      // Emerald
@@ -135,8 +146,8 @@ export function Dashboard() {
           <p className="font-semibold mb-2">{label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {entry.name === 'budget' 
-                ? `Προϋπολογισμός: ${formatCurrency(entry.value)}`
+              {entry.name === 'budget'
+                ? `Προϋπολογισμός: ${formatLargeNumber(entry.value)}`
                 : `Πλήθος: ${entry.value}`}
             </p>
           ))}
@@ -219,7 +230,7 @@ export function Dashboard() {
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Συνολικός Προϋπολογισμός</h3>
               <p className="text-2xl font-bold mt-1">
-                {formatCurrency(Object.values(stats.budgetTotals || {}).reduce((a, b) => a + b, 0))}
+                {formatLargeNumber(Object.values(stats.budgetTotals || {}).reduce((a, b) => a + b, 0))}
               </p>
             </div>
           </div>
@@ -247,7 +258,7 @@ export function Dashboard() {
                   onMouseEnter={(_, index) => setActivePieIndex(index)}
                 >
                   {chartData.map((entry, index) => (
-                    <Cell 
+                    <Cell
                       key={`cell-${index}`}
                       fill={entry.fill}
                       strokeWidth={1}
@@ -255,8 +266,8 @@ export function Dashboard() {
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
-                <Legend 
-                  verticalAlign="bottom" 
+                <Legend
+                  verticalAlign="bottom"
                   height={36}
                   formatter={(value) => (
                     <span className="text-sm font-medium">{value}</span>
@@ -274,11 +285,11 @@ export function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                margin={{ top: 20, right: 50, left: 50, bottom: 60 }}
               >
-                <CartesianGrid 
-                  strokeDasharray="3 3" 
-                  opacity={0.1} 
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  opacity={0.1}
                   vertical={false}
                 />
                 <XAxis
@@ -291,12 +302,13 @@ export function Dashboard() {
                   tickLine={false}
                 />
                 <YAxis
-                  tickFormatter={(value) => formatCurrency(value)}
+                  tickFormatter={formatLargeNumber}
                   tick={{ fontSize: 12 }}
                   axisLine={false}
                   tickLine={false}
+                  width={80}
                 />
-                <Tooltip 
+                <Tooltip
                   content={<CustomTooltip />}
                   cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
                 />
@@ -306,7 +318,7 @@ export function Dashboard() {
                   maxBarSize={60}
                 >
                   {chartData.map((entry, index) => (
-                    <Cell 
+                    <Cell
                       key={`cell-${index}`}
                       fill={entry.fill}
                     />
