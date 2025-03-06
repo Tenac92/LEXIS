@@ -1,6 +1,6 @@
 import { FC, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Bell, AlertTriangle, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Card,
@@ -13,33 +13,46 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { BudgetNotification } from '@shared/schema';
+import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
 
 // Styling based on notification type
 const notificationStyles = {
   funding: {
-    bg: 'bg-red-50',
+    bg: 'bg-red-50 hover:bg-red-100',
     border: 'border-red-200',
     badge: 'bg-red-100 text-red-800',
+    icon: AlertCircle,
     toastVariant: 'destructive' as const
   },
   reallocation: {
-    bg: 'bg-yellow-50',
+    bg: 'bg-yellow-50 hover:bg-yellow-100',
     border: 'border-yellow-200',
     badge: 'bg-yellow-100 text-yellow-800',
+    icon: AlertTriangle,
+    toastVariant: 'default' as const
+  },
+  increase: {
+    bg: 'bg-green-50 hover:bg-green-100',
+    border: 'border-green-200',
+    badge: 'bg-green-100 text-green-800',
+    icon: ArrowUp,
+    toastVariant: 'default' as const
+  },
+  decrease: {
+    bg: 'bg-blue-50 hover:bg-blue-100',
+    border: 'border-blue-200',
+    badge: 'bg-blue-100 text-blue-800',
+    icon: ArrowDown,
     toastVariant: 'default' as const
   },
   default: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    badge: 'bg-blue-100 text-blue-800',
+    bg: 'bg-gray-50 hover:bg-gray-100',
+    border: 'border-gray-200',
+    badge: 'bg-gray-100 text-gray-800',
+    icon: Bell,
     toastVariant: 'default' as const
   }
 };
-
-const typeIcons = {
-  funding: AlertCircle,
-  reallocation: AlertTriangle
-} as const;
 
 interface NotificationCenterProps {
   onNotificationClick?: (notification: BudgetNotification) => void;
@@ -48,6 +61,7 @@ interface NotificationCenterProps {
 export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotificationClick }) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isConnected } = useWebSocketUpdates();
 
   const { data: notifications, error, isError, isLoading } = useQuery({
     queryKey: ['/api/budget/notifications'],
@@ -73,66 +87,14 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000)
   });
 
-  useEffect(() => {
-    try {
-      const host = window.location.host;
-      if (!host) {
-        console.error('No host found in window.location');
-        return;
-      }
-
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${host}/ws/notifications`;
-
-      console.log('Attempting WebSocket connection to:', wsUrl);
-      const ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        console.log('WebSocket connection established');
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        toast({
-          title: "Connection Warning",
-          description: "Real-time updates may be delayed. Please refresh for latest notifications.",
-          variant: "default"
-        });
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const notification = JSON.parse(event.data) as BudgetNotification;
-          const styles = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
-
-          toast({
-            title: `New Budget Notification`,
-            description: notification.reason || `${notification.type} notification received`,
-            variant: styles.toastVariant
-          });
-
-          queryClient.invalidateQueries({ queryKey: ['/api/budget/notifications'] });
-        } catch (error) {
-          console.error('Error processing notification:', error);
-        }
-      };
-
-      return () => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.close();
-        }
-      };
-    } catch (error) {
-      console.error('Failed to setup WebSocket:', error);
-    }
-  }, [queryClient, toast]);
-
   if (isLoading) {
     return (
-      <Card className="w-full max-w-md mx-auto">
+      <Card className="w-full animate-pulse">
         <CardContent className="pt-6">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-24 bg-muted rounded-lg" />
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -141,11 +103,11 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
   if (isError) {
     return (
-      <Card className="w-full max-w-md mx-auto border-destructive">
+      <Card className="w-full border-destructive">
         <CardContent className="pt-6">
           <div className="text-center text-destructive">
             <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
-            <p>Failed to load notifications</p>
+            <p className="font-semibold">Failed to load notifications</p>
             <p className="text-sm text-muted-foreground mt-2">
               {error instanceof Error ? error.message : 'An unexpected error occurred'}
             </p>
@@ -157,11 +119,16 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
   if (!notifications?.length) {
     return (
-      <Card className="w-full max-w-md mx-auto">
+      <Card className="w-full">
         <CardContent className="pt-6">
           <div className="text-center text-muted-foreground">
             <Bell className="h-8 w-8 mx-auto mb-2" />
-            No notifications
+            <p>No notifications available</p>
+            {!isConnected && (
+              <p className="text-sm mt-2 text-yellow-600">
+                Real-time updates disconnected. Notifications may be delayed.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -170,18 +137,24 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
   return (
     <div className="space-y-4">
+      {!isConnected && (
+        <div className="text-sm p-2 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-600 mb-4">
+          ⚠️ Real-time updates disconnected. Some notifications may be delayed.
+        </div>
+      )}
       {notifications.map((notification) => {
-        const Icon = typeIcons[notification.type as keyof typeof typeIcons] || Bell;
-        const styles = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
+        const style = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
+        const Icon = style.icon;
         const createdAt = notification.created_at ? new Date(notification.created_at) : new Date();
 
         return (
           <Card
             key={notification.id}
             className={cn(
-              'cursor-pointer transition-colors hover:shadow-md',
-              styles.bg,
-              styles.border,
+              'cursor-pointer transition-all duration-200',
+              'hover:shadow-md',
+              style.bg,
+              style.border,
               'border rounded-lg overflow-hidden'
             )}
             onClick={() => onNotificationClick?.(notification)}
@@ -196,7 +169,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
                   {formatDistanceToNow(createdAt, { addSuffix: true })}
                 </CardDescription>
               </div>
-              <Badge variant="outline" className={cn(styles.badge)}>
+              <Badge variant="outline" className={cn(style.badge)}>
                 {notification.status}
               </Badge>
             </CardHeader>
