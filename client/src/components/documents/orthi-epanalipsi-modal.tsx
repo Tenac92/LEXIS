@@ -15,6 +15,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { GeneratedDocument } from "@shared/schema";
+import { z } from "zod";
 import { supabase } from "@/lib/supabase";
 
 interface OrthiEpanalipsiModalProps {
@@ -23,33 +24,38 @@ interface OrthiEpanalipsiModalProps {
   document: GeneratedDocument | null;
 }
 
-interface Recipient {
-  firstname: string;
-  lastname: string;
-  afm: string;
-  amount: number;
-  installment: number;
-}
+// Zod schema for form validation
+const orthiEpanalipsiSchema = z.object({
+  correctionReason: z.string().min(1, "Παρακαλώ εισάγετε το λόγο διόρθωσης"),
+  na853: z.string().min(1, "Παρακαλώ επιλέξτε NA853"),
+  comments: z.string().optional(),
+});
 
-interface OrthiEpanalipsiFormData {
-  correctionReason: string;
-  na853: string;
-  recipients: Recipient[];
-  comments: string;
-}
+type OrthiEpanalipsiFormData = z.infer<typeof orthiEpanalipsiSchema>;
 
 export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanalipsiModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const form = useForm<OrthiEpanalipsiFormData>({
+    resolver: zodResolver(orthiEpanalipsiSchema),
     defaultValues: {
       correctionReason: "",
       na853: document?.project_na853 || "",
-      recipients: document?.recipients || [],
       comments: "",
     },
   });
+
+  // Reset form when document changes
+  useEffect(() => {
+    if (document) {
+      form.reset({
+        correctionReason: "",
+        na853: document.project_na853 || "",
+        comments: "",
+      });
+    }
+  }, [document, form]);
 
   // Fetch available NA853 options for the unit
   const { data: projects } = useQuery({
@@ -59,7 +65,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       const { data, error } = await supabase
         .from("projects")
         .select("na853")
-        .eq("unit", document?.unit);
+        .eq("unit", document?.unit || "");
 
       if (error) throw error;
       return data || [];
@@ -78,10 +84,6 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         },
         body: JSON.stringify({
           ...document,
-          recipients: data.recipients.map(recipient => ({
-            ...recipient,
-            amount: parseFloat(recipient.amount.toString()),
-          })),
           project_na853: data.na853,
           comments: data.comments,
           correction_reason: data.correctionReason,
@@ -96,7 +98,6 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         throw new Error(error.message || "Failed to generate correction");
       }
 
-      // Handle document download
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -113,30 +114,18 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       toast({
         title: "Επιτυχία",
-        description: "Η διόρθωση δημιουργήθηκε επιτυχώς",
+        description: "Η ορθή επανάληψη δημιουργήθηκε επιτυχώς",
       });
       onClose();
     },
     onError: (error) => {
       toast({
         title: "Σφάλμα",
-        description: error instanceof Error ? error.message : "Αποτυχία δημιουργίας διόρθωσης",
+        description: error instanceof Error ? error.message : "Αποτυχία δημιουργίας ορθής επανάληψης",
         variant: "destructive",
       });
     },
   });
-
-  // Reset form when document changes
-  useEffect(() => {
-    if (document) {
-      form.reset({
-        correctionReason: "",
-        na853: document.project_na853 || "",
-        recipients: document.recipients || [],
-        comments: document.comments || "",
-      });
-    }
-  }, [document, form]);
 
   const onSubmit = (data: OrthiEpanalipsiFormData) => {
     generateCorrection.mutate(data);
@@ -146,25 +135,12 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Στοιχεία Διόρθωσης</DialogTitle>
+          <DialogTitle>Στοιχεία Ορθής Επανάληψης</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="originalProtocol"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Αρχικό Πρωτόκολλο</FormLabel>
-                    <FormControl>
-                      <Input {...field} readOnly value={document?.protocol_number_input || ""} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="na853"
@@ -189,6 +165,15 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                   </FormItem>
                 )}
               />
+
+              <div className="space-y-2">
+                <FormLabel>Αρχικό Πρωτόκολλο</FormLabel>
+                <Input 
+                  value={document?.protocol_number_input || ""} 
+                  readOnly
+                  className="bg-gray-100"
+                />
+              </div>
             </div>
 
             <FormField
@@ -196,11 +181,11 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
               name="correctionReason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Λόγος Διόρθωσης</FormLabel>
+                  <FormLabel>Λόγος Ορθής Επανάληψης</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
-                      placeholder="Δώστε το λόγο διόρθωσης"
+                      placeholder="Εισάγετε το λόγο της ορθής επανάληψης..."
                       className="min-h-[100px]"
                     />
                   </FormControl>
@@ -218,7 +203,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                   <FormControl>
                     <Textarea
                       {...field}
-                      placeholder="Εισάγετε σχόλια διόρθωσης..."
+                      placeholder="Εισάγετε επιπλέον σχόλια..."
                       className="min-h-[100px]"
                     />
                   </FormControl>
@@ -235,7 +220,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                 type="submit"
                 disabled={generateCorrection.isPending}
               >
-                Δημιουργία Διόρθωσης
+                Δημιουργία Ορθής Επανάληψης
               </Button>
             </div>
           </form>
