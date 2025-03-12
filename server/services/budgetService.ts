@@ -237,12 +237,17 @@ export class BudgetService {
       const { data, error } = await supabase
         .from('budget_notifications')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50); // Limit to latest 50 notifications
 
       if (error) {
         console.error('[BudgetService] Error fetching notifications:', error);
         throw error;
       }
+
+      console.log('[BudgetService] Successfully fetched notifications:', {
+        count: data?.length || 0
+      });
 
       return data || [];
     } catch (error) {

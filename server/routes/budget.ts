@@ -6,6 +6,38 @@ import { supabase } from '../config/db';
 
 const router = Router();
 
+// Get budget notifications - this route must come before /:mis
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    console.log('[BudgetController] Fetching notifications...');
+
+    const notifications = await BudgetService.getNotifications();
+
+    // Return empty array if no notifications found
+    if (!notifications?.length) {
+      console.log('[BudgetController] No notifications found');
+      return res.json([]);
+    }
+
+    console.log('[BudgetController] Successfully fetched notifications:', notifications.length);
+    return res.json(notifications);
+  } catch (error) {
+    console.error('[BudgetController] Error in getBudgetNotifications:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch notifications',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get budget data by MIS
 router.get('/:mis', async (req, res) => {
   try {
@@ -69,52 +101,6 @@ router.post('/validate', authenticateToken, async (req, res) => {
       canCreate: true, // Still allow creation even on error
       message: "Failed to validate budget",
       allowDocx: true
-    });
-  }
-});
-
-// Get budget notifications
-router.get('/notifications', authenticateToken, async (req, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Authentication required'
-      });
-    }
-
-    console.log('[BudgetController] Fetching notifications...');
-
-    // Fetch notifications ordered by creation date
-    const { data: notifications, error } = await supabase
-      .from('budget_notifications')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50); // Limit to latest 50 notifications
-
-    if (error) {
-      console.error('[BudgetController] Error fetching notifications:', error);
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to fetch notifications',
-        error: error.message
-      });
-    }
-
-    // Return empty array if no notifications found
-    if (!notifications) {
-      console.log('[BudgetController] No notifications found');
-      return res.json([]);
-    }
-
-    console.log('[BudgetController] Successfully fetched notifications:', notifications.length);
-    return res.json(notifications);
-  } catch (error) {
-    console.error('[BudgetController] Error in getBudgetNotifications:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch notifications',
-      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
