@@ -167,7 +167,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
             </div>
 
             <div className="absolute bottom-6 left-6 right-6">
-              <div className="grid grid-cols-3 gap-2 mb-2">
+              <div className="grid grid-cols-2 gap-2 mb-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -194,33 +194,36 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                   <Download className="h-4 w-4 mr-2" />
                   Εξαγωγή
                 </Button>
+              </div>
+              {doc.protocol_number_input ? (
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   className="w-full"
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowCorrectionModal(true);
                   }}
-                  disabled={isLoading || !doc.protocol_number_input}
+                  disabled={isLoading}
                 >
                   <History className="h-4 w-4 mr-2" />
-                  Διόρθωση
+                  Ορθή Επανάληψη
                 </Button>
-              </div>
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onView();
-                }}
-                disabled={isLoading || doc.status === 'approved'}
-              >
-                <ClipboardCheck className="h-4 w-4 mr-2" />
-                Προσθήκη Πρωτοκόλλου
-              </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onView();
+                  }}
+                  disabled={isLoading || doc.status === 'approved'}
+                >
+                  <ClipboardCheck className="h-4 w-4 mr-2" />
+                  Προσθήκη Πρωτοκόλλου
+                </Button>
+              )}
             </div>
           </div>
 
