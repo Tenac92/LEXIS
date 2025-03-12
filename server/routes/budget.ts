@@ -6,7 +6,7 @@ import { supabase } from '../config/db';
 
 const router = Router();
 
-// Get budget notifications - this route must come before /:mis
+// Get budget notifications
 router.get('/notifications', authenticateToken, async (req, res) => {
   try {
     if (!req.user?.id) {
@@ -38,8 +38,8 @@ router.get('/notifications', authenticateToken, async (req, res) => {
   }
 });
 
-// Get budget data by MIS
-router.get('/:mis', async (req, res) => {
+// Get budget data by MIS - with numeric constraint
+router.get('/mis/:mis([0-9]+)', async (req, res) => {
   try {
     const { mis } = req.params;
 

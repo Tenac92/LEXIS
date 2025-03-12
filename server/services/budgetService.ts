@@ -236,22 +236,34 @@ export class BudgetService {
 
       const { data, error } = await supabase
         .from('budget_notifications')
-        .select('*')
+        .select(`
+          *,
+          users (
+            id,
+            username,
+            name
+          )
+        `)
         .order('created_at', { ascending: false })
-        .limit(50); // Limit to latest 50 notifications
+        .limit(50);
 
       if (error) {
         console.error('[BudgetService] Error fetching notifications:', error);
-        throw error;
+        throw new Error(`Database error: ${error.message}`);
       }
 
       console.log('[BudgetService] Successfully fetched notifications:', {
-        count: data?.length || 0
+        count: data?.length || 0,
+        sample: data?.[0] ? {
+          id: data[0].id,
+          type: data[0].type,
+          status: data[0].status
+        } : null
       });
 
       return data || [];
     } catch (error) {
-      console.error('[BudgetService] Get notifications error:', error);
+      console.error('[BudgetService] Error in getNotifications:', error);
       throw error;
     }
   }
