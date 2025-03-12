@@ -1,14 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
 import { useQuery } from '@tanstack/react-query';
 import { DocumentCard } from '@/components/documents/document-card';
+import type { GeneratedDocument } from '@shared/schema';
 
 export default function DocumentsPage() {
   // Set up WebSocket connection
   useWebSocketUpdates();
 
   // Fetch documents using React Query
-  const { data: documents, isLoading, error } = useQuery({
+  const { data: documents, isLoading, error } = useQuery<GeneratedDocument[]>({
     queryKey: ['/api/documents/generated'],
     staleTime: 0, // Always fetch fresh data
     refetchOnWindowFocus: true,
