@@ -23,7 +23,7 @@ interface OrthiEpanalipsiModalProps {
   document: GeneratedDocument | null;
 }
 
-// Constants
+// Constants remain unchanged
 const EXPENDITURE_TYPES = [
   "ΔΚΑ ΕΠΙΣΚΕΥΗ",
   "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ",
@@ -56,7 +56,9 @@ const recipientSchema = z.object({
   installment: z.number().min(1, "Η δόση πρέπει να είναι τουλάχιστον 1"),
 });
 
-// Zod schema for form validation
+export type Recipient = z.infer<typeof recipientSchema>;
+
+// Update schema for form validation
 const orthiEpanalipsiSchema = z.object({
   correctionReason: z.string().min(1, "Παρακαλώ εισάγετε το λόγο διόρθωσης"),
   project_id: z.string().min(1, "Παρακαλώ επιλέξτε έργο"),
@@ -103,8 +105,10 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       protocol_date: new Date().toISOString().split('T')[0],
       unit: document?.unit || "",
       expenditure_type: document?.expenditure_type || "",
-      recipients: document?.recipients || [],
-      total_amount: document?.total_amount || 0,
+      recipients: (document?.recipients as Recipient[]) || [],
+      total_amount: typeof document?.total_amount === 'string' 
+        ? parseFloat(document.total_amount) 
+        : (document?.total_amount as number) || 0,
     },
   });
 
@@ -119,8 +123,10 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         protocol_date: new Date().toISOString().split('T')[0],
         unit: documentDetails.unit || "",
         expenditure_type: documentDetails.expenditure_type || "",
-        recipients: documentDetails.recipients || [],
-        total_amount: documentDetails.total_amount || 0,
+        recipients: (documentDetails.recipients as Recipient[]) || [],
+        total_amount: typeof documentDetails.total_amount === 'string'
+          ? parseFloat(documentDetails.total_amount)
+          : (documentDetails.total_amount as number) || 0,
       });
     }
   }, [documentDetails, form, isOpen]);
@@ -172,7 +178,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     }
   }, [form.watch("project_id"), projects, form]);
 
-  // Mutation for generating correction
+  // Update the download section
   const generateCorrection = useMutation({
     mutationFn: async (data: OrthiEpanalipsiFormData) => {
       if (!document?.id) throw new Error("No document selected");
@@ -205,13 +211,13 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      const a = window.document.createElement("a");
       a.href = url;
       a.download = `orthi-epanalipsi-${document.id}.docx`;
-      document.body.appendChild(a);
+      window.document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      window.document.body.removeChild(a);
 
       return response;
     },
