@@ -139,7 +139,12 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         return data.data || [];
       } catch (error) {
         console.error("Error fetching projects:", error);
-        throw error;
+        toast({
+          title: "Σφάλμα",
+          description: "Αποτυχία φόρτωσης έργων",
+          variant: "destructive",
+        });
+        return [];
       }
     },
   });
@@ -235,8 +240,8 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <FormLabel>Αρχικό Πρωτόκολλο</FormLabel>
-                <Input 
-                  value={document?.protocol_number_input || ""} 
+                <Input
+                  value={document?.protocol_number_input || ""}
                   readOnly
                   className="bg-gray-100"
                 />
@@ -328,7 +333,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                     <SelectContent>
                       {projects?.map((project: any) => (
                         <SelectItem key={project.na853} value={project.na853}>
-                          {project.na853}
+                          {project.na853} - {project.title}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -488,12 +493,12 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
             />
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   onClose();
                   form.reset();
-                }} 
+                }}
                 type="button"
               >
                 Ακύρωση
