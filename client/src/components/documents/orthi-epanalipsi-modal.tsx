@@ -23,12 +23,25 @@ interface OrthiEpanalipsiModalProps {
   document: GeneratedDocument | null;
 }
 
+// Recipient schema
+const recipientSchema = z.object({
+  firstname: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
+  lastname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
+  afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
+  amount: z.number().min(0, "Το ποσό πρέπει να είναι θετικό"),
+  installment: z.number().min(1, "Η δόση πρέπει να είναι τουλάχιστον 1"),
+});
+
 // Zod schema for form validation
 const orthiEpanalipsiSchema = z.object({
   correctionReason: z.string().min(1, "Παρακαλώ εισάγετε το λόγο διόρθωσης"),
   na853: z.string().min(1, "Παρακαλώ επιλέξτε NA853"),
   comments: z.string().optional(),
   protocol_date: z.string().min(1, "Παρακαλώ επιλέξτε ημερομηνία"),
+  unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
+  expenditure_type: z.string().optional(),
+  recipients: z.array(recipientSchema),
+  total_amount: z.number().min(0, "Το συνολικό ποσό πρέπει να είναι θετικό"),
 });
 
 type OrthiEpanalipsiFormData = z.infer<typeof orthiEpanalipsiSchema>;
@@ -44,6 +57,10 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       na853: document?.project_na853 || "",
       comments: "",
       protocol_date: new Date().toISOString().split('T')[0],
+      unit: document?.unit || "",
+      expenditure_type: document?.expenditure_type || "",
+      recipients: document?.recipients || [],
+      total_amount: document?.total_amount || 0,
     },
   });
 
@@ -55,9 +72,20 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         na853: document.project_na853 || "",
         comments: "",
         protocol_date: new Date().toISOString().split('T')[0],
+        unit: document.unit || "",
+        expenditure_type: document.expenditure_type || "",
+        recipients: document.recipients || [],
+        total_amount: document.total_amount || 0,
       });
     }
   }, [document, form, isOpen]);
+
+  // Calculate total amount from recipients
+  useEffect(() => {
+    const recipients = form.watch("recipients");
+    const total = recipients.reduce((sum, recipient) => sum + (recipient.amount || 0), 0);
+    form.setValue("total_amount", total);
+  }, [form.watch("recipients")]);
 
   // Fetch available NA853 options for the unit
   const { data: projects = [] } = useQuery({
@@ -95,10 +123,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         },
         body: JSON.stringify({
           ...document,
-          project_na853: data.na853,
-          comments: data.comments,
-          correction_reason: data.correctionReason,
-          protocol_date: data.protocol_date,
+          ...data,
           original_protocol_number: document.protocol_number_input,
           original_protocol_date: document.protocol_date,
           status: "pending",
@@ -149,6 +174,20 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     generateCorrection.mutate(data);
   };
 
+  const addRecipient = () => {
+    const recipients = form.getValues("recipients");
+    form.setValue("recipients", [
+      ...recipients,
+      { firstname: "", lastname: "", afm: "", amount: 0, installment: 1 }
+    ]);
+  };
+
+  const removeRecipient = (index: number) => {
+    const recipients = form.getValues("recipients");
+    recipients.splice(index, 1);
+    form.setValue("recipients", [...recipients]);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -180,6 +219,36 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                         type="date"
                         className="w-full"
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="unit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Μονάδα</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="expenditure_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Τύπος Δαπάνης</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -229,6 +298,119 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                 </FormItem>
               )}
             />
+
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <FormLabel>Δικαιούχοι</FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addRecipient}
+                >
+                  Προσθήκη Δικαιούχου
+                </Button>
+              </div>
+
+              {form.watch("recipients").map((recipient, index) => (
+                <div key={index} className="space-y-4 p-4 border rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <h4 className="font-medium">Δικαιούχος #{index + 1}</h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => removeRecipient(index)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Διαγραφή
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.firstname`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Όνομα</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.lastname`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Επώνυμο</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.afm`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>ΑΦΜ</FormLabel>
+                          <FormControl>
+                            <Input {...field} maxLength={9} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.amount`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ποσό</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              step="0.01"
+                              onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name={`recipients.${index}.installment`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Δόση</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              min="1"
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
 
             <FormField
               control={form.control}
