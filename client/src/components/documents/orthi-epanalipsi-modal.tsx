@@ -139,7 +139,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         }
         const data = await response.json();
         console.log("Fetched projects:", data);
-        return data.data || [];
+        return data || [];
       } catch (error) {
         console.error("Error fetching projects:", error);
         toast({
@@ -155,10 +155,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   // Update project_na853 when project_id changes
   useEffect(() => {
     const projectId = form.watch("project_id");
-    console.log("Current project_id:", projectId);
-    console.log("Available projects:", projects);
-    const selectedProject = projects.find((p: any) => p.mis === projectId);
-    console.log("Selected project:", selectedProject);
+    const selectedProject = projects.find((p) => p.mis === projectId);
     if (selectedProject) {
       form.setValue("project_na853", selectedProject.na853);
     }
@@ -346,7 +343,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {projects.map((project: any) => (
+                      {projects.map((project) => (
                         <SelectItem key={project.mis} value={project.mis}>
                           {project.mis} - {project.na853}
                         </SelectItem>
