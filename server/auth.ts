@@ -12,11 +12,11 @@ interface AuthenticatedRequest extends Request {
 // Properly extend express-session types
 declare module 'express-session' {
   interface SessionData {
-    user: User;
+    user?: User;  // Make user optional to match runtime behavior
   }
 }
 
-// Session middleware with enhanced security
+// Session middleware with enhanced security and development-friendly settings
 export const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'document-manager-secret',
   resave: false,
@@ -24,24 +24,30 @@ export const sessionMiddleware = session({
   store: storage.sessionStore,
   name: 'sid',
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Set to false for development
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax'
+    sameSite: 'lax',
+    path: '/'
   }
 });
 
-// Authentication middleware
+// Authentication middleware with enhanced logging
 export const authenticateSession = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     console.log('[Auth] Checking session:', { 
       hasSession: !!req.session,
       hasUser: !!req.session?.user,
-      sessionID: req.sessionID 
+      sessionID: req.sessionID,
+      cookies: req.headers.cookie 
     });
 
     if (!req.session?.user?.id) {
-      console.log('[Auth] No valid user in session');
+      console.log('[Auth] No valid user in session:', {
+        sessionExists: !!req.session,
+        userExists: !!req.session?.user,
+        sessionID: req.sessionID
+      });
       return res.status(401).json({
         message: 'Authentication required'
       });
@@ -51,7 +57,8 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
     req.user = req.session.user;
     console.log('[Auth] User authenticated:', { 
       id: req.user.id,
-      role: req.user.role
+      role: req.user.role,
+      sessionID: req.sessionID
     });
     next();
   } catch (error) {
@@ -70,7 +77,7 @@ export async function setupAuth(app: Express) {
   app.use(sessionMiddleware);
   console.log('[Auth] Session middleware applied');
 
-  // Login route
+  // Login route with enhanced session handling
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -119,13 +126,26 @@ export async function setupAuth(app: Express) {
       // Store user data in session
       req.session.user = sessionUser;
 
-      // Save session explicitly
+      // Save session explicitly and wait for completion
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
-          if (err) reject(err);
-          else resolve();
+          if (err) {
+            console.error('[Auth] Session save error:', err);
+            reject(err);
+          } else {
+            console.log('[Auth] Session saved successfully:', {
+              sessionID: req.sessionID,
+              userID: sessionUser.id
+            });
+            resolve();
+          }
         });
       });
+
+      // Set cookie header explicitly
+      res.setHeader('Set-Cookie', [
+        `sid=${req.sessionID}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${24 * 60 * 60}`
+      ]);
 
       console.log('[Auth] Login successful:', {
         id: sessionUser.id,
@@ -144,7 +164,7 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Logout route
+  // Logout route with enhanced session cleanup
   app.post("/api/auth/logout", (req, res) => {
     console.log('[Auth] Logging out user:', { 
       sessionID: req.sessionID,
@@ -159,7 +179,7 @@ export async function setupAuth(app: Express) {
             message: 'Logout failed'
           });
         }
-        res.clearCookie('sid');
+        res.clearCookie('sid', { path: '/' });
         res.json({ message: 'Logged out successfully' });
       });
     } else {
@@ -167,15 +187,17 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Get current user route
+  // Get current user route with enhanced error handling
   app.get("/api/auth/me", authenticateSession, (req: AuthenticatedRequest, res) => {
     if (!req.user) {
+      console.log('[Auth] No user found in authenticated request');
       return res.status(401).json({ message: 'Authentication required' });
     }
 
     console.log('[Auth] Returning current user:', { 
       id: req.user.id,
-      role: req.user.role 
+      role: req.user.role,
+      sessionID: req.sessionID
     });
     res.json(req.user);
   });

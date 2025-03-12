@@ -6,6 +6,7 @@ const WS_PATH = '/ws';
 
 interface ExtendedWebSocket extends WebSocket {
   isAlive: boolean;
+  clientId?: string;
 }
 
 export function createWebSocketServer(server: Server) {
@@ -13,13 +14,15 @@ export function createWebSocketServer(server: Server) {
     const wss = new WebSocketServer({ 
       server,
       path: WS_PATH,
-      clientTracking: true
+      clientTracking: true,
+      handleProtocols: () => 'notifications'
     });
 
     console.log(`[WebSocket] Server initialized on path: ${WS_PATH}`);
 
     wss.on('connection', (ws: ExtendedWebSocket, req) => {
       const clientId = Math.random().toString(36).substring(7);
+      ws.clientId = clientId;
       console.log(`[WebSocket] New client connected: ${clientId}`);
 
       ws.isAlive = true;
@@ -44,6 +47,7 @@ export function createWebSocketServer(server: Server) {
           const message = JSON.parse(data.toString());
           console.log(`[WebSocket] Received message from ${clientId}:`, message);
 
+          // Send acknowledgment
           ws.send(JSON.stringify({
             type: 'acknowledgment',
             message: 'Message received',
@@ -51,6 +55,17 @@ export function createWebSocketServer(server: Server) {
           }));
         } catch (error) {
           console.error('[WebSocket] Error processing message:', error);
+
+          // Send error notification back to client
+          try {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Failed to process message',
+              timestamp: new Date().toISOString()
+            }));
+          } catch (sendError) {
+            console.error('[WebSocket] Failed to send error message:', sendError);
+          }
         }
       });
 
@@ -69,13 +84,17 @@ export function createWebSocketServer(server: Server) {
           reason: reason.toString(),
           timestamp: new Date().toISOString()
         });
+
+        // Cleanup
+        ws.isAlive = false;
       });
     });
 
+    // Set up heartbeat interval
     const heartbeatInterval = setInterval(() => {
       (wss.clients as Set<ExtendedWebSocket>).forEach((ws) => {
         if (ws.isAlive === false) {
-          console.log('[WebSocket] Terminating inactive connection');
+          console.log('[WebSocket] Terminating inactive connection:', ws.clientId);
           return ws.terminate();
         }
 

@@ -14,13 +14,13 @@ export function useWebSocketUpdates() {
 
     function connect() {
       try {
-        // Use window.location.host to get hostname:port
+        // Get the correct websocket URL based on current location
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws`;
 
         console.log('[WebSocket] Attempting to connect:', wsUrl);
 
-        const ws = new WebSocket(wsUrl);
+        const ws = new WebSocket(wsUrl, ['notifications']);
         wsRef.current = ws;
 
         ws.onopen = () => {
@@ -29,10 +29,14 @@ export function useWebSocketUpdates() {
           retryCount = 0;
 
           // Send initial connection message
-          ws.send(JSON.stringify({ 
-            type: 'connect',
-            timestamp: new Date().toISOString()
-          }));
+          try {
+            ws.send(JSON.stringify({ 
+              type: 'connect',
+              timestamp: new Date().toISOString()
+            }));
+          } catch (error) {
+            console.error('[WebSocket] Failed to send initial message:', error);
+          }
         };
 
         ws.onmessage = (event) => {
@@ -42,20 +46,27 @@ export function useWebSocketUpdates() {
 
             switch (data.type) {
               case 'notification':
-                // Invalidate notifications cache
+                // Handle new notification
                 queryClient.invalidateQueries({ queryKey: ['/api/budget/notifications'] });
-
-                // Show toast notification
                 toast({
-                  title: data.title || 'New Notification',
-                  description: data.message,
-                  variant: data.variant || 'default'
+                  title: data.data?.reason || 'New Budget Notification',
+                  description: `MIS: ${data.data?.mis} • Amount: €${Number(data.data?.amount).toLocaleString()}`,
+                  variant: data.data?.type === 'funding' ? 'destructive' : 'default'
                 });
                 break;
 
               case 'connection':
               case 'acknowledgment':
                 console.log(`[WebSocket] ${data.type} received:`, data);
+                break;
+
+              case 'error':
+                console.error('[WebSocket] Server reported error:', data);
+                toast({
+                  title: 'Error',
+                  description: data.message || 'An error occurred with the notification service',
+                  variant: 'destructive'
+                });
                 break;
 
               default:
