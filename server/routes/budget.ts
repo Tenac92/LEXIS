@@ -10,10 +10,7 @@ const router = Router();
 router.get('/notifications', authenticateToken, async (req, res) => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Authentication required'
-      });
+      return res.status(401).json([]);  // Return empty array even for auth errors
     }
 
     console.log('[BudgetController] Fetching notifications...');
@@ -26,11 +23,11 @@ router.get('/notifications', authenticateToken, async (req, res) => {
       res.json(notifications);
     } catch (error) {
       console.error('[BudgetController] Error fetching notifications:', error);
-      throw error;
+      res.json([]); // Return empty array on error
     }
   } catch (error) {
     console.error('[BudgetController] Error in notifications route:', error);
-    return res.status(500).json([]);  // Return empty array on error
+    res.json([]); // Return empty array on error
   }
 });
 

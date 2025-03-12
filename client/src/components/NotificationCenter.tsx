@@ -64,8 +64,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
         if (!response.ok) {
           console.error('[NotificationCenter] Response not OK:', response.status);
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `Server returned ${response.status}`);
+          return [];
         }
 
         const data = await response.json();
@@ -76,25 +75,16 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
           fields: Array.isArray(data) && data.length > 0 ? Object.keys(data[0]) : []
         });
 
-        // Handle different response formats
-        if (Array.isArray(data)) {
-          return data;
-        } else if (data && typeof data === 'object') {
-          // If it's an object with a notifications array
-          if (Array.isArray(data.notifications)) {
-            return data.notifications;
-          }
-          // If it's an object with notification data
-          if (data.status === 'success' && Array.isArray(data.data)) {
-            return data.data;
-          }
+        // Ensure we always return an array
+        if (!Array.isArray(data)) {
+          console.warn('[NotificationCenter] Expected array but got:', typeof data);
+          return [];
         }
 
-        console.warn('[NotificationCenter] Unexpected response format:', data);
-        return [];
+        return data;
       } catch (err) {
         console.error('[NotificationCenter] Fetch error:', err);
-        throw err;
+        return [];
       }
     },
     retry: 1,

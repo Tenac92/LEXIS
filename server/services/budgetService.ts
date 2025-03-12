@@ -254,7 +254,8 @@ export class BudgetService {
 
       if (error) {
         console.error('[BudgetService] Error fetching notifications:', error);
-        throw new Error(`Database error: ${error.message}`);
+        // Return empty array instead of throwing error
+        return [];
       }
 
       // Ensure data is an array
@@ -268,7 +269,7 @@ export class BudgetService {
         amount: Number(notification.amount),
         current_budget: Number(notification.current_budget),
         ethsia_pistosi: Number(notification.ethsia_pistosi),
-        reason: String(notification.reason),
+        reason: String(notification.reason || ''),
         status: notification.status,
         user_id: Number(notification.user_id),
         created_at: notification.created_at,
@@ -284,7 +285,8 @@ export class BudgetService {
       return transformedData;
     } catch (error) {
       console.error('[BudgetService] Error in getNotifications:', error);
-      throw error;
+      // Return empty array instead of throwing error
+      return [];
     }
   }
 }

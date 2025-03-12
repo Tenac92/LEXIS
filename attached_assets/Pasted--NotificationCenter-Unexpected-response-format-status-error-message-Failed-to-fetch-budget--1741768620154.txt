@@ -1,0 +1,46 @@
+[NotificationCenter] Unexpected response format: {status: 'error', message: 'Failed to fetch budget data', error: 'Unknown error'}error: "Unknown error"message: "Failed to fetch budget data"status: "error"[[Prototype]]: Objectconstructor: ƒ Object()hasOwnProperty: ƒ hasOwnProperty()isPrototypeOf: ƒ isPrototypeOf()propertyIsEnumerable: ƒ propertyIsEnumerable()toLocaleString: ƒ toLocaleString()toString: ƒ toString()valueOf: ƒ valueOf()__defineGetter__: ƒ __defineGetter__()__defineSetter__: ƒ __defineSetter__()__lookupGetter__: ƒ __lookupGetter__()__lookupSetter__: ƒ __lookupSetter__()__proto__: (…)get __proto__: ƒ __proto__()set __proto__: ƒ __proto__()
+queryFn @ NotificationCenter.tsx:93
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=e8e204d9:840
+run @ @tanstack_react-query.js?v=e8e204d9:494
+start @ @tanstack_react-query.js?v=e8e204d9:536
+fetch @ @tanstack_react-query.js?v=e8e204d9:926
+executeFetch_fn @ @tanstack_react-query.js?v=e8e204d9:2211
+(ανώνυμες) @ @tanstack_react-query.js?v=e8e204d9:2245
+setInterval
+updateRefetchInterval_fn @ @tanstack_react-query.js?v=e8e204d9:2243
+updateTimers_fn @ @tanstack_react-query.js?v=e8e204d9:2250
+onQueryUpdate @ @tanstack_react-query.js?v=e8e204d9:2206
+(ανώνυμες) @ @tanstack_react-query.js?v=e8e204d9:998
+(ανώνυμες) @ @tanstack_react-query.js?v=e8e204d9:997
+batch @ @tanstack_react-query.js?v=e8e204d9:583
+dispatch_fn @ @tanstack_react-query.js?v=e8e204d9:996
+setData @ @tanstack_react-query.js?v=e8e204d9:696
+onSuccess @ @tanstack_react-query.js?v=e8e204d9:897
+resolve @ @tanstack_react-query.js?v=e8e204d9:456
+Promise.then
+run @ @tanstack_react-query.js?v=e8e204d9:498
+start @ @tanstack_react-query.js?v=e8e204d9:536
+fetch @ @tanstack_react-query.js?v=e8e204d9:926
+executeFetch_fn @ @tanstack_react-query.js?v=e8e204d9:2211
+onSubscribe @ @tanstack_react-query.js?v=e8e204d9:1898
+subscribe @ @tanstack_react-query.js?v=e8e204d9:24
+(ανώνυμες) @ @tanstack_react-query.js?v=e8e204d9:3022
+subscribeToStore @ chunk-276SZO74.js?v=e8e204d9:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=e8e204d9:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=e8e204d9:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=e8e204d9:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=e8e204d9:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=e8e204d9:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=e8e204d9:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=e8e204d9:19447
+commitRootImpl @ chunk-276SZO74.js?v=e8e204d9:19416
+commitRoot @ chunk-276SZO74.js?v=e8e204d9:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=e8e204d9:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=e8e204d9:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=e8e204d9:18627
+Εμφάνιση 36 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+NotificationCenter.tsx:55 [NotificationCenter] Fetching notifications...
+NotificationCenter.tsx:72 [NotificationCenter] Raw API Response: {type: 'object', isArray: false, sample: null, fields: Array(0)}fields: []isArray: falsesample: nulltype: "object"[[Prototype]]: Object
+NotificationCenter.tsx:93 [NotificationCenter] Unexpected response format: {status: 'error', message: 'Failed to fetch budget data', error: 'Unknown error'}
