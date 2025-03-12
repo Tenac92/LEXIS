@@ -34,9 +34,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.get('/api/budget-history', authenticateSession, budgetController.getBudgetHistory);
     log('[Routes] Budget routes setup complete');
 
-    // Documents routes
-    app.use('/api/documents', authenticateSession, documentsController);
+    // Documents routes - Register specific routes before general ones
+    log('[Routes] Setting up document routes...');
     app.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
+    app.use('/api/documents', authenticateSession, documentsController);
+    log('[Routes] Document routes setup complete');
 
     // Template preview route
     app.use('/api/templates', authenticateSession, templatePreviewRouter);
