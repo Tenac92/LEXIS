@@ -19,7 +19,7 @@ interface DocumentData {
   protocol_number_input?: string;
   protocol_date?: string;
   user_name?: string;
-  attachments?: string[]; 
+  attachments?: string[]; // Updated type to string[]
   recipients?: Array<{
     firstname: string;
     lastname: string;
@@ -149,34 +149,10 @@ export class DocumentFormatter {
   }
 
   private static createMainContent(documentData: DocumentData): Paragraph[] {
-    const paragraphs = [
+    return [
       new Paragraph({
         text: "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε, συμπληρώθηκε και ισχύει.",
       }),
-    ];
-
-    // Add specific content for "orthi epanalipsi" if that's the expenditure type
-    if (documentData.expenditure_type === 'ΟΡΘΗ ΕΠΑΝΑΛΗΨΗ') {
-      paragraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: "ΟΡΘΗ ΕΠΑΝΑΛΗΨΗ",
-              bold: true,
-              size: 28,
-            }),
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { before: 400, after: 400 },
-        }),
-        new Paragraph({
-          text: "Το παρόν έγγραφο αποτελεί ορθή επανάληψη του αρχικού εγγράφου, διορθώνοντας σφάλματα ή παραλείψεις που εντοπίστηκαν στο αρχικό κείμενο.",
-          spacing: { before: 240, after: 240 },
-        })
-      );
-    }
-
-    paragraphs.push(
       new Paragraph({
         text: "Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε. , σύμφωνα με τα κάτωθι στοιχεία.",
       }),
@@ -197,10 +173,8 @@ export class DocumentFormatter {
           new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true }),
           new TextRun({ text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών" }),
         ],
-      })
-    );
-
-    return paragraphs;
+      }),
+    ];
   }
 
   private static createPaymentTable(recipients: NonNullable<DocumentData['recipients']>): Table {
