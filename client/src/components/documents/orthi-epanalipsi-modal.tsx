@@ -64,10 +64,20 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     queryKey: ["/api/catalog", document?.unit],
     enabled: !!document?.unit && isOpen,
     queryFn: async () => {
-      const response = await fetch(`/api/catalog?unit=${encodeURIComponent(document?.unit || '')}`);
-      if (!response.ok) throw new Error('Failed to fetch projects');
-      const data = await response.json();
-      return data.data || [];
+      try {
+        console.log("Fetching projects for unit:", document?.unit);
+        const response = await fetch(`/api/catalog?unit=${encodeURIComponent(document?.unit || '')}`);
+        if (!response.ok) {
+          console.error("Failed to fetch projects:", response.status, response.statusText);
+          throw new Error('Failed to fetch projects');
+        }
+        const data = await response.json();
+        console.log("Fetched projects:", data);
+        return data.data || [];
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+        throw error;
+      }
     },
   });
 
@@ -75,6 +85,8 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   const generateCorrection = useMutation({
     mutationFn: async (data: OrthiEpanalipsiFormData) => {
       if (!document?.id) throw new Error("No document selected");
+
+      console.log("Generating correction with data:", data);
 
       const response = await fetch(`/api/documents/generated/${document.id}/orthi-epanalipsi`, {
         method: "POST",
