@@ -20,11 +20,10 @@ router.get('/notifications', authenticateToken, async (req, res) => {
 
     try {
       const notifications = await BudgetService.getNotifications();
-      console.log('[BudgetController] Successfully fetched notifications:', {
-        count: notifications?.length || 0
-      });
+      console.log('[BudgetController] Successfully fetched notifications:', notifications.length);
 
-      return res.json(notifications || []);
+      // Ensure we're always returning an array
+      return res.json(notifications);
     } catch (error) {
       console.error('[BudgetController] Error fetching notifications:', error);
       throw error;
