@@ -24,6 +24,8 @@ interface PreviewOptions {
 export class TemplateManager {
   static async getTemplateForExpenditure(expenditureType: string): Promise<DocumentTemplate | null> {
     try {
+      console.log(`[TemplateManager] Fetching template for expenditure type: ${expenditureType}`);
+      
       // First try to find a specific template for this expenditure type
       let { data: specificTemplate, error: specificError } = await supabase
         .from('document_templates')
@@ -33,13 +35,21 @@ export class TemplateManager {
         .single();
 
       if (specificError) {
-        console.error('Error fetching specific template:', specificError);
+        console.error('[TemplateManager] Error fetching specific template:', specificError);
+        
+        // Only throw if it's not a "not found" error
+        if (specificError.code !== 'PGRST116') {
+          throw new Error(`Failed to fetch specific template: ${specificError.message}`);
+        }
       }
 
       if (specificTemplate) {
+        console.log(`[TemplateManager] Found specific template for: ${expenditureType}`);
         return specificTemplate;
       }
 
+      console.log(`[TemplateManager] No specific template found for: ${expenditureType}, fetching default template`);
+      
       // If no specific template found, get the default template
       const { data: defaultTemplate, error: defaultError } = await supabase
         .from('document_templates')
@@ -49,13 +59,20 @@ export class TemplateManager {
         .single();
 
       if (defaultError) {
-        console.error('Error fetching default template:', defaultError);
+        console.error('[TemplateManager] Error fetching default template:', defaultError);
+        throw new Error(`Failed to fetch default template: ${defaultError.message}`);
       }
 
-      return defaultTemplate || null;
+      if (!defaultTemplate) {
+        console.error('[TemplateManager] No default template found');
+        throw new Error('No template found: neither specific nor default template exists');
+      }
+
+      console.log('[TemplateManager] Using default template');
+      return defaultTemplate;
     } catch (error) {
-      console.error('Error in getTemplateForExpenditure:', error);
-      return null;
+      console.error('[TemplateManager] Error in getTemplateForExpenditure:', error);
+      throw error; // Propagate the error so it can be handled by the calling function
     }
   }
 
@@ -108,57 +125,107 @@ export class TemplateManager {
     options: PreviewOptions = {}
   ): Promise<Buffer> {
     try {
+      console.log(`[TemplateManager] Generating preview for template ID: ${templateId}`);
+      
       const template = await this.getTemplate(templateId);
+      if (!template.template_data) {
+        throw new Error(`Template with ID ${templateId} has no template_data`);
+      }
+
       const templateData = template.template_data as TemplateData;
 
+      if (!templateData.sections || !Array.isArray(templateData.sections) || templateData.sections.length === 0) {
+        throw new Error(`Template ${templateId} has invalid or empty sections`);
+      }
+
       // Transform template sections to match docx library format
-      const sections = templateData.sections.map(section => ({
-        properties: {
-          page: {
-            ...section.properties.page,
-            orientation: section.properties.page.orientation || PageOrientation.PORTRAIT
-          }
-        },
-        children: this.processTemplateChildren(section.children, previewData)
-      }));
+      const sections = templateData.sections.map((section, index) => {
+        if (!section.properties || !section.properties.page) {
+          throw new Error(`Section ${index} has invalid properties`);
+        }
+        
+        return {
+          properties: {
+            page: {
+              ...section.properties.page,
+              orientation: section.properties.page.orientation || PageOrientation.PORTRAIT
+            }
+          },
+          children: this.processTemplateChildren(section.children, previewData)
+        };
+      });
 
       // Create document from template
+      console.log('[TemplateManager] Creating document from template sections');
       const doc = new Document({
         sections: sections
       });
 
+      console.log('[TemplateManager] Packing document to buffer');
       return await Packer.toBuffer(doc);
     } catch (error) {
-      console.error('Error generating preview:', error);
-      throw new Error('Failed to generate preview');
+      console.error('[TemplateManager] Error generating preview:', error);
+      throw new Error(`Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   private static processTemplateChildren(children: any[], data: any): any[] {
-    return children.map(child => {
-      if (typeof child === 'string') {
-        return new TextRun(this.replacePlaceholders(child, data));
-      }
-      if (Array.isArray(child)) {
-        return new Paragraph({
-          children: this.processTemplateChildren(child, data)
-        });
-      }
-      if (child.children) {
-        return {
-          ...child,
-          children: this.processTemplateChildren(child.children, data)
-        };
-      }
-      return child;
-    });
+    if (!children || !Array.isArray(children)) {
+      console.warn('[TemplateManager] Invalid children in template:', children);
+      return [];
+    }
+    
+    try {
+      return children.map((child, index) => {
+        try {
+          if (typeof child === 'string') {
+            return new TextRun(this.replacePlaceholders(child, data));
+          }
+          if (Array.isArray(child)) {
+            return new Paragraph({
+              children: this.processTemplateChildren(child, data)
+            });
+          }
+          if (child && typeof child === 'object' && child.children) {
+            return {
+              ...child,
+              children: this.processTemplateChildren(child.children, data)
+            };
+          }
+          return child;
+        } catch (error) {
+          console.error(`[TemplateManager] Error processing child at index ${index}:`, error);
+          console.error(`[TemplateManager] Problematic child:`, JSON.stringify(child));
+          // Return an empty text run instead of failing the entire document generation
+          return new TextRun('');
+        }
+      });
+    } catch (error) {
+      console.error('[TemplateManager] Error in processTemplateChildren:', error);
+      return [new TextRun('[Template processing error]')];
+    }
   }
 
   private static replacePlaceholders(text: string, data: any): string {
-    return text.replace(/\${(.*?)}/g, (match, key) => {
-      const value = key.split('.').reduce((obj: any, k: string) => obj?.[k], data);
-      return value?.toString() || match;
-    });
+    if (!text || typeof text !== 'string') {
+      console.warn('[TemplateManager] Invalid text for placeholder replacement:', text);
+      return '';
+    }
+    
+    try {
+      return text.replace(/\${(.*?)}/g, (match, key) => {
+        try {
+          const value = key.split('.').reduce((obj: any, k: string) => obj?.[k], data);
+          return value !== undefined && value !== null ? String(value) : match;
+        } catch (error) {
+          console.warn(`[TemplateManager] Error processing placeholder ${match}:`, error);
+          return match;
+        }
+      });
+    } catch (error) {
+      console.error('[TemplateManager] Error in replacePlaceholders:', error);
+      return text; // Return original text on error
+    }
   }
 
   static async listTemplates(category?: string): Promise<DocumentTemplate[]> {
