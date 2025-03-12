@@ -237,12 +237,17 @@ export class BudgetService {
       const { data, error } = await supabase
         .from('budget_notifications')
         .select(`
-          *,
-          users (
-            id,
-            username,
-            name
-          )
+          id,
+          mis,
+          type,
+          amount,
+          current_budget,
+          ethsia_pistosi,
+          reason,
+          status,
+          user_id,
+          created_at,
+          updated_at
         `)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -252,16 +257,27 @@ export class BudgetService {
         throw new Error(`Database error: ${error.message}`);
       }
 
+      // Transform and validate the data
+      const transformedData = data?.map(notification => ({
+        id: Number(notification.id),
+        mis: String(notification.mis),
+        type: notification.type,
+        amount: Number(notification.amount),
+        current_budget: Number(notification.current_budget),
+        ethsia_pistosi: Number(notification.ethsia_pistosi),
+        reason: String(notification.reason),
+        status: notification.status,
+        user_id: Number(notification.user_id),
+        created_at: notification.created_at,
+        updated_at: notification.updated_at
+      })) || [];
+
       console.log('[BudgetService] Successfully fetched notifications:', {
-        count: data?.length || 0,
-        sample: data?.[0] ? {
-          id: data[0].id,
-          type: data[0].type,
-          status: data[0].status
-        } : null
+        count: transformedData.length,
+        sample: transformedData[0]
       });
 
-      return data || [];
+      return transformedData;
     } catch (error) {
       console.error('[BudgetService] Error in getNotifications:', error);
       throw error;

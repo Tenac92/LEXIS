@@ -69,24 +69,41 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
         }
 
         const data = await response.json();
-        console.log('[NotificationCenter] Raw API Response:', data);
+        console.log('[NotificationCenter] Raw API Response:', {
+          type: typeof data,
+          isArray: Array.isArray(data),
+          sample: Array.isArray(data) && data.length > 0 ? data[0] : null,
+          fields: Array.isArray(data) && data.length > 0 ? Object.keys(data[0]) : []
+        });
 
-        // Handle different response formats
-        if (Array.isArray(data)) {
-          return data;
+        // Ensure we have an array of notifications
+        if (!Array.isArray(data)) {
+          console.error('[NotificationCenter] Expected array but got:', typeof data);
+          return [];
         }
 
-        if (data.notifications && Array.isArray(data.notifications)) {
-          return data.notifications;
-        }
+        // Validate the shape of each notification
+        const validNotifications = data.filter(notification => {
+          const isValid = 
+            typeof notification.id === 'number' &&
+            typeof notification.mis === 'string' &&
+            ['funding', 'reallocation', 'low_budget'].includes(notification.type) &&
+            typeof notification.amount === 'number' &&
+            typeof notification.current_budget === 'number' &&
+            typeof notification.ethsia_pistosi === 'number' &&
+            typeof notification.reason === 'string' &&
+            ['pending', 'approved', 'rejected'].includes(notification.status) &&
+            typeof notification.user_id === 'number' &&
+            typeof notification.created_at === 'string' &&
+            typeof notification.updated_at === 'string';
 
-        if (data.status === 'error') {
-          throw new Error(data.message || 'Failed to fetch notifications');
-        }
+          if (!isValid) {
+            console.warn('[NotificationCenter] Invalid notification:', notification);
+          }
+          return isValid;
+        });
 
-        // If we get here with invalid data, return empty array
-        console.warn('[NotificationCenter] Unexpected response format:', data);
-        return [];
+        return validNotifications;
       } catch (err) {
         console.error('[NotificationCenter] Fetch error:', err);
         throw err;
