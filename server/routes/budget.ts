@@ -22,19 +22,15 @@ router.get('/notifications', authenticateToken, async (req, res) => {
       const notifications = await BudgetService.getNotifications();
       console.log('[BudgetController] Successfully fetched notifications:', notifications.length);
 
-      // Ensure we're always returning an array
-      return res.json(notifications);
+      // Return the array directly without wrapping
+      res.json(notifications);
     } catch (error) {
       console.error('[BudgetController] Error fetching notifications:', error);
       throw error;
     }
   } catch (error) {
     console.error('[BudgetController] Error in notifications route:', error);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch notifications',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return res.status(500).json([]);  // Return empty array on error
   }
 });
 

@@ -76,34 +76,22 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
           fields: Array.isArray(data) && data.length > 0 ? Object.keys(data[0]) : []
         });
 
-        // Ensure we have an array of notifications
-        if (!Array.isArray(data)) {
-          console.error('[NotificationCenter] Expected array but got:', typeof data);
-          return [];
+        // Handle different response formats
+        if (Array.isArray(data)) {
+          return data;
+        } else if (data && typeof data === 'object') {
+          // If it's an object with a notifications array
+          if (Array.isArray(data.notifications)) {
+            return data.notifications;
+          }
+          // If it's an object with notification data
+          if (data.status === 'success' && Array.isArray(data.data)) {
+            return data.data;
+          }
         }
 
-        // Validate the shape of each notification
-        const validNotifications = data.filter(notification => {
-          const isValid = 
-            typeof notification.id === 'number' &&
-            typeof notification.mis === 'string' &&
-            ['funding', 'reallocation', 'low_budget'].includes(notification.type) &&
-            typeof notification.amount === 'number' &&
-            typeof notification.current_budget === 'number' &&
-            typeof notification.ethsia_pistosi === 'number' &&
-            typeof notification.reason === 'string' &&
-            ['pending', 'approved', 'rejected'].includes(notification.status) &&
-            typeof notification.user_id === 'number' &&
-            typeof notification.created_at === 'string' &&
-            typeof notification.updated_at === 'string';
-
-          if (!isValid) {
-            console.warn('[NotificationCenter] Invalid notification:', notification);
-          }
-          return isValid;
-        });
-
-        return validNotifications;
+        console.warn('[NotificationCenter] Unexpected response format:', data);
+        return [];
       } catch (err) {
         console.error('[NotificationCenter] Fetch error:', err);
         throw err;

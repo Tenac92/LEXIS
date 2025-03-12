@@ -257,8 +257,11 @@ export class BudgetService {
         throw new Error(`Database error: ${error.message}`);
       }
 
+      // Ensure data is an array
+      const notificationArray = Array.isArray(data) ? data : [];
+
       // Transform and validate the data
-      const transformedData = data?.map(notification => ({
+      const transformedData = notificationArray.map(notification => ({
         id: Number(notification.id),
         mis: String(notification.mis),
         type: notification.type,
@@ -270,10 +273,11 @@ export class BudgetService {
         user_id: Number(notification.user_id),
         created_at: notification.created_at,
         updated_at: notification.updated_at
-      })) || [];
+      }));
 
       console.log('[BudgetService] Successfully fetched notifications:', {
         count: transformedData.length,
+        isArray: Array.isArray(transformedData),
         sample: transformedData[0]
       });
 
