@@ -71,6 +71,13 @@ const orthiEpanalipsiSchema = z.object({
 
 type OrthiEpanalipsiFormData = z.infer<typeof orthiEpanalipsiSchema>;
 
+interface Project {
+  mis: string;
+  na853: string;
+  title: string;
+  expenditure_type: string;
+}
+
 export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanalipsiModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -126,7 +133,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   }, [form.watch("recipients")]);
 
   // Update project fetch query
-  const { data: projects = [] } = useQuery({
+  const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ["/api/projects", form.watch("unit")],
     enabled: !!form.watch("unit") && isOpen,
     queryFn: async () => {
@@ -152,7 +159,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     },
   });
 
-  // Update project_na853 when project_id changes
+  // Update project_na853 and expenditure_type when project_id changes
   useEffect(() => {
     const projectId = form.watch("project_id");
     console.log("Current project_id:", projectId);
@@ -161,6 +168,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     console.log("Selected project:", selectedProject);
     if (selectedProject) {
       form.setValue("project_na853", selectedProject.na853);
+      form.setValue("expenditure_type", selectedProject.expenditure_type);
     }
   }, [form.watch("project_id"), projects, form]);
 
