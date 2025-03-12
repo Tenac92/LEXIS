@@ -59,7 +59,8 @@ const recipientSchema = z.object({
 // Zod schema for form validation
 const orthiEpanalipsiSchema = z.object({
   correctionReason: z.string().min(1, "Παρακαλώ εισάγετε το λόγο διόρθωσης"),
-  na853: z.string().min(1, "Παρακαλώ επιλέξτε NA853"),
+  project_id: z.string().min(1, "Παρακαλώ επιλέξτε έργο"),
+  project_na853: z.string().min(1, "Το NA853 είναι υποχρεωτικό"),
   comments: z.string().optional(),
   protocol_date: z.string().min(1, "Παρακαλώ επιλέξτε ημερομηνία"),
   unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
@@ -89,7 +90,8 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     resolver: zodResolver(orthiEpanalipsiSchema),
     defaultValues: {
       correctionReason: "",
-      na853: document?.project_na853 || "",
+      project_id: document?.project_id || "",
+      project_na853: document?.project_na853 || "",
       comments: "",
       protocol_date: new Date().toISOString().split('T')[0],
       unit: document?.unit || "",
@@ -104,7 +106,8 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     if (documentDetails && isOpen) {
       form.reset({
         correctionReason: "",
-        na853: documentDetails.project_na853 || "",
+        project_id: documentDetails.project_id || "",
+        project_na853: documentDetails.project_na853 || "",
         comments: documentDetails.comments || "",
         protocol_date: new Date().toISOString().split('T')[0],
         unit: documentDetails.unit || "",
@@ -122,7 +125,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     form.setValue("total_amount", total);
   }, [form.watch("recipients")]);
 
-  // Fetch available NA853 options for the unit
+  // Fetch available projects for the unit
   const { data: projects = [] } = useQuery({
     queryKey: ["/api/catalog", form.watch("unit")],
     enabled: !!form.watch("unit") && isOpen,
@@ -148,6 +151,15 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       }
     },
   });
+
+  // Update project_na853 when project_id changes
+  useEffect(() => {
+    const projectId = form.watch("project_id");
+    const selectedProject = projects.find((p: any) => p.mis === projectId);
+    if (selectedProject) {
+      form.setValue("project_na853", selectedProject.na853);
+    }
+  }, [form.watch("project_id"), projects, form]);
 
   // Mutation for generating correction
   const generateCorrection = useMutation({
@@ -320,20 +332,20 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
 
             <FormField
               control={form.control}
-              name="na853"
+              name="project_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>NA853</FormLabel>
+                  <FormLabel>Έργο</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Επιλέξτε NA853..." />
+                        <SelectValue placeholder="Επιλέξτε έργο..." />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {projects?.map((project: any) => (
-                        <SelectItem key={project.na853} value={project.na853}>
-                          {project.na853} - {project.title}
+                        <SelectItem key={project.mis} value={project.mis}>
+                          {project.mis} - {project.na853}
                         </SelectItem>
                       ))}
                     </SelectContent>
