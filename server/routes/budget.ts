@@ -6,7 +6,7 @@ import { supabase } from '../config/db';
 
 const router = Router();
 
-// Get budget notifications
+// Get budget notifications - always handle this route first
 router.get('/notifications', authenticateToken, async (req, res) => {
   try {
     if (!req.user?.id) {
@@ -18,18 +18,19 @@ router.get('/notifications', authenticateToken, async (req, res) => {
 
     console.log('[BudgetController] Fetching notifications...');
 
-    const notifications = await BudgetService.getNotifications();
+    try {
+      const notifications = await BudgetService.getNotifications();
+      console.log('[BudgetController] Successfully fetched notifications:', {
+        count: notifications?.length || 0
+      });
 
-    // Return empty array if no notifications found
-    if (!notifications?.length) {
-      console.log('[BudgetController] No notifications found');
-      return res.json([]);
+      return res.json(notifications || []);
+    } catch (error) {
+      console.error('[BudgetController] Error fetching notifications:', error);
+      throw error;
     }
-
-    console.log('[BudgetController] Successfully fetched notifications:', notifications.length);
-    return res.json(notifications);
   } catch (error) {
-    console.error('[BudgetController] Error in getBudgetNotifications:', error);
+    console.error('[BudgetController] Error in notifications route:', error);
     return res.status(500).json({
       status: 'error',
       message: 'Failed to fetch notifications',
@@ -38,11 +39,10 @@ router.get('/notifications', authenticateToken, async (req, res) => {
   }
 });
 
-// Get budget data by MIS - with numeric constraint
-router.get('/mis/:mis([0-9]+)', async (req, res) => {
+// Budget data routes - with explicit paths
+router.get('/data/:mis([0-9]+)', async (req, res) => {
   try {
     const { mis } = req.params;
-
     if (!mis) {
       return res.status(400).json({
         status: 'error',
@@ -53,10 +53,11 @@ router.get('/mis/:mis([0-9]+)', async (req, res) => {
     const result = await BudgetService.getBudget(mis);
     return res.json(result);
   } catch (error) {
-    console.error('Unexpected error in getBudget:', error);
+    console.error('[BudgetController] Error fetching budget:', error);
     return res.status(500).json({
       status: 'error',
-      message: 'Failed to fetch budget data'
+      message: 'Failed to fetch budget data',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
