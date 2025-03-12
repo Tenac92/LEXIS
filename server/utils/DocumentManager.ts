@@ -1,5 +1,6 @@
 import { supabase } from '../config/db';
 import { DocumentValidator } from './DocumentValidator';
+import { DocumentFormatter } from './DocumentFormatter';
 
 interface DocumentFilters {
   unit?: string;
@@ -10,9 +11,11 @@ interface DocumentFilters {
 
 export class DocumentManager {
   private cache: Map<string, any>;
+  private formatter: DocumentFormatter;
 
   constructor() {
     this.cache = new Map();
+    this.formatter = new DocumentFormatter();
   }
 
   async loadDocuments(filters: DocumentFilters = {}) {
@@ -135,5 +138,60 @@ export class DocumentManager {
 
   clearCache() {
     this.cache.clear();
+  }
+
+  async generateOrthiEpanalipsi(documentData: any) {
+    try {
+      console.log('Generating orthi epanalipsi document with data:', JSON.stringify(documentData, null, 2));
+
+      // Validate document data
+      await this.validateDocument(documentData);
+
+      // Get the original document to reference
+      const { data: originalDoc, error: fetchError } = await supabase
+        .from('generated_documents')
+        .select('*')
+        .eq('id', documentData.original_document_id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching original document:', fetchError);
+        throw new Error('Failed to fetch original document');
+      }
+
+      // Format document using DocumentFormatter
+      const docxBuffer = await this.formatter.formatOrthiEpanalipsi({
+        ...documentData,
+        originalDocument: originalDoc
+      });
+
+      return docxBuffer;
+    } catch (error) {
+      console.error('Generate orthi epanalipsi error:', error);
+      throw error;
+    }
+  }
+
+  async fetchDocumentFields(documentId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('generated_documents')
+        .select(`
+          *,
+          recipients,
+          project:project_id (
+            na853,
+            title
+          )
+        `)
+        .eq('id', documentId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Fetch document fields error:', error);
+      throw error;
+    }
   }
 }

@@ -2,8 +2,10 @@ import { Router } from "express";
 import { authenticateToken } from "../middleware/authMiddleware";
 import { supabase } from "../config/db";
 import { broadcastDocumentUpdate } from "../services/websocketService";
+import { DocumentManager } from "../utils/DocumentManager";
 
 const router = Router();
+const documentManager = new DocumentManager();
 
 // Create new document
 router.post('/', authenticateToken, async (req, res) => {
@@ -239,6 +241,77 @@ router.get('/', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching documents:', error);
     return res.status(500).json({ message: 'Failed to fetch documents' });
+  }
+});
+
+// Generate orthi epanalipsi
+router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('Generating orthi epanalipsi for document:', id, req.body);
+
+    // Get the original document first
+    const { data: existingDoc, error: fetchError } = await supabase
+      .from('generated_documents')
+      .select('*')
+      .eq('id', parseInt(id))
+      .single();
+
+    if (fetchError || !existingDoc) {
+      console.error('Original document not found:', id);
+      return res.status(404).json({ 
+        message: 'Original document not found',
+        error: fetchError?.message 
+      });
+    }
+
+    // Create new document for orthi epanalipsi
+    const orthiDoc = {
+      ...req.body,
+      original_document_id: parseInt(id),
+      is_orthi_epanalipsi: true,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: req.user?.id,
+      updated_by: req.user?.id
+    };
+
+    const { data, error } = await supabase
+      .from('generated_documents')
+      .insert([orthiDoc])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating orthi epanalipsi:', error);
+      return res.status(500).json({
+        message: 'Failed to create orthi epanalipsi',
+        error: error.message
+      });
+    }
+
+    // Broadcast update
+    broadcastDocumentUpdate({
+      type: 'DOCUMENT_UPDATE',
+      documentId: data.id,
+      data
+    });
+
+    // Generate the document file
+    const docBuffer = await documentManager.generateOrthiEpanalipsi(data);
+
+    // Set response headers for Word document download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="orthi-epanalipsi-${id}.docx"`);
+    return res.send(docBuffer);
+
+  } catch (error) {
+    console.error('Error generating orthi epanalipsi:', error);
+    return res.status(500).json({
+      message: 'Failed to generate orthi epanalipsi',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 

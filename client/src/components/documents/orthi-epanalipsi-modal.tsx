@@ -50,6 +50,17 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch document details
+  const { data: documentDetails } = useQuery({
+    queryKey: ['/api/documents/generated', document?.id],
+    enabled: !!document?.id && isOpen,
+    queryFn: async () => {
+      const response = await fetch(`/api/documents/generated/${document?.id}`);
+      if (!response.ok) throw new Error('Failed to fetch document details');
+      return response.json();
+    },
+  });
+
   const form = useForm<OrthiEpanalipsiFormData>({
     resolver: zodResolver(orthiEpanalipsiSchema),
     defaultValues: {
@@ -66,19 +77,19 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
 
   // Reset form when document changes or modal opens
   useEffect(() => {
-    if (document && isOpen) {
+    if (documentDetails && isOpen) {
       form.reset({
         correctionReason: "",
-        na853: document.project_na853 || "",
-        comments: "",
+        na853: documentDetails.project_na853 || "",
+        comments: documentDetails.comments || "",
         protocol_date: new Date().toISOString().split('T')[0],
-        unit: document.unit || "",
-        expenditure_type: document.expenditure_type || "",
-        recipients: document.recipients || [],
-        total_amount: document.total_amount || 0,
+        unit: documentDetails.unit || "",
+        expenditure_type: documentDetails.expenditure_type || "",
+        recipients: documentDetails.recipients || [],
+        total_amount: documentDetails.total_amount || 0,
       });
     }
-  }, [document, form, isOpen]);
+  }, [documentDetails, form, isOpen]);
 
   // Calculate total amount from recipients
   useEffect(() => {
