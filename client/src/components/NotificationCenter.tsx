@@ -55,11 +55,17 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       console.log('[NotificationCenter] Fetching notifications...');
       try {
         const response = await fetch('/api/budget/notifications', {
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
         });
 
         if (!response.ok) {
-          throw new Error(`Server returned ${response.status}`);
+          const errorData = await response.json();
+          console.error('[NotificationCenter] Server error:', errorData);
+          throw new Error(errorData.message || `Server returned ${response.status}`);
         }
 
         const data = await response.json();
@@ -67,6 +73,10 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
         if (Array.isArray(data)) {
           return data as BudgetNotification[];
+        }
+
+        if (data.notifications && Array.isArray(data.notifications)) {
+          return data.notifications as BudgetNotification[];
         }
 
         if (data.status === 'error') {
@@ -80,7 +90,8 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
         throw err;
       }
     },
-    retry: 1
+    retry: 1,
+    refetchInterval: 30000 // Refetch every 30 seconds
   });
 
   if (isLoading) {
