@@ -349,14 +349,28 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         total_amount: calculateTotalAmount(),
       };
 
-      console.log('[EditDocument] Sending update with data:', formData);
+      // Pre-process form data to handle empty protocol values
+      const processedData = { ...formData };
+
+      // Only include protocol_date if it's not empty
+      if (!processedData.protocol_date || processedData.protocol_date === '') {
+        delete processedData.protocol_date;
+      }
+
+      // Only include protocol_number_input if it's not empty
+      if (!processedData.protocol_number_input || processedData.protocol_number_input === '') {
+        delete processedData.protocol_number_input;
+      }
+
+
+      console.log('[EditDocument] Sending update with data:', processedData);
 
       const response = await apiRequest(`/api/documents/generated/${document.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(processedData)
       });
 
       if (!response || response.error) {
