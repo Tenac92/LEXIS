@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -85,16 +86,22 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   const queryClient = useQueryClient();
 
   // Fetch document details
-  const { data: documentDetails, isError: isDocumentError, error: documentError } = useQuery({
+  const { data: documentDetails, isError: isDocumentError, error: documentError, isLoading: isDocumentLoading } = useQuery({
     queryKey: ['/api/documents/generated', document?.id],
     enabled: !!document?.id && isOpen,
+    retry: 1,
     queryFn: async () => {
-      const response = await fetch(`/api/documents/generated/${document?.id}`);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: response.statusText }));
-        throw new Error(errorData.message || 'Failed to fetch document details');
+      try {
+        const response = await fetch(`/api/documents/generated/${document?.id}`);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: response.statusText }));
+          throw new Error(errorData.message || 'Failed to fetch document details');
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Document fetch error:', error);
+        throw error;
       }
-      return response.json();
     },
   });
 
@@ -152,9 +159,10 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   }, [form.watch("recipients")]);
 
   // Update project fetch query
-  const { data: projects = [], isError: isProjectsError } = useQuery<Project[]>({
+  const { data: projects = [], isError: isProjectsError, isLoading: isProjectsLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects", form.watch("unit")],
     enabled: !!form.watch("unit") && isOpen,
+    retry: 1,
     queryFn: async () => {
       try {
         const response = await fetch(`/api/projects?unit=${encodeURIComponent(form.watch("unit"))}`);
@@ -190,18 +198,22 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       if (!document?.id) throw new Error("No document selected");
       if (!documentDetails) throw new Error("Document details not loaded");
 
+      const payload = {
+        ...documentDetails,
+        ...data,
+        original_protocol_number: documentDetails.protocol_number_input,
+        original_protocol_date: documentDetails.protocol_date,
+        status: "pending",
+      };
+
+      console.log('Sending payload:', payload);
+
       const response = await fetch(`/api/documents/generated/${document.id}/orthi-epanalipsi`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...documentDetails,
-          ...data,
-          original_protocol_number: documentDetails.protocol_number_input,
-          original_protocol_date: documentDetails.protocol_date,
-          status: "pending",
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -270,7 +282,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     form.setValue("recipients", [...recipients]);
   };
 
-  if (isDocumentError) {
+  if (isDocumentError || (isDocumentLoading && !documentDetails)) {
     return null;
   }
 
@@ -279,6 +291,9 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Στοιχεία Ορθής Επανάληψης</DialogTitle>
+          <DialogDescription>
+            Συμπληρώστε τα στοιχεία για τη δημιουργία ορθής επανάληψης του εγγράφου.
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -551,7 +566,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
               </Button>
               <Button
                 type="submit"
-                disabled={generateCorrection.isPending || !documentDetails}
+                disabled={generateCorrection.isPending || !documentDetails || isProjectsLoading}
               >
                 Δημιουργία Ορθής Επανάληψης
               </Button>
