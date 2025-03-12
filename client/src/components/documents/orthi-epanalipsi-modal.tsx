@@ -127,12 +127,12 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
 
   // Update project fetch query
   const { data: projects = [] } = useQuery({
-    queryKey: ["/api/catalog", form.watch("unit")],
+    queryKey: ["/api/projects", form.watch("unit")],
     enabled: !!form.watch("unit") && isOpen,
     queryFn: async () => {
       try {
         console.log("Fetching projects for unit:", form.watch("unit"));
-        const response = await fetch(`/api/catalog?unit=${encodeURIComponent(form.watch("unit"))}`);
+        const response = await fetch(`/api/projects?unit=${encodeURIComponent(form.watch("unit"))}`);
         if (!response.ok) {
           console.error("Failed to fetch projects:", response.status, response.statusText);
           throw new Error('Failed to fetch projects');
@@ -152,7 +152,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     },
   });
 
-  // Add debug logs for project selection
+  // Update project_na853 when project_id changes
   useEffect(() => {
     const projectId = form.watch("project_id");
     console.log("Current project_id:", projectId);
@@ -346,7 +346,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {projects?.map((project: any) => (
+                      {projects.map((project: any) => (
                         <SelectItem key={project.mis} value={project.mis}>
                           {project.mis} - {project.na853}
                         </SelectItem>

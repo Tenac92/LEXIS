@@ -1,0 +1,79 @@
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203792
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203797
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203797
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203797
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203790
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203792
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203792
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203934
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203934
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203934
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203934
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203934
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203934
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203935
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203936
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203936
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203935
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203936
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+orthi-epanalipsi-modal.tsx:158 Current project_id: 5203936
+orthi-epanalipsi-modal.tsx:159 Available projects: 
+[]
+orthi-epanalipsi-modal.tsx:161 Selected project: undefined
+﻿
+
