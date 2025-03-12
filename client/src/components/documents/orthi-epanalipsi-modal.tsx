@@ -16,7 +16,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { GeneratedDocument } from "@shared/schema";
 import { z } from "zod";
-import { supabase } from "@/lib/supabase";
 
 interface OrthiEpanalipsiModalProps {
   isOpen: boolean;
@@ -29,6 +28,7 @@ const orthiEpanalipsiSchema = z.object({
   correctionReason: z.string().min(1, "Παρακαλώ εισάγετε το λόγο διόρθωσης"),
   na853: z.string().min(1, "Παρακαλώ επιλέξτε NA853"),
   comments: z.string().optional(),
+  protocol_date: z.string().min(1, "Παρακαλώ επιλέξτε ημερομηνία"),
 });
 
 type OrthiEpanalipsiFormData = z.infer<typeof orthiEpanalipsiSchema>;
@@ -43,32 +43,31 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       correctionReason: "",
       na853: document?.project_na853 || "",
       comments: "",
+      protocol_date: new Date().toISOString().split('T')[0],
     },
   });
 
-  // Reset form when document changes
+  // Reset form when document changes or modal opens
   useEffect(() => {
-    if (document) {
+    if (document && isOpen) {
       form.reset({
         correctionReason: "",
         na853: document.project_na853 || "",
         comments: "",
+        protocol_date: new Date().toISOString().split('T')[0],
       });
     }
-  }, [document, form]);
+  }, [document, form, isOpen]);
 
   // Fetch available NA853 options for the unit
-  const { data: projects } = useQuery({
+  const { data: projects = [] } = useQuery({
     queryKey: ["/api/catalog", document?.unit],
-    enabled: !!document?.unit,
+    enabled: !!document?.unit && isOpen,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("na853")
-        .eq("unit", document?.unit || "");
-
-      if (error) throw error;
-      return data || [];
+      const response = await fetch(`/api/catalog?unit=${encodeURIComponent(document?.unit || '')}`);
+      if (!response.ok) throw new Error('Failed to fetch projects');
+      const data = await response.json();
+      return data.data || [];
     },
   });
 
@@ -87,6 +86,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
           project_na853: data.na853,
           comments: data.comments,
           correction_reason: data.correctionReason,
+          protocol_date: data.protocol_date,
           original_protocol_number: document.protocol_number_input,
           original_protocol_date: document.protocol_date,
           status: "pending",
@@ -96,6 +96,11 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: "Failed to generate correction" }));
         throw new Error(error.message || "Failed to generate correction");
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+        throw new Error('Invalid response format');
       }
 
       const blob = await response.blob();
@@ -117,6 +122,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         description: "Η ορθή επανάληψη δημιουργήθηκε επιτυχώς",
       });
       onClose();
+      form.reset();
     },
     onError: (error) => {
       toast({
@@ -141,31 +147,6 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="na853"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>NA853</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Επιλέξτε NA853..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {projects?.map((project) => (
-                          <SelectItem key={project.na853} value={project.na853}>
-                            {project.na853}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="space-y-2">
                 <FormLabel>Αρχικό Πρωτόκολλο</FormLabel>
                 <Input 
@@ -174,7 +155,50 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                   className="bg-gray-100"
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="protocol_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ημερομηνία Πρωτοκόλλου</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="date"
+                        className="w-full"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
+
+            <FormField
+              control={form.control}
+              name="na853"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>NA853</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Επιλέξτε NA853..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {projects?.map((project: any) => (
+                        <SelectItem key={project.na853} value={project.na853}>
+                          {project.na853}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -213,7 +237,14 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
             />
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={onClose} type="button">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  onClose();
+                  form.reset();
+                }} 
+                type="button"
+              >
                 Ακύρωση
               </Button>
               <Button
