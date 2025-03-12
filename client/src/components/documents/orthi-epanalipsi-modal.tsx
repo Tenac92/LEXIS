@@ -23,6 +23,30 @@ interface OrthiEpanalipsiModalProps {
   document: GeneratedDocument | null;
 }
 
+// Constants
+const EXPENDITURE_TYPES = [
+  "ΔΚΑ ΕΠΙΣΚΕΥΗ",
+  "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ",
+  "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ",
+  "ΔΚΑ ΑΠΟΠΕΡΑΤΩΣΗ",
+  "ΔΚΑ ΕΠΙΣΚΕΥΗ ΚΟΙΝΟΧΡΗΣΤΩΝ",
+  "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ ΚΟΙΝΟΧΡΗΣΤΩΝ",
+] as const;
+
+const UNITS = [
+  "ΔΑΕΦΚ-ΚΕ",
+  "ΔΑΕΦΚ-ΒΕ",
+  "ΔΑΕΦΚ-ΑΚ",
+  "ΔΑΕΦΚ-ΔΕ",
+  "ΓΔΑΕΦΚ",
+  "ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ",
+  "ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ",
+  "ΤΑΕΦΚ-ΑΑ",
+  "ΤΑΕΦΚ-ΔΑ",
+  "ΤΑΕΦΚ ΧΑΝΙΩΝ",
+  "ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ"
+] as const;
+
 // Recipient schema
 const recipientSchema = z.object({
   firstname: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
@@ -39,7 +63,7 @@ const orthiEpanalipsiSchema = z.object({
   comments: z.string().optional(),
   protocol_date: z.string().min(1, "Παρακαλώ επιλέξτε ημερομηνία"),
   unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
-  expenditure_type: z.string().optional(),
+  expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
   recipients: z.array(recipientSchema),
   total_amount: z.number().min(0, "Το συνολικό ποσό πρέπει να είναι θετικό"),
 });
@@ -100,12 +124,12 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
 
   // Fetch available NA853 options for the unit
   const { data: projects = [] } = useQuery({
-    queryKey: ["/api/catalog", document?.unit],
-    enabled: !!document?.unit && isOpen,
+    queryKey: ["/api/catalog", form.watch("unit")],
+    enabled: !!form.watch("unit") && isOpen,
     queryFn: async () => {
       try {
-        console.log("Fetching projects for unit:", document?.unit);
-        const response = await fetch(`/api/catalog?unit=${encodeURIComponent(document?.unit || '')}`);
+        console.log("Fetching projects for unit:", form.watch("unit"));
+        const response = await fetch(`/api/catalog?unit=${encodeURIComponent(form.watch("unit"))}`);
         if (!response.ok) {
           console.error("Failed to fetch projects:", response.status, response.statusText);
           throw new Error('Failed to fetch projects');
@@ -244,9 +268,20 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Μονάδα</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Επιλέξτε μονάδα..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {UNITS.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -258,9 +293,20 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Τύπος Δαπάνης</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Επιλέξτε τύπο δαπάνης..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {EXPENDITURE_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
