@@ -110,6 +110,67 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Update document
+router.patch('/:id', authenticateToken, async (req, res) => {
+  try {
+    console.log('[Documents] Updating document:', req.params.id, req.body);
+
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    // Get the document first to check if it exists
+    const { data: existingDoc, error: fetchError } = await supabase
+      .from('generated_documents')
+      .select('id, unit')
+      .eq('id', parseInt(req.params.id))
+      .single();
+
+    if (fetchError || !existingDoc) {
+      console.error('[Documents] Document not found:', req.params.id);
+      return res.status(404).json({ 
+        message: 'Document not found',
+        error: fetchError?.message 
+      });
+    }
+
+    // Update the document
+    const { data, error } = await supabase
+      .from('generated_documents')
+      .update({
+        ...req.body,
+        updated_at: new Date().toISOString(),
+        updated_by: req.user.id
+      })
+      .eq('id', parseInt(req.params.id))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Documents] Update error:', error);
+      return res.status(500).json({
+        message: 'Failed to update document',
+        error: error.message
+      });
+    }
+
+    // Broadcast update
+    broadcastDocumentUpdate({
+      type: 'DOCUMENT_UPDATE',
+      documentId: parseInt(req.params.id),
+      data
+    });
+
+    return res.json(data);
+  } catch (error) {
+    console.error('[Documents] Error updating document:', error);
+    return res.status(500).json({
+      message: 'Failed to update document',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Update protocol number and date
 router.patch('/:id/protocol', authenticateToken, async (req, res) => {
   try {
