@@ -155,7 +155,10 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   // Update project_na853 when project_id changes
   useEffect(() => {
     const projectId = form.watch("project_id");
+    console.log("Current project_id:", projectId);
+    console.log("Available projects:", projects);
     const selectedProject = projects.find((p) => p.mis === projectId);
+    console.log("Selected project:", selectedProject);
     if (selectedProject) {
       form.setValue("project_na853", selectedProject.na853);
     }
