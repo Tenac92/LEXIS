@@ -85,30 +85,43 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   const queryClient = useQueryClient();
 
   // Fetch document details
-  const { data: documentDetails } = useQuery({
+  const { data: documentDetails, isError: isDocumentError, error: documentError } = useQuery({
     queryKey: ['/api/documents/generated', document?.id],
     enabled: !!document?.id && isOpen,
     queryFn: async () => {
       const response = await fetch(`/api/documents/generated/${document?.id}`);
-      if (!response.ok) throw new Error('Failed to fetch document details');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || 'Failed to fetch document details');
+      }
       return response.json();
     },
   });
+
+  // Show error toast if document fetch fails
+  useEffect(() => {
+    if (isDocumentError && documentError instanceof Error) {
+      toast({
+        title: "Σφάλμα",
+        description: documentError.message || "Αποτυχία φόρτωσης εγγράφου",
+        variant: "destructive",
+      });
+      onClose();
+    }
+  }, [isDocumentError, documentError, toast, onClose]);
 
   const form = useForm<OrthiEpanalipsiFormData>({
     resolver: zodResolver(orthiEpanalipsiSchema),
     defaultValues: {
       correctionReason: "",
-      project_id: document?.project_id || "",
-      project_na853: document?.project_na853 || "",
+      project_id: "",
+      project_na853: "",
       comments: "",
       protocol_date: new Date().toISOString().split('T')[0],
-      unit: document?.unit || "",
-      expenditure_type: document?.expenditure_type || "",
-      recipients: (document?.recipients as Recipient[]) || [],
-      total_amount: typeof document?.total_amount === 'string' 
-        ? parseFloat(document.total_amount) 
-        : (document?.total_amount as number) || 0,
+      unit: "",
+      expenditure_type: "",
+      recipients: [],
+      total_amount: 0,
     },
   });
 
@@ -139,20 +152,16 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   }, [form.watch("recipients")]);
 
   // Update project fetch query
-  const { data: projects = [] } = useQuery<Project[]>({
+  const { data: projects = [], isError: isProjectsError } = useQuery<Project[]>({
     queryKey: ["/api/projects", form.watch("unit")],
     enabled: !!form.watch("unit") && isOpen,
     queryFn: async () => {
       try {
-        console.log("Fetching projects for unit:", form.watch("unit"));
         const response = await fetch(`/api/projects?unit=${encodeURIComponent(form.watch("unit"))}`);
         if (!response.ok) {
-          console.error("Failed to fetch projects:", response.status, response.statusText);
           throw new Error('Failed to fetch projects');
         }
-        const data = await response.json();
-        console.log("Fetched projects:", data);
-        return data || [];
+        return response.json();
       } catch (error) {
         console.error("Error fetching projects:", error);
         toast({
@@ -168,10 +177,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   // Update project_na853 and expenditure_type when project_id changes
   useEffect(() => {
     const projectId = form.watch("project_id");
-    console.log("Current project_id:", projectId);
-    console.log("Available projects:", projects);
-    const selectedProject = projects.find(p => p.mis === projectId);
-    console.log("Selected project:", selectedProject);
+    const selectedProject = projects?.find(p => p.mis === projectId);
     if (selectedProject) {
       form.setValue("project_na853", selectedProject.na853);
       form.setValue("expenditure_type", selectedProject.expenditure_type);
@@ -182,8 +188,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   const generateCorrection = useMutation({
     mutationFn: async (data: OrthiEpanalipsiFormData) => {
       if (!document?.id) throw new Error("No document selected");
-
-      console.log("Generating correction with data:", data);
+      if (!documentDetails) throw new Error("Document details not loaded");
 
       const response = await fetch(`/api/documents/generated/${document.id}/orthi-epanalipsi`, {
         method: "POST",
@@ -191,17 +196,17 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...document,
+          ...documentDetails,
           ...data,
-          original_protocol_number: document.protocol_number_input,
-          original_protocol_date: document.protocol_date,
+          original_protocol_number: documentDetails.protocol_number_input,
+          original_protocol_date: documentDetails.protocol_date,
           status: "pending",
         }),
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: "Failed to generate correction" }));
-        throw new Error(error.message || "Failed to generate correction");
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
+        throw new Error(errorData.message || "Failed to generate correction");
       }
 
       const contentType = response.headers.get('content-type');
@@ -240,6 +245,14 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   });
 
   const onSubmit = (data: OrthiEpanalipsiFormData) => {
+    if (!documentDetails) {
+      toast({
+        title: "Σφάλμα",
+        description: "Τα στοιχεία του εγγράφου δεν έχουν φορτωθεί",
+        variant: "destructive",
+      });
+      return;
+    }
     generateCorrection.mutate(data);
   };
 
@@ -256,6 +269,10 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     recipients.splice(index, 1);
     form.setValue("recipients", [...recipients]);
   };
+
+  if (isDocumentError) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -534,7 +551,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
               </Button>
               <Button
                 type="submit"
-                disabled={generateCorrection.isPending}
+                disabled={generateCorrection.isPending || !documentDetails}
               >
                 Δημιουργία Ορθής Επανάληψης
               </Button>
