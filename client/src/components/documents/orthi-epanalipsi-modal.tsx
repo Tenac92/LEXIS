@@ -25,11 +25,10 @@ interface OrthiEpanalipsiModalProps {
 
 // Zod schema for form validation
 const orthiEpanalipsiSchema = z.object({
-  protocol_number: z.string().min(1, "Παρακαλώ εισάγετε αριθμό πρωτοκόλλου"),
-  protocol_date: z.string().min(1, "Παρακαλώ επιλέξτε ημερομηνία"),
   correctionReason: z.string().min(1, "Παρακαλώ εισάγετε το λόγο διόρθωσης"),
   na853: z.string().min(1, "Παρακαλώ επιλέξτε NA853"),
   comments: z.string().optional(),
+  protocol_date: z.string().min(1, "Παρακαλώ επιλέξτε ημερομηνία"),
 });
 
 type OrthiEpanalipsiFormData = z.infer<typeof orthiEpanalipsiSchema>;
@@ -41,11 +40,10 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   const form = useForm<OrthiEpanalipsiFormData>({
     resolver: zodResolver(orthiEpanalipsiSchema),
     defaultValues: {
-      protocol_number: "",
-      protocol_date: new Date().toISOString().split('T')[0],
       correctionReason: "",
       na853: document?.project_na853 || "",
       comments: "",
+      protocol_date: new Date().toISOString().split('T')[0],
     },
   });
 
@@ -53,11 +51,10 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   useEffect(() => {
     if (document && isOpen) {
       form.reset({
-        protocol_number: "",
-        protocol_date: new Date().toISOString().split('T')[0],
         correctionReason: "",
         na853: document.project_na853 || "",
         comments: "",
+        protocol_date: new Date().toISOString().split('T')[0],
       });
     }
   }, [document, form, isOpen]);
@@ -70,12 +67,10 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       try {
         console.log("Fetching projects for unit:", document?.unit);
         const response = await fetch(`/api/catalog?unit=${encodeURIComponent(document?.unit || '')}`);
-
         if (!response.ok) {
           console.error("Failed to fetch projects:", response.status, response.statusText);
           throw new Error('Failed to fetch projects');
         }
-
         const data = await response.json();
         console.log("Fetched projects:", data);
         return data.data || [];
@@ -103,7 +98,6 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
           project_na853: data.na853,
           comments: data.comments,
           correction_reason: data.correctionReason,
-          protocol_number_input: data.protocol_number,
           protocol_date: data.protocol_date,
           original_protocol_number: document.protocol_number_input,
           original_protocol_date: document.protocol_date,
@@ -192,23 +186,6 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="protocol_number"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Νέο Πρωτόκολλο</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Εισάγετε τον αριθμό πρωτοκόλλου..."
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <FormField
               control={form.control}
