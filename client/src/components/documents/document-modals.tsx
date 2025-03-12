@@ -52,9 +52,9 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
 
       const formattedDate = new Date(protocolDate).toISOString().split('T')[0];
 
-      console.log('Αποθήκευση πρωτοκόλλου:', { 
-        protocolNumber, 
-        protocolDate: formattedDate 
+      console.log('Αποθήκευση πρωτοκόλλου:', {
+        protocolNumber,
+        protocolDate: formattedDate
       });
 
       const response = await apiRequest<{ success: boolean; message: string; data?: any }>(`/api/documents/generated/${document.id}/protocol`, {
@@ -202,6 +202,32 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
   );
 }
 
+interface GeneratedDocument {
+  id: string;
+  protocol_number_input?: string;
+  protocol_date?: string;
+  project_id?: string;
+  expenditure_type?: string;
+  recipients?: Array<{
+    firstname: string;
+    lastname: string;
+    afm: string;
+    amount: number | string;
+    installment: number | string;
+  }>;
+  created_at: string;
+  status: string;
+  total_amount: number;
+}
+
+
+interface EditModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  document: GeneratedDocument;
+  onEdit: (id: string) => void;
+}
+
 export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -209,7 +235,13 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   const [protocolDate, setProtocolDate] = useState('');
   const [projectId, setProjectId] = useState('');
   const [expenditureType, setExpenditureType] = useState('');
-  const [recipients, setRecipients] = useState<any[]>([]);
+  const [recipients, setRecipients] = useState<Array<{
+    firstname: string;
+    lastname: string;
+    afm: string;
+    amount: number;
+    installment: number;
+  }>>([]);
 
   useEffect(() => {
     if (document) {
@@ -220,7 +252,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
       );
       setProjectId(document.project_id || '');
       setExpenditureType(document.expenditure_type || '');
-      setRecipients(document.recipients || []);
+      setRecipients(Array.isArray(document.recipients) ? document.recipients : []);
     }
   }, [document]);
 
@@ -228,7 +260,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     const updatedRecipients = [...recipients];
     updatedRecipients[index] = {
       ...updatedRecipients[index],
-      [field]: field === 'amount' ? parseFloat(value as string) || 0 : value,
+      [field]: field === 'amount' ? parseFloat(value as string) : field === 'installment' ? parseInt(value as string) : value,
     };
     setRecipients(updatedRecipients);
   };
@@ -253,48 +285,70 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   };
 
   const calculateTotalAmount = () => {
-    return recipients.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+    return recipients.reduce((sum, r) => sum + r.amount, 0);
   };
 
   const handleEdit = async () => {
     try {
-      if (!protocolNumber || !protocolDate) {
-        toast({
-          title: "Error",
-          description: "Protocol number and date are required",
-          variant: "destructive",
-        });
-        return;
+      setLoading(true);
+      console.log('[EditDocument] Starting edit for document:', document.id);
+
+      // Validate form data
+      if (!projectId || !expenditureType) {
+        throw new Error('Project ID and expenditure type are required');
       }
 
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('protocol_number_input', protocolNumber);
-      formData.append('protocol_date', protocolDate);
-      formData.append('project_id', projectId);
-      formData.append('expenditure_type', expenditureType);
-      formData.append('recipients', JSON.stringify(recipients.map(r => ({
-        ...r,
-        amount: parseFloat(r.amount) || 0,
-        installment: parseInt(r.installment) || 1
-      }))));
-      formData.append('total_amount', calculateTotalAmount().toString());
+      // Validate recipients
+      if (!recipients.length) {
+        throw new Error('At least one recipient is required');
+      }
 
-      await apiRequest(`/api/documents/generated/${document.id}`, {
+      const validatedRecipients = recipients.map(r => ({
+        ...r,
+        amount: typeof r.amount === 'string' ? parseFloat(r.amount) : r.amount,
+        installment: typeof r.installment === 'string' ? parseInt(r.installment.toString()) : r.installment
+      }));
+
+      const totalAmount = validatedRecipients.reduce((sum, r) => sum + r.amount, 0);
+
+      const formData = {
+        protocol_number_input: protocolNumber.trim(),
+        protocol_date: protocolDate,
+        project_id: projectId.trim(),
+        expenditure_type: expenditureType.trim(),
+        recipients: validatedRecipients,
+        total_amount: totalAmount,
+      };
+
+      console.log('[EditDocument] Sending update with data:', formData);
+
+      const response = await apiRequest(`/api/documents/generated/${document.id}`, {
         method: 'PATCH',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
       });
+
+      if (!response || response.error) {
+        throw new Error(response?.error || 'Failed to update document');
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
 
       toast({
         title: "Success",
         description: "Document updated successfully",
       });
-      onEdit(document.id);
+
+      onEdit(document.id.toString());
       onClose();
+
     } catch (error) {
+      console.error('[EditDocument] Error updating document:', error);
       toast({
         title: "Error",
-        description: "Failed to update document",
+        description: error instanceof Error ? error.message : "Failed to update document",
         variant: "destructive",
       });
     } finally {
@@ -548,8 +602,8 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
           <Button variant="outline" onClick={onClose}>
             Ακύρωση
           </Button>
-          <Button 
-            onClick={handleExport} 
+          <Button
+            onClick={handleExport}
             disabled={loading}
             className="min-w-[100px]"
           >
@@ -564,7 +618,7 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
 interface EditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  document: any;
+  document: GeneratedDocument;
   onEdit: (id: string) => void;
 }
 
@@ -578,5 +632,5 @@ interface DeleteModalProps {
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  document: any;
+  document: GeneratedDocument;
 }

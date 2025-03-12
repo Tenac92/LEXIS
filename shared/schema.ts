@@ -69,7 +69,7 @@ export const projectCatalog = pgTable("project_catalog", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
-// Generated Documents table matching the database structure
+// Update the Generated Documents table with protocol fields
 export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
   status: text("status").default("draft").notNull(),
@@ -84,6 +84,8 @@ export const generatedDocuments = pgTable("generated_documents", {
   generated_by: integer("generated_by").references(() => users.id),
   department: text("department"),
   attachments: text("attachments").array(),
+  protocol_number_input: text("protocol_number_input"),
+  protocol_date: timestamp("protocol_date"),
 });
 
 // Update the budget history table to include metadata
@@ -171,7 +173,7 @@ export const insertUserSchema = createInsertSchema(users, {
   units: z.array(z.string()).optional(),
   department: z.string().optional(),
   telephone: z.string().optional(),
-}).omit({ 
+}).omit({
   id: true,
   created_at: true,
   updated_at: true,
@@ -222,7 +224,7 @@ const recipientSchema = z.object({
   installment: z.number().int().min(1).max(12, "Installment must be between 1 and 12")
 });
 
-// Update generated document schema with enhanced validation
+// Update generated document schema with enhanced validation and protocol fields
 export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
   recipients: z.array(recipientSchema)
     .min(1, "At least one recipient is required")
@@ -231,8 +233,10 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
   project_id: z.string().min(1, "Project ID is required"),
   unit: z.string().min(1, "Unit is required"),
   expenditure_type: z.string().min(1, "Expenditure type is required"),
-  status: z.enum(["draft", "pending", "approved", "rejected"]).default("draft")
-});
+  status: z.enum(["draft", "pending", "approved", "rejected"]).default("draft"),
+  protocol_number_input: z.string().optional(),
+  protocol_date: z.string().optional(), // For date input compatibility
+}).omit({ id: true, created_at: true, updated_at: true });
 
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({
   id: true,
