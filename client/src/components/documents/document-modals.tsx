@@ -1,18 +1,15 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { DocumentSections } from "./document-sections";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
-import { useEffect, useState } from "react";
 
 interface ViewModalProps {
   isOpen: boolean;
@@ -22,75 +19,88 @@ interface ViewModalProps {
 
 export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps) {
   const { toast } = useToast();
-  const [protocolNumber, setProtocolNumber] = useState('');
-  const [protocolDate, setProtocolDate] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (document) {
-      setProtocolNumber(document.protocol_number_input || '');
-      setProtocolDate(document.protocol_date ?
-        new Date(document.protocol_date).toISOString().split('T')[0] :
-        new Date().toISOString().split('T')[0]
-      );
+  const [sections, setSections] = useState([
+    {
+      id: "protocol",
+      title: "Στοιχεία Πρωτοκόλλου",
+      content: (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Αριθμός Πρωτοκόλλου</p>
+            <p className="font-medium">{document?.protocol_number_input || "Δεν έχει οριστεί"}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Ημερομηνία Πρωτοκόλλου</p>
+            <p className="font-medium">
+              {document?.protocol_date ? 
+                new Date(document.protocol_date).toLocaleDateString('el-GR') : 
+                "Δεν έχει οριστεί"
+              }
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "info",
+      title: "Πληροφορίες Εγγράφου",
+      content: (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Κατάσταση</p>
+            <p className="font-medium capitalize">
+              {document?.status === 'approved' ? 'Εγκεκριμένο' : 'Σε εκκρεμότητα'}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Ημερομηνία Δημιουργίας</p>
+            <p className="font-medium">
+              {document?.created_at ? 
+                new Date(document.created_at).toLocaleDateString('el-GR') : 
+                "Δεν έχει οριστεί"
+              }
+            </p>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "recipients",
+      title: "Δικαιούχοι",
+      content: document?.recipients && document.recipients.length > 0 ? (
+        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+          {document.recipients.map((recipient: any, index: number) => (
+            <div
+              key={index}
+              className="p-3 bg-muted rounded-lg"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-medium">
+                    {recipient.lastname} {recipient.firstname}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    ΑΦΜ: {recipient.afm}
+                  </p>
+                </div>
+                <p className="font-medium">
+                  {new Intl.NumberFormat('el-GR', {
+                    style: 'currency',
+                    currency: 'EUR'
+                  }).format(recipient.amount || 0)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground">Δεν υπάρχουν δικαιούχοι</p>
+      )
     }
-  }, [document]);
+  ]);
 
-  if (!document) return null;
-
-  const handleProtocolSave = async () => {
-    try {
-      setLoading(true);
-
-      if (!protocolNumber.trim()) {
-        throw new Error('Απαιτείται αριθμός πρωτοκόλλου');
-      }
-
-      if (!protocolDate) {
-        throw new Error('Απαιτείται ημερομηνία πρωτοκόλλου');
-      }
-
-      const formattedDate = new Date(protocolDate).toISOString().split('T')[0];
-
-      console.log('Αποθήκευση πρωτοκόλλου:', {
-        protocolNumber,
-        protocolDate: formattedDate
-      });
-
-      const response = await apiRequest<{ success: boolean; message: string; data?: any }>(`/api/documents/generated/${document.id}/protocol`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          protocol_number: protocolNumber.trim(),
-          protocol_date: formattedDate
-        })
-      });
-
-      if (!response || response.success === false) {
-        throw new Error(response?.message || 'Αποτυχία ενημέρωσης πρωτοκόλλου');
-      }
-
-      await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
-      await queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
-
-      toast({
-        title: "Επιτυχία",
-        description: response.message || "Το πρωτόκολλο ενημερώθηκε επιτυχώς",
-      });
-      onClose();
-
-    } catch (error) {
-      console.error('Σφάλμα αποθήκευσης πρωτοκόλλου:', error);
-      toast({
-        title: "Σφάλμα",
-        description: error instanceof Error ? error.message : "Αποτυχία ενημέρωσης πρωτοκόλλου",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleSectionReorder = (newSections: any[]) => {
+    setSections(newSections);
   };
 
   return (
@@ -99,104 +109,17 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         <DialogHeader>
           <DialogTitle>Λεπτομέρειες Εγγράφου</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-4">
-            {/* Protocol Section */}
-            <div className="p-4 bg-muted rounded-lg">
-              <h3 className="font-medium text-lg mb-4">Στοιχεία Πρωτοκόλλου</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Αριθμός Πρωτοκόλλου</Label>
-                  <Input
-                    value={protocolNumber}
-                    onChange={(e) => setProtocolNumber(e.target.value)}
-                    placeholder="Εισάγετε αριθμό πρωτοκόλλου"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Ημερομηνία Πρωτοκόλλου</Label>
-                  <Input
-                    type="date"
-                    value={protocolDate}
-                    onChange={(e) => setProtocolDate(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              <Button
-                className="mt-4 w-full"
-                onClick={handleProtocolSave}
-                disabled={loading}
-              >
-                {loading ? "Αποθήκευση..." : "Αποθήκευση Πρωτοκόλλου"}
-              </Button>
-            </div>
 
-            {/* Document Information */}
-            <div>
-              <h3 className="font-medium text-lg">Πληροφορίες Εγγράφου</h3>
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Κατάσταση</p>
-                  <p className="font-medium capitalize">{document.status === 'approved' ? 'Εγκεκριμένο' : 'Σε εκκρεμότητα'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Ημερομηνία Δημιουργίας</p>
-                  <p className="font-medium">
-                    {new Date(document.created_at).toLocaleDateString('el-GR')}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Συνολικό Ποσό</p>
-                  <p className="font-medium">
-                    {new Intl.NumberFormat('el-GR', {
-                      style: 'currency',
-                      currency: 'EUR'
-                    }).format(document.total_amount || 0)}
-                  </p>
-                </div>
-              </div>
-            </div>
+        <DocumentSections 
+          sections={sections}
+          onReorder={handleSectionReorder}
+        />
 
-            {/* Recipients Section */}
-            {document.recipients && document.recipients.length > 0 && (
-              <div>
-                <h3 className="font-medium text-lg mb-2">Δικαιούχοι</h3>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {document.recipients.map((recipient: any, index: number) => (
-                    <div
-                      key={index}
-                      className="p-3 bg-muted rounded-lg"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium">
-                            {recipient.lastname} {recipient.firstname}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            ΑΦΜ: {recipient.afm}
-                          </p>
-                        </div>
-                        <p className="font-medium">
-                          {new Intl.NumberFormat('el-GR', {
-                            style: 'currency',
-                            currency: 'EUR'
-                          }).format(recipient.amount || 0)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        <DialogFooter>
+        <div className="flex justify-end mt-6">
           <Button variant="outline" onClick={onClose}>
             Κλείσιμο
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
