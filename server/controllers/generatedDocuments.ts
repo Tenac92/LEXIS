@@ -5,12 +5,60 @@ import { broadcastDocumentUpdate } from "../services/websocketService";
 import { DocumentManager } from "../utils/DocumentManager";
 
 const router = Router();
+
+// Make sure to export the router at the end of the file
 const documentManager = new DocumentManager();
 
 // Create new document
 router.post('/', authenticateToken, async (req, res) => {
   try {
     console.log('Creating document with data:', JSON.stringify(req.body, null, 2));
+
+
+// Get single generated document
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`[Generated Documents] Fetching document with ID: ${id}`);
+    
+    const { data: document, error } = await supabase
+      .from('generated_documents')
+      .select(`
+        *,
+        generated_by:users!generated_documents_generated_by_fkey (
+          name
+        )
+      `)
+      .eq('id', parseInt(id))
+      .single();
+
+    if (error) {
+      console.error('[Generated Documents] Database query error:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch document',
+        details: error.message
+      });
+    }
+
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    // Prepare document data with user name
+    const documentData = {
+      ...document,
+      user_name: document.generated_by?.name || 'Unknown User'
+    };
+
+    res.json(documentData);
+  } catch (error) {
+    console.error('[Generated Documents] Error fetching document:', error);
+    res.status(500).json({
+      error: 'Failed to fetch document',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
     const { unit, project_id, expenditure_type, status, recipients, total_amount, attachments } = req.body;
 
@@ -314,5 +362,7 @@ router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
     });
   }
 });
+
+export default router;
 
 export default router;
