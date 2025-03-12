@@ -14,9 +14,9 @@ export function useWebSocketUpdates() {
 
     function connect() {
       try {
+        // Use window.location.host to get hostname:port
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        const wsUrl = `${protocol}//${host}/ws`;
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
 
         console.log('[WebSocket] Attempting to connect:', wsUrl);
 
@@ -26,7 +26,7 @@ export function useWebSocketUpdates() {
         ws.onopen = () => {
           console.log('[WebSocket] Connected successfully');
           setIsConnected(true);
-          retryCount = 0; // Reset retry count on successful connection
+          retryCount = 0;
 
           // Send initial connection message
           ws.send(JSON.stringify({ 
@@ -40,22 +40,24 @@ export function useWebSocketUpdates() {
             const data = JSON.parse(event.data);
             console.log('[WebSocket] Received message:', data);
 
-            // Handle different message types
             switch (data.type) {
               case 'notification':
+                // Invalidate notifications cache
                 queryClient.invalidateQueries({ queryKey: ['/api/budget/notifications'] });
+
+                // Show toast notification
                 toast({
-                  title: 'New Notification',
-                  description: data.message || 'New notification received',
-                  variant: 'default'
+                  title: data.title || 'New Notification',
+                  description: data.message,
+                  variant: data.variant || 'default'
                 });
                 break;
+
               case 'connection':
-                console.log('[WebSocket] Connection confirmed:', data);
-                break;
               case 'acknowledgment':
-                console.log('[WebSocket] Acknowledgment received:', data);
+                console.log(`[WebSocket] ${data.type} received:`, data);
                 break;
+
               default:
                 console.log('[WebSocket] Unhandled message type:', data.type);
             }
@@ -67,21 +69,21 @@ export function useWebSocketUpdates() {
         ws.onerror = (error) => {
           console.error('[WebSocket] Connection error:', error);
           setIsConnected(false);
-          toast({
-            title: 'Connection Error',
-            description: 'Failed to connect to notification service',
-            variant: 'destructive'
-          });
         };
 
         ws.onclose = (event) => {
           console.log('[WebSocket] Connection closed:', event.code);
           setIsConnected(false);
+          wsRef.current = null;
 
-          // Implement exponential backoff for reconnection
+          // Only attempt reconnection if we haven't exceeded max retries
           if (retryCount < MAX_RETRIES) {
             const timeout = Math.min(1000 * Math.pow(2, retryCount), 10000);
             console.log(`[WebSocket] Attempting reconnect in ${timeout}ms`);
+
+            if (reconnectTimeoutRef.current) {
+              clearTimeout(reconnectTimeoutRef.current);
+            }
 
             reconnectTimeoutRef.current = window.setTimeout(() => {
               retryCount++;
@@ -103,7 +105,6 @@ export function useWebSocketUpdates() {
 
     connect();
 
-    // Cleanup function
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);

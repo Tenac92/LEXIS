@@ -14,24 +14,43 @@ export const NotificationsPage = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Check if user is admin using the correct endpoint
+  // Check if user is authenticated and is admin
   const { data: user, isLoading: userLoading, error: userError } = useQuery<User>({
     queryKey: ['/api/auth/me'],
     queryFn: async () => {
-      const response = await fetch('/api/auth/me', {
-        credentials: 'include'
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch user data');
+      try {
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.status === 401) {
+          setLocation('/auth');
+          throw new Error('Please log in to access notifications');
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('[Auth] Error fetching user:', error);
+        throw error;
       }
-      return response.json();
     },
-    retry: 1
+    retry: false,
+    staleTime: 30000 // Cache for 30 seconds
   });
 
   useEffect(() => {
-    // Only redirect if we have finished loading and the user is not an admin
-    if (!userLoading && user && user.role !== 'admin') {
+    if (!userLoading && !user) {
+      setLocation('/auth');
+    } else if (!userLoading && user && user.role !== 'admin') {
       toast({
         title: "Access Denied",
         description: "You need administrator privileges to access this page.",
@@ -78,11 +97,9 @@ export const NotificationsPage = () => {
             <CardContent className="p-6">
               <div className="text-center text-destructive">
                 <Bell className="h-12 w-12 mx-auto mb-4 text-destructive" />
-                <p className="text-lg font-semibold">Authentication Error</p>
+                <p className="text-lg font-semibold">Authentication Required</p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {userError instanceof Error 
-                    ? userError.message 
-                    : 'Please try logging in again'}
+                  Please log in to view notifications
                 </p>
                 <Button 
                   variant="outline" 

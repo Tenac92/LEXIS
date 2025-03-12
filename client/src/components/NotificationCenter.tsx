@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { BudgetNotification } from '@shared/schema';
 import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
@@ -65,12 +65,14 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
         const data = await response.json();
         console.log('[NotificationCenter] API Response:', data);
 
-        // If we got an array, return it directly
         if (Array.isArray(data)) {
           return data as BudgetNotification[];
         }
 
-        // If we got here but data is not an array, return empty array
+        if (data.status === 'error') {
+          throw new Error(data.message || 'Failed to fetch notifications');
+        }
+
         console.warn('[NotificationCenter] Unexpected response format:', data);
         return [];
       } catch (err) {
@@ -154,7 +156,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       {notifications.map((notification) => {
         const style = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
         const Icon = style.icon;
-        const createdAt = new Date(notification.created_at);
+        const createdAt = parseISO(notification.created_at);
 
         return (
           <Card
@@ -185,7 +187,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
             <CardContent>
               <p className="text-sm">{notification.reason}</p>
               <div className="mt-2 text-xs text-muted-foreground">
-                MIS: {notification.mis} • Budget: €{notification.current_budget.toLocaleString('en-US', { minimumFractionDigits: 2 })} • Amount: €{notification.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                MIS: {notification.mis} • Budget: €{Number(notification.current_budget).toLocaleString()} • Amount: €{Number(notification.amount).toLocaleString()}
               </div>
             </CardContent>
           </Card>
