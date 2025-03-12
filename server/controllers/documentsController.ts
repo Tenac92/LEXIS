@@ -172,7 +172,8 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
       });
     }
 
-    if (!protocol_date) {
+    // Check if protocol_date is present and not empty
+    if (!protocol_date || protocol_date === '') {
       return res.status(400).json({
         success: false,
         message: 'Protocol date is required'
@@ -207,14 +208,23 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
     }
 
     // Update the document without updated_at field
+    // Only include protocol_date and protocol_number if they are provided
+    const updateData: any = {
+      status: 'approved',
+      updated_by: req.user?.id
+    };
+    
+    if (protocol_number && protocol_number.trim() !== '') {
+      updateData.protocol_number_input = protocol_number.trim();
+    }
+    
+    if (protocol_date && protocol_date !== '') {
+      updateData.protocol_date = protocol_date;
+    }
+    
     const { data: updatedDocument, error: updateError } = await supabase
       .from('generated_documents')
-      .update({
-        protocol_number_input: protocol_number.trim(),
-        protocol_date,
-        status: 'approved',
-        updated_by: req.user?.id
-      })
+      .update(updateData)
       .eq('id', parseInt(id))
       .select()
       .single();
