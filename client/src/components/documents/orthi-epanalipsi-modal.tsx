@@ -164,7 +164,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     const projectId = form.watch("project_id");
     console.log("Current project_id:", projectId);
     console.log("Available projects:", projects);
-    const selectedProject = projects.find((p) => p.mis === projectId);
+    const selectedProject = projects.find(p => p.mis === projectId);
     console.log("Selected project:", selectedProject);
     if (selectedProject) {
       form.setValue("project_na853", selectedProject.na853);
@@ -296,7 +296,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Μονάδα</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Επιλέξτε μονάδα..." />
@@ -321,7 +321,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Τύπος Δαπάνης</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Επιλέξτε τύπο δαπάνης..." />
