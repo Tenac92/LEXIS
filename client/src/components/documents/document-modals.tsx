@@ -252,7 +252,19 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
       );
       setProjectId(document.project_id || '');
       setExpenditureType(document.expenditure_type || '');
-      setRecipients(Array.isArray(document.recipients) ? document.recipients : []);
+
+      // Safely parse recipients array
+      const safeRecipients = Array.isArray(document.recipients)
+        ? document.recipients.map(r => ({
+            firstname: String(r.firstname || ''),
+            lastname: String(r.lastname || ''),
+            afm: String(r.afm || ''),
+            amount: typeof r.amount === 'string' ? parseFloat(r.amount) : Number(r.amount) || 0,
+            installment: typeof r.installment === 'string' ? parseInt(r.installment) : Number(r.installment) || 1
+          }))
+        : [];
+
+      setRecipients(safeRecipients);
     }
   }, [document]);
 
@@ -260,7 +272,11 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     const updatedRecipients = [...recipients];
     updatedRecipients[index] = {
       ...updatedRecipients[index],
-      [field]: field === 'amount' ? parseFloat(value as string) : field === 'installment' ? parseInt(value as string) : value,
+      [field]: field === 'amount'
+        ? parseFloat(String(value)) || 0
+        : field === 'installment'
+        ? parseInt(String(value)) || 1
+        : String(value)
     };
     setRecipients(updatedRecipients);
   };
@@ -285,7 +301,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   };
 
   const calculateTotalAmount = () => {
-    return recipients.reduce((sum, r) => sum + r.amount, 0);
+    return recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
   };
 
   const handleEdit = async () => {
@@ -293,31 +309,44 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
       setLoading(true);
       console.log('[EditDocument] Starting edit for document:', document.id);
 
-      // Validate form data
-      if (!projectId || !expenditureType) {
-        throw new Error('Project ID and expenditure type are required');
+      // Form validation
+      const errors: string[] = [];
+      if (!String(projectId).trim()) errors.push('Project ID is required');
+      if (!String(expenditureType).trim()) errors.push('Expenditure type is required');
+      if (!recipients.length) errors.push('At least one recipient is required');
+
+      if (errors.length > 0) {
+        throw new Error(errors.join(', '));
       }
 
-      // Validate recipients
-      if (!recipients.length) {
-        throw new Error('At least one recipient is required');
-      }
+      // Validate and transform recipients data
+      const validatedRecipients = recipients.map((r, index) => {
+        const amount = typeof r.amount === 'string' ? parseFloat(r.amount) : r.amount;
+        const installment = typeof r.installment === 'string' ? parseInt(r.installment) : r.installment;
 
-      const validatedRecipients = recipients.map(r => ({
-        ...r,
-        amount: typeof r.amount === 'string' ? parseFloat(r.amount) : r.amount,
-        installment: typeof r.installment === 'string' ? parseInt(r.installment.toString()) : r.installment
-      }));
+        if (isNaN(amount) || amount <= 0) {
+          throw new Error(`Invalid amount for recipient ${index + 1}`);
+        }
+        if (isNaN(installment) || installment < 1 || installment > 12) {
+          throw new Error(`Invalid installment for recipient ${index + 1}`);
+        }
 
-      const totalAmount = validatedRecipients.reduce((sum, r) => sum + r.amount, 0);
+        return {
+          firstname: String(r.firstname).trim(),
+          lastname: String(r.lastname).trim(),
+          afm: String(r.afm).trim(),
+          amount,
+          installment
+        };
+      });
 
       const formData = {
-        protocol_number_input: protocolNumber.trim(),
+        protocol_number_input: String(protocolNumber).trim(),
         protocol_date: protocolDate,
-        project_id: projectId.trim(),
-        expenditure_type: expenditureType.trim(),
+        project_id: String(projectId).trim(),
+        expenditure_type: String(expenditureType).trim(),
         recipients: validatedRecipients,
-        total_amount: totalAmount,
+        total_amount: calculateTotalAmount(),
       };
 
       console.log('[EditDocument] Sending update with data:', formData);
@@ -391,6 +420,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
                   placeholder="Εισάγετε ID έργου"
+                  required
                 />
               </div>
               <div className="space-y-2">
@@ -399,6 +429,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                   value={expenditureType}
                   onChange={(e) => setExpenditureType(e.target.value)}
                   placeholder="Εισάγετε τύπο δαπάνης"
+                  required
                 />
               </div>
             </div>
@@ -434,17 +465,20 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                         value={recipient.firstname}
                         onChange={(e) => handleRecipientChange(index, 'firstname', e.target.value)}
                         placeholder="Όνομα"
+                        required
                       />
                       <Input
                         value={recipient.lastname}
                         onChange={(e) => handleRecipientChange(index, 'lastname', e.target.value)}
                         placeholder="Επίθετο"
+                        required
                       />
                       <Input
                         value={recipient.afm}
                         onChange={(e) => handleRecipientChange(index, 'afm', e.target.value)}
                         placeholder="ΑΦΜ"
                         maxLength={9}
+                        required
                       />
                       <Input
                         value={recipient.amount}
@@ -452,6 +486,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                         onChange={(e) => handleRecipientChange(index, 'amount', e.target.value)}
                         placeholder="Ποσό"
                         step="0.01"
+                        required
                       />
                       <Input
                         value={recipient.installment}
@@ -459,6 +494,8 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                         onChange={(e) => handleRecipientChange(index, 'installment', e.target.value)}
                         placeholder="Δόση"
                         min="1"
+                        max="12"
+                        required
                       />
                     </div>
                   </div>
@@ -613,13 +650,6 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
       </DialogContent>
     </Dialog>
   );
-}
-
-interface EditModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  document: GeneratedDocument;
-  onEdit: (id: string) => void;
 }
 
 interface DeleteModalProps {
