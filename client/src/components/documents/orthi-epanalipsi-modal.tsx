@@ -125,7 +125,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     form.setValue("total_amount", total);
   }, [form.watch("recipients")]);
 
-  // Fetch available projects for the unit
+  // Update project fetch query
   const { data: projects = [] } = useQuery({
     queryKey: ["/api/catalog", form.watch("unit")],
     enabled: !!form.watch("unit") && isOpen,
@@ -152,10 +152,13 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     },
   });
 
-  // Update project_na853 when project_id changes
+  // Add debug logs for project selection
   useEffect(() => {
     const projectId = form.watch("project_id");
+    console.log("Current project_id:", projectId);
+    console.log("Available projects:", projects);
     const selectedProject = projects.find((p: any) => p.mis === projectId);
+    console.log("Selected project:", selectedProject);
     if (selectedProject) {
       form.setValue("project_na853", selectedProject.na853);
     }
@@ -336,7 +339,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Έργο</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Επιλέξτε έργο..." />
