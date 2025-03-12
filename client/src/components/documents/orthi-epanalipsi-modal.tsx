@@ -97,14 +97,14 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     resolver: zodResolver(orthiEpanalipsiSchema),
     defaultValues: {
       correctionReason: "",
-      project_id: document?.project_id || "",
-      project_na853: document?.project_na853 || "",
+      project_id: "",
+      project_na853: "",
       comments: "",
       protocol_date: new Date().toISOString().split('T')[0],
-      unit: document?.unit || "",
-      expenditure_type: document?.expenditure_type || "",
-      recipients: document?.recipients || [],
-      total_amount: document?.total_amount || 0,
+      unit: "",
+      expenditure_type: "",
+      recipients: [],
+      total_amount: 0,
     },
   });
 
@@ -119,8 +119,8 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         protocol_date: new Date().toISOString().split('T')[0],
         unit: documentDetails.unit || "",
         expenditure_type: documentDetails.expenditure_type || "",
-        recipients: documentDetails.recipients || [],
-        total_amount: documentDetails.total_amount || 0,
+        recipients: Array.isArray(documentDetails.recipients) ? documentDetails.recipients : [],
+        total_amount: typeof documentDetails.total_amount === 'number' ? documentDetails.total_amount : 0,
       });
     }
   }, [documentDetails, form, isOpen]);
@@ -185,7 +185,6 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...document,
           ...data,
           original_protocol_number: document.protocol_number_input,
           original_protocol_date: document.protocol_date,
@@ -204,8 +203,13 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       }
 
       const blob = await response.blob();
+      if (blob.size === 0) {
+        throw new Error('Received empty document');
+      }
+
+      // Create download link
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
       a.download = `orthi-epanalipsi-${document.id}.docx`;
       document.body.appendChild(a);
