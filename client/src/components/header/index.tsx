@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { FileText, FolderKanban, LogOut, Menu, LayoutDashboard, Users, History, Bell, Key } from "lucide-react";
+import { FileText, FolderKanban, LogOut, Menu, LayoutDashboard, Users, History, Bell, Key, Settings, FileSpreadsheet, Library } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Sheet,
@@ -10,6 +10,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
@@ -32,170 +40,147 @@ export function Header() {
   }, []);
 
   const NavItems = () => (
-    <>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        whileHover={{ scale: 1.02 }}
-      >
-        <Link href="/">
-          <Button 
-            variant="ghost" 
-            className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
-          >
-            <LayoutDashboard className="h-4 w-4" />
-            <span className="hidden lg:inline">Πίνακας Ελέγχου</span>
-            <span className="lg:hidden">Αρχική</span>
-          </Button>
-        </Link>
-      </motion.div>
-      <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
-        whileHover={{ scale: 1.02 }}
-      >
-        <Link href="/documents">
-          <Button 
-            variant="ghost" 
-            className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
-          >
-            <FileText className="h-4 w-4" />
-            <span className="hidden lg:inline">{isRegularUser ? 'Δημιουργία Εγγράφων' : 'Προβολή Εγγράφων'}</span>
-            <span className="lg:hidden">Έγγραφα</span>
-          </Button>
-        </Link>
-      </motion.div>
-      <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.2 }}
-        whileHover={{ scale: 1.02 }}
-      >
-        <Link href="/projects">
-          <Button 
-            variant="ghost" 
-            className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
-          >
-            <FolderKanban className="h-4 w-4" />
-            <span className="hidden lg:inline">Έργα</span>
-            <span className="lg:hidden">Έργα</span>
-          </Button>
-        </Link>
-      </motion.div>
-      {(isManager || isAdmin) && (
-        <>
-          <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.3 }}
-            whileHover={{ scale: 1.02 }}
-          >
-            <Link href="/budget-history">
+    <NavigationMenu>
+      <NavigationMenuList className="gap-2">
+        {/* Dashboard */}
+        <NavigationMenuItem>
+          <Link href="/">
+            <Button 
+              variant="ghost" 
+              className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              <span>Πίνακας Ελέγχου</span>
+            </Button>
+          </Link>
+        </NavigationMenuItem>
+
+        {/* Documents Section */}
+        <NavigationMenuItem>
+          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10">
+            <FileText className="h-4 w-4 mr-2" />
+            Έγγραφα
+          </NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <div className="grid gap-2 p-4 w-[200px]">
+              <Link href="/documents">
+                <Button variant="ghost" className="w-full justify-start">
+                  <FileText className="h-4 w-4 mr-2" />
+                  {isRegularUser ? 'Δημιουργία' : 'Προβολή'}
+                </Button>
+              </Link>
+              <Link href="/templates">
+                <Button variant="ghost" className="w-full justify-start">
+                  <Library className="h-4 w-4 mr-2" />
+                  Πρότυπα
+                </Button>
+              </Link>
+            </div>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+
+        {/* Projects Section */}
+        <NavigationMenuItem>
+          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10">
+            <FolderKanban className="h-4 w-4 mr-2" />
+            Έργα
+          </NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <div className="grid gap-2 p-4 w-[200px]">
+              <Link href="/projects">
+                <Button variant="ghost" className="w-full justify-start">
+                  <FolderKanban className="h-4 w-4 mr-2" />
+                  Όλα τα Έργα
+                </Button>
+              </Link>
+              <Link href="/projects/active">
+                <Button variant="ghost" className="w-full justify-start">
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Ενεργά
+                </Button>
+              </Link>
+            </div>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+
+        {/* Management Section - Only for Admin/Manager */}
+        {(isManager || isAdmin) && (
+          <NavigationMenuItem>
+            <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10">
+              <Settings className="h-4 w-4 mr-2" />
+              Διαχείριση
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <div className="grid gap-2 p-4 w-[200px]">
+                <Link href="/budget-history">
+                  <Button variant="ghost" className="w-full justify-start">
+                    <History className="h-4 w-4 mr-2" />
+                    Ιστορικό Προϋπ.
+                  </Button>
+                </Link>
+                {isAdmin && (
+                  <>
+                    <Link href="/users">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <Users className="h-4 w-4 mr-2" />
+                        Χρήστες
+                      </Button>
+                    </Link>
+                    <Link href="/notifications">
+                      <Button variant="ghost" className="w-full justify-start relative">
+                        <Bell className="h-4 w-4 mr-2" />
+                        Ειδοποιήσεις
+                        <motion.span 
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-2 w-2 bg-primary rounded-full"
+                          animate={{ 
+                            scale: [1, 1.2, 1],
+                            opacity: [1, 0.8, 1] 
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        />
+                      </Button>
+                    </Link>
+                  </>
+                )}
+              </div>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+        )}
+
+        {/* User Settings */}
+        <NavigationMenuItem>
+          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10">
+            <Settings className="h-4 w-4 mr-2" />
+            Ρυθμίσεις
+          </NavigationMenuTrigger>
+          <NavigationMenuContent>
+            <div className="grid gap-2 p-4 w-[200px]">
               <Button 
                 variant="ghost" 
-                className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
+                onClick={() => setIsPasswordModalOpen(true)}
+                className="w-full justify-start"
               >
-                <History className="h-4 w-4" />
-                <span className="hidden lg:inline">Ιστορικό Προϋπολογισμού</span>
-                <span className="lg:hidden">Ιστορικό</span>
+                <Key className="h-4 w-4 mr-2" />
+                Αλλαγή Κωδικού
               </Button>
-            </Link>
-          </motion.div>
-        </>
-      )}
-      {isAdmin && (
-        <>
-          <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.4 }}
-            whileHover={{ scale: 1.02 }}
-          >
-            <Link href="/users">
               <Button 
                 variant="ghost" 
-                className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
+                onClick={() => logoutMutation.mutate()}
+                disabled={logoutMutation.isPending}
+                className="w-full justify-start text-destructive hover:text-destructive"
               >
-                <Users className="h-4 w-4" />
-                <span className="hidden lg:inline">Χρήστες</span>
-                <span className="lg:hidden">Χρήστες</span>
+                <LogOut className="h-4 w-4 mr-2" />
+                Αποσύνδεση
               </Button>
-            </Link>
-          </motion.div>
-          <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.5 }}
-            whileHover={{ scale: 1.02 }}
-          >
-            <Link href="/notifications">
-              <Button 
-                variant="ghost" 
-                className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5 relative"
-              >
-                <Bell className="h-4 w-4" />
-                <span className="hidden lg:inline">Ειδοποιήσεις</span>
-                <span className="lg:hidden">Ειδοπ.</span>
-                <motion.span 
-                  className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full"
-                  animate={{ 
-                    scale: [1, 1.2, 1],
-                    opacity: [1, 0.8, 1] 
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                />
-              </Button>
-            </Link>
-          </motion.div>
-        </>
-      )}
-      <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.5 }}
-        whileHover={{ scale: 1.02 }}
-      >
-        <Button 
-          variant="ghost" 
-          onClick={() => setIsPasswordModalOpen(true)}
-          className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
-        >
-          <Key className="h-4 w-4" />
-          <span className="hidden lg:inline">Αλλαγή Κωδικού</span>
-          <span className="lg:hidden">Κωδικός</span>
-        </Button>
-      </motion.div>
-      <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.6 }}
-        whileHover={{ scale: 1.02 }}
-      >
-        <Button 
-          variant="ghost" 
-          onClick={() => logoutMutation.mutate()}
-          disabled={logoutMutation.isPending}
-          className="flex items-center gap-2 transition-all duration-300 hover:bg-destructive/10 hover:text-destructive hover:shadow-lg hover:shadow-destructive/5"
-        >
-          <LogOut className="h-4 w-4" />
-          <span className="hidden lg:inline">Αποσύνδεση</span>
-          <span className="lg:hidden">Έξοδος</span>
-        </Button>
-      </motion.div>
-    </>
+            </div>
+          </NavigationMenuContent>
+        </NavigationMenuItem>
+      </NavigationMenuList>
+    </NavigationMenu>
   );
 
   return (
@@ -273,14 +258,9 @@ export function Header() {
                       Μενού
                     </SheetTitle>
                   </SheetHeader>
-                  <motion.div 
-                    className="flex flex-col gap-4 mt-6"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
+                  <div className="flex flex-col gap-4 mt-6">
                     <NavItems />
-                  </motion.div>
+                  </div>
                 </SheetContent>
               </Sheet>
             </div>
