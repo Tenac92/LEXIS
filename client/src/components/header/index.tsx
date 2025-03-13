@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { FileText, FolderKanban, LogOut, Menu, LayoutDashboard, Users, History, Bell } from "lucide-react";
+import { FileText, FolderKanban, LogOut, Menu, LayoutDashboard, Users, History, Bell, Key } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Sheet,
@@ -12,11 +12,13 @@ import {
 } from "@/components/ui/sheet";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChangePasswordModal } from "@/components/auth/change-password-modal";
 
 export function Header() {
   const { user, logoutMutation } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
   const isRegularUser = user?.role === 'user';
@@ -162,6 +164,23 @@ export function Header() {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.5 }}
+        whileHover={{ scale: 1.02 }}
+      >
+        <Button 
+          variant="ghost" 
+          onClick={() => setIsPasswordModalOpen(true)}
+          className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 hover:shadow-lg hover:shadow-primary/5"
+        >
+          <Key className="h-4 w-4" />
+          <span className="hidden lg:inline">Αλλαγή Κωδικού</span>
+          <span className="lg:hidden">Κωδικός</span>
+        </Button>
+      </motion.div>
+      <Separator orientation="vertical" className="h-8 mx-2 bg-gradient-to-b from-primary/30 to-primary/10" />
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.6 }}
         whileHover={{ scale: 1.02 }}
       >
@@ -269,3 +288,7 @@ export function Header() {
     </motion.header>
   );
 }
+<ChangePasswordModal 
+  isOpen={isPasswordModalOpen}
+  onClose={() => setIsPasswordModalOpen(false)}
+/>
