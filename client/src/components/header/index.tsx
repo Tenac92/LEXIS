@@ -16,6 +16,7 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
+  NavigationMenuViewport,
 } from "@/components/ui/navigation-menu";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,7 +40,7 @@ export function Header() {
   }, []);
 
   const NavItems = () => (
-    <NavigationMenu className="relative z-50">
+    <NavigationMenu>
       <NavigationMenuList className="flex items-center gap-2">
         {/* Dashboard */}
         <NavigationMenuItem>
@@ -62,11 +63,11 @@ export function Header() {
             <FileText className="h-4 w-4" />
             Διαβιβαστικά
           </NavigationMenuTrigger>
-          <NavigationMenuContent className="min-w-[220px] bg-popover p-2 shadow-lg rounded-md data-[motion=from-start]:animate-enterFromLeft data-[motion=from-end]:animate-enterFromRight data-[motion=to-start]:animate-exitToLeft data-[motion=to-end]:animate-exitToRight">
-            <div className="grid gap-1">
+          <NavigationMenuContent>
+            <div className="grid gap-1 p-2 w-[220px]">
               <Link href="/documents">
                 <NavigationMenuLink
-                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                 >
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
@@ -76,7 +77,7 @@ export function Header() {
               </Link>
               <Link href="/templates">
                 <NavigationMenuLink
-                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                 >
                   <div className="flex items-center gap-2">
                     <Library className="h-4 w-4" />
@@ -96,11 +97,11 @@ export function Header() {
             <FolderKanban className="h-4 w-4" />
             Έργα
           </NavigationMenuTrigger>
-          <NavigationMenuContent className="min-w-[220px] bg-popover p-2 shadow-lg rounded-md">
-            <div className="grid gap-1">
+          <NavigationMenuContent>
+            <div className="grid gap-1 p-2 w-[220px]">
               <Link href="/projects">
                 <NavigationMenuLink
-                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                 >
                   <div className="flex items-center gap-2">
                     <FolderKanban className="h-4 w-4" />
@@ -110,7 +111,7 @@ export function Header() {
               </Link>
               <Link href="/projects/active">
                 <NavigationMenuLink
-                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                 >
                   <div className="flex items-center gap-2">
                     <FileSpreadsheet className="h-4 w-4" />
@@ -131,11 +132,11 @@ export function Header() {
               <Settings className="h-4 w-4" />
               Διαχείριση
             </NavigationMenuTrigger>
-            <NavigationMenuContent className="min-w-[220px] bg-popover p-2 shadow-lg rounded-md">
-              <div className="grid gap-1">
+            <NavigationMenuContent>
+              <div className="grid gap-1 p-2 w-[220px]">
                 <Link href="/budget-history">
                   <NavigationMenuLink
-                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                    className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                   >
                     <div className="flex items-center gap-2">
                       <History className="h-4 w-4" />
@@ -147,7 +148,7 @@ export function Header() {
                   <>
                     <Link href="/users">
                       <NavigationMenuLink
-                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                        className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                       >
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4" />
@@ -157,7 +158,7 @@ export function Header() {
                     </Link>
                     <Link href="/notifications">
                       <NavigationMenuLink
-                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative"
+                        className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative"
                       >
                         <div className="flex items-center gap-2">
                           <Bell className="h-4 w-4" />
@@ -192,10 +193,10 @@ export function Header() {
             <Settings className="h-4 w-4" />
             Ρυθμίσεις
           </NavigationMenuTrigger>
-          <NavigationMenuContent className="min-w-[220px] bg-popover p-2 shadow-lg rounded-md">
-            <div className="grid gap-1">
+          <NavigationMenuContent>
+            <div className="grid gap-1 p-2 w-[220px]">
               <NavigationMenuLink
-                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                 onClick={() => setIsPasswordModalOpen(true)}
               >
                 <div className="flex items-center gap-2">
@@ -204,7 +205,7 @@ export function Header() {
                 </div>
               </NavigationMenuLink>
               <NavigationMenuLink
-                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground"
+                className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground"
                 onClick={() => logoutMutation.mutate()}
               >
                 <div className="flex items-center gap-2">
@@ -216,13 +217,14 @@ export function Header() {
           </NavigationMenuContent>
         </NavigationMenuItem>
       </NavigationMenuList>
+      <NavigationMenuViewport className="origin-top-center absolute top-full mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 md:w-[var(--radix-navigation-menu-viewport-width)]" />
     </NavigationMenu>
   );
 
   return (
     <>
       <motion.header 
-        className={`sticky top-0 z-40 w-full border-b backdrop-blur-sm transition-all duration-300 ${
+        className={`sticky top-0 z-[100] w-full border-b backdrop-blur-sm transition-all duration-300 ${
           scrolled 
             ? 'bg-gradient-to-r from-background/95 via-background/98 to-background/95 shadow-lg shadow-primary/5' 
             : 'bg-gradient-to-r from-background/80 via-background/90 to-background/80'
