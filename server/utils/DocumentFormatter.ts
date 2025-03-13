@@ -2,7 +2,6 @@ import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, Align
 import { supabase } from '../config/db';
 import * as fs from 'fs';
 import * as path from 'path';
-import { format } from 'date-fns';
 import { before } from 'node:test';
 
 interface UnitDetails {
@@ -38,9 +37,9 @@ export class DocumentFormatter {
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
     top: 100,
-    right: 800,
-    bottom: 1440,
-    left: 1134,
+    right: 600,
+    bottom: 850,
+    left: 600,
   };
 
   private static async getLogoImageData(): Promise<Buffer> {
@@ -49,13 +48,11 @@ export class DocumentFormatter {
   }
 
   private static async createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Promise<Table> {
-    try {
-      console.log("[DocumentFormatter] Starting to create document header");
-      const logoBuffer = await this.getLogoImageData();
+    const logoBuffer = await this.getLogoImageData();
 
       return new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
-        columnWidths: [65, 35],
+        columnWidths: [55, 45],
         borders: {
           top: { style: BorderStyle.NONE },
           bottom: { style: BorderStyle.NONE },
@@ -68,7 +65,7 @@ export class DocumentFormatter {
           new TableRow({
             children: [
               new TableCell({
-                width: { size: 65, type: WidthType.PERCENTAGE },
+                width: { size: 55, type: WidthType.PERCENTAGE },
                 borders: {
                   top: { style: BorderStyle.NONE },
                   bottom: { style: BorderStyle.NONE },
@@ -87,7 +84,7 @@ export class DocumentFormatter {
                       new ImageRun({
                         data: logoBuffer,
                         transformation: {
-                          width: 100,
+                          width: 50,
                           height: 50,
                         },
                         type: 'png',
@@ -97,6 +94,7 @@ export class DocumentFormatter {
                       this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                       this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
                       this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
+                      this.createBoldParagraph(""),
                       this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                       this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
                       this.createContactDetail("Πληροφορίες", documentData.user_name || "......................"),
@@ -106,7 +104,7 @@ export class DocumentFormatter {
                 ],
               }),
               new TableCell({
-                width: { size: 35, type: WidthType.PERCENTAGE },
+                width: { size: 45, type: WidthType.PERCENTAGE },
                 borders: {
                   top: { style: BorderStyle.NONE },
                   bottom: { style: BorderStyle.NONE },
@@ -139,31 +137,57 @@ export class DocumentFormatter {
                   }),
                   new Table({
                     width: { size: 100, type: WidthType.PERCENTAGE },
+                    borders: {
+                      top: { style: BorderStyle.NONE },
+                      bottom: { style: BorderStyle.NONE },
+                      left: { style: BorderStyle.NONE },
+                      right: { style: BorderStyle.NONE },
+                      insideHorizontal: { style: BorderStyle.NONE },
+                      insideVertical: { style: BorderStyle.NONE },
+                    },
                     rows: [
                       new TableRow({
                         children: [
                           new TableCell({
-                            width: { size: 50, type: WidthType.PERCENTAGE },
+                            width: { size: 15, type: WidthType.PERCENTAGE },
+                            borders: {
+                              top: { style: BorderStyle.NONE },
+                              bottom: { style: BorderStyle.NONE },
+                              left: { style: BorderStyle.NONE },
+                              right: { style: BorderStyle.NONE },
+                            },
                             children: [
                               new Paragraph({
-                                text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών",
+                                text: "ΠΡΟΣ:",
+                                spacing: { before: 700 },
+                                alignment: AlignmentType.LEFT,
+                              }),
+                            ],
+                          }),
+                          new TableCell({
+                            width: { size: 85, type: WidthType.PERCENTAGE },
+                            borders: {
+                              top: { style: BorderStyle.NONE },
+                              bottom: { style: BorderStyle.NONE },
+                              left: { style: BorderStyle.NONE },
+                              right: { style: BorderStyle.NONE },
+                            },
+                            children: [
+                              new Paragraph({
+                                text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                                spacing: { before: 700 },
+                                alignment: AlignmentType.LEFT,
+                              }),
+                              new Paragraph({
+                                text: "Διεύθυνση Οικονομικής Διαχείρισης",
                                 alignment: AlignmentType.LEFT,
                               }),
                               new Paragraph({
                                 text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
                                 alignment: AlignmentType.LEFT,
                               }),
-                            ],
-                          }),
-                          new TableCell({
-                            width: { size: 50, type: WidthType.PERCENTAGE },
-                            children: [
                               new Paragraph({
-                                text: "Αντίγραφο στο:",
-                                alignment: AlignmentType.LEFT,
-                              }),
-                              new Paragraph({
-                                text: "Χωρίς αναγνωρίσιμο κείμενο",
+                                text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
                                 alignment: AlignmentType.LEFT,
                               }),
                             ],
@@ -178,12 +202,8 @@ export class DocumentFormatter {
           }),
         ],
       });
-    } catch (error) {
-      console.error('[DocumentFormatter] Error creating document header:', error);
-      throw error;
-    }
   }
-
+    
   public static async generateDocument(documentData: DocumentData): Promise<Buffer> {
     try {
       console.log("Generating document for:", documentData);
@@ -438,7 +458,7 @@ export class DocumentFormatter {
                   })
                 ),
                 this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
-                ...["Χρονολογικό Αρχείο", "Τμήμα Β/20.51", "Αβραμόπουλο Ι."].map((item, index) =>
+                ...["Χρονολογικό Αρχείο"].map((item, index) =>
                   new Paragraph({
                     text: `${index + 1}. ${item}`,
                     indent: { left: 426 },
