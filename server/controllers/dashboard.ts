@@ -63,7 +63,11 @@ export async function getDashboardStats(req: Request, res: Response) {
       const katanomesEtous = parseAmount(budget.katanomes_etous);
 
       // Determine project status with updated logic
-      if (katanomesEtous > 0 && Math.abs(katanomesEtous - userView) > 0.01) {
+      if (userView > 0 && katanomesEtous === 0) {
+        // If there's active budget being used but no allocation yet
+        projectStats.active++;
+        budgetTotals.active += userView;
+      } else if (katanomesEtous > 0 && Math.abs(katanomesEtous - userView) > 0.01) {
         // If there's any significant difference between allocated and used budget
         projectStats.pending_reallocation++;
         budgetTotals.pending_reallocation += katanomesEtous - userView;
@@ -75,10 +79,6 @@ export async function getDashboardStats(req: Request, res: Response) {
         // If there's only provisional budget
         projectStats.pending++;
         budgetTotals.pending += proip;
-      } else if (userView > 0) {
-        // If there's active budget being used
-        projectStats.active++;
-        budgetTotals.active += userView;
       }
     });
 
