@@ -56,24 +56,29 @@ export async function getDashboardStats(req: Request, res: Response) {
       completed: 0
     };
 
-    // Single pass through budget data
+    // Single pass through budget data with improved status detection
     budgetData?.forEach(budget => {
       const userView = parseAmount(budget.user_view);
       const proip = parseAmount(budget.proip);
       const katanomesEtous = parseAmount(budget.katanomes_etous);
 
-      if (userView > 0) {
-        projectStats.active++;
-        budgetTotals.active += userView;
-      } else if (userView === 0 && proip > 0) {
-        projectStats.pending++;
-        budgetTotals.pending += proip;
-      } else if (katanomesEtous > userView) {
+      // Determine project status with updated logic
+      if (katanomesEtous > 0 && Math.abs(katanomesEtous - userView) > 0.01) {
+        // If there's any significant difference between allocated and used budget
         projectStats.pending_reallocation++;
         budgetTotals.pending_reallocation += katanomesEtous - userView;
-      } else if (userView === katanomesEtous && userView > 0) {
+      } else if (userView > 0 && Math.abs(katanomesEtous - userView) <= 0.01) {
+        // If the project is fully allocated (with small tolerance for floating point)
         projectStats.completed++;
         budgetTotals.completed += userView;
+      } else if (userView === 0 && proip > 0) {
+        // If there's only provisional budget
+        projectStats.pending++;
+        budgetTotals.pending += proip;
+      } else if (userView > 0) {
+        // If there's active budget being used
+        projectStats.active++;
+        budgetTotals.active += userView;
       }
     });
 
