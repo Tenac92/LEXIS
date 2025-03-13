@@ -36,10 +36,10 @@ export class DocumentFormatter {
   private static readonly DEFAULT_FONT_SIZE = 22;
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
-    top: 1000, 
-    right: 1000,
+    top: 0, 
+    right: 0,
     bottom: 1000,
-    left: 1000,
+    left: 0,
   };
   private static readonly DOCUMENT_MARGINS = this.DEFAULT_MARGINS;
 
