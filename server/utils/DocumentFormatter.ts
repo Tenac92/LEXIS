@@ -223,12 +223,12 @@ export class DocumentFormatter {
       const sections = [{
         properties: {
           page: {
-            size: { width: 11906, height: 16838 }, // A4 size in twips
+            size: { width: 11906, height: 18000 }, // A4 size in twips
             margins: { 
-              top: 1000,    // Modified margin
-              right: 1000,  // Modified margin
+              top: 200,    // Modified margin
+              right: 800,  // Modified margin
               bottom: 1000, // Modified margin
-              left: 1000,   // Modified margin
+              left: 800,   // Modified margin
             },
             orientation: PageOrientation.PORTRAIT
           }
