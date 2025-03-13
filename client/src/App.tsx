@@ -12,6 +12,7 @@ import UsersPage from "@/pages/users";
 import BudgetHistoryPage from "@/pages/budget-history-page";
 import NotificationsPage from "@/pages/NotificationsPage";
 import BulkUpdatePage from "@/pages/projects/bulk-update";
+import TemplatesPage from "@/pages/templates";
 import { ProtectedRoute } from "./lib/protected-route";
 import { PageTransition } from "@/components/ui/page-transition";
 
@@ -21,6 +22,7 @@ function Router() {
       <Switch>
         <ProtectedRoute path="/" component={HomePage} />
         <ProtectedRoute path="/documents" component={DocumentsPage} />
+        <ProtectedRoute path="/templates" component={TemplatesPage} />
         <ProtectedRoute path="/projects" component={ProjectsPage} />
         <ProtectedRoute path="/projects/bulk-update" component={BulkUpdatePage} />
         <ProtectedRoute path="/users" component={UsersPage} />
