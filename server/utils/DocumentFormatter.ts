@@ -22,7 +22,7 @@ interface DocumentData {
   protocol_number_input?: string;
   protocol_date?: string;
   user_name?: string;
-  attachments?: string[]; 
+  attachments?: string[];
   recipients?: Array<{
     firstname: string;
     lastname: string;
@@ -36,7 +36,7 @@ export class DocumentFormatter {
   private static readonly DEFAULT_FONT_SIZE = 22;
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
-    top: 20,
+    top: 5, // Reduced top margin
     right: 600,
     bottom: 850,
     left: 600,
@@ -61,6 +61,12 @@ export class DocumentFormatter {
         insideHorizontal: { style: BorderStyle.NONE },
         insideVertical: { style: BorderStyle.NONE },
       },
+      margins: {
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0
+      },
       rows: [
         new TableRow({
           children: [
@@ -74,9 +80,9 @@ export class DocumentFormatter {
               },
               margins: {
                 top: 0,
-                bottom: 120,
-                left: 120,
-                right: 120
+                bottom: 60,
+                left: 60,
+                right: 60
               },
               children: [
                 new Paragraph({
@@ -88,19 +94,19 @@ export class DocumentFormatter {
                         height: 50,
                       },
                       type: 'png',
-                    }),
-                    this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
-                    this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
-                    this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
-                    this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
-                    this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
-                    this.createBoldParagraph(""),
-                    this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
-                    this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
-                    this.createContactDetail("Πληροφορίες", documentData.user_name || "......................"),
+                    })
                   ],
-                  spacing: { after: 200 },
+                  spacing: { after: 120 },
                 }),
+                this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+                this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
+                this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
+                this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
+                this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
+                this.createBoldParagraph(""),
+                this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
+                this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
+                this.createContactDetail("Πληροφορίες", documentData.user_name || "......................"),
               ],
             }),
             new TableCell({
@@ -112,29 +118,31 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               margins: {
-                top: 120,
-                bottom: 120,
-                left: 120,
-                right: 120
+                top: 60,
+                bottom: 60,
+                left: 60,
+                right: 60
               },
               children: [
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: `Ημερομηνία: ${documentData.protocol_date ? format(new Date(documentData.protocol_date), 'dd/MM/yyyy') : '........................'}
-`
+                      text: `Ημερομηνία: ${documentData.protocol_date ? format(new Date(documentData.protocol_date), 'dd/MM/yyyy') : '........................'}`,
                     }),
                   ],
                   alignment: AlignmentType.RIGHT,
-                  spacing: { before: 520 },
+                  spacing: { before: 240 },
                 }),
                 new Paragraph({
-                  children: [new TextRun({ text: `Αρ. Πρωτ.: ${documentData.protocol_number_input || documentData.protocol_number || '......................'}`, bold: true })],
+                  children: [new TextRun({ 
+                    text: `Αρ. Πρωτ.: ${documentData.protocol_number_input || documentData.protocol_number || '......................'}`,
+                    bold: true 
+                  })],
                   alignment: AlignmentType.RIGHT,
                 }),
                 new Paragraph({
                   text: "",
-                  spacing: { before: 360 },
+                  spacing: { before: 240 },
                 }),
                 new Table({
                   width: { size: 100, type: WidthType.PERCENTAGE },
@@ -160,7 +168,7 @@ export class DocumentFormatter {
                           children: [
                             new Paragraph({
                               text: "ΠΡΟΣ:",
-                              spacing: { before: 700 },
+                              spacing: { before: 360 },
                               alignment: AlignmentType.LEFT,
                             }),
                           ],
@@ -176,7 +184,7 @@ export class DocumentFormatter {
                           children: [
                             new Paragraph({
                               text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
-                              spacing: { before: 700 },
+                              spacing: { before: 360 },
                               alignment: AlignmentType.LEFT,
                             }),
                             new Paragraph({
