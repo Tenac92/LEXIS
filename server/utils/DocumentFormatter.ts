@@ -1,8 +1,8 @@
-import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, AlignmentType, WidthType, BorderStyle, VerticalAlign, HeightRule, ITableBordersOptions, ImageRun } from 'docx';
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, AlignmentType, WidthType, BorderStyle, VerticalAlign, HeightRule, ITableBordersOptions, ImageRun, PageOrientation } from 'docx';
 import { supabase } from '../config/db';
 import * as fs from 'fs';
 import * as path from 'path';
-import { before } from 'node:test';
+import { format } from 'date-fns';
 
 interface UnitDetails {
   unit_name?: string;
@@ -36,10 +36,10 @@ export class DocumentFormatter {
   private static readonly DEFAULT_FONT_SIZE = 22;
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
-    top: 5, // Reduced top margin
-    right: 600,
-    bottom: 850,
-    left: 600,
+    top: 5, 
+    right: 500,
+    bottom: 500,
+    left: 500,
   };
 
   private static async getLogoImageData(): Promise<Buffer> {
@@ -80,7 +80,7 @@ export class DocumentFormatter {
               },
               margins: {
                 top: 0,
-                bottom: 60,
+                bottom: 0,
                 left: 60,
                 right: 60
               },
@@ -221,7 +221,18 @@ export class DocumentFormatter {
       console.log("Unit details:", unitDetails);
 
       const sections = [{
-        properties: {},
+        properties: {
+          page: {
+            size: { width: 11906, height: 16838 }, // A4 size in twips
+            margins: { 
+              top: 100,    // Very small top margin (in twips)
+              right: 1000,
+              bottom: 850,
+              left: 1000,
+            },
+            orientation: PageOrientation.PORTRAIT
+          }
+        },
         children: [
           await this.createDocumentHeader(documentData, unitDetails || undefined),
           ...this.createDocumentSubject(),
@@ -621,9 +632,3 @@ export class DocumentFormatter {
     }
   }
 }
-
-// Assuming 'format' is defined elsewhere and handles date formatting.  If not, you'll need to add a date formatting function.
-const format = (date: Date, formatString: string) => {
-  // Add your date formatting logic here.  This is a placeholder.  A real implementation might use a library like moment.js or date-fns.
-  return date.toLocaleDateString();
-};
