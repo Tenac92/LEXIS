@@ -41,6 +41,8 @@ export class DocumentFormatter {
     bottom: 1000,
     left: 1000,
   };
+  private static readonly DOCUMENT_MARGINS = this.DEFAULT_MARGINS;
+
 
   private static async getLogoImageData(): Promise<Buffer> {
     const logoPath = path.join(process.cwd(), 'attached_assets', 'ethnosimo22.png');
@@ -224,12 +226,7 @@ export class DocumentFormatter {
         properties: {
           page: {
             size: { width: 11906, height: 18000 }, // A4 size in twips
-            margins: { 
-              top: 200,    // Modified margin
-              right: 800,  // Modified margin
-              bottom: 1000, // Modified margin
-              left: 800,   // Modified margin
-            },
+            margins: this.DOCUMENT_MARGINS,
             orientation: PageOrientation.PORTRAIT
           }
         },
