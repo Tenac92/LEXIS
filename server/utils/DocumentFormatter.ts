@@ -226,9 +226,9 @@ export class DocumentFormatter {
             size: { width: 11906, height: 16838 }, // A4 size in twips
             margins: { 
               top: 100,    // Very small top margin (in twips)
-              right: 1000,
-              bottom: 850,
-              left: 1000,
+              right: 100,
+              bottom: 100,
+              left: 100,
             },
             orientation: PageOrientation.PORTRAIT
           }
