@@ -1,4 +1,3 @@
-```typescript
 import { Router, Request, Response } from "express";
 import { TemplateManager } from "../utils/TemplateManager";
 import { authenticateSession } from '../auth';
@@ -46,7 +45,7 @@ router.post('/', authenticateSession, async (req: AuthRequest, res: Response) =>
     }
 
     const { name, description, category, templateData } = req.body;
-    
+
     if (!name || !description || !category) {
       return res.status(400).json({
         error: 'Missing required fields',
@@ -131,4 +130,3 @@ router.post('/:id/preview', authenticateSession, async (req: AuthRequest, res: R
 });
 
 export default router;
-```
