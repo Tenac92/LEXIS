@@ -36,10 +36,10 @@ export class DocumentFormatter {
   private static readonly DEFAULT_FONT_SIZE = 22;
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
-    top: 5, 
-    right: 500,
-    bottom: 500,
-    left: 500,
+    top: 1000, 
+    right: 1000,
+    bottom: 1000,
+    left: 1000,
   };
 
   private static async getLogoImageData(): Promise<Buffer> {
@@ -118,10 +118,10 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               margins: {
-                top: 60,
-                bottom: 60,
-                left: 60,
-                right: 60
+                top: 240,
+                bottom: 240,
+                left: 240,
+                right: 240
               },
               children: [
                 new Paragraph({
@@ -308,10 +308,10 @@ export class DocumentFormatter {
                   right: { style: BorderStyle.SINGLE, size: 4 },
                 },
                 margins: {
-                  top: 240,
-                  bottom: 240,
-                  left: 240,
-                  right: 240
+                  top: 360,
+                  bottom: 360,
+                  left: 360,
+                  right: 360
                 },
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 children: [
