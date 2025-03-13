@@ -36,10 +36,10 @@ export class DocumentFormatter {
   private static readonly DEFAULT_FONT_SIZE = 22;
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
-    top: 0, 
-    right: 0,
+    top: 200, 
+    right: 1000,
     bottom: 1000,
-    left: 0,
+    left: 1000,
   };
   private static readonly DOCUMENT_MARGINS = this.DEFAULT_MARGINS;
 
@@ -231,7 +231,7 @@ export class DocumentFormatter {
           }
         },
         children: [
-          await this.createDocumentHeader(documentData, unitDetails || undefined),
+          //await this.createDocumentHeader(documentData, unitDetails || undefined), //Removed Header
           ...this.createDocumentSubject(),
           ...this.createMainContent(documentData),
           this.createPaymentTable(documentData.recipients || []),
