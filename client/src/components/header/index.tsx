@@ -16,10 +16,10 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-  NavigationMenuViewport,
+  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
 
 export function Header() {
@@ -39,188 +39,6 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const NavItems = () => (
-    <NavigationMenu>
-      <NavigationMenuList className="flex items-center gap-2">
-        {/* Dashboard */}
-        <NavigationMenuItem>
-          <Link href="/">
-            <Button 
-              variant="ghost" 
-              className="flex items-center gap-2 transition-colors duration-200 hover:bg-primary/10 px-4 py-2"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              <span>Πίνακας Ελέγχου</span>
-            </Button>
-          </Link>
-        </NavigationMenuItem>
-
-        {/* Documents Section - Renamed to Διαβιβαστικά */}
-        <NavigationMenuItem>
-          <NavigationMenuTrigger 
-            className="flex items-center gap-2 transition-colors duration-200 hover:bg-primary/10 px-4 py-2 data-[state=open]:bg-primary/10"
-          >
-            <FileText className="h-4 w-4" />
-            Διαβιβαστικά
-          </NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <div className="grid gap-1 p-2 w-[220px]">
-              <Link href="/documents">
-                <NavigationMenuLink
-                  className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span>{isRegularUser ? 'Δημιουργία' : 'Προβολή'}</span>
-                  </div>
-                </NavigationMenuLink>
-              </Link>
-              <Link href="/templates">
-                <NavigationMenuLink
-                  className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                >
-                  <div className="flex items-center gap-2">
-                    <Library className="h-4 w-4" />
-                    <span>Πρότυπα</span>
-                  </div>
-                </NavigationMenuLink>
-              </Link>
-            </div>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-
-        {/* Projects Section */}
-        <NavigationMenuItem>
-          <NavigationMenuTrigger 
-            className="flex items-center gap-2 transition-colors duration-200 hover:bg-primary/10 px-4 py-2 data-[state=open]:bg-primary/10"
-          >
-            <FolderKanban className="h-4 w-4" />
-            Έργα
-          </NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <div className="grid gap-1 p-2 w-[220px]">
-              <Link href="/projects">
-                <NavigationMenuLink
-                  className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                >
-                  <div className="flex items-center gap-2">
-                    <FolderKanban className="h-4 w-4" />
-                    <span>Όλα τα Έργα</span>
-                  </div>
-                </NavigationMenuLink>
-              </Link>
-              <Link href="/projects/active">
-                <NavigationMenuLink
-                  className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileSpreadsheet className="h-4 w-4" />
-                    <span>Ενεργά</span>
-                  </div>
-                </NavigationMenuLink>
-              </Link>
-            </div>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-
-        {/* Management Section - Only for Admin/Manager */}
-        {(isManager || isAdmin) && (
-          <NavigationMenuItem>
-            <NavigationMenuTrigger 
-              className="flex items-center gap-2 transition-colors duration-200 hover:bg-primary/10 px-4 py-2 data-[state=open]:bg-primary/10"
-            >
-              <Settings className="h-4 w-4" />
-              Διαχείριση
-            </NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <div className="grid gap-1 p-2 w-[220px]">
-                <Link href="/budget-history">
-                  <NavigationMenuLink
-                    className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                  >
-                    <div className="flex items-center gap-2">
-                      <History className="h-4 w-4" />
-                      <span>Ιστορικό Προϋπ.</span>
-                    </div>
-                  </NavigationMenuLink>
-                </Link>
-                {isAdmin && (
-                  <>
-                    <Link href="/users">
-                      <NavigationMenuLink
-                        className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4" />
-                          <span>Χρήστες</span>
-                        </div>
-                      </NavigationMenuLink>
-                    </Link>
-                    <Link href="/notifications">
-                      <NavigationMenuLink
-                        className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Bell className="h-4 w-4" />
-                          <span>Ειδοποιήσεις</span>
-                          <motion.span 
-                            className="absolute right-2 h-2 w-2 bg-primary rounded-full"
-                            animate={{ 
-                              scale: [1, 1.2, 1],
-                              opacity: [1, 0.8, 1] 
-                            }}
-                            transition={{
-                              duration: 2,
-                              repeat: Infinity,
-                              ease: "easeInOut"
-                            }}
-                          />
-                        </div>
-                      </NavigationMenuLink>
-                    </Link>
-                  </>
-                )}
-              </div>
-            </NavigationMenuContent>
-          </NavigationMenuItem>
-        )}
-
-        {/* User Settings */}
-        <NavigationMenuItem>
-          <NavigationMenuTrigger 
-            className="flex items-center gap-2 transition-colors duration-200 hover:bg-primary/10 px-4 py-2 data-[state=open]:bg-primary/10"
-          >
-            <Settings className="h-4 w-4" />
-            Ρυθμίσεις
-          </NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <div className="grid gap-1 p-2 w-[220px]">
-              <NavigationMenuLink
-                className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                onClick={() => setIsPasswordModalOpen(true)}
-              >
-                <div className="flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  <span>Αλλαγή Κωδικού</span>
-                </div>
-              </NavigationMenuLink>
-              <NavigationMenuLink
-                className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground"
-                onClick={() => logoutMutation.mutate()}
-              >
-                <div className="flex items-center gap-2">
-                  <LogOut className="h-4 w-4" />
-                  <span>Αποσύνδεση</span>
-                </div>
-              </NavigationMenuLink>
-            </div>
-          </NavigationMenuContent>
-        </NavigationMenuItem>
-      </NavigationMenuList>
-      <NavigationMenuViewport className="origin-top-center absolute top-full mt-1.5 h-[var(--radix-navigation-menu-viewport-height)] w-full overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-90 md:w-[var(--radix-navigation-menu-viewport-width)]" />
-    </NavigationMenu>
-  );
-
   return (
     <>
       <motion.header 
@@ -235,6 +53,7 @@ export function Header() {
       >
         <div className="container mx-auto px-4 py-2">
           <div className="flex justify-between items-center">
+            {/* Logo & Title */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -255,9 +74,177 @@ export function Header() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:block">
-              <nav className="flex items-center rounded-lg py-1.5 px-2 shadow-lg shadow-primary/5 backdrop-blur-md bg-background/30">
-                <NavItems />
-              </nav>
+              <NavigationMenu>
+                <NavigationMenuList className="gap-2">
+                  {/* Dashboard */}
+                  <NavigationMenuItem>
+                    <Link href="/">
+                      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        Πίνακας Ελέγχου
+                      </NavigationMenuLink>
+                    </Link>
+                  </NavigationMenuItem>
+
+                  {/* Documents */}
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Διαβιβαστικά
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <ul className="grid w-[200px] gap-1 p-2">
+                        <li>
+                          <Link href="/documents">
+                            <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                              <div className="flex items-center gap-2">
+                                <FileText className="h-4 w-4" />
+                                <span>{isRegularUser ? 'Δημιουργία' : 'Προβολή'}</span>
+                              </div>
+                            </NavigationMenuLink>
+                          </Link>
+                        </li>
+                        <li>
+                          <Link href="/templates">
+                            <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                              <div className="flex items-center gap-2">
+                                <Library className="h-4 w-4" />
+                                <span>Πρότυπα</span>
+                              </div>
+                            </NavigationMenuLink>
+                          </Link>
+                        </li>
+                      </ul>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
+
+                  {/* Projects */}
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger>
+                      <FolderKanban className="h-4 w-4 mr-2" />
+                      Έργα
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <ul className="grid w-[200px] gap-1 p-2">
+                        <li>
+                          <Link href="/projects">
+                            <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                              <div className="flex items-center gap-2">
+                                <FolderKanban className="h-4 w-4" />
+                                <span>Όλα τα Έργα</span>
+                              </div>
+                            </NavigationMenuLink>
+                          </Link>
+                        </li>
+                        <li>
+                          <Link href="/projects/active">
+                            <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                              <div className="flex items-center gap-2">
+                                <FileSpreadsheet className="h-4 w-4" />
+                                <span>Ενεργά</span>
+                              </div>
+                            </NavigationMenuLink>
+                          </Link>
+                        </li>
+                      </ul>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
+
+                  {/* Management - Admin/Manager Only */}
+                  {(isAdmin || isManager) && (
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Διαχείριση
+                      </NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <ul className="grid w-[200px] gap-1 p-2">
+                          <li>
+                            <Link href="/budget-history">
+                              <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                                <div className="flex items-center gap-2">
+                                  <History className="h-4 w-4" />
+                                  <span>Ιστορικό Προϋπ.</span>
+                                </div>
+                              </NavigationMenuLink>
+                            </Link>
+                          </li>
+                          {isAdmin && (
+                            <>
+                              <li>
+                                <Link href="/users">
+                                  <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                                    <div className="flex items-center gap-2">
+                                      <Users className="h-4 w-4" />
+                                      <span>Χρήστες</span>
+                                    </div>
+                                  </NavigationMenuLink>
+                                </Link>
+                              </li>
+                              <li>
+                                <Link href="/notifications">
+                                  <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                                    <div className="flex items-center gap-2">
+                                      <Bell className="h-4 w-4" />
+                                      <span>Ειδοποιήσεις</span>
+                                      <motion.span 
+                                        className="absolute right-2 h-2 w-2 bg-primary rounded-full"
+                                        animate={{ 
+                                          scale: [1, 1.2, 1],
+                                          opacity: [1, 0.8, 1] 
+                                        }}
+                                        transition={{
+                                          duration: 2,
+                                          repeat: Infinity,
+                                          ease: "easeInOut"
+                                        }}
+                                      />
+                                    </div>
+                                  </NavigationMenuLink>
+                                </Link>
+                              </li>
+                            </>
+                          )}
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+                  )}
+
+                  {/* User Settings */}
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Ρυθμίσεις
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <ul className="grid w-[200px] gap-1 p-2">
+                        <li>
+                          <NavigationMenuLink
+                            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
+                            onClick={() => setIsPasswordModalOpen(true)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Key className="h-4 w-4" />
+                              <span>Αλλαγή Κωδικού</span>
+                            </div>
+                          </NavigationMenuLink>
+                        </li>
+                        <li>
+                          <NavigationMenuLink
+                            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
+                            onClick={() => logoutMutation.mutate()}
+                          >
+                            <div className="flex items-center gap-2">
+                              <LogOut className="h-4 w-4" />
+                              <span>Αποσύνδεση</span>
+                            </div>
+                          </NavigationMenuLink>
+                        </li>
+                      </ul>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
+                </NavigationMenuList>
+              </NavigationMenu>
             </div>
 
             {/* Mobile Navigation */}
@@ -291,8 +278,74 @@ export function Header() {
                       Μενού
                     </SheetTitle>
                   </SheetHeader>
-                  <div className="mt-6">
-                    <NavItems />
+                  {/* Mobile Navigation Items */}
+                  <div className="mt-6 flex flex-col gap-2">
+                    <Link href="/">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        Πίνακας Ελέγχου
+                      </Button>
+                    </Link>
+                    <Link href="/documents">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Διαβιβαστικά
+                      </Button>
+                    </Link>
+                    <Link href="/templates">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <Library className="h-4 w-4 mr-2" />
+                        Πρότυπα
+                      </Button>
+                    </Link>
+                    <Link href="/projects">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <FolderKanban className="h-4 w-4 mr-2" />
+                        Έργα
+                      </Button>
+                    </Link>
+                    {(isAdmin || isManager) && (
+                      <>
+                        <Link href="/budget-history">
+                          <Button variant="ghost" className="w-full justify-start">
+                            <History className="h-4 w-4 mr-2" />
+                            Ιστορικό Προϋπ.
+                          </Button>
+                        </Link>
+                        {isAdmin && (
+                          <>
+                            <Link href="/users">
+                              <Button variant="ghost" className="w-full justify-start">
+                                <Users className="h-4 w-4 mr-2" />
+                                Χρήστες
+                              </Button>
+                            </Link>
+                            <Link href="/notifications">
+                              <Button variant="ghost" className="w-full justify-start">
+                                <Bell className="h-4 w-4 mr-2" />
+                                Ειδοποιήσεις
+                              </Button>
+                            </Link>
+                          </>
+                        )}
+                      </>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start"
+                      onClick={() => setIsPasswordModalOpen(true)}
+                    >
+                      <Key className="h-4 w-4 mr-2" />
+                      Αλλαγή Κωδικού
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-start text-destructive hover:text-destructive"
+                      onClick={() => logoutMutation.mutate()}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Αποσύνδεση
+                    </Button>
                   </div>
                 </SheetContent>
               </Sheet>
