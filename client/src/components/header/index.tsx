@@ -1,6 +1,5 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { FileText, FolderKanban, LogOut, Menu, LayoutDashboard, Users, History, Bell, Key, Settings, FileSpreadsheet, Library } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -40,14 +39,14 @@ export function Header() {
   }, []);
 
   const NavItems = () => (
-    <NavigationMenu>
+    <NavigationMenu className="relative">
       <NavigationMenuList className="gap-2">
         {/* Dashboard */}
         <NavigationMenuItem>
           <Link href="/">
             <Button 
               variant="ghost" 
-              className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10"
+              className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 py-6"
             >
               <LayoutDashboard className="h-4 w-4" />
               <span>Πίνακας Ελέγχου</span>
@@ -56,13 +55,13 @@ export function Header() {
         </NavigationMenuItem>
 
         {/* Documents Section - Renamed to Διαβιβαστικά */}
-        <NavigationMenuItem>
-          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10">
+        <NavigationMenuItem className="relative">
+          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10 py-6 px-4">
             <FileText className="h-4 w-4 mr-2" />
             Διαβιβαστικά
           </NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <div className="grid gap-2 p-4 w-[200px]">
+          <NavigationMenuContent className="absolute top-full left-0 mt-1 w-[200px] rounded-md bg-white shadow-lg z-50">
+            <div className="grid gap-2 p-4">
               <Link href="/documents">
                 <Button variant="ghost" className="w-full justify-start">
                   <FileText className="h-4 w-4 mr-2" />
@@ -80,13 +79,13 @@ export function Header() {
         </NavigationMenuItem>
 
         {/* Projects Section */}
-        <NavigationMenuItem>
-          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10">
+        <NavigationMenuItem className="relative">
+          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10 py-6 px-4">
             <FolderKanban className="h-4 w-4 mr-2" />
             Έργα
           </NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <div className="grid gap-2 p-4 w-[200px]">
+          <NavigationMenuContent className="absolute top-full left-0 mt-1 w-[200px] rounded-md bg-white shadow-lg z-50">
+            <div className="grid gap-2 p-4">
               <Link href="/projects">
                 <Button variant="ghost" className="w-full justify-start">
                   <FolderKanban className="h-4 w-4 mr-2" />
@@ -105,13 +104,13 @@ export function Header() {
 
         {/* Management Section - Only for Admin/Manager */}
         {(isManager || isAdmin) && (
-          <NavigationMenuItem>
-            <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10">
+          <NavigationMenuItem className="relative">
+            <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10 py-6 px-4">
               <Settings className="h-4 w-4 mr-2" />
               Διαχείριση
             </NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <div className="grid gap-2 p-4 w-[200px]">
+            <NavigationMenuContent className="absolute top-full left-0 mt-1 w-[200px] rounded-md bg-white shadow-lg z-50">
+              <div className="grid gap-2 p-4">
                 <Link href="/budget-history">
                   <Button variant="ghost" className="w-full justify-start">
                     <History className="h-4 w-4 mr-2" />
@@ -152,13 +151,13 @@ export function Header() {
         )}
 
         {/* User Settings */}
-        <NavigationMenuItem>
-          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10">
+        <NavigationMenuItem className="relative">
+          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10 py-6 px-4">
             <Settings className="h-4 w-4 mr-2" />
             Ρυθμίσεις
           </NavigationMenuTrigger>
-          <NavigationMenuContent>
-            <div className="grid gap-2 p-4 w-[200px]">
+          <NavigationMenuContent className="absolute top-full left-0 mt-1 w-[200px] rounded-md bg-white shadow-lg z-50">
+            <div className="grid gap-2 p-4">
               <Button 
                 variant="ghost" 
                 onClick={() => setIsPasswordModalOpen(true)}
@@ -195,7 +194,7 @@ export function Header() {
         animate={{ y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-2">
           <div className="flex justify-between items-center">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -217,14 +216,14 @@ export function Header() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center">
-              <motion.div 
+              <motion.nav
                 className="flex items-center rounded-lg p-1 shadow-lg shadow-primary/5 backdrop-blur-md bg-background/30"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5 }}
               >
                 <NavItems />
-              </motion.div>
+              </motion.nav>
             </div>
 
             {/* Mobile Navigation */}
