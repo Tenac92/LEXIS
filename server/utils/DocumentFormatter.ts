@@ -2,6 +2,7 @@ import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, Align
 import { supabase } from '../config/db';
 import * as fs from 'fs';
 import * as path from 'path';
+import { format } from 'date-fns';
 import { before } from 'node:test';
 
 interface UnitDetails {
@@ -48,7 +49,9 @@ export class DocumentFormatter {
   }
 
   private static async createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Promise<Table> {
-    const logoBuffer = await this.getLogoImageData();
+    try {
+      console.log("[DocumentFormatter] Starting to create document header");
+      const logoBuffer = await this.getLogoImageData();
 
       return new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
@@ -122,59 +125,65 @@ export class DocumentFormatter {
                       new TextRun({
                         text: `Ημερομηνία: ${documentData.protocol_date ? format(new Date(documentData.protocol_date), 'dd/MM/yyyy') : '........................'}
 `                      }),
-                  ],
-                  alignment: AlignmentType.RIGHT,
-                  spacing: { before: 520 },
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: `Αρ. Πρωτ.: ${documentData.protocol_number_input || documentData.protocol_number || '......................'}`, bold: true })],
-                  alignment: AlignmentType.RIGHT,
-                }),
-                new Paragraph({
-                  text: "",
-                  spacing: { before: 360 },
-                }),
-                new Table({
-                  width: { size: 100, type: WidthType.PERCENTAGE },
-                  rows: [
-                    new TableRow({
-                      children: [
-                        new TableCell({
-                          width: { size: 50, type: WidthType.PERCENTAGE },
-                          children: [
-                            new Paragraph({
-                              text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών",
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-                              alignment: AlignmentType.LEFT,
-                            }),
-                          ],
-                        }),
-                        new TableCell({
-                          width: { size: 50, type: WidthType.PERCENTAGE },
-                          children: [
-                            new Paragraph({
-                              text: "Αντίγραφο στο:",
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              text: "Χωρίς αναγνωρίσιμο κείμενο",
-                              alignment: AlignmentType.LEFT,
-                            }),
-                          ],
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    });
+                    ],
+                    alignment: AlignmentType.RIGHT,
+                    spacing: { before: 520 },
+                  }),
+                  new Paragraph({
+                    children: [new TextRun({ text: `Αρ. Πρωτ.: ${documentData.protocol_number_input || documentData.protocol_number || '......................'}`, bold: true })],
+                    alignment: AlignmentType.RIGHT,
+                  }),
+                  new Paragraph({
+                    text: "",
+                    spacing: { before: 360 },
+                  }),
+                  new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    rows: [
+                      new TableRow({
+                        children: [
+                          new TableCell({
+                            width: { size: 50, type: WidthType.PERCENTAGE },
+                            children: [
+                              new Paragraph({
+                                text: "ΠΡΟΣ: Γενική Δ/νση Οικονομικών Υπηρεσιών",
+                                alignment: AlignmentType.LEFT,
+                              }),
+                              new Paragraph({
+                                text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                                alignment: AlignmentType.LEFT,
+                              }),
+                            ],
+                          }),
+                          new TableCell({
+                            width: { size: 50, type: WidthType.PERCENTAGE },
+                            children: [
+                              new Paragraph({
+                                text: "Αντίγραφο στο:",
+                                alignment: AlignmentType.LEFT,
+                              }),
+                              new Paragraph({
+                                text: "Χωρίς αναγνωρίσιμο κείμενο",
+                                alignment: AlignmentType.LEFT,
+                              }),
+                            ],
+                          }),
+                        ],
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+    } catch (error) {
+      console.error('[DocumentFormatter] Error creating document header:', error);
+      throw error;
+    }
+  }
+
   public static async generateDocument(documentData: DocumentData): Promise<Buffer> {
     try {
       console.log("Generating document for:", documentData);
