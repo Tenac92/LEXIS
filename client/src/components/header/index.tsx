@@ -39,14 +39,14 @@ export function Header() {
   }, []);
 
   const NavItems = () => (
-    <NavigationMenu className="relative">
-      <NavigationMenuList className="gap-2">
+    <NavigationMenu className="relative z-50">
+      <NavigationMenuList className="flex items-center gap-2">
         {/* Dashboard */}
         <NavigationMenuItem>
           <Link href="/">
             <Button 
               variant="ghost" 
-              className="flex items-center gap-2 transition-all duration-300 hover:bg-primary/10 py-6"
+              className="flex items-center gap-2 transition-colors duration-200 hover:bg-primary/10 px-4 py-2"
             >
               <LayoutDashboard className="h-4 w-4" />
               <span>Πίνακας Ελέγχου</span>
@@ -55,48 +55,68 @@ export function Header() {
         </NavigationMenuItem>
 
         {/* Documents Section - Renamed to Διαβιβαστικά */}
-        <NavigationMenuItem className="relative">
-          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10 py-6 px-4">
-            <FileText className="h-4 w-4 mr-2" />
+        <NavigationMenuItem>
+          <NavigationMenuTrigger 
+            className="flex items-center gap-2 transition-colors duration-200 hover:bg-primary/10 px-4 py-2 data-[state=open]:bg-primary/10"
+          >
+            <FileText className="h-4 w-4" />
             Διαβιβαστικά
           </NavigationMenuTrigger>
-          <NavigationMenuContent className="absolute top-full left-0 mt-1 w-[200px] rounded-md bg-white shadow-lg z-50">
-            <div className="grid gap-2 p-4">
+          <NavigationMenuContent className="min-w-[220px] bg-popover p-2 shadow-lg rounded-md data-[motion=from-start]:animate-enterFromLeft data-[motion=from-end]:animate-enterFromRight data-[motion=to-start]:animate-exitToLeft data-[motion=to-end]:animate-exitToRight">
+            <div className="grid gap-1">
               <Link href="/documents">
-                <Button variant="ghost" className="w-full justify-start">
-                  <FileText className="h-4 w-4 mr-2" />
-                  {isRegularUser ? 'Δημιουργία' : 'Προβολή'}
-                </Button>
+                <NavigationMenuLink
+                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span>{isRegularUser ? 'Δημιουργία' : 'Προβολή'}</span>
+                  </div>
+                </NavigationMenuLink>
               </Link>
               <Link href="/templates">
-                <Button variant="ghost" className="w-full justify-start">
-                  <Library className="h-4 w-4 mr-2" />
-                  Πρότυπα
-                </Button>
+                <NavigationMenuLink
+                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                >
+                  <div className="flex items-center gap-2">
+                    <Library className="h-4 w-4" />
+                    <span>Πρότυπα</span>
+                  </div>
+                </NavigationMenuLink>
               </Link>
             </div>
           </NavigationMenuContent>
         </NavigationMenuItem>
 
         {/* Projects Section */}
-        <NavigationMenuItem className="relative">
-          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10 py-6 px-4">
-            <FolderKanban className="h-4 w-4 mr-2" />
+        <NavigationMenuItem>
+          <NavigationMenuTrigger 
+            className="flex items-center gap-2 transition-colors duration-200 hover:bg-primary/10 px-4 py-2 data-[state=open]:bg-primary/10"
+          >
+            <FolderKanban className="h-4 w-4" />
             Έργα
           </NavigationMenuTrigger>
-          <NavigationMenuContent className="absolute top-full left-0 mt-1 w-[200px] rounded-md bg-white shadow-lg z-50">
-            <div className="grid gap-2 p-4">
+          <NavigationMenuContent className="min-w-[220px] bg-popover p-2 shadow-lg rounded-md">
+            <div className="grid gap-1">
               <Link href="/projects">
-                <Button variant="ghost" className="w-full justify-start">
-                  <FolderKanban className="h-4 w-4 mr-2" />
-                  Όλα τα Έργα
-                </Button>
+                <NavigationMenuLink
+                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                >
+                  <div className="flex items-center gap-2">
+                    <FolderKanban className="h-4 w-4" />
+                    <span>Όλα τα Έργα</span>
+                  </div>
+                </NavigationMenuLink>
               </Link>
               <Link href="/projects/active">
-                <Button variant="ghost" className="w-full justify-start">
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Ενεργά
-                </Button>
+                <NavigationMenuLink
+                  className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    <span>Ενεργά</span>
+                  </div>
+                </NavigationMenuLink>
               </Link>
             </div>
           </NavigationMenuContent>
@@ -104,44 +124,58 @@ export function Header() {
 
         {/* Management Section - Only for Admin/Manager */}
         {(isManager || isAdmin) && (
-          <NavigationMenuItem className="relative">
-            <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10 py-6 px-4">
-              <Settings className="h-4 w-4 mr-2" />
+          <NavigationMenuItem>
+            <NavigationMenuTrigger 
+              className="flex items-center gap-2 transition-colors duration-200 hover:bg-primary/10 px-4 py-2 data-[state=open]:bg-primary/10"
+            >
+              <Settings className="h-4 w-4" />
               Διαχείριση
             </NavigationMenuTrigger>
-            <NavigationMenuContent className="absolute top-full left-0 mt-1 w-[200px] rounded-md bg-white shadow-lg z-50">
-              <div className="grid gap-2 p-4">
+            <NavigationMenuContent className="min-w-[220px] bg-popover p-2 shadow-lg rounded-md">
+              <div className="grid gap-1">
                 <Link href="/budget-history">
-                  <Button variant="ghost" className="w-full justify-start">
-                    <History className="h-4 w-4 mr-2" />
-                    Ιστορικό Προϋπ.
-                  </Button>
+                  <NavigationMenuLink
+                    className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                  >
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4" />
+                      <span>Ιστορικό Προϋπ.</span>
+                    </div>
+                  </NavigationMenuLink>
                 </Link>
                 {isAdmin && (
                   <>
                     <Link href="/users">
-                      <Button variant="ghost" className="w-full justify-start">
-                        <Users className="h-4 w-4 mr-2" />
-                        Χρήστες
-                      </Button>
+                      <NavigationMenuLink
+                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          <span>Χρήστες</span>
+                        </div>
+                      </NavigationMenuLink>
                     </Link>
                     <Link href="/notifications">
-                      <Button variant="ghost" className="w-full justify-start relative">
-                        <Bell className="h-4 w-4 mr-2" />
-                        Ειδοποιήσεις
-                        <motion.span 
-                          className="absolute right-2 top-1/2 -translate-y-1/2 h-2 w-2 bg-primary rounded-full"
-                          animate={{ 
-                            scale: [1, 1.2, 1],
-                            opacity: [1, 0.8, 1] 
-                          }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                          }}
-                        />
-                      </Button>
+                      <NavigationMenuLink
+                        className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Bell className="h-4 w-4" />
+                          <span>Ειδοποιήσεις</span>
+                          <motion.span 
+                            className="absolute right-2 h-2 w-2 bg-primary rounded-full"
+                            animate={{ 
+                              scale: [1, 1.2, 1],
+                              opacity: [1, 0.8, 1] 
+                            }}
+                            transition={{
+                              duration: 2,
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }}
+                          />
+                        </div>
+                      </NavigationMenuLink>
                     </Link>
                   </>
                 )}
@@ -151,30 +185,33 @@ export function Header() {
         )}
 
         {/* User Settings */}
-        <NavigationMenuItem className="relative">
-          <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10 py-6 px-4">
-            <Settings className="h-4 w-4 mr-2" />
+        <NavigationMenuItem>
+          <NavigationMenuTrigger 
+            className="flex items-center gap-2 transition-colors duration-200 hover:bg-primary/10 px-4 py-2 data-[state=open]:bg-primary/10"
+          >
+            <Settings className="h-4 w-4" />
             Ρυθμίσεις
           </NavigationMenuTrigger>
-          <NavigationMenuContent className="absolute top-full left-0 mt-1 w-[200px] rounded-md bg-white shadow-lg z-50">
-            <div className="grid gap-2 p-4">
-              <Button 
-                variant="ghost" 
+          <NavigationMenuContent className="min-w-[220px] bg-popover p-2 shadow-lg rounded-md">
+            <div className="grid gap-1">
+              <NavigationMenuLink
+                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                 onClick={() => setIsPasswordModalOpen(true)}
-                className="w-full justify-start"
               >
-                <Key className="h-4 w-4 mr-2" />
-                Αλλαγή Κωδικού
-              </Button>
-              <Button 
-                variant="ghost" 
+                <div className="flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  <span>Αλλαγή Κωδικού</span>
+                </div>
+              </NavigationMenuLink>
+              <NavigationMenuLink
+                className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground"
                 onClick={() => logoutMutation.mutate()}
-                disabled={logoutMutation.isPending}
-                className="w-full justify-start text-destructive hover:text-destructive"
               >
-                <LogOut className="h-4 w-4 mr-2" />
-                Αποσύνδεση
-              </Button>
+                <div className="flex items-center gap-2">
+                  <LogOut className="h-4 w-4" />
+                  <span>Αποσύνδεση</span>
+                </div>
+              </NavigationMenuLink>
             </div>
           </NavigationMenuContent>
         </NavigationMenuItem>
@@ -185,7 +222,7 @@ export function Header() {
   return (
     <>
       <motion.header 
-        className={`sticky top-0 z-50 border-b backdrop-blur-sm transition-all duration-300 ${
+        className={`sticky top-0 z-40 w-full border-b backdrop-blur-sm transition-all duration-300 ${
           scrolled 
             ? 'bg-gradient-to-r from-background/95 via-background/98 to-background/95 shadow-lg shadow-primary/5' 
             : 'bg-gradient-to-r from-background/80 via-background/90 to-background/80'
@@ -215,15 +252,10 @@ export function Header() {
             </motion.div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center">
-              <motion.nav
-                className="flex items-center rounded-lg p-1 shadow-lg shadow-primary/5 backdrop-blur-md bg-background/30"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-              >
+            <div className="hidden md:block">
+              <nav className="flex items-center rounded-lg py-1.5 px-2 shadow-lg shadow-primary/5 backdrop-blur-md bg-background/30">
                 <NavItems />
-              </motion.nav>
+              </nav>
             </div>
 
             {/* Mobile Navigation */}
@@ -257,7 +289,7 @@ export function Header() {
                       Μενού
                     </SheetTitle>
                   </SheetHeader>
-                  <div className="flex flex-col gap-4 mt-6">
+                  <div className="mt-6">
                     <NavItems />
                   </div>
                 </SheetContent>
