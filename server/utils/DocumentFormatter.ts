@@ -36,7 +36,7 @@ export class DocumentFormatter {
   private static readonly DEFAULT_FONT_SIZE = 22;
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
-    top: 100,
+    top: 20,
     right: 600,
     bottom: 850,
     left: 600,
@@ -50,160 +50,161 @@ export class DocumentFormatter {
   private static async createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Promise<Table> {
     const logoBuffer = await this.getLogoImageData();
 
-      return new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        columnWidths: [55, 45],
-        borders: {
-          top: { style: BorderStyle.NONE },
-          bottom: { style: BorderStyle.NONE },
-          left: { style: BorderStyle.NONE },
-          right: { style: BorderStyle.NONE },
-          insideHorizontal: { style: BorderStyle.NONE },
-          insideVertical: { style: BorderStyle.NONE },
-        },
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                width: { size: 55, type: WidthType.PERCENTAGE },
-                borders: {
-                  top: { style: BorderStyle.NONE },
-                  bottom: { style: BorderStyle.NONE },
-                  left: { style: BorderStyle.NONE },
-                  right: { style: BorderStyle.NONE },
-                },
-                margins: {
-                  top: 0,
-                  bottom: 120,
-                  left: 120,
-                  right: 120
-                },
-                children: [
-                  new Paragraph({
-                    children: [
-                      new ImageRun({
-                        data: logoBuffer,
-                        transformation: {
-                          width: 50,
-                          height: 50,
-                        },
-                        type: 'png',
-                      }),
-                      this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
-                      this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
-                      this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
-                      this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
-                      this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
-                      this.createBoldParagraph(""),
-                      this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
-                      this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
-                      this.createContactDetail("Πληροφορίες", documentData.user_name || "......................"),
-                    ],
-                    spacing: { after: 200 },
-                  }),
-                ],
-              }),
-              new TableCell({
-                width: { size: 45, type: WidthType.PERCENTAGE },
-                borders: {
-                  top: { style: BorderStyle.NONE },
-                  bottom: { style: BorderStyle.NONE },
-                  left: { style: BorderStyle.NONE },
-                  right: { style: BorderStyle.NONE },
-                },
-                margins: {
-                  top: 120,
-                  bottom: 120,
-                  left: 120,
-                  right: 120
-                },
-                children: [
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: `Ημερομηνία: ${documentData.protocol_date ? format(new Date(documentData.protocol_date), 'dd/MM/yyyy') : '........................'}
-`                      }),
-                    ],
-                    alignment: AlignmentType.RIGHT,
-                    spacing: { before: 520 },
-                  }),
-                  new Paragraph({
-                    children: [new TextRun({ text: `Αρ. Πρωτ.: ${documentData.protocol_number_input || documentData.protocol_number || '......................'}`, bold: true })],
-                    alignment: AlignmentType.RIGHT,
-                  }),
-                  new Paragraph({
-                    text: "",
-                    spacing: { before: 360 },
-                  }),
-                  new Table({
-                    width: { size: 100, type: WidthType.PERCENTAGE },
-                    borders: {
-                      top: { style: BorderStyle.NONE },
-                      bottom: { style: BorderStyle.NONE },
-                      left: { style: BorderStyle.NONE },
-                      right: { style: BorderStyle.NONE },
-                      insideHorizontal: { style: BorderStyle.NONE },
-                      insideVertical: { style: BorderStyle.NONE },
-                    },
-                    rows: [
-                      new TableRow({
-                        children: [
-                          new TableCell({
-                            width: { size: 15, type: WidthType.PERCENTAGE },
-                            borders: {
-                              top: { style: BorderStyle.NONE },
-                              bottom: { style: BorderStyle.NONE },
-                              left: { style: BorderStyle.NONE },
-                              right: { style: BorderStyle.NONE },
-                            },
-                            children: [
-                              new Paragraph({
-                                text: "ΠΡΟΣ:",
-                                spacing: { before: 700 },
-                                alignment: AlignmentType.LEFT,
-                              }),
-                            ],
-                          }),
-                          new TableCell({
-                            width: { size: 85, type: WidthType.PERCENTAGE },
-                            borders: {
-                              top: { style: BorderStyle.NONE },
-                              bottom: { style: BorderStyle.NONE },
-                              left: { style: BorderStyle.NONE },
-                              right: { style: BorderStyle.NONE },
-                            },
-                            children: [
-                              new Paragraph({
-                                text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
-                                spacing: { before: 700 },
-                                alignment: AlignmentType.LEFT,
-                              }),
-                              new Paragraph({
-                                text: "Διεύθυνση Οικονομικής Διαχείρισης",
-                                alignment: AlignmentType.LEFT,
-                              }),
-                              new Paragraph({
-                                text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-                                alignment: AlignmentType.LEFT,
-                              }),
-                              new Paragraph({
-                                text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-                                alignment: AlignmentType.LEFT,
-                              }),
-                            ],
-                          }),
-                        ],
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      });
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [55, 45],
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 55, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              margins: {
+                top: 0,
+                bottom: 120,
+                left: 120,
+                right: 120
+              },
+              children: [
+                new Paragraph({
+                  children: [
+                    new ImageRun({
+                      data: logoBuffer,
+                      transformation: {
+                        width: 50,
+                        height: 50,
+                      },
+                      type: 'png',
+                    }),
+                    this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+                    this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
+                    this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
+                    this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
+                    this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
+                    this.createBoldParagraph(""),
+                    this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
+                    this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
+                    this.createContactDetail("Πληροφορίες", documentData.user_name || "......................"),
+                  ],
+                  spacing: { after: 200 },
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 45, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              margins: {
+                top: 120,
+                bottom: 120,
+                left: 120,
+                right: 120
+              },
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Ημερομηνία: ${documentData.protocol_date ? format(new Date(documentData.protocol_date), 'dd/MM/yyyy') : '........................'}
+`
+                    }),
+                  ],
+                  alignment: AlignmentType.RIGHT,
+                  spacing: { before: 520 },
+                }),
+                new Paragraph({
+                  children: [new TextRun({ text: `Αρ. Πρωτ.: ${documentData.protocol_number_input || documentData.protocol_number || '......................'}`, bold: true })],
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "",
+                  spacing: { before: 360 },
+                }),
+                new Table({
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  borders: {
+                    top: { style: BorderStyle.NONE },
+                    bottom: { style: BorderStyle.NONE },
+                    left: { style: BorderStyle.NONE },
+                    right: { style: BorderStyle.NONE },
+                    insideHorizontal: { style: BorderStyle.NONE },
+                    insideVertical: { style: BorderStyle.NONE },
+                  },
+                  rows: [
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          width: { size: 15, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          children: [
+                            new Paragraph({
+                              text: "ΠΡΟΣ:",
+                              spacing: { before: 700 },
+                              alignment: AlignmentType.LEFT,
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          width: { size: 85, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          children: [
+                            new Paragraph({
+                              text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                              spacing: { before: 700 },
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                          ],
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
   }
-    
+
   public static async generateDocument(documentData: DocumentData): Promise<Buffer> {
     try {
       console.log("Generating document for:", documentData);
@@ -612,3 +613,9 @@ export class DocumentFormatter {
     }
   }
 }
+
+// Assuming 'format' is defined elsewhere and handles date formatting.  If not, you'll need to add a date formatting function.
+const format = (date: Date, formatString: string) => {
+  // Add your date formatting logic here.  This is a placeholder.  A real implementation might use a library like moment.js or date-fns.
+  return date.toLocaleDateString();
+};
