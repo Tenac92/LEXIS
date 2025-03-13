@@ -55,11 +55,11 @@ export function Header() {
           </Link>
         </NavigationMenuItem>
 
-        {/* Documents Section */}
+        {/* Documents Section - Renamed to Διαβιβαστικά */}
         <NavigationMenuItem>
           <NavigationMenuTrigger className="bg-transparent hover:bg-primary/10">
             <FileText className="h-4 w-4 mr-2" />
-            Έγγραφα
+            Διαβιβαστικά
           </NavigationMenuTrigger>
           <NavigationMenuContent>
             <div className="grid gap-2 p-4 w-[200px]">
