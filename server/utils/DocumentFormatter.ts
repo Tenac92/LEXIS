@@ -159,7 +159,7 @@ export class DocumentFormatter {
                   unitDetails?.unit_name || documentData.unit,
                 ),
                 this.createBoldParagraph(userInfo.department),
-                this.createBlankLine(1),
+                this.createBlankLine(10),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
                 this.createContactDetail(
@@ -174,7 +174,7 @@ export class DocumentFormatter {
                   "Email",
                   unitDetails?.email || "......................",
                 ),
-                this.createBlankLine(0),
+                this.createBlankLine(10),
               ],
             }),
             new TableCell({
