@@ -254,7 +254,7 @@ export class DocumentFormatter {
         },
         children: [
           await this.createDocumentHeader(documentData, unitDetails || undefined),
-          ...this.createDocumentSubject(),
+          ...this.createDocumentSubject(documentData), // Updated line
           ...this.createMainContent(documentData),
           this.createPaymentTable(documentData.recipients || []),
           this.createNote(),
@@ -295,7 +295,7 @@ export class DocumentFormatter {
     }
   }
 
-  private static createDocumentSubject(): (Table | Paragraph)[] {
+  private static createDocumentSubject(documentData: DocumentData): (Table | Paragraph)[] {
     const subjectText = [
       {
         text: "ΘΕΜΑ:",
