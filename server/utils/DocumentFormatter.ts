@@ -153,29 +153,13 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ."),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit,),
                 this.createBoldParagraph(userInfo.department),
-                new Paragraph({ 
-                  text: "",
-                  children: [
-                    new TextRun({
-                      text: "",
-                      size: DocumentFormatter.DEFAULT_FONT_SIZE - 2,
-                    }),
-                  ],
-                }),
+                this.createBlankLine(0),
                 this.createContactDetail("Ταχ. Δ/νση","Κηφισίας 124 & Ιατρίδου 2",),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
                 this.createContactDetail("Πληροφορίες",userInfo.name || "......................",),
                 this.createContactDetail("Τηλέφωνο",userInfo.contact_number || "......................",),
                 this.createContactDetail("Email",unitDetails?.email || "......................",),
-                new Paragraph({ 
-                  text: "",
-                  children: [
-                    new TextRun({
-                      text: "",
-                      size: DocumentFormatter.DEFAULT_FONT_SIZE - 2,
-                    }),
-                  ],
-                }),
+                this.createBlankLine(0),
               ],
             }),
             new TableCell({
@@ -755,10 +739,10 @@ export class DocumentFormatter {
     });
   }
 
-  private static createBlankLine(size: number = 240): Paragraph {
+  private static createBlankLine(size: number = 50): Paragraph {
     return new Paragraph({
-      children: [new TextRun({ text: "" })],
-      spacing: { before: size, after: size }
+      children: [new TextRun({ text: " ".repeat(size / 100), size: (size < 100 ? this.DEFAULT_FONT_SIZE - 4 : 0) })],
+      spacing: { before: 0, after: 0 }
     });
   }
 
