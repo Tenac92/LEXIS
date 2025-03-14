@@ -153,7 +153,7 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ."),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit,),
                 this.createBoldParagraph(userInfo.department),
-                this.createBlankLine(0),
+                this.createBlankLine(1),
                 this.createContactDetail("Ταχ. Δ/νση","Κηφισίας 124 & Ιατρίδου 2",),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
                 this.createContactDetail("Πληροφορίες",userInfo.name || "......................",),
@@ -739,9 +739,9 @@ export class DocumentFormatter {
     });
   }
 
-  private static createBlankLine(size: number = 120): Paragraph {
+  private static createBlankLine(size: number = 60): Paragraph {
     return new Paragraph({
-      children: [new TextRun({ text: " ".repeat(size / 100), size: (size < 100 ? this.DEFAULT_FONT_SIZE - 4 : 0) })],
+      children: [new TextRun({ text: " ".repeat(size / 100), size: (size < 100 ? this.DEFAULT_FONT_SIZE - 10 : 0) })],
       spacing: { before: size / 2, after: size / 2 }
     });
   }
