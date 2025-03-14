@@ -1,0 +1,59 @@
+INSERT INTO
+  "public"."project_catalog" (
+    "mis",
+    "e069",
+    "na271",
+    "na853",
+    "event_description",
+    "project_title",
+    "event_type",
+    "event_year",
+    "region",
+    "implementing_agency",
+    "expenditure_type",
+    "kya",
+    "fek",
+    "ada",
+    "procedures",
+    "ada_import_sana271",
+    "ada_import_sana853",
+    "budget_decision",
+    "funding_decision",
+    "allocation_decision",
+    "budget_e069",
+    "budget_na271",
+    "budget_na853",
+    "status"
+  )
+VALUES
+  (
+    '5174689',
+    '2021ΣΕ06900010',
+    '2022ΝΑ27100025',
+    '2024ΝΑ85300035',
+    '2021 πλημμύρες Σέρρες',
+    'Δωρεάν κρατική αρωγή για την επισκευή ή ανακατασκευή κτιρίων που υπέστησαν βλάβες από τις πλημμύρες της 04/01/2021 σε περιοχές της Π.Ε. Σερρών της Π. Κεντρ. Μακεδονίας καιθώς και δαπ. μετακ. μηχανικών',
+    'ΠΛΗΜΜΥΡΑ',
+    '"{2021]}"',
+    jsonb_build_object(
+      'region', 'ΚΕΝΤΡ. ΜΑΚΕΔΟΝΙΑΣ',
+      'regional_unit', array['ΣΕΡΡΩΝ'],
+      'municipality', null
+    ),
+    jsonb_build_array('ΔΑΕΦΚ-ΒΕ'),
+    jsonb_build_array('ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΕΚΤΟΣ ΕΔΡΑΣ'),
+    'ΔΑΕΦΚ-ΚΕ/7247/Α325/2021',
+    '1972/Β/2021',
+    '63Ω4465ΧΘΞ-ΞΝΟ',
+    '1577/Β/2020
+1877/Β/2020',
+    jsonb_build_array('ΨΦ31465ΧΘΞ-ΠΙΧ'),
+    jsonb_build_array('ΨΠ8Η46ΝΠΙΘ-9ΞΕ'),
+    jsonb_build_array('ΡΠΘΡΗ-ΚΦΧ'),
+    jsonb_build_array('9Κ8ΤΗ-Β2Μ'),
+    jsonb_build_array('ΨΥΓΩ46ΝΠΙΘ-1ΔΚ'),
+    '1024610.00',
+    '1024610.00',
+    '987089.78',
+    null
+  );
