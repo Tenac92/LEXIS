@@ -755,6 +755,13 @@ export class DocumentFormatter {
     });
   }
 
+  private static createBlankLine(size: number = 240): Paragraph {
+    return new Paragraph({
+      children: [new TextRun({ text: "" })],
+      spacing: { before: size, after: size }
+    });
+  }
+
   private static createHeaderCell(
     text: string,
     width: string | number,
