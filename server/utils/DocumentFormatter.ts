@@ -160,7 +160,10 @@ export class DocumentFormatter {
                 ),
                 this.createBoldParagraph(userInfo.department),
                 this.createBlankLine(10),
-                this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
+                this.createContactDetail(
+                  "Ταχ. Δ/νση",
+                  "Κηφισίας 124 & Ιατρίδου 2",
+                ),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
                 this.createContactDetail(
                   "Πληροφορίες",
@@ -249,7 +252,7 @@ export class DocumentFormatter {
                           children: [
                             new Paragraph({
                               text: "ΠΡΟΣ:",
-                              spacing: { before: 1800 },
+                              spacing: { before: 2000 },
                               alignment: AlignmentType.LEFT,
                             }),
                           ],
@@ -265,20 +268,20 @@ export class DocumentFormatter {
                           children: [
                             new Paragraph({
                               text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
-                              spacing: { before: 1800 },
-                              alignment: AlignmentType.LEFT,
+                              spacing: { before: 2000 },
+                              alignment: AlignmentType.JUSTIFIED,
                             }),
                             new Paragraph({
                               text: "Διεύθυνση Οικονομικής Διαχείρισης",
-                              alignment: AlignmentType.LEFT,
+                              alignment: AlignmentType.JUSTIFIED,
                             }),
                             new Paragraph({
                               text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-                              alignment: AlignmentType.LEFT,
+                              alignment: AlignmentType.JUSTIFIED,
                             }),
                             new Paragraph({
                               text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-                              alignment: AlignmentType.LEFT,
+                              alignment: AlignmentType.JUSTIFIED,
                             }),
                           ],
                         }),
@@ -425,6 +428,7 @@ export class DocumentFormatter {
     documentData: DocumentData,
   ): (Paragraph | Table)[] {
     return [
+      this.createBlankLine(8),
       new Paragraph({
         children: [
           new TextRun({
@@ -433,20 +437,15 @@ export class DocumentFormatter {
           }),
         ],
       }),
-      new Paragraph({
-        text: "",
-      }),
+      this.createBlankLine(14),
       new Paragraph({
         children: [
           new TextRun({
             text: "Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε. , σύμφωνα με τα κάτωθι στοιχεία.",
           }),
         ],
-        text: "",
       }),
-      new Paragraph({
-        text: "",
-      }),
+      this.createBlankLine(14),
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         columnWidths: [20, 80],
@@ -567,14 +566,14 @@ export class DocumentFormatter {
               this.createTableCell((index + 1).toString() + ".", "center"),
               this.createTableCell(
                 `${recipient.lastname} ${recipient.firstname}`.trim(),
-                "left",
+                "center",
               ),
               this.createTableCell(
                 recipient.amount.toLocaleString("el-GR", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 }),
-                "right",
+                "center",
               ),
               this.createTableCell(recipient.installment.toString(), "center"),
               this.createTableCell(recipient.afm, "center"),
@@ -613,7 +612,7 @@ export class DocumentFormatter {
 
   private static createNote(): Paragraph {
     return new Paragraph({
-      text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσίας μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+      text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
     });
   }
 
@@ -768,7 +767,7 @@ export class DocumentFormatter {
   private static createBlankLine(size: number = 60): Paragraph {
     return new Paragraph({
       children: [new TextRun({ text: " ", size: size })],
-      spacing: { before: 0, after: 0, line: 100, lineRule: "exact" }
+      spacing: { before: 0, after: 0, line: 100, lineRule: "exact" },
     });
   }
 
