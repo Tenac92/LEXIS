@@ -3,6 +3,7 @@ import { supabase } from '../config/db';
 import * as fs from 'fs';
 import * as path from 'path';
 import { format } from 'date-fns';
+import { userInfo } from 'os';
 
 interface UnitDetails {
   unit_name?: string;
@@ -45,7 +46,7 @@ export class DocumentFormatter {
 
 
   private static async getLogoImageData(): Promise<Buffer> {
-    const logoPath = path.join(process.cwd(), 'attached_assets', 'ethnosimo22.png');
+    const logoPath = path.join(process.cwd(), 'server', 'utils', 'ethnosimo22.png');
     return fs.promises.readFile(logoPath);
   }
 
@@ -83,8 +84,8 @@ export class DocumentFormatter {
               margins: {
                 top: 0,
                 bottom: 0,
-                left: 60,
-                right: 60
+                left: 0,
+                right: 0
               },
               children: [
                 new Paragraph({
@@ -92,8 +93,8 @@ export class DocumentFormatter {
                     new ImageRun({
                       data: logoBuffer,
                       transformation: {
-                        width: 50,
-                        height: 50,
+                        width: 40,
+                        height: 40,
                       },
                       type: 'png',
                     })
@@ -105,10 +106,13 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                 this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
+                
                 this.createBoldParagraph(""),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
                 this.createContactDetail("Πληροφορίες", documentData.user_name || "......................"),
+                this.createContactDetail("Τηλέφωνο", documentData?._contact_number || "......................"),
+                this.createContactDetail("Email", unitDetails?.email || "......................")
               ],
             }),
             new TableCell({
@@ -120,10 +124,10 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
               margins: {
-                top: 240,
-                bottom: 240,
-                left: 240,
-                right: 240
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0
               },
               children: [
                 new Paragraph({
@@ -160,7 +164,7 @@ export class DocumentFormatter {
                     new TableRow({
                       children: [
                         new TableCell({
-                          width: { size: 15, type: WidthType.PERCENTAGE },
+                          width: { size: 12, type: WidthType.PERCENTAGE },
                           borders: {
                             top: { style: BorderStyle.NONE },
                             bottom: { style: BorderStyle.NONE },
@@ -176,7 +180,7 @@ export class DocumentFormatter {
                           ],
                         }),
                         new TableCell({
-                          width: { size: 85, type: WidthType.PERCENTAGE },
+                          width: { size: 88, type: WidthType.PERCENTAGE },
                           borders: {
                             top: { style: BorderStyle.NONE },
                             bottom: { style: BorderStyle.NONE },
@@ -225,7 +229,7 @@ export class DocumentFormatter {
       const sections = [{
         properties: {
           page: {
-            size: { width: 11906, height: 18000 }, // A4 size in twips
+            size: { width: 11906, height: 16838 }, 
             margins: this.DOCUMENT_MARGINS,
             orientation: PageOrientation.PORTRAIT
           }
