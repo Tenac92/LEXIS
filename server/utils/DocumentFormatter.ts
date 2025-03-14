@@ -61,11 +61,15 @@ export class DocumentFormatter {
 
   private static async createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Promise<Table> {
     const logoBuffer = await this.getLogoImageData();
-    const userInfo = documentData.generated_by || {
-      name: documentData.user_name,
-      department: documentData.department,
-      contact_number: documentData.contact_number
+
+    // Extract user information with fallbacks
+    const userInfo = {
+      name: documentData.generated_by?.name || documentData.user_name || "",
+      department: documentData.generated_by?.department || documentData.department || "",
+      contact_number: documentData.generated_by?.contact_number || documentData.contact_number || ""
     };
+
+    console.log("Document user info:", userInfo); // Debug log
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -120,7 +124,7 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                 this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
-                this.createBoldParagraph(userInfo.department || ""),
+                this.createBoldParagraph(userInfo.department),
                 this.createBoldParagraph(""),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
