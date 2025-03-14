@@ -148,17 +148,32 @@ export class DocumentFormatter {
                   spacing: { after: 120 },
                 }),
                 this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
-                this.createBoldParagraph("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ",),
-                this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",),
+                this.createBoldParagraph(
+                  "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ",
+                ),
+                this.createBoldParagraph(
+                  "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
+                ),
                 this.createBoldParagraph("ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ."),
-                this.createBoldParagraph(unitDetails?.unit_name || documentData.unit,),
+                this.createBoldParagraph(
+                  unitDetails?.unit_name || documentData.unit,
+                ),
                 this.createBoldParagraph(userInfo.department),
                 this.createBlankLine(1),
-                this.createContactDetail("Ταχ. Δ/νση","Κηφισίας 124 & Ιατρίδου 2",),
+                this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
-                this.createContactDetail("Πληροφορίες",userInfo.name || "......................",),
-                this.createContactDetail("Τηλέφωνο",userInfo.contact_number || "......................",),
-                this.createContactDetail("Email",unitDetails?.email || "......................",),
+                this.createContactDetail(
+                  "Πληροφορίες",
+                  userInfo.name || "......................",
+                ),
+                this.createContactDetail(
+                  "Τηλέφωνο",
+                  userInfo.contact_number || "......................",
+                ),
+                this.createContactDetail(
+                  "Email",
+                  unitDetails?.email || "......................",
+                ),
                 this.createBlankLine(0),
               ],
             }),
@@ -180,7 +195,14 @@ export class DocumentFormatter {
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: `Ημερομηνία: ${documentData.protocol_date ? format(new Date(documentData.protocol_date), "dd/MM/yyyy") : "........................"}`,
+                      text: `Ημερομηνία: ${
+                        documentData.protocol_date
+                          ? format(
+                              new Date(documentData.protocol_date),
+                              "dd/MM/yyyy",
+                            )
+                          : "........................"
+                      }`,
                     }),
                   ],
                   alignment: AlignmentType.RIGHT,
@@ -189,7 +211,11 @@ export class DocumentFormatter {
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: `Αρ. Πρωτ.: ${documentData.protocol_number_input || documentData.protocol_number || "......................"}`,
+                      text: `Αρ. Πρωτ.: ${
+                        documentData.protocol_number_input ||
+                        documentData.protocol_number ||
+                        "......................"
+                      }`,
                       bold: true,
                     }),
                   ],
@@ -392,11 +418,12 @@ export class DocumentFormatter {
           }),
         ],
       }),
-
     ];
   }
 
-  private static createMainContent( documentData: DocumentData,): (Paragraph | Table)[] {
+  private static createMainContent(
+    documentData: DocumentData,
+  ): (Paragraph | Table)[] {
     return [
       new Paragraph({
         children: [
@@ -408,7 +435,7 @@ export class DocumentFormatter {
       }),
       new Paragraph({
         text: "",
-         }),        
+      }),
       new Paragraph({
         children: [
           new TextRun({
@@ -419,8 +446,7 @@ export class DocumentFormatter {
       }),
       new Paragraph({
         text: "",
-         }),
-
+      }),
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         columnWidths: [20, 80],
@@ -741,8 +767,8 @@ export class DocumentFormatter {
 
   private static createBlankLine(size: number = 60): Paragraph {
     return new Paragraph({
-      children: [new TextRun({ text: " ".repeat(size / 100), size: (size < 100 ? this.DEFAULT_FONT_SIZE - 10 : 0) })],
-      spacing: { before: size / 2, after: size / 2 }
+      children: [new TextRun({ text: " ", size: this.DEFAULT_FONT_SIZE - 8 })],
+      spacing: { before: size / 4, after: size / 4 },
     });
   }
 
