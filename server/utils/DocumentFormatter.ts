@@ -24,6 +24,12 @@ interface DocumentData {
   protocol_date?: string;
   user_name?: string;
   attachments?: string[];
+  contact_number?: string;
+  generated_by?: {
+    name: string;
+    email?: string;
+    contact_number?: string;
+  };
   recipients?: Array<{
     firstname: string;
     lastname: string;
@@ -106,12 +112,11 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                 this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
-                
                 this.createBoldParagraph(""),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
-                this.createContactDetail("Πληροφορίες", documentData.user_name || "......................"),
-                this.createContactDetail("Τηλέφωνο", documentData?._contact_number || "......................"),
+                this.createContactDetail("Πληροφορίες", documentData.generated_by?.name || documentData.user_name || "......................"),
+                this.createContactDetail("Τηλέφωνο", documentData.generated_by?.contact_number || documentData.contact_number || "......................"),
                 this.createContactDetail("Email", unitDetails?.email || "......................")
               ],
             }),
