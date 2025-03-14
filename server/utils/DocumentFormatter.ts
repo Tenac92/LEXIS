@@ -768,6 +768,7 @@ export class DocumentFormatter {
   private static createBlankLine(size: number = 60): Paragraph {
     return new Paragraph({
       children: [new TextRun({ text: " ", size: size })],
+      spacing: { before: 0, after: 0, line: 100, lineRule: "exact" }
     });
   }
 
