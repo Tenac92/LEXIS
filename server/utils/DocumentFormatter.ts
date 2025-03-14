@@ -768,7 +768,7 @@ export class DocumentFormatter {
   private static createBlankLine(size: number = 60): Paragraph {
     return new Paragraph({
       children: [new TextRun({ text: " ", size: this.DEFAULT_FONT_SIZE - 8 })],
-      spacing: { before: size / 4, after: size / 4 },
+      spacing: { before: size / 4},
     });
   }
 
