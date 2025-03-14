@@ -392,7 +392,7 @@ export class DocumentFormatter {
           }),
         ],
       }),
-     
+
     ];
   }
 
@@ -420,7 +420,7 @@ export class DocumentFormatter {
       new Paragraph({
         text: "",
          }),
-      
+
       new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         columnWidths: [20, 80],
@@ -739,10 +739,10 @@ export class DocumentFormatter {
     });
   }
 
-  private static createBlankLine(size: number = 50): Paragraph {
+  private static createBlankLine(size: number = 120): Paragraph {
     return new Paragraph({
       children: [new TextRun({ text: " ".repeat(size / 100), size: (size < 100 ? this.DEFAULT_FONT_SIZE - 4 : 0) })],
-      spacing: { before: 0, after: 0 }
+      spacing: { before: size / 2, after: size / 2 }
     });
   }
 
