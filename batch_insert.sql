@@ -79,6 +79,7 @@ WITH parsed_data AS (
     status
   FROM project_catalog_2
   WHERE mis NOT IN (SELECT mis FROM project_catalog)
+  LIMIT 15  -- Process in batches of 15 records
 )
 INSERT INTO project_catalog
 SELECT * FROM parsed_data;
