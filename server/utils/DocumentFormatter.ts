@@ -290,6 +290,7 @@ export class DocumentFormatter {
       throw error;
     }
   }
+
   private static createDocumentSubject(): (Table | Paragraph)[] {
     const subjectText = [
       {
