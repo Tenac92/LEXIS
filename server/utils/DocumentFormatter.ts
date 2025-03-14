@@ -3,12 +3,18 @@ import { supabase } from '../config/db';
 import * as fs from 'fs';
 import * as path from 'path';
 import { format } from 'date-fns';
-import { userInfo } from 'os';
 
 interface UnitDetails {
   unit_name?: string;
   manager?: string;
   email?: string;
+}
+
+interface UserDetails {
+  name: string;
+  email?: string;
+  contact_number?: string;
+  department?: string;
 }
 
 interface DocumentData {
@@ -25,11 +31,8 @@ interface DocumentData {
   user_name?: string;
   attachments?: string[];
   contact_number?: string;
-  generated_by?: {
-    name: string;
-    email?: string;
-    contact_number?: string;
-  };
+  department?: string;
+  generated_by?: UserDetails;
   recipients?: Array<{
     firstname: string;
     lastname: string;
@@ -58,6 +61,11 @@ export class DocumentFormatter {
 
   private static async createDocumentHeader(documentData: DocumentData, unitDetails?: UnitDetails): Promise<Table> {
     const logoBuffer = await this.getLogoImageData();
+    const userInfo = documentData.generated_by || {
+      name: documentData.user_name,
+      department: documentData.department,
+      contact_number: documentData.contact_number
+    };
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -112,11 +120,12 @@ export class DocumentFormatter {
                 this.createBoldParagraph("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
                 this.createBoldParagraph("ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
                 this.createBoldParagraph(unitDetails?.unit_name || documentData.unit),
+                this.createBoldParagraph(userInfo.department || ""),
                 this.createBoldParagraph(""),
                 this.createContactDetail("Ταχ. Δ/νση", "Κηφισίας 124 & Ιατρίδου 2"),
                 this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
-                this.createContactDetail("Πληροφορίες", documentData.generated_by?.name || documentData.user_name || "......................"),
-                this.createContactDetail("Τηλέφωνο", documentData.generated_by?.contact_number || documentData.contact_number || "......................"),
+                this.createContactDetail("Πληροφορίες", userInfo.name || "......................"),
+                this.createContactDetail("Τηλέφωνο", userInfo.contact_number || "......................"),
                 this.createContactDetail("Email", unitDetails?.email || "......................")
               ],
             }),
