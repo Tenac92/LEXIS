@@ -303,7 +303,7 @@ export class DocumentFormatter {
         italics: true,
       },
       {
-        text: " Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη ${documentData.unit}`,
         italics: true,
       }
     ];
@@ -328,10 +328,10 @@ export class DocumentFormatter {
                   right: { style: BorderStyle.SINGLE, size: 4 },
                 },
                 margins: {
-                  top: 360,
-                  bottom: 360,
-                  left: 360,
-                  right: 360
+                  top: 0,
+                  bottom: 0,
+                  left: 0,
+                  right: 0
                 },
                 width: { size: 100, type: WidthType.PERCENTAGE },
                 children: [
