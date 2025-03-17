@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "../../lib/supabase";
 import {
   Form,
   FormControl,
@@ -76,7 +75,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     resolver: zodResolver(orthiEpanalipsiSchema),
     defaultValues: {
       correctionReason: "",
-      project_id: document?.project_id || "",
+      project_id: document?.project_id ? String(document.project_id) : "",
       project_na853: document?.project_na853 || "",
       protocol_number_input: document?.protocol_number_input || "",
       protocol_date: document?.protocol_date || "",
@@ -107,11 +106,11 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   });
 
   const handleProjectSelect = (projectId: string) => {
-    const project = projects.find(p => p.mis === projectId);
+    const project = projects.find(p => String(p.mis) === projectId);
     if (project) {
-      form.setValue("project_id", project.mis);
+      form.setValue("project_id", String(project.mis));
       form.setValue("project_na853", project.na853);
-      setSelectedProject(project.mis);
+      setSelectedProject(String(project.mis));
     }
   };
 
@@ -130,7 +129,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
 
       if (!response.ok) throw new Error("Failed to create orthi epanalipsi");
 
-      await queryClient.invalidateQueries(["documents"]);
+      await queryClient.invalidateQueries({ queryKey: ["documents"] });
       toast({ title: "Επιτυχία", description: "Η ορθή επανάληψη δημιουργήθηκε" });
       onClose();
     } catch (error) {
@@ -146,7 +145,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   useEffect(() => {
     if (document && isOpen) {
       form.reset({
-        project_id: document.project_id,
+        project_id: String(document.project_id),
         project_na853: document.project_na853,
         unit: document.unit,
         expenditure_type: document.expenditure_type,
@@ -155,12 +154,12 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         protocol_number_input: document.protocol_number_input,
         protocol_date: document.protocol_date,
       });
-      setSelectedProject(document.project_id);
+      setSelectedProject(String(document.project_id));
     }
   }, [document, isOpen]);
 
   const addRecipient = () => {
-    const recipients = form.getValues("recipients");
+    const recipients = form.getValues("recipients") || [];
     form.setValue("recipients", [
       ...recipients,
       { firstname: "", lastname: "", afm: "", amount: 0, installment: 1 }
@@ -168,7 +167,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
   };
 
   const removeRecipient = (index: number) => {
-    const recipients = form.getValues("recipients");
+    const recipients = form.getValues("recipients") || [];
     recipients.splice(index, 1);
     form.setValue("recipients", [...recipients]);
   };
@@ -218,7 +217,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                         </FormControl>
                         <SelectContent>
                           {projects.map((project) => (
-                            <SelectItem key={project.mis} value={project.mis}>
+                            <SelectItem key={project.mis} value={String(project.mis)}>
                               {project.mis} - {project.na853}
                             </SelectItem>
                           ))}
@@ -326,7 +325,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                   </Button>
                 </div>
 
-                {form.watch("recipients").map((recipient, index) => (
+                {(form.watch("recipients") || []).map((recipient, index) => (
                   <div key={index} className="space-y-4 p-4 border rounded-lg">
                     <div className="flex justify-between items-center">
                       <h4 className="font-medium">Δικαιούχος #{index + 1}</h4>
