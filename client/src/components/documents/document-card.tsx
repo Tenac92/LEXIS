@@ -35,8 +35,9 @@ interface Recipient {
   installment: number;
 }
 
-const getStatusDetails = (status: string, isCorrection: boolean) => {
-  if (isCorrection) {
+const getStatusDetails = (status: string, is_correction: boolean) => {
+  // First check if this is an orthi epanalipsi
+  if (is_correction) {
     return {
       label: "Ορθή Επανάληψη",
       variant: "destructive" as const,
@@ -44,6 +45,7 @@ const getStatusDetails = (status: string, isCorrection: boolean) => {
     };
   }
 
+  // Then check other statuses
   switch (status) {
     case 'approved':
       return {
@@ -59,9 +61,9 @@ const getStatusDetails = (status: string, isCorrection: boolean) => {
       };
     default:
       return {
-        label: status,
+        label: "Σε εκκρεμότητα",
         variant: "secondary" as const,
-        icon: FileText
+        icon: Clock
       };
   }
 };
@@ -81,7 +83,6 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   const handleExport = async () => {
     try {
       setIsLoading(true);
-      console.log('[DocumentCard] Starting document export for ID:', doc.id);
 
       const response = await fetch(`/api/documents/generated/${doc.id}/export`, {
         method: 'GET',
@@ -131,19 +132,15 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
 
   return (
     <>
-      <div className="document-card" onClick={handleCardClick}>
+      <Card className="relative overflow-hidden" onClick={handleCardClick}>
         <div className={`flip-card-inner ${isFlipped ? 'is-flipped' : ''}`}>
           {/* Front of the card */}
-          <div className="flip-card-front">
+          <div className="flip-card-front p-6">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-lg font-semibold">
                   {doc.protocol_number_input && doc.protocol_date ? (
-                    `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString('el-GR', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: '2-digit'
-                    }).replace(/\//g, '.')}`
+                    `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString('el-GR')}`
                   ) : (
                     `Έγγραφο #${doc.id}`
                   )}
@@ -158,14 +155,15 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
               </Badge>
             </div>
 
-            {doc.is_correction && doc.original_protocol_number && (
-              <div className="mt-4 p-3 bg-red-100 dark:bg-red-900 rounded-lg">
-                <p className="text-sm font-medium">
-                  Ορθή Επανάληψη του εγγράφου με αρ. πρωτ. {doc.original_protocol_number}
+            {doc.is_correction && (
+              <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                  Ορθή Επανάληψη του εγγράφου 
+                  {doc.original_protocol_number && ` με αρ. πρωτ. ${doc.original_protocol_number}`}
                   {doc.original_protocol_date && ` (${new Date(doc.original_protocol_date).toLocaleDateString('el-GR')})`}
                 </p>
                 {doc.comments && (
-                  <p className="text-sm mt-1">
+                  <p className="text-sm mt-1 text-red-700 dark:text-red-300">
                     Λόγος διόρθωσης: {doc.comments}
                   </p>
                 )}
@@ -230,7 +228,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                   Εξαγωγή
                 </Button>
               </div>
-              {doc.protocol_number_input ? (
+              {!doc.is_correction && doc.protocol_number_input ? (
                 <Button
                   variant="default"
                   size="sm"
@@ -262,8 +260,8 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
             </div>
           </div>
 
-          {/* Back of the card */}
-          <div className="flip-card-back">
+          {/* Back of the card - Recipients list */}
+          <div className="flip-card-back p-6">
             <div className="h-full flex flex-col">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">Δικαιούχοι</h3>
@@ -314,7 +312,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       <OrthiEpanalipsiModal
         isOpen={showCorrectionModal}
