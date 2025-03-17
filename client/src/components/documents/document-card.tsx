@@ -35,7 +35,7 @@ interface Recipient {
   installment: number;
 }
 
-const getStatusDetails = (status: string, is_correction: boolean) => {
+const getStatusDetails = (status: string, is_correction: boolean | null) => {
   // First check if this is an orthi epanalipsi
   if (is_correction) {
     return {
@@ -75,7 +75,6 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   const { toast } = useToast();
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Only flip if we didn't click a button
     if (!(e.target as HTMLElement).closest('button')) {
       setIsFlipped(!isFlipped);
     }
@@ -135,7 +134,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   });
 
   // Show orthi epanalipsi info when either condition is met
-  const showOrthiEpanalipsiInfo = doc.is_correction === true || doc.original_protocol_number != null;
+  const showOrthiEpanalipsiInfo = Boolean(doc.is_correction) || Boolean(doc.original_protocol_number);
 
   return (
     <div className="flip-card" onClick={handleCardClick}>

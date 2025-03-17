@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, numeric, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, numeric, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -146,27 +146,15 @@ export const documentTemplates = pgTable("document_templates", {
 });
 
 // Types
-export type User = {
-  id: number;
-  email: string;
-  name: string;
-  role: string;
-  units?: string[];
-  department?: string;
-  telephone?: string;
-};
+export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
 export type BudgetHistory = typeof budgetHistory.$inferSelect;
 export type BudgetNotification = typeof budgetNotifications.$inferSelect;
 export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
-export type InsertAttachmentsRow = typeof attachmentsRows.$inferInsert;
 export type DocumentVersion = typeof documentVersions.$inferSelect;
-export type InsertDocumentVersion = typeof documentVersions.$inferInsert;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
-export type InsertDocumentTemplate = typeof documentTemplates.$inferInsert;
-
 
 
 // Insert Schemas
@@ -309,14 +297,14 @@ export interface Monada {
 
 // Export database type
 export type Database = {
-  users: User;
-  projectCatalog: ProjectCatalog;
-  generatedDocuments: GeneratedDocument;
-  budgetNA853Split: BudgetNA853Split;
-  budgetHistory: BudgetHistory;
-  budgetNotifications: BudgetNotification;
-  attachmentsRows: AttachmentsRow;
-  documentVersions: DocumentVersion;
-  documentTemplates: DocumentTemplate;
+  users: typeof users.$inferSelect;
+  projectCatalog: typeof projectCatalog.$inferSelect;
+  generatedDocuments: typeof generatedDocuments.$inferSelect;
+  budgetNA853Split: typeof budgetNA853Split.$inferSelect;
+  budgetHistory: typeof budgetHistory.$inferSelect;
+  budgetNotifications: typeof budgetNotifications.$inferSelect;
+  attachmentsRows: typeof attachmentsRows.$inferSelect;
+  documentVersions: typeof documentVersions.$inferSelect;
+  documentTemplates: typeof documentTemplates.$inferSelect;
   monada: Monada;
 };
