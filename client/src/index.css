@@ -14,9 +14,9 @@
 
 @layer components {
   .flip-card {
-    @apply relative;
+    @apply relative cursor-pointer;
     perspective: 1000px;
-    height: 420px;
+    min-height: 480px;
   }
 
   .flip-card-inner {
@@ -27,7 +27,7 @@
 
   .flip-card-front,
   .flip-card-back {
-    @apply absolute w-full h-full bg-card rounded-xl border border-border shadow-sm;
+    @apply absolute w-full h-full bg-card rounded-xl border border-border;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
@@ -36,12 +36,12 @@
     transform: rotateY(180deg);
   }
 
-  .backface-hidden {
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-  }
-
   .rotate-y-180 {
     transform: rotateY(180deg);
+  }
+
+  .backface-hidden {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
 }
