@@ -10,9 +10,7 @@ import {
   History,
   Bell,
   Key,
-  Settings,
-  FileSpreadsheet,
-  Library
+  ChevronDown
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -23,12 +21,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
@@ -41,7 +38,6 @@ export function Header() {
 
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
-  const isRegularUser = user?.role === 'user';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -57,155 +53,99 @@ export function Header() {
     }`}>
       <div className="container mx-auto px-4 py-3">
         <nav className="flex items-center justify-between">
-          {/* Logo & Title */}
+          {/* Logo & User Info with Dropdown */}
           <div className="flex-shrink-0">
-            <h1 className="text-xl font-semibold text-primary">
-              {user?.username || user?.name || 'Χρήστης'}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Σύστημα Διαχείρισης Εγγράφων
-            </p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent">
+                  <div>
+                    <h1 className="text-xl font-semibold text-primary flex items-center gap-2">
+                      {user?.username || user?.name || 'Χρήστης'}
+                      <ChevronDown className="h-4 w-4" />
+                    </h1>
+                    <p className="text-sm text-muted-foreground text-left">
+                      Σύστημα Διαχείρισης Εγγράφων
+                    </p>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem onClick={() => setIsPasswordModalOpen(true)}>
+                  <Key className="h-4 w-4 mr-2" />
+                  Αλλαγή Κωδικού
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive" 
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Αποσύνδεση
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:space-x-4">
-            <NavigationMenu>
-              <NavigationMenuList>
-                {/* Dashboard */}
-                <NavigationMenuItem>
-                  <Link href="/">
-                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                      <LayoutDashboard className="h-4 w-4" />
-                      Πίνακας Ελέγχου
-                    </Button>
-                  </Link>
-                </NavigationMenuItem>
+          <div className="hidden md:flex md:items-center md:space-x-2">
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <LayoutDashboard className="h-4 w-4" />
+                Πίνακας Ελέγχου
+              </Button>
+            </Link>
 
-                {/* Documents */}
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger className="h-9">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Διαβιβαστικά
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <div className="w-48 p-2">
-                      <Link href="/documents">
-                        <Button variant="ghost" className="w-full justify-start mb-2">
-                          <FileText className="h-4 w-4 mr-2" />
-                          {isRegularUser ? 'Δημιουργία' : 'Προβολή'}
-                        </Button>
-                      </Link>
-                      <Link href="/templates">
-                        <Button variant="ghost" className="w-full justify-start">
-                          <Library className="h-4 w-4 mr-2" />
-                          Πρότυπα
-                        </Button>
-                      </Link>
-                    </div>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
+            <Link href="/documents">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Διαβιβαστικά
+              </Button>
+            </Link>
 
-                {/* Projects */}
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger className="h-9">
-                    <FolderKanban className="h-4 w-4 mr-2" />
-                    Έργα
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <div className="w-48 p-2">
-                      <Link href="/projects">
-                        <Button variant="ghost" className="w-full justify-start mb-2">
-                          <FolderKanban className="h-4 w-4 mr-2" />
-                          Όλα τα Έργα
-                        </Button>
-                      </Link>
-                      <Link href="/projects/active">
-                        <Button variant="ghost" className="w-full justify-start">
-                          <FileSpreadsheet className="h-4 w-4 mr-2" />
-                          Ενεργά
-                        </Button>
-                      </Link>
-                    </div>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
+            <Link href="/projects">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <FolderKanban className="h-4 w-4" />
+                Έργα
+              </Button>
+            </Link>
 
-                {/* Management */}
-                {(isAdmin || isManager) && (
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger className="h-9">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Διαχείριση
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <div className="w-48 p-2">
-                        <Link href="/budget-history">
-                          <Button variant="ghost" className="w-full justify-start mb-2">
-                            <History className="h-4 w-4 mr-2" />
-                            Ιστορικό Προϋπ.
-                          </Button>
-                        </Link>
-                        {isAdmin && (
-                          <>
-                            <Link href="/users">
-                              <Button variant="ghost" className="w-full justify-start mb-2">
-                                <Users className="h-4 w-4 mr-2" />
-                                Χρήστες
-                              </Button>
-                            </Link>
-                            <Link href="/notifications">
-                              <Button variant="ghost" className="w-full justify-start relative">
-                                <Bell className="h-4 w-4 mr-2" />
-                                Ειδοποιήσεις
-                                <motion.div
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 h-2 w-2 bg-primary rounded-full"
-                                  animate={{
-                                    scale: [1, 1.2, 1],
-                                    opacity: [1, 0.8, 1]
-                                  }}
-                                  transition={{
-                                    duration: 2,
-                                    repeat: Infinity,
-                                    ease: "easeInOut"
-                                  }}
-                                />
-                              </Button>
-                            </Link>
-                          </>
-                        )}
-                      </div>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-                )}
+            {/* Management Links */}
+            {(isAdmin || isManager) && (
+              <Link href="/budget-history">
+                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Ιστορικό Προϋπ.
+                </Button>
+              </Link>
+            )}
 
-                {/* User Settings */}
-                <NavigationMenuItem>
-                  <NavigationMenuTrigger className="h-9">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Ρυθμίσεις
-                  </NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <div className="w-48 p-2">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start mb-2"
-                        onClick={() => setIsPasswordModalOpen(true)}
-                      >
-                        <Key className="h-4 w-4 mr-2" />
-                        Αλλαγή Κωδικού
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start text-destructive hover:text-destructive-foreground"
-                        onClick={() => logoutMutation.mutate()}
-                      >
-                        <LogOut className="h-4 w-4 mr-2" />
-                        Αποσύνδεση
-                      </Button>
-                    </div>
-                  </NavigationMenuContent>
-                </NavigationMenuItem>
-              </NavigationMenuList>
-            </NavigationMenu>
+            {isAdmin && (
+              <>
+                <Link href="/users">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Χρήστες
+                  </Button>
+                </Link>
+                <Link href="/notifications">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2 relative">
+                    <Bell className="h-4 w-4" />
+                    Ειδοποιήσεις
+                    <motion.div
+                      className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full"
+                      animate={{
+                        scale: [1, 1.2, 1],
+                        opacity: [1, 0.8, 1]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    />
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -245,12 +185,6 @@ export function Header() {
                     <Button variant="ghost" className="w-full justify-start">
                       <FileText className="h-4 w-4 mr-2" />
                       Διαβιβαστικά
-                    </Button>
-                  </Link>
-                  <Link href="/templates">
-                    <Button variant="ghost" className="w-full justify-start">
-                      <Library className="h-4 w-4 mr-2" />
-                      Πρότυπα
                     </Button>
                   </Link>
                   <Link href="/projects">
