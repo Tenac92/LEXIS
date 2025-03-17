@@ -22,7 +22,13 @@ import { format } from "date-fns";
 import { after } from "node:test";
 
 interface UnitDetails {
-  unit_name: string;
+  unit: string;
+  unit_name: {
+    name: string;
+    prop: string;
+  };
+  parts?: Record<string, string>;
+  email?: string;
   manager?: {
     name: string;
     order: string;
@@ -30,7 +36,6 @@ interface UnitDetails {
     degree: string;
     prepose: string;
   };
-  email?: string;
   address?: {
     tk: string;
     region: string;
@@ -172,7 +177,7 @@ export class DocumentFormatter {
                 ),
                 this.createBoldParagraph("ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ."),
                 this.createBoldParagraph(
-                  unitDetails?.unit_name || documentData.unit,
+                  unitDetails?.unit_name?.name || documentData.unit,
                 ),
                 this.createBoldParagraph(userInfo.department),
                 this.createBlankLine(10),
@@ -214,7 +219,7 @@ export class DocumentFormatter {
                 new Paragraph({
                   children: [
                     new TextRun({
-                      text: `Ημερομηνία: ${
+                      text: `${address.region}: ${
                         documentData.protocol_date
                           ? format(
                               new Date(documentData.protocol_date),
@@ -336,7 +341,7 @@ export class DocumentFormatter {
               documentData,
               unitDetails || undefined,
             ),
-            ...this.createDocumentSubject(documentData),
+            ...this.createDocumentSubject(documentData, unitDetails || undefined),
             ...this.createMainContent(documentData),
             this.createPaymentTable(documentData.recipients || []),
             this.createNote(),
@@ -380,6 +385,7 @@ export class DocumentFormatter {
 
   private static createDocumentSubject(
     documentData: DocumentData,
+    unitDetails?: UnitDetails,
   ): (Table | Paragraph)[] {
     const subjectText = [
       {
@@ -388,7 +394,7 @@ export class DocumentFormatter {
         italics: true,
       },
       {
-        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από τη ${documentData.unit}`,
+        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || ''} ${documentData.unit}`,
         italics: true,
       },
     ];

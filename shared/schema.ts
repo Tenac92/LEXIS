@@ -265,15 +265,42 @@ export type InsertBudgetNotification = z.infer<typeof insertBudgetNotificationSc
 export const monada = pgTable("Monada", {
   id: text("id").primaryKey(),
   unit: text("unit").notNull(),
-  unit_name: text("unit_name").notNull(),
+  unit_name: jsonb("unit_name").notNull(),
   parts: jsonb("parts"),
   email: text("email"),
-  manager: jsonb("manager").notNull(),
+  manager: jsonb("manager"),
   address: jsonb("address"),
 });
 
-// Add Monada type
-export type Monada = typeof monada.$inferSelect;
+// Add Monada type with specific JSON structure
+export interface MonadaUnitName {
+  name: string;
+  prop: string;
+}
+
+export interface MonadaManager {
+  name: string;
+  order: string;
+  title: string;
+  degree: string;
+  prepose: string;
+}
+
+export interface MonadaAddress {
+  tk: string;
+  region: string;
+  address: string;
+}
+
+export interface Monada {
+  id: string;
+  unit: string;
+  unit_name: MonadaUnitName;
+  parts?: Record<string, string>;
+  email?: string;
+  manager?: MonadaManager;
+  address?: MonadaAddress;
+}
 
 // Export database type
 export type Database = {

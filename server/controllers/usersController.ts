@@ -11,6 +11,38 @@ interface AuthenticatedRequest extends Request {
 
 const router = Router();
 
+// Get all units
+router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    console.log('[Units] Fetching units from Monada table');
+    const { data: units, error } = await supabase
+      .from('Monada')
+      .select('unit_name');
+
+    if (error) {
+      console.error('[Units] Supabase query error:', error);
+      throw error;
+    }
+
+    // Extract unique unit names from the JSON structure
+    const uniqueUnits = new Set<string>();
+    units?.forEach(unit => {
+      if (unit.unit_name?.name && typeof unit.unit_name.name === 'string') {
+        uniqueUnits.add(unit.unit_name.name);
+      }
+    });
+
+    const unitsList = Array.from(uniqueUnits).sort();
+    res.json(unitsList);
+  } catch (error) {
+    console.error('[Units] Units fetch error:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch units', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
 // Get parts for selected units
 router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -25,7 +57,7 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
     const { data, error } = await supabase
       .from('Monada')
       .select('parts')
-      .in('unit_name', unitsList);
+      .in('unit_name->name', unitsList);
 
     if (error) {
       console.error('[Units] Error fetching parts:', error);
@@ -54,38 +86,6 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
   }
 });
 
-// Get all units
-router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res: Response) => {
-  try {
-    console.log('[Units] Fetching units from Monada table');
-    const { data: units, error } = await supabase
-      .from('Monada')
-      .select('unit_name');
-
-    if (error) {
-      console.error('[Units] Supabase query error:', error);
-      throw error;
-    }
-
-    // Extract unique unit names
-    const uniqueUnits = new Set<string>();
-    units?.forEach(unit => {
-      if (unit.unit_name && typeof unit.unit_name === 'string') {
-        uniqueUnits.add(unit.unit_name);
-      }
-    });
-
-    const unitsList = Array.from(uniqueUnits).sort();
-    res.json(unitsList);
-  } catch (error) {
-    console.error('[Units] Units fetch error:', error);
-    res.status(500).json({ 
-      message: 'Failed to fetch units', 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    });
-  }
-});
-
 // Get parts for a specific unit
 router.get('/units/:unitName/parts', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -95,7 +95,7 @@ router.get('/units/:unitName/parts', authenticateSession, async (req: Authentica
     const { data: unitData, error } = await supabase
       .from('Monada')
       .select('parts')
-      .eq('unit_name', unitName)
+      .eq('unit_name->name', unitName)
       .single();
 
     if (error) {
@@ -174,7 +174,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const { data: unitData, error: unitError } = await supabase
       .from('Monada')
       .select('unit_name, parts')
-      .in('unit_name', units);
+      .in('unit_name->name', units);
 
     if (unitError || !unitData || unitData.length !== units.length) {
       console.error('[Users] Invalid units:', units, unitError);
