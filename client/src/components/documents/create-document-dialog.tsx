@@ -285,8 +285,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           }
 
           return {
-            id: item.mis.toString(),
-            name: `${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
+            id: String(item.mis),
+            name: `${String(item.mis)} - ${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
             expenditure_types: expenditureTypes
           };
         });
