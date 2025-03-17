@@ -207,21 +207,20 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
       });
     }
 
-    // Update the document without updated_at field
-    // Only include protocol_date and protocol_number if they are provided
+    // Update the document
     const updateData: any = {
-      status: 'approved',
+      status: 'completed', // Set to completed when protocol is added
       updated_by: req.user?.id
     };
-    
+
     if (protocol_number && protocol_number.trim() !== '') {
       updateData.protocol_number_input = protocol_number.trim();
     }
-    
+
     if (protocol_date && protocol_date !== '') {
       updateData.protocol_date = protocol_date;
     }
-    
+
     const { data: updatedDocument, error: updateError } = await supabase
       .from('generated_documents')
       .update(updateData)
@@ -245,6 +244,95 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
     return res.status(500).json({
       success: false,
       message: 'Failed to update protocol',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Create document
+router.post('/', authenticateSession, async (req: AuthRequest, res: Response) => {
+  try {
+    const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
+
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (!recipients?.length || !project_id || !unit || !expenditure_type) {
+      return res.status(400).json({
+        message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
+      });
+    }
+
+    // Get project NA853
+    const { data: projectData, error: projectError } = await supabase
+      .from('project_catalog')
+      .select('na853')
+      .eq('mis', project_id)
+      .single();
+
+    if (projectError || !projectData) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const { data, error } = await supabase
+      .from('generated_documents')
+      .insert([{
+        unit,
+        project_id,
+        project_na853: projectData.na853,
+        expenditure_type,
+        status: 'pending', // Always set initial status to pending
+        recipients: recipients.map((r: any) => ({
+          firstname: String(r.firstname).trim(),
+          lastname: String(r.lastname).trim(),
+          afm: String(r.afm).trim(),
+          amount: parseFloat(String(r.amount)),
+          installment: parseInt(String(r.installment))
+        })),
+        total_amount: parseFloat(String(total_amount)) || 0,
+        generated_by: req.user.id,
+        department: req.user.department,
+        attachments: attachments || [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Documents] Creation error:', error);
+      return res.status(500).json({
+        message: 'Failed to create document',
+        error: error.message
+      });
+    }
+
+    // If attachments were provided, create attachment records
+    if (attachments?.length && data?.id) {
+      const { error: attachError } = await supabase
+        .from('attachments')
+        .insert(
+          attachments.map(att => ({
+            document_id: data.id,
+            file_path: att.path,
+            type: att.type,
+            created_by: req.user?.id,
+            created_at: new Date().toISOString()
+          }))
+        );
+
+      if (attachError) {
+        console.error('[Documents] Attachment creation error:', attachError);
+        // Continue even if attachment creation fails
+      }
+    }
+
+    return res.status(201).json(data);
+  } catch (error) {
+    console.error('[Documents] Error creating document:', error);
+    return res.status(500).json({
+      message: 'Failed to create document',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
@@ -306,95 +394,6 @@ router.get('/generated/:id/export', authenticateSession, async (req: AuthRequest
     res.status(500).json({
       error: 'Failed to export document',
       details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Create document
-router.post('/', authenticateSession, async (req: AuthRequest, res: Response) => {
-  try {
-    const { unit, project_id, expenditure_type, status, recipients, total_amount, attachments } = req.body;
-
-    if (!req.user?.id) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
-
-    if (!recipients?.length || !project_id || !unit || !expenditure_type) {
-      return res.status(400).json({
-        message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
-      });
-    }
-
-    // Get project NA853
-    const { data: projectData, error: projectError } = await supabase
-      .from('project_catalog')
-      .select('na853')
-      .eq('mis', project_id)
-      .single();
-
-    if (projectError || !projectData) {
-      return res.status(404).json({ message: 'Project not found' });
-    }
-
-    const { data, error } = await supabase
-      .from('generated_documents')
-      .insert([{
-        unit,
-        project_id,
-        project_na853: projectData.na853,
-        expenditure_type,
-        status: status || 'draft',
-        recipients: recipients.map((r: any) => ({
-          firstname: String(r.firstname).trim(),
-          lastname: String(r.lastname).trim(),
-          afm: String(r.afm).trim(),
-          amount: parseFloat(String(r.amount)),
-          installment: parseInt(String(r.installment))
-        })),
-        total_amount: parseFloat(String(total_amount)) || 0,
-        generated_by: req.user.id,
-        department: req.user.department,
-        attachments: attachments || [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('[Documents] Creation error:', error);
-      return res.status(500).json({
-        message: 'Failed to create document',
-        error: error.message
-      });
-    }
-
-    // If attachments were provided, create attachment records
-    if (attachments?.length && data?.id) {
-      const { error: attachError } = await supabase
-        .from('attachments')
-        .insert(
-          attachments.map((att: any) => ({
-            document_id: data.id,
-            file_path: att.path,
-            type: att.type,
-            created_by: req.user?.id,
-            created_at: new Date().toISOString()
-          }))
-        );
-
-      if (attachError) {
-        console.error('[Documents] Attachment creation error:', attachError);
-        // Continue even if attachment creation fails
-      }
-    }
-
-    return res.status(201).json(data);
-  } catch (error) {
-    console.error('[Documents] Error creating document:', error);
-    return res.status(500).json({
-      message: 'Failed to create document',
-      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
