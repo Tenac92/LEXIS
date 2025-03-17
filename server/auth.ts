@@ -4,6 +4,7 @@ import session from "express-session";
 import { storage } from "./storage";
 import type { User } from "@shared/schema";
 import bcrypt from "bcrypt";
+import { rateLimit } from 'express-rate-limit';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -13,23 +14,34 @@ interface AuthenticatedRequest extends Request {
 declare module 'express-session' {
   interface SessionData {
     user?: User;  // Make user optional to match runtime behavior
+    createdAt?: Date;
   }
 }
 
-// Session middleware with enhanced security and development-friendly settings
+// Session middleware with enhanced security settings
 export const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'document-manager-secret',
   resave: false,
   saveUninitialized: false,
   store: storage.sessionStore,
-  name: 'sid',
+  name: 'sid', // Custom session ID name
   cookie: {
-    secure: false, // Set to false for development
+    secure: process.env.NODE_ENV === 'production', // Secure in production
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax',
-    path: '/'
+    maxAge: 8 * 60 * 60 * 1000, // 8 hours
+    sameSite: 'strict',
+    path: '/',
+    domain: process.env.NODE_ENV === 'production' ? process.env.DOMAIN : undefined
   }
+});
+
+// Rate limiting middleware for auth routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: { message: 'Too many login attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
 // Authentication middleware with enhanced logging
@@ -77,8 +89,8 @@ export async function setupAuth(app: Express) {
   app.use(sessionMiddleware);
   console.log('[Auth] Session middleware applied');
 
-  // Login route with enhanced session handling
-  app.post("/api/auth/login", async (req, res) => {
+  // Login route with enhanced security and rate limiting
+  app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
       const { email, password } = req.body;
 
@@ -87,6 +99,9 @@ export async function setupAuth(app: Express) {
           message: 'Email and password are required'
         });
       }
+
+      // Add brute force protection delay
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       console.log('[Auth] Attempting login for email:', email);
 
@@ -103,7 +118,7 @@ export async function setupAuth(app: Express) {
         });
       }
 
-      // Compare password
+      // Compare password with constant-time comparison
       const isPasswordValid = await bcrypt.compare(password, userData.password);
       if (!isPasswordValid) {
         console.error('[Auth] Password validation failed for user:', email);
@@ -123,8 +138,9 @@ export async function setupAuth(app: Express) {
         telephone: userData.telephone
       };
 
-      // Store user data in session
+      // Store user data in session with expiry
       req.session.user = sessionUser;
+      req.session.createdAt = new Date();
 
       // Save session explicitly and wait for completion
       await new Promise<void>((resolve, reject) => {
@@ -142,9 +158,9 @@ export async function setupAuth(app: Express) {
         });
       });
 
-      // Set cookie header explicitly
+      // Set secure cookie headers
       res.setHeader('Set-Cookie', [
-        `sid=${req.sessionID}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${24 * 60 * 60}`
+        `sid=${req.sessionID}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${8 * 60 * 60}`
       ]);
 
       console.log('[Auth] Login successful:', {

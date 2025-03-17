@@ -12,6 +12,9 @@ const PUBLIC_ROUTES = [
   '/api/auth/me'
 ];
 
+// Maximum session age in milliseconds (8 hours)
+const MAX_SESSION_AGE = 8 * 60 * 60 * 1000;
+
 export function authenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
     const isPublicRoute = PUBLIC_ROUTES.some(route => req.path.startsWith(route));
@@ -42,6 +45,18 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
       return res.status(401).json({ message: "Authentication required" });
     }
 
+    // Check session age
+    const sessionCreatedAt = req.session.createdAt ? new Date(req.session.createdAt).getTime() : 0;
+    const currentTime = new Date().getTime();
+
+    if (currentTime - sessionCreatedAt > MAX_SESSION_AGE) {
+      console.log('[Auth] Session expired');
+      req.session.destroy((err) => {
+        if (err) console.error('[Auth] Error destroying expired session:', err);
+      });
+      return res.status(401).json({ message: "Session expired" });
+    }
+
     // Ensure all required user properties are present
     const sessionUser = req.session.user;
     if (!sessionUser.id || !sessionUser.role || !sessionUser.units) {
@@ -49,13 +64,21 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
       return res.status(401).json({ message: "Invalid user data" });
     }
 
+    // Validate user role
+    if (!['admin', 'user'].includes(sessionUser.role)) {
+      console.log('[Auth] Invalid user role');
+      return res.status(403).json({ message: "Invalid user role" });
+    }
+
     // Add fully typed user to request
-    req.user = {
-      id: sessionUser.id,
-      role: sessionUser.role,
-      units: sessionUser.units,
-      // Include other required User properties if any
-    };
+    req.user = sessionUser as Required<User>;
+
+    // Regenerate session ID periodically to prevent session fixation
+    if (Math.random() < 0.1) { // 10% chance of regeneration
+      req.session.regenerate((err) => {
+        if (err) console.error('[Auth] Session regeneration error:', err);
+      });
+    }
 
     console.log('[Auth] User authenticated:', {
       id: req.user.id,
@@ -83,6 +106,12 @@ export function requireAdmin(req: AuthenticatedRequest, res: Response, next: Nex
       });
       return res.status(403).json({ message: "Admin access required" });
     }
+
+    // Add additional admin validation if needed
+    if (!req.user.id || !req.user.units) {
+      return res.status(403).json({ message: "Invalid admin user data" });
+    }
+
     next();
   } catch (error) {
     console.error('[Auth] Admin validation error:', error);
