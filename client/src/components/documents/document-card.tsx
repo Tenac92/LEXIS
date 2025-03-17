@@ -126,7 +126,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   const statusDetails = getStatusDetails(doc.status, doc.is_correction);
 
   // Show orthi epanalipsi info when original protocol number exists
-  const showOrthiEpanalipsiInfo = doc.original_protocol_number !== null;
+  const showOrthiEpanalipsiInfo = doc.is_correction === true;
 
   return (
     <div className="flip-card" onClick={handleCardClick}>
