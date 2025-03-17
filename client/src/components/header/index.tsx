@@ -78,12 +78,12 @@ export function Header() {
                 <NavigationMenuList className="gap-2">
                   {/* Dashboard */}
                   <NavigationMenuItem>
-                    <Link href="/">
-                      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                    <NavigationMenuLink asChild>
+                      <Link href="/" className={navigationMenuTriggerStyle()}>
                         <LayoutDashboard className="h-4 w-4 mr-2" />
                         Πίνακας Ελέγχου
-                      </NavigationMenuLink>
-                    </Link>
+                      </Link>
+                    </NavigationMenuLink>
                   </NavigationMenuItem>
 
                   {/* Documents */}
@@ -95,24 +95,24 @@ export function Header() {
                     <NavigationMenuContent>
                       <ul className="grid w-[200px] gap-1 p-2">
                         <li>
-                          <Link href="/documents">
-                            <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                          <NavigationMenuLink asChild>
+                            <Link href="/documents" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                               <div className="flex items-center gap-2">
                                 <FileText className="h-4 w-4" />
                                 <span>{isRegularUser ? 'Δημιουργία' : 'Προβολή'}</span>
                               </div>
-                            </NavigationMenuLink>
-                          </Link>
+                            </Link>
+                          </NavigationMenuLink>
                         </li>
                         <li>
-                          <Link href="/templates">
-                            <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                          <NavigationMenuLink asChild>
+                            <Link href="/templates" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                               <div className="flex items-center gap-2">
                                 <Library className="h-4 w-4" />
                                 <span>Πρότυπα</span>
                               </div>
-                            </NavigationMenuLink>
-                          </Link>
+                            </Link>
+                          </NavigationMenuLink>
                         </li>
                       </ul>
                     </NavigationMenuContent>
@@ -127,24 +127,24 @@ export function Header() {
                     <NavigationMenuContent>
                       <ul className="grid w-[200px] gap-1 p-2">
                         <li>
-                          <Link href="/projects">
-                            <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                          <NavigationMenuLink asChild>
+                            <Link href="/projects" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                               <div className="flex items-center gap-2">
                                 <FolderKanban className="h-4 w-4" />
                                 <span>Όλα τα Έργα</span>
                               </div>
-                            </NavigationMenuLink>
-                          </Link>
+                            </Link>
+                          </NavigationMenuLink>
                         </li>
                         <li>
-                          <Link href="/projects/active">
-                            <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                          <NavigationMenuLink asChild>
+                            <Link href="/projects/active" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                               <div className="flex items-center gap-2">
                                 <FileSpreadsheet className="h-4 w-4" />
                                 <span>Ενεργά</span>
                               </div>
-                            </NavigationMenuLink>
-                          </Link>
+                            </Link>
+                          </NavigationMenuLink>
                         </li>
                       </ul>
                     </NavigationMenuContent>
@@ -160,30 +160,30 @@ export function Header() {
                       <NavigationMenuContent>
                         <ul className="grid w-[200px] gap-1 p-2">
                           <li>
-                            <Link href="/budget-history">
-                              <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                            <NavigationMenuLink asChild>
+                              <Link href="/budget-history" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                                 <div className="flex items-center gap-2">
                                   <History className="h-4 w-4" />
                                   <span>Ιστορικό Προϋπ.</span>
                                 </div>
-                              </NavigationMenuLink>
-                            </Link>
+                              </Link>
+                            </NavigationMenuLink>
                           </li>
                           {isAdmin && (
                             <>
                               <li>
-                                <Link href="/users">
-                                  <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                                <NavigationMenuLink asChild>
+                                  <Link href="/users" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                                     <div className="flex items-center gap-2">
                                       <Users className="h-4 w-4" />
                                       <span>Χρήστες</span>
                                     </div>
-                                  </NavigationMenuLink>
-                                </Link>
+                                  </Link>
+                                </NavigationMenuLink>
                               </li>
                               <li>
-                                <Link href="/notifications">
-                                  <NavigationMenuLink className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
+                                <NavigationMenuLink asChild>
+                                  <Link href="/notifications" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
                                     <div className="flex items-center gap-2">
                                       <Bell className="h-4 w-4" />
                                       <span>Ειδοποιήσεις</span>
@@ -200,8 +200,8 @@ export function Header() {
                                         }}
                                       />
                                     </div>
-                                  </NavigationMenuLink>
-                                </Link>
+                                  </Link>
+                                </NavigationMenuLink>
                               </li>
                             </>
                           )}
@@ -219,26 +219,26 @@ export function Header() {
                     <NavigationMenuContent>
                       <ul className="grid w-[200px] gap-1 p-2">
                         <li>
-                          <NavigationMenuLink
-                            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
+                          <button
                             onClick={() => setIsPasswordModalOpen(true)}
+                            className="block w-full select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer text-left"
                           >
                             <div className="flex items-center gap-2">
                               <Key className="h-4 w-4" />
                               <span>Αλλαγή Κωδικού</span>
                             </div>
-                          </NavigationMenuLink>
+                          </button>
                         </li>
                         <li>
-                          <NavigationMenuLink
-                            className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground cursor-pointer"
+                          <button
                             onClick={() => logoutMutation.mutate()}
+                            className="block w-full select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground cursor-pointer text-left"
                           >
                             <div className="flex items-center gap-2">
                               <LogOut className="h-4 w-4" />
                               <span>Αποσύνδεση</span>
                             </div>
-                          </NavigationMenuLink>
+                          </button>
                         </li>
                       </ul>
                     </NavigationMenuContent>
