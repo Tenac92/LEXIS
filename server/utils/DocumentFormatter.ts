@@ -22,13 +22,10 @@ import { format } from "date-fns";
 import { after } from "node:test";
 
 interface UnitDetails {
-  unit: string;
-  unit_name: {
+  unit_name?: {
     name: string;
     prop: string;
-  };
-  parts?: Record<string, string>;
-  email?: string;
+  }
   manager?: {
     name: string;
     order: string;
@@ -36,6 +33,7 @@ interface UnitDetails {
     degree: string;
     prepose: string;
   };
+  email?: string;
   address?: {
     tk: string;
     region: string;
@@ -341,8 +339,8 @@ export class DocumentFormatter {
               documentData,
               unitDetails || undefined,
             ),
-            ...this.createDocumentSubject(documentData, unitDetails || undefined),
-            ...this.createMainContent(documentData),
+            ...this.createDocumentSubject(documentData, unitDetails || {}),
+            ...this.createMainContent(documentData, unitDetails || {}),
             this.createPaymentTable(documentData.recipients || []),
             this.createNote(),
             this.createFooter(documentData, unitDetails || undefined),
@@ -384,8 +382,7 @@ export class DocumentFormatter {
   }
 
   private static createDocumentSubject(
-    documentData: DocumentData,
-    unitDetails?: UnitDetails,
+    documentData: DocumentData, unitDetails: UnitDetails,
   ): (Table | Paragraph)[] {
     const subjectText = [
       {
@@ -394,7 +391,7 @@ export class DocumentFormatter {
         italics: true,
       },
       {
-        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || ''} ${documentData.unit}`,
+         text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${documentData.unit}`,
         italics: true,
       },
     ];
@@ -447,7 +444,7 @@ export class DocumentFormatter {
   }
 
   private static createMainContent(
-    documentData: DocumentData,
+    documentData: DocumentData,  unitDetails: UnitDetails,
   ): (Paragraph | Table)[] {
     return [
       this.createBlankLine(8),
@@ -463,7 +460,7 @@ export class DocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: "Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από τη Δ.Α.Ε.Φ.Κ.-Κ.Ε. , σύμφωνα με τα κάτωθι στοιχεία.",
+            text: `Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${documentData.unit}, σύμφωνα με τα παρακάτω στοιχεία.`,
           }),
         ],
       }),
@@ -713,35 +710,40 @@ export class DocumentFormatter {
               },
               children: [
                 new Paragraph({
+                  keepLines: true,  // Ensure the cell content doesn't break across pages
+                  spacing: { before: 100 },
                   children: [
                     new TextRun({
-                      text: "ΜΕ ΕΝΤΟΛΗ ΠΡΟΪΣΤΑΜΕΝΗΣ Γ.Δ.Α.Ε.Φ.Κ.",
+                      text: unitDetails?.manager?.order || '',
                       bold: true,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
                 }),
                 new Paragraph({
+                  keepLines: true,  // Ensure the cell content doesn't break across pages
                   children: [
                     new TextRun({
-                      text: "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
-                      bold: true,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-                new Paragraph({ text: "", spacing: { before: 720 } }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
+                      text: unitDetails?.manager?.title || '',
                       bold: true,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
                 }),
                 new Paragraph({
-                  text: "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α΄ β.",
+                  keepLines: true,  // Ensure the cell content doesn't break across pages
+                  spacing: { before: 400},
+                  children: [
+                    new TextRun({
+                      text: unitDetails?.manager?.name || '',
+                      bold: true,
+                    }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                }),
+                new Paragraph({
+                  keepLines: true,  // Ensure the cell content doesn't break across pages
+                  text: unitDetails?.manager?.degree || '',
                   alignment: AlignmentType.CENTER,
                 }),
               ],
