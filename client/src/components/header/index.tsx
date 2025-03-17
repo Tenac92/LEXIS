@@ -78,7 +78,7 @@ export function Header() {
           </div>
 
           {/* Center - User Info with Dropdown */}
-          <div className="flex-1 flex flex-col items-center">
+          <div className="flex-1 flex justify-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="p-0 h-auto hover:bg-transparent">
@@ -87,11 +87,6 @@ export function Header() {
                       {user?.username || user?.name || 'Χρήστης'}
                       <ChevronDown className="h-4 w-4" />
                     </h1>
-                    <Link href="/">
-                      <p className="text-sm bg-gradient-to-r from-primary/80 to-primary bg-clip-text text-transparent font-medium hover:cursor-pointer transition-all duration-200 hover:scale-105">
-                        Σύστημα Διαχείρισης Εγγράφων
-                      </p>
-                    </Link>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
@@ -111,8 +106,8 @@ export function Header() {
             </DropdownMenu>
           </div>
 
-          {/* Right side - Admin controls */}
-          <div className="hidden md:flex md:items-center md:space-x-2">
+          {/* Right side - System Title and Admin Controls */}
+          <div className="hidden md:flex md:items-center md:space-x-4">
             {(isAdmin || isManager) && (
               <Link href="/budget-history">
                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
@@ -150,6 +145,14 @@ export function Header() {
                 </Link>
               </>
             )}
+
+            <div className="border-l pl-4">
+              <Link href="/">
+                <p className="text-sm bg-gradient-to-r from-primary/80 to-primary bg-clip-text text-transparent font-medium hover:cursor-pointer transition-all duration-200 hover:scale-105">
+                  Σύστημα Διαχείρισης Εγγράφων
+                </p>
+              </Link>
+            </div>
           </div>
 
           {/* Mobile Menu Button */}
