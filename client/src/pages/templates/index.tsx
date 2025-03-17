@@ -38,7 +38,7 @@ export default function TemplatesPage() {
     queryKey: ['/api/templates'],
     queryFn: async () => {
       const response = await fetch('/api/templates');
-      if (!response.ok) throw new Error('Failed to fetch templates');
+      if (!response.ok) throw new Error('Αποτυχία λήψης προτύπων');
       return response.json() as Promise<Template[]>;
     }
   });
@@ -50,7 +50,7 @@ export default function TemplatesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(templateData)
       });
-      if (!response.ok) throw new Error('Failed to create template');
+      if (!response.ok) throw new Error('Αποτυχία δημιουργίας προτύπου');
       return response.json();
     },
     onSuccess: () => {
