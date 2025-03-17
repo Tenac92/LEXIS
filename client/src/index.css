@@ -16,18 +16,17 @@
   .flip-card {
     @apply relative cursor-pointer;
     perspective: 1000px;
-    min-height: 480px;
+    min-height: 540px;
   }
 
   .flip-card-inner {
-    @apply relative w-full h-full;
+    @apply relative w-full h-full transition-transform duration-500;
     transform-style: preserve-3d;
-    transition: transform 0.6s;
   }
 
   .flip-card-front,
   .flip-card-back {
-    @apply absolute w-full h-full bg-card rounded-xl border border-border;
+    @apply absolute inset-0 w-full h-full bg-card rounded-xl border border-border shadow-sm;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
@@ -38,10 +37,5 @@
 
   .rotate-y-180 {
     transform: rotateY(180deg);
-  }
-
-  .backface-hidden {
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
   }
 }

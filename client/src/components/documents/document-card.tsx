@@ -81,6 +81,47 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
     }
   };
 
+  const handleExport = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/documents/generated/${doc.id}/export`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Export failed:', errorText);
+        throw new Error('Failed to export document');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `document-${doc.id}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        description: "Το έγγραφο εξήχθη επιτυχώς",
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Σφάλμα",
+        description: "Αποτυχία εξαγωγής εγγράφου",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const recipients = doc.recipients as Recipient[];
   const statusDetails = getStatusDetails(doc.status, doc.is_correction);
 
@@ -162,6 +203,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                   e.stopPropagation();
                   onEdit();
                 }}
+                disabled={isLoading}
               >
                 <FileEdit className="h-4 w-4 mr-2" />
                 Επεξεργασία
@@ -172,26 +214,43 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                 className="w-full"
                 onClick={(e) => {
                   e.stopPropagation();
+                  handleExport();
+                }}
+                disabled={isLoading}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Εξαγωγή
+              </Button>
+            </div>
+            {!doc.is_correction && doc.protocol_number_input ? (
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
                   setShowCorrectionModal(true);
                 }}
+                disabled={isLoading}
               >
                 <History className="h-4 w-4 mr-2" />
                 Ορθή Επανάληψη
               </Button>
-            </div>
-            <Button
-              variant="default"
-              size="sm"
-              className="w-full"
-              onClick={(e) => {
-                e.stopPropagation();
-                onView();
-              }}
-              disabled={doc.status === 'approved'}
-            >
-              <ClipboardCheck className="h-4 w-4 mr-2" />
-              Προσθήκη Πρωτοκόλλου
-            </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="sm"
+                className="w-full"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView();
+                }}
+                disabled={isLoading || doc.status === 'approved'}
+              >
+                <ClipboardCheck className="h-4 w-4 mr-2" />
+                Προσθήκη Πρωτοκόλλου
+              </Button>
+            )}
           </div>
         </Card>
 
