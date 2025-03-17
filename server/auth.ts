@@ -29,19 +29,22 @@ export const sessionMiddleware = session({
     secure: process.env.NODE_ENV === 'production', // Secure in production
     httpOnly: true,
     maxAge: 8 * 60 * 60 * 1000, // 8 hours
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site cookies in production
     path: '/',
-    domain: process.env.NODE_ENV === 'production' ? process.env.DOMAIN : undefined
-  }
+  },
+  proxy: true // Enable proxy support
 });
 
-// Rate limiting middleware for auth routes
+// Rate limiting middleware for auth routes with proxy support
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts per window
   message: { message: 'Too many login attempts, please try again later' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  // Configure rate limiter for proxy environment
+  skipFailedRequests: false,
+  trustProxy: true
 });
 
 // Authentication middleware with enhanced logging
@@ -51,14 +54,18 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
       hasSession: !!req.session,
       hasUser: !!req.session?.user,
       sessionID: req.sessionID,
-      cookies: req.headers.cookie 
+      cookies: req.headers.cookie,
+      ip: req.ip,
+      protocol: req.protocol,
+      secure: req.secure
     });
 
     if (!req.session?.user?.id) {
       console.log('[Auth] No valid user in session:', {
         sessionExists: !!req.session,
         userExists: !!req.session?.user,
-        sessionID: req.sessionID
+        sessionID: req.sessionID,
+        headers: req.headers
       });
       return res.status(401).json({
         message: 'Authentication required'
@@ -70,7 +77,8 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
     console.log('[Auth] User authenticated:', { 
       id: req.user.id,
       role: req.user.role,
-      sessionID: req.sessionID
+      sessionID: req.sessionID,
+      ip: req.ip
     });
     next();
   } catch (error) {
@@ -151,22 +159,20 @@ export async function setupAuth(app: Express) {
           } else {
             console.log('[Auth] Session saved successfully:', {
               sessionID: req.sessionID,
-              userID: sessionUser.id
+              userID: sessionUser.id,
+              secure: req.secure,
+              protocol: req.protocol
             });
             resolve();
           }
         });
       });
 
-      // Set secure cookie headers
-      res.setHeader('Set-Cookie', [
-        `sid=${req.sessionID}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${8 * 60 * 60}`
-      ]);
-
       console.log('[Auth] Login successful:', {
         id: sessionUser.id,
         role: sessionUser.role,
-        sessionID: req.sessionID
+        sessionID: req.sessionID,
+        ip: req.ip
       });
 
       res.json(sessionUser);
@@ -184,7 +190,8 @@ export async function setupAuth(app: Express) {
   app.post("/api/auth/logout", (req, res) => {
     console.log('[Auth] Logging out user:', { 
       sessionID: req.sessionID,
-      userId: req.session?.user?.id 
+      userId: req.session?.user?.id,
+      ip: req.ip
     });
 
     if (req.session) {
@@ -195,7 +202,11 @@ export async function setupAuth(app: Express) {
             message: 'Logout failed'
           });
         }
-        res.clearCookie('sid', { path: '/' });
+        res.clearCookie('sid', { 
+          path: '/',
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+        });
         res.json({ message: 'Logged out successfully' });
       });
     } else {
@@ -213,7 +224,8 @@ export async function setupAuth(app: Express) {
     console.log('[Auth] Returning current user:', { 
       id: req.user.id,
       role: req.user.role,
-      sessionID: req.sessionID
+      sessionID: req.sessionID,
+      ip: req.ip
     });
     res.json(req.user);
   });

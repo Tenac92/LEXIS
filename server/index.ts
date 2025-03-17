@@ -29,6 +29,10 @@ async function startServer() {
     const app = express();
     console.log('[Startup] Express app created');
 
+    // Enable trust proxy - Required for running behind proxies in production
+    app.set('trust proxy', 1);
+    console.log('[Startup] Trust proxy enabled');
+
     // Security headers
     app.use(securityHeaders);
 
@@ -47,10 +51,11 @@ async function startServer() {
     app.use((req, res, next) => {
       const start = Date.now();
       const path = req.path;
+      const ip = req.ip; // Will now correctly get IP when behind proxy
 
       // Add detailed request logging only for API routes
       if (req.path.startsWith('/api')) {
-        log(`[Request] ${req.method} ${path}`);
+        log(`[Request] ${req.method} ${path} from ${ip}`);
       }
 
       res.on("finish", () => {
