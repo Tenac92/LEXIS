@@ -5,7 +5,6 @@ import {
   FolderKanban,
   LogOut,
   Menu,
-  LayoutDashboard,
   Users,
   History,
   Bell,
@@ -53,27 +52,12 @@ export function Header() {
     }`}>
       <div className="container mx-auto px-4 py-3">
         <nav className="flex items-center justify-between">
-          {/* Left side - Navigation */}
-          <div className="hidden md:flex md:items-center md:space-x-2">
+          {/* Left side - System Title */}
+          <div className="hidden md:block">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                <LayoutDashboard className="h-4 w-4" />
-                Πίνακας Ελέγχου
-              </Button>
-            </Link>
-
-            <Link href="/documents">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Διαβιβαστικά
-              </Button>
-            </Link>
-
-            <Link href="/projects">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                <FolderKanban className="h-4 w-4" />
-                Έργα
-              </Button>
+              <p className="text-sm bg-gradient-to-r from-primary/80 to-primary bg-clip-text text-transparent font-medium hover:cursor-pointer transition-all duration-200 hover:scale-105">
+                Σύστημα Διαχείρισης Εγγράφων
+              </p>
             </Link>
           </div>
 
@@ -106,8 +90,22 @@ export function Header() {
             </DropdownMenu>
           </div>
 
-          {/* Right side - System Title and Admin Controls */}
-          <div className="hidden md:flex md:items-center md:space-x-4">
+          {/* Right side - Navigation */}
+          <div className="hidden md:flex md:items-center md:space-x-2">
+            <Link href="/documents">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Διαβιβαστικά
+              </Button>
+            </Link>
+
+            <Link href="/projects">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <FolderKanban className="h-4 w-4" />
+                Έργα
+              </Button>
+            </Link>
+
             {(isAdmin || isManager) && (
               <Link href="/budget-history">
                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
@@ -145,14 +143,6 @@ export function Header() {
                 </Link>
               </>
             )}
-
-            <div className="border-l pl-4">
-              <Link href="/">
-                <p className="text-sm bg-gradient-to-r from-primary/80 to-primary bg-clip-text text-transparent font-medium hover:cursor-pointer transition-all duration-200 hover:scale-105">
-                  Σύστημα Διαχείρισης Εγγράφων
-                </p>
-              </Link>
-            </div>
           </div>
 
           {/* Mobile Menu Button */}
@@ -182,12 +172,6 @@ export function Header() {
                   <SheetTitle>Μενού</SheetTitle>
                 </SheetHeader>
                 <div className="mt-6 flex flex-col gap-2">
-                  <Link href="/">
-                    <Button variant="ghost" className="w-full justify-start">
-                      <LayoutDashboard className="h-4 w-4 mr-2" />
-                      Πίνακας Ελέγχου
-                    </Button>
-                  </Link>
                   <Link href="/documents">
                     <Button variant="ghost" className="w-full justify-start">
                       <FileText className="h-4 w-4 mr-2" />
