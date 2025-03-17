@@ -13,7 +13,7 @@
 }
 
 @layer components {
-  .document-card {
+  .flip-card {
     @apply relative;
     perspective: 1000px;
     height: 420px;
@@ -27,17 +27,21 @@
 
   .flip-card-front,
   .flip-card-back {
-    @apply absolute w-full h-full p-6 bg-white rounded-xl border border-gray-200/75 shadow-sm;
+    @apply absolute w-full h-full bg-card rounded-xl border border-border shadow-sm;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
 
   .flip-card-back {
     transform: rotateY(180deg);
-    @apply bg-white/95 backdrop-blur-sm;
   }
 
-  .is-flipped {
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .rotate-y-180 {
     transform: rotateY(180deg);
   }
 }
