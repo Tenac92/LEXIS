@@ -295,10 +295,10 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('[Controllers] Starting orthi epanalipsi generation for document:', id);
+    console.log('[Controllers] Starting orthi epanalipsi update for document:', id);
     console.log('[Controllers] Request body:', JSON.stringify(req.body, null, 2));
 
-    // Get the original document first
+    // Get the document first to check if it exists
     const { data: existingDoc, error: fetchError } = await supabase
       .from('generated_documents')
       .select('*')
@@ -306,19 +306,19 @@ router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
       .single();
 
     if (fetchError || !existingDoc) {
-      console.error('[Controllers] Original document not found:', id, fetchError);
+      console.error('[Controllers] Document not found:', id, fetchError);
       return res.status(404).json({ 
-        message: 'Original document not found',
+        message: 'Document not found',
         error: fetchError?.message 
       });
     }
 
     try {
       // Generate the orthi epanalipsi
-      const result = await documentManager.generateOrthiEpanalipsi({
-        ...req.body,
-        original_document_id: parseInt(id)
-      });
+      const result = await documentManager.generateOrthiEpanalipsi(
+        parseInt(id),
+        req.body
+      );
 
       // Check if we got both document and buffer
       if (!result?.document || !result?.buffer) {
@@ -328,7 +328,7 @@ router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
       // Broadcast update
       broadcastDocumentUpdate({
         type: 'DOCUMENT_UPDATE',
-        documentId: result.document.id,
+        documentId: parseInt(id),
         data: result.document
       });
 
