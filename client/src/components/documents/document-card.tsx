@@ -125,8 +125,17 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   const recipients = doc.recipients as Recipient[];
   const statusDetails = getStatusDetails(doc.status, doc.is_correction);
 
-  // Show orthi epanalipsi info when original protocol number exists
-  const showOrthiEpanalipsiInfo = doc.is_correction === true;
+  // Debug log to check values
+  console.log('Document data:', {
+    id: doc.id,
+    is_correction: doc.is_correction,
+    original_protocol_number: doc.original_protocol_number,
+    original_protocol_date: doc.original_protocol_date,
+    comments: doc.comments
+  });
+
+  // Show orthi epanalipsi info when either condition is met
+  const showOrthiEpanalipsiInfo = doc.is_correction === true || doc.original_protocol_number != null;
 
   return (
     <div className="flip-card" onClick={handleCardClick}>
