@@ -86,10 +86,10 @@ export const generatedDocuments = pgTable("generated_documents", {
   attachments: text("attachments").array(),
   protocol_number_input: text("protocol_number_input"),
   protocol_date: timestamp("protocol_date"),
-  original_protocol_number: text("original_protocol_number"),
-  original_protocol_date: timestamp("original_protocol_date"),
-  is_correction: boolean("is_correction").default(false),
-  comments: text("comments"),
+  original_protocol_number: text("original_protocol_number").notNull(),
+  original_protocol_date: timestamp("original_protocol_date").notNull(),
+  is_correction: boolean("is_correction").default(false).notNull(),
+  comments: text("comments").notNull(),
 });
 
 // Update the budget history table to include metadata
