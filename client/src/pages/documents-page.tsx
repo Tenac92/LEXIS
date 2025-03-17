@@ -27,6 +27,7 @@ import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import type { GeneratedDocument } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Filters {
   unit: string;
@@ -58,8 +59,8 @@ export default function DocumentsPage() {
 
   // Initialize filters
   const [filters, setFilters] = useState<Filters>({
-    unit: user?.unit || 'all',
-    status: 'all',
+    unit: user?.units?.[0] || 'all',
+    status: 'pending',
     user: 'all',
     dateFrom: '',
     dateTo: '',
@@ -67,6 +68,16 @@ export default function DocumentsPage() {
     amountTo: '',
     recipient: '',
     afm: ''
+  });
+
+  // Fetch users with same units
+  const { data: matchingUsers } = useQuery({
+    queryKey: ['/api/users/matching-units'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/users/matching-units');
+      return response || [];
+    },
+    enabled: !!user?.units
   });
 
   // Query for documents with debugging
@@ -107,16 +118,21 @@ export default function DocumentsPage() {
           query = query.eq('unit', filters.unit);
         }
 
-        // Apply status filter
-        if (filters.status && filters.status !== 'all') {
-          console.log('[Documents] Applying status filter:', filters.status);
-          query = query.eq('status', filters.status);
+        // Apply status filter based on simplified statuses
+        if (filters.status !== 'all') {
+          if (filters.status === 'orthi_epanalipsi') {
+            query = query.eq('is_correction', true);
+          } else {
+            query = query.eq('status', filters.status);
+          }
         }
 
         // Apply user filter
         if (filters.user === 'current' && user?.id) {
           console.log('[Documents] Applying current user filter:', user.id);
           query = query.eq('generated_by', user.id);
+        } else if (filters.user !== 'all') {
+          query = query.eq('generated_by', parseInt(filters.user));
         }
 
         // Apply date range filters
@@ -210,8 +226,9 @@ export default function DocumentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Όλες οι Μονάδες</SelectItem>
-                    <SelectItem value="ΔΑΕΦΚ-ΚΕ">ΔΑΕΦΚ-ΚΕ</SelectItem>
-                    <SelectItem value="ΓΔΑΕΦΚ">ΓΔΑΕΦΚ</SelectItem>
+                    {user?.units?.map((unit) => (
+                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -227,9 +244,9 @@ export default function DocumentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Όλες οι Καταστάσεις</SelectItem>
-                    <SelectItem value="draft">Πρόχειρο</SelectItem>
                     <SelectItem value="pending">Σε Εκκρεμότητα</SelectItem>
-                    <SelectItem value="approved">Εγκεκριμένο</SelectItem>
+                    <SelectItem value="completed">Ολοκληρωμένο</SelectItem>
+                    <SelectItem value="orthi_epanalipsi">Ορθή Επανάληψη</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -246,6 +263,11 @@ export default function DocumentsPage() {
                   <SelectContent>
                     <SelectItem value="all">Όλοι οι Χρήστες</SelectItem>
                     <SelectItem value="current">Τα Έγγραφά μου</SelectItem>
+                    {matchingUsers?.map((u) => (
+                      <SelectItem key={u.id} value={u.id.toString()}>
+                        {u.name || u.email}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

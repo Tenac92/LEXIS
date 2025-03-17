@@ -221,7 +221,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
         name,
         role,
         password: hashedPassword,
-        units, // Changed from 'unit' to 'units' to match schema
+        units, 
         department,
         telephone: telephone || null
       }])
@@ -269,6 +269,42 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
     console.error('[Users] User deletion error:', error);
     res.status(500).json({ 
       message: 'Failed to delete user',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get users with matching units
+router.get('/matching-units', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.units || req.user.units.length === 0) {
+      return res.status(400).json({ message: 'User has no assigned units' });
+    }
+
+    console.log('[Users] Fetching users with matching units for units:', req.user.units);
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, email, name, units')
+      .neq('id', req.user.id)  
+      .filter('units', 'cs', `{${req.user.units.join(',')}}`)  
+      .order('name');
+
+    if (error) {
+      console.error('[Users] Supabase query error:', error);
+      throw error;
+    }
+
+    // Filter users to only include those that have at least one matching unit
+    const filteredUsers = users?.filter(user => {
+      return user.units?.some(unit => req.user?.units.includes(unit));
+    }) || [];
+
+    console.log('[Users] Found matching users:', filteredUsers.length);
+    res.json(filteredUsers);
+  } catch (error) {
+    console.error('[Users] Error fetching matching users:', error);
+    res.status(500).json({
+      message: 'Failed to fetch matching users',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
