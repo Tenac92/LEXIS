@@ -16,7 +16,6 @@ import { cn } from '@/lib/utils';
 import type { BudgetNotification } from '@shared/schema';
 import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
 
-// Styling based on notification type
 const notificationStyles = {
   funding: {
     bg: 'bg-red-50 hover:bg-red-100',
@@ -111,9 +110,9 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
         <CardContent className="pt-6">
           <div className="text-center text-destructive">
             <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
-            <p className="font-semibold">Failed to load notifications</p>
+            <p className="font-semibold">Αποτυχία φόρτωσης ειδοποιήσεων</p>
             <p className="text-sm text-muted-foreground mt-2">
-              {error instanceof Error ? error.message : 'An unexpected error occurred'}
+              {error instanceof Error ? error.message : 'Προέκυψε ένα μη αναμενόμενο σφάλμα'}
             </p>
             <Button
               variant="outline"
@@ -121,7 +120,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
               onClick={() => refetch()}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Try Again
+              Δοκιμάστε ξανά
             </Button>
           </div>
         </CardContent>
@@ -135,10 +134,10 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
         <CardContent className="pt-6">
           <div className="text-center text-muted-foreground">
             <Bell className="h-8 w-8 mx-auto mb-2" />
-            <p>No notifications available</p>
+            <p>Δεν υπάρχουν ειδοποιήσεις</p>
             {!isConnected && (
               <p className="text-sm mt-2 text-yellow-600">
-                Real-time updates disconnected. Notifications may be delayed.
+                Αποσύνδεση ενημερώσεων πραγματικού χρόνου. Οι ειδοποιήσεις ενδέχεται να καθυστερήσουν.
               </p>
             )}
           </div>
@@ -151,13 +150,13 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     <div className="space-y-4">
       {!isConnected && (
         <div className="text-sm p-2 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-600 mb-4">
-          ⚠️ Real-time updates disconnected. Some notifications may be delayed.
+          ⚠️ Αποσύνδεση ενημερώσεων πραγματικού χρόνου. Ορισμένες ειδοποιήσεις ενδέχεται να καθυστερήσουν.
           <Button
             variant="link"
             className="text-yellow-700 p-0 h-auto ml-2"
             onClick={() => window.location.reload()}
           >
-            Reconnect
+            Επανασύνδεση
           </Button>
         </div>
       )}

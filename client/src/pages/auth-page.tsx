@@ -66,7 +66,7 @@ export default function AuthPage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="password">Κωδικός</Label>
+                  <Label htmlFor="password">Κωδικός Πρόσβασης</Label>
                   <Input 
                     type="password"
                     id="password"
