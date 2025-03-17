@@ -183,7 +183,7 @@ export class DatabaseStorage implements IStorage {
       if (!budgetData) {
         return {
           status: 'error',
-          message: 'Budget data not found for the project',
+          message: 'Δεν βρέθηκαν δεδομένα προϋπολογισμού για το έργο',
           canCreate: false
         };
       }
@@ -196,7 +196,7 @@ export class DatabaseStorage implements IStorage {
       if (remainingBudget < 0) {
         return {
           status: 'error',
-          message: 'Insufficient budget available',
+          message: 'Ανεπαρκής διαθέσιμος προϋπολογισμός',
           canCreate: false
         };
       }
@@ -204,7 +204,7 @@ export class DatabaseStorage implements IStorage {
       if (remainingBudget < minimumThreshold) {
         return {
           status: 'warning',
-          message: 'Budget will be reduced below 20% of annual allocation',
+          message: 'Ο προϋπολογισμός θα μειωθεί κάτω από το 20% της ετήσιας κατανομής',
           canCreate: true
         };
       }

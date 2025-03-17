@@ -83,7 +83,7 @@ export default function AuthPage() {
                   className="w-full"
                   disabled={loginMutation.isPending}
                 >
-                  {loginMutation.isPending ? "Σύνδεση..." : "Σύνδεση"}
+                  {loginMutation.isPending ? "Σύνδεση σε εξέλιξη..." : "Σύνδεση"}
                 </Button>
               </div>
             </form>

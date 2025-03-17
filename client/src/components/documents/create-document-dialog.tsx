@@ -909,14 +909,15 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                 min={1}
                                 max={12}
                                 {...form.register(`recipients.${index}.installment`, {
-                                  valueAsNumber: true,                                  min: 1,
+                                  valueAsNumber: true,
+                                  min: 1,
                                   max: 12
                                 })}
                                 placeholder="Δόση"
                                 className="flex-1"
                               />
                               <Button
-                                type="button"
+                                                               type="button"
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => removeRecipient(index)}
