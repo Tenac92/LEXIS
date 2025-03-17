@@ -125,6 +125,9 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   const recipients = doc.recipients as Recipient[];
   const statusDetails = getStatusDetails(doc.status, doc.is_correction);
 
+  // Show orthi epanalipsi info when original protocol number exists
+  const showOrthiEpanalipsiInfo = doc.original_protocol_number !== null;
+
   return (
     <div className="flip-card" onClick={handleCardClick}>
       <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
@@ -149,11 +152,11 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
             </Badge>
           </div>
 
-          {doc.is_correction && (
+          {/* Orthi Epanalipsi Information */}
+          {showOrthiEpanalipsiInfo && (
             <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
               <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                Ορθή Επανάληψη του εγγράφου 
-                {doc.original_protocol_number && ` με αρ. πρωτ. ${doc.original_protocol_number}`}
+                Ορθή Επανάληψη του εγγράφου με αρ. πρωτ. {doc.original_protocol_number}
                 {doc.original_protocol_date && ` (${new Date(doc.original_protocol_date).toLocaleDateString('el-GR')})`}
               </p>
               {doc.comments && (
