@@ -177,6 +177,8 @@ export class DocumentManager {
         protocol_date: null,
         status: 'draft',
         is_correction: true,
+        // Store correction reason in comments field
+        comments: documentData.correctionReason,
         // Ensure these fields are numbers/strings
         project_id: documentData.project_id ? String(documentData.project_id) : null,
         total_amount: parseFloat(String(documentData.total_amount || 0)),
@@ -186,6 +188,9 @@ export class DocumentManager {
           installment: parseInt(String(r.installment))
         }))
       };
+
+      // Remove correctionReason as it's now stored in comments
+      delete documentToCreate.correctionReason;
 
       console.log('[DocumentManager] Preparing to create new document:', 
         JSON.stringify(documentToCreate, null, 2)

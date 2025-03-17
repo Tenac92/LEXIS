@@ -316,7 +316,7 @@ export class DocumentFormatter {
     });
   }
 
-  public static async generateDocument(
+  private static async generateDocument(
     documentData: DocumentData,
   ): Promise<Buffer> {
     try {
@@ -866,7 +866,7 @@ export class DocumentFormatter {
   }
 
   public async formatOrthiEpanalipsi(data: {
-    correctionReason: string;
+    comments: string;
     originalDocument: DocumentData;
     project_id: string;
     project_na853: string;
@@ -887,19 +887,19 @@ export class DocumentFormatter {
       console.log("Formatting orthi epanalipsi document with data:", data);
 
       // Get unit details
-      const unitDetails = await this.getUnitDetails(data.unit);
+      const unitDetails = await DocumentFormatter.getUnitDetails(data.unit);
 
       const sections = [
         {
           properties: {
             page: {
               size: { width: 11906, height: 16838 },
-              margins: this.DOCUMENT_MARGINS,
+              margins: DocumentFormatter.DOCUMENT_MARGINS,
               orientation: PageOrientation.PORTRAIT,
             },
           },
           children: [
-            await this.createDocumentHeader(data, unitDetails || undefined),
+            await DocumentFormatter.createDocumentHeader(data, unitDetails || undefined),
             new Paragraph({
               children: [
                 new TextRun({
@@ -918,16 +918,16 @@ export class DocumentFormatter {
                   bold: true,
                 }),
                 new TextRun({
-                  text: data.correctionReason,
+                  text: data.comments || '',
                 }),
               ],
               spacing: { before: 240, after: 480 },
             }),
-            ...this.createDocumentSubject(data, unitDetails || {}),
-            ...this.createMainContent(data, unitDetails || {}),
-            this.createPaymentTable(data.recipients),
-            this.createNote(),
-            this.createFooter(data, unitDetails),
+            ...DocumentFormatter.createDocumentSubject(data, unitDetails || {}),
+            ...DocumentFormatter.createMainContent(data, unitDetails || {}),
+            DocumentFormatter.createPaymentTable(data.recipients),
+            DocumentFormatter.createNote(),
+            DocumentFormatter.createFooter(data, unitDetails),
           ],
         },
       ];
@@ -938,8 +938,8 @@ export class DocumentFormatter {
           default: {
             document: {
               run: {
-                font: this.DEFAULT_FONT,
-                size: this.DEFAULT_FONT_SIZE,
+                font: DocumentFormatter.DEFAULT_FONT,
+                size: DocumentFormatter.DEFAULT_FONT_SIZE,
               },
             },
           },
