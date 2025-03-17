@@ -50,14 +50,14 @@ export function Header() {
         ? 'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60' 
         : 'bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60'
     }`}>
-      <div className="container mx-auto px-4 py-3">
+      <div className="container mx-auto px-4 py-4">
         <nav className="flex items-center justify-between">
           {/* Left side - System Title */}
           <div className="hidden md:block">
             <Link href="/">
-              <p className="text-sm bg-gradient-to-r from-primary/80 to-primary bg-clip-text text-transparent font-medium hover:cursor-pointer transition-all duration-200 hover:scale-105">
+              <h1 className="text-lg font-semibold bg-gradient-to-r from-primary/90 to-primary bg-clip-text text-transparent hover:cursor-pointer transition-all duration-200 hover:scale-105 tracking-tight">
                 Σύστημα Διαχείρισης Εγγράφων
-              </p>
+              </h1>
             </Link>
           </div>
 
@@ -65,22 +65,28 @@ export function Header() {
           <div className="flex-1 flex justify-center">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent">
+                <Button 
+                  variant="ghost" 
+                  className="px-4 py-2 h-auto hover:bg-accent/50 rounded-lg transition-colors"
+                >
                   <div className="text-center">
-                    <h1 className="text-xl font-semibold text-primary flex items-center gap-2">
+                    <span className="text-lg font-medium text-foreground flex items-center gap-2">
                       {user?.username || user?.name || 'Χρήστης'}
-                      <ChevronDown className="h-4 w-4" />
-                    </h1>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </span>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center" className="w-48">
-                <DropdownMenuItem onClick={() => setIsPasswordModalOpen(true)}>
+                <DropdownMenuItem 
+                  onClick={() => setIsPasswordModalOpen(true)}
+                  className="hover:bg-accent/80"
+                >
                   <Key className="h-4 w-4 mr-2" />
                   Αλλαγή Κωδικού
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive" 
+                  className="text-destructive focus:text-destructive hover:bg-destructive/10" 
                   onClick={() => logoutMutation.mutate()}
                 >
                   <LogOut className="h-4 w-4 mr-2" />
@@ -91,16 +97,24 @@ export function Header() {
           </div>
 
           {/* Right side - Navigation */}
-          <div className="hidden md:flex md:items-center md:space-x-2">
+          <div className="hidden md:flex md:items-center md:gap-3">
             <Link href="/documents">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
+              >
                 <FileText className="h-4 w-4" />
                 Διαβιβαστικά
               </Button>
             </Link>
 
             <Link href="/projects">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
+              >
                 <FolderKanban className="h-4 w-4" />
                 Έργα
               </Button>
@@ -108,7 +122,11 @@ export function Header() {
 
             {(isAdmin || isManager) && (
               <Link href="/budget-history">
-                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
+                >
                   <History className="h-4 w-4" />
                   Ιστορικό Προϋπ.
                 </Button>
@@ -118,13 +136,21 @@ export function Header() {
             {isAdmin && (
               <>
                 <Link href="/users">
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
+                  >
                     <Users className="h-4 w-4" />
                     Χρήστες
                   </Button>
                 </Link>
                 <Link href="/notifications">
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2 relative">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4 relative"
+                  >
                     <Bell className="h-4 w-4" />
                     Ειδοποιήσεις
                     <motion.div
