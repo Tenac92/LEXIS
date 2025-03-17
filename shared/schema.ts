@@ -261,6 +261,20 @@ export interface BudgetValidationResponse {
 export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
 export type InsertBudgetNotification = z.infer<typeof insertBudgetNotificationSchema>;
 
+// Add the Monada table schema
+export const monada = pgTable("Monada", {
+  id: text("id").primaryKey(),
+  unit: text("unit").notNull(),
+  unit_name: text("unit_name").notNull(),
+  parts: jsonb("parts"),
+  email: text("email"),
+  manager: jsonb("manager").notNull(),
+  address: jsonb("address"),
+});
+
+// Add Monada type
+export type Monada = typeof monada.$inferSelect;
+
 // Export database type
 export type Database = {
   users: User;
@@ -272,4 +286,5 @@ export type Database = {
   attachmentsRows: AttachmentsRow;
   documentVersions: DocumentVersion;
   documentTemplates: DocumentTemplate;
+  monada: Monada;
 };

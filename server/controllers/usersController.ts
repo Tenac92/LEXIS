@@ -3,6 +3,7 @@ import { supabase } from '../config/db';
 import { authenticateSession } from '../auth';
 import type { User } from '@shared/schema';
 import bcrypt from 'bcrypt';
+import { Request, Response } from 'express';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -22,7 +23,7 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
     const unitsList = Array.isArray(units) ? units : [units];
 
     const { data, error } = await supabase
-      .from('unit_det')
+      .from('Monada')
       .select('parts')
       .in('unit_name', unitsList);
 
@@ -33,8 +34,9 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
 
     // Combine all parts from selected units
     const allParts = data?.reduce((acc: string[], unit) => {
-      if (unit.parts && Array.isArray(unit.parts)) {
-        return [...acc, ...unit.parts];
+      if (unit.parts && typeof unit.parts === 'object') {
+        // Extract values from the parts object
+        return [...acc, ...Object.values(unit.parts)];
       }
       return acc;
     }, []);
@@ -55,9 +57,9 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
 // Get all units
 router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res: Response) => {
   try {
-    console.log('[Units] Fetching units from unit_det table');
+    console.log('[Units] Fetching units from Monada table');
     const { data: units, error } = await supabase
-      .from('unit_det')
+      .from('Monada')
       .select('unit_name');
 
     if (error) {
@@ -91,7 +93,7 @@ router.get('/units/:unitName/parts', authenticateSession, async (req: Authentica
 
     console.log('[Units] Fetching parts for unit:', unitName);
     const { data: unitData, error } = await supabase
-      .from('unit_det')
+      .from('Monada')
       .select('parts')
       .eq('unit_name', unitName)
       .single();
@@ -101,7 +103,7 @@ router.get('/units/:unitName/parts', authenticateSession, async (req: Authentica
       throw error;
     }
 
-    const parts = unitData?.parts || [];
+    const parts = unitData?.parts ? Object.values(unitData.parts) : [];
     console.log('[Units] Found parts:', parts);
     res.json(parts);
   } catch (error) {
@@ -170,7 +172,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     // Verify units exist
     console.log('[Users] Verifying units:', units);
     const { data: unitData, error: unitError } = await supabase
-      .from('unit_det')
+      .from('Monada')
       .select('unit_name, parts')
       .in('unit_name', units);
 
@@ -184,7 +186,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 
     // Verify department exists in units' parts
     const allParts = Array.from(new Set(
-      unitData.flatMap(unit => unit.parts || [])
+      unitData.flatMap(unit => Object.values(unit.parts || {}))
     ));
 
     if (!allParts.includes(department)) {

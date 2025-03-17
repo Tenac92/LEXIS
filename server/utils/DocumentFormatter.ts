@@ -22,9 +22,20 @@ import { format } from "date-fns";
 import { after } from "node:test";
 
 interface UnitDetails {
-  unit_name?: string;
-  manager?: string;
+  unit_name: string;
+  manager?: {
+    name: string;
+    order: string;
+    title: string;
+    degree: string;
+    prepose: string;
+  };
   email?: string;
+  address?: {
+    tk: string;
+    region: string;
+    address: string;
+  };
 }
 
 interface UserDetails {
@@ -97,7 +108,12 @@ export class DocumentFormatter {
         "",
     };
 
-    console.log("Document user info:", userInfo); // Debug log
+    // Use unitDetails.address if available
+    const address = unitDetails?.address || {
+      address: "Κηφισίας 124 & Ιατρίδου 2",
+      tk: "11526",
+      region: "Αθήνα"
+    };
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -162,20 +178,20 @@ export class DocumentFormatter {
                 this.createBlankLine(10),
                 this.createContactDetail(
                   "Ταχ. Δ/νση",
-                  "Κηφισίας 124 & Ιατρίδου 2",
+                  address.address,
                 ),
-                this.createContactDetail("Ταχ. Κώδικας", "11526, Αθήνα"),
+                this.createContactDetail("Ταχ. Κώδικας", `${address.tk}, ${address.region}`),
                 this.createContactDetail(
                   "Πληροφορίες",
-                  userInfo.name || "......................",
+                  userInfo.name,
                 ),
                 this.createContactDetail(
                   "Τηλέφωνο",
-                  userInfo.contact_number || "......................",
+                  userInfo.contact_number,
                 ),
                 this.createContactDetail(
                   "Email",
-                  unitDetails?.email || "......................",
+                  unitDetails?.email || "",
                 ),
                 this.createBlankLine(10),
               ],
@@ -320,7 +336,7 @@ export class DocumentFormatter {
               documentData,
               unitDetails || undefined,
             ),
-            ...this.createDocumentSubject(documentData), // Updated line
+            ...this.createDocumentSubject(documentData),
             ...this.createMainContent(documentData),
             this.createPaymentTable(documentData.recipients || []),
             this.createNote(),
@@ -759,7 +775,7 @@ export class DocumentFormatter {
       children: [
         new TextRun({ text: label }),
         new TextRun({ text: ": " }),
-        new TextRun({ text: value }),
+        new TextRun({ text: value || "........................" }),
       ],
     });
   }
@@ -823,7 +839,7 @@ export class DocumentFormatter {
     try {
       console.log("Fetching unit details for:", unitCode);
       const { data: unitData, error: unitError } = await supabase
-        .from("unit_det")
+        .from("Monada")
         .select("*")
         .eq("unit", unitCode)
         .single();
