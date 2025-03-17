@@ -86,6 +86,10 @@ export const generatedDocuments = pgTable("generated_documents", {
   attachments: text("attachments").array(),
   protocol_number_input: text("protocol_number_input"),
   protocol_date: timestamp("protocol_date"),
+  original_protocol_number: text("original_protocol_number"),
+  original_protocol_date: timestamp("original_protocol_date"),
+  is_correction: boolean("is_correction").default(false),
+  comments: text("comments"),
 });
 
 // Update the budget history table to include metadata
@@ -162,6 +166,7 @@ export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type InsertDocumentVersion = typeof documentVersions.$inferInsert;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 export type InsertDocumentTemplate = typeof documentTemplates.$inferInsert;
+
 
 
 // Insert Schemas
