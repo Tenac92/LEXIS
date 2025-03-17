@@ -142,12 +142,8 @@ export class DocumentManager {
 
   async generateOrthiEpanalipsi(documentData: any) {
     try {
-      console.log('[DocumentManager] Starting orthi epanalipsi generation with data:', 
-        JSON.stringify({
-          ...documentData,
-          original_document_id: documentData.original_document_id,
-          correctionReason: documentData.correctionReason
-        }, null, 2)
+      console.log('[DocumentManager] Starting orthi epanalipsi update with data:', 
+        JSON.stringify(documentData, null, 2)
       );
 
       // Get the original document first
@@ -162,67 +158,42 @@ export class DocumentManager {
         throw new Error('Failed to fetch original document');
       }
 
-      console.log('[DocumentManager] Original document found:', {
-        id: originalDoc.id,
-        protocol_number: originalDoc.protocol_number_input,
-        protocol_date: originalDoc.protocol_date
-      });
-
-      // Store original protocol details and clear current ones
-      const documentToCreate = {
-        ...documentData,
+      // Store original protocol details and update document
+      const updateData = {
         original_protocol_number: originalDoc.protocol_number_input,
         original_protocol_date: originalDoc.protocol_date,
-        protocol_number_input: null,
-        protocol_date: null,
+        protocol_number_input: documentData.protocol_number_input,
+        protocol_date: documentData.protocol_date,
         status: 'draft',
         is_correction: true,
-        // Store correction reason in comments field
         comments: documentData.correctionReason,
-        // Ensure these fields are numbers/strings
-        project_id: documentData.project_id ? String(documentData.project_id) : null,
-        total_amount: parseFloat(String(documentData.total_amount || 0)),
-        recipients: (documentData.recipients || []).map((r: any) => ({
-          ...r,
-          amount: parseFloat(String(r.amount)),
-          installment: parseInt(String(r.installment))
-        }))
+        updated_at: new Date().toISOString()
       };
 
-      // Remove correctionReason as it's now stored in comments
-      delete documentToCreate.correctionReason;
+      console.log('[DocumentManager] Updating document with:', updateData);
 
-      console.log('[DocumentManager] Preparing to create new document:', 
-        JSON.stringify(documentToCreate, null, 2)
-      );
-
-      // Create the new document
-      const { data: newDoc, error: createError } = await supabase
+      // Update the document
+      const { data: updatedDoc, error: updateError } = await supabase
         .from('generated_documents')
-        .insert([documentToCreate])
+        .update(updateData)
+        .eq('id', documentData.original_document_id)
         .select()
         .single();
 
-      if (createError) {
-        console.error('[DocumentManager] Error creating orthi epanalipsi document:', createError);
-        throw new Error(`Failed to create orthi epanalipsi document: ${createError.message}`);
+      if (updateError) {
+        console.error('[DocumentManager] Error updating document:', updateError);
+        throw new Error(`Failed to update document: ${updateError.message}`);
       }
-
-      console.log('[DocumentManager] New document created successfully:', {
-        id: newDoc.id,
-        status: newDoc.status,
-        is_correction: newDoc.is_correction
-      });
 
       try {
         // Format document using DocumentFormatter
         const docxBuffer = await this.formatter.formatOrthiEpanalipsi({
-          ...documentToCreate,
+          ...updatedDoc,
           originalDocument: originalDoc
         });
 
         console.log('[DocumentManager] Document formatted successfully');
-        return { document: newDoc, buffer: docxBuffer };
+        return { document: updatedDoc, buffer: docxBuffer };
       } catch (formatError) {
         console.error('[DocumentManager] Error formatting document:', formatError);
         throw new Error(`Failed to format orthi epanalipsi document: ${formatError.message}`);
