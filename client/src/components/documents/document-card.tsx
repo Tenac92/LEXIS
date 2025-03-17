@@ -11,7 +11,8 @@ import {
   Download,
   ClipboardCheck,
   Users,
-  History
+  History,
+  AlertCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -33,6 +34,37 @@ interface Recipient {
   amount: number;
   installment: number;
 }
+
+const getStatusDetails = (status: string, isCorrection: boolean) => {
+  if (isCorrection) {
+    return {
+      label: "Ορθή Επανάληψη",
+      variant: "destructive" as const,
+      icon: AlertCircle
+    };
+  }
+
+  switch (status) {
+    case 'approved':
+      return {
+        label: "Ολοκληρωμένο",
+        variant: "default" as const,
+        icon: CheckCircle
+      };
+    case 'draft':
+      return {
+        label: "Σε εκκρεμότητα",
+        variant: "secondary" as const,
+        icon: Clock
+      };
+    default:
+      return {
+        label: status,
+        variant: "secondary" as const,
+        icon: FileText
+      };
+  }
+};
 
 export function DocumentCard({ document: doc, onView, onEdit, onDelete }: DocumentCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
@@ -58,20 +90,13 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
         },
       });
 
-      console.log('[DocumentCard] Export response status:', response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[DocumentCard] Export failed:', errorText);
         throw new Error(`Failed to export document: ${response.statusText}`);
       }
 
-      const contentType = response.headers.get('content-type');
-      console.log('[DocumentCard] Response content type:', contentType);
-
       const blob = await response.blob();
-      console.log('[DocumentCard] Blob size:', blob.size);
-
       if (blob.size === 0) {
         throw new Error('Received empty document');
       }
@@ -85,7 +110,6 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
       window.document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      console.log('[DocumentCard] Document exported successfully');
       toast({
         description: "Το έγγραφο εξήχθη επιτυχώς",
         variant: "default"
@@ -103,6 +127,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   };
 
   const recipients = doc.recipients as Recipient[];
+  const statusDetails = getStatusDetails(doc.status, doc.is_correction);
 
   return (
     <>
@@ -127,15 +152,25 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                   Μονάδα: {doc.unit}
                 </p>
               </div>
-              <Badge variant={doc.status === 'approved' ? 'default' : 'secondary'}>
-                {doc.status === 'approved' ? (
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                ) : (
-                  <Clock className="h-3 w-3 mr-1" />
-                )}
-                {doc.status === 'approved' ? 'Εγκεκριμένο' : 'Σε εκκρεμότητα'}
+              <Badge variant={statusDetails.variant}>
+                <statusDetails.icon className="h-3 w-3 mr-1" />
+                {statusDetails.label}
               </Badge>
             </div>
+
+            {doc.is_correction && doc.original_protocol_number && (
+              <div className="mt-4 p-3 bg-red-100 dark:bg-red-900 rounded-lg">
+                <p className="text-sm font-medium">
+                  Ορθή Επανάληψη του εγγράφου με αρ. πρωτ. {doc.original_protocol_number}
+                  {doc.original_protocol_date && ` (${new Date(doc.original_protocol_date).toLocaleDateString('el-GR')})`}
+                </p>
+                {doc.comments && (
+                  <p className="text-sm mt-1">
+                    Λόγος διόρθωσης: {doc.comments}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4 mt-4">
               <div className="space-y-1">
