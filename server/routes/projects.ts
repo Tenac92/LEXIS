@@ -1,15 +1,19 @@
-
 import { Router } from 'express';
 import { supabase } from '../config/db';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken } from '../middleware/authMiddleware';
+import { ProjectCatalog } from '@shared/schema';
+import * as xlsx from 'xlsx';
+import multer from 'multer';
+import { parse } from 'csv-parse';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Add this new endpoint for fetching expenditure types
 router.get('/:projectId/expenditure-types', authenticateToken, async (req, res) => {
   try {
     const { projectId } = req.params;
-    
+
     const { data: project, error } = await supabase
       .from('project_catalog')
       .select('expenditure_type')
@@ -41,17 +45,6 @@ router.get('/:projectId/expenditure-types', authenticateToken, async (req, res) 
     });
   }
 });
-
-import { Router } from 'express';
-import { supabase } from '../config/db';
-import { authenticateToken } from '../middleware/authMiddleware'; //Preserving the original middleware
-import { ProjectCatalog } from '@shared/schema';
-import * as xlsx from 'xlsx';
-import multer from 'multer';
-import { parse } from 'csv-parse';
-
-const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
 
 // Get all projects
 router.get('/', authenticateToken, async (req, res) => {
@@ -243,6 +236,7 @@ router.post('/bulk-upload', authenticateToken, upload.single('file'), async (req
     });
   }
 });
+
 
 // Add this route after the existing routes
 router.put('/bulk-update', authenticateToken, async (req, res) => {
