@@ -295,7 +295,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('[Controllers] Starting orthi epanalipsi update for document:', id);
+    console.log('[Controllers] Starting orthi epanalipsi generation for document:', id);
     console.log('[Controllers] Request body:', JSON.stringify(req.body, null, 2));
 
     // Get the original document first
@@ -314,7 +314,7 @@ router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
     }
 
     try {
-      // Update document and generate orthi epanalipsi
+      // Generate the orthi epanalipsi
       const result = await documentManager.generateOrthiEpanalipsi({
         ...req.body,
         original_document_id: parseInt(id)
@@ -328,11 +328,11 @@ router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
       // Broadcast update
       broadcastDocumentUpdate({
         type: 'DOCUMENT_UPDATE',
-        documentId: parseInt(id),
+        documentId: result.document.id,
         data: result.document
       });
 
-      console.log('[Controllers] Orthi epanalipsi updated successfully:', {
+      console.log('[Controllers] Orthi epanalipsi generated successfully:', {
         id: result.document.id,
         bufferSize: result.buffer.length
       });

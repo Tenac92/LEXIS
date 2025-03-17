@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Form,
   FormControl,
@@ -13,17 +13,50 @@ import {
 } from "../ui/form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { GeneratedDocument } from "@shared/schema";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+const recipientSchema = z.object({
+  firstname: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
+  lastname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
+  afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
+  amount: z.number().min(0, "Το ποσό πρέπει να είναι θετικό"),
+  installment: z.number().min(1, "Η δόση πρέπει να είναι τουλάχιστον 1"),
+});
+
 const orthiEpanalipsiSchema = z.object({
   correctionReason: z.string().min(1, "Παρακαλώ εισάγετε το λόγο διόρθωσης"),
-  protocol_number_input: z.string().min(1, "Ο αριθμός πρωτοκόλλου είναι υποχρεωτικός"),
-  protocol_date: z.string().min(1, "Η ημερομηνία πρωτοκόλλου είναι υποχρεωτική"),
+  project_id: z.string().min(1, "Παρακαλώ επιλέξτε έργο"),
+  project_na853: z.string().min(1, "Το NA853 είναι υποχρεωτικό"),
+  unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
+  expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
+  recipients: z.array(recipientSchema),
+  total_amount: z.number().min(0, "Το συνολικό ποσό πρέπει να είναι θετικό"),
 });
+
+const UNITS = [
+  "ΔΑΕΦΚ-ΚΕ",
+  "ΔΑΕΦΚ-ΒΕ",
+  "ΔΑΕΦΚ-ΑΚ",
+  "ΔΑΕΦΚ-ΔΕ",
+  "ΓΔΑΕΦΚ",
+  "ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ",
+  "ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ",
+  "ΤΑΕΦΚ-ΑΑ",
+  "ΤΑΕΦΚ-ΔΑ",
+  "ΤΑΕΦΚ ΧΑΝΙΩΝ",
+  "ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ"
+] as const;
 
 interface OrthiEpanalipsiModalProps {
   isOpen: boolean;
@@ -34,24 +67,68 @@ interface OrthiEpanalipsiModalProps {
 export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanalipsiModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedProject, setSelectedProject] = useState<string>("");
 
   const form = useForm({
     resolver: zodResolver(orthiEpanalipsiSchema),
     defaultValues: {
       correctionReason: "",
-      protocol_number_input: "",
-      protocol_date: "",
+      project_id: document?.project_id ? String(document.project_id) : "",
+      project_na853: document?.project_na853 || "",
+      unit: document?.unit || "",
+      expenditure_type: document?.expenditure_type || "",
+      recipients: document?.recipients || [],
+      total_amount: document?.total_amount || 0,
     },
   });
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: async () => {
+      const response = await fetch("/api/projects");
+      if (!response.ok) throw new Error("Failed to fetch projects");
+      return response.json();
+    },
+  });
+
+  const { data: expenditureTypes = [] } = useQuery({
+    queryKey: ["expenditureTypes", selectedProject],
+    enabled: !!selectedProject,
+    queryFn: async () => {
+      const response = await fetch(`/api/projects/${selectedProject}/expenditure-types`);
+      if (!response.ok) throw new Error("Failed to fetch expenditure types");
+      return response.json();
+    },
+  });
+
+  const handleProjectSelect = (projectId: string) => {
+    const project = projects.find(p => String(p.mis) === projectId);
+    if (project) {
+      form.setValue("project_id", String(project.mis));
+      form.setValue("project_na853", project.na853);
+      setSelectedProject(String(project.mis));
+    }
+  };
 
   const onSubmit = async (data: z.infer<typeof orthiEpanalipsiSchema>) => {
     try {
       console.log('Submitting orthi epanalipsi with data:', data);
 
+      const formattedData = {
+        ...data,
+        project_id: String(data.project_id),
+        total_amount: parseFloat(String(data.total_amount)),
+        recipients: data.recipients.map(r => ({
+          ...r,
+          amount: parseFloat(String(r.amount)),
+          installment: parseInt(String(r.installment))
+        }))
+      };
+
       const response = await fetch(`/api/documents/generated/${document?.id}/orthi-epanalipsi`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formattedData),
       });
 
       if (!response.ok) {
@@ -59,17 +136,6 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         console.error("Orthi epanalipsi error response:", errorText);
         throw new Error("Failed to create orthi epanalipsi");
       }
-
-      // Get the response as a blob for downloading
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `orthi-epanalipsi-${document?.id}.docx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
 
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       toast({ title: "Επιτυχία", description: "Η ορθή επανάληψη δημιουργήθηκε" });
@@ -84,9 +150,37 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     }
   };
 
+  useEffect(() => {
+    if (document && isOpen) {
+      form.reset({
+        project_id: String(document.project_id),
+        project_na853: document.project_na853,
+        unit: document.unit,
+        expenditure_type: document.expenditure_type,
+        recipients: document.recipients,
+        total_amount: document.total_amount,
+      });
+      setSelectedProject(String(document.project_id));
+    }
+  }, [document, isOpen]);
+
+  const addRecipient = () => {
+    const recipients = form.getValues("recipients") || [];
+    form.setValue("recipients", [
+      ...recipients,
+      { firstname: "", lastname: "", afm: "", amount: 0, installment: 1 }
+    ]);
+  };
+
+  const removeRecipient = (index: number) => {
+    const recipients = form.getValues("recipients") || [];
+    recipients.splice(index, 1);
+    form.setValue("recipients", [...recipients]);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>Δημιουργία Ορθής Επανάληψης</DialogTitle>
           <DialogDescription>
@@ -111,33 +205,202 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                 )}
               />
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="project_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Έργο</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={(value) => handleProjectSelect(value)}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε έργο" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {projects.map((project) => (
+                            <SelectItem key={project.mis} value={String(project.mis)}>
+                              {project.mis} - {project.na853}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="expenditure_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Τύπος Δαπάνης</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={!selectedProject}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε τύπο δαπάνης" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {expenditureTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={form.control}
-                name="protocol_number_input"
+                name="unit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Νέος Αριθμός Πρωτοκόλλου</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
+                    <FormLabel>Μονάδα</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Επιλέξτε μονάδα" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {UNITS.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="protocol_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Νέα Ημερομηνία Πρωτοκόλλου</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <FormLabel>Δικαιούχοι</FormLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addRecipient}
+                  >
+                    Προσθήκη Δικαιούχου
+                  </Button>
+                </div>
+
+                {(form.watch("recipients") || []).map((recipient, index) => (
+                  <div key={index} className="space-y-4 p-4 border rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-medium">Δικαιούχος #{index + 1}</h4>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => removeRecipient(index)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        Διαγραφή
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.firstname`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Όνομα</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.lastname`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Επώνυμο</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.afm`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ΑΦΜ</FormLabel>
+                            <FormControl>
+                              <Input {...field} maxLength={9} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.amount`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Ποσό</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                step="0.01"
+                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.installment`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Δόση</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                min="1"
+                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </form>
           </Form>
         </ScrollArea>
