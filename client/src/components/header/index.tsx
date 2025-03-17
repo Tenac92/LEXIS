@@ -19,7 +19,7 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
 
 export function Header() {
@@ -42,10 +42,10 @@ export function Header() {
   return (
     <>
       <motion.header 
-        className={`sticky top-0 z-[100] w-full border-b backdrop-blur-sm transition-all duration-300 ${
+        className={`sticky top-0 z-40 w-full border-b backdrop-blur-sm transition-all duration-300 ${
           scrolled 
-            ? 'bg-gradient-to-r from-background/95 via-background/98 to-background/95 shadow-lg shadow-primary/5' 
-            : 'bg-gradient-to-r from-background/80 via-background/90 to-background/80'
+            ? 'bg-background/95 shadow-lg shadow-primary/5' 
+            : 'bg-background/80'
         }`}
         initial={{ y: -100 }}
         animate={{ y: 0 }}
@@ -78,12 +78,12 @@ export function Header() {
                 <NavigationMenuList className="gap-2">
                   {/* Dashboard */}
                   <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
-                      <Link href="/" className={navigationMenuTriggerStyle()}>
+                    <Link href="/">
+                      <a className={navigationMenuTriggerStyle()}>
                         <LayoutDashboard className="h-4 w-4 mr-2" />
                         Πίνακας Ελέγχου
-                      </Link>
-                    </NavigationMenuLink>
+                      </a>
+                    </Link>
                   </NavigationMenuItem>
 
                   {/* Documents */}
@@ -93,26 +93,22 @@ export function Header() {
                       Διαβιβαστικά
                     </NavigationMenuTrigger>
                     <NavigationMenuContent>
-                      <ul className="grid w-[200px] gap-1 p-2">
+                      <ul className="grid w-48 gap-1 p-2">
                         <li>
-                          <NavigationMenuLink asChild>
-                            <Link href="/documents" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                              <div className="flex items-center gap-2">
-                                <FileText className="h-4 w-4" />
-                                <span>{isRegularUser ? 'Δημιουργία' : 'Προβολή'}</span>
-                              </div>
-                            </Link>
-                          </NavigationMenuLink>
+                          <Link href="/documents">
+                            <a className="flex select-none items-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground">
+                              <FileText className="h-4 w-4 mr-2" />
+                              <span>{isRegularUser ? 'Δημιουργία' : 'Προβολή'}</span>
+                            </a>
+                          </Link>
                         </li>
                         <li>
-                          <NavigationMenuLink asChild>
-                            <Link href="/templates" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                              <div className="flex items-center gap-2">
-                                <Library className="h-4 w-4" />
-                                <span>Πρότυπα</span>
-                              </div>
-                            </Link>
-                          </NavigationMenuLink>
+                          <Link href="/templates">
+                            <a className="flex select-none items-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground">
+                              <Library className="h-4 w-4 mr-2" />
+                              <span>Πρότυπα</span>
+                            </a>
+                          </Link>
                         </li>
                       </ul>
                     </NavigationMenuContent>
@@ -125,26 +121,22 @@ export function Header() {
                       Έργα
                     </NavigationMenuTrigger>
                     <NavigationMenuContent>
-                      <ul className="grid w-[200px] gap-1 p-2">
+                      <ul className="grid w-48 gap-1 p-2">
                         <li>
-                          <NavigationMenuLink asChild>
-                            <Link href="/projects" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                              <div className="flex items-center gap-2">
-                                <FolderKanban className="h-4 w-4" />
-                                <span>Όλα τα Έργα</span>
-                              </div>
-                            </Link>
-                          </NavigationMenuLink>
+                          <Link href="/projects">
+                            <a className="flex select-none items-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground">
+                              <FolderKanban className="h-4 w-4 mr-2" />
+                              <span>Όλα τα Έργα</span>
+                            </a>
+                          </Link>
                         </li>
                         <li>
-                          <NavigationMenuLink asChild>
-                            <Link href="/projects/active" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                              <div className="flex items-center gap-2">
-                                <FileSpreadsheet className="h-4 w-4" />
-                                <span>Ενεργά</span>
-                              </div>
-                            </Link>
-                          </NavigationMenuLink>
+                          <Link href="/projects/active">
+                            <a className="flex select-none items-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground">
+                              <FileSpreadsheet className="h-4 w-4 mr-2" />
+                              <span>Ενεργά</span>
+                            </a>
+                          </Link>
                         </li>
                       </ul>
                     </NavigationMenuContent>
@@ -158,50 +150,44 @@ export function Header() {
                         Διαχείριση
                       </NavigationMenuTrigger>
                       <NavigationMenuContent>
-                        <ul className="grid w-[200px] gap-1 p-2">
+                        <ul className="grid w-48 gap-1 p-2">
                           <li>
-                            <NavigationMenuLink asChild>
-                              <Link href="/budget-history" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                                <div className="flex items-center gap-2">
-                                  <History className="h-4 w-4" />
-                                  <span>Ιστορικό Προϋπ.</span>
-                                </div>
-                              </Link>
-                            </NavigationMenuLink>
+                            <Link href="/budget-history">
+                              <a className="flex select-none items-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground">
+                                <History className="h-4 w-4 mr-2" />
+                                <span>Ιστορικό Προϋπ.</span>
+                              </a>
+                            </Link>
                           </li>
                           {isAdmin && (
                             <>
                               <li>
-                                <NavigationMenuLink asChild>
-                                  <Link href="/users" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                                    <div className="flex items-center gap-2">
-                                      <Users className="h-4 w-4" />
-                                      <span>Χρήστες</span>
-                                    </div>
-                                  </Link>
-                                </NavigationMenuLink>
+                                <Link href="/users">
+                                  <a className="flex select-none items-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground">
+                                    <Users className="h-4 w-4 mr-2" />
+                                    <span>Χρήστες</span>
+                                  </a>
+                                </Link>
                               </li>
                               <li>
-                                <NavigationMenuLink asChild>
-                                  <Link href="/notifications" className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground">
-                                    <div className="flex items-center gap-2">
-                                      <Bell className="h-4 w-4" />
-                                      <span>Ειδοποιήσεις</span>
-                                      <motion.span 
-                                        className="absolute right-2 h-2 w-2 bg-primary rounded-full"
-                                        animate={{ 
-                                          scale: [1, 1.2, 1],
-                                          opacity: [1, 0.8, 1] 
-                                        }}
-                                        transition={{
-                                          duration: 2,
-                                          repeat: Infinity,
-                                          ease: "easeInOut"
-                                        }}
-                                      />
-                                    </div>
-                                  </Link>
-                                </NavigationMenuLink>
+                                <Link href="/notifications">
+                                  <a className="flex select-none items-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground">
+                                    <Bell className="h-4 w-4 mr-2" />
+                                    <span>Ειδοποιήσεις</span>
+                                    <motion.span 
+                                      className="ml-auto h-2 w-2 bg-primary rounded-full"
+                                      animate={{ 
+                                        scale: [1, 1.2, 1],
+                                        opacity: [1, 0.8, 1] 
+                                      }}
+                                      transition={{
+                                        duration: 2,
+                                        repeat: Infinity,
+                                        ease: "easeInOut"
+                                      }}
+                                    />
+                                  </a>
+                                </Link>
                               </li>
                             </>
                           )}
@@ -217,27 +203,23 @@ export function Header() {
                       Ρυθμίσεις
                     </NavigationMenuTrigger>
                     <NavigationMenuContent>
-                      <ul className="grid w-[200px] gap-1 p-2">
+                      <ul className="grid w-48 gap-1 p-2">
                         <li>
                           <button
                             onClick={() => setIsPasswordModalOpen(true)}
-                            className="block w-full select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer text-left"
+                            className="flex w-full select-none items-center rounded-md p-2 hover:bg-accent hover:text-accent-foreground"
                           >
-                            <div className="flex items-center gap-2">
-                              <Key className="h-4 w-4" />
-                              <span>Αλλαγή Κωδικού</span>
-                            </div>
+                            <Key className="h-4 w-4 mr-2" />
+                            <span>Αλλαγή Κωδικού</span>
                           </button>
                         </li>
                         <li>
                           <button
                             onClick={() => logoutMutation.mutate()}
-                            className="block w-full select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-destructive hover:text-destructive-foreground focus:bg-destructive focus:text-destructive-foreground cursor-pointer text-left"
+                            className="flex w-full select-none items-center rounded-md p-2 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                           >
-                            <div className="flex items-center gap-2">
-                              <LogOut className="h-4 w-4" />
-                              <span>Αποσύνδεση</span>
-                            </div>
+                            <LogOut className="h-4 w-4 mr-2" />
+                            <span>Αποσύνδεση</span>
                           </button>
                         </li>
                       </ul>
@@ -271,81 +253,90 @@ export function Header() {
                 </SheetTrigger>
                 <SheetContent 
                   side="right" 
-                  className="w-[300px] bg-gradient-to-b from-background/95 to-background/90 backdrop-blur-lg border-l border-primary/10"
+                  className="w-[300px] bg-background/95 backdrop-blur-lg border-l border-primary/10"
                 >
                   <SheetHeader>
                     <SheetTitle className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
                       Μενού
                     </SheetTitle>
                   </SheetHeader>
-                  {/* Mobile Navigation Items */}
                   <div className="mt-6 flex flex-col gap-2">
-                    <Link href="/">
-                      <Button variant="ghost" className="w-full justify-start">
-                        <LayoutDashboard className="h-4 w-4 mr-2" />
-                        Πίνακας Ελέγχου
-                      </Button>
-                    </Link>
-                    <Link href="/documents">
-                      <Button variant="ghost" className="w-full justify-start">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Διαβιβαστικά
-                      </Button>
-                    </Link>
-                    <Link href="/templates">
-                      <Button variant="ghost" className="w-full justify-start">
-                        <Library className="h-4 w-4 mr-2" />
-                        Πρότυπα
-                      </Button>
-                    </Link>
-                    <Link href="/projects">
-                      <Button variant="ghost" className="w-full justify-start">
-                        <FolderKanban className="h-4 w-4 mr-2" />
-                        Έργα
-                      </Button>
-                    </Link>
-                    {(isAdmin || isManager) && (
-                      <>
-                        <Link href="/budget-history">
+                    <AnimatePresence>
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex flex-col gap-2"
+                      >
+                        <Link href="/">
                           <Button variant="ghost" className="w-full justify-start">
-                            <History className="h-4 w-4 mr-2" />
-                            Ιστορικό Προϋπ.
+                            <LayoutDashboard className="h-4 w-4 mr-2" />
+                            Πίνακας Ελέγχου
                           </Button>
                         </Link>
-                        {isAdmin && (
+                        <Link href="/documents">
+                          <Button variant="ghost" className="w-full justify-start">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Διαβιβαστικά
+                          </Button>
+                        </Link>
+                        <Link href="/templates">
+                          <Button variant="ghost" className="w-full justify-start">
+                            <Library className="h-4 w-4 mr-2" />
+                            Πρότυπα
+                          </Button>
+                        </Link>
+                        <Link href="/projects">
+                          <Button variant="ghost" className="w-full justify-start">
+                            <FolderKanban className="h-4 w-4 mr-2" />
+                            Έργα
+                          </Button>
+                        </Link>
+                        {(isAdmin || isManager) && (
                           <>
-                            <Link href="/users">
+                            <Link href="/budget-history">
                               <Button variant="ghost" className="w-full justify-start">
-                                <Users className="h-4 w-4 mr-2" />
-                                Χρήστες
+                                <History className="h-4 w-4 mr-2" />
+                                Ιστορικό Προϋπ.
                               </Button>
                             </Link>
-                            <Link href="/notifications">
-                              <Button variant="ghost" className="w-full justify-start">
-                                <Bell className="h-4 w-4 mr-2" />
-                                Ειδοποιήσεις
-                              </Button>
-                            </Link>
+                            {isAdmin && (
+                              <>
+                                <Link href="/users">
+                                  <Button variant="ghost" className="w-full justify-start">
+                                    <Users className="h-4 w-4 mr-2" />
+                                    Χρήστες
+                                  </Button>
+                                </Link>
+                                <Link href="/notifications">
+                                  <Button variant="ghost" className="w-full justify-start">
+                                    <Bell className="h-4 w-4 mr-2" />
+                                    Ειδοποιήσεις
+                                  </Button>
+                                </Link>
+                              </>
+                            )}
                           </>
                         )}
-                      </>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start"
-                      onClick={() => setIsPasswordModalOpen(true)}
-                    >
-                      <Key className="h-4 w-4 mr-2" />
-                      Αλλαγή Κωδικού
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="w-full justify-start text-destructive hover:text-destructive"
-                      onClick={() => logoutMutation.mutate()}
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Αποσύνδεση
-                    </Button>
+                        <Button 
+                          variant="ghost" 
+                          className="w-full justify-start"
+                          onClick={() => setIsPasswordModalOpen(true)}
+                        >
+                          <Key className="h-4 w-4 mr-2" />
+                          Αλλαγή Κωδικού
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          className="w-full justify-start text-destructive hover:text-destructive"
+                          onClick={() => logoutMutation.mutate()}
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Αποσύνδεση
+                        </Button>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                 </SheetContent>
               </Sheet>
