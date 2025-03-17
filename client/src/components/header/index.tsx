@@ -53,39 +53,7 @@ export function Header() {
     }`}>
       <div className="container mx-auto px-4 py-3">
         <nav className="flex items-center justify-between">
-          {/* Logo & User Info with Dropdown */}
-          <div className="flex-shrink-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent">
-                  <div>
-                    <h1 className="text-xl font-semibold text-primary flex items-center gap-2">
-                      {user?.username || user?.name || 'Χρήστης'}
-                      <ChevronDown className="h-4 w-4" />
-                    </h1>
-                    <p className="text-sm text-muted-foreground text-left">
-                      Σύστημα Διαχείρισης Εγγράφων
-                    </p>
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                <DropdownMenuItem onClick={() => setIsPasswordModalOpen(true)}>
-                  <Key className="h-4 w-4 mr-2" />
-                  Αλλαγή Κωδικού
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive" 
-                  onClick={() => logoutMutation.mutate()}
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Αποσύνδεση
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Desktop Navigation */}
+          {/* Left side - Navigation */}
           <div className="hidden md:flex md:items-center md:space-x-2">
             <Link href="/">
               <Button variant="ghost" size="sm" className="flex items-center gap-2">
@@ -107,8 +75,44 @@ export function Header() {
                 Έργα
               </Button>
             </Link>
+          </div>
 
-            {/* Management Links */}
+          {/* Center - User Info with Dropdown */}
+          <div className="flex-1 flex flex-col items-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="p-0 h-auto hover:bg-transparent">
+                  <div className="text-center">
+                    <h1 className="text-xl font-semibold text-primary flex items-center gap-2">
+                      {user?.username || user?.name || 'Χρήστης'}
+                      <ChevronDown className="h-4 w-4" />
+                    </h1>
+                    <Link href="/">
+                      <p className="text-sm bg-gradient-to-r from-primary/80 to-primary bg-clip-text text-transparent font-medium hover:cursor-pointer transition-all duration-200 hover:scale-105">
+                        Σύστημα Διαχείρισης Εγγράφων
+                      </p>
+                    </Link>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-48">
+                <DropdownMenuItem onClick={() => setIsPasswordModalOpen(true)}>
+                  <Key className="h-4 w-4 mr-2" />
+                  Αλλαγή Κωδικού
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-destructive focus:text-destructive" 
+                  onClick={() => logoutMutation.mutate()}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Αποσύνδεση
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Right side - Admin controls */}
+          <div className="hidden md:flex md:items-center md:space-x-2">
             {(isAdmin || isManager) && (
               <Link href="/budget-history">
                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
