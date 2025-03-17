@@ -159,13 +159,36 @@ export class DocumentManager {
         throw new Error('Failed to fetch original document');
       }
 
+      // Store original protocol details and clear current ones
+      const documentToCreate = {
+        ...documentData,
+        original_protocol_number: originalDoc.protocol_number_input,
+        original_protocol_date: originalDoc.protocol_date,
+        protocol_number_input: null,
+        protocol_date: null,
+        status: 'draft',
+        is_correction: true
+      };
+
+      // Create the new document
+      const { data: newDoc, error: createError } = await supabase
+        .from('generated_documents')
+        .insert([documentToCreate])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating orthi epanalipsi document:', createError);
+        throw new Error('Failed to create orthi epanalipsi document');
+      }
+
       // Format document using DocumentFormatter
       const docxBuffer = await this.formatter.formatOrthiEpanalipsi({
-        ...documentData,
+        ...documentToCreate,
         originalDocument: originalDoc
       });
 
-      return docxBuffer;
+      return { document: newDoc, buffer: docxBuffer };
     } catch (error) {
       console.error('Generate orthi epanalipsi error:', error);
       throw error;
