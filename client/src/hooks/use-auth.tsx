@@ -77,19 +77,21 @@ function useLogoutMutation() {
     mutationFn: async () => {
       const response = await fetch('/api/auth/logout', { 
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       if (!response.ok) {
-        throw new Error('Logout failed');
+        const error = await response.json();
+        throw new Error(error.message || 'Logout failed');
       }
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/me"], null);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account."
-      });
+      // Force reload after successful logout to clear any cached state
+      window.location.href = '/';
     },
     onError: (error: Error) => {
       toast({

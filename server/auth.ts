@@ -205,7 +205,9 @@ export async function setupAuth(app: Express) {
         res.clearCookie('sid', { 
           path: '/',
           secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          httpOnly: true,
+          domain: undefined // Let the browser determine the domain
         });
         res.json({ message: 'Logged out successfully' });
       });
