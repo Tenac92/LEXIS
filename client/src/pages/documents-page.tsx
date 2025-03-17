@@ -93,7 +93,11 @@ export default function DocumentsPage() {
             department,
             attachments,
             expenditure_type,
-            generated_by
+            generated_by,
+            is_correction,
+            original_protocol_number,
+            original_protocol_date,
+            comments
           `)
           .order('created_at', { ascending: false });
 
