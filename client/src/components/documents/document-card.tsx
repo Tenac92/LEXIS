@@ -35,9 +35,16 @@ interface Recipient {
   installment: number;
 }
 
-const getStatusDetails = (status: string, is_correction: boolean | null) => {
-  // First check if this is an orthi epanalipsi
-  if (is_correction) {
+const getStatusDetails = (status: string, is_correction: boolean | null, protocol_number_input: string | null) => {
+  // First check if this is an orthi epanalipsi and doesn't have a protocol number yet
+  if (protocol_number_input) {
+    return {
+      label: "Ολοκληρωμένο",
+      variant: "default" as const,
+      icon: CheckCircle
+    };
+  }
+  if (is_correction && !protocol_number_input) {
     return {
       label: "Ορθή Επανάληψη",
       variant: "destructive" as const,
@@ -47,13 +54,13 @@ const getStatusDetails = (status: string, is_correction: boolean | null) => {
 
   // Then check other statuses
   switch (status) {
-    case 'approved':
+    case 'completed':
       return {
         label: "Ολοκληρωμένο",
         variant: "default" as const,
         icon: CheckCircle
       };
-    case 'draft':
+    case 'pending':
       return {
         label: "Σε εκκρεμότητα",
         variant: "secondary" as const,
@@ -122,7 +129,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   };
 
   const recipients = doc.recipients as Recipient[];
-  const statusDetails = getStatusDetails(doc.status, doc.is_correction);
+  const statusDetails = getStatusDetails(doc.status, doc.is_correction, doc.protocol_number_input);
 
   // Debug log to check values
   console.log('Document data:', {
