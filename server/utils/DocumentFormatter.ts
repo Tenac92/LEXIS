@@ -391,7 +391,7 @@ export class DocumentFormatter {
         italics: true,
       },
       {
-         text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${documentData.unit}`,
+        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${documentData.unit}`,
         italics: true,
       },
     ];
@@ -862,6 +862,106 @@ export class DocumentFormatter {
     } catch (error) {
       console.error("Error in getUnitDetails:", error);
       return null;
+    }
+  }
+
+  public async formatOrthiEpanalipsi(data: {
+    correctionReason: string;
+    originalDocument: DocumentData;
+    project_id: string;
+    project_na853: string;
+    protocol_number_input: string;
+    protocol_date: string;
+    unit: string;
+    expenditure_type: string;
+    recipients: Array<{
+      firstname: string;
+      lastname: string;
+      afm: string;
+      amount: number;
+      installment: number;
+    }>;
+    total_amount: number;
+  }): Promise<Buffer> {
+    try {
+      console.log("Formatting orthi epanalipsi document with data:", data);
+
+      // Get unit details
+      const unitDetails = await this.getUnitDetails(data.unit);
+
+      const sections = [
+        {
+          properties: {
+            page: {
+              size: { width: 11906, height: 16838 },
+              margins: this.DOCUMENT_MARGINS,
+              orientation: PageOrientation.PORTRAIT,
+            },
+          },
+          children: [
+            await this.createDocumentHeader(data, unitDetails || undefined),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "ΟΡΘΗ ΕΠΑΝΑΛΗΨΗ",
+                  bold: true,
+                  size: 32,
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 240, after: 240 },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Λόγος διόρθωσης: ",
+                  bold: true,
+                }),
+                new TextRun({
+                  text: data.correctionReason,
+                }),
+              ],
+              spacing: { before: 240, after: 480 },
+            }),
+            ...this.createDocumentSubject(data, unitDetails || {}),
+            ...this.createMainContent(data, unitDetails || {}),
+            this.createPaymentTable(data.recipients),
+            this.createNote(),
+            this.createFooter(data, unitDetails),
+          ],
+        },
+      ];
+
+      const doc = new Document({
+        sections,
+        styles: {
+          default: {
+            document: {
+              run: {
+                font: this.DEFAULT_FONT,
+                size: this.DEFAULT_FONT_SIZE,
+              },
+            },
+          },
+          paragraphStyles: [
+            {
+              id: "A6",
+              name: "A6",
+              basedOn: "Normal",
+              next: "Normal",
+              quickFormat: true,
+              paragraph: {
+                spacing: { line: 240, lineRule: "atLeast" },
+              },
+            },
+          ],
+        },
+      });
+
+      return await Packer.toBuffer(doc);
+    } catch (error) {
+      console.error("Error formatting orthi epanalipsi document:", error);
+      throw error;
     }
   }
 }
