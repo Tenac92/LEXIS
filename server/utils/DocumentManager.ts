@@ -142,22 +142,31 @@ export class DocumentManager {
 
   async generateOrthiEpanalipsi(documentData: any) {
     try {
-      console.log('Generating orthi epanalipsi document with data:', JSON.stringify(documentData, null, 2));
+      console.log('[DocumentManager] Starting orthi epanalipsi generation with data:', 
+        JSON.stringify({
+          ...documentData,
+          original_document_id: documentData.original_document_id,
+          correctionReason: documentData.correctionReason
+        }, null, 2)
+      );
 
-      // Validate document data
-      await this.validateDocument(documentData);
-
-      // Get the original document to reference
+      // Get the original document first
       const { data: originalDoc, error: fetchError } = await supabase
         .from('generated_documents')
         .select('*')
         .eq('id', documentData.original_document_id)
         .single();
 
-      if (fetchError) {
-        console.error('Error fetching original document:', fetchError);
+      if (fetchError || !originalDoc) {
+        console.error('[DocumentManager] Error fetching original document:', fetchError);
         throw new Error('Failed to fetch original document');
       }
+
+      console.log('[DocumentManager] Original document found:', {
+        id: originalDoc.id,
+        protocol_number: originalDoc.protocol_number_input,
+        protocol_date: originalDoc.protocol_date
+      });
 
       // Store original protocol details and clear current ones
       const documentToCreate = {
@@ -167,8 +176,20 @@ export class DocumentManager {
         protocol_number_input: null,
         protocol_date: null,
         status: 'draft',
-        is_correction: true
+        is_correction: true,
+        // Ensure these fields are numbers/strings
+        project_id: documentData.project_id ? String(documentData.project_id) : null,
+        total_amount: parseFloat(String(documentData.total_amount || 0)),
+        recipients: (documentData.recipients || []).map((r: any) => ({
+          ...r,
+          amount: parseFloat(String(r.amount)),
+          installment: parseInt(String(r.installment))
+        }))
       };
+
+      console.log('[DocumentManager] Preparing to create new document:', 
+        JSON.stringify(documentToCreate, null, 2)
+      );
 
       // Create the new document
       const { data: newDoc, error: createError } = await supabase
@@ -178,19 +199,31 @@ export class DocumentManager {
         .single();
 
       if (createError) {
-        console.error('Error creating orthi epanalipsi document:', createError);
-        throw new Error('Failed to create orthi epanalipsi document');
+        console.error('[DocumentManager] Error creating orthi epanalipsi document:', createError);
+        throw new Error(`Failed to create orthi epanalipsi document: ${createError.message}`);
       }
 
-      // Format document using DocumentFormatter
-      const docxBuffer = await this.formatter.formatOrthiEpanalipsi({
-        ...documentToCreate,
-        originalDocument: originalDoc
+      console.log('[DocumentManager] New document created successfully:', {
+        id: newDoc.id,
+        status: newDoc.status,
+        is_correction: newDoc.is_correction
       });
 
-      return { document: newDoc, buffer: docxBuffer };
+      try {
+        // Format document using DocumentFormatter
+        const docxBuffer = await this.formatter.formatOrthiEpanalipsi({
+          ...documentToCreate,
+          originalDocument: originalDoc
+        });
+
+        console.log('[DocumentManager] Document formatted successfully');
+        return { document: newDoc, buffer: docxBuffer };
+      } catch (formatError) {
+        console.error('[DocumentManager] Error formatting document:', formatError);
+        throw new Error(`Failed to format orthi epanalipsi document: ${formatError.message}`);
+      }
     } catch (error) {
-      console.error('Generate orthi epanalipsi error:', error);
+      console.error('[DocumentManager] Generate orthi epanalipsi error:', error);
       throw error;
     }
   }

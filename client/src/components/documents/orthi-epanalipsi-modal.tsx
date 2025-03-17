@@ -38,8 +38,6 @@ const orthiEpanalipsiSchema = z.object({
   correctionReason: z.string().min(1, "Παρακαλώ εισάγετε το λόγο διόρθωσης"),
   project_id: z.string().min(1, "Παρακαλώ επιλέξτε έργο"),
   project_na853: z.string().min(1, "Το NA853 είναι υποχρεωτικό"),
-  protocol_number_input: z.string().min(1, "Ο αριθμός πρωτοκόλλου είναι υποχρεωτικός"),
-  protocol_date: z.string().min(1, "Παρακαλώ επιλέξτε ημερομηνία"),
   unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
   expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
   recipients: z.array(recipientSchema),
@@ -77,8 +75,6 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
       correctionReason: "",
       project_id: document?.project_id ? String(document.project_id) : "",
       project_na853: document?.project_na853 || "",
-      protocol_number_input: document?.protocol_number_input || "",
-      protocol_date: document?.protocol_date || "",
       unit: document?.unit || "",
       expenditure_type: document?.expenditure_type || "",
       recipients: document?.recipients || [],
@@ -116,18 +112,30 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
 
   const onSubmit = async (data: z.infer<typeof orthiEpanalipsiSchema>) => {
     try {
+      console.log('Submitting orthi epanalipsi with data:', data);
+
+      const formattedData = {
+        ...data,
+        project_id: String(data.project_id),
+        total_amount: parseFloat(String(data.total_amount)),
+        recipients: data.recipients.map(r => ({
+          ...r,
+          amount: parseFloat(String(r.amount)),
+          installment: parseInt(String(r.installment))
+        }))
+      };
+
       const response = await fetch(`/api/documents/generated/${document?.id}/orthi-epanalipsi`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
-          is_correction: true,
-          original_document_id: document?.id,
-          status: "draft",
-        }),
+        body: JSON.stringify(formattedData),
       });
 
-      if (!response.ok) throw new Error("Failed to create orthi epanalipsi");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Orthi epanalipsi error response:", errorText);
+        throw new Error("Failed to create orthi epanalipsi");
+      }
 
       await queryClient.invalidateQueries({ queryKey: ["documents"] });
       toast({ title: "Επιτυχία", description: "Η ορθή επανάληψη δημιουργήθηκε" });
@@ -151,8 +159,6 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
         expenditure_type: document.expenditure_type,
         recipients: document.recipients,
         total_amount: document.total_amount,
-        protocol_number_input: document.protocol_number_input,
-        protocol_date: document.protocol_date,
       });
       setSelectedProject(String(document.project_id));
     }
@@ -258,56 +264,26 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="unit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Μονάδα</FormLabel>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Επιλέξτε μονάδα" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {UNITS.map((unit) => (
-                            <SelectItem key={unit} value={unit}>
-                              {unit}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="protocol_number_input"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
               <FormField
                 control={form.control}
-                name="protocol_date"
+                name="unit"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ημερομηνία Πρωτοκόλλου</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
+                    <FormLabel>Μονάδα</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Επιλέξτε μονάδα" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {UNITS.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -414,7 +390,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                                 {...field}
                                 type="number"
                                 min="1"
-                                onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
+                                onChange={(e) => field.onChange(parseInt(e.target.value))}
                               />
                             </FormControl>
                             <FormMessage />

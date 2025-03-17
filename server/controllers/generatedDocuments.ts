@@ -14,7 +14,6 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     console.log('Creating document with data:', JSON.stringify(req.body, null, 2));
 
-
     const { unit, project_id, expenditure_type, status, recipients, total_amount, attachments } = req.body;
 
     if (!req.user?.id) {
@@ -292,11 +291,12 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Generate orthi epanalipsi
+// Update the orthi epanalipsi endpoint
 router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('Generating orthi epanalipsi for document:', id, req.body);
+    console.log('[Controllers] Starting orthi epanalipsi generation for document:', id);
+    console.log('[Controllers] Request body:', JSON.stringify(req.body, null, 2));
 
     // Get the original document first
     const { data: existingDoc, error: fetchError } = await supabase
@@ -306,58 +306,53 @@ router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
       .single();
 
     if (fetchError || !existingDoc) {
-      console.error('Original document not found:', id);
+      console.error('[Controllers] Original document not found:', id, fetchError);
       return res.status(404).json({ 
         message: 'Original document not found',
         error: fetchError?.message 
       });
     }
 
-    // Create new document for orthi epanalipsi
-    const orthiDoc = {
-      ...req.body,
-      original_document_id: parseInt(id),
-      is_orthi_epanalipsi: true,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      created_by: req.user?.id,
-      updated_by: req.user?.id
-    };
+    try {
+      // Generate the orthi epanalipsi
+      const result = await documentManager.generateOrthiEpanalipsi({
+        ...req.body,
+        original_document_id: parseInt(id)
+      });
 
-    const { data, error } = await supabase
-      .from('generated_documents')
-      .insert([orthiDoc])
-      .select()
-      .single();
+      // Check if we got both document and buffer
+      if (!result?.document || !result?.buffer) {
+        throw new Error('Failed to generate orthi epanalipsi document');
+      }
 
-    if (error) {
-      console.error('Error creating orthi epanalipsi:', error);
+      // Broadcast update
+      broadcastDocumentUpdate({
+        type: 'DOCUMENT_UPDATE',
+        documentId: result.document.id,
+        data: result.document
+      });
+
+      console.log('[Controllers] Orthi epanalipsi generated successfully:', {
+        id: result.document.id,
+        bufferSize: result.buffer.length
+      });
+
+      // Set response headers for Word document download
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename="orthi-epanalipsi-${id}.docx"`);
+      return res.send(result.buffer);
+
+    } catch (generateError) {
+      console.error('[Controllers] Error in document generation:', generateError);
       return res.status(500).json({
-        message: 'Failed to create orthi epanalipsi',
-        error: error.message
+        message: 'Failed to generate orthi epanalipsi',
+        error: generateError instanceof Error ? generateError.message : 'Unknown error'
       });
     }
-
-    // Broadcast update
-    broadcastDocumentUpdate({
-      type: 'DOCUMENT_UPDATE',
-      documentId: data.id,
-      data
-    });
-
-    // Generate the document file
-    const docBuffer = await documentManager.generateOrthiEpanalipsi(data);
-
-    // Set response headers for Word document download
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="orthi-epanalipsi-${id}.docx"`);
-    return res.send(docBuffer);
-
   } catch (error) {
-    console.error('Error generating orthi epanalipsi:', error);
+    console.error('[Controllers] Error handling orthi epanalipsi request:', error);
     return res.status(500).json({
-      message: 'Failed to generate orthi epanalipsi',
+      message: 'Failed to process orthi epanalipsi request',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
