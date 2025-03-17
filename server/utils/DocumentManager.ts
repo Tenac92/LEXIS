@@ -164,7 +164,7 @@ export class DocumentManager {
         original_protocol_date: existingDoc.protocol_date,
         protocol_number_input: null,
         protocol_date: null,
-        status: 'draft',
+        status: 'orthi_epanalipsi', // Set status to orthi_epanalipsi
         is_correction: true,
         comments: documentData.correctionReason,
         // Ensure these fields are numbers/strings

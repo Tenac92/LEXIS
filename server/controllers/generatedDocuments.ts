@@ -14,7 +14,7 @@ router.post('/', authenticateToken, async (req, res) => {
   try {
     console.log('Creating document with data:', JSON.stringify(req.body, null, 2));
 
-    const { unit, project_id, expenditure_type, status, recipients, total_amount, attachments } = req.body;
+    const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
 
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -48,13 +48,13 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const now = new Date().toISOString();
 
-    // Create document with exact schema match
+    // Create document with exact schema match and set initial status to pending
     const documentPayload = {
       unit,
       project_id,
       project_na853: projectData.na853,
       expenditure_type,
-      status: status || 'draft',
+      status: 'pending', // Always set initial status to pending
       recipients: formattedRecipients,
       total_amount: parseFloat(String(total_amount)) || 0,
       generated_by: req.user.id,
@@ -233,12 +233,27 @@ router.patch('/:id/protocol', authenticateToken, async (req, res) => {
       });
     }
 
+    // Get current document to check if it's an orthi epanalipsi
+    const { data: currentDoc, error: fetchError } = await supabase
+      .from('generated_documents')
+      .select('is_correction')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching document:', fetchError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch document status'
+      });
+    }
+
     const { data, error } = await supabase
       .from('generated_documents')
       .update({
         protocol_number_input: protocol_number,
         protocol_date: protocol_date,
-        status: 'approved'
+        status: 'completed' // Always set to completed when protocol is added
       })
       .eq('id', id)
       .select()
