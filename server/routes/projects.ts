@@ -1,3 +1,47 @@
+
+import { Router } from 'express';
+import { supabase } from '../config/db';
+import { authenticateToken } from '../middleware/auth';
+
+const router = Router();
+
+// Add this new endpoint for fetching expenditure types
+router.get('/:projectId/expenditure-types', authenticateToken, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    
+    const { data: project, error } = await supabase
+      .from('project_catalog')
+      .select('expenditure_type')
+      .eq('mis', projectId)
+      .single();
+
+    if (error) throw error;
+
+    let expenditureTypes: string[] = [];
+    if (project?.expenditure_type) {
+      if (Array.isArray(project.expenditure_type)) {
+        expenditureTypes = project.expenditure_type;
+      } else if (typeof project.expenditure_type === 'string') {
+        expenditureTypes = project.expenditure_type
+          .replace(/[{}]/g, '')
+          .split(',')
+          .map(type => type.trim())
+          .filter(Boolean);
+      }
+    }
+
+    res.json(expenditureTypes);
+  } catch (error) {
+    console.error('[Projects] Error fetching expenditure types:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch expenditure types',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 import { Router } from 'express';
 import { supabase } from '../config/db';
 import { authenticateToken } from '../middleware/authMiddleware'; //Preserving the original middleware
