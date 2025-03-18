@@ -89,7 +89,7 @@ export default function DocumentsPage() {
 
   // Query for documents with debugging
   const { data: documents, isLoading, error, refetch } = useQuery<GeneratedDocument[]>({
-    queryKey: ['/api/documents', filters],
+    queryKey: ['/api/documents', activeFilters], // Use activeFilters instead of filters
     queryFn: async () => {
       try {
         console.log('[Documents] Starting document fetch with filters:', filters);
@@ -191,6 +191,7 @@ export default function DocumentsPage() {
   });
 
   const handleApplyFilters = () => {
+    setActiveFilters(filters);
     refetch();
   };
 
