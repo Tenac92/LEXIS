@@ -21,6 +21,10 @@ type FilterParams = {
   status: string;
   dateFrom: Date | null;
   dateTo: Date | null;
+  amountFrom: string;
+  amountTo: string;
+  recipient: string;
+  afm: string;
 };
 
 export default function DocumentsPage() {
@@ -33,7 +37,11 @@ export default function DocumentsPage() {
     unit: '',
     status: '',
     dateFrom: null,
-    dateTo: null
+    dateTo: null,
+    amountFrom: '',
+    amountTo: '',
+    recipient: '',
+    afm: ''
   });
 
   // Query parameters - only updated when search is triggered
@@ -42,12 +50,34 @@ export default function DocumentsPage() {
     unit: '',
     status: '',
     dateFrom: null,
-    dateTo: null
+    dateTo: null,
+    amountFrom: '',
+    amountTo: '',
+    recipient: '',
+    afm: ''
   });
 
   // Fetch documents using React Query
   const { data: documents = [], isLoading } = useQuery<GeneratedDocument[]>({
-    queryKey: ['/api/documents/generated', queryParams],
+    queryKey: ['/api/documents', queryParams],
+    queryFn: async () => {
+      // Convert dates to ISO strings for API
+      const apiParams = {
+        ...queryParams,
+        dateFrom: queryParams.dateFrom?.toISOString(),
+        dateTo: queryParams.dateTo?.toISOString()
+      };
+
+      // Build query string
+      const params = new URLSearchParams();
+      Object.entries(apiParams).forEach(([key, value]) => {
+        if (value) params.append(key, value.toString());
+      });
+
+      const response = await fetch(`/api/documents?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch documents');
+      return response.json();
+    },
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
@@ -57,26 +87,6 @@ export default function DocumentsPage() {
     setQueryParams(filterInputs);
     setIsFiltersOpen(false); // Close popover after applying filters
   }, [filterInputs]);
-
-  // Filter documents based on query parameters
-  const filteredDocuments = documents.filter(doc => {
-    const matchesQuery = !queryParams.query || 
-      doc.protocol_number_input?.toLowerCase().includes(queryParams.query.toLowerCase()) ||
-      doc.recipients?.some(r => 
-        r.firstname.toLowerCase().includes(queryParams.query.toLowerCase()) ||
-        r.lastname.toLowerCase().includes(queryParams.query.toLowerCase()) ||
-        r.afm.includes(queryParams.query)
-      );
-
-    const matchesUnit = !queryParams.unit || doc.unit === queryParams.unit;
-    const matchesStatus = !queryParams.status || doc.status === queryParams.status;
-
-    const docDate = new Date(doc.created_at);
-    const matchesDateFrom = !queryParams.dateFrom || docDate >= queryParams.dateFrom;
-    const matchesDateTo = !queryParams.dateTo || docDate <= queryParams.dateTo;
-
-    return matchesQuery && matchesUnit && matchesStatus && matchesDateFrom && matchesDateTo;
-  });
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -105,7 +115,7 @@ export default function DocumentsPage() {
               <Button variant="outline" className="gap-2">
                 <Filter className="h-4 w-4" />
                 Φίλτρα
-                {(filterInputs.unit || filterInputs.status || filterInputs.dateFrom || filterInputs.dateTo) && 
+                {(filterInputs.unit || filterInputs.status || filterInputs.dateFrom || filterInputs.dateTo || filterInputs.amountFrom || filterInputs.amountTo || filterInputs.recipient || filterInputs.afm) && 
                   <span className="ml-2 h-2 w-2 rounded-full bg-primary"></span>
                 }
               </Button>
@@ -148,8 +158,33 @@ export default function DocumentsPage() {
                       <SelectItem value="draft">Πρόχειρο</SelectItem>
                       <SelectItem value="completed">Ολοκληρωμένο</SelectItem>
                       <SelectItem value="pending">Σε εξέλιξη</SelectItem>
+                      <SelectItem value="orthi_epanalipsi">Ορθή Επανάληψη</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Εύρος Ποσού</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-muted-foreground">Από</label>
+                      <Input
+                        type="number"
+                        placeholder="Ελάχιστο"
+                        value={filterInputs.amountFrom}
+                        onChange={e => setFilterInputs(prev => ({ ...prev, amountFrom: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Έως</label>
+                      <Input
+                        type="number"
+                        placeholder="Μέγιστο"
+                        value={filterInputs.amountTo}
+                        onChange={e => setFilterInputs(prev => ({ ...prev, amountTo: e.target.value }))}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -165,6 +200,24 @@ export default function DocumentsPage() {
                   <DatePicker
                     selected={filterInputs.dateTo}
                     onSelect={date => setFilterInputs(prev => ({ ...prev, dateTo: date }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Παραλήπτης</label>
+                  <Input
+                    placeholder="Όνομα παραλήπτη"
+                    value={filterInputs.recipient}
+                    onChange={e => setFilterInputs(prev => ({ ...prev, recipient: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">ΑΦΜ</label>
+                  <Input
+                    placeholder="ΑΦΜ παραλήπτη"
+                    value={filterInputs.afm}
+                    onChange={e => setFilterInputs(prev => ({ ...prev, afm: e.target.value }))}
                   />
                 </div>
 
@@ -184,7 +237,7 @@ export default function DocumentsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDocuments.map((doc) => (
+        {documents.map((doc) => (
           <DocumentCard
             key={doc.id}
             document={doc}
@@ -193,6 +246,12 @@ export default function DocumentsPage() {
             onDelete={() => {/* implement delete handler */}}
           />
         ))}
+        {(!documents || documents.length === 0) && (
+          <div className="col-span-full flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Filter className="h-12 w-12 mb-4" />
+            <p>Δεν βρέθηκαν έγγραφα</p>
+          </div>
+        )}
       </div>
     </div>
   );

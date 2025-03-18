@@ -7,6 +7,10 @@ interface DocumentFilters {
   status?: string;
   dateFrom?: string;
   dateTo?: string;
+  amountFrom?: number;
+  amountTo?: number;
+  recipient?: string;
+  afm?: string;
 }
 
 export class DocumentManager {
@@ -20,19 +24,79 @@ export class DocumentManager {
 
   async loadDocuments(filters: DocumentFilters = {}) {
     try {
-      let query = supabase.from('generated_documents')
-                         .select('*');
+      console.log('[DocumentManager] Loading documents with filters:', filters);
 
-      if (filters.unit) query = query.eq('unit', filters.unit);
-      if (filters.status) query = query.eq('status', filters.status);
-      if (filters.dateFrom) query = query.gte('created_at', filters.dateFrom);
-      if (filters.dateTo) query = query.lte('created_at', filters.dateTo);
+      let query = supabase.from('generated_documents')
+                         .select('*')
+                         .order('created_at', { ascending: false });
+
+      // Apply basic filters
+      if (filters.unit) {
+        console.log('[DocumentManager] Applying unit filter:', filters.unit);
+        query = query.eq('unit', filters.unit);
+      }
+
+      if (filters.status) {
+        console.log('[DocumentManager] Applying status filter:', filters.status);
+        if (filters.status === 'orthi_epanalipsi') {
+          query = query.eq('is_correction', true);
+        } else {
+          query = query.eq('status', filters.status);
+        }
+      }
+
+      // Apply date range filters
+      if (filters.dateFrom) {
+        console.log('[DocumentManager] Applying date from filter:', filters.dateFrom);
+        query = query.gte('created_at', filters.dateFrom);
+      }
+      if (filters.dateTo) {
+        console.log('[DocumentManager] Applying date to filter:', filters.dateTo);
+        query = query.lte('created_at', filters.dateTo);
+      }
+
+      // Apply amount range filters
+      if (filters.amountFrom !== undefined) {
+        console.log('[DocumentManager] Applying amount from filter:', filters.amountFrom);
+        query = query.gte('total_amount', filters.amountFrom);
+      }
+      if (filters.amountTo !== undefined) {
+        console.log('[DocumentManager] Applying amount to filter:', filters.amountTo);
+        query = query.lte('total_amount', filters.amountTo);
+      }
 
       const { data, error } = await query;
-      if (error) throw error;
-      return data;
+
+      if (error) {
+        console.error('[DocumentManager] Error loading documents:', error);
+        throw error;
+      }
+
+      // Apply recipient and AFM filters client-side since they're in JSON
+      let filteredData = data || [];
+
+      if (filters.recipient || filters.afm) {
+        filteredData = filteredData.filter(doc => {
+          return doc.recipients?.some((r: any) => {
+            const matchesRecipient = !filters.recipient || 
+              r.firstname?.toLowerCase().includes(filters.recipient.toLowerCase()) ||
+              r.lastname?.toLowerCase().includes(filters.recipient.toLowerCase());
+
+            const matchesAFM = !filters.afm || r.afm?.includes(filters.afm);
+
+            return matchesRecipient && matchesAFM;
+          });
+        });
+      }
+
+      console.log('[DocumentManager] Documents loaded successfully:', {
+        totalCount: filteredData.length,
+        sample: filteredData[0] ? { id: filteredData[0].id, unit: filteredData[0].unit } : null
+      });
+
+      return filteredData;
     } catch (error) {
-      console.error('Load documents error:', error);
+      console.error('[DocumentManager] Load documents error:', error);
       throw error;
     }
   }

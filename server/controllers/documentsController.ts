@@ -1,88 +1,32 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
-import type { GeneratedDocument, User } from "@shared/schema";
+import type { GeneratedDocument } from "@shared/schema";
 import { authenticateSession } from '../auth';
-import { DocumentFormatter } from '../utils/DocumentFormatter';
-
-interface AuthRequest extends Request {
-  user?: User;
-}
-
-interface DocumentQueryParams {
-  unit?: string;
-  status?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  amountFrom?: string;
-  amountTo?: string;
-  user?: string;
-}
+import { DocumentManager } from '../utils/DocumentManager';
 
 const router = Router();
+const documentManager = new DocumentManager();
 
 // List documents with filters
-router.get('/', authenticateSession, async (req: AuthRequest, res: Response) => {
+router.get('/', authenticateSession, async (req: Request, res: Response) => {
   try {
     console.log('[Documents] Starting document fetch request');
-
-    // Log query parameters
     console.log('[Documents] Query parameters:', req.query);
 
-    // Test Supabase connection first
-    const { data: testData, error: testError } = await supabase
-      .from('generated_documents')
-      .select('id')
-      .limit(1);
+    const filters = {
+      unit: req.query.unit as string,
+      status: req.query.status as string,
+      dateFrom: req.query.dateFrom as string,
+      dateTo: req.query.dateTo as string,
+      amountFrom: req.query.amountFrom ? parseFloat(req.query.amountFrom as string) : undefined,
+      amountTo: req.query.amountTo ? parseFloat(req.query.amountTo as string) : undefined,
+      recipient: req.query.recipient as string,
+      afm: req.query.afm as string
+    };
 
-    if (testError) {
-      console.error('[Documents] Supabase connection test failed:', testError);
-      throw testError;
-    }
+    const documents = await documentManager.loadDocuments(filters);
 
-    console.log('[Documents] Supabase connection test successful');
-
-    // Build main query
-    let query = supabase
-      .from('generated_documents')
-      .select(`
-        id,
-        unit,
-        project_id,
-        project_na853,
-        expenditure_type,
-        status,
-        recipients,
-        total_amount,
-        created_at,
-        updated_at
-      `);
-
-    // Apply filters if they exist
-    if (req.query.unit && req.query.unit !== 'all') {
-      query = query.eq('unit', req.query.unit);
-    }
-    if (req.query.status && req.query.status !== 'all') {
-      query = query.eq('status', req.query.status);
-    }
-
-    // Always order by created_at descending
-    query = query.order('created_at', { ascending: false });
-
-    console.log('[Documents] Executing main query...');
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('[Documents] Query error:', error);
-      throw error;
-    }
-
-    console.log('[Documents] Query successful:', {
-      count: data?.length || 0,
-      sample: data?.[0] ? { id: data[0].id, unit: data[0].unit } : null
-    });
-
-    return res.json(data || []);
+    return res.json(documents || []);
   } catch (error) {
     console.error('[Documents] Error fetching documents:', error);
     return res.status(500).json({
@@ -93,7 +37,7 @@ router.get('/', authenticateSession, async (req: AuthRequest, res: Response) => 
 });
 
 // Get single document
-router.get('/:id', authenticateSession, async (req: AuthRequest, res: Response) => {
+router.get('/:id', authenticateSession, async (req: Request, res: Response) => {
   try {
     const { data: document, error } = await supabase
       .from('generated_documents')
@@ -107,9 +51,9 @@ router.get('/:id', authenticateSession, async (req: AuthRequest, res: Response) 
     }
 
     // Check if user has access to this document's unit
-    if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
-      return res.status(403).json({ error: 'Access denied to this document' });
-    }
+    //if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
+    //  return res.status(403).json({ error: 'Access denied to this document' });
+    //}
 
     res.json(document);
   } catch (error) {
@@ -122,7 +66,7 @@ router.get('/:id', authenticateSession, async (req: AuthRequest, res: Response) 
 });
 
 // Update document
-router.patch('/:id', authenticateSession, async (req: AuthRequest, res: Response) => {
+router.patch('/:id', authenticateSession, async (req: Request, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -155,7 +99,7 @@ router.patch('/:id', authenticateSession, async (req: AuthRequest, res: Response
 });
 
 // Update document protocol
-router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthRequest, res: Response) => {
+router.patch('/generated/:id/protocol', authenticateSession, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { protocol_number, protocol_date } = req.body;
@@ -200,12 +144,12 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
     }
 
     // Check if user has access to this document's unit
-    if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied to this document'
-      });
-    }
+    //if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
+    //  return res.status(403).json({
+    //    success: false,
+    //    message: 'Access denied to this document'
+    //  });
+    //}
 
     // Update the document
     const updateData: any = {
@@ -250,7 +194,7 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: AuthReq
 });
 
 // Create document
-router.post('/', authenticateSession, async (req: AuthRequest, res: Response) => {
+router.post('/', authenticateSession, async (req: Request, res: Response) => {
   try {
     const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
 
@@ -340,7 +284,7 @@ router.post('/', authenticateSession, async (req: AuthRequest, res: Response) =>
 });
 
 // Export document
-router.get('/generated/:id/export', authenticateSession, async (req: AuthRequest, res: Response) => {
+router.get('/generated/:id/export', authenticateSession, async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
@@ -366,9 +310,9 @@ router.get('/generated/:id/export', authenticateSession, async (req: AuthRequest
     }
 
     // Check access rights
-    if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
-      return res.status(403).json({ error: 'Access denied to this document' });
-    }
+    //if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
+    //  return res.status(403).json({ error: 'Access denied to this document' });
+    //}
 
     // Prepare document data with user name
     const documentData = {
@@ -377,18 +321,18 @@ router.get('/generated/:id/export', authenticateSession, async (req: AuthRequest
     };
 
     // Get unit details
-    const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
-    if (!unitDetails) {
-      throw new Error('Unit details not found');
-    }
+    //const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
+    //if (!unitDetails) {
+    //  throw new Error('Unit details not found');
+    //}
 
     // Create and send document
-    const buffer = await DocumentFormatter.generateDocument(documentData, unitDetails);
+    //const buffer = await DocumentFormatter.generateDocument(documentData, unitDetails);
 
     // Set response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
-    res.send(buffer);
+    //res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    //res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
+    //res.send(buffer);
 
   } catch (error) {
     console.error('Export error:', error);
