@@ -162,17 +162,20 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
+const recipientSchema = z.object({
+  firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  lastname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
+  amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
+  installment: z.enum(['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ']).optional(),
+});
+
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
   project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
   expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
-  recipients: z.array(z.object({
-    firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-    lastname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-    afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
-    amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
-    installment: z.number().int().min(1).max(12, "Η δόση πρέπει να είναι μεταξύ 1 και 12")
-  })).optional().default([]),
+  recipients: z.array(recipientSchema).optional().default([]),
   total_amount: z.number().optional(),
   status: z.string().default("draft"),
   selectedAttachments: z.array(z.string()).optional().default([])
@@ -502,9 +505,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         recipients: data.recipients.map(r => ({
           firstname: r.firstname.trim(),
           lastname: r.lastname.trim(),
+          fathername: r.fathername.trim(),
           afm: r.afm.trim(),
           amount: parseFloat(r.amount.toString()),
-          installment: parseInt(r.installment.toString())
+          installment: r.installment.toString() // Assuming installment is a string from enum
         })),
         total_amount: totalAmount,
         status: "draft",
@@ -593,7 +597,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
     form.setValue("recipients", [
       ...currentRecipients,
-      { firstname: "", lastname: "", afm: "", amount: 0, installment: 1 }
+      { firstname: "", lastname: "", fathername: "", afm: "", amount: 0, installment: 'Α' }
     ]);
   };
 
@@ -872,7 +876,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
                 <ScrollArea className="h-[calc(60vh-200px)] w-full pr-4">
                   <div className="space-y-3">
-                    {recipients.map((_, index) => (
+                    {recipients.map((recipient, index) => (
                       <Card key={index} className="p-4 relative">
                         <div className="flex items-start gap-4">
                           <span className="text-sm font-medium min-w-[24px] text-center mt-2">{index + 1}</span>
@@ -888,6 +892,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                               className="md:col-span-1"
                             />
                             <Input
+                              {...form.register(`recipients.${index}.fathername`)}
+                              placeholder="Πατρώνυμο"
+                              className="md:col-span-1"
+                            />
+                            <Input
                               {...form.register(`recipients.${index}.afm`)}
                               placeholder="ΑΦΜ"
                               maxLength={9}
@@ -896,37 +905,35 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             <Input
                               type="number"
                               step="0.01"
-                              {...form.register(`recipients.${index}.amount`, {
+                              {...form.register(`recipients.${index}.amount`,{
                                 valueAsNumber: true,
                                 min: 0.01
                               })}
                               placeholder="Ποσό"
-                              className="md:col-span-2"
+                              className="md:col-span-1"
                             />
-                            <div className="flex items-center gap-2 md:col-span-1">
-                              <Input
-                                type="number"
-                                min={1}
-                                max={12}
-                                {...form.register(`recipients.${index}.installment`, {
-                                  valueAsNumber: true,
-                                  min: 1,
-                                  max: 12
-                                })}
-                                placeholder="Δόση"
-                                className="flex-1"
-                              />
-                              <Button
-                                                               type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeRecipient(index)}
-                                className="absolute top-2 right-2"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={12}
+                              {...form.register(`recipients.${index}.installment`, {
+                                valueAsNumber: true,
+                                min: 1,
+                                max: 12
+                              })}
+                              placeholder="Δόση"
+                              className="md:col-span-1"
+                            />
                           </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeRecipient(index)}
+                            className="absolute top-2 right-2"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </Card>
                     ))}
