@@ -14,61 +14,67 @@ import type { GeneratedDocument } from '@shared/schema';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
 
+// Filter types
+type FilterParams = {
+  query: string;
+  unit: string;
+  status: string;
+  dateFrom: Date | null;
+  dateTo: Date | null;
+};
+
 export default function DocumentsPage() {
-  // Set up WebSocket connection
   useWebSocketUpdates();
 
-  // State for filter popover visibility
+  // Filter states
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-
-  // State for filter inputs (doesn't trigger search)
-  const [filterInputs, setFilterInputs] = useState({
+  const [filterInputs, setFilterInputs] = useState<FilterParams>({
     query: '',
     unit: '',
     status: '',
-    dateFrom: null as Date | null,
-    dateTo: null as Date | null
+    dateFrom: null,
+    dateTo: null
   });
 
-  // State for applied filters (triggers search)
-  const [activeFilters, setActiveFilters] = useState({
+  // Query parameters - only updated when search is triggered
+  const [queryParams, setQueryParams] = useState<FilterParams>({
     query: '',
     unit: '',
     status: '',
-    dateFrom: null as Date | null,
-    dateTo: null as Date | null
+    dateFrom: null,
+    dateTo: null
   });
 
   // Fetch documents using React Query
   const { data: documents = [], isLoading } = useQuery<GeneratedDocument[]>({
-    queryKey: ['/api/documents/generated'],
+    queryKey: ['/api/documents/generated', queryParams],
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
 
   // Handle applying filters
   const handleApplyFilters = useCallback(() => {
-    setActiveFilters(filterInputs);
+    setQueryParams(filterInputs);
   }, [filterInputs]);
 
-  // Filter documents based on active filters only
+  // Filter documents based on active filters
   const filteredDocuments = documents.filter(doc => {
-    const matchesQuery = !activeFilters.query || 
-      doc.protocol_number_input?.toLowerCase().includes(activeFilters.query.toLowerCase()) ||
+    const matchesQuery = !queryParams.query || 
+      doc.protocol_number_input?.toLowerCase().includes(queryParams.query.toLowerCase()) ||
       doc.recipients?.some(r => 
-        r.firstname.toLowerCase().includes(activeFilters.query.toLowerCase()) ||
-        r.lastname.toLowerCase().includes(activeFilters.query.toLowerCase()) ||
-        r.afm.includes(activeFilters.query)
+        r.firstname.toLowerCase().includes(queryParams.query.toLowerCase()) ||
+        r.lastname.toLowerCase().includes(queryParams.query.toLowerCase()) ||
+        r.afm.includes(queryParams.query)
       );
 
-    const matchesUnit = !activeFilters.unit || doc.unit === activeFilters.unit;
-    const matchesStatus = !activeFilters.status || doc.status === activeFilters.status;
+    const matchesUnit = !queryParams.unit || doc.unit === queryParams.unit;
+    const matchesStatus = !queryParams.status || doc.status === queryParams.status;
 
-    const matchesDateFrom = !activeFilters.dateFrom || 
-      new Date(doc.created_at) >= activeFilters.dateFrom;
+    const matchesDateFrom = !queryParams.dateFrom || 
+      new Date(doc.created_at) >= queryParams.dateFrom;
 
-    const matchesDateTo = !activeFilters.dateTo || 
-      new Date(doc.created_at) <= activeFilters.dateTo;
+    const matchesDateTo = !queryParams.dateTo || 
+      new Date(doc.created_at) <= queryParams.dateTo;
 
     return matchesQuery && matchesUnit && matchesStatus && matchesDateFrom && matchesDateTo;
   });
