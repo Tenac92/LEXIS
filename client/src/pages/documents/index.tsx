@@ -18,11 +18,11 @@ export default function DocumentsPage() {
   // Set up WebSocket connection
   useWebSocketUpdates();
 
-  // State for popover
+  // State for filter popover visibility
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
-  // Current filter state (not applied yet)
-  const [currentFilters, setCurrentFilters] = useState({
+  // State for filter inputs (doesn't trigger search)
+  const [filterInputs, setFilterInputs] = useState({
     query: '',
     unit: '',
     status: '',
@@ -30,8 +30,8 @@ export default function DocumentsPage() {
     dateTo: null as Date | null
   });
 
-  // Applied filters that actually filter the documents
-  const [appliedFilters, setAppliedFilters] = useState({
+  // State for applied filters (triggers search)
+  const [activeFilters, setActiveFilters] = useState({
     query: '',
     unit: '',
     status: '',
@@ -46,29 +46,29 @@ export default function DocumentsPage() {
     refetchOnWindowFocus: true,
   });
 
-  // Handle search/apply filters
+  // Handle applying filters
   const handleApplyFilters = useCallback(() => {
-    setAppliedFilters(currentFilters);
-  }, [currentFilters]);
+    setActiveFilters(filterInputs);
+  }, [filterInputs]);
 
-  // Filter documents based on applied filters
+  // Filter documents based on active filters only
   const filteredDocuments = documents.filter(doc => {
-    const matchesQuery = !appliedFilters.query || 
-      doc.protocol_number_input?.toLowerCase().includes(appliedFilters.query.toLowerCase()) ||
+    const matchesQuery = !activeFilters.query || 
+      doc.protocol_number_input?.toLowerCase().includes(activeFilters.query.toLowerCase()) ||
       doc.recipients?.some(r => 
-        r.firstname.toLowerCase().includes(appliedFilters.query.toLowerCase()) ||
-        r.lastname.toLowerCase().includes(appliedFilters.query.toLowerCase()) ||
-        r.afm.includes(appliedFilters.query)
+        r.firstname.toLowerCase().includes(activeFilters.query.toLowerCase()) ||
+        r.lastname.toLowerCase().includes(activeFilters.query.toLowerCase()) ||
+        r.afm.includes(activeFilters.query)
       );
 
-    const matchesUnit = !appliedFilters.unit || doc.unit === appliedFilters.unit;
-    const matchesStatus = !appliedFilters.status || doc.status === appliedFilters.status;
+    const matchesUnit = !activeFilters.unit || doc.unit === activeFilters.unit;
+    const matchesStatus = !activeFilters.status || doc.status === activeFilters.status;
 
-    const matchesDateFrom = !appliedFilters.dateFrom || 
-      new Date(doc.created_at) >= new Date(appliedFilters.dateFrom);
+    const matchesDateFrom = !activeFilters.dateFrom || 
+      new Date(doc.created_at) >= activeFilters.dateFrom;
 
-    const matchesDateTo = !appliedFilters.dateTo || 
-      new Date(doc.created_at) <= new Date(appliedFilters.dateTo);
+    const matchesDateTo = !activeFilters.dateTo || 
+      new Date(doc.created_at) <= activeFilters.dateTo;
 
     return matchesQuery && matchesUnit && matchesStatus && matchesDateFrom && matchesDateTo;
   });
@@ -83,8 +83,8 @@ export default function DocumentsPage() {
         <div className="flex-1 flex gap-2">
           <Input
             placeholder="Αναζήτηση..."
-            value={currentFilters.query}
-            onChange={e => setCurrentFilters(prev => ({ ...prev, query: e.target.value }))}
+            value={filterInputs.query}
+            onChange={e => setFilterInputs(prev => ({ ...prev, query: e.target.value }))}
             className="max-w-sm"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -100,18 +100,23 @@ export default function DocumentsPage() {
               <Button variant="outline" className="gap-2">
                 <Filter className="h-4 w-4" />
                 Φίλτρα
-                {(currentFilters.unit || currentFilters.status || currentFilters.dateFrom || currentFilters.dateTo) && 
+                {(filterInputs.unit || filterInputs.status || filterInputs.dateFrom || filterInputs.dateTo) && 
                   <span className="ml-2 h-2 w-2 rounded-full bg-primary"></span>
                 }
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80" align="start" side="bottom">
+            <PopoverContent 
+              className="w-80" 
+              align="start" 
+              side="bottom"
+              aria-label="Φίλτρα εγγράφων"
+            >
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Μονάδα</label>
                   <Select
-                    value={currentFilters.unit}
-                    onValueChange={value => setCurrentFilters(prev => ({ ...prev, unit: value }))}
+                    value={filterInputs.unit}
+                    onValueChange={value => setFilterInputs(prev => ({ ...prev, unit: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Επιλέξτε μονάδα" />
@@ -127,8 +132,8 @@ export default function DocumentsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Κατάσταση</label>
                   <Select
-                    value={currentFilters.status}
-                    onValueChange={value => setCurrentFilters(prev => ({ ...prev, status: value }))}
+                    value={filterInputs.status}
+                    onValueChange={value => setFilterInputs(prev => ({ ...prev, status: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Επιλέξτε κατάσταση" />
@@ -145,16 +150,16 @@ export default function DocumentsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Από ημερομηνία</label>
                   <DatePicker
-                    selected={currentFilters.dateFrom}
-                    onSelect={date => setCurrentFilters(prev => ({ ...prev, dateFrom: date }))}
+                    selected={filterInputs.dateFrom}
+                    onSelect={date => setFilterInputs(prev => ({ ...prev, dateFrom: date }))}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Έως ημερομηνία</label>
                   <DatePicker
-                    selected={currentFilters.dateTo}
-                    onSelect={date => setCurrentFilters(prev => ({ ...prev, dateTo: date }))}
+                    selected={filterInputs.dateTo}
+                    onSelect={date => setFilterInputs(prev => ({ ...prev, dateTo: date }))}
                   />
                 </div>
 
