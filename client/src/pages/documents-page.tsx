@@ -58,6 +58,13 @@ export default function DocumentsPage() {
   });
 
   // Initialize filters
+  const setFiltersWithRefresh = (newFilters: any, shouldRefresh = true) => {
+    setFilters(newFilters);
+    if (shouldRefresh) {
+      handleApplyFilters();
+    }
+  };
+
   const [filters, setFilters] = useState<Filters>({
     unit: user?.units?.[0] || 'all',
     status: 'pending',
@@ -183,6 +190,10 @@ export default function DocumentsPage() {
     }
   });
 
+  const handleApplyFilters = () => {
+    refetch();
+  };
+
   // Handle document refresh
   const handleRefresh = () => {
     console.log('[Documents] Manually refreshing documents...');
@@ -219,7 +230,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Μονάδα</label>
                 <Select
                   value={filters.unit}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, unit: value }))}
+                  onValueChange={(value) => setFiltersWithRefresh(prev => ({ ...prev, unit: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
@@ -237,7 +248,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Κατάσταση</label>
                 <Select
                   value={filters.status}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+                  onValueChange={(value) => setFiltersWithRefresh(prev => ({ ...prev, status: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε κατάσταση" />
@@ -255,7 +266,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Χρήστης</label>
                 <Select
                   value={filters.user}
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, user: value }))}
+                  onValueChange={(value) => setFiltersWithRefresh(prev => ({ ...prev, user: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε χρήστη" />
@@ -296,7 +307,7 @@ export default function DocumentsPage() {
                         <Input
                           type="date"
                           value={filters.dateFrom}
-                          onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                          onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, dateFrom: e.target.value }))}
                         />
                       </div>
                       <div>
@@ -304,7 +315,7 @@ export default function DocumentsPage() {
                         <Input
                           type="date"
                           value={filters.dateTo}
-                          onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                          onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, dateTo: e.target.value }))}
                         />
                       </div>
                     </div>
@@ -319,7 +330,7 @@ export default function DocumentsPage() {
                           type="number"
                           placeholder="Ελάχιστο ποσό"
                           value={filters.amountFrom}
-                          onChange={(e) => setFilters(prev => ({ ...prev, amountFrom: e.target.value }))}
+                          onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, amountFrom: e.target.value }))}
                         />
                       </div>
                       <div>
@@ -328,7 +339,7 @@ export default function DocumentsPage() {
                           type="number"
                           placeholder="Μέγιστο ποσό"
                           value={filters.amountTo}
-                          onChange={(e) => setFilters(prev => ({ ...prev, amountTo: e.target.value }))}
+                          onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, amountTo: e.target.value }))}
                         />
                       </div>
                     </div>
@@ -339,7 +350,7 @@ export default function DocumentsPage() {
                     <Input
                       placeholder="Αναζήτηση με όνομα παραλήπτη"
                       value={filters.recipient}
-                      onChange={(e) => setFilters(prev => ({ ...prev, recipient: e.target.value }))}
+                      onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, recipient: e.target.value }))}
                     />
                   </div>
 
@@ -348,12 +359,12 @@ export default function DocumentsPage() {
                     <Input
                       placeholder="Αναζήτηση με ΑΦΜ"
                       value={filters.afm}
-                      onChange={(e) => setFilters(prev => ({ ...prev, afm: e.target.value }))}
+                      onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, afm: e.target.value }))}
                     />
                   </div>
                 </div>
                 <SheetClose asChild>
-                  <Button className="w-full mt-4">Εφαρμογή Φίλτρων</Button>
+                  <Button className="w-full mt-4" onClick={handleApplyFilters}>Εφαρμογή Φίλτρων</Button>
                 </SheetClose>
               </SheetContent>
             </Sheet>
