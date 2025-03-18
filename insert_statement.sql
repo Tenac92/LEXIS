@@ -1,5 +1,4 @@
-
-INSERT INTO public.project_catalog_2 (
+INSERT INTO "public"."project_catalog_2" (
     mis,
     e069,
     na271,
