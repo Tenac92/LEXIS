@@ -29,6 +29,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const recipientSchema = z.object({
   firstname: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
   lastname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
+  fathername: z.string().min(1, "Το πατρώνυμο είναι υποχρεωτικό"),
   afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
   amount: z.number().min(0, "Το ποσό πρέπει να είναι θετικό"),
   installment: z.number().min(1, "Η δόση πρέπει να είναι τουλάχιστον 1"),
@@ -62,6 +63,15 @@ interface OrthiEpanalipsiModalProps {
   isOpen: boolean;
   onClose: () => void;
   document: GeneratedDocument | null;
+}
+
+interface Recipient {
+  firstname: string;
+  lastname: string;
+  fathername: string;
+  afm: string;
+  amount: number;
+  installment: number;
 }
 
 export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanalipsiModalProps) {
@@ -168,7 +178,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
     const recipients = form.getValues("recipients") || [];
     form.setValue("recipients", [
       ...recipients,
-      { firstname: "", lastname: "", afm: "", amount: 0, installment: 1 }
+      { firstname: "", lastname: "", fathername: "", afm: "", amount: 0, installment: 1 }
     ]);
   };
 
@@ -315,7 +325,7 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                       </Button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <FormField
                         control={form.control}
                         name={`recipients.${index}.firstname`}
@@ -343,8 +353,20 @@ export function OrthiEpanalipsiModal({ isOpen, onClose, document }: OrthiEpanali
                           </FormItem>
                         )}
                       />
+                      <FormField
+                        control={form.control}
+                        name={`recipients.${index}.fathername`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Πατρώνυμο</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <FormField
                         control={form.control}

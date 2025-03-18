@@ -30,6 +30,7 @@ interface DocumentCardProps {
 interface Recipient {
   firstname: string;
   lastname: string;
+  fathername: string;
   afm: string;
   amount: number;
   installment: number;
@@ -297,7 +298,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="font-medium">
-                      {recipient.firstname} {recipient.lastname}
+                      {recipient.firstname} {recipient.fathername} {recipient.lastname}
                     </div>
                     <Badge variant="outline" className="text-xs">
                       Δόση {recipient.installment}
