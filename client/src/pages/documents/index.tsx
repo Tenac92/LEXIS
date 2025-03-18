@@ -18,9 +18,11 @@ export default function DocumentsPage() {
   // Set up WebSocket connection
   useWebSocketUpdates();
 
-  // Separate state for current and applied filters
+  // State for popover
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [currentParams, setCurrentParams] = useState({
+
+  // Current filter state (not applied yet)
+  const [currentFilters, setCurrentFilters] = useState({
     query: '',
     unit: '',
     status: '',
@@ -28,7 +30,7 @@ export default function DocumentsPage() {
     dateTo: null as Date | null
   });
 
-  // State for actually applied filters
+  // Applied filters that actually filter the documents
   const [appliedFilters, setAppliedFilters] = useState({
     query: '',
     unit: '',
@@ -44,10 +46,10 @@ export default function DocumentsPage() {
     refetchOnWindowFocus: true,
   });
 
-  // Handle search button click
-  const handleSearch = useCallback(() => {
-    setAppliedFilters(currentParams);
-  }, [currentParams]);
+  // Handle search/apply filters
+  const handleApplyFilters = useCallback(() => {
+    setAppliedFilters(currentFilters);
+  }, [currentFilters]);
 
   // Filter documents based on applied filters
   const filteredDocuments = documents.filter(doc => {
@@ -61,8 +63,12 @@ export default function DocumentsPage() {
 
     const matchesUnit = !appliedFilters.unit || doc.unit === appliedFilters.unit;
     const matchesStatus = !appliedFilters.status || doc.status === appliedFilters.status;
-    const matchesDateFrom = !appliedFilters.dateFrom || new Date(doc.created_at) >= appliedFilters.dateFrom;
-    const matchesDateTo = !appliedFilters.dateTo || new Date(doc.created_at) <= appliedFilters.dateTo;
+
+    const matchesDateFrom = !appliedFilters.dateFrom || 
+      new Date(doc.created_at) >= new Date(appliedFilters.dateFrom);
+
+    const matchesDateTo = !appliedFilters.dateTo || 
+      new Date(doc.created_at) <= new Date(appliedFilters.dateTo);
 
     return matchesQuery && matchesUnit && matchesStatus && matchesDateFrom && matchesDateTo;
   });
@@ -77,36 +83,43 @@ export default function DocumentsPage() {
         <div className="flex-1 flex gap-2">
           <Input
             placeholder="Αναζήτηση..."
-            value={currentParams.query}
-            onChange={e => setCurrentParams(prev => ({ ...prev, query: e.target.value }))}
+            value={currentFilters.query}
+            onChange={e => setCurrentFilters(prev => ({ ...prev, query: e.target.value }))}
             className="max-w-sm"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
-                handleSearch();
+                handleApplyFilters();
               }
             }}
           />
-          <Popover open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+          <Popover 
+            open={isFiltersOpen} 
+            onOpenChange={setIsFiltersOpen}
+          >
             <PopoverTrigger asChild>
               <Button variant="outline" className="gap-2">
                 <Filter className="h-4 w-4" />
                 Φίλτρα
+                {(currentFilters.unit || currentFilters.status || currentFilters.dateFrom || currentFilters.dateTo) && 
+                  <span className="ml-2 h-2 w-2 rounded-full bg-primary"></span>
+                }
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80" align="start">
+            <PopoverContent className="w-80" align="start" side="bottom">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Μονάδα</label>
                   <Select
-                    value={currentParams.unit}
-                    onValueChange={value => setCurrentParams(prev => ({ ...prev, unit: value }))}
+                    value={currentFilters.unit}
+                    onValueChange={value => setCurrentFilters(prev => ({ ...prev, unit: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Επιλέξτε μονάδα" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Όλες</SelectItem>
-                      {/* Add your unit options here */}
+                      <SelectItem value="ΔΑΕΦΚ-ΚΕ">ΔΑΕΦΚ-ΚΕ</SelectItem>
+                      <SelectItem value="ΔΑΕΦΚ-ΘΕΣΣ">ΔΑΕΦΚ-ΘΕΣΣ</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -114,8 +127,8 @@ export default function DocumentsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Κατάσταση</label>
                   <Select
-                    value={currentParams.status}
-                    onValueChange={value => setCurrentParams(prev => ({ ...prev, status: value }))}
+                    value={currentFilters.status}
+                    onValueChange={value => setCurrentFilters(prev => ({ ...prev, status: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Επιλέξτε κατάσταση" />
@@ -132,23 +145,23 @@ export default function DocumentsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Από ημερομηνία</label>
                   <DatePicker
-                    selected={currentParams.dateFrom}
-                    onSelect={date => setCurrentParams(prev => ({ ...prev, dateFrom: date }))}
+                    selected={currentFilters.dateFrom}
+                    onSelect={date => setCurrentFilters(prev => ({ ...prev, dateFrom: date }))}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Έως ημερομηνία</label>
                   <DatePicker
-                    selected={currentParams.dateTo}
-                    onSelect={date => setCurrentParams(prev => ({ ...prev, dateTo: date }))}
+                    selected={currentFilters.dateTo}
+                    onSelect={date => setCurrentFilters(prev => ({ ...prev, dateTo: date }))}
                   />
                 </div>
 
                 <Button 
                   className="w-full" 
                   onClick={() => {
-                    handleSearch();
+                    handleApplyFilters();
                   }}
                 >
                   Εφαρμογή φίλτρων
@@ -156,7 +169,7 @@ export default function DocumentsPage() {
               </div>
             </PopoverContent>
           </Popover>
-          <Button onClick={handleSearch}>
+          <Button onClick={handleApplyFilters}>
             Αναζήτηση
           </Button>
         </div>
