@@ -55,9 +55,10 @@ export default function DocumentsPage() {
   // Handle applying filters
   const handleApplyFilters = useCallback(() => {
     setQueryParams(filterInputs);
+    setIsFiltersOpen(false); // Close popover after applying filters
   }, [filterInputs]);
 
-  // Filter documents based on active filters
+  // Filter documents based on query parameters
   const filteredDocuments = documents.filter(doc => {
     const matchesQuery = !queryParams.query || 
       doc.protocol_number_input?.toLowerCase().includes(queryParams.query.toLowerCase()) ||
@@ -70,11 +71,9 @@ export default function DocumentsPage() {
     const matchesUnit = !queryParams.unit || doc.unit === queryParams.unit;
     const matchesStatus = !queryParams.status || doc.status === queryParams.status;
 
-    const matchesDateFrom = !queryParams.dateFrom || 
-      new Date(doc.created_at) >= queryParams.dateFrom;
-
-    const matchesDateTo = !queryParams.dateTo || 
-      new Date(doc.created_at) <= queryParams.dateTo;
+    const docDate = new Date(doc.created_at);
+    const matchesDateFrom = !queryParams.dateFrom || docDate >= queryParams.dateFrom;
+    const matchesDateTo = !queryParams.dateTo || docDate <= queryParams.dateTo;
 
     return matchesQuery && matchesUnit && matchesStatus && matchesDateFrom && matchesDateTo;
   });
@@ -171,9 +170,7 @@ export default function DocumentsPage() {
 
                 <Button 
                   className="w-full" 
-                  onClick={() => {
-                    handleApplyFilters();
-                  }}
+                  onClick={handleApplyFilters}
                 >
                   Εφαρμογή φίλτρων
                 </Button>
