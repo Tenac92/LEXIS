@@ -286,9 +286,10 @@ router.post('/', authenticateSession, async (req: AuthRequest, res: Response) =>
         recipients: recipients.map((r: any) => ({
           firstname: String(r.firstname).trim(),
           lastname: String(r.lastname).trim(),
+          fathername: String(r.fathername).trim(),
           afm: String(r.afm).trim(),
           amount: parseFloat(String(r.amount)),
-          installment: parseInt(String(r.installment))
+          installment: String(r.installment).trim()
         })),
         total_amount: parseFloat(String(total_amount)) || 0,
         generated_by: req.user.id,
