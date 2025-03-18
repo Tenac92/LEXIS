@@ -162,13 +162,18 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
+// Add this constant at the top level
+const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
+const DKA_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ'];
+const ALL_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
+
 const recipientSchema = z.object({
   firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
   lastname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
   fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
   afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
-  installment: z.enum(['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ']).optional(),
+  installment: z.string().optional(), // Changed to string to handle dynamic installments
 });
 
 const createDocumentSchema = z.object({
@@ -508,7 +513,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           fathername: r.fathername.trim(),
           afm: r.afm.trim(),
           amount: parseFloat(r.amount.toString()),
-          installment: r.installment.toString() // Assuming installment is a string from enum
+          installment: r.installment // Assuming installment is a string from enum
         })),
         total_amount: totalAmount,
         status: "draft",
@@ -726,6 +731,36 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
+  // Add this function to get available installments based on expenditure type
+  const getAvailableInstallments = (expenditureType: string) => {
+    return DKA_TYPES.includes(expenditureType) ? DKA_INSTALLMENTS : ALL_INSTALLMENTS;
+  };
+
+  // Update the recipients section rendering
+  const renderRecipientInstallments = (index: number) => {
+    const expenditureType = form.watch('expenditure_type');
+    const availableInstallments = getAvailableInstallments(expenditureType);
+
+    return (
+      <Select
+        value={form.watch(`recipients.${index}.installment`)}
+        onValueChange={(value) => form.setValue(`recipients.${index}.installment`, value)}
+      >
+        <SelectTrigger className="flex-1">
+          <SelectValue placeholder="Δόση" className="placeholder:text-muted-foreground" />
+        </SelectTrigger>
+        <SelectContent>
+          {availableInstallments.map((value) => (
+            <SelectItem key={value} value={value}>
+              {value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
+
+
   const renderStepContent = () => {
     return (
       <AnimatePresence mode="wait" custom={direction}>
@@ -910,7 +945,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                               type="number"
                               step="0.01"
                               {...form.register(`recipients.${index}.amount`, {
-                                valueAsNumber: true,                                min: 0.01
+                                valueAsNumber: true,
+                                min: 0.01
                               })}
                               placeholder="Ποσό"
                               className="md:col-span-1"
@@ -918,21 +954,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                               defaultValue=""
                             />
                             <div className="md:col-span-1 flex items-center gap-2">
-                              <Select
-                                value={form.watch(`recipients.${index}.installment`)}
-                                onValueChange={(value) => form.setValue(`recipients.${index}.installment`, value)}
-                              >
-                                <SelectTrigger className="flex-1">
-                                  <SelectValue placeholder="Δόση" className="placeholder:text-muted-foreground" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'].map((value) => (
-                                    <SelectItem key={value} value={value}>
-                                      {value}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              {renderRecipientInstallments(index)}
                               <Button
                                 type="button"
                                 variant="ghost"
