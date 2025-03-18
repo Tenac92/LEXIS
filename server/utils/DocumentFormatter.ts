@@ -67,6 +67,7 @@ interface DocumentData {
   recipients?: Array<{
     firstname: string;
     lastname: string;
+    fathername: string;
     afm: string;
     amount: number;
     installment: number;
@@ -584,7 +585,7 @@ export class DocumentFormatter {
             children: [
               this.createTableCell((index + 1).toString() + ".", "center"),
               this.createTableCell(
-                `${recipient.lastname} ${recipient.firstname}`.trim(),
+                `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim(), 
                 "center",
               ),
               this.createTableCell(
