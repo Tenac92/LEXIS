@@ -298,10 +298,10 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="font-medium">
-                      {`${recipient.firstname} ${recipient.fathername} ${recipient.lastname}`}
+                      {`${recipient.firstname} του ${recipient.fathername} ${recipient.lastname}`}
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      Δόση {recipient.installment}
+                      {`Δόση ${recipient.installment}`}
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
