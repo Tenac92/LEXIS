@@ -597,7 +597,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
     form.setValue("recipients", [
       ...currentRecipients,
-      { firstname: "", lastname: "", fathername: "", afm: "", amount: 0, installment: 'Α' }
+      { firstname: "", lastname: "", fathername: "", afm: "", amount: undefined, installment: undefined }
     ]);
   };
 
@@ -910,12 +910,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                               type="number"
                               step="0.01"
                               {...form.register(`recipients.${index}.amount`, {
-                                valueAsNumber: true,
-                                min: 0.01
+                                valueAsNumber: true,                                min: 0.01
                               })}
                               placeholder="Ποσό"
                               className="md:col-span-1"
                               autoComplete="off"
+                              defaultValue=""
                             />
                             <div className="md:col-span-1 flex items-center gap-2">
                               <Select
@@ -923,12 +923,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                 onValueChange={(value) => form.setValue(`recipients.${index}.installment`, value)}
                               >
                                 <SelectTrigger className="flex-1">
-                                  <SelectValue placeholder="Δόση" />
+                                  <SelectValue placeholder="Δόση" className="placeholder:text-muted-foreground" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'].map((value) => (
                                     <SelectItem key={value} value={value}>
-                                      Δόση {value}
+                                      {value}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
