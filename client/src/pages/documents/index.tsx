@@ -18,9 +18,18 @@ export default function DocumentsPage() {
   // Set up WebSocket connection
   useWebSocketUpdates();
 
-  // State for filters
+  // Separate state for current and applied filters
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [searchParams, setSearchParams] = useState({
+  const [currentParams, setCurrentParams] = useState({
+    query: '',
+    unit: '',
+    status: '',
+    dateFrom: null as Date | null,
+    dateTo: null as Date | null
+  });
+
+  // State for actually applied filters
+  const [appliedFilters, setAppliedFilters] = useState({
     query: '',
     unit: '',
     status: '',
@@ -37,24 +46,23 @@ export default function DocumentsPage() {
 
   // Handle search button click
   const handleSearch = useCallback(() => {
-    // Your search logic here using searchParams
-    console.log('Searching with params:', searchParams);
-  }, [searchParams]);
+    setAppliedFilters(currentParams);
+  }, [currentParams]);
 
-  // Filter documents based on search parameters
+  // Filter documents based on applied filters
   const filteredDocuments = documents.filter(doc => {
-    const matchesQuery = !searchParams.query || 
-      doc.protocol_number_input?.toLowerCase().includes(searchParams.query.toLowerCase()) ||
+    const matchesQuery = !appliedFilters.query || 
+      doc.protocol_number_input?.toLowerCase().includes(appliedFilters.query.toLowerCase()) ||
       doc.recipients?.some(r => 
-        r.firstname.toLowerCase().includes(searchParams.query.toLowerCase()) ||
-        r.lastname.toLowerCase().includes(searchParams.query.toLowerCase()) ||
-        r.afm.includes(searchParams.query)
+        r.firstname.toLowerCase().includes(appliedFilters.query.toLowerCase()) ||
+        r.lastname.toLowerCase().includes(appliedFilters.query.toLowerCase()) ||
+        r.afm.includes(appliedFilters.query)
       );
 
-    const matchesUnit = !searchParams.unit || doc.unit === searchParams.unit;
-    const matchesStatus = !searchParams.status || doc.status === searchParams.status;
-    const matchesDateFrom = !searchParams.dateFrom || new Date(doc.created_at) >= searchParams.dateFrom;
-    const matchesDateTo = !searchParams.dateTo || new Date(doc.created_at) <= searchParams.dateTo;
+    const matchesUnit = !appliedFilters.unit || doc.unit === appliedFilters.unit;
+    const matchesStatus = !appliedFilters.status || doc.status === appliedFilters.status;
+    const matchesDateFrom = !appliedFilters.dateFrom || new Date(doc.created_at) >= appliedFilters.dateFrom;
+    const matchesDateTo = !appliedFilters.dateTo || new Date(doc.created_at) <= appliedFilters.dateTo;
 
     return matchesQuery && matchesUnit && matchesStatus && matchesDateFrom && matchesDateTo;
   });
@@ -69,9 +77,14 @@ export default function DocumentsPage() {
         <div className="flex-1 flex gap-2">
           <Input
             placeholder="Αναζήτηση..."
-            value={searchParams.query}
-            onChange={e => setSearchParams(prev => ({ ...prev, query: e.target.value }))}
+            value={currentParams.query}
+            onChange={e => setCurrentParams(prev => ({ ...prev, query: e.target.value }))}
             className="max-w-sm"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSearch();
+              }
+            }}
           />
           <Popover open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
             <PopoverTrigger asChild>
@@ -85,8 +98,8 @@ export default function DocumentsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Μονάδα</label>
                   <Select
-                    value={searchParams.unit}
-                    onValueChange={value => setSearchParams(prev => ({ ...prev, unit: value }))}
+                    value={currentParams.unit}
+                    onValueChange={value => setCurrentParams(prev => ({ ...prev, unit: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Επιλέξτε μονάδα" />
@@ -101,8 +114,8 @@ export default function DocumentsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Κατάσταση</label>
                   <Select
-                    value={searchParams.status}
-                    onValueChange={value => setSearchParams(prev => ({ ...prev, status: value }))}
+                    value={currentParams.status}
+                    onValueChange={value => setCurrentParams(prev => ({ ...prev, status: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Επιλέξτε κατάσταση" />
@@ -119,20 +132,25 @@ export default function DocumentsPage() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Από ημερομηνία</label>
                   <DatePicker
-                    selected={searchParams.dateFrom}
-                    onSelect={date => setSearchParams(prev => ({ ...prev, dateFrom: date }))}
+                    selected={currentParams.dateFrom}
+                    onSelect={date => setCurrentParams(prev => ({ ...prev, dateFrom: date }))}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Έως ημερομηνία</label>
                   <DatePicker
-                    selected={searchParams.dateTo}
-                    onSelect={date => setSearchParams(prev => ({ ...prev, dateTo: date }))}
+                    selected={currentParams.dateTo}
+                    onSelect={date => setCurrentParams(prev => ({ ...prev, dateTo: date }))}
                   />
                 </div>
 
-                <Button className="w-full" onClick={handleSearch}>
+                <Button 
+                  className="w-full" 
+                  onClick={() => {
+                    handleSearch();
+                  }}
+                >
                   Εφαρμογή φίλτρων
                 </Button>
               </div>
