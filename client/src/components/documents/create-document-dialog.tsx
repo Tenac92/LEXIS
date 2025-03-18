@@ -885,55 +885,65 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                               {...form.register(`recipients.${index}.firstname`)}
                               placeholder="Όνομα"
                               className="md:col-span-1"
+                              autoComplete="off"
                             />
                             <Input
                               {...form.register(`recipients.${index}.lastname`)}
                               placeholder="Επώνυμο"
                               className="md:col-span-1"
+                              autoComplete="off"
                             />
                             <Input
                               {...form.register(`recipients.${index}.fathername`)}
                               placeholder="Πατρώνυμο"
                               className="md:col-span-1"
+                              autoComplete="off"
                             />
                             <Input
                               {...form.register(`recipients.${index}.afm`)}
                               placeholder="ΑΦΜ"
                               maxLength={9}
                               className="md:col-span-1"
+                              autoComplete="off"
                             />
                             <Input
                               type="number"
                               step="0.01"
-                              {...form.register(`recipients.${index}.amount`,{
+                              {...form.register(`recipients.${index}.amount`, {
                                 valueAsNumber: true,
                                 min: 0.01
                               })}
                               placeholder="Ποσό"
                               className="md:col-span-1"
+                              autoComplete="off"
                             />
-                            <Input
-                              type="number"
-                              min={1}
-                              max={12}
-                              {...form.register(`recipients.${index}.installment`, {
-                                valueAsNumber: true,
-                                min: 1,
-                                max: 12
-                              })}
-                              placeholder="Δόση"
-                              className="md:col-span-1"
-                            />
+                            <div className="md:col-span-1 flex items-center gap-2">
+                              <Select
+                                value={form.watch(`recipients.${index}.installment`)}
+                                onValueChange={(value) => form.setValue(`recipients.${index}.installment`, value)}
+                              >
+                                <SelectTrigger className="flex-1">
+                                  <SelectValue placeholder="Δόση" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'].map((value) => (
+                                    <SelectItem key={value} value={value}>
+                                      Δόση {value}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeRecipient(index)}
+                                className="shrink-0"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeRecipient(index)}
-                            className="absolute top-2 right-2"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
                         </div>
                       </Card>
                     ))}
