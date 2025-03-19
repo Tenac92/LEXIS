@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, numeric, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -145,6 +145,79 @@ export const documentTemplates = pgTable("document_templates", {
   is_default: boolean("is_default").default(false),
 });
 
+// New Projects table definition based on the SQL structure
+export const projects = pgTable("Projects", {
+  id: serial("id").primaryKey(),
+  mis: text("mis").notNull().unique(),
+  e069: text("e069"),
+  na271: text("na271"),
+  na853: text("na853"),
+  event_description: text("event_description"),
+  project_title: text("project_title"),
+  event_type: jsonb("event_type").array(),
+  event_year: jsonb("event_year").array(),
+  region: jsonb("region"), // Contains region, municipality, regional_unit
+  implementing_agency: jsonb("implementing_agency").array(),
+  expenditure_type: jsonb("expenditure_type").array(),
+  kya: jsonb("kya").array(),
+  fek: jsonb("fek").array(),
+  ada: text("ada"),
+  procedures: text("procedures"),
+  ada_import_sana271: jsonb("ada_import_sana271").array(),
+  ada_import_sana853: jsonb("ada_import_sana853").array(),
+  budget_decision: jsonb("budget_decision").array(),
+  funding_decision: jsonb("funding_decision").array(),
+  allocation_decision: jsonb("allocation_decision").array(),
+  budget_e069: numeric("budget_e069"),
+  budget_na271: numeric("budget_na271"),
+  budget_na853: numeric("budget_na853"),
+  status: text("status"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// Update type definitions
+export type Project = typeof projects.$inferSelect;
+
+// Create insert schema for the new Projects table
+export const insertProjectSchema = createInsertSchema(projects, {
+  mis: z.string().min(1, "MIS is required"),
+  e069: z.string().nullable(),
+  na271: z.string().nullable(),
+  na853: z.string().nullable(),
+  event_description: z.string().nullable(),
+  project_title: z.string().nullable(),
+  event_type: z.array(z.string()).nullable(),
+  event_year: z.array(z.string()).nullable(),
+  region: z.object({
+    region: z.array(z.string()).nullable(),
+    municipality: z.array(z.string()).nullable(),
+    regional_unit: z.array(z.string()).nullable(),
+  }).nullable(),
+  implementing_agency: z.array(z.string()).nullable(),
+  expenditure_type: z.array(z.string()).nullable(),
+  kya: z.array(z.string()).nullable(),
+  fek: z.array(z.string()).nullable(),
+  ada: z.string().nullable(),
+  procedures: z.string().nullable(),
+  ada_import_sana271: z.array(z.string()).nullable(),
+  ada_import_sana853: z.array(z.string()).nullable(),
+  budget_decision: z.array(z.string()).nullable(),
+  funding_decision: z.array(z.string()).nullable(),
+  allocation_decision: z.array(z.string()).nullable(),
+  budget_e069: z.number().nullable(),
+  budget_na271: z.number().nullable(),
+  budget_na853: z.number().nullable(),
+  status: z.string().nullable(),
+}).omit({ 
+  id: true,
+  created_at: true,
+  updated_at: true 
+});
+
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+
+
 // Types
 export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
@@ -155,6 +228,7 @@ export type BudgetNotification = typeof budgetNotifications.$inferSelect;
 export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
 export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+
 
 
 // Insert Schemas
@@ -307,4 +381,7 @@ export type Database = {
   documentVersions: typeof documentVersions.$inferSelect;
   documentTemplates: typeof documentTemplates.$inferSelect;
   monada: Monada;
+  projects: Project;
 };
+
+import { integer, boolean } from "drizzle-orm/pg-core";
