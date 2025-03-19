@@ -304,10 +304,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           if (item.expenditure_type) {
             try {
               // Parse expenditure_type field
-              const parsedTypes = typeof item.expenditure_type === 'string' ?
-                JSON.parse(item.expenditure_type) :
-                item.expenditure_type;
-              expenditureTypes = Array.isArray(parsedTypes) ? parsedTypes : [];
+              if (typeof item.expenditure_type === 'string') {
+                expenditureTypes = JSON.parse(item.expenditure_type);
+              } else if (Array.isArray(item.expenditure_type)) {
+                expenditureTypes = item.expenditure_type;
+              } else if (item.expenditure_type === null) {
+                expenditureTypes = [];
+              }
+              console.log('Project:', item.mis, 'Parsed expenditure types:', expenditureTypes);
             } catch (e) {
               console.error('Error parsing expenditure_type for project:', item.mis, e);
             }
@@ -316,7 +320,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           return {
             id: String(item.mis),
             name: `${String(item.mis)} - ${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
-            expenditure_types: expenditureTypes
+            expenditure_types: expenditureTypes || []
           };
         });
 
@@ -976,11 +980,17 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {selectedProject?.expenditure_types?.map((type: string) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
+                            {selectedProject?.expenditure_types?.length > 0 ? (
+                              selectedProject.expenditure_types.map((type: string) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="" disabled>
+                                Δεν υπάρχουν διαθέσιμοι τύποι δαπάνης
                               </SelectItem>
-                            ))}
+                            )}
                           </SelectContent>
                         </Select>
                         <FormMessage />
