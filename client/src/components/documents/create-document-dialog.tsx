@@ -264,7 +264,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         const { data, error } = await supabase
           .from('Projects')
           .select('*')
-          .contains('implementing_agency', `{${selectedUnit}}`) // Fixed JSONB array containment syntax
+          .filter('implementing_agency', '@>', JSON.stringify([selectedUnit])) // Fixed JSONB array query
           .order('mis');
 
         if (error) {
