@@ -179,6 +179,7 @@ const recipientSchema = z.object({
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
   project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
+  region: z.string().min(1, "Η περιφέρεια είναι υποχρεωτική"),
   expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
   recipients: z.array(recipientSchema).optional().default([]),
   total_amount: z.number().optional(),
@@ -206,6 +207,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     defaultValues: {
       unit: "",
       project_id: "",
+      region: "", // Added default value for region
       expenditure_type: "",
       recipients: [],
       status: "draft",
@@ -506,6 +508,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       const payload = {
         unit: data.unit,
         project_id: data.project_id,
+        region: data.region, // Include region in payload
         expenditure_type: data.expenditure_type,
         recipients: data.recipients.map(r => ({
           firstname: r.firstname.trim(),
@@ -615,6 +618,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     if (selectedUnit) {
       form.setValue("project_id", "");
       form.setValue("expenditure_type", "");
+      form.setValue("region", ""); // Reset region when unit changes
     }
   }, [selectedUnit, form]);
 
@@ -635,7 +639,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           fieldsToValidate = ["unit"];
           break;
         case 1:
-          fieldsToValidate = ["project_id", "expenditure_type"];
+          fieldsToValidate = ["project_id", "region", "expenditure_type"]; // Added region
           break;
         case 2:
           fieldsToValidate = ["recipients"];
@@ -761,6 +765,52 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   };
 
 
+  const { data: regions = [], isLoading: regionsLoading } = useQuery({
+    queryKey: ["regions", selectedProjectId],
+    queryFn: async () => {
+      if (!selectedProjectId) return [];
+
+      try {
+        const { data, error } = await supabase
+          .from('project_catalog')
+          .select('region')
+          .eq('mis', selectedProjectId)
+          .single();
+
+        if (error) {
+          console.error('Error fetching regions:', error);
+          toast({
+            title: "Σφάλμα",
+            description: "Αποτυχία φόρτωσης περιφερειών. Παρακαλώ δοκιμάστε ξανά.",
+            variant: "destructive"
+          });
+          throw error;
+        }
+
+        if (!data || !data.region) return [];
+
+        // Convert PostgreSQL array to JS array if needed
+        let regionArray = data.region;
+        if (typeof data.region === 'string') {
+          regionArray = data.region
+            .replace(/[{}]/g, '')
+            .split(',')
+            .map((region: string) => region.trim())
+            .filter(Boolean);
+        }
+
+        return regionArray.map((region: string) => ({
+          id: region,
+          name: region
+        }));
+      } catch (error) {
+        console.error('Regions fetch error:', error);
+        return [];
+      }
+    },
+    enabled: Boolean(selectedProjectId)
+  });
+
   const renderStepContent = () => {
     return (
       <AnimatePresence mode="wait" custom={direction}>
@@ -847,6 +897,36 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     </FormItem>
                   )}
                 />
+
+                {selectedProjectId && (
+                  <FormField
+                    control={form.control}
+                    name="region"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Περιφέρεια</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}                          disabled={!selectedProjectId || regionsLoading}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Επιλέξτε περιφέρεια" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {regions.map((region: { id: string; name: string }) => (
+                              <SelectItem key={region.id} value={region.id}>
+                                {region.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {selectedProject && (
                   <FormField
