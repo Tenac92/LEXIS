@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, numeric, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -145,6 +145,40 @@ export const documentTemplates = pgTable("document_templates", {
   is_default: boolean("is_default").default(false),
 });
 
+// Add Projects table definition
+export const projects = pgTable("Projects", {
+  id: serial("id").primaryKey(),
+  mis: text("mis").notNull(),
+  e069: text("e069"),
+  na271: text("na271"),
+  na853: text("na853"),
+  event_description: text("event_description"),
+  project_title: text("project_title"),
+  event_type: jsonb("event_type").$type<string[]>(),
+  event_year: jsonb("event_year").$type<string[]>(),
+  region: jsonb("region").$type<{
+    region: string[];
+    municipality: string[];
+    regional_unit: string[];
+  }>(),
+  implementing_agency: jsonb("implementing_agency").$type<string[]>(),
+  expenditure_type: jsonb("expenditure_type").$type<string[]>(),
+  kya: jsonb("kya").$type<string[]>(),
+  fek: jsonb("fek").$type<string[]>(),
+  ada: jsonb("ada").$type<string[]>(),
+  ada_import_sana271: jsonb("ada_import_sana271").$type<string[]>(),
+  ada_import_sana853: jsonb("ada_import_sana853").$type<string[]>(),
+  budget_decision: jsonb("budget_decision").$type<string[]>(),
+  funding_decision: jsonb("funding_decision").$type<string[]>(),
+  allocation_decision: jsonb("allocation_decision").$type<string[]>(),
+  budget_e069: numeric("budget_e069"),
+  budget_na271: numeric("budget_na271"),
+  budget_na853: numeric("budget_na853"),
+  status: text("status"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type ProjectCatalog = typeof projectCatalog.$inferSelect;
@@ -155,6 +189,7 @@ export type BudgetNotification = typeof budgetNotifications.$inferSelect;
 export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
 export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type Project = typeof projects.$inferSelect;
 
 
 // Insert Schemas
@@ -236,6 +271,35 @@ export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit(
   created_at: true
 });
 
+// Create insert schema for Projects
+export const insertProjectSchema = createInsertSchema(projects, {
+  event_type: z.array(z.string()).nullable(),
+  event_year: z.array(z.string()).nullable(),
+  region: z.object({
+    region: z.array(z.string()),
+    municipality: z.array(z.string()),
+    regional_unit: z.array(z.string()),
+  }).nullable(),
+  implementing_agency: z.array(z.string()).nullable(),
+  expenditure_type: z.array(z.string()).nullable(),
+  kya: z.array(z.string()).nullable(),
+  fek: z.array(z.string()).nullable(),
+  ada: z.array(z.string()).nullable(),
+  ada_import_sana271: z.array(z.string()).nullable(),
+  ada_import_sana853: z.array(z.string()).nullable(),
+  budget_decision: z.array(z.string()).nullable(),
+  funding_decision: z.array(z.string()).nullable(),
+  allocation_decision: z.array(z.string()).nullable(),
+  budget_e069: z.number().nullable(),
+  budget_na271: z.number().nullable(),
+  budget_na853: z.number().nullable(),
+  status: z.enum(["active", "pending", "pending_reallocation", "completed"]).default("pending"),
+}).omit({ 
+  id: true,
+  created_at: true,
+  updated_at: true 
+});
+
 // Export types for insert operations
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertProjectCatalog = z.infer<typeof insertProjectCatalogSchema>;
@@ -253,6 +317,7 @@ export interface BudgetValidationResponse {
 
 export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
 export type InsertBudgetNotification = z.infer<typeof insertBudgetNotificationSchema>;
+export type InsertProject = z.infer<typeof insertProjectSchema>;
 
 // Add the Monada table schema
 export const monada = pgTable("Monada", {
@@ -307,4 +372,6 @@ export type Database = {
   documentVersions: typeof documentVersions.$inferSelect;
   documentTemplates: typeof documentTemplates.$inferSelect;
   monada: Monada;
+  projects: Project;
 };
+import { integer, boolean } from "drizzle-orm/pg-core";

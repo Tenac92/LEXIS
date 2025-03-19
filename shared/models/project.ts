@@ -1,31 +1,34 @@
 import { z } from 'zod';
 
-// Base schema for project catalog
+// Base schema for Projects
 export const projectSchema = z.object({
-  mis: z.coerce.string(),
-  na853: z.string().nullable(),
+  mis: z.string(),
   e069: z.string().nullable(),
   na271: z.string().nullable(),
+  na853: z.string().nullable(),
   event_description: z.string().nullable(),
   project_title: z.string().nullable(),
-  event_type: z.string().nullable(),
-  event_year: z.array(z.coerce.string()).nullable(),
-  region: z.string().nullable(),
-  regional_unit: z.string().nullable(),
-  municipality: z.string().nullable(),
+  event_type: z.array(z.string()).nullable(),
+  event_year: z.array(z.string()).nullable(),
+  region: z.object({
+    region: z.array(z.string()),
+    municipality: z.array(z.string()),
+    regional_unit: z.array(z.string()),
+  }).nullable(),
   implementing_agency: z.array(z.string()).nullable(),
-  budget_na853: z.coerce.number().nullable(),
-  budget_e069: z.coerce.number().nullable(),
-  budget_na271: z.coerce.number().nullable(),
-  ethsia_pistosi: z.coerce.number().nullable().transform(val => 
-    isNaN(val) ? null : val
-  ),
-  status: z.string().nullable().default("pending"),
-  kya: z.string().nullable(),
-  fek: z.string().nullable(),
-  ada: z.string().nullable(),
   expenditure_type: z.array(z.string()).nullable(),
-  procedures: z.string().nullable(),
+  kya: z.array(z.string()).nullable(),
+  fek: z.array(z.string()).nullable(),
+  ada: z.array(z.string()).nullable(),
+  ada_import_sana271: z.array(z.string()).nullable(),
+  ada_import_sana853: z.array(z.string()).nullable(),
+  budget_decision: z.array(z.string()).nullable(),
+  funding_decision: z.array(z.string()).nullable(),
+  allocation_decision: z.array(z.string()).nullable(),
+  budget_e069: z.number().nullable(),
+  budget_na271: z.number().nullable(),
+  budget_na853: z.number().nullable(),
+  status: z.string().nullable().default("pending"),
   created_at: z.date().nullable().default(() => new Date()),
   updated_at: z.date().nullable().default(() => new Date())
 });
@@ -51,28 +54,21 @@ export const projectHelpers = {
     'NA271': project.na271,
     'Event Description': project.event_description,
     'Project Title': project.project_title,
-    'Event Type': project.event_type,
+    'Event Type': project.event_type ? project.event_type.join(', ') : '',
     'Event Year': project.event_year ? project.event_year.join(', ') : '',
-    'Region': project.region,
-    'Regional Unit': project.regional_unit,
-    'Municipality': project.municipality,
-    'Implementing Agency': Array.isArray(project.implementing_agency) 
-      ? project.implementing_agency.join(', ') 
-      : project.implementing_agency,
-    'Budget NA853': project.budget_na853?.toString() ?? '0',
-    'Budget E069': project.budget_e069?.toString() ?? '0',
-    'Budget NA271': project.budget_na271?.toString() ?? '0',
-    'Annual Credit': project.ethsia_pistosi?.toString() ?? '0',
+    'Region': project.region?.region.join(', ') || '',
+    'Regional Unit': project.region?.regional_unit.join(', ') || '',
+    'Municipality': project.region?.municipality.join(', ') || '',
+    'Implementing Agency': project.implementing_agency?.join(', ') || '',
+    'Budget NA853': project.budget_na853?.toString() || '0',
+    'Budget E069': project.budget_e069?.toString() || '0',
+    'Budget NA271': project.budget_na271?.toString() || '0',
     'Status': project.status,
-    'KYA': project.kya,
-    'FEK': project.fek,
-    'ADA': project.ada,
-    'Expenditure Type': Array.isArray(project.expenditure_type)
-      ? project.expenditure_type.join(', ')
-      : project.expenditure_type,
-    'Procedures': project.procedures,
-    'Created At': project.created_at ? project.created_at.toLocaleDateString() : '',
-    'Updated At': project.updated_at ? project.updated_at.toLocaleDateString() : ''
+    'KYA': project.kya?.join(', ') || '',
+    'FEK': project.fek?.join(', ') || '',
+    'ADA': project.ada?.join(', ') || '',
+    'Created At': project.created_at?.toLocaleDateString() || '',
+    'Updated At': project.updated_at?.toLocaleDateString() || ''
   }),
 
   validateProject: (data: unknown): Project => {

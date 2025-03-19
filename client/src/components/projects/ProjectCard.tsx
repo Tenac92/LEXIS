@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type ProjectCatalog } from "@shared/schema";
+import { type Project } from "@shared/schema";
 import { Edit, Trash2, Calendar, MapPin, Building2, Eye, Copy, Coins, FileText } from "lucide-react";
 import {
   AlertDialog,
@@ -34,7 +34,7 @@ interface APIResponse<T = any> {
 }
 
 interface ProjectCardProps {
-  project: ProjectCatalog;
+  project: Project;
   view?: "grid" | "list";
   isAdmin: boolean;
 }
@@ -131,12 +131,21 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
     }
   };
 
+  const getRegionText = (region: Project['region']) => {
+    if (!region) return '';
+    const parts = [];
+    if (region.region?.length) parts.push(region.region[0]);
+    if (region.regional_unit?.length) parts.push(region.regional_unit[0]);
+    if (region.municipality?.length) parts.push(region.municipality[0]);
+    return parts.join(' / ');
+  };
+
   const cardContent = (
     <>
       <div className="mb-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="line-clamp-2 text-lg font-bold">
-            {project.event_description || "Έργο χωρίς τίτλο"}
+            {project.event_description || project.project_title || "Έργο χωρίς τίτλο"}
           </h3>
           <Badge variant="secondary" className={getStatusColor(project.status || '')}>
             {getStatusText(project.status || '')}
@@ -152,17 +161,17 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
             {project.region && (
               <div className="flex items-center text-sm text-muted-foreground">
                 <MapPin className="mr-2 h-4 w-4" />
-                {project.region}
+                {getRegionText(project.region)}
               </div>
             )}
           </div>
           <div className="space-y-2">
             <div className="font-medium">
-              Προϋπολογισμός: {formatCurrency(project.budget_na853)}
+              Προϋπολογισμός NA853: {formatCurrency(project.budget_na853)}
             </div>
-            {project.ethsia_pistosi && (
+            {project.budget_na271 && (
               <div className="text-sm text-muted-foreground">
-                Ετήσια Πίστωση: {formatCurrency(project.ethsia_pistosi)}
+                Προϋπολογισμός NA271: {formatCurrency(project.budget_na271)}
               </div>
             )}
           </div>
@@ -195,18 +204,8 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           <DialogHeader>
             <DialogTitle>Στοιχεία Έργου</DialogTitle>
             <DialogDescription>
-              Έργο {project.mis || 'N/A'} - {project.event_description || 'Χωρίς περιγραφή'}
+              Έργο {project.mis || 'N/A'} - {project.event_description || project.project_title || 'Χωρίς περιγραφή'}
             </DialogDescription>
-          </DialogHeader>
-          <DialogHeader>
-            <DialogTitle>
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold">{project.event_description || "Στοιχεία Έργου"}</span>
-                <Badge variant="secondary" className={`${getStatusColor(project.status || '')} px-4 py-1.5`}>
-                  {getStatusText(project.status || '')}
-                </Badge>
-              </div>
-            </DialogTitle>
           </DialogHeader>
 
           <div className="mt-6 space-y-8">
@@ -223,7 +222,6 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                     <button
                       onClick={() => copyToClipboard(project.mis || '', 'MIS')}
                       className="text-gray-400 hover:text-gray-600"
-                      aria-label="Αντιγραφή αριθμού MIS"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
@@ -236,17 +234,18 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                     <button
                       onClick={() => copyToClipboard(project.na853 || '', 'NA853')}
                       className="text-gray-400 hover:text-gray-600"
-                      aria-label="Αντιγραφή αριθμού NA853"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
                   </div>
                   <p className="text-gray-900 font-medium">{project.na853 || "N/A"}</p>
                 </div>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Περιοχή</h4>
-                  <p className="text-gray-900 font-medium">{project.region || "N/A"}</p>
-                </div>
+                {project.region && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h4 className="font-semibold text-sm text-gray-600">Περιοχή</h4>
+                    <p className="text-gray-900 font-medium">{getRegionText(project.region)}</p>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -256,23 +255,25 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                 <Coins className="h-5 w-5" />
                 Πληροφορίες Προϋπολογισμού
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός NA853</h4>
-                  <p className="text-gray-900 font-medium">{formatCurrency(project.budget_na853)}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός E069</h4>
-                  <p className="text-gray-900 font-medium">{formatCurrency(project.budget_e069)}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός NA271</h4>
-                  <p className="text-gray-900 font-medium">{formatCurrency(project.budget_na271)}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Ετήσια Πίστωση</h4>
-                  <p className="text-gray-900 font-medium">{formatCurrency(project.ethsia_pistosi)}</p>
-                </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {project.budget_na853 && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός NA853</h4>
+                    <p className="text-gray-900 font-medium">{formatCurrency(project.budget_na853)}</p>
+                  </div>
+                )}
+                {project.budget_na271 && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός NA271</h4>
+                    <p className="text-gray-900 font-medium">{formatCurrency(project.budget_na271)}</p>
+                  </div>
+                )}
+                {project.budget_e069 && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός E069</h4>
+                    <p className="text-gray-900 font-medium">{formatCurrency(project.budget_e069)}</p>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -283,44 +284,30 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                 Πρόσθετες Πληροφορίες
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {project.implementing_agency && (
+                {project.implementing_agency && project.implementing_agency.length > 0 && (
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                     <h4 className="font-semibold text-sm text-gray-600">Φορέας Υλοποίησης</h4>
-                    <p className="text-gray-900">{Array.isArray(project.implementing_agency) ? project.implementing_agency.join(", ") : project.implementing_agency}</p>
+                    <p className="text-gray-900">{project.implementing_agency.join(", ")}</p>
                   </div>
                 )}
-                {project.event_type && (
+                {project.event_type && project.event_type.length > 0 && (
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                     <h4 className="font-semibold text-sm text-gray-600">Τύπος Συμβάντος</h4>
-                    <p className="text-gray-900">{project.event_type}</p>
+                    <p className="text-gray-900">{project.event_type.join(", ")}</p>
                   </div>
                 )}
-                {project.municipality && (
+                {project.event_year && project.event_year.length > 0 && (
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Δήμος</h4>
-                    <p className="text-gray-900">{project.municipality}</p>
+                    <h4 className="font-semibold text-sm text-gray-600">Έτος Συμβάντος</h4>
+                    <p className="text-gray-900">{project.event_year.join(", ")}</p>
                   </div>
                 )}
-                {project.procedures && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2 col-span-full">
-                    <h4 className="font-semibold text-sm text-gray-600">Διαδικασίες</h4>
-                    <p className="text-gray-900 whitespace-pre-wrap">{project.procedures}</p>
+                {project.kya && project.kya.length > 0 && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                    <h4 className="font-semibold text-sm text-gray-600">ΚΥΑ</h4>
+                    <p className="text-gray-900">{project.kya.join(", ")}</p>
                   </div>
                 )}
-              </div>
-            </section>
-
-            {/* Χρονικά Στοιχεία */}
-            <section className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Ημερομηνία Δημιουργίας</h4>
-                  <p className="text-gray-900">{formatDate(project.created_at)}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-600">Τελευταία Ενημέρωση</h4>
-                  <p className="text-gray-900">{formatDate(project.updated_at)}</p>
-                </div>
               </div>
             </section>
           </div>
