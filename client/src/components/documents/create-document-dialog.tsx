@@ -264,7 +264,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         const { data, error } = await supabase
           .from('Projects')
           .select('*')
-          .filter('implementing_agency', '@>', JSON.stringify([selectedUnit])) // Fixed JSONB array query
+          .contains('implementing_agency', [selectedUnit]) // Use .contains() with array
           .order('mis');
 
         if (error) {
@@ -899,8 +899,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                           </SelectContent>
                         </Select>
                         <FormMessage />
-                      </FormItem>
-                    )}
+                      </FormItem>                    )}
                   />
                 )}
 
