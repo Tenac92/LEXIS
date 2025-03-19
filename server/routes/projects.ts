@@ -147,7 +147,7 @@ router.get('/:mis', authenticateToken, async (req, res) => {
     console.log(`[Projects] Fetching project with MIS: ${mis}`);
 
     const { data: project, error } = await supabase
-      .from('project_catalog')  // Changed from 'Projects' to 'project_catalog'
+      .from('Projects')
       .select('*')
       .eq('mis', mis)
       .single();
