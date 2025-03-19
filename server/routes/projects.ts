@@ -9,7 +9,37 @@ import { parse } from 'csv-parse';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Add this new endpoint for fetching expenditure types
+// Get all projects with improved error handling
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    console.log('[Projects] Fetching all projects');
+
+    const { data: projects, error } = await supabase
+      .from('Projects')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[Projects] Database error:', error);
+      return res.status(500).json({ 
+        message: "Failed to fetch projects from database",
+        error: error.message
+      });
+    }
+
+    console.log(`[Projects] Successfully fetched ${projects?.length || 0} projects`);
+    return res.json(projects || []);
+
+  } catch (error) {
+    console.error("[Projects] Error fetching projects:", error);
+    return res.status(500).json({ 
+      message: "Failed to fetch projects",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get project expenditure types
 router.get('/:projectId/expenditure-types', authenticateToken, async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -41,39 +71,6 @@ router.get('/:projectId/expenditure-types', authenticateToken, async (req, res) 
     res.status(500).json({
       success: false,
       message: 'Failed to fetch expenditure types',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get all projects
-router.get('/', authenticateToken, async (req, res) => {
-  try {
-    console.log('[Projects] Fetching all projects');
-    const { data: projects, error } = await supabase
-      .from('Projects')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('[Projects] Database error:', error);
-      return res.status(500).json({ 
-        message: "Failed to fetch projects from database",
-        error: error.message
-      });
-    }
-
-    if (!data) {
-      console.log('[Projects] No projects found');
-      return res.status(404).json({ message: 'No projects found' });
-    }
-
-    console.log(`[Projects] Successfully fetched ${projects.length} projects`);
-    res.json(projects);
-  } catch (error) {
-    console.error("[Projects] Error fetching projects:", error);
-    res.status(500).json({ 
-      message: "Failed to fetch projects",
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
@@ -128,12 +125,15 @@ router.get('/export/xlsx', authenticateToken, async (req, res) => {
 
     if (error) {
       console.error('[Projects] Database error:', error);
-      throw error;
+      return res.status(500).json({ 
+        message: "Failed to export projects",
+        error: error.message
+      });
     }
 
     if (!projects?.length) {
       console.log('[Projects] No projects found for export');
-      return res.status(400).json({ message: 'No projects found for export' });
+      return res.status(404).json({ message: 'No projects found for export' });
     }
 
     console.log(`[Projects] Found ${projects.length} projects to export`);
@@ -171,11 +171,11 @@ router.get('/export/xlsx', authenticateToken, async (req, res) => {
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=projects-${new Date().toISOString().split('T')[0]}.xlsx`);
-    res.send(buffer);
+    return res.send(buffer);
 
   } catch (error) {
     console.error('[Projects] Export error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Failed to export projects',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
