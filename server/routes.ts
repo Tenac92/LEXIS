@@ -42,10 +42,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Documents routes
     log('[Routes] Setting up document routes...');
-    // Mount base documents routes first
-    app.use('/api/documents', authenticateSession, documentsController);
-    // Then mount more specific routes
+    // Mount more specific routes first
     app.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
+    // Then mount base documents routes
+    app.use('/api/documents', authenticateSession, documentsController.router);
     log('[Routes] Document routes setup complete');
 
     // Template preview route
