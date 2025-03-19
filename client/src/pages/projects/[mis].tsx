@@ -14,7 +14,7 @@ export default function ProjectDetailsPage() {
   const isAdmin = user?.role === 'admin';
 
   const { data: project, isLoading, error } = useQuery<Project>({
-    queryKey: ["/api/projects", mis],
+    queryKey: [`/api/projects/${mis}`],
     enabled: !!mis
   });
 
@@ -132,7 +132,7 @@ export default function ProjectDetailsPage() {
                     <Calendar className="mr-2 h-4 w-4" />
                     Created: {new Date(project.created_at || '').toLocaleDateString('el-GR')}
                   </div>
-                  
+
                   {project.region && (
                     <div className="flex items-center text-sm text-muted-foreground">
                       <MapPin className="mr-2 h-4 w-4" />

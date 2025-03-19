@@ -140,6 +140,44 @@ router.get('/:mis/expenditure-types', authenticateToken, async (req, res) => {
   }
 });
 
+// Get single project by MIS
+router.get('/:mis', authenticateToken, async (req, res) => {
+  try {
+    const { mis } = req.params;
+    console.log(`[Projects] Fetching project with MIS: ${mis}`);
+
+    const { data: project, error } = await supabase
+      .from('Projects')
+      .select('*')
+      .eq('mis', mis)
+      .single();
+
+    if (error) {
+      console.error('[Projects] Database error:', error);
+      return res.status(500).json({ 
+        message: "Failed to fetch project",
+        error: error.message
+      });
+    }
+
+    if (!project) {
+      console.log(`[Projects] No project found with MIS: ${mis}`);
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    console.log(`[Projects] Successfully fetched project: ${project.mis}`);
+    return res.json(project);
+
+  } catch (error) {
+    console.error('[Projects] Error fetching project:', error);
+    return res.status(500).json({
+      message: 'Failed to fetch project',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+
 // Export projects to XLSX
 router.get('/export/xlsx', authenticateToken, async (req, res) => {
   try {
