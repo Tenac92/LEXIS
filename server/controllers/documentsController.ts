@@ -193,9 +193,11 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: Request
   }
 });
 
-// Create document
+// Create new document
 router.post('/', authenticateSession, async (req: Request, res: Response) => {
   try {
+    console.log('[Documents] Creating new document:', JSON.stringify(req.body, null, 2));
+
     const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
 
     if (!req.user?.id) {
@@ -203,7 +205,7 @@ router.post('/', authenticateSession, async (req: Request, res: Response) => {
     }
 
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
-      return res.status(400).json({
+      return res.status(400).json({ 
         message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
       });
     }
@@ -219,41 +221,51 @@ router.post('/', authenticateSession, async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Project not found' });
     }
 
+    // Format recipients data
+    const formattedRecipients = recipients.map(r => ({
+      firstname: String(r.firstname).trim(),
+      lastname: String(r.lastname).trim(),
+      fathername: String(r.fathername).trim(),
+      afm: String(r.afm).trim(),
+      amount: parseFloat(String(r.amount)),
+      installment: String(r.installment).trim()
+    }));
+
+    const now = new Date().toISOString();
+
+    // Create document with exact schema match and set initial status to pending
+    const documentPayload = {
+      unit,
+      project_id,
+      project_na853: projectData.na853,
+      expenditure_type,
+      status: 'pending', // Always set initial status to pending
+      recipients: formattedRecipients,
+      total_amount: parseFloat(String(total_amount)) || 0,
+      generated_by: req.user.id,
+      department: req.user.department || null,
+      attachments: attachments || [],
+      created_at: now,
+      updated_at: now
+    };
+
+    console.log('[Documents] Document payload:', JSON.stringify(documentPayload, null, 2));
+
     const { data, error } = await supabase
       .from('generated_documents')
-      .insert([{
-        unit,
-        project_id,
-        project_na853: projectData.na853,
-        expenditure_type,
-        status: 'pending', // Always set initial status to pending
-        recipients: recipients.map((r: any) => ({
-          firstname: String(r.firstname).trim(),
-          lastname: String(r.lastname).trim(),
-          fathername: String(r.fathername).trim(),
-          afm: String(r.afm).trim(),
-          amount: parseFloat(String(r.amount)),
-          installment: String(r.installment).trim()
-        })),
-        total_amount: parseFloat(String(total_amount)) || 0,
-        generated_by: req.user.id,
-        department: req.user.department,
-        attachments: attachments || [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
+      .insert([documentPayload])
       .select()
       .single();
 
     if (error) {
       console.error('[Documents] Creation error:', error);
-      return res.status(500).json({
+      return res.status(500).json({ 
         message: 'Failed to create document',
-        error: error.message
+        error: error.message 
       });
     }
 
-    // If attachments were provided, create attachment records
+    // Create attachment records if provided
     if (attachments?.length && data?.id) {
       const { error: attachError } = await supabase
         .from('attachments')
@@ -263,7 +275,7 @@ router.post('/', authenticateSession, async (req: Request, res: Response) => {
             file_path: att.path,
             type: att.type,
             created_by: req.user?.id,
-            created_at: new Date().toISOString()
+            created_at: now
           }))
         );
 
@@ -276,7 +288,7 @@ router.post('/', authenticateSession, async (req: Request, res: Response) => {
     return res.status(201).json(data);
   } catch (error) {
     console.error('[Documents] Error creating document:', error);
-    return res.status(500).json({
+    return res.status(500).json({ 
       message: 'Failed to create document',
       error: error instanceof Error ? error.message : 'Unknown error'
     });

@@ -40,10 +40,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.get('/api/budget-history', authenticateSession, budgetController.getBudgetHistory);
     log('[Routes] Budget routes setup complete');
 
-    // Documents routes - Register specific routes before general ones
+    // Documents routes
     log('[Routes] Setting up document routes...');
-    app.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
+    // Mount base documents routes first
     app.use('/api/documents', authenticateSession, documentsController);
+    // Then mount more specific routes
+    app.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
     log('[Routes] Document routes setup complete');
 
     // Template preview route
