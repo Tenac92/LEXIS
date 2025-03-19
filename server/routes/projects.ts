@@ -9,29 +9,58 @@ import { parse } from 'csv-parse';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Get all projects with improved error handling
+// Get all projects with improved error handling and logging
 router.get('/', authenticateToken, async (req, res) => {
-  try {
-    console.log('[Projects] Fetching all projects');
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`[Projects ${requestId}] Starting request to fetch all projects`);
 
+  try {
+    console.log(`[Projects ${requestId}] Verifying database connection...`);
+
+    // First verify database connection
+    const { error: connError } = await supabase
+      .from('Projects')
+      .select('count(*)')
+      .single();
+
+    if (connError) {
+      console.error(`[Projects ${requestId}] Database connection error:`, connError);
+      return res.status(503).json({ 
+        message: "Database connection error",
+        error: connError.message
+      });
+    }
+
+    console.log(`[Projects ${requestId}] Database connection verified, fetching projects...`);
+
+    // Fetch actual projects
     const { data: projects, error } = await supabase
       .from('Projects')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[Projects] Database error:', error);
+      console.error(`[Projects ${requestId}] Database query error:`, error);
       return res.status(500).json({ 
         message: "Failed to fetch projects from database",
         error: error.message
       });
     }
 
-    console.log(`[Projects] Successfully fetched ${projects?.length || 0} projects`);
+    console.log(`[Projects ${requestId}] Successfully fetched ${projects?.length || 0} projects`);
+
+    // Log a sample project (first one) for debugging
+    if (projects?.length > 0) {
+      console.log(`[Projects ${requestId}] Sample project:`, {
+        mis: projects[0].mis,
+        event_description: projects[0].event_description
+      });
+    }
+
     return res.json(projects || []);
 
   } catch (error) {
-    console.error("[Projects] Error fetching projects:", error);
+    console.error(`[Projects ${requestId}] Unexpected error:`, error);
     return res.status(500).json({ 
       message: "Failed to fetch projects",
       error: error instanceof Error ? error.message : 'Unknown error'
