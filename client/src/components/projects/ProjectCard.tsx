@@ -109,7 +109,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   };
 
   return (
-    <Link href={`/projects/${project.mis}`}>
+    <Link href={`/projects/${project.mis}`} key={project.id}>
       <Card className={`transition-shadow hover:shadow-lg ${view === "list" ? "flex" : ""} cursor-pointer`}>
         <CardContent 
           className={`p-6 ${view === "list" ? "flex-1" : ""}`} 
