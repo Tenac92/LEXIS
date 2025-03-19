@@ -4,11 +4,11 @@ import { authenticateSession } from "./auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
 import { router as documentsRouter } from "./controllers/documentsController";
-import budgetController from "./controllers/budgetController";
+import { router as budgetRouter } from "./controllers/budgetController";
 import { router as generatedDocumentsRouter } from "./controllers/generatedDocuments";
-import unitsController from "./controllers/unitsController";
-import usersController from "./controllers/usersController";
-import projectsRouter from "./routes/projects";
+import { router as unitsRouter } from "./controllers/unitsController";
+import { router as usersRouter } from "./controllers/usersController";
+import { router as projectRouter } from "./controllers/projectController";
 import templatePreviewRouter from "./routes/template-preview";
 import authRouter from "./routes/auth";
 import { log } from "./vite";
@@ -22,22 +22,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Mount users routes
     log('[Routes] Setting up users routes...');
-    app.use('/api/users', authenticateSession, usersController);
+    app.use('/api/users', authenticateSession, usersRouter);
     log('[Routes] Users routes setup complete');
 
     // Dashboard routes
     app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
 
     // Project catalog routes - maintaining both /catalog and /projects endpoints for backwards compatibility
-    app.use('/api/projects', authenticateSession, projectsRouter);
-    app.use('/api/catalog', authenticateSession, projectsRouter);
+    app.use('/api/projects', authenticateSession, projectRouter);
+    app.use('/api/catalog', authenticateSession, projectRouter);
 
     // Budget routes
     log('[Routes] Setting up budget routes...');
-    app.get('/api/budget/:mis', authenticateSession, budgetController.getBudget);
-    app.post('/api/budget/validate', authenticateSession, budgetController.validateBudget);
-    app.patch('/api/budget/:mis', authenticateSession, budgetController.updateBudget);
-    app.get('/api/budget-history', authenticateSession, budgetController.getBudgetHistory);
+    app.use('/api/budget', authenticateSession, budgetRouter);
     log('[Routes] Budget routes setup complete');
 
     // Documents routes
@@ -53,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Units routes
     log('[Routes] Registering units routes...');
-    app.use('/api/units', authenticateSession, unitsController);
+    app.use('/api/units', authenticateSession, unitsRouter);
     log('[Routes] Units routes registered');
 
     // Mount all API routes under /api

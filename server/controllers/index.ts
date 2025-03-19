@@ -5,6 +5,7 @@ import { router as budgetRouter } from './budgetController';
 import { router as recipientsRouter } from './recipientsController';
 import { router as statsRouter } from './statsController';
 import { router as usersRouter } from './usersController';
+import { router as projectRouter } from './projectController';
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.use('/documents', authenticateSession, documentsRouter);
 router.use('/recipients', authenticateSession, recipientsRouter);
 router.use('/stats', authenticateSession, statsRouter);
 router.use('/users', authenticateSession, usersRouter);
+router.use('/projects', authenticateSession, projectRouter);
 
 // Healthcheck endpoint
 router.get('/health', (_req, res) => {

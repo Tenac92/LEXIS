@@ -4,6 +4,9 @@ import * as XLSX from 'xlsx';
 import { Project, projectHelpers } from "@shared/models/project";
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { storage } from '../storage';
+
+export const router = Router();
 
 export async function listProjects(req: Request, res: Response) {
   try {
@@ -42,7 +45,7 @@ export async function listProjects(req: Request, res: Response) {
   }
 }
 
-export async function getExpenditureTypes(req: Request, res: Response) {
+router.get('/expenditure-types/:projectId', async (req: Request, res: Response) => {
   const { projectId } = req.params;
 
   try {
@@ -57,7 +60,7 @@ export async function getExpenditureTypes(req: Request, res: Response) {
     console.error("Error fetching expenditure types:", error);
     res.status(500).json({ message: "Failed to fetch expenditure types" });
   }
-}
+});
 
 export async function exportProjectsXLSX(req: Request, res: Response) {
   try {
@@ -99,7 +102,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
   }
 }
 
-export async function bulkUpdateProjects(req: Request, res: Response) {
+router.post('/bulk-update', async (req: Request, res: Response) => {
   try {
     const { updates } = req.body;
 
@@ -154,4 +157,8 @@ export async function bulkUpdateProjects(req: Request, res: Response) {
       error: error instanceof Error ? error.message : "Unknown error"
     });
   }
-}
+});
+
+// Mount routes
+router.get('/', listProjects);
+router.get('/export', exportProjectsXLSX);

@@ -9,7 +9,7 @@ interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
-const router = Router();
+export const router = Router();
 
 // Get all units
 router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res: Response) => {
@@ -65,7 +65,7 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
     }
 
     // Combine all parts from selected units
-    const allParts = data?.reduce((acc: string[], unit) => {
+    const allParts = data?.reduce<string[]>((acc, unit) => {
       if (unit.parts && typeof unit.parts === 'object') {
         // Extract values from the parts object
         return [...acc, ...Object.values(unit.parts)];
@@ -74,7 +74,7 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
     }, []);
 
     // Remove duplicates
-    const uniqueParts = [...new Set(allParts)];
+    const uniqueParts = Array.from(new Set(allParts));
 
     res.json(uniqueParts.sort());
   } catch (error) {
@@ -309,5 +309,3 @@ router.get('/matching-units', authenticateSession, async (req: AuthenticatedRequ
     });
   }
 });
-
-export default router;
