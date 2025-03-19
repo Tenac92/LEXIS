@@ -8,10 +8,21 @@ import { securityHeaders } from "./middleware/securityHeaders";
 import { setupAuth, sessionMiddleware } from './auth';
 import { createWebSocketServer } from './websocket';
 
+// Add global error handlers
+process.on('uncaughtException', (error) => {
+  console.error('[Fatal] Uncaught Exception:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Fatal] Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 console.log('[Startup] Beginning server initialization');
 
 // Verify required environment variables
-const requiredEnvVars = ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_KEY'];
+const requiredEnvVars = ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_ANON_KEY'];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     console.error(`Missing required environment variable: ${envVar}`);
@@ -51,9 +62,8 @@ async function startServer() {
     app.use((req, res, next) => {
       const start = Date.now();
       const path = req.path;
-      const ip = req.ip; // Will now correctly get IP when behind proxy
+      const ip = req.ip;
 
-      // Add detailed request logging only for API routes
       if (req.path.startsWith('/api')) {
         log(`[Request] ${req.method} ${path} from ${ip}`);
       }
@@ -76,6 +86,7 @@ async function startServer() {
     console.log('[Startup] Authentication setup complete');
 
     // Register API routes
+    console.log('[Startup] Registering routes...');
     const server = await registerRoutes(app);
     console.log('[Startup] Routes registered successfully');
 
@@ -105,23 +116,31 @@ async function startServer() {
     const HOST = '0.0.0.0'; // Bind to all network interfaces
 
     // Start the server
-    server.listen(PORT, HOST, () => {
-      console.log(`[Startup] Server running at http://${HOST}:${PORT}`);
-    });
+    return new Promise((resolve, reject) => {
+      try {
+        const serverInstance = server.listen(PORT, HOST, () => {
+          console.log(`[Startup] Server running at http://${HOST}:${PORT}`);
+          resolve(serverInstance);
+        });
 
-    // Add error handler for the server
-    server.on('error', (error: any) => {
-      if (error.code === 'EADDRINUSE') {
-        console.error(`[Error] Port ${PORT} is already in use`);
-        process.exit(1);
+        // Add error handler for the server
+        serverInstance.on('error', (error: any) => {
+          if (error.code === 'EADDRINUSE') {
+            console.error(`[Error] Port ${PORT} is already in use`);
+            reject(error);
+          }
+          console.error('[Error] Server error:', error);
+          reject(error);
+        });
+      } catch (error) {
+        console.error('[Error] Failed to start server:', error);
+        reject(error);
       }
-      console.error('[Error] Server error:', error);
     });
 
-    return server;
   } catch (error) {
     console.error('[Error] Failed to start server:', error);
-    process.exit(1);
+    throw error;
   }
 }
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { supabase } from '../config/db';
+import { supabase } from '../db';
 import { authenticateToken } from '../middleware/authMiddleware';
-import { ProjectCatalog } from '@shared/schema';
+import { Project } from '@shared/schema';
 import * as xlsx from 'xlsx';
 import multer from 'multer';
 import { parse } from 'csv-parse';
@@ -51,22 +51,29 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     console.log('[Projects] Fetching all projects');
     const { data: projects, error } = await supabase
-      .from('project_catalog')
+      .from('Projects')
       .select('*')
-      .order('mis');
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[Projects] Error fetching projects:', error);
-      throw error;
+      console.error('[Projects] Database error:', error);
+      return res.status(500).json({ 
+        message: "Failed to fetch projects from database",
+        error: error.message
+      });
     }
 
-    console.log(`[Projects] Successfully fetched ${projects?.length || 0} projects`);
-    res.json(projects || []);
+    if (!data) {
+      console.log('[Projects] No projects found');
+      return res.status(404).json({ message: 'No projects found' });
+    }
+
+    console.log(`[Projects] Successfully fetched ${projects.length} projects`);
+    res.json(projects);
   } catch (error) {
-    console.error('[Projects] Get projects error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch projects',
+    console.error("[Projects] Error fetching projects:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch projects",
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
@@ -113,71 +120,62 @@ router.get('/:mis/expenditure-types', authenticateToken, async (req, res) => {
 // Export projects to XLSX
 router.get('/export/xlsx', authenticateToken, async (req, res) => {
   try {
-    console.log('[Projects] Starting XLSX export...');
+    console.log('[Projects] Starting XLSX export');
     const { data: projects, error } = await supabase
-      .from('project_catalog')
-      .select('*');
+      .from('Projects')
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('[Projects] Database query error:', error);
+      console.error('[Projects] Database error:', error);
       throw error;
     }
 
     if (!projects?.length) {
       console.log('[Projects] No projects found for export');
-      return res.status(400).json({
-        success: false,
-        message: 'No projects found for export'
-      });
+      return res.status(400).json({ message: 'No projects found for export' });
     }
 
     console.log(`[Projects] Found ${projects.length} projects to export`);
 
-    // Create workbook and worksheet
-    const wb = xlsx.utils.book_new();
     const wsData = projects.map(project => ({
       MIS: project.mis || '',
       NA853: project.na853 || '',
-      NA271: project.na271 || '',
       E069: project.e069 || '',
+      NA271: project.na271 || '',
       Event_Description: project.event_description || '',
       Project_Title: project.project_title || '',
-      Event_Type: project.event_type || '',
+      Event_Type: Array.isArray(project.event_type) ? project.event_type.join(', ') : '',
       Event_Year: Array.isArray(project.event_year) ? project.event_year.join(', ') : '',
-      Region: project.region || '',
-      Regional_Unit: project.regional_unit || '',
-      Municipality: project.municipality || '',
-      Implementing_Agency: Array.isArray(project.implementing_agency)
-        ? project.implementing_agency.join(', ')
-        : project.implementing_agency || '',
+      Region: project.region?.region?.join(', ') || '',
+      Regional_Unit: project.region?.regional_unit?.join(', ') || '',
+      Municipality: project.region?.municipality?.join(', ') || '',
+      Implementing_Agency: Array.isArray(project.implementing_agency) 
+        ? project.implementing_agency.join(', ') 
+        : '',
       Budget_NA853: project.budget_na853?.toString() || '0',
       Budget_E069: project.budget_e069?.toString() || '0',
       Budget_NA271: project.budget_na271?.toString() || '0',
-      Annual_Credit: project.ethsia_pistosi?.toString() || '0',
       Status: project.status || '',
-      KYA: project.kya || '',
-      FEK: project.fek || '',
-      ADA: project.ada || '',
-      Expenditure_Type: Array.isArray(project.expenditure_type)
-        ? project.expenditure_type.join(', ')
-        : project.expenditure_type || '',
-      Procedures: project.procedures || '',
+      KYA: Array.isArray(project.kya) ? project.kya.join(', ') : '',
+      FEK: Array.isArray(project.fek) ? project.fek.join(', ') : '',
+      ADA: Array.isArray(project.ada) ? project.ada.join(', ') : '',
       Created_At: project.created_at ? new Date(project.created_at).toLocaleDateString() : '',
       Updated_At: project.updated_at ? new Date(project.updated_at).toLocaleDateString() : ''
     }));
 
+    const wb = xlsx.utils.book_new();
     const ws = xlsx.utils.json_to_sheet(wsData);
     xlsx.utils.book_append_sheet(wb, ws, 'Projects');
-    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=projects-${new Date().toISOString().split('T')[0]}.xlsx`);
-    res.send(buf);
+    res.send(buffer);
 
   } catch (error) {
     console.error('[Projects] Export error:', error);
     res.status(500).json({
-      success: false,
       message: 'Failed to export projects',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -238,11 +236,10 @@ router.post('/bulk-upload', authenticateToken, upload.single('file'), async (req
 });
 
 
-// Add this route after the existing routes
+// Bulk update
 router.put('/bulk-update', authenticateToken, async (req, res) => {
   try {
-    console.log('[Projects] Starting bulk update for budget_na853_split');
-
+    console.log('[Projects] Starting bulk update');
     const { updates } = req.body;
 
     if (!Array.isArray(updates)) {
@@ -256,13 +253,13 @@ router.put('/bulk-update', authenticateToken, async (req, res) => {
     for (const update of updates) {
       const { mis, data } = update;
 
-      if (!mis || !data?.budget_na853_split) {
-        throw new Error(`Invalid update data: missing mis or budget_na853_split value`);
+      if (!mis || !data) {
+        throw new Error(`Invalid update data: missing mis or data`);
       }
 
       // Validate MIS exists
       const { data: existing, error: checkError } = await supabase
-        .from('project_catalog')
+        .from('Projects')
         .select('id')
         .eq('mis', mis)
         .single();
@@ -271,17 +268,16 @@ router.put('/bulk-update', authenticateToken, async (req, res) => {
         throw new Error(`Project with MIS ${mis} not found`);
       }
 
-      // Update only the budget_na853_split field
       const { error: updateError } = await supabase
-        .from('project_catalog')
-        .update({ budget_na853_split: data.budget_na853_split })
+        .from('Projects')
+        .update(data)
         .eq('mis', mis);
 
       if (updateError) {
         throw new Error(`Failed to update project ${mis}: ${updateError.message}`);
       }
 
-      console.log(`[Projects] Successfully updated budget split for project ${mis}`);
+      console.log(`[Projects] Successfully updated project ${mis}`);
     }
 
     res.json({
