@@ -5,13 +5,6 @@ import { authenticateSession } from '../auth';
 import { DocumentManager } from '../utils/DocumentManager';
 
 const router = Router();
-
-// Add your route handlers here
-router.get('/', (req, res) => {
-  res.json({ message: 'Documents endpoint' });
-});
-
-export default { router };
 const documentManager = new DocumentManager();
 
 // List documents with filters
@@ -212,7 +205,7 @@ router.post('/', authenticateSession, async (req: Request, res: Response) => {
     }
 
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
       });
     }
@@ -266,9 +259,9 @@ router.post('/', authenticateSession, async (req: Request, res: Response) => {
 
     if (error) {
       console.error('[Documents] Creation error:', error);
-      return res.status(500).json({ 
+      return res.status(500).json({
         message: 'Failed to create document',
-        error: error.message 
+        error: error.message
       });
     }
 
@@ -295,7 +288,7 @@ router.post('/', authenticateSession, async (req: Request, res: Response) => {
     return res.status(201).json(data);
   } catch (error) {
     console.error('[Documents] Error creating document:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: 'Failed to create document',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
