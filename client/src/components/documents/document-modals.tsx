@@ -602,24 +602,27 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
   const handleExport = async () => {
     try {
       setLoading(true);
-      console.log('Έναρξη διαδικασίας εξαγωγής εγγράφου...');
+      console.log('[Export] Starting document export process...');
 
       const testResponse = await fetch(`/api/documents/generated/${document.id}/test`);
       const testResult = await testResponse.json();
 
       if (!testResult.success) {
-        throw new Error(testResult.message || 'Αποτυχία επικύρωσης εγγράφου');
+        throw new Error(testResult.message || 'Failed to validate document');
       }
 
-      console.log('Επικύρωση εγγράφου επιτυχής:', testResult);
+      console.log('[Export] Document validation successful:', testResult);
 
+      // Create a hidden form for the download
       const downloadUrl = `/api/documents/generated/${document.id}/export`;
-      const link = document.createElement('a');
+
+      // Use window.document instead of document
+      const link = window.document.createElement('a');
       link.href = downloadUrl;
       link.setAttribute('download', `document-${document.id}.docx`);
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
 
       toast({
         title: "Επιτυχία",
@@ -630,7 +633,7 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
       onClose();
 
     } catch (error) {
-      console.error('Σφάλμα εξαγωγής:', error);
+      console.error('[Export] Export error:', error);
       toast({
         title: "Σφάλμα",
         description: error instanceof Error ? error.message : "Αποτυχία λήψης εγγράφου",
