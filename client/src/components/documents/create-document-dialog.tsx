@@ -261,8 +261,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       try {
         const { data, error } = await supabase
-          .from('project_catalog')
-          .select('mis, na853, event_description, project_title, expenditure_type')
+          .from('Projects')
+          .select('*')
           .contains('implementing_agency', [selectedUnit])
           .order('mis');
 
@@ -280,15 +280,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           let expenditureTypes: string[] = [];
           try {
             if (item.expenditure_type) {
-              if (Array.isArray(item.expenditure_type)) {
-                expenditureTypes = item.expenditure_type;
-              } else if (typeof item.expenditure_type === 'string') {
-                expenditureTypes = item.expenditure_type
-                  .replace(/[{}]/g, '')
-                  .split(',')
-                  .map((type: string) => type.trim())
-                  .filter(Boolean);
-              }
+              expenditureTypes = Array.isArray(item.expenditure_type) ?
+                item.expenditure_type : [];
             }
           } catch (e) {
             console.error('Error parsing expenditure types:', e, item);
@@ -772,7 +765,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       try {
         const { data, error } = await supabase
-          .from('project_catalog')
+          .from('Projects')
           .select('region')
           .eq('mis', selectedProjectId)
           .single();
@@ -787,17 +780,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           throw error;
         }
 
-        if (!data || !data.region) return [];
+        if (!data?.region?.region) return [];
 
-        // Convert PostgreSQL array to JS array if needed
-        let regionArray = data.region;
-        if (typeof data.region === 'string') {
-          regionArray = data.region
-            .replace(/[{}]/g, '')
-            .split(',')
-            .map((region: string) => region.trim())
-            .filter(Boolean);
-        }
+        // Data comes as JSONB with structure: {"region":["ΘΕΣΣΑΛΙΑΣ"],"municipality":["ΤΡΙΚΚΑΙΩΝ"],"regional_unit":["ΤΡΙΚΑΛΩΝ"]}
+        const regionArray = data.region.region || [];
 
         return regionArray.map((region: string) => ({
           id: region,
@@ -907,7 +893,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         <FormLabel>Περιφέρεια</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          value={field.value}                          disabled={!selectedProjectId || regionsLoading}
+                          value={field.value}
+                          disabled={!selectedProjectId || regionsLoading}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -920,7 +907,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                 {region.name}
                               </SelectItem>
                             ))}
-                          </SelectContent>
+                                                    </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
