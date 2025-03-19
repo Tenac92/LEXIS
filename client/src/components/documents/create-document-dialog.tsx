@@ -262,15 +262,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       try {
         console.log('Fetching projects for unit:', selectedUnit);
 
-        // First try a simpler query to verify connection
-        const testQuery = await supabase
-          .from('Projects')
-          .select('mis')
-          .limit(1);
-
-        console.log('Test query result:', testQuery);
-
-        // Main query with implementing_agency filter
         const { data, error } = await supabase
           .from('Projects')
           .select('*');
@@ -299,7 +290,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return filteredData.map((item: any) => ({
           id: String(item.mis),
           name: `${String(item.mis)} - ${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
-          expenditure_types: Array.isArray(item.expenditure_type) ? item.expenditure_type : []
+          expenditure_types: item.expenditure_type || [] // Default to empty array if null
         }));
 
       } catch (error) {
@@ -792,10 +783,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
         // Data comes as JSONB with structure: {"region":["ΘΕΣΣΑΛΙΑΣ"],"municipality":["ΤΡΙΚΚΑΙΩΝ"],"regional_unit":["ΤΡΙΚΑΛΩΝ"]}
         const regionArray = data.region.region || [];
+        const municipalityArray = data.region.municipality || [];
+        const regionalUnitArray = data.region.regional_unit || [];
 
-        return regionArray.map((region: string) => ({
+        return regionArray.map((region: string, index: number) => ({
           id: region,
-          name: region
+          name: region,
+          municipality: municipalityArray[index] || '',
+          regional_unit: regionalUnitArray[index] || ''
         }));
       } catch (error) {
         console.error('Regions fetch error:', error);
@@ -901,7 +896,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         <FormLabel>Περιφέρεια</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          value={field.value}
+                                                    value={field.value}
                           disabled={!selectedProjectId || regionsLoading}
                         >
                           <FormControl>
@@ -910,9 +905,16 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {regions.map((region: { id: string; name: string }) => (
+                            {regions.map((region: { id: string; name: string; municipality: string; regional_unit: string }) => (
                               <SelectItem key={region.id} value={region.id}>
-                                {region.name}
+                                <div className="flex flex-col">
+                                  <span>{region.name}</span>
+                                  {region.municipality && region.regional_unit && (
+                                    <span className="text-sm text-muted-foreground">
+                                      {region.municipality} - {region.regional_unit}
+                                    </span>
+                                  )}
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -932,15 +934,15 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
-                          disabled={!selectedProject?.expenditure_types?.length}
+                          disabled={!selectedProject || !selectedProject.expenditure_types.length}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Επιλέξτε τύπο" />
+                              <SelectValue placeholder="Επιλέξτε τύπο δαπάνης" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {selectedProject?.expenditure_types?.map((type: string) => (
+                            {selectedProject.expenditure_types.map((type: string) => (
                               <SelectItem key={type} value={type}>
                                 {type}
                               </SelectItem>
