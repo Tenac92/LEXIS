@@ -79,7 +79,7 @@ export default function DocumentsPage() {
 
   const [activeFilters, setActiveFilters] = useState<Filters>(filters);
 
-  const setFiltersWithRefresh = (newFilters: Filters, shouldRefresh = true) => {
+  const setFiltersWithRefresh = (newFilters: Filters, shouldRefresh = false) => {
     setFilters(newFilters);
     if (shouldRefresh) {
       handleApplyFilters();
@@ -180,11 +180,13 @@ export default function DocumentsPage() {
     }
   });
 
+  // Query parameters - only updated when search is triggered
   const handleApplyFilters = () => {
     setActiveFilters(filters);
     refetch();
   };
 
+  // Handle document refresh
   const handleRefresh = () => {
     console.log('[Documents] Manually refreshing documents...');
     refetch();
@@ -297,7 +299,7 @@ export default function DocumentsPage() {
                         <Input
                           type="date"
                           value={filters.dateFrom}
-                          onChange={(e) => setFiltersWithRefresh({ ...filters, dateFrom: e.target.value })}
+                          onChange={(e) => setFiltersWithRefresh({ ...filters, dateFrom: e.target.value }, false)}
                         />
                       </div>
                       <div>
@@ -305,7 +307,7 @@ export default function DocumentsPage() {
                         <Input
                           type="date"
                           value={filters.dateTo}
-                          onChange={(e) => setFiltersWithRefresh({ ...filters, dateTo: e.target.value })}
+                          onChange={(e) => setFiltersWithRefresh({ ...filters, dateTo: e.target.value }, false)}
                         />
                       </div>
                     </div>
@@ -320,7 +322,7 @@ export default function DocumentsPage() {
                           type="number"
                           placeholder="Ελάχιστο ποσό"
                           value={filters.amountFrom}
-                          onChange={(e) => setFiltersWithRefresh({ ...filters, amountFrom: e.target.value })}
+                          onChange={(e) => setFiltersWithRefresh({ ...filters, amountFrom: e.target.value }, false)}
                         />
                       </div>
                       <div>
@@ -329,7 +331,7 @@ export default function DocumentsPage() {
                           type="number"
                           placeholder="Μέγιστο ποσό"
                           value={filters.amountTo}
-                          onChange={(e) => setFiltersWithRefresh({ ...filters, amountTo: e.target.value })}
+                          onChange={(e) => setFiltersWithRefresh({ ...filters, amountTo: e.target.value }, false)}
                         />
                       </div>
                     </div>
@@ -340,7 +342,7 @@ export default function DocumentsPage() {
                     <Input
                       placeholder="Αναζήτηση με όνομα παραλήπτη"
                       value={filters.recipient}
-                      onChange={(e) => setFiltersWithRefresh({ ...filters, recipient: e.target.value })}
+                      onChange={(e) => setFiltersWithRefresh({ ...filters, recipient: e.target.value }, false)}
                     />
                   </div>
 
@@ -349,7 +351,7 @@ export default function DocumentsPage() {
                     <Input
                       placeholder="Αναζήτηση με ΑΦΜ"
                       value={filters.afm}
-                      onChange={(e) => setFiltersWithRefresh({ ...filters, afm: e.target.value })}
+                      onChange={(e) => setFiltersWithRefresh({ ...filters, afm: e.target.value }, false)}
                     />
                   </div>
                 </div>
