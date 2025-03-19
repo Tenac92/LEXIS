@@ -276,13 +276,17 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           throw error;
         }
 
+        console.log('Raw projects data:', data); // Log raw data
+
         // Filter in JavaScript since PostgREST JSONB filtering is problematic
         const filteredData = data.filter(project => {
           if (!project.implementing_agency) return false;
           try {
-            const agencies = typeof project.implementing_agency === 'string' ? 
-              JSON.parse(project.implementing_agency) : 
+            const agencies = typeof project.implementing_agency === 'string' ?
+              JSON.parse(project.implementing_agency) :
               project.implementing_agency;
+
+            console.log('Project:', project.mis, 'agencies:', agencies); // Log parsed agencies
             return Array.isArray(agencies) && agencies.includes(selectedUnit);
           } catch (e) {
             console.error('Error parsing implementing_agency:', e, project);
@@ -292,18 +296,26 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
         console.log('Filtered projects:', filteredData);
 
-        return filteredData.map((item: any) => {
+        const mappedProjects = filteredData.map((item: any) => {
           let expenditureTypes: string[] = [];
+
+          console.log('Processing project:', item.mis, 'Raw expenditure_type:', item.expenditure_type); // Log raw expenditure_type
 
           // Handle expenditure_type as JSONB array
           if (item.expenditure_type) {
             try {
-              expenditureTypes = typeof item.expenditure_type === 'string' ? 
-                JSON.parse(item.expenditure_type) : 
-                Array.isArray(item.expenditure_type) ? 
-                  item.expenditure_type : [];
+              if (typeof item.expenditure_type === 'string') {
+                // Try parsing as JSON string
+                expenditureTypes = JSON.parse(item.expenditure_type);
+              } else if (Array.isArray(item.expenditure_type)) {
+                // Already an array
+                expenditureTypes = item.expenditure_type;
+              } else if (typeof item.expenditure_type === 'object') {
+                // Handle case where it might be a JSONB object
+                expenditureTypes = Object.values(item.expenditure_type);
+              }
 
-              console.log('Parsed expenditure types for project:', item.mis, expenditureTypes);
+              console.log('Project:', item.mis, 'Parsed expenditure types:', expenditureTypes);
             } catch (e) {
               console.error('Error parsing expenditure_type for project:', item.mis, e);
             }
@@ -315,6 +327,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             expenditure_types: expenditureTypes
           };
         });
+
+        console.log('Final mapped projects:', mappedProjects);
+        return mappedProjects;
 
       } catch (error) {
         console.error('Projects fetch error:', error);
@@ -947,7 +962,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   />
                 )}
 
-                {selectedProject && (
+                {currentStep === 1 && selectedProject && (
                   <FormField
                     control={form.control}
                     name="expenditure_type"
@@ -957,7 +972,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
-                          disabled={!selectedProject || !selectedProject.expenditure_types || selectedProject.expenditure_types.length === 0}
+                          disabled={!selectedProject?.expenditure_types?.length}
                         >
                           <FormControl>
                             <SelectTrigger>
