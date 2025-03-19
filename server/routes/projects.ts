@@ -15,25 +15,17 @@ router.get('/', authenticateToken, async (req, res) => {
   console.log(`[Projects ${requestId}] Starting request to fetch all projects`);
 
   try {
-    console.log(`[Projects ${requestId}] Verifying database connection...`);
-
-    // First verify database connection
-    const { error: connError } = await supabase
-      .from('Projects')
-      .select('count(*)')
-      .single();
-
-    if (connError) {
-      console.error(`[Projects ${requestId}] Database connection error:`, connError);
-      return res.status(503).json({ 
-        message: "Database connection error",
-        error: connError.message
+    // First verify database connection and user authentication
+    if (!req.user) {
+      console.error(`[Projects ${requestId}] No authenticated user found`);
+      return res.status(401).json({ 
+        message: "Authentication required"
       });
     }
 
-    console.log(`[Projects ${requestId}] Database connection verified, fetching projects...`);
+    console.log(`[Projects ${requestId}] Authenticated user:`, req.user.id);
 
-    // Fetch actual projects
+    // Fetch projects with error handling
     const { data: projects, error } = await supabase
       .from('Projects')
       .select('*')
@@ -47,17 +39,22 @@ router.get('/', authenticateToken, async (req, res) => {
       });
     }
 
-    console.log(`[Projects ${requestId}] Successfully fetched ${projects?.length || 0} projects`);
+    if (!projects) {
+      console.log(`[Projects ${requestId}] No projects found`);
+      return res.json([]);
+    }
 
-    // Log a sample project (first one) for debugging
-    if (projects?.length > 0) {
+    console.log(`[Projects ${requestId}] Successfully fetched ${projects.length} projects`);
+
+    // Log sample project for debugging
+    if (projects.length > 0) {
       console.log(`[Projects ${requestId}] Sample project:`, {
         mis: projects[0].mis,
         event_description: projects[0].event_description
       });
     }
 
-    return res.json(projects || []);
+    return res.json(projects);
 
   } catch (error) {
     console.error(`[Projects ${requestId}] Unexpected error:`, error);
