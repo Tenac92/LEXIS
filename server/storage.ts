@@ -1,4 +1,4 @@
-import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog, type BudgetNA853Split, type BudgetValidation, type BudgetValidationResponse, type BudgetHistory, type InsertBudgetHistory, type BudgetNotification } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type ProjectCatalog, type BudgetNA853Split, type BudgetValidation, type BudgetValidationResponse, type BudgetHistory, type InsertBudgetHistory, type BudgetNotification, type Project } from "@shared/schema";
 import { supabase } from "./config/db";
 import session from "express-session";
 import MemoryStore from "memorystore";
@@ -21,6 +21,9 @@ export interface IStorage {
   getBudgetHistory(projectId: string): Promise<BudgetHistory[]>;
   getBudgetNotifications(): Promise<BudgetNotification[]>;
   sessionStore: session.Store;
+  getProjectById(mis: string): Promise<Project | undefined>;
+  listProjects(): Promise<Project[]>;
+  getProjectsByUnit(unit: string): Promise<Project[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -66,6 +69,15 @@ export class DatabaseStorage implements IStorage {
 
   async createGeneratedDocument(doc: InsertGeneratedDocument): Promise<GeneratedDocument> {
     try {
+      const project = await this.getProjectById(doc.project_id);
+      if (!project) {
+        throw new Error('Project not found');
+      }
+
+      if (project.region?.region && !project.region.region.includes(doc.region)) {
+        throw new Error('Invalid region for this project');
+      }
+
       const { data, error } = await supabase
         .from('generated_documents')
         .insert([doc])
@@ -287,6 +299,53 @@ export class DatabaseStorage implements IStorage {
       return data || [];
     } catch (error) {
       console.error('[Storage] Error in getBudgetNotifications:', error);
+      throw error;
+    }
+  }
+
+  async getProjectById(mis: string): Promise<Project | undefined> {
+    try {
+      const { data, error } = await supabase
+        .from('Projects')
+        .select('*')
+        .eq('mis', mis)
+        .single();
+
+      if (error) throw error;
+      return data || undefined;
+    } catch (error) {
+      console.error('[Storage] Error fetching project:', error);
+      throw error;
+    }
+  }
+
+  async listProjects(): Promise<Project[]> {
+    try {
+      const { data, error } = await supabase
+        .from('Projects')
+        .select('*')
+        .order('mis');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error listing projects:', error);
+      throw error;
+    }
+  }
+
+  async getProjectsByUnit(unit: string): Promise<Project[]> {
+    try {
+      const { data, error } = await supabase
+        .from('Projects')
+        .select('*')
+        .contains('implementing_agency', `{${unit}}`)
+        .order('mis');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error fetching projects by unit:', error);
       throw error;
     }
   }

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, numeric, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -213,46 +213,28 @@ export const insertProjectSchema = createInsertSchema(projects, {
   updated_at: true
 });
 
-// Types
-export type User = typeof users.$inferSelect;
-export type ProjectCatalog = typeof projectCatalog.$inferSelect;
+// Keep existing types and schemas but update document-related ones
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
-export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
-export type BudgetHistory = typeof budgetHistory.$inferSelect;
-export type BudgetNotification = typeof budgetNotifications.$inferSelect;
-export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
-export type DocumentVersion = typeof documentVersions.$inferSelect;
-export type DocumentTemplate = typeof documentTemplates.$inferSelect;
-export type Project = typeof projects.$inferSelect;
+export type InsertGeneratedDocument = typeof generatedDocuments.$inferInsert;
 
-
-// Insert Schemas
-export const insertUserSchema = createInsertSchema(users, {
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  role: z.enum(["admin", "manager", "user"]),
-  units: z.array(z.string()).optional(),
-  department: z.string().optional(),
-  telephone: z.string().optional(),
+// Update the generated document schema to include region
+export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
+  recipients: z.array(recipientSchema)
+    .min(1, "At least one recipient is required")
+    .max(10, "Maximum 10 recipients allowed"),
+  total_amount: z.number().min(0.01, "Total amount must be greater than 0"),
+  project_id: z.string().min(1, "Project ID is required"),
+  region: z.string().min(1, "Region is required"),
+  unit: z.string().min(1, "Unit is required"),
+  expenditure_type: z.string().min(1, "Expenditure type is required"),
+  status: z.enum(["draft", "pending", "approved", "rejected"]).default("draft"),
 }).omit({
   id: true,
   created_at: true,
   updated_at: true,
 });
-export const insertProjectCatalogSchema = createInsertSchema(projectCatalog, {
-  implementing_agency: z.array(z.string()).min(1, "At least one implementing agency is required"),
-  budget_na853: z.coerce.number().min(0, "Budget NA853 must be non-negative"),
-  budget_e069: z.coerce.number().min(0, "Budget E069 must be non-negative"),
-  budget_na271: z.coerce.number().min(0, "Budget NA271 must be non-negative"),
-  ethsia_pistosi: z.coerce.number().min(0, "Annual credit must be non-negative"),
-  status: z.enum(["active", "pending", "pending_reallocation", "pending_funding", "completed"]).default("pending"),
-  event_type: z.string().nullable(),
-  event_year: z.array(z.string()).nullable(),
-  procedures: z.string().nullable(),
-}).omit({ id: true, created_at: true, updated_at: true });
 
-// Budget validation schemas
+
 export const budgetValidationSchema = z.object({
   mis: z.string().min(1, "Project ID is required"),
   amount: z.number().min(0, "Amount must be non-negative"),
@@ -287,18 +269,6 @@ const recipientSchema = z.object({
 });
 
 // Update generated document schema with enhanced validation and protocol fields
-export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
-  recipients: z.array(recipientSchema)
-    .min(1, "At least one recipient is required")
-    .max(10, "Maximum 10 recipients allowed"),
-  total_amount: z.number().min(0.01, "Total amount must be greater than 0"),
-  project_id: z.string().min(1, "Project ID is required"),
-  unit: z.string().min(1, "Unit is required"),
-  expenditure_type: z.string().min(1, "Expenditure type is required"),
-  status: z.enum(["draft", "pending", "approved", "rejected"]).default("draft"),
-  protocol_number_input: z.string().optional(),
-  protocol_date: z.string().optional(), // For date input compatibility
-}).omit({ id: true, created_at: true, updated_at: true });
 
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({
   id: true,
@@ -379,4 +349,39 @@ export type Database = {
   monada: Monada;
   projects: Project;
 };
-import { integer, boolean } from "drizzle-orm/pg-core";
+import { integer } from "drizzle-orm/pg-core";
+export const insertProjectCatalogSchema = createInsertSchema(projectCatalog, {
+  implementing_agency: z.array(z.string()).min(1, "At least one implementing agency is required"),
+  budget_na853: z.coerce.number().min(0, "Budget NA853 must be non-negative"),
+  budget_e069: z.coerce.number().min(0, "Budget E069 must be non-negative"),
+  budget_na271: z.coerce.number().min(0, "Budget NA271 must be non-negative"),
+  ethsia_pistosi: z.coerce.number().min(0, "Annual credit must be non-negative"),
+  status: z.enum(["active", "pending", "pending_reallocation", "pending_funding", "completed"]).default("pending"),
+  event_type: z.string().nullable(),
+  event_year: z.array(z.string()).nullable(),
+  procedures: z.string().nullable(),
+}).omit({ id: true, created_at: true, updated_at: true });
+
+export const insertUserSchema = createInsertSchema(users, {
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  role: z.enum(["admin", "manager", "user"]),
+  units: z.array(z.string()).optional(),
+  department: z.string().optional(),
+  telephone: z.string().optional(),
+}).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export type ProjectCatalog = typeof projectCatalog.$inferSelect;
+export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
+export type BudgetHistory = typeof budgetHistory.$inferSelect;
+export type BudgetNotification = typeof budgetNotifications.$inferSelect;
+export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
+export type DocumentVersion = typeof documentVersions.$inferSelect;
+export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type Project = typeof projects.$inferSelect;
+export type User = typeof users.$inferSelect;
