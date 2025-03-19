@@ -41,8 +41,15 @@ interface Filters {
   afm: string;
 }
 
+interface User {
+  id: number;
+  role: string;
+  units?: string[];
+  name?: string;
+}
+
 export default function DocumentsPage() {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: User };
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -57,14 +64,7 @@ export default function DocumentsPage() {
     delete: false,
   });
 
-  // Initialize filters
-  const setFiltersWithRefresh = (newFilters: any, shouldRefresh = true) => {
-    setFilters(newFilters);
-    if (shouldRefresh) {
-      handleApplyFilters();
-    }
-  };
-
+  // Initialize filters and active filters state
   const [filters, setFilters] = useState<Filters>({
     unit: user?.units?.[0] || 'all',
     status: 'pending',
@@ -77,8 +77,17 @@ export default function DocumentsPage() {
     afm: ''
   });
 
+  const [activeFilters, setActiveFilters] = useState<Filters>(filters);
+
+  const setFiltersWithRefresh = (newFilters: Filters, shouldRefresh = true) => {
+    setFilters(newFilters);
+    if (shouldRefresh) {
+      handleApplyFilters();
+    }
+  };
+
   // Fetch users with same units
-  const { data: matchingUsers } = useQuery({
+  const { data: matchingUsers = [] } = useQuery({
     queryKey: ['/api/users/matching-units'],
     queryFn: async () => {
       const response = await apiRequest('/api/users/matching-units');
@@ -87,14 +96,13 @@ export default function DocumentsPage() {
     enabled: !!user?.units
   });
 
-  // Query for documents with debugging
-  const { data: documents, isLoading, error, refetch } = useQuery<GeneratedDocument[]>({
-    queryKey: ['/api/documents', activeFilters], // Use activeFilters instead of filters
+  // Query for documents
+  const { data: documents = [], isLoading, error, refetch } = useQuery<GeneratedDocument[]>({
+    queryKey: ['/api/documents', activeFilters],
     queryFn: async () => {
       try {
         console.log('[Documents] Starting document fetch with filters:', filters);
 
-        // Build query with explicit column selection
         let query = supabase
           .from('generated_documents')
           .select(`
@@ -115,17 +123,15 @@ export default function DocumentsPage() {
             is_correction,
             original_protocol_number,
             original_protocol_date,
-            comments
+            comments,
+            updated_at
           `)
           .order('created_at', { ascending: false });
 
-        // Apply unit filter
         if (filters.unit && filters.unit !== 'all') {
-          console.log('[Documents] Applying unit filter:', filters.unit);
           query = query.eq('unit', filters.unit);
         }
 
-        // Apply status filter based on simplified statuses
         if (filters.status !== 'all') {
           if (filters.status === 'orthi_epanalipsi') {
             query = query.eq('is_correction', true);
@@ -134,48 +140,32 @@ export default function DocumentsPage() {
           }
         }
 
-        // Apply user filter
         if (filters.user === 'current' && user?.id) {
-          console.log('[Documents] Applying current user filter:', user.id);
           query = query.eq('generated_by', user.id);
         } else if (filters.user !== 'all') {
           query = query.eq('generated_by', parseInt(filters.user));
         }
 
-        // Apply date range filters
         if (filters.dateFrom) {
-          console.log('[Documents] Applying date from filter:', filters.dateFrom);
           query = query.gte('created_at', filters.dateFrom);
         }
         if (filters.dateTo) {
-          console.log('[Documents] Applying date to filter:', filters.dateTo);
           query = query.lte('created_at', filters.dateTo);
         }
 
-        // Apply amount range filters
         if (filters.amountFrom) {
-          console.log('[Documents] Applying amount from filter:', filters.amountFrom);
           query = query.gte('total_amount', parseFloat(filters.amountFrom));
         }
         if (filters.amountTo) {
-          console.log('[Documents] Applying amount to filter:', filters.amountTo);
           query = query.lte('total_amount', parseFloat(filters.amountTo));
         }
 
-        // Execute query with error handling
-        console.log('[Documents] Executing Supabase query...');
         const { data, error } = await query;
 
         if (error) {
           console.error('[Documents] Supabase query error:', error);
           throw error;
         }
-
-        // Log success with sample data
-        console.log('[Documents] Query successful:', {
-          count: data?.length || 0,
-          sample: data?.[0] ? { id: data[0].id, unit: data[0].unit } : null
-        });
 
         return data || [];
       } catch (error) {
@@ -195,7 +185,6 @@ export default function DocumentsPage() {
     refetch();
   };
 
-  // Handle document refresh
   const handleRefresh = () => {
     console.log('[Documents] Manually refreshing documents...');
     refetch();
@@ -231,14 +220,14 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Μονάδα</label>
                 <Select
                   value={filters.unit}
-                  onValueChange={(value) => setFiltersWithRefresh(prev => ({ ...prev, unit: value }))}
+                  onValueChange={(value: string) => setFiltersWithRefresh({ ...filters, unit: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Όλες οι Μονάδες</SelectItem>
-                    {user?.units?.map((unit) => (
+                    {user?.units?.map((unit: string) => (
                       <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                     ))}
                   </SelectContent>
@@ -249,7 +238,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Κατάσταση</label>
                 <Select
                   value={filters.status}
-                  onValueChange={(value) => setFiltersWithRefresh(prev => ({ ...prev, status: value }))}
+                  onValueChange={(value: string) => setFiltersWithRefresh({ ...filters, status: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε κατάσταση" />
@@ -267,7 +256,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Χρήστης</label>
                 <Select
                   value={filters.user}
-                  onValueChange={(value) => setFiltersWithRefresh(prev => ({ ...prev, user: value }))}
+                  onValueChange={(value: string) => setFiltersWithRefresh({ ...filters, user: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε χρήστη" />
@@ -275,7 +264,7 @@ export default function DocumentsPage() {
                   <SelectContent>
                     <SelectItem value="all">Όλοι οι Χρήστες</SelectItem>
                     <SelectItem value="current">Τα Έγγραφά μου</SelectItem>
-                    {matchingUsers?.map((u) => (
+                    {matchingUsers?.map((u: { id: number; name?: string; email?: string }) => (
                       <SelectItem key={u.id} value={u.id.toString()}>
                         {u.name || u.email}
                       </SelectItem>
@@ -308,7 +297,7 @@ export default function DocumentsPage() {
                         <Input
                           type="date"
                           value={filters.dateFrom}
-                          onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, dateFrom: e.target.value }))}
+                          onChange={(e) => setFiltersWithRefresh({ ...filters, dateFrom: e.target.value })}
                         />
                       </div>
                       <div>
@@ -316,7 +305,7 @@ export default function DocumentsPage() {
                         <Input
                           type="date"
                           value={filters.dateTo}
-                          onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, dateTo: e.target.value }))}
+                          onChange={(e) => setFiltersWithRefresh({ ...filters, dateTo: e.target.value })}
                         />
                       </div>
                     </div>
@@ -331,7 +320,7 @@ export default function DocumentsPage() {
                           type="number"
                           placeholder="Ελάχιστο ποσό"
                           value={filters.amountFrom}
-                          onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, amountFrom: e.target.value }))}
+                          onChange={(e) => setFiltersWithRefresh({ ...filters, amountFrom: e.target.value })}
                         />
                       </div>
                       <div>
@@ -340,7 +329,7 @@ export default function DocumentsPage() {
                           type="number"
                           placeholder="Μέγιστο ποσό"
                           value={filters.amountTo}
-                          onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, amountTo: e.target.value }))}
+                          onChange={(e) => setFiltersWithRefresh({ ...filters, amountTo: e.target.value })}
                         />
                       </div>
                     </div>
@@ -351,7 +340,7 @@ export default function DocumentsPage() {
                     <Input
                       placeholder="Αναζήτηση με όνομα παραλήπτη"
                       value={filters.recipient}
-                      onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, recipient: e.target.value }))}
+                      onChange={(e) => setFiltersWithRefresh({ ...filters, recipient: e.target.value })}
                     />
                   </div>
 
@@ -360,7 +349,7 @@ export default function DocumentsPage() {
                     <Input
                       placeholder="Αναζήτηση με ΑΦΜ"
                       value={filters.afm}
-                      onChange={(e) => setFiltersWithRefresh(prev => ({ ...prev, afm: e.target.value }))}
+                      onChange={(e) => setFiltersWithRefresh({ ...filters, afm: e.target.value })}
                     />
                   </div>
                 </div>

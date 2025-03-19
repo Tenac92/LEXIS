@@ -613,13 +613,14 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
 
       console.log('Επικύρωση εγγράφου επιτυχής:', testResult);
 
+      // Create and trigger download using window.document
       const downloadUrl = `/api/documents/generated/${document.id}/export`;
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = downloadUrl;
       link.setAttribute('download', `document-${document.id}.docx`);
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
 
       toast({
         title: "Επιτυχία",
