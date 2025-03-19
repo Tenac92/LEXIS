@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { supabase } from '../config/db';
 import type { User } from '@shared/schema';
 
@@ -6,9 +6,9 @@ interface AuthRequest extends Request {
   user?: User;
 }
 
-const router = Router();
+export const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
     const { unit, status = 'pending', project_id } = req.query;
     let query = supabase.from('recipients').select('*');
@@ -34,7 +34,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req: AuthRequest, res) => {
+router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -58,7 +58,7 @@ router.post('/', async (req: AuthRequest, res) => {
   }
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', async (req: Request, res: Response) => {
   try {
     const { data, error } = await supabase
       .from('recipients')
@@ -82,7 +82,7 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { data, error } = await supabase
       .from('recipients')
@@ -102,5 +102,3 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ message: 'Failed to delete recipient' });
   }
 });
-
-export default router;
