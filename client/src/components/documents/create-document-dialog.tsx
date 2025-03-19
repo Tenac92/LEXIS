@@ -260,12 +260,20 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (!selectedUnit) return [];
 
       try {
-        // Query Projects table for records where implementing_agency array contains selectedUnit
+        console.log('Fetching projects for unit:', selectedUnit);
+
+        // First try a simpler query to verify connection
+        const testQuery = await supabase
+          .from('Projects')
+          .select('mis')
+          .limit(1);
+
+        console.log('Test query result:', testQuery);
+
+        // Main query with implementing_agency filter
         const { data, error } = await supabase
           .from('Projects')
-          .select('*')
-          .contains('implementing_agency', [selectedUnit]) // Use .contains() with array
-          .order('mis');
+          .select('*');
 
         if (error) {
           console.error('Error fetching projects:', error);
@@ -277,7 +285,18 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           throw error;
         }
 
-        return data.map((item: any) => ({
+        // Filter in JavaScript since PostgREST JSONB filtering is problematic
+        const filteredData = data.filter(project => {
+          if (!project.implementing_agency) return false;
+          const agencies = Array.isArray(project.implementing_agency) ?
+            project.implementing_agency :
+            JSON.parse(project.implementing_agency);
+          return agencies.includes(selectedUnit);
+        });
+
+        console.log('Filtered projects:', filteredData);
+
+        return filteredData.map((item: any) => ({
           id: String(item.mis),
           name: `${String(item.mis)} - ${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
           expenditure_types: Array.isArray(item.expenditure_type) ? item.expenditure_type : []

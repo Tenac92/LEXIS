@@ -1,0 +1,36 @@
+[Supabase] Initializing client...
+Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[Supabase] Testing connection...
+[Supabase] Connection successful, found records: 
+Object {count: 1, sample: {…}}
+[Supabase] Initial connection test: successful
+Υποβολή φόρμας σύνδεσης με δεδομένα: 
+Object {email: "test@test.gr", password: "12345678"}
+Attempting login with: test@test.gr
+Login successful: 
+Object {id: 65, email: "test@test.gr", name: "test", role: "user", units: Array(11), …}
+Login mutation succeeded, updating cache with user: 
+Object {id: 65, email: "test@test.gr", name: "test", role: "user", units: Array(11), …}
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Error fetching projects: 
+Object {code: "22P02", details: "Token "ΔΑΕΦΚ" is invalid.", hint: null, message: "invalid input syntax for type json"}
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Projects fetch error: 
+Object {code: "22P02", details: "Token "ΔΑΕΦΚ" is invalid.", hint: null, message: "invalid input syntax for type json"}
+
+Error fetching projects: 
+Object {code: "22P02", details: "Token "ΔΑΕΦΚ" is invalid.", hint: null, message: "invalid input syntax for type json"}
+
+Projects fetch error: 
+Object {code: "22P02", details: "Token "ΔΑΕΦΚ" is invalid.", hint: null, message: "invalid input syntax for type json"}
+
+Error fetching projects: 
+Object {code: "22P02", details: "Token "ΔΑΕΦΚ" is invalid.", hint: null, message: "invalid input syntax for type json"}
+
+Projects fetch error: 
+Object {code: "22P02", details: "Token "ΔΑΕΦΚ" is invalid.", hint: null, message: "invalid input syntax for type json"}
+
