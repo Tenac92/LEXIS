@@ -7,15 +7,12 @@ export const documentExportRouter = Router();
 export async function exportDocument(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    console.log('[DocumentExport] Starting document export for ID:', id);
+    console.log('Starting document export for ID:', id);
 
     // Validate ID
     if (!id || isNaN(parseInt(id))) {
-      console.error('[DocumentExport] Invalid document ID:', id);
-      return res.status(400).json({ 
-        error: 'Failed to export document',
-        details: 'Invalid document ID'
-      });
+      console.error('Invalid document ID:', id);
+      return res.status(400).json({ message: 'Invalid document ID' });
     }
 
     // Fetch document with recipients
@@ -26,51 +23,41 @@ export async function exportDocument(req: Request, res: Response) {
       .single();
 
     if (docError) {
-      console.error('[DocumentExport] Database query error:', docError);
+      console.error('Database query error:', docError);
       return res.status(500).json({ 
-        error: 'Failed to export document',
+        message: 'Error fetching document',
         details: docError.message
       });
     }
 
     if (!document) {
-      console.error('[DocumentExport] Document not found:', id);
-      return res.status(404).json({ 
-        error: 'Failed to export document',
-        details: 'Document not found'
-      });
+      console.error('Document not found:', id);
+      return res.status(404).json({ message: 'Document not found' });
     }
 
     // Validate document data
     if (!document.unit || !document.recipients || !Array.isArray(document.recipients)) {
-      console.error('[DocumentExport] Invalid document data:', {
+      console.error('Invalid document data:', {
         id: document.id,
         hasUnit: Boolean(document.unit),
         hasRecipients: Boolean(document.recipients),
         recipientsIsArray: Array.isArray(document.recipients)
       });
-      return res.status(400).json({ 
-        error: 'Failed to export document',
-        details: 'Invalid document data structure'
-      });
+      return res.status(400).json({ message: 'Invalid document data' });
     }
 
     // Generate document buffer
-    console.log('[DocumentExport] Generating document...');
+    console.log('Generating document...');
     const buffer = await DocumentFormatter.generateDocument(document);
 
     if (!buffer || buffer.length === 0) {
-      console.error('[DocumentExport] Generated empty buffer for document:', id);
-      return res.status(500).json({ 
-        error: 'Failed to export document',
-        details: 'Failed to generate document content'
-      });
+      console.error('Generated empty buffer for document:', id);
+      return res.status(500).json({ message: 'Failed to generate document content' });
     }
 
     // Set proper headers for Word document
-    const documentId = document.id ? document.id.toString().padStart(6, '0') : id.toString().padStart(6, '0');
-    const filename = `document-${documentId}.docx`;
-    console.log('[DocumentExport] Sending document:', filename, 'Size:', buffer.length);
+    const filename = `document-${document.id.toString().padStart(6, '0')}.docx`;
+    console.log('Sending document:', filename, 'Size:', buffer.length);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
@@ -81,12 +68,12 @@ export async function exportDocument(req: Request, res: Response) {
 
     // Send buffer
     res.end(buffer);
-    console.log('[DocumentExport] Document sent successfully');
+    console.log('Document sent successfully');
 
   } catch (error) {
-    console.error('[DocumentExport] Document export error:', error);
+    console.error('Document export error:', error);
     res.status(500).json({
-      error: 'Failed to export document',
+      message: 'Failed to generate document',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
@@ -96,7 +83,7 @@ export async function exportDocument(req: Request, res: Response) {
 documentExportRouter.get('/:id/test', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    console.log('[DocumentExport] Testing document generation for ID:', id);
+    console.log('Testing document generation for ID:', id);
 
     const { data: document } = await supabase
       .from('generated_documents')
@@ -130,7 +117,7 @@ documentExportRouter.get('/:id/test', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('[DocumentExport] Document test error:', error);
+    console.error('Document test error:', error);
     res.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
