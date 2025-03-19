@@ -86,10 +86,11 @@ export const generatedDocuments = pgTable("generated_documents", {
   attachments: text("attachments").array(),
   protocol_number_input: text("protocol_number_input"),
   protocol_date: timestamp("protocol_date"),
-  original_protocol_number: text("original_protocol_number").notNull(),
-  original_protocol_date: timestamp("original_protocol_date").notNull(),
-  is_correction: boolean("is_correction").default(false).notNull(),
-  comments: text("comments").notNull(),
+  original_protocol_number: text("original_protocol_number"),
+  original_protocol_date: timestamp("original_protocol_date"),
+  is_correction: boolean("is_correction").default(false),
+  comments: text("comments"),
+  region: text("region"), // Added region field
 });
 
 // Update the budget history table to include metadata
@@ -206,10 +207,10 @@ export const insertProjectSchema = createInsertSchema(projects, {
   budget_na271: z.number().nullable(),
   budget_na853: z.number().nullable(),
   status: z.enum(["active", "pending", "pending_reallocation", "completed"]).default("pending"),
-}).omit({ 
+}).omit({
   id: true,
   created_at: true,
-  updated_at: true 
+  updated_at: true
 });
 
 // Types
@@ -223,7 +224,6 @@ export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
 export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 export type Project = typeof projects.$inferSelect;
-
 
 
 // Insert Schemas
