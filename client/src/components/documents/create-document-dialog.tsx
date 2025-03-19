@@ -260,10 +260,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (!selectedUnit) return [];
 
       try {
+        // Use @> operator for JSONB array containment
         const { data, error } = await supabase
           .from('Projects')
           .select('*')
-          .contains('implementing_agency', [selectedUnit])
+          .filter('implementing_agency', '@>', JSON.stringify([selectedUnit]))
           .order('mis');
 
         if (error) {
@@ -276,23 +277,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           throw error;
         }
 
-        return data.map((item: any) => {
-          let expenditureTypes: string[] = [];
-          try {
-            if (item.expenditure_type) {
-              expenditureTypes = Array.isArray(item.expenditure_type) ?
-                item.expenditure_type : [];
-            }
-          } catch (e) {
-            console.error('Error parsing expenditure types:', e, item);
-          }
-
-          return {
-            id: String(item.mis),
-            name: `${String(item.mis)} - ${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
-            expenditure_types: expenditureTypes
-          };
-        });
+        return data.map((item: any) => ({
+          id: String(item.mis),
+          name: `${String(item.mis)} - ${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
+          expenditure_types: Array.isArray(item.expenditure_type) ? item.expenditure_type : []
+        }));
 
       } catch (error) {
         console.error('Projects fetch error:', error);
@@ -907,7 +896,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                 {region.name}
                               </SelectItem>
                             ))}
-                                                    </SelectContent>
+                          </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
