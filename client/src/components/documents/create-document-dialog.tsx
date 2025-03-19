@@ -260,11 +260,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (!selectedUnit) return [];
 
       try {
-        // Use @> operator for JSONB array containment
+        // Query Projects table for records where implementing_agency array contains selectedUnit
         const { data, error } = await supabase
           .from('Projects')
           .select('*')
-          .filter('implementing_agency', '@>', JSON.stringify([selectedUnit]))
+          .contains('implementing_agency', `{${selectedUnit}}`) // Fixed JSONB array containment syntax
           .order('mis');
 
         if (error) {
