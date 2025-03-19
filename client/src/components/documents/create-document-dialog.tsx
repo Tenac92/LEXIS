@@ -301,16 +301,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
           console.log('Processing project:', item.mis, 'Raw expenditure_type:', item.expenditure_type);
 
-          // Handle expenditure_type as JSONB array
           if (item.expenditure_type) {
             try {
-              expenditureTypes = Array.isArray(item.expenditure_type) ?
-                item.expenditure_type :
-                typeof item.expenditure_type === 'string' ?
-                  JSON.parse(item.expenditure_type) :
-                  [];
-
-              console.log('Project:', item.mis, 'Parsed expenditure types:', expenditureTypes);
+              // Parse expenditure_type field
+              const parsedTypes = typeof item.expenditure_type === 'string' ?
+                JSON.parse(item.expenditure_type) :
+                item.expenditure_type;
+              expenditureTypes = Array.isArray(parsedTypes) ? parsedTypes : [];
             } catch (e) {
               console.error('Error parsing expenditure_type for project:', item.mis, e);
             }
@@ -325,7 +322,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
         console.log('Final mapped projects:', mappedProjects);
         return mappedProjects;
-
       } catch (error) {
         console.error('Projects fetch error:', error);
         throw error;
@@ -972,7 +968,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
-                          disabled={!selectedProject?.expenditure_types?.length}
+                          disabled={!selectedProjectId}
                         >
                           <FormControl>
                             <SelectTrigger>
