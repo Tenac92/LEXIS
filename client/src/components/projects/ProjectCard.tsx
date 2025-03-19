@@ -1,17 +1,9 @@
 import { Link } from "wouter";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type Project } from "@shared/schema";
-import { Edit, Trash2, Calendar, MapPin, Building2, Eye, Copy, Coins, FileText } from "lucide-react";
+import { Edit, Trash2, Calendar, MapPin, Building2, Coins, FileText } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,12 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
-interface APIResponse<T = any> {
-  ok: boolean;
-  json(): Promise<T>;
-  blob(): Promise<Blob>;
-}
-
 interface ProjectCardProps {
   project: Project;
   view?: "grid" | "list";
@@ -43,23 +29,15 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Αντιγράφηκε!",
-      description: `${label} έχει αντιγραφεί στο πρόχειρο`,
-    });
-  };
-
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest(`/api/projects/${project.mis}`, {
         method: "DELETE",
-      }) as APIResponse;
+      });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Αποτυχία διαγραφής έργου");
+        throw new Error(error.message || "Failed to delete project");
       }
 
       return response.json();
@@ -67,38 +45,27 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({
-        title: "Διαγραφή Έργου",
-        description: "Το έργο διαγράφηκε με επιτυχία",
+        title: "Project Deleted",
+        description: "The project has been successfully deleted",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Αποτυχία Διαγραφής",
-        description: error.message || "Αποτυχία διαγραφής έργου",
+        title: "Delete Failed",
+        description: error.message || "Failed to delete project",
         variant: "destructive",
       });
     },
   });
 
-  const formatDate = (date: string | Date | null) => {
-    if (!date) return 'N/A';
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleDateString('el-GR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const formatCurrency = (amount: number | string | null) => {
+  const formatCurrency = (amount: number | null) => {
     if (!amount) return '€0,00';
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     return new Intl.NumberFormat("el-GR", {
       style: "currency",
       currency: "EUR",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
-    }).format(numAmount);
+    }).format(amount);
   };
 
   const getStatusColor = (status: string) => {
@@ -131,195 +98,73 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
     }
   };
 
-  const getRegionText = (region: Project['region']) => {
-    if (!region) return '';
+  const getRegionText = (project: Project) => {
+    if (!project.region) return '';
+    const regionData = project.region as { region: string[], municipality: string[], regional_unit: string[] };
     const parts = [];
-    if (region.region?.length) parts.push(region.region[0]);
-    if (region.regional_unit?.length) parts.push(region.regional_unit[0]);
-    if (region.municipality?.length) parts.push(region.municipality[0]);
+    if (regionData.region?.length) parts.push(regionData.region[0]);
+    if (regionData.regional_unit?.length) parts.push(regionData.regional_unit[0]);
+    if (regionData.municipality?.length) parts.push(regionData.municipality[0]);
     return parts.join(' / ');
   };
 
-  const cardContent = (
-    <>
-      <div className="mb-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="line-clamp-2 text-lg font-bold">
-            {project.event_description || project.project_title || "Έργο χωρίς τίτλο"}
-          </h3>
-          <Badge variant="secondary" className={getStatusColor(project.status || '')}>
-            {getStatusText(project.status || '')}
-          </Badge>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Calendar className="mr-2 h-4 w-4" />
-              Δημιουργήθηκε: {formatDate(project.created_at)}
-            </div>
-            {project.region && (
-              <div className="flex items-center text-sm text-muted-foreground">
-                <MapPin className="mr-2 h-4 w-4" />
-                {getRegionText(project.region)}
-              </div>
-            )}
-          </div>
-          <div className="space-y-2">
-            <div className="font-medium">
-              Προϋπολογισμός NA853: {formatCurrency(project.budget_na853)}
-            </div>
-            {project.budget_na271 && (
-              <div className="text-sm text-muted-foreground">
-                Προϋπολογισμός NA271: {formatCurrency(project.budget_na271)}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded bg-gray-50 p-2">
-            <div className="text-xs text-gray-500">MIS</div>
-            <div className="font-medium">{project.mis || "N/A"}</div>
-          </div>
-          <div className="rounded bg-gray-50 p-2">
-            <div className="text-xs text-gray-500">NA853</div>
-            <div className="font-medium">{project.na853 || "N/A"}</div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-
   return (
     <Card className={`transition-shadow hover:shadow-lg ${view === "list" ? "flex" : ""}`}>
-      <Dialog>
-        <DialogTrigger asChild>
-          <CardContent className={`p-6 cursor-pointer ${view === "list" ? "flex-1" : ""}`}>
-            {cardContent}
-          </CardContent>
-        </DialogTrigger>
-
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Στοιχεία Έργου</DialogTitle>
-            <DialogDescription>
-              Έργο {project.mis || 'N/A'} - {project.event_description || project.project_title || 'Χωρίς περιγραφή'}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="mt-6 space-y-8">
-            {/* Βασικές Πληροφορίες */}
-            <section className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Βασικές Πληροφορίες
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-sm text-gray-600">MIS</h4>
-                    <button
-                      onClick={() => copyToClipboard(project.mis || '', 'MIS')}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <p className="text-gray-900 font-medium">{project.mis || "N/A"}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-sm text-gray-600">NA853</h4>
-                    <button
-                      onClick={() => copyToClipboard(project.na853 || '', 'NA853')}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <p className="text-gray-900 font-medium">{project.na853 || "N/A"}</p>
-                </div>
-                {project.region && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Περιοχή</h4>
-                    <p className="text-gray-900 font-medium">{getRegionText(project.region)}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* Πληροφορίες Προϋπολογισμού */}
-            <section className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Coins className="h-5 w-5" />
-                Πληροφορίες Προϋπολογισμού
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {project.budget_na853 && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός NA853</h4>
-                    <p className="text-gray-900 font-medium">{formatCurrency(project.budget_na853)}</p>
-                  </div>
-                )}
-                {project.budget_na271 && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός NA271</h4>
-                    <p className="text-gray-900 font-medium">{formatCurrency(project.budget_na271)}</p>
-                  </div>
-                )}
-                {project.budget_e069 && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Προϋπολογισμός E069</h4>
-                    <p className="text-gray-900 font-medium">{formatCurrency(project.budget_e069)}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* Πρόσθετες Πληροφορίες */}
-            <section className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Πρόσθετες Πληροφορίες
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {project.implementing_agency && project.implementing_agency.length > 0 && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Φορέας Υλοποίησης</h4>
-                    <p className="text-gray-900">{project.implementing_agency.join(", ")}</p>
-                  </div>
-                )}
-                {project.event_type && project.event_type.length > 0 && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Τύπος Συμβάντος</h4>
-                    <p className="text-gray-900">{project.event_type.join(", ")}</p>
-                  </div>
-                )}
-                {project.event_year && project.event_year.length > 0 && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">Έτος Συμβάντος</h4>
-                    <p className="text-gray-900">{project.event_year.join(", ")}</p>
-                  </div>
-                )}
-                {project.kya && project.kya.length > 0 && (
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-semibold text-sm text-gray-600">ΚΥΑ</h4>
-                    <p className="text-gray-900">{project.kya.join(", ")}</p>
-                  </div>
-                )}
-              </div>
-            </section>
+      <CardContent className={`p-6 ${view === "list" ? "flex-1" : ""}`}>
+        <div className="mb-4">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="line-clamp-2 text-lg font-bold">
+              {project.event_description || project.project_title || "Untitled Project"}
+            </h3>
+            <Badge variant="secondary" className={getStatusColor(project.status || '')}>
+              {getStatusText(project.status || '')}
+            </Badge>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Calendar className="mr-2 h-4 w-4" />
+                Created: {new Date(project.created_at).toLocaleDateString('el-GR')}
+              </div>
+              {project.region && (
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <MapPin className="mr-2 h-4 w-4" />
+                  {getRegionText(project)}
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <div className="font-medium">
+                Budget NA853: {formatCurrency(project.budget_na853)}
+              </div>
+              {project.budget_na271 && (
+                <div className="text-sm text-muted-foreground">
+                  Budget NA271: {formatCurrency(project.budget_na271)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded bg-gray-50 p-2">
+              <div className="text-xs text-gray-500">MIS</div>
+              <div className="font-medium">{project.mis || "N/A"}</div>
+            </div>
+            <div className="rounded bg-gray-50 p-2">
+              <div className="text-xs text-gray-500">NA853</div>
+              <div className="font-medium">{project.na853 || "N/A"}</div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
 
       {isAdmin && (
         <CardFooter className="flex justify-end gap-2 border-t p-4">
           <Link href={`/projects/${project.mis}/edit`}>
             <Button variant="outline" size="sm">
               <Edit className="mr-2 h-4 w-4" />
-              Επεξεργασία
+              Edit
             </Button>
           </Link>
 
@@ -327,23 +172,23 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm">
                 <Trash2 className="mr-2 h-4 w-4" />
-                Διαγραφή
+                Delete
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Διαγραφή Έργου</AlertDialogTitle>
+                <AlertDialogTitle>Delete Project</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτό το έργο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
+                  Are you sure you want to delete this project? This action cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={() => deleteMutation.mutate()}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  Διαγραφή
+                  Delete
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

@@ -145,7 +145,7 @@ export const documentTemplates = pgTable("document_templates", {
   is_default: boolean("is_default").default(false),
 });
 
-// Add Projects table definition
+// Update the Projects table definition to match the actual database structure
 export const projects = pgTable("Projects", {
   id: serial("id").primaryKey(),
   mis: text("mis").notNull(),
@@ -174,9 +174,42 @@ export const projects = pgTable("Projects", {
   budget_e069: numeric("budget_e069"),
   budget_na271: numeric("budget_na271"),
   budget_na853: numeric("budget_na853"),
-  status: text("status"),
+  status: text("status").default("pending"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// Export project types
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = typeof projects.$inferInsert;
+
+// Create insert schema for Projects
+export const insertProjectSchema = createInsertSchema(projects, {
+  event_type: z.array(z.string()).nullable(),
+  event_year: z.array(z.string()).nullable(),
+  region: z.object({
+    region: z.array(z.string()),
+    municipality: z.array(z.string()),
+    regional_unit: z.array(z.string()),
+  }).nullable(),
+  implementing_agency: z.array(z.string()).nullable(),
+  expenditure_type: z.array(z.string()).nullable(),
+  kya: z.array(z.string()).nullable(),
+  fek: z.array(z.string()).nullable(),
+  ada: z.array(z.string()).nullable(),
+  ada_import_sana271: z.array(z.string()).nullable(),
+  ada_import_sana853: z.array(z.string()).nullable(),
+  budget_decision: z.array(z.string()).nullable(),
+  funding_decision: z.array(z.string()).nullable(),
+  allocation_decision: z.array(z.string()).nullable(),
+  budget_e069: z.number().nullable(),
+  budget_na271: z.number().nullable(),
+  budget_na853: z.number().nullable(),
+  status: z.enum(["active", "pending", "pending_reallocation", "completed"]).default("pending"),
+}).omit({ 
+  id: true,
+  created_at: true,
+  updated_at: true 
 });
 
 // Types
@@ -190,6 +223,7 @@ export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
 export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 export type Project = typeof projects.$inferSelect;
+
 
 
 // Insert Schemas
@@ -269,35 +303,6 @@ export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocumen
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({
   id: true,
   created_at: true
-});
-
-// Create insert schema for Projects
-export const insertProjectSchema = createInsertSchema(projects, {
-  event_type: z.array(z.string()).nullable(),
-  event_year: z.array(z.string()).nullable(),
-  region: z.object({
-    region: z.array(z.string()),
-    municipality: z.array(z.string()),
-    regional_unit: z.array(z.string()),
-  }).nullable(),
-  implementing_agency: z.array(z.string()).nullable(),
-  expenditure_type: z.array(z.string()).nullable(),
-  kya: z.array(z.string()).nullable(),
-  fek: z.array(z.string()).nullable(),
-  ada: z.array(z.string()).nullable(),
-  ada_import_sana271: z.array(z.string()).nullable(),
-  ada_import_sana853: z.array(z.string()).nullable(),
-  budget_decision: z.array(z.string()).nullable(),
-  funding_decision: z.array(z.string()).nullable(),
-  allocation_decision: z.array(z.string()).nullable(),
-  budget_e069: z.number().nullable(),
-  budget_na271: z.number().nullable(),
-  budget_na853: z.number().nullable(),
-  status: z.enum(["active", "pending", "pending_reallocation", "completed"]).default("pending"),
-}).omit({ 
-  id: true,
-  created_at: true,
-  updated_at: true 
 });
 
 // Export types for insert operations

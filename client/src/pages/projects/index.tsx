@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,25 +12,16 @@ import {
 } from "@/components/ui/select";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { useToast } from "@/hooks/use-toast";
-import { type ProjectCatalog } from "@shared/schema";
-import { Plus, FileUp, Download, LayoutGrid, LayoutList, FileEdit, Upload } from "lucide-react";
+import { type Project } from "@shared/schema";
+import { Plus, FileUp, Download, LayoutGrid, LayoutList } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRef } from "react";
 import { Header } from "@/components/header";
-import { FAB } from "@/components/ui/fab";
-
-interface APIResponse<T = any> {
-  ok: boolean;
-  json(): Promise<T>;
-  blob(): Promise<Blob>;
-}
 
 export default function ProjectsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const isAdmin = user?.role === 'admin';
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -48,16 +39,15 @@ export default function ProjectsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: projects, isLoading } = useQuery<ProjectCatalog[]>({
+  const { data: projects, isLoading } = useQuery<Project[]>({
     queryKey: ["/api/projects", { search: debouncedSearch, status: status !== "all" ? status : undefined }],
-    enabled: true,
   });
 
   const handleExport = async () => {
     try {
       toast({
-        title: "Έναρξη Εξαγωγής",
-        description: "Παρακαλώ περιμένετε όσο προετοιμάζεται το αρχείο σας...",
+        title: "Starting Export",
+        description: "Please wait while your file is being prepared...",
       });
 
       const response = await fetch("/api/projects/export/xlsx", {
@@ -68,14 +58,7 @@ export default function ProjectsPage() {
       });
 
       if (!response.ok) {
-        let errorMessage = 'Η εξαγωγή απέτυχε';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || 'Η εξαγωγή απέτυχε';
-        } catch (e) {
-          console.error('Error parsing error response:', e);
-        }
-        throw new Error(errorMessage);
+        throw new Error('Export failed');
       }
 
       const blob = await response.blob();
@@ -89,45 +72,14 @@ export default function ProjectsPage() {
       window.URL.revokeObjectURL(url);
 
       toast({
-        title: "Επιτυχής Εξαγωγή",
-        description: "Τα δεδομένα των έργων έχουν εξαχθεί σε Excel",
+        title: "Export Successful",
+        description: "Project data has been exported to Excel",
       });
     } catch (error) {
       console.error('Export error:', error);
       toast({
-        title: "Αποτυχία Εξαγωγής",
-        description: error instanceof Error ? error.message : "Αποτυχία εξαγωγής δεδομένων έργων",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleFileUpload = async (file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await apiRequest("/api/projects/bulk-upload", {
-        method: "POST",
-        body: formData,
-      }) as APIResponse;
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Η μεταφόρτωση απέτυχε");
-      }
-
-      toast({
-        title: "Επιτυχής Μεταφόρτωση",
-        description: "Τα έργα ενημερώθηκαν με επιτυχία",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
-      setUploadDialogOpen(false);
-    } catch (error) {
-      toast({
-        title: "Αποτυχία Μεταφόρτωσης",
-        description: error instanceof Error ? error.message : "Αποτυχία μεταφόρτωσης δεδομένων έργων",
+        title: "Export Failed",
+        description: error instanceof Error ? error.message : "Failed to export project data",
         variant: "destructive",
       });
     }
@@ -138,7 +90,7 @@ export default function ProjectsPage() {
     const searchMatch = !debouncedSearch ||
       project.event_description?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
       project.mis?.toString().includes(debouncedSearch) ||
-      project.region?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      (project.region as any)?.region?.[0]?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
       project.na853?.toLowerCase().includes(debouncedSearch.toLowerCase());
 
     const statusMatch = status === "all" || project.status === status;
@@ -151,7 +103,7 @@ export default function ProjectsPage() {
       <Header />
       <main className="container mx-auto px-4 py-6">
         <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <h1 className="text-3xl font-bold">Έργα</h1>
+          <h1 className="text-3xl font-bold">Projects</h1>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
@@ -159,9 +111,9 @@ export default function ProjectsPage() {
               onClick={() => setView(view === "grid" ? "list" : "grid")}
             >
               {view === "grid" ? (
-                <><LayoutList className="mr-2 h-4 w-4" /> Προβολή Λίστας</>
+                <><LayoutList className="mr-2 h-4 w-4" /> List View</>
               ) : (
-                <><LayoutGrid className="mr-2 h-4 w-4" /> Προβολή Πλέγματος</>
+                <><LayoutGrid className="mr-2 h-4 w-4" /> Grid View</>
               )}
             </Button>
             {isAdmin && (
@@ -169,22 +121,12 @@ export default function ProjectsPage() {
                 <Link href="/projects/new">
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    Νέο Έργο
+                    New Project
                   </Button>
                 </Link>
                 <Button variant="secondary" onClick={handleExport}>
                   <Download className="mr-2 h-4 w-4" />
-                  Εξαγωγή
-                </Button>
-                <Link href="/projects/bulk-update">
-                  <Button variant="outline">
-                    <FileEdit className="mr-2 h-4 w-4" />
-                    Μαζική Ενημέρωση
-                  </Button>
-                </Link>
-                <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Μεταφόρτωση CSV
+                  Export
                 </Button>
               </>
             )}
@@ -194,7 +136,7 @@ export default function ProjectsPage() {
         <div className="mt-8 space-y-4">
           <div className="flex flex-col gap-4 md:flex-row">
             <Input
-              placeholder="Αναζήτηση με MIS, περιγραφή, περιοχή..."
+              placeholder="Search by MIS, description, region..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="md:w-96"
@@ -204,14 +146,14 @@ export default function ProjectsPage() {
               onValueChange={setStatus}
             >
               <SelectTrigger className="md:w-48">
-                <SelectValue placeholder="Φιλτράρισμα κατά κατάσταση" />
+                <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Όλες οι Καταστάσεις</SelectItem>
-                <SelectItem value="active">Ενεργό</SelectItem>
-                <SelectItem value="pending">Σε Εκκρεμότητα</SelectItem>
-                <SelectItem value="pending_reallocation">Σε Αναμονή Ανακατανομής</SelectItem>
-                <SelectItem value="completed">Ολοκληρωμένο</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="pending_reallocation">Pending Reallocation</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -226,7 +168,7 @@ export default function ProjectsPage() {
             <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
               {filteredProjects.map((project) => (
                 <ProjectCard
-                  key={`${project.id}-${project.mis}`}
+                  key={project.id}
                   project={project}
                   view={view}
                   isAdmin={isAdmin}
@@ -235,42 +177,11 @@ export default function ProjectsPage() {
             </div>
           ) : (
             <div className="rounded-lg border-2 border-dashed p-8 text-center">
-              <p className="text-muted-foreground">Δεν βρέθηκαν έργα</p>
+              <p className="text-muted-foreground">No projects found</p>
             </div>
           )}
         </div>
-
-        {/* CSV Upload Dialog */}
-        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Μεταφόρτωση CSV</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".csv"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    handleFileUpload(file);
-                  }
-                }}
-                className="hidden"
-              />
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full"
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Επιλογή Αρχείου CSV
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </main>
-      <FAB />
     </div>
   );
 }
