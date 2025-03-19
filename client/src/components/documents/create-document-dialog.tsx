@@ -645,11 +645,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       const project = projects.find(p => p.id === selectedProjectId);
       console.log('Selected project:', project);
       if (project) {
+        console.log('Expenditure types:', project.expenditure_types);
         // Reset expenditure type when project changes
         form.setValue('expenditure_type', '');
       }
     }
-  }, [selectedProjectId, projects]);
+  }, [selectedProjectId, projects, form]);
 
   const handleNext = async () => {
     try {
@@ -965,7 +966,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
-                          disabled={!selectedProject?.expenditure_types?.length}
+                          disabled={!selectedProjectId}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -973,7 +974,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {(selectedProject?.expenditure_types || []).map((type: string) => (
+                            {selectedProject?.expenditure_types?.map((type: string) => (
                               <SelectItem key={type} value={type}>
                                 {type}
                               </SelectItem>
