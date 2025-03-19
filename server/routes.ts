@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { authenticateSession } from "./auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
-import documentsController from "./controllers/documentsController";
+import { router as documentsRouter } from "./controllers/documentsController";
 import budgetController from "./controllers/budgetController";
 import { router as generatedDocumentsRouter } from "./controllers/generatedDocuments";
 import unitsController from "./controllers/unitsController";
@@ -45,7 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Mount more specific routes first
     app.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
     // Then mount base documents routes
-    app.use('/api/documents', authenticateSession, documentsController.router);
+    app.use('/api/documents', authenticateSession, documentsRouter);
     log('[Routes] Document routes setup complete');
 
     // Template preview route

@@ -4,7 +4,7 @@ import type { GeneratedDocument } from "@shared/schema";
 import { authenticateSession } from '../auth';
 import { DocumentManager } from '../utils/DocumentManager';
 
-const router = Router();
+export const router = Router();
 const documentManager = new DocumentManager();
 
 // List documents with filters
@@ -354,5 +354,3 @@ router.get('/generated/:id/export', authenticateSession, async (req: Request, re
     });
   }
 });
-
-export default router;

@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
 import { storage } from "../storage";
 import type { User, BudgetValidation } from "@shared/schema";
@@ -8,7 +8,10 @@ interface AuthRequest extends Request {
   user?: User;
 }
 
-export async function getBudgetNotifications(req: AuthRequest, res: Response) {
+export const router = Router();
+
+// Get budget notifications
+router.get('/notifications', async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({
@@ -18,10 +21,8 @@ export async function getBudgetNotifications(req: AuthRequest, res: Response) {
     }
 
     console.log('[BudgetController] Fetching notifications...');
-
     const notifications = await BudgetService.getNotifications();
     console.log('[BudgetController] Successfully fetched notifications:', notifications.length);
-
     return res.json(notifications);
   } catch (error) {
     console.error('[BudgetController] Error in getBudgetNotifications:', error);
@@ -31,9 +32,10 @@ export async function getBudgetNotifications(req: AuthRequest, res: Response) {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-}
+});
 
-export async function getBudget(req: Request, res: Response) {
+// Get budget data
+router.get('/:mis', async (req: Request, res: Response) => {
   try {
     const { mis } = req.params;
     if (!mis) {
@@ -52,9 +54,10 @@ export async function getBudget(req: Request, res: Response) {
       message: 'Failed to fetch budget data'
     });
   }
-}
+});
 
-export async function validateBudget(req: AuthRequest, res: Response) {
+// Validate budget
+router.post('/validate', async (req: AuthRequest, res: Response) => {
   try {
     const { mis, amount } = req.body as BudgetValidation;
     const requestedAmount = parseFloat(amount.toString());
@@ -95,9 +98,10 @@ export async function validateBudget(req: AuthRequest, res: Response) {
       message: "Failed to validate budget"
     });
   }
-}
+});
 
-export async function updateBudget(req: AuthRequest, res: Response) {
+// Update budget
+router.patch('/:mis', async (req: AuthRequest, res: Response) => {
   try {
     const { mis } = req.params;
     const { amount } = req.body;
@@ -119,9 +123,10 @@ export async function updateBudget(req: AuthRequest, res: Response) {
       message: error instanceof Error ? error.message : 'Failed to update budget'
     });
   }
-}
+});
 
-export async function getBudgetHistory(req: AuthRequest, res: Response) {
+// Get budget history
+router.get('/:mis/history', async (req: AuthRequest, res: Response) => {
   try {
     const { mis } = req.params;
 
@@ -145,6 +150,4 @@ export async function getBudgetHistory(req: AuthRequest, res: Response) {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-}
-
-export default { getBudgetNotifications, validateBudget, updateBudget, getBudget, getBudgetHistory };
+});

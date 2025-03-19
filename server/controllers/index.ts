@@ -1,24 +1,21 @@
 import express from 'express';
 import { authenticateSession } from '../auth';
-import documentsController from './documentsController';
-import budgetController from './budgetController';
-import recipientsController from './recipientsController';
-import statsController from './statsController';
-import usersController from './usersController';
+import { router as documentsRouter } from './documentsController';
+import { router as budgetRouter } from './budgetController';
+import { router as recipientsRouter } from './recipientsController';
+import { router as statsRouter } from './statsController';
+import { router as usersRouter } from './usersController';
 
 const router = express.Router();
 
 // Mount budget routes
-router.get('/budget/:mis', authenticateSession, budgetController.getBudget);
-router.post('/budget/validate', authenticateSession, budgetController.validateBudget);
-router.patch('/budget/:mis', authenticateSession, budgetController.updateBudget);
-router.get('/budget/notifications', authenticateSession, budgetController.getBudgetNotifications);
+router.use('/budget', authenticateSession, budgetRouter);
 
 // Mount other controllers with authentication middleware
-router.use('/documents', authenticateSession, documentsController);
-router.use('/recipients', authenticateSession, recipientsController);
-router.use('/stats', authenticateSession, statsController);
-router.use('/users', authenticateSession, usersController);
+router.use('/documents', authenticateSession, documentsRouter);
+router.use('/recipients', authenticateSession, recipientsRouter);
+router.use('/stats', authenticateSession, statsRouter);
+router.use('/users', authenticateSession, usersRouter);
 
 // Healthcheck endpoint
 router.get('/health', (_req, res) => {
