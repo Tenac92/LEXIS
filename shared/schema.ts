@@ -146,7 +146,7 @@ export const documentTemplates = pgTable("document_templates", {
   is_default: boolean("is_default").default(false),
 });
 
-// Update the Projects table definition to match the actual database structure
+// Update the Projects table definition to properly handle JSONB fields
 export const projects = pgTable("Projects", {
   id: serial("id").primaryKey(),
   mis: text("mis").notNull(),
@@ -163,7 +163,7 @@ export const projects = pgTable("Projects", {
     regional_unit: string[];
   }>(),
   implementing_agency: jsonb("implementing_agency").$type<string[]>(),
-  expenditure_type: jsonb("expenditure_type").$type<string[]>(),
+  expenditure_type: jsonb("expenditure_type").$type<string[]>(), // Properly type expenditure_type as JSONB array
   kya: jsonb("kya").$type<string[]>(),
   fek: jsonb("fek").$type<string[]>(),
   ada: jsonb("ada").$type<string[]>(),

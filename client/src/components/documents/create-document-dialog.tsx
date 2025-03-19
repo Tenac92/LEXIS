@@ -301,13 +301,19 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
           console.log('Processing project:', item.mis, 'Raw expenditure_type:', item.expenditure_type);
 
+          // Handle expenditure_type as JSONB array
           if (item.expenditure_type) {
-            // Since the data is already in array format, just ensure it's an array
-            expenditureTypes = Array.isArray(item.expenditure_type) ?
-              item.expenditure_type :
-              [item.expenditure_type];
+            try {
+              expenditureTypes = Array.isArray(item.expenditure_type) ?
+                item.expenditure_type :
+                typeof item.expenditure_type === 'string' ?
+                  JSON.parse(item.expenditure_type) :
+                  [];
 
-            console.log('Project:', item.mis, 'Parsed expenditure types:', expenditureTypes);
+              console.log('Project:', item.mis, 'Parsed expenditure types:', expenditureTypes);
+            } catch (e) {
+              console.error('Error parsing expenditure_type for project:', item.mis, e);
+            }
           }
 
           return {
@@ -966,7 +972,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
-                          disabled={!selectedProjectId}
+                          disabled={!selectedProject?.expenditure_types?.length}
                         >
                           <FormControl>
                             <SelectTrigger>
