@@ -279,19 +279,42 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         // Filter in JavaScript since PostgREST JSONB filtering is problematic
         const filteredData = data.filter(project => {
           if (!project.implementing_agency) return false;
-          const agencies = Array.isArray(project.implementing_agency) ?
-            project.implementing_agency :
-            JSON.parse(project.implementing_agency);
-          return agencies.includes(selectedUnit);
+          try {
+            const agencies = typeof project.implementing_agency === 'string' ? 
+              JSON.parse(project.implementing_agency) : 
+              project.implementing_agency;
+            return Array.isArray(agencies) && agencies.includes(selectedUnit);
+          } catch (e) {
+            console.error('Error parsing implementing_agency:', e, project);
+            return false;
+          }
         });
 
         console.log('Filtered projects:', filteredData);
 
-        return filteredData.map((item: any) => ({
-          id: String(item.mis),
-          name: `${String(item.mis)} - ${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
-          expenditure_types: item.expenditure_type || [] // Default to empty array if null
-        }));
+        return filteredData.map((item: any) => {
+          let expenditureTypes: string[] = [];
+
+          // Handle expenditure_type as JSONB array
+          if (item.expenditure_type) {
+            try {
+              expenditureTypes = typeof item.expenditure_type === 'string' ? 
+                JSON.parse(item.expenditure_type) : 
+                Array.isArray(item.expenditure_type) ? 
+                  item.expenditure_type : [];
+
+              console.log('Parsed expenditure types for project:', item.mis, expenditureTypes);
+            } catch (e) {
+              console.error('Error parsing expenditure_type for project:', item.mis, e);
+            }
+          }
+
+          return {
+            id: String(item.mis),
+            name: `${String(item.mis)} - ${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
+            expenditure_types: expenditureTypes
+          };
+        });
 
       } catch (error) {
         console.error('Projects fetch error:', error);
@@ -896,7 +919,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         <FormLabel>Περιφέρεια</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                                                    value={field.value}
+                          value={field.value}
                           disabled={!selectedProjectId || regionsLoading}
                         >
                           <FormControl>
@@ -934,7 +957,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
-                          disabled={!selectedProject || !selectedProject.expenditure_types.length}
+                          disabled={!selectedProject || !selectedProject.expenditure_types || selectedProject.expenditure_types.length === 0}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -942,7 +965,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {selectedProject.expenditure_types.map((type: string) => (
+                            {(selectedProject?.expenditure_types || []).map((type: string) => (
                               <SelectItem key={type} value={type}>
                                 {type}
                               </SelectItem>
