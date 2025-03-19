@@ -5,6 +5,13 @@ import { authenticateSession } from '../auth';
 import { DocumentManager } from '../utils/DocumentManager';
 
 const router = Router();
+
+// Add your route handlers here
+router.get('/', (req, res) => {
+  res.json({ message: 'Documents endpoint' });
+});
+
+export default { router };
 const documentManager = new DocumentManager();
 
 // List documents with filters
