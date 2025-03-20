@@ -66,7 +66,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Project Details</DialogTitle>
+          <DialogTitle>Στοιχεία Έργου</DialogTitle>
         </DialogHeader>
         <div className="py-6">
           <div className="flex items-center justify-between mb-6">
@@ -76,7 +76,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
           </div>
 
           <h1 className="text-2xl font-bold mb-4">
-            {project.event_description || project.project_title || "Untitled Project"}
+            {project.event_description || project.project_title || "Έργο Χωρίς Τίτλο"}
           </h1>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
@@ -84,7 +84,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
             <div className="space-y-4">
               <div className="flex items-center text-sm text-muted-foreground">
                 <Calendar className="mr-2 h-4 w-4" />
-                Created: {new Date(project.created_at || '').toLocaleDateString('el-GR')}
+                Δημιουργήθηκε: {new Date(project.created_at || '').toLocaleDateString('el-GR')}
               </div>
 
               {project.region && (
@@ -97,7 +97,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
               {project.implementing_agency && (
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Building2 className="mr-2 h-4 w-4" />
-                  {Array.isArray(project.implementing_agency) 
+                  Φορέας Υλοποίησης: {Array.isArray(project.implementing_agency) 
                     ? project.implementing_agency.join(', ')
                     : project.implementing_agency}
                 </div>
@@ -106,7 +106,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
               {project.event_type && (
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Target className="mr-2 h-4 w-4" />
-                  Event Type: {Array.isArray(project.event_type) 
+                  Τύπος Συμβάντος: {Array.isArray(project.event_type) 
                     ? project.event_type.join(', ')
                     : project.event_type}
                 </div>
@@ -115,7 +115,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
               {project.event_year && (
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="mr-2 h-4 w-4" />
-                  Event Year: {Array.isArray(project.event_year) 
+                  Έτος Συμβάντος: {Array.isArray(project.event_year) 
                     ? project.event_year.join(', ')
                     : project.event_year}
                 </div>
@@ -126,21 +126,21 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
             <div className="space-y-4">
               <Card>
                 <CardContent className="pt-6">
-                  <h3 className="font-semibold mb-4">Budget Information</h3>
+                  <h3 className="font-semibold mb-4">Οικονομικά Στοιχεία</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-muted-foreground">Budget NA853:</span>
+                      <span className="text-muted-foreground">Προϋπολογισμός ΣΑ853:</span>
                       <span className="font-medium">{formatCurrency(Number(project.budget_na853))}</span>
                     </div>
                     {project.budget_na271 && (
                       <div className="flex justify-between items-center py-2 border-b">
-                        <span className="text-muted-foreground">Budget NA271:</span>
+                        <span className="text-muted-foreground">Προϋπολογισμός ΣΑ271:</span>
                         <span className="font-medium">{formatCurrency(Number(project.budget_na271))}</span>
                       </div>
                     )}
                     {project.budget_e069 && (
                       <div className="flex justify-between items-center py-2 border-b">
-                        <span className="text-muted-foreground">Budget E069:</span>
+                        <span className="text-muted-foreground">Προϋπολογισμός Ε069:</span>
                         <span className="font-medium">{formatCurrency(Number(project.budget_e069))}</span>
                       </div>
                     )}
@@ -153,28 +153,28 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
           {/* Project Identifiers */}
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm text-gray-500 mb-1">MIS</h3>
-              <p className="font-medium">{project.mis || "N/A"}</p>
+              <h3 className="text-sm text-gray-500 mb-1">Κωδικός MIS</h3>
+              <p className="font-medium">{project.mis || "Δ/Υ"}</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm text-gray-500 mb-1">NA853</h3>
-              <p className="font-medium">{project.na853 || "N/A"}</p>
+              <h3 className="text-sm text-gray-500 mb-1">Κωδικός ΣΑ853</h3>
+              <p className="font-medium">{project.na853 || "Δ/Υ"}</p>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm text-gray-500 mb-1">E069</h3>
-              <p className="font-medium">{project.e069 || "N/A"}</p>
+              <h3 className="text-sm text-gray-500 mb-1">Κωδικός Ε069</h3>
+              <p className="font-medium">{project.e069 || "Δ/Υ"}</p>
             </div>
           </div>
 
           {/* Related Documents Section */}
           <div className="mt-6 space-y-4">
-            <h3 className="font-semibold text-lg">Related Documents</h3>
+            <h3 className="font-semibold text-lg">Σχετικά Έγγραφα</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {project.kya && (
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-4 w-4" />
-                    <span className="font-medium">KYA</span>
+                    <span className="font-medium">ΚΥΑ</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {Array.isArray(project.kya) ? project.kya.join(', ') : project.kya}
@@ -186,7 +186,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-4 w-4" />
-                    <span className="font-medium">FEK</span>
+                    <span className="font-medium">ΦΕΚ</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {Array.isArray(project.fek) ? project.fek.join(', ') : project.fek}
@@ -198,7 +198,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-4 w-4" />
-                    <span className="font-medium">ADA</span>
+                    <span className="font-medium">ΑΔΑ</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {Array.isArray(project.ada) ? project.ada.join(', ') : project.ada}
@@ -210,13 +210,13 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
 
           {/* Additional Documents */}
           <div className="mt-6 space-y-4">
-            <h3 className="font-semibold text-lg">Additional Documents</h3>
+            <h3 className="font-semibold text-lg">Πρόσθετα Έγγραφα</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {project.budget_decision && (
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <BriefcaseBusiness className="h-4 w-4" />
-                    <span className="font-medium">Budget Decisions</span>
+                    <span className="font-medium">Αποφάσεις Προϋπολογισμού</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {Array.isArray(project.budget_decision) ? project.budget_decision.join(', ') : project.budget_decision}
@@ -228,7 +228,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <BriefcaseBusiness className="h-4 w-4" />
-                    <span className="font-medium">Funding Decisions</span>
+                    <span className="font-medium">Αποφάσεις Χρηματοδότησης</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {Array.isArray(project.funding_decision) ? project.funding_decision.join(', ') : project.funding_decision}
@@ -240,7 +240,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
                 <div className="p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <BriefcaseBusiness className="h-4 w-4" />
-                    <span className="font-medium">Allocation Decisions</span>
+                    <span className="font-medium">Αποφάσεις Κατανομής</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {Array.isArray(project.allocation_decision) ? project.allocation_decision.join(', ') : project.allocation_decision}
