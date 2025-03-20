@@ -51,7 +51,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
   // Focus input when dropdown opens
   React.useEffect(() => {
     if (open && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      inputRef.current.focus();
     } else {
       setSearchQuery("");
     }
@@ -63,12 +63,13 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
 
     // Extract NA853 code from project name
     const na853Match = project.name.match(/NA853\d+/i);
-    const na853Code = na853Match ? na853Match[0] : '';
+    const na853Code = na853Match ? na853Match[0].toLowerCase() : '';
     const last3Digits = na853Code.slice(-3);
 
     return (
       project.id.toLowerCase().includes(searchLower) ||
       project.name.toLowerCase().includes(searchLower) ||
+      na853Code.includes(searchLower) ||
       last3Digits.includes(searchLower)
     );
   });
@@ -95,18 +96,20 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
           )}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent align="start" className="p-0">
-        <div className="flex items-center border-b p-2">
-          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-          <Input
-            ref={inputRef}
-            placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-8 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-          />
+      <SelectContent align="start" className="p-0" style={{ maxHeight: '300px' }}>
+        <div className="sticky top-0 z-10 bg-background border-b p-2">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 shrink-0 opacity-50" />
+            <Input
+              ref={inputRef}
+              placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-8 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+          </div>
         </div>
-        <ScrollArea className="h-[300px] overflow-y-auto">
+        <div className="overflow-y-auto" style={{ maxHeight: '250px' }}>
           {filteredProjects.length === 0 ? (
             <div className="relative flex items-center justify-center py-4 text-sm text-muted-foreground">
               Δεν βρέθηκαν έργα.
@@ -134,7 +137,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
               </SelectItem>
             ))
           )}
-        </ScrollArea>
+        </div>
       </SelectContent>
     </Select>
   );
@@ -856,8 +859,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       }
     } catch (error) {
       console.error('Navigation error:', error);
-      toast({
-        title: "Σφάλμα",
+      toast({        title: "Σφάλμα",
         description: "Προέκυψε σφάλμα κατά την μετάβαση στο επόμενο βήμα",
         variant: "destructive"
       });
