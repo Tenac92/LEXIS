@@ -73,11 +73,12 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     }, []);
 
     const extractNA853Info = useCallback((name: string) => {
-      const match = name.match(/NA853\d+/i);
+      const match = name.match(/\d{4}NA853\d+/i);
       if (!match) return null;
       const code = match[0];
       return {
-        full: code.toLowerCase(),
+        full: code,
+        displayText: name.split(' - ').slice(1).join(' - '),
         last3: code.slice(-3),
         originalMatch: match
       };
@@ -109,10 +110,10 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
 
             // Check full NA853 code
             if (na853Info && term.includes('853')) {
-              return na853Info.full.includes(term);
+              return na853Info.full.toLowerCase().includes(term);
             }
 
-            // Check general text
+            // Check full project name
             return normalizedProjectText.includes(term);
           });
         });
@@ -148,7 +149,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
       if (selectedProject && !isFocused) {
         const na853Info = extractNA853Info(selectedProject.name);
         const displayText = na853Info ? 
-          `${na853Info.originalMatch[0]} - ${selectedProject.name.split(' - ').slice(1).join(' - ')}` :
+          `${na853Info.full} - ${na853Info.displayText}` :
           selectedProject.name;
         setSearchQuery(displayText);
       }
@@ -164,7 +165,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
         if (selectedProject && !searchQuery.trim()) {
           const na853Info = extractNA853Info(selectedProject.name);
           const displayText = na853Info ? 
-            `${na853Info.originalMatch[0]} - ${selectedProject.name.split(' - ').slice(1).join(' - ')}` :
+            `${na853Info.full} - ${na853Info.displayText}` :
             selectedProject.name;
           setSearchQuery(displayText);
         }
@@ -174,8 +175,8 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
 
     return (
       <div className="relative w-full">
-        <Command className="relative rounded-lg border shadow-md overflow-visible" ref={commandRef}>
-          <div className="flex items-center px-4 py-3 gap-3 bg-background">
+        <Command className="relative rounded-lg border shadow-md overflow-visible w-full" ref={commandRef}>
+          <div className="flex items-center px-4 py-3 gap-3 bg-background w-full">
             <Search className="h-5 w-5 shrink-0 opacity-50" />
             <CommandInput
               ref={inputRef}
@@ -184,7 +185,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
               onFocus={handleFocus}
               onBlur={handleBlur}
               placeholder="Αναζήτηση με NA853 ή όνομα έργου... (Ctrl + /)"
-              className="flex-1 bg-transparent border-0 outline-none text-base placeholder:text-muted-foreground focus:ring-0 h-auto py-1"
+              className="flex-1 bg-transparent border-0 outline-none text-base placeholder:text-muted-foreground focus:ring-0 h-auto py-1 w-full"
             />
             {isSearching && (
               <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
@@ -208,31 +209,34 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
                   </CommandEmpty>
 
                   <CommandGroup className="max-h-[300px] overflow-y-auto">
-                    {filteredProjects.map((project) => (
-                      <CommandItem
-                        key={project.id}
-                        value={project.id}
-                        onSelect={(value) => {
-                          onChange(value);
-                          setIsFocused(false);
-                        }}
-                        className={cn(
-                          "cursor-pointer py-2 px-4 hover:bg-accent",
-                          project.id === value && "bg-accent"
-                        )}
-                      >
-                        <div className="flex flex-col gap-1">
-                          {project.name.match(/NA853\d+/i) && (
-                            <Badge variant="outline" className="text-xs w-fit">
-                              NA853: {project.name.match(/NA853\d+/i)?.[0]}
-                            </Badge>
+                    {filteredProjects.map((project) => {
+                      const na853Info = extractNA853Info(project.name);
+                      return (
+                        <CommandItem
+                          key={project.id}
+                          value={project.id}
+                          onSelect={(value) => {
+                            onChange(value);
+                            setIsFocused(false);
+                          }}
+                          className={cn(
+                            "cursor-pointer py-2 px-4 hover:bg-accent",
+                            project.id === value && "bg-accent"
                           )}
-                          <span className="text-sm text-muted-foreground">
-                            {project.name.split(' - ').slice(1).join(' - ')}
-                          </span>
-                        </div>
-                      </CommandItem>
-                    ))}
+                        >
+                          <div className="flex flex-col gap-1">
+                            {na853Info && (
+                              <Badge variant="outline" className="text-xs w-fit">
+                                {na853Info.full}
+                              </Badge>
+                            )}
+                            <span className="text-sm text-muted-foreground">
+                              {na853Info ? na853Info.displayText : project.name}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 </>
               )}
