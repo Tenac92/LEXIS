@@ -21,7 +21,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import cn from 'classnames';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+//import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 // Types and Interfaces
 interface Project {
@@ -203,6 +203,84 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
+// Project selection component
+const ProjectSelect = React.forwardRef<
+  HTMLButtonElement,
+  {
+    value?: string;
+    onChange: (value: string) => void;
+    projects: Project[];
+    disabled?: boolean;
+  }
+>(({ value, onChange, projects, disabled }, ref) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const filteredProjects = projects.filter(project => {
+    if (!query) return true;
+    const searchLower = query.toLowerCase();
+
+    // Extract NA853 code from project name
+    const na853Match = project.name.match(/NA853\d+/i);
+    const na853Code = na853Match ? na853Match[0] : '';
+    const last3Digits = na853Code.slice(-3);
+
+    return (
+      project.id.toLowerCase().includes(searchLower) ||
+      project.name.toLowerCase().includes(searchLower) ||
+      last3Digits.includes(searchLower)
+    );
+  });
+
+  return (
+    <Command shouldFilter={false} className="rounded-lg border shadow-md">
+      <CommandInput 
+        placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
+        value={query}
+        onValueChange={setQuery}
+        className="border-none focus:ring-0"
+      />
+      <CommandEmpty>Δεν βρέθηκαν έργα.</CommandEmpty>
+      <CommandGroup className="max-h-[300px] overflow-y-auto">
+        {filteredProjects.map((project) => (
+          <CommandItem
+            key={project.id}
+            value={project.name}
+            onSelect={() => {
+              onChange(project.id);
+              setQuery("");
+            }}
+            className="flex flex-col gap-1 py-2 border-b last:border-0 cursor-pointer"
+          >
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-primary">MIS: {project.id}</span>
+                {project.name.match(/NA853\d+/i) && (
+                  <span className="text-sm text-muted-foreground">
+                    (NA853: {project.name.match(/NA853\d+/i)[0]})
+                  </span>
+                )}
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {project.name.split(' - ').slice(1).join(' - ')}
+              </span>
+            </div>
+            <Check
+              className={cn(
+                "ml-auto h-4 w-4",
+                project.id === value ? "opacity-100" : "opacity-0"
+              )}
+            />
+          </CommandItem>
+        ))}
+      </CommandGroup>
+    </Command>
+  );
+});
+
+ProjectSelect.displayName = "ProjectSelect";
+
+
 // Main component
 export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
@@ -329,22 +407,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     enabled: Boolean(selectedUnit)
   });
 
-  // Filter projects based on search query
-  const filteredProjects = projects.filter(project => {
-    if (!searchQuery) return true;
-    const searchLower = searchQuery.toLowerCase();
-
-    // Extract NA853 code from project name
-    const na853Match = project.name.match(/NA853\d+/i);
-    const na853Code = na853Match ? na853Match[0] : '';
-    const last3Digits = na853Code.slice(-3);
-
-    return (
-      project.id.toLowerCase().includes(searchLower) ||
-      project.name.toLowerCase().includes(searchLower) ||
-      last3Digits.includes(searchLower)
-    );
-  });
 
   const { data: budgetData, error: budgetError } = useQuery({
     queryKey: ["budget", selectedProjectId],
@@ -910,69 +972,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>Έργο</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              disabled={!selectedUnit || projectsLoading}
-                            >
-                              {field.value
-                                ? projects.find((project) => project.id === field.value)?.name
-                                : "Αναζήτηση/επιλογή έργου με MIS ή NA853..."}
-                              <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[600px] p-0">
-                          <Command>
-                            <CommandInput
-                              placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
-                              value={searchQuery}
-                              onValueChange={setSearchQuery}
-                            />
-                            <CommandEmpty>Δεν βρέθηκαν έργα.</CommandEmpty>
-                            <CommandGroup className="max-h-[300px] overflow-auto">
-                              {filteredProjects.map((project) => (
-                                <CommandItem
-                                  key={project.id}
-                                  value={project.name}
-                                  onSelect={() => {
-                                    form.setValue("project_id", project.id);
-                                  }}
-                                >
-                                  <div className="flex flex-col gap-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-medium text-primary">MIS: {project.id}</span>
-                                      {project.name.match(/NA853\d+/i) && (
-                                        <span className="text-sm text-muted-foreground">
-                                          (NA853: {project.name.match(/NA853\d+/i)[0]})
-                                        </span>
-                                      )}
-                                    </div>
-                                    <span className="text-sm text-muted-foreground">
-                                      {project.name.split(' - ').slice(1).join(' - ')}
-                                    </span>
-                                  </div>
-                                  <Check
-                                    className={cn(
-                                      "ml-auto h-4 w-4",
-                                      project.id === field.value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      <ProjectSelect
+                        value={field.value}
+                        onChange={field.onChange}
+                        projects={projects}
+                        disabled={!selectedUnit || projectsLoading}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
