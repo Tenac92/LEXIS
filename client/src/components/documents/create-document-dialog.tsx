@@ -68,17 +68,19 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     const normalizeText = useCallback((text: string) => {
       return text.toLowerCase()
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9\s]/g, "");
+        .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+        .trim();
     }, []);
 
     const extractNA853Info = useCallback((name: string) => {
-      const match = name.match(/\d{4}NA853\d+/i);
+      // Look for patterns like 2024ΝΑ85300016 or 2024NA85300016
+      const match = name.match(/\d{4}(?:NA|ΝΑ)853\d+/i);
       if (!match) return null;
       const code = match[0];
+      const parts = name.split(' - ');
       return {
         full: code,
-        displayText: name.split(' - ').slice(1).join(' - '),
+        displayText: parts.slice(1).join(' - '), // Everything after the NA853 code
         last3: code.slice(-3),
         originalMatch: match
       };
@@ -93,21 +95,27 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
           return projects;
         }
 
-        const searchTerms = debouncedSearchQuery.toLowerCase()
-          .split(/\s+/)
-          .filter(term => term.length > 0)
-          .map(normalizeText);
+        const searchTerm = normalizeText(debouncedSearchQuery);
 
         const results = projects.filter(project => {
-          const normalizedProjectText = normalizeText(project.name);
+          const na853Info = extractNA853Info(project.name);
+          const normalizedProjectName = normalizeText(project.name);
 
-          return searchTerms.every(term => {
-            // Check if the term matches any part of the project name or NA853 code
-            return normalizedProjectText.includes(term);
-          });
+          // Direct match with NA853 code
+          if (na853Info && normalizeText(na853Info.full).includes(searchTerm)) {
+            return true;
+          }
+
+          // Match with project description
+          if (na853Info && normalizeText(na853Info.displayText).includes(searchTerm)) {
+            return true;
+          }
+
+          // Match with full project name
+          return normalizedProjectName.includes(searchTerm);
         });
 
-        if (results.length === 0 && searchTerms.length > 0) {
+        if (results.length === 0) {
           setError(`Δεν βρέθηκαν έργα που να ταιριάζουν με "${debouncedSearchQuery}"`);
         }
 
@@ -119,7 +127,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
       } finally {
         setIsSearching(false);
       }
-    }, [projects, debouncedSearchQuery, normalizeText]);
+    }, [projects, debouncedSearchQuery, normalizeText, extractNA853Info]);
 
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
