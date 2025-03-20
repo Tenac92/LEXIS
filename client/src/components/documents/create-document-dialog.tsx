@@ -2,7 +2,7 @@ import * as React from "react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 
 // Constants
 const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
@@ -117,33 +118,33 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
         </div>
 
         <div className="overflow-y-auto max-h-[300px]">
-          {filteredProjects.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-              Δεν βρέθηκαν έργα
-            </div>
-          ) : (
-            filteredProjects.map((project) => (
-              <SelectItem
-                key={project.id}
-                value={project.id}
-                className="cursor-pointer border-b last:border-0"
-              >
-                <div className="flex flex-col py-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-primary">MIS: {project.id}</span>
-                    {project.name.match(/NA853\d+/i) && (
-                      <span className="text-sm text-muted-foreground">
-                        (NA853: {project.name.match(/NA853\d+/i)?.[0]})
-                      </span>
-                    )}
+          <Command>
+            <CommandInput placeholder="Αναζήτηση έργου..." className="h-9" />
+            <CommandEmpty>Δεν βρέθηκαν έργα</CommandEmpty>
+            <CommandGroup>
+              {filteredProjects.map((project) => (
+                <CommandItem
+                  key={project.id}
+                  value={project.id}
+                  onSelect={(value) => onChange(value)}
+                >
+                  <div className="flex flex-col py-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-primary">MIS: {project.id}</span>
+                      {project.name.match(/NA853\d+/i) && (
+                        <span className="text-sm text-muted-foreground">
+                          (NA853: {project.name.match(/NA853\d+/i)?.[0]})
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {project.name.split(' - ').slice(1).join(' - ')}
+                    </span>
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    {project.name.split(' - ').slice(1).join(' - ')}
-                  </span>
-                </div>
-              </SelectItem>
-            ))
-          )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </Command>
         </div>
       </SelectContent>
     </Select>
