@@ -57,6 +57,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     const { value, onChange, projects, disabled } = props;
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearching, setIsSearching] = useState(false);
+    const [isFocused, setIsFocused] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const commandRef = useRef<HTMLDivElement>(null);
@@ -123,82 +124,102 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
       return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    useEffect(() => {
+      // Reset search query when selection changes
+      if (selectedProject && !isFocused) {
+        const na853Match = selectedProject.name.match(/NA853\d+/i);
+        const displayText = na853Match ? 
+          `${na853Match[0]} - ${selectedProject.name.split(' - ').slice(1).join(' - ')}` :
+          selectedProject.name;
+        setSearchQuery(displayText);
+      }
+    }, [selectedProject, isFocused]);
+
+    const handleFocus = () => {
+      setIsFocused(true);
+      setSearchQuery('');
+    };
+
+    const handleBlur = () => {
+      setTimeout(() => {
+        if (selectedProject && !searchQuery.trim()) {
+          const na853Match = selectedProject.name.match(/NA853\d+/i);
+          const displayText = na853Match ? 
+            `${na853Match[0]} - ${selectedProject.name.split(' - ').slice(1).join(' - ')}` :
+            selectedProject.name;
+          setSearchQuery(displayText);
+        }
+        setIsFocused(false);
+      }, 200);
+    };
+
     return (
       <div className="relative w-full">
         <Command className="relative rounded-lg border shadow-md" ref={commandRef}>
-          <CommandInput
-            ref={inputRef}
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-            placeholder="Αναζήτηση με NA853 ή όνομα έργου... (Ctrl + /)"
-            className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground"
-          />
-          {isSearching && (
-            <div className="absolute right-3 top-3">
+          <div className="flex items-center px-3 py-2">
+            <Search className="h-4 w-4 shrink-0 opacity-50 mr-2" />
+            <CommandInput
+              ref={inputRef}
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              placeholder="Αναζήτηση με NA853 ή όνομα έργου... (Ctrl + /)"
+              className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground"
+            />
+            {isSearching && (
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-            </div>
-          )}
+            )}
+            <kbd className="pointer-events-none ml-2 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </div>
 
-          {error ? (
-            <div className="p-4 text-center">
-              <AlertCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">{error}</p>
-            </div>
-          ) : (
+          {isFocused && (
             <>
-              <CommandEmpty className="py-6 text-center text-sm">
-                Δεν βρέθηκαν έργα
-              </CommandEmpty>
+              {error ? (
+                <div className="p-4 text-center">
+                  <AlertCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">{error}</p>
+                </div>
+              ) : (
+                <>
+                  <CommandEmpty className="py-6 text-center text-sm">
+                    Δεν βρέθηκαν έργα
+                  </CommandEmpty>
 
-              <CommandGroup className="max-h-[300px] overflow-y-auto">
-                {filteredProjects.map((project) => (
-                  <CommandItem
-                    key={project.id}
-                    value={project.id}
-                    onSelect={onChange}
-                    className={cn(
-                      "cursor-pointer py-2 px-4 hover:bg-accent",
-                      project.id === value && "bg-accent"
-                    )}
-                  >
-                    <div className="flex flex-col gap-1">
-                      {project.name.match(/NA853\d+/i) && (
-                        <Badge variant="outline" className="text-xs w-fit">
-                          NA853: {project.name.match(/NA853\d+/i)?.[0]}
-                        </Badge>
-                      )}
-                      <span className="text-sm text-muted-foreground">
-                        {project.name.split(' - ').slice(1).join(' - ')}
-                      </span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+                  <CommandGroup className="max-h-[300px] overflow-y-auto">
+                    {filteredProjects.map((project) => (
+                      <CommandItem
+                        key={project.id}
+                        value={project.id}
+                        onSelect={(value) => {
+                          onChange(value);
+                          setIsFocused(false);
+                        }}
+                        className={cn(
+                          "cursor-pointer py-2 px-4 hover:bg-accent",
+                          project.id === value && "bg-accent"
+                        )}
+                      >
+                        <div className="flex flex-col gap-1">
+                          {project.name.match(/NA853\d+/i) && (
+                            <Badge variant="outline" className="text-xs w-fit">
+                              NA853: {project.name.match(/NA853\d+/i)?.[0]}
+                            </Badge>
+                          )}
+                          <span className="text-sm text-muted-foreground">
+                            {project.name.split(' - ').slice(1).join(' - ')}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </>
+              )}
             </>
           )}
         </Command>
-
-        {selectedProject && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-2 p-3 rounded-md bg-muted/50 border border-border"
-          >
-            {selectedProject.name.match(/NA853\d+/i) && (
-              <Badge variant="outline" className="text-xs mb-2">
-                NA853: {selectedProject.name.match(/NA853\d+/i)?.[0]}
-              </Badge>
-            )}
-            <p className="text-sm text-muted-foreground">
-              {selectedProject.name.split(' - ').slice(1).join(' - ')}
-            </p>
-          </motion.div>
-        )}
-        <div className="absolute top-3 right-3">
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-        </div>
       </div>
     );
   }
