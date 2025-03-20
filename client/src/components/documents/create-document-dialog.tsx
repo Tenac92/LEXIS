@@ -86,7 +86,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
           .map(normalizeText);
 
         const results = projects.filter(project => {
-          const normalizedProjectText = normalizeText(`${project.id} ${project.name}`);
+          const normalizedProjectText = normalizeText(`${project.name}`);
           const na853Match = project.name.match(/NA853\d+/i);
           const na853Code = na853Match ? normalizeText(na853Match[0]) : '';
 
@@ -124,21 +124,20 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     }, []);
 
     return (
-      <div className="relative w-full space-y-2">
+      <div className="relative w-full">
         <Command className="relative rounded-lg border shadow-md" ref={commandRef}>
-          <div className="flex items-center border-b px-3 py-2">
-            <Search className="h-4 w-4 shrink-0 opacity-50 mr-2" />
-            <CommandInput
-              ref={inputRef}
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-              placeholder="Αναζήτηση με MIS, NA853 ή όνομα έργου... (Ctrl + /)"
-              className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground"
-            />
-            {isSearching && (
+          <CommandInput
+            ref={inputRef}
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+            placeholder="Αναζήτηση με NA853 ή όνομα έργου... (Ctrl + /)"
+            className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground"
+          />
+          {isSearching && (
+            <div className="absolute right-3 top-3">
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-            )}
-          </div>
+            </div>
+          )}
 
           {error ? (
             <div className="p-4 text-center">
@@ -163,15 +162,12 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
                     )}
                   >
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">MIS: {project.id}</span>
-                        {project.name.match(/NA853\d+/i) && (
-                          <Badge variant="outline" className="text-xs">
-                            NA853: {project.name.match(/NA853\d+/i)?.[0]}
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="text-sm text-muted-foreground truncate">
+                      {project.name.match(/NA853\d+/i) && (
+                        <Badge variant="outline" className="text-xs w-fit">
+                          NA853: {project.name.match(/NA853\d+/i)?.[0]}
+                        </Badge>
+                      )}
+                      <span className="text-sm text-muted-foreground">
                         {project.name.split(' - ').slice(1).join(' - ')}
                       </span>
                     </div>
@@ -186,24 +182,19 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-3 rounded-md bg-muted/50 border border-border"
+            className="mt-2 p-3 rounded-md bg-muted/50 border border-border"
           >
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Επιλεγμένο έργο:</span>
-              <span>MIS: {selectedProject.id}</span>
-              {selectedProject.name.match(/NA853\d+/i) && (
-                <Badge variant="outline" className="text-xs">
-                  NA853: {selectedProject.name.match(/NA853\d+/i)?.[0]}
-                </Badge>
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground mt-1 truncate">
+            {selectedProject.name.match(/NA853\d+/i) && (
+              <Badge variant="outline" className="text-xs mb-2">
+                NA853: {selectedProject.name.match(/NA853\d+/i)?.[0]}
+              </Badge>
+            )}
+            <p className="text-sm text-muted-foreground">
               {selectedProject.name.split(' - ').slice(1).join(' - ')}
             </p>
           </motion.div>
         )}
-
-        <div className="absolute bottom-full right-0 mb-2">
+        <div className="absolute top-3 right-3">
           <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
             <span className="text-xs">⌘</span>K
           </kbd>
