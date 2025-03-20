@@ -20,6 +20,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import cn from 'classnames';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 // Types and Interfaces
 interface Project {
@@ -902,45 +904,49 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               )}
 
               <div className="grid gap-4">
-                  <FormField
-                    control={form.control}
-                    name="project_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Έργο</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={!selectedUnit || projectsLoading}
-                        >
+                <FormField
+                  control={form.control}
+                  name="project_id"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Έργο</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
                           <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Αναζήτηση/επιλογή έργου με MIS ή NA853..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="max-h-[300px]">
-                            <div className="relative">
-                              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-8 h-9 mb-2"
-                              />
-                            </div>
-                            <ScrollArea className="max-h-[200px]">
-                              {!filteredProjects.length && (
-                                <div className="py-6 text-center text-sm text-muted-foreground">
-                                  Δεν βρέθηκαν έργα
-                                </div>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn(
+                                "w-full justify-between",
+                                !field.value && "text-muted-foreground"
                               )}
+                              disabled={!selectedUnit || projectsLoading}
+                            >
+                              {field.value
+                                ? projects.find((project) => project.id === field.value)?.name
+                                : "Αναζήτηση/επιλογή έργου με MIS ή NA853..."}
+                              <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[600px] p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
+                              value={searchQuery}
+                              onValueChange={setSearchQuery}
+                            />
+                            <CommandEmpty>Δεν βρέθηκαν έργα.</CommandEmpty>
+                            <CommandGroup className="max-h-[300px] overflow-auto">
                               {filteredProjects.map((project) => (
-                                <SelectItem
+                                <CommandItem
                                   key={project.id}
-                                  value={project.id}
-                                  className="flex flex-col py-2 border-b last:border-0"
+                                  value={project.name}
+                                  onSelect={() => {
+                                    form.setValue("project_id", project.id);
+                                  }}
                                 >
-                                  <div className="flex flex-col">
+                                  <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium text-primary">MIS: {project.id}</span>
                                       {project.name.match(/NA853\d+/i) && (
@@ -953,15 +959,24 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                       {project.name.split(' - ').slice(1).join(' - ')}
                                     </span>
                                   </div>
-                                </SelectItem>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto h-4 w-4",
+                                      project.id === field.value
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                </CommandItem>
                               ))}
-                            </ScrollArea>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="region"
