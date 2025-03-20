@@ -8,26 +8,41 @@ import { securityHeaders } from "./middleware/securityHeaders";
 import { setupAuth, sessionMiddleware } from './auth';
 import { createWebSocketServer } from './websocket';
 
-// Add global error handlers
+// Enhanced error handlers
 process.on('uncaughtException', (error) => {
   console.error('[Fatal] Uncaught Exception:', error);
+  // Log additional context if available
+  if (error.stack) {
+    console.error('[Fatal] Stack trace:', error.stack);
+  }
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('[Fatal] Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('[Fatal] Unhandled Rejection at:', {
+    promise,
+    reason: reason instanceof Error ? {
+      message: reason.message,
+      stack: reason.stack
+    } : reason
+  });
   process.exit(1);
 });
 
 console.log('[Startup] Beginning server initialization');
 
-// Verify required environment variables
-const requiredEnvVars = ['DATABASE_URL', 'SUPABASE_URL', 'SUPABASE_ANON_KEY'];
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    console.error(`Missing required environment variable: ${envVar}`);
-    process.exit(1);
-  }
+// Verify required environment variables with detailed logging
+const requiredEnvVars = [
+  'DATABASE_URL',
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'SESSION_SECRET'
+];
+
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingVars.length > 0) {
+  console.error('[Fatal] Missing required environment variables:', missingVars);
+  process.exit(1);
 }
 
 console.log('[Startup] Environment variables validated');
@@ -40,38 +55,47 @@ async function startServer() {
     const app = express();
     console.log('[Startup] Express app created');
 
-    // Enable trust proxy - Required for running behind proxies in production
+    // Enable trust proxy with detailed logging
     app.set('trust proxy', 1);
-    console.log('[Startup] Trust proxy enabled');
+    console.log('[Startup] Trust proxy enabled with level:', app.get('trust proxy'));
 
-    // Security headers
+    // Apply security headers
     app.use(securityHeaders);
+    console.log('[Startup] Security headers applied');
 
-    // Body parsing middleware
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: false }));
+    // Body parsing middleware with size limits
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+    console.log('[Startup] Body parsing middleware configured');
 
     // Session middleware must be applied before any routes
     app.use(sessionMiddleware);
-    console.log('[Startup] Core middleware initialized');
+    console.log('[Startup] Session middleware initialized');
 
-    // Serve static files from the public directory
-    app.use(express.static(join(__dirname, '../client/public')));
+    // Serve static files with proper security headers
+    app.use(express.static(join(__dirname, '../client/public'), {
+      maxAge: '1d',
+      setHeaders: (res) => {
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+      }
+    }));
 
-    // Request logging middleware
+    // Enhanced request logging middleware
     app.use((req, res, next) => {
       const start = Date.now();
       const path = req.path;
       const ip = req.ip;
+      const method = req.method;
 
-      if (req.path.startsWith('/api')) {
-        log(`[Request] ${req.method} ${path} from ${ip}`);
+      if (path.startsWith('/api')) {
+        log(`[Request] ${method} ${path} from ${ip}`);
+        console.log('[Request] Headers:', req.headers);
       }
 
       res.on("finish", () => {
         const duration = Date.now() - start;
         if (path.startsWith("/api")) {
-          log(`${req.method} ${path} ${res.statusCode} in ${duration}ms`);
+          log(`${method} ${path} ${res.statusCode} in ${duration}ms`);
         }
       });
 
@@ -80,71 +104,110 @@ async function startServer() {
 
     console.log('[Startup] Request logging middleware configured');
 
-    // Setup authentication before registering other routes
-    console.log('[Startup] Setting up authentication...');
-    await setupAuth(app);
-    console.log('[Startup] Authentication setup complete');
-
-    // Register API routes
-    console.log('[Startup] Registering routes...');
-    const server = await registerRoutes(app);
-    console.log('[Startup] Routes registered successfully');
-
-    // Error handling middleware
-    app.use(errorMiddleware);
-
-    // Create WebSocket server
-    const wss = createWebSocketServer(server);
-    console.log('[Startup] WebSocket server initialized on /ws');
-
-    // Setup Vite or serve static files
-    if (app.get("env") === "development") {
-      console.log('[Startup] Setting up Vite development server...');
-      await setupVite(app, server);
-      console.log('[Startup] Vite setup complete');
-    } else {
-      serveStatic(app);
+    // Setup authentication with enhanced error handling
+    try {
+      console.log('[Startup] Setting up authentication...');
+      await setupAuth(app);
+      console.log('[Startup] Authentication setup complete');
+    } catch (authError) {
+      console.error('[Fatal] Authentication setup failed:', authError);
+      throw authError;
     }
 
-    // Catch-all route for SPA
-    app.get('*', (req, res) => {
-      res.sendFile(join(__dirname, '../client/index.html'));
-    });
+    // Register API routes with enhanced error handling
+    try {
+      console.log('[Startup] Registering routes...');
+      const server = await registerRoutes(app);
+      console.log('[Startup] Routes registered successfully');
 
-    // ALWAYS serve the app on port 5000
-    const PORT = 5000;
-    const HOST = '0.0.0.0'; // Bind to all network interfaces
+      // Error handling middleware
+      app.use(errorMiddleware);
 
-    // Start the server
-    return new Promise((resolve, reject) => {
+      // Create WebSocket server with error handling
       try {
-        const serverInstance = server.listen(PORT, HOST, () => {
-          console.log(`[Startup] Server running at http://${HOST}:${PORT}`);
-          resolve(serverInstance);
-        });
-
-        // Add error handler for the server
-        serverInstance.on('error', (error: any) => {
-          if (error.code === 'EADDRINUSE') {
-            console.error(`[Error] Port ${PORT} is already in use`);
-            reject(error);
-          }
-          console.error('[Error] Server error:', error);
-          reject(error);
-        });
-      } catch (error) {
-        console.error('[Error] Failed to start server:', error);
-        reject(error);
+        const wss = createWebSocketServer(server);
+        console.log('[Startup] WebSocket server initialized on /ws');
+      } catch (wsError) {
+        console.error('[Warning] WebSocket server initialization failed:', wsError);
+        // Continue without WebSocket support
       }
-    });
+
+      // Setup Vite or serve static files
+      if (app.get("env") === "development") {
+        console.log('[Startup] Setting up Vite development server...');
+        await setupVite(app, server);
+        console.log('[Startup] Vite setup complete');
+      } else {
+        serveStatic(app);
+      }
+
+      // Catch-all route for SPA with proper content headers
+      app.get('*', (req, res) => {
+        res.setHeader('Content-Type', 'text/html');
+        res.sendFile(join(__dirname, '../client/index.html'));
+      });
+
+      // ALWAYS serve the app on port 5000
+      const PORT = 5000;
+      const HOST = '0.0.0.0'; // Bind to all network interfaces
+
+      // Start the server with enhanced error handling
+      return new Promise((resolve, reject) => {
+        try {
+          const serverInstance = server.listen(PORT, HOST, () => {
+            console.log(`[Startup] Server running at http://${HOST}:${PORT}`);
+            console.log('[Startup] Environment:', app.get('env'));
+            console.log('[Startup] Node version:', process.version);
+            resolve(serverInstance);
+          });
+
+          // Add error handler for the server
+          serverInstance.on('error', (error: any) => {
+            if (error.code === 'EADDRINUSE') {
+              console.error(`[Fatal] Port ${PORT} is already in use`);
+              reject(error);
+            } else {
+              console.error('[Fatal] Server error:', {
+                code: error.code,
+                message: error.message,
+                stack: error.stack
+              });
+              reject(error);
+            }
+          });
+
+          // Handle graceful shutdown
+          process.on('SIGTERM', () => {
+            console.log('[Shutdown] Received SIGTERM signal');
+            serverInstance.close(() => {
+              console.log('[Shutdown] Server closed');
+              process.exit(0);
+            });
+          });
+
+        } catch (error) {
+          console.error('[Fatal] Failed to start server:', error);
+          reject(error);
+        }
+      });
+
+    } catch (routesError) {
+      console.error('[Fatal] Routes registration failed:', routesError);
+      throw routesError;
+    }
 
   } catch (error) {
-    console.error('[Error] Failed to start server:', error);
+    console.error('[Fatal] Server initialization failed:', error);
     throw error;
   }
 }
 
+// Start server with comprehensive error handling
 startServer().catch((error) => {
-  console.error('[Error] Failed to start server:', error);
+  console.error('[Fatal] Failed to start server:', {
+    message: error.message,
+    stack: error.stack,
+    cause: error.cause
+  });
   process.exit(1);
 });

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticateToken } from "../middleware/authMiddleware";
 import { storage } from "../storage";
 
-const router = Router();
+export const router = Router();
 
 router.get("/", authenticateToken, async (req, res) => {
   try {
@@ -19,7 +19,10 @@ router.get("/", authenticateToken, async (req, res) => {
     res.json(formattedUnits);
   } catch (error) {
     console.error("Error fetching units:", error);
-    res.status(500).json({ error: "Failed to fetch units" });
+    res.status(500).json({ 
+      message: "Failed to fetch units",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
