@@ -100,20 +100,9 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
 
         const results = projects.filter(project => {
           const normalizedProjectText = normalizeText(project.name);
-          const na853Info = extractNA853Info(project.name);
 
           return searchTerms.every(term => {
-            // Check if term matches last 3 digits of NA853
-            if (na853Info && term.length <= 3) {
-              return na853Info.last3.includes(term);
-            }
-
-            // Check full NA853 code
-            if (na853Info && term.includes('853')) {
-              return na853Info.full.toLowerCase().includes(term);
-            }
-
-            // Check full project name
+            // Check if the term matches any part of the project name or NA853 code
             return normalizedProjectText.includes(term);
           });
         });
@@ -130,7 +119,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
       } finally {
         setIsSearching(false);
       }
-    }, [projects, debouncedSearchQuery, normalizeText, extractNA853Info]);
+    }, [projects, debouncedSearchQuery, normalizeText]);
 
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -148,7 +137,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
       // Reset search query when selection changes
       if (selectedProject && !isFocused) {
         const na853Info = extractNA853Info(selectedProject.name);
-        const displayText = na853Info ? 
+        const displayText = na853Info ?
           `${na853Info.full} - ${na853Info.displayText}` :
           selectedProject.name;
         setSearchQuery(displayText);
@@ -164,7 +153,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
       setTimeout(() => {
         if (selectedProject && !searchQuery.trim()) {
           const na853Info = extractNA853Info(selectedProject.name);
-          const displayText = na853Info ? 
+          const displayText = na853Info ?
             `${na853Info.full} - ${na853Info.displayText}` :
             selectedProject.name;
           setSearchQuery(displayText);
@@ -175,7 +164,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
 
     return (
       <div className="relative w-full">
-        <Command className="relative rounded-lg border shadow-md overflow-visible w-full" ref={commandRef}>
+        <Command className="relative rounded-lg border shadow-md w-full overflow-visible" ref={commandRef}>
           <div className="flex items-center px-4 py-3 gap-3 bg-background w-full">
             <Search className="h-5 w-5 shrink-0 opacity-50" />
             <CommandInput
@@ -211,6 +200,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
                   <CommandGroup className="max-h-[300px] overflow-y-auto">
                     {filteredProjects.map((project) => {
                       const na853Info = extractNA853Info(project.name);
+                      const displayName = na853Info ? na853Info.displayText : project.name;
                       return (
                         <CommandItem
                           key={project.id}
@@ -220,18 +210,16 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
                             setIsFocused(false);
                           }}
                           className={cn(
-                            "cursor-pointer py-2 px-4 hover:bg-accent",
+                            "cursor-pointer py-3 px-4 hover:bg-accent",
                             project.id === value && "bg-accent"
                           )}
                         >
-                          <div className="flex flex-col gap-1">
-                            {na853Info && (
-                              <Badge variant="outline" className="text-xs w-fit">
-                                {na853Info.full}
-                              </Badge>
-                            )}
-                            <span className="text-sm text-muted-foreground">
-                              {na853Info ? na853Info.displayText : project.name}
+                          <div className="flex flex-col gap-1 w-full">
+                            <Badge variant="outline" className="text-xs w-fit mb-1">
+                              {na853Info?.full || project.id}
+                            </Badge>
+                            <span className="text-sm">
+                              {displayName}
                             </span>
                           </div>
                         </CommandItem>
@@ -562,7 +550,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
           return {
             id: String(item.mis),
-            name: `${String(item.mis)} - ${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
+            name: `${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
             expenditure_types: expenditureTypes || []
           };
         });
@@ -857,7 +845,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     }
   };
 
-  const addRecipient = ()=> {
+  const addRecipient = () => {
     const currentRecipients = form.watch("recipients") || [];
     if (currentRecipients.length >= 10) {
       toast({
