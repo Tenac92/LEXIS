@@ -109,102 +109,99 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   };
 
   return (
-    <Link href={`/projects/${project.mis}`} key={project.id}>
-      <Card className={`transition-shadow hover:shadow-lg ${view === "list" ? "flex" : ""} cursor-pointer`}>
-        <CardContent 
-          className={`p-6 ${view === "list" ? "flex-1" : ""}`} 
-          onClick={(e) => {
-            // Prevent triggering card click when clicking on the admin buttons
-            if ((e.target as HTMLElement).closest('.admin-actions')) {
-              e.preventDefault();
-            }
-          }}
-        >
-          <div className="mb-4">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="line-clamp-2 text-lg font-bold">
-                {project.event_description || project.project_title || "Untitled Project"}
-              </h3>
-              <Badge variant="secondary" className={getStatusColor(project.status || '')}>
-                {getStatusText(project.status || '')}
-              </Badge>
-            </div>
+    <Card className={`transition-shadow hover:shadow-lg ${view === "list" ? "flex" : ""} cursor-pointer`}>
+      <CardContent 
+        className={`p-6 ${view === "list" ? "flex-1" : ""}`} 
+        onClick={(e) => {
+          if ((e.target as HTMLElement).closest('.admin-actions')) {
+            e.preventDefault();
+          }
+        }}
+      >
+        <div className="mb-4">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="line-clamp-2 text-lg font-bold">
+              {project.event_description || project.project_title || "Untitled Project"}
+            </h3>
+            <Badge variant="secondary" className={getStatusColor(project.status || '')}>
+              {getStatusText(project.status || '')}
+            </Badge>
+          </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+          <div className="mt-4 grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Calendar className="mr-2 h-4 w-4" />
+                Created: {new Date(project.created_at || '').toLocaleDateString('el-GR')}
+              </div>
+              {project.region && (
                 <div className="flex items-center text-sm text-muted-foreground">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Created: {new Date(project.created_at || '').toLocaleDateString('el-GR')}
+                  <MapPin className="mr-2 h-4 w-4" />
+                  {getRegionText(project)}
                 </div>
-                {project.region && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <MapPin className="mr-2 h-4 w-4" />
-                    {getRegionText(project)}
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <div className="font-medium">
-                  Budget NA853: {formatCurrency(Number(project.budget_na853))}
-                </div>
-                {project.budget_na271 && (
-                  <div className="text-sm text-muted-foreground">
-                    Budget NA271: {formatCurrency(Number(project.budget_na271))}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="rounded bg-gray-50 p-2">
-                <div className="text-xs text-gray-500">MIS</div>
-                <div className="font-medium">{project.mis || "N/A"}</div>
+            <div className="space-y-2">
+              <div className="font-medium">
+                Budget NA853: {formatCurrency(Number(project.budget_na853))}
               </div>
-              <div className="rounded bg-gray-50 p-2">
-                <div className="text-xs text-gray-500">NA853</div>
-                <div className="font-medium">{project.na853 || "N/A"}</div>
-              </div>
+              {project.budget_na271 && (
+                <div className="text-sm text-muted-foreground">
+                  Budget NA271: {formatCurrency(Number(project.budget_na271))}
+                </div>
+              )}
             </div>
           </div>
-        </CardContent>
 
-        {isAdmin && (
-          <CardFooter className="flex justify-end gap-2 border-t p-4 admin-actions" onClick={e => e.preventDefault()}>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded bg-gray-50 p-2">
+              <div className="text-xs text-gray-500">MIS</div>
+              <div className="font-medium">{project.mis || "N/A"}</div>
+            </div>
+            <div className="rounded bg-gray-50 p-2">
+              <div className="text-xs text-gray-500">NA853</div>
+              <div className="font-medium">{project.na853 || "N/A"}</div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+
+      {isAdmin && (
+        <CardFooter className="flex justify-end gap-2 border-t p-4 admin-actions">
+          <Button variant="outline" size="sm" asChild>
             <Link href={`/projects/${project.mis}/edit`}>
-              <Button variant="outline" size="sm">
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
             </Link>
+          </Button>
 
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="mr-2 h-4 w-4" />
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this project? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => deleteMutation.mutate()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
                   Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Project</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this project? This action cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteMutation.mutate()}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardFooter>
-        )}
-      </Card>
-    </Link>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardFooter>
+      )}
+    </Card>
   );
 }

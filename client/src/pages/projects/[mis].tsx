@@ -14,33 +14,39 @@ export default function ProjectDetailsPage() {
   const isAdmin = user?.role === 'admin';
 
   const { data: project, isLoading, error } = useQuery<Project>({
-    queryKey: [`/api/projects/${mis}`],
+    queryKey: ["/api/projects", mis], // Updated query key to match API structure
     enabled: !!mis
   });
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
       </div>
     );
   }
 
   if (error || !project) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold">Project Not Found</h1>
-            <Button variant="outline" asChild>
-              <Link href="/projects">Back to Projects</Link>
-            </Button>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto py-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold">Project Not Found</h1>
+              <Button variant="outline" asChild>
+                <Link href="/projects">Back to Projects</Link>
+              </Button>
+            </div>
+            <Card className="p-6 bg-red-50">
+              <p className="text-red-600">
+                The requested project could not be found or you don't have permission to view it.
+              </p>
+            </Card>
           </div>
-          <Card className="p-6 bg-red-50">
-            <p className="text-red-600">
-              The requested project could not be found or you don't have permission to view it.
-            </p>
-          </Card>
         </div>
       </div>
     );
