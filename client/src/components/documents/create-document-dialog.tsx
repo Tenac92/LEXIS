@@ -19,9 +19,85 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import cn from 'classnames';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
-//import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+
+// Project selection component
+const ProjectSelect = React.forwardRef<
+  HTMLDivElement,
+  {
+    value?: string;
+    onChange: (value: string) => void;
+    projects: Project[];
+    disabled?: boolean;
+  }
+>(({ value, onChange, projects, disabled }, ref) => {
+  const [inputValue, setInputValue] = useState("");
+
+  const filteredProjects = projects.filter(project => {
+    if (!inputValue) return true;
+    const searchLower = inputValue.toLowerCase();
+
+    // Extract NA853 code from project name
+    const na853Match = project.name.match(/NA853\d+/i);
+    const na853Code = na853Match ? na853Match[0] : '';
+    const last3Digits = na853Code.slice(-3);
+
+    return (
+      project.id.toLowerCase().includes(searchLower) ||
+      project.name.toLowerCase().includes(searchLower) ||
+      last3Digits.includes(searchLower)
+    );
+  });
+
+  return (
+    <Command ref={ref} className="relative rounded-lg border shadow-md">
+      <CommandInput
+        placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
+        value={inputValue}
+        onValueChange={setInputValue}
+        disabled={disabled}
+        className="border-0"
+      />
+      <CommandEmpty>Δεν βρέθηκαν έργα.</CommandEmpty>
+      <CommandGroup className="max-h-[300px] overflow-y-auto">
+        {filteredProjects.map((project) => (
+          <CommandItem
+            key={project.id}
+            value={project.name}
+            onSelect={() => {
+              onChange(project.id);
+              setInputValue("");
+            }}
+            className="flex flex-col gap-1 py-2 px-4 border-b last:border-0 cursor-pointer"
+          >
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-primary">MIS: {project.id}</span>
+                {project.name.match(/NA853\d+/i) && (
+                  <span className="text-sm text-muted-foreground">
+                    (NA853: {project.name.match(/NA853\d+/i)[0]})
+                  </span>
+                )}
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {project.name.split(' - ').slice(1).join(' - ')}
+              </span>
+            </div>
+            <Check
+              className={cn(
+                "ml-auto h-4 w-4",
+                project.id === value ? "opacity-100" : "opacity-0"
+              )}
+            />
+          </CommandItem>
+        ))}
+      </CommandGroup>
+    </Command>
+  );
+});
+
+ProjectSelect.displayName = "ProjectSelect";
 
 // Types and Interfaces
 interface Project {
@@ -55,29 +131,6 @@ const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ',
 const DKA_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ'];
 const ALL_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
 
-// Schemas
-const recipientSchema = z.object({
-  firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-  lastname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-  fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-  afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
-  amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
-  installment: z.string().optional(),
-});
-
-const createDocumentSchema = z.object({
-  unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
-  project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
-  region: z.string().min(1, "Η περιφέρεια είναι υποχρεωτική"),
-  expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
-  recipients: z.array(recipientSchema).optional().default([]),
-  total_amount: z.number().optional(),
-  status: z.string().default("draft"),
-  selectedAttachments: z.array(z.string()).optional().default([])
-});
-
-type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
-
 // Supabase setup
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
@@ -91,6 +144,12 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: false
   }
 });
+
+// Fix the region array code
+const regionArray = (data: any) => {
+  if (!data?.region?.region) return [];
+  return data.region.region || [];
+};
 
 // Animation variants
 const stepVariants = {
@@ -203,90 +262,35 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
-// Project selection component
-const ProjectSelect = React.forwardRef<
-  HTMLButtonElement,
-  {
-    value?: string;
-    onChange: (value: string) => void;
-    projects: Project[];
-    disabled?: boolean;
-  }
->(({ value, onChange, projects, disabled }, ref) => {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
 
-  const filteredProjects = projects.filter(project => {
-    if (!query) return true;
-    const searchLower = query.toLowerCase();
-
-    // Extract NA853 code from project name
-    const na853Match = project.name.match(/NA853\d+/i);
-    const na853Code = na853Match ? na853Match[0] : '';
-    const last3Digits = na853Code.slice(-3);
-
-    return (
-      project.id.toLowerCase().includes(searchLower) ||
-      project.name.toLowerCase().includes(searchLower) ||
-      last3Digits.includes(searchLower)
-    );
-  });
-
-  return (
-    <Command shouldFilter={false} className="rounded-lg border shadow-md">
-      <CommandInput 
-        placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
-        value={query}
-        onValueChange={setQuery}
-        className="border-none focus:ring-0"
-      />
-      <CommandEmpty>Δεν βρέθηκαν έργα.</CommandEmpty>
-      <CommandGroup className="max-h-[300px] overflow-y-auto">
-        {filteredProjects.map((project) => (
-          <CommandItem
-            key={project.id}
-            value={project.name}
-            onSelect={() => {
-              onChange(project.id);
-              setQuery("");
-            }}
-            className="flex flex-col gap-1 py-2 border-b last:border-0 cursor-pointer"
-          >
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-primary">MIS: {project.id}</span>
-                {project.name.match(/NA853\d+/i) && (
-                  <span className="text-sm text-muted-foreground">
-                    (NA853: {project.name.match(/NA853\d+/i)[0]})
-                  </span>
-                )}
-              </div>
-              <span className="text-sm text-muted-foreground">
-                {project.name.split(' - ').slice(1).join(' - ')}
-              </span>
-            </div>
-            <Check
-              className={cn(
-                "ml-auto h-4 w-4",
-                project.id === value ? "opacity-100" : "opacity-0"
-              )}
-            />
-          </CommandItem>
-        ))}
-      </CommandGroup>
-    </Command>
-  );
+// Schemas
+const recipientSchema = z.object({
+  firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  lastname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
+  amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
+  installment: z.string().optional(),
 });
 
-ProjectSelect.displayName = "ProjectSelect";
+const createDocumentSchema = z.object({
+  unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
+  project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
+  region: z.string().min(1, "Η περιφέρεια είναι υποχρεωτική"),
+  expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
+  recipients: z.array(recipientSchema).optional().default([]),
+  total_amount: z.number().optional(),
+  status: z.string().default("draft"),
+  selectedAttachments: z.array(z.string()).optional().default([])
+});
 
+type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
 // Main component
 export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -889,12 +893,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         }
 
         if (!data?.region?.region) return [];
-
-        const regionArray = data.region.region || [];
+        const regionArrayData = regionArray(data);
         const municipalityArray = data.region.municipality || [];
         const regionalUnitArray = data.region.regional_unit || [];
 
-        return regionArray.map((region: string, index: number) => ({
+        return regionArrayData.map((region: string, index: number) => ({
           id: region,
           name: region,
           municipality: municipalityArray[index] || '',
