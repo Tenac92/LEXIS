@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -41,62 +41,98 @@ interface ProjectSelectProps {
   disabled?: boolean;
 }
 
+function useDebounce<T>(value: T, delay?: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay || 500);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
   function ProjectSelect(props, ref) {
     const { value, onChange, projects, disabled } = props;
-    const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearching, setIsSearching] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const commandRef = useRef<HTMLDivElement>(null);
 
+    const debouncedSearchQuery = useDebounce(searchQuery, 300);
     const selectedProject = projects.find(project => project.id === value);
 
-    useEffect(() => {
-      if (open && inputRef.current) {
-        inputRef.current.focus();
-      } else {
-        setSearchQuery("");
-      }
-    }, [open]);
+    const normalizeText = useCallback((text: string) => {
+      return text.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s]/g, "");
+    }, []);
 
     const filteredProjects = useMemo(() => {
       setIsSearching(true);
+      setError(null);
+
       try {
-        if (!searchQuery.trim()) {
+        if (!debouncedSearchQuery.trim()) {
           return projects;
         }
 
-        const searchTerms = searchQuery.toLowerCase().split(/\s+/);
+        const searchTerms = debouncedSearchQuery.toLowerCase()
+          .split(/\s+/)
+          .filter(term => term.length > 0)
+          .map(normalizeText);
 
-        return projects.filter(project => {
-          const projectText = `${project.id} ${project.name}`.toLowerCase();
+        const results = projects.filter(project => {
+          const normalizedProjectText = normalizeText(`${project.id} ${project.name}`);
           const na853Match = project.name.match(/NA853\d+/i);
-          const na853Code = na853Match ? na853Match[0].toLowerCase() : '';
+          const na853Code = na853Match ? normalizeText(na853Match[0]) : '';
 
           return searchTerms.every(term =>
-            projectText.includes(term) ||
+            normalizedProjectText.includes(term) ||
             na853Code.includes(term) ||
             na853Code.slice(-3).includes(term)
           );
         });
+
+        if (results.length === 0 && searchTerms.length > 0) {
+          setError(`Δεν βρέθηκαν έργα που να ταιριάζουν με "${debouncedSearchQuery}"`);
+        }
+
+        return results;
       } catch (error) {
         console.error('Search error:', error);
+        setError('Σφάλμα κατά την αναζήτηση');
         return projects;
       } finally {
         setIsSearching(false);
       }
-    }, [projects, searchQuery]);
+    }, [projects, debouncedSearchQuery, normalizeText]);
+
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === '/' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     return (
-      <div className="relative w-full">
-        <Command className="relative">
-          <div className="flex items-center border rounded-md px-3 py-2 w-full">
+      <div className="relative w-full space-y-2">
+        <Command className="relative rounded-lg border shadow-md" ref={commandRef}>
+          <div className="flex items-center border-b px-3 py-2">
             <Search className="h-4 w-4 shrink-0 opacity-50 mr-2" />
             <CommandInput
               ref={inputRef}
               value={searchQuery}
               onValueChange={setSearchQuery}
-              placeholder="Αναζήτηση με MIS, NA853 ή όνομα έργου..."
+              placeholder="Αναζήτηση με MIS, NA853 ή όνομα έργου... (Ctrl + /)"
               className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground"
             />
             {isSearching && (
@@ -104,38 +140,54 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
             )}
           </div>
 
-          <CommandEmpty className="py-6 text-center text-sm">
-            Δεν βρέθηκαν έργα
-          </CommandEmpty>
+          {error ? (
+            <div className="p-4 text-center">
+              <AlertCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">{error}</p>
+            </div>
+          ) : (
+            <>
+              <CommandEmpty className="py-6 text-center text-sm">
+                Δεν βρέθηκαν έργα
+              </CommandEmpty>
 
-          <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {filteredProjects.map((project) => (
-              <CommandItem
-                key={project.id}
-                value={project.id}
-                onSelect={onChange}
-                className="cursor-pointer py-2 px-4 hover:bg-accent"
-              >
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">MIS: {project.id}</span>
-                    {project.name.match(/NA853\d+/i) && (
-                      <Badge variant="outline" className="text-xs">
-                        NA853: {project.name.match(/NA853\d+/i)?.[0]}
-                      </Badge>
+              <CommandGroup className="max-h-[300px] overflow-y-auto">
+                {filteredProjects.map((project) => (
+                  <CommandItem
+                    key={project.id}
+                    value={project.id}
+                    onSelect={onChange}
+                    className={cn(
+                      "cursor-pointer py-2 px-4 hover:bg-accent",
+                      project.id === value && "bg-accent"
                     )}
-                  </div>
-                  <span className="text-sm text-muted-foreground truncate">
-                    {project.name.split(' - ').slice(1).join(' - ')}
-                  </span>
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">MIS: {project.id}</span>
+                        {project.name.match(/NA853\d+/i) && (
+                          <Badge variant="outline" className="text-xs">
+                            NA853: {project.name.match(/NA853\d+/i)?.[0]}
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-sm text-muted-foreground truncate">
+                        {project.name.split(' - ').slice(1).join(' - ')}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
+          )}
         </Command>
 
         {selectedProject && (
-          <div className="mt-2 p-2 rounded-md bg-muted/50">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-3 rounded-md bg-muted/50 border border-border"
+          >
             <div className="flex items-center gap-2">
               <span className="font-medium">Επιλεγμένο έργο:</span>
               <span>MIS: {selectedProject.id}</span>
@@ -148,8 +200,14 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
             <p className="text-sm text-muted-foreground mt-1 truncate">
               {selectedProject.name.split(' - ').slice(1).join(' - ')}
             </p>
-          </div>
+          </motion.div>
         )}
+
+        <div className="absolute bottom-full right-0 mb-2">
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </div>
       </div>
     );
   }
@@ -879,7 +937,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     } catch (error) {
       console.error('Navigation error:', error);
       toast({
-        title: "Σφάλμα",        description: "Προέκυψε σφάλμα κατά την μετάβαση στο επόμενο βήμα",
+        title: "Σφάλμα", description: "Προέκυψε σφάλμα κατά την μετάβαση στο επόμενο βήμα",
         variant: "destructive"
       });
     }
