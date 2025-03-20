@@ -81,7 +81,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
       return {
         full: code,
         displayText: parts.slice(1).join(' - '), // Everything after the NA853 code
-        last3: code.slice(-3),
+        numbers: code.replace(/\D/g, ''), // Extract all numbers from the code
         originalMatch: match
       };
     }, []);
@@ -98,15 +98,26 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
         const searchTerm = normalizeText(debouncedSearchQuery);
         const isNumericSearch = /^\d+$/.test(searchTerm); // Check if search is only numbers
 
+        console.log('Search debug:', {
+          searchTerm,
+          isNumericSearch,
+          projectCount: projects.length
+        });
+
         const results = projects.filter(project => {
           const na853Info = extractNA853Info(project.name);
           const normalizedProjectName = normalizeText(project.name);
 
-          // For numeric searches, check if it matches the end of NA853 code
+          // For numeric searches, match anywhere in the NA853 numbers
           if (isNumericSearch && na853Info) {
-            // Extract the numeric part from the end of the NA853 code
-            const na853Numbers = na853Info.full.match(/\d+$/)?.[0] || '';
-            if (na853Numbers.endsWith(searchTerm)) {
+            const allNumbers = na853Info.numbers;
+            console.log('Numeric search:', {
+              projectName: project.name,
+              allNumbers,
+              searchTerm,
+              matches: allNumbers.includes(searchTerm)
+            });
+            if (allNumbers.includes(searchTerm)) {
               return true;
             }
           }
@@ -123,6 +134,12 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
 
           // Match with full project name
           return normalizedProjectName.includes(searchTerm);
+        });
+
+        console.log('Search results:', {
+          searchTerm,
+          resultCount: results.length,
+          results: results.map(r => r.name)
         });
 
         if (results.length === 0) {
@@ -568,10 +585,20 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
           return {
             id: String(item.mis),
-            name: `${item.na853} - ${item.event_description || item.project_title || 'No description'}`,
+            // Format name to ensure NA853 is first and properly formatted
+            name: item.na853 ?
+              `${item.na853} - ${item.event_description || item.project_title || 'No description'}` :
+              `${item.event_description || item.project_title || 'No description'}`,
             expenditure_types: expenditureTypes || []
           };
         });
+
+        console.log('Mapped projects:', filteredData.map(p => ({
+          id: p.id,
+          name: p.name
+        })));
+
+        return filteredData;
       } catch (error) {
         console.error('Projects fetch error:', error);
         throw error;
@@ -846,8 +873,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               errorMessage += `: ${responseData.error}`;
             }
           } catch (e) {
-            console.error('Σφάλμα ανάλυσης απάντησης σφάλματος:', e);
-          }
+            console.error('Σφάλμα ανάλυσης απάντησης σφάλματος:', e);          }
         }
       } else if (typeof error === 'object' && error !== null && 'message' in error) {
         errorMessage = String(error.message);
