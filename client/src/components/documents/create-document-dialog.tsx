@@ -902,36 +902,33 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               )}
 
               <div className="grid gap-4">
-                <FormField
-                  control={form.control}
-                  name="`project_id"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <FormLabel>Έργο</FormLabel>
-                      <div className="relative">
-                        <div className="relative">
-                          <Input
-                            placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9"
-                          />
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        </div>
+                  <FormField
+                    control={form.control}
+                    name="project_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Έργο</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
                           disabled={!selectedUnit || projectsLoading}
                         >
                           <FormControl>
-                            <SelectTrigger className="mt-2">
-                              <SelectValue placeholder="Επιλέξτε έργο">
-                                {field.value ? projects.find((project) => project.id === field.value)?.name : "Επιλέξτε έργο"}
-                              </SelectValue>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Αναζήτηση/επιλογή έργου με MIS ή NA853..." />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent align="start">
-                            <ScrollArea className="max-h-[300px]">
+                          <SelectContent className="max-h-[300px]">
+                            <div className="relative">
+                              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-8 h-9 mb-2"
+                              />
+                            </div>
+                            <ScrollArea className="max-h-[200px]">
                               {!filteredProjects.length && (
                                 <div className="py-6 text-center text-sm text-muted-foreground">
                                   Δεν βρέθηκαν έργα
@@ -941,8 +938,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                 <SelectItem
                                   key={project.id}
                                   value={project.id}
+                                  className="flex flex-col py-2 border-b last:border-0"
                                 >
-                                  <div className="flex flex-col py-1">
+                                  <div className="flex flex-col">
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium text-primary">MIS: {project.id}</span>
                                       {project.name.match(/NA853\d+/i) && (
@@ -960,11 +958,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             </ScrollArea>
                           </SelectContent>
                         </Select>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 <FormField
                   control={form.control}
                   name="region"
