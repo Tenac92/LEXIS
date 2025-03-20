@@ -14,7 +14,7 @@ export default function ProjectDetailsPage() {
   const isAdmin = user?.role === 'admin';
 
   const { data: project, isLoading, error } = useQuery<Project>({
-    queryKey: ["/api/projects", mis], // Updated query key to match API structure
+    queryKey: ["/api/projects", { mis }],
     enabled: !!mis
   });
 
@@ -38,7 +38,10 @@ export default function ProjectDetailsPage() {
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-3xl font-bold">Project Not Found</h1>
               <Button variant="outline" asChild>
-                <Link href="/projects">Back to Projects</Link>
+                <Link href="/projects">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Projects
+                </Link>
               </Button>
             </div>
             <Card className="p-6 bg-red-50">
