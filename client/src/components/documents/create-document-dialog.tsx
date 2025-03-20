@@ -116,38 +116,42 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
             />
           </div>
         </div>
-
-        <div className="overflow-y-auto max-h-[300px]">
-          <Command>
-            <CommandInput placeholder="Αναζήτηση έργου..." className="h-9" />
-            <CommandEmpty>Δεν βρέθηκαν έργα</CommandEmpty>
-            <CommandGroup>
-              {filteredProjects.map((project) => (
-                <CommandItem
-                  key={project.id}
-                  value={project.id}
-                  onSelect={(value) => onChange(value)}
-                >
-                  <div className="flex flex-col py-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-primary">MIS: {project.id}</span>
-                      {project.name.match(/NA853\d+/i) && (
-                        <span className="text-sm text-muted-foreground">
-                          (NA853: {project.name.match(/NA853\d+/i)?.[0]})
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      {project.name.split(' - ').slice(1).join(' - ')}
-                    </span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </Command>
-        </div>
       </SelectContent>
     </Select>
+
+    <div className="relative mt-2">
+      <Command className="rounded-lg border shadow-md">
+        <CommandInput placeholder="Αναζήτηση έργου..." className="h-9" />
+        <CommandEmpty>Δεν βρέθηκαν έργα</CommandEmpty>
+        <CommandGroup className="max-h-[200px] overflow-y-auto">
+          {filteredProjects.map((project) => (
+            <CommandItem
+              key={project.id}
+              value={project.id}
+              onSelect={(value) => {
+                onChange(value);
+                setValue('project', value);
+              }}
+              className="cursor-pointer"
+            >
+              <div className="flex flex-col py-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-primary">MIS: {project.id}</span>
+                  {project.name.match(/NA853\d+/i) && (
+                    <span className="text-sm text-muted-foreground">
+                      (NA853: {project.name.match(/NA853\d+/i)?.[0]})
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {project.name.split(' - ').slice(1).join(' - ')}
+                </span>
+              </div>
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </Command>
+    </div>
   );
 });
 
