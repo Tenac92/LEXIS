@@ -19,8 +19,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import cn from 'classnames';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -903,60 +901,50 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   control={form.control}
                   name="project_id"
                   render={({ field }) => (
-                    <FormItem className="flex flex-col">
+                    <FormItem>
                       <FormLabel>Έργο</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className={cn(
-                                "w-full justify-between",
-                                !field.value && "text-muted-foreground"
-                              )}
-                              disabled={!selectedUnit || projectsLoading}
-                            >
-                              {field.value
-                                ? projects.find((project) => project.id === field.value)?.name
-                                : "Επιλέξτε έργο"}
-                              <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[600px] p-0">
-                          <Command>
-                            <CommandInput placeholder="Αναζήτηση έργου με κωδικό ή όνομα..." />
-                            <CommandEmpty>Δεν βρέθηκαν έργα.</CommandEmpty>
-                            <CommandGroup className="max-h-[300px] overflow-auto">
-                              {projects.map((project) => (
-                                <CommandItem
-                                  key={project.id}
-                                  value={project.name}
-                                  onSelect={() => {
-                                    form.setValue("project_id", project.id);
-                                  }}
-                                >
-                                  <div className="flex flex-col gap-1">
-                                    <div className="font-medium">MIS: {project.id}</div>
-                                    <div className="text-sm text-muted-foreground">
-                                      {project.name.split(' - ').slice(1).join(' - ')}
-                                    </div>
-                                  </div>
-                                  <Check
-                                    className={cn(
-                                      "ml-auto h-4 w-4",
-                                      project.id === field.value
-                                        ? "opacity-100"
-                                        : "opacity-0"
-                                    )}
-                                  />
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={!selectedUnit || projectsLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Επιλέξτε έργο">
+                              {field.value ? projects.find((project) => project.id === field.value)?.name : "Επιλέξτε έργο"}
+                            </SelectValue>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[300px]">
+                          <div className="p-2">
+                            <Input
+                              placeholder="Αναζήτηση έργου..."
+                              className="mb-2"
+                              onChange={(e) => {
+                                const searchField = e.target.parentElement?.querySelector('input[type="text"]');
+                                if (searchField) {
+                                  searchField.value = e.target.value;
+                                  searchField.dispatchEvent(new Event('input', { bubbles: true }));
+                                }
+                              }}
+                            />
+                          </div>
+                          <ScrollArea className="max-h-[200px]">
+                            {projects.map((project) => (
+                              <SelectItem
+                                key={project.id}
+                                value={project.id}
+                                className="flex flex-col py-2 px-3"
+                              >
+                                <div className="font-medium">MIS: {project.id}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {project.name.split(' - ').slice(1).join(' - ')}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </ScrollArea>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -995,7 +983,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                           </SelectContent>
                         </Select>
                         <FormMessage />
-                      </FormItem>                    )}
+                      </FormItem>
+                    )}
                   />
                 )}
 
