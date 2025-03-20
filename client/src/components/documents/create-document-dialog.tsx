@@ -15,7 +15,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { BudgetValidationResponse } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Check, ChevronDown, ChevronRight, FileText, Plus, Trash2, User } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, ChevronRight, FileText, Plus, Search, Trash2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
@@ -71,7 +71,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between",
+            "w-full justify-between font-normal",
             !value && "text-muted-foreground"
           )}
           disabled={disabled}
@@ -91,14 +91,17 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[600px] p-0">
-        <Command>
-          <CommandInput
-            placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
-            value={inputValue}
-            onValueChange={setInputValue}
-            className="h-9"
-          />
+      <PopoverContent className="w-[600px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <CommandInput
+              placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
+              value={inputValue}
+              onValueChange={setInputValue}
+              className="h-9 w-full border-0 outline-none focus:ring-0"
+            />
+          </div>
           <CommandEmpty>Δεν βρέθηκαν έργα.</CommandEmpty>
           <CommandGroup className="max-h-[300px] overflow-y-auto">
             {filteredProjects.map((project) => (
@@ -110,27 +113,29 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
                   setOpen(false);
                   setInputValue("");
                 }}
-                className="py-2 px-4"
+                className="flex flex-col gap-1 py-2 px-4 cursor-pointer border-b last:border-0"
               >
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-primary">MIS: {project.id}</span>
-                    {project.name.match(/NA853\d+/i) && (
-                      <span className="text-sm text-muted-foreground">
-                        (NA853: {project.name.match(/NA853\d+/i)?.[0]})
-                      </span>
-                    )}
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-primary">MIS: {project.id}</span>
+                      {project.name.match(/NA853\d+/i) && (
+                        <span className="text-sm text-muted-foreground">
+                          (NA853: {project.name.match(/NA853\d+/i)?.[0]})
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm text-muted-foreground">
+                      {project.name.split(' - ').slice(1).join(' - ')}
+                    </span>
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    {project.name.split(' - ').slice(1).join(' - ')}
-                  </span>
+                  <Check
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      project.id === value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
                 </div>
-                <Check
-                  className={cn(
-                    "ml-auto h-4 w-4",
-                    project.id === value ? "opacity-100" : "opacity-0"
-                  )}
-                />
               </CommandItem>
             ))}
           </CommandGroup>
