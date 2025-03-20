@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { ProjectDetailsDialog } from "./ProjectDetailsDialog";
 
 interface ProjectCardProps {
   project: Project;
@@ -26,6 +27,7 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProps) {
+  const [showDetails, setShowDetails] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -109,8 +111,11 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   };
 
   return (
-    <Link href={`/projects/${project.mis}`}>
-      <Card className={`transition-shadow hover:shadow-lg ${view === "list" ? "flex" : ""} cursor-pointer`}>
+    <>
+      <Card 
+        className={`transition-shadow hover:shadow-lg ${view === "list" ? "flex" : ""} cursor-pointer`}
+        onClick={() => setShowDetails(true)}
+      >
         <CardContent 
           className={`p-6 ${view === "list" ? "flex-1" : ""}`}
         >
@@ -168,7 +173,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
               variant="outline" 
               size="sm" 
               onClick={(e) => {
-                e.preventDefault();
+                e.stopPropagation();
                 window.location.href = `/projects/${project.mis}/edit`;
               }}
             >
@@ -181,7 +186,9 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                 <Button 
                   variant="destructive" 
                   size="sm"
-                  onClick={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
@@ -195,10 +202,10 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={(e) => {
-                      e.preventDefault();
+                      e.stopPropagation();
                       deleteMutation.mutate();
                     }}
                     className="bg-red-600 hover:bg-red-700"
@@ -211,6 +218,12 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           </CardFooter>
         )}
       </Card>
-    </Link>
+
+      <ProjectDetailsDialog 
+        project={project}
+        open={showDetails}
+        onOpenChange={setShowDetails}
+      />
+    </>
   );
 }
