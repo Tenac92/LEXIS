@@ -14,8 +14,8 @@ export default function ProjectDetailsPage() {
   const isAdmin = user?.role === 'admin';
 
   const { data: project, isLoading, error } = useQuery<Project>({
-    queryKey: ["/api/projects", { mis }],
-    enabled: !!mis
+    queryKey: [`/api/projects/${mis}`], // Direct API route matching
+    enabled: !!mis && !!user // Only fetch if we have both MIS and user
   });
 
   if (isLoading) {
@@ -152,7 +152,9 @@ export default function ProjectDetailsPage() {
                   {project.implementing_agency && (
                     <div className="flex items-center text-sm text-muted-foreground">
                       <Building2 className="mr-2 h-4 w-4" />
-                      {project.implementing_agency}
+                      {Array.isArray(project.implementing_agency) 
+                        ? project.implementing_agency.join(', ')
+                        : project.implementing_agency}
                     </div>
                   )}
                 </div>
@@ -198,7 +200,7 @@ export default function ProjectDetailsPage() {
                   <h3 className="font-semibold mb-2">Related Documents</h3>
                   <div className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    <span>KYA: {project.kya}</span>
+                    <span>KYA: {Array.isArray(project.kya) ? project.kya.join(', ') : project.kya}</span>
                   </div>
                 </div>
               )}

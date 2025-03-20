@@ -146,14 +146,21 @@ router.get('/:mis', authenticateToken, async (req, res) => {
     const { mis } = req.params;
     console.log(`[Projects] Fetching project with MIS: ${mis}`);
 
+    if (!req.user) {
+      console.error(`[Projects] No authenticated user found when fetching MIS: ${mis}`);
+      return res.status(401).json({ 
+        message: "Authentication required"
+      });
+    }
+
     const { data: project, error } = await supabase
-      .from('Projects')
+      .from('Projects') // Note the capital P to match the table name
       .select('*')
       .eq('mis', mis)
       .single();
 
     if (error) {
-      console.error('[Projects] Database error:', error);
+      console.error(`[Projects] Database error for MIS ${mis}:`, error);
       return res.status(500).json({ 
         message: "Failed to fetch project",
         error: error.message
