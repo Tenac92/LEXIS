@@ -44,7 +44,18 @@ interface ProjectSelectProps {
 const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((props, ref) => {
   const { value, onChange, projects, disabled } = props;
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [open, setOpen] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const selectedProject = projects.find(project => project.id === value);
+
+  // Focus input when dropdown opens
+  React.useEffect(() => {
+    if (open && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 100);
+    } else {
+      setSearchQuery("");
+    }
+  }, [open]);
 
   const filteredProjects = projects.filter(project => {
     if (!searchQuery) return true;
@@ -67,6 +78,8 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
       value={value} 
       onValueChange={onChange}
       disabled={disabled}
+      open={open}
+      onOpenChange={setOpen}
     >
       <SelectTrigger ref={ref} className="w-full">
         <SelectValue placeholder="Επιλέξτε έργο">
@@ -86,13 +99,14 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
         <div className="flex items-center border-b p-2">
           <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
           <Input
+            ref={inputRef}
             placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-8 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
           />
         </div>
-        <ScrollArea className="max-h-[300px]">
+        <ScrollArea className="h-[300px] overflow-y-auto">
           {filteredProjects.length === 0 ? (
             <div className="relative flex items-center justify-center py-4 text-sm text-muted-foreground">
               Δεν βρέθηκαν έργα.
@@ -111,9 +125,6 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
                       <span className="text-sm text-muted-foreground">
                         (NA853: {project.name.match(/NA853\d+/i)?.[0]})
                       </span>
-                    )}
-                    {project.id === value && (
-                      <Check className="ml-auto h-4 w-4" />
                     )}
                   </div>
                   <span className="text-sm text-muted-foreground">
@@ -1267,4 +1278,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       </DialogContent>
     </Dialog>
   );
+}
+
+function regionArray(data: any): string[] {
+    return data.region.region || [];
 }
