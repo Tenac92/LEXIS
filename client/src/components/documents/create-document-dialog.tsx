@@ -96,7 +96,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
         }
 
         const searchTerm = normalizeText(debouncedSearchQuery);
-        const isNumericSearch = /^\d+$/.test(searchTerm); // Check if search is only numbers
+        const isNumericSearch = /^\d+$/.test(searchTerm);
 
         console.log('Search debug:', {
           searchTerm,
@@ -105,35 +105,23 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
         });
 
         const results = projects.filter(project => {
-          const na853Info = extractNA853Info(project.name);
           const normalizedProjectName = normalizeText(project.name);
+          const na853Match = project.id.toLowerCase().includes(searchTerm.toLowerCase());
 
-          // For numeric searches, match anywhere in the NA853 numbers
-          if (isNumericSearch && na853Info) {
-            const allNumbers = na853Info.numbers;
+          // For numeric searches, match NA853 code
+          if (isNumericSearch) {
             console.log('Numeric search:', {
               projectName: project.name,
-              allNumbers,
+              projectId: project.id,
               searchTerm,
-              matches: allNumbers.includes(searchTerm)
+              matches: project.id.includes(searchTerm)
             });
-            if (allNumbers.includes(searchTerm)) {
+            if (project.id.includes(searchTerm)) {
               return true;
             }
           }
 
-          // Direct match with NA853 code
-          if (na853Info && normalizeText(na853Info.full).includes(searchTerm)) {
-            return true;
-          }
-
-          // Match with project description
-          if (na853Info && normalizeText(na853Info.displayText).includes(searchTerm)) {
-            return true;
-          }
-
-          // Match with full project name
-          return normalizedProjectName.includes(searchTerm);
+          return na853Match || normalizedProjectName.includes(searchTerm);
         });
 
         console.log('Search results:', {
@@ -154,7 +142,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
       } finally {
         setIsSearching(false);
       }
-    }, [projects, debouncedSearchQuery, normalizeText, extractNA853Info]);
+    }, [projects, debouncedSearchQuery, normalizeText]);
 
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -433,7 +421,7 @@ const recipientSchema = z.object({
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
   project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
-  region: z.string().min(1, "Η περιφέρεια είναι υποχρεωτική"),
+  region: z.string().optional(), // Make region optional
   expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
   recipients: z.array(recipientSchema).optional().default([]),
   total_amount: z.number().optional(),
@@ -583,22 +571,18 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             }
           }
 
+          // Format name to include NA853 code properly
+          const name = item.na853 ?
+            `${item.na853} - ${item.event_description || item.project_title || 'No description'}` :
+            item.event_description || item.project_title || 'No description';
+
           return {
-            id: String(item.mis),
-            // Format name to ensure NA853 is first and properly formatted
-            name: item.na853 ?
-              `${item.na853} - ${item.event_description || item.project_title || 'No description'}` :
-              `${item.event_description || item.project_title || 'No description'}`,
+            id: item.na853 || String(item.mis), // Use NA853 as ID if available
+            name,
             expenditure_types: expenditureTypes || []
           };
         });
 
-        console.log('Mapped projects:', filteredData.map(p => ({
-          id: p.id,
-          name: p.name
-        })));
-
-        return filteredData;
       } catch (error) {
         console.error('Projects fetch error:', error);
         throw error;
@@ -935,6 +919,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     }
   }, [selectedProjectId, projects, form]);
 
+  useEffect(() => {
+    // Auto-select unit if only one option exists
+    if (units?.length === 1) {
+      form.setValue("unit", units[0].id);
+    }
+  }, [units, form]);
+
+
   const handleNext = async () => {
     try {
       let fieldsToValidate: Array<keyof CreateDocumentForm> = [];
@@ -946,7 +938,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           fieldsToValidate = ["unit"];
           break;
         case 1:
-          fieldsToValidate = ["project_id", "region", "expenditure_type"];
+          fieldsToValidate = ["project_id", "expenditure_type"];
           break;
         case 2:
           fieldsToValidate = ["recipients"];
@@ -1156,41 +1148,35 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="region"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Περιφέρεια</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={!selectedProjectId || regionsLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Επιλέξτε περιφέρεια" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {regions.map((region: { id: string; name: string; municipality: string; regional_unit: string }) => (
-                            <SelectItem key={region.id} value={region.id}>
-                              <div className="flex flex-col">
-                                <span>{region.name}</span>
-                                {region.municipality && region.regional_unit && (
-                                  <span className="text-sm text-muted-foreground">
-                                    {region.municipality} - {region.regional_unit}
-                                  </span>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {selectedProject?.region && (
+                  <FormField
+                    control={form.control}
+                    name="region"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Περιφέρεια</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Επιλέξτε περιφέρεια" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(Array.isArray(selectedProject.region) ? selectedProject.region : []).map((region) => (
+                              <SelectItem key={region} value={region}>
+                                {region}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 {currentStep === 1 && selectedProject && (
                   <FormField
                     control={form.control}
