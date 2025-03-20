@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -20,19 +21,26 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import cn from 'classnames';
+import { cn } from "@/lib/utils";
+
+// Types and Interfaces
+interface Project {
+  id: string;
+  name: string;
+  expenditure_types: string[];
+}
+
+interface ProjectSelectProps {
+  value?: string;
+  onChange: (value: string) => void;
+  projects: Project[];
+  disabled?: boolean;
+}
 
 // Project selection component
-const ProjectSelect = React.forwardRef<
-  HTMLDivElement,
-  {
-    value?: string;
-    onChange: (value: string) => void;
-    projects: Project[];
-    disabled?: boolean;
-  }
->(({ value, onChange, projects, disabled }, ref) => {
-  const [inputValue, setInputValue] = useState("");
+const ProjectSelect = React.forwardRef<HTMLDivElement, ProjectSelectProps>((props, ref) => {
+  const { value, onChange, projects, disabled } = props;
+  const [inputValue, setInputValue] = React.useState("");
 
   const filteredProjects = projects.filter(project => {
     if (!inputValue) return true;
@@ -76,7 +84,7 @@ const ProjectSelect = React.forwardRef<
                 <span className="font-medium text-primary">MIS: {project.id}</span>
                 {project.name.match(/NA853\d+/i) && (
                   <span className="text-sm text-muted-foreground">
-                    (NA853: {project.name.match(/NA853\d+/i)[0]})
+                    (NA853: {project.name.match(/NA853\d+/i)?.[0]})
                   </span>
                 )}
               </div>
@@ -98,13 +106,6 @@ const ProjectSelect = React.forwardRef<
 });
 
 ProjectSelect.displayName = "ProjectSelect";
-
-// Types and Interfaces
-interface Project {
-  id: string;
-  name: string;
-  expenditure_types: string[];
-}
 
 interface BudgetData {
   current_budget: number;
@@ -868,7 +869,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       </Select>
     );
   };
-
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
     queryKey: ["regions", selectedProjectId],
