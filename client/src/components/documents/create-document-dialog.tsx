@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,7 +17,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Check, ChevronDown, FileText, Plus, Search, Trash2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
+//import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -43,13 +43,12 @@ interface ProjectSelectProps {
 
 const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((props, ref) => {
   const { value, onChange, projects, disabled } = props;
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [open, setOpen] = React.useState(false);
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const selectedProject = projects.find(project => project.id === value);
 
-  // Focus input when dropdown opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (open && inputRef.current) {
       inputRef.current.focus();
     } else {
@@ -57,22 +56,23 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
     }
   }, [open]);
 
-  const filteredProjects = projects.filter(project => {
-    if (!searchQuery) return true;
+  const filteredProjects = useMemo(() => {
+    if (!searchQuery) return projects;
     const searchLower = searchQuery.toLowerCase();
 
-    // Extract NA853 code from project name
-    const na853Match = project.name.match(/NA853\d+/i);
-    const na853Code = na853Match ? na853Match[0].toLowerCase() : '';
-    const last3Digits = na853Code.slice(-3);
+    return projects.filter(project => {
+      const na853Match = project.name.match(/NA853\d+/i);
+      const na853Code = na853Match ? na853Match[0].toLowerCase() : '';
+      const last3Digits = na853Code.slice(-3);
 
-    return (
-      project.id.toLowerCase().includes(searchLower) ||
-      project.name.toLowerCase().includes(searchLower) ||
-      na853Code.includes(searchLower) ||
-      last3Digits.includes(searchLower)
-    );
-  });
+      return (
+        project.id.toLowerCase().includes(searchLower) ||
+        project.name.toLowerCase().includes(searchLower) ||
+        na853Code.includes(searchLower) ||
+        last3Digits.includes(searchLower)
+      );
+    });
+  }, [projects, searchQuery]);
 
   return (
     <Select 
@@ -96,23 +96,30 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
           )}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent align="start" className="p-0" style={{ maxHeight: '300px' }}>
+
+      <SelectContent 
+        className="p-0 max-h-[400px]" 
+        position="popper"
+        sideOffset={4}
+      >
         <div className="sticky top-0 z-10 bg-background border-b p-2">
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 shrink-0 opacity-50" />
-            <Input
+            <input
               ref={inputRef}
-              placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="flex h-8 w-full rounded-md bg-transparent px-3 py-1 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="Αναζήτηση με MIS, NA853 ή όνομα έργου..."
             />
           </div>
         </div>
-        <div className="overflow-y-auto" style={{ maxHeight: '250px' }}>
+
+        <div className="overflow-y-auto max-h-[300px]">
           {filteredProjects.length === 0 ? (
-            <div className="relative flex items-center justify-center py-4 text-sm text-muted-foreground">
-              Δεν βρέθηκαν έργα.
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              Δεν βρέθηκαν έργα
             </div>
           ) : (
             filteredProjects.map((project) => (
@@ -1113,68 +1120,66 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   </Button>
                 </div>
 
-                <ScrollArea className="h-[calc(60vh-200px)] w-full pr-4">
-                  <div className="space-y-3">
-                    {recipients.map((recipient, index) => (
-                      <Card key={index} className="p-4 relative">
-                        <div className="flex items-start gap-4">
-                          <span className="text-sm font-medium min-w-[24px] text-center mt-2">{index + 1}</span>
-                          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 flex-1">
-                            <Input
-                              {...form.register(`recipients.${index}.firstname`)}
-                              placeholder="Όνομα"
-                              className="md:col-span-1"
-                              autoComplete="off"
-                            />
-                            <Input
-                              {...form.register(`recipients.${index}.lastname`)}
-                              placeholder="Επώνυμο"
-                              className="md:col-span-1"
-                              autoComplete="off"
-                            />
-                            <Input
-                              {...form.register(`recipients.${index}.fathername`)}
-                              placeholder="Πατρώνυμο"
-                              className="md:col-span-1"
-                              autoComplete="off"
-                            />
-                            <Input
-                              {...form.register(`recipients.${index}.afm`)}
-                              placeholder="ΑΦΜ"
-                              maxLength={9}
-                              className="md:col-span-1"
-                              autoComplete="off"
-                            />
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...form.register(`recipients.${index}.amount`, {
-                                valueAsNumber: true,
-                                min: 0.01
-                              })}
-                              placeholder="Ποσό"
-                              className="md:col-span-1"
-                              autoComplete="off"
-                              defaultValue=""
-                            />
-                            <div className="md:col-span-1 flex items-center gap-2">
-                              {renderRecipientInstallments(index)}
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeRecipient(index)}
-                                className="shrink-0"
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
+                <div className="space-y-3">
+                  {recipients.map((recipient, index) => (
+                    <Card key={index} className="p-4 relative">
+                      <div className="flex items-start gap-4">
+                        <span className="text-sm font-medium min-w-[24px] text-center mt-2">{index + 1}</span>
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 flex-1">
+                          <Input
+                            {...form.register(`recipients.${index}.firstname`)}
+                            placeholder="Όνομα"
+                            className="md:col-span-1"
+                            autoComplete="off"
+                          />
+                          <Input
+                            {...form.register(`recipients.${index}.lastname`)}
+                            placeholder="Επώνυμο"
+                            className="md:col-span-1"
+                            autoComplete="off"
+                          />
+                          <Input
+                            {...form.register(`recipients.${index}.fathername`)}
+                            placeholder="Πατρώνυμο"
+                            className="md:col-span-1"
+                            autoComplete="off"
+                          />
+                          <Input
+                            {...form.register(`recipients.${index}.afm`)}
+                            placeholder="ΑΦΜ"
+                            maxLength={9}
+                            className="md:col-span-1"
+                            autoComplete="off"
+                          />
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...form.register(`recipients.${index}.amount`, {
+                              valueAsNumber: true,
+                              min: 0.01
+                            })}
+                            placeholder="Ποσό"
+                            className="md:col-span-1"
+                            autoComplete="off"
+                            defaultValue=""
+                          />
+                          <div className="md:col-span-1 flex items-center gap-2">
+                            {renderRecipientInstallments(index)}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeRecipient(index)}
+                              className="shrink-0"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                           </div>
                         </div>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
             </div>
           )}
