@@ -96,10 +96,20 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
         }
 
         const searchTerm = normalizeText(debouncedSearchQuery);
+        const isNumericSearch = /^\d+$/.test(searchTerm); // Check if search is only numbers
 
         const results = projects.filter(project => {
           const na853Info = extractNA853Info(project.name);
           const normalizedProjectName = normalizeText(project.name);
+
+          // For numeric searches, check if it matches the end of NA853 code
+          if (isNumericSearch && na853Info) {
+            // Extract the numeric part from the end of the NA853 code
+            const na853Numbers = na853Info.full.match(/\d+$/)?.[0] || '';
+            if (na853Numbers.endsWith(searchTerm)) {
+              return true;
+            }
+          }
 
           // Direct match with NA853 code
           if (na853Info && normalizeText(na853Info.full).includes(searchTerm)) {
