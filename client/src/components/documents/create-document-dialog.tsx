@@ -14,26 +14,14 @@ import { createClient } from '@supabase/supabase-js';
 import type { BudgetValidationResponse } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Check, ChevronRight, FileText, Plus, Trash2, User } from "lucide-react";
+import { AlertCircle, Check, ChevronRight, FileText, Plus, Search, Trash2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import cn from 'classnames';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Supabase URL and Key must be defined in environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false
-  }
-});
-
+// Types and Interfaces
 interface Project {
   id: string;
   name: string;
@@ -52,8 +40,57 @@ interface BudgetIndicatorProps {
   currentAmount: number;
 }
 
+interface CreateDocumentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
+}
+
 type BadgeVariant = "default" | "destructive" | "outline" | "secondary";
 
+// Constants
+const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
+const DKA_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ'];
+const ALL_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
+
+// Schemas
+const recipientSchema = z.object({
+  firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  lastname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
+  amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
+  installment: z.string().optional(),
+});
+
+const createDocumentSchema = z.object({
+  unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
+  project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
+  region: z.string().min(1, "Η περιφέρεια είναι υποχρεωτική"),
+  expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
+  recipients: z.array(recipientSchema).optional().default([]),
+  total_amount: z.number().optional(),
+  status: z.string().default("draft"),
+  selectedAttachments: z.array(z.string()).optional().default([])
+});
+
+type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
+
+// Supabase setup
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Supabase URL and Key must be defined in environment variables');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false
+  }
+});
+
+// Animation variants
 const stepVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? 1000 : -1000,
@@ -71,6 +108,7 @@ const stepVariants = {
   })
 };
 
+// Components
 const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
   const availableBudget = budgetData.current_budget - currentAmount;
   const percentageUsed = (currentAmount / budgetData.current_budget) * 100;
@@ -163,39 +201,7 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
-// Add this constant at the top level
-const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
-const DKA_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ'];
-const ALL_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
-
-const recipientSchema = z.object({
-  firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-  lastname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-  fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-  afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
-  amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
-  installment: z.string().optional(), // Changed to string to handle dynamic installments
-});
-
-const createDocumentSchema = z.object({
-  unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
-  project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
-  region: z.string().min(1, "Η περιφέρεια είναι υποχρεωτική"),
-  expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
-  recipients: z.array(recipientSchema).optional().default([]),
-  total_amount: z.number().optional(),
-  status: z.string().default("draft"),
-  selectedAttachments: z.array(z.string()).optional().default([])
-});
-
-type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
-
-interface CreateDocumentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onClose: () => void;
-}
-
+// Main component
 export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocumentDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -209,7 +215,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     defaultValues: {
       unit: "",
       project_id: "",
-      region: "", // Added default value for region
+      region: "",
       expenditure_type: "",
       recipients: [],
       status: "draft",
@@ -225,6 +231,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     return sum + (typeof r.amount === 'number' ? r.amount : 0);
   }, 0);
 
+  // Queries
   const { data: units = [], isLoading: unitsLoading } = useQuery({
     queryKey: ["units"],
     queryFn: async () => {
@@ -262,8 +269,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (!selectedUnit) return [];
 
       try {
-        console.log('Fetching projects for unit:', selectedUnit);
-
         const { data, error } = await supabase
           .from('Projects')
           .select('*');
@@ -278,7 +283,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           throw error;
         }
 
-        // Filter in JavaScript since PostgREST JSONB filtering is problematic
         const filteredData = data.filter(project => {
           if (!project.implementing_agency) return false;
           try {
@@ -287,8 +291,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               typeof project.implementing_agency === 'string' ?
                 JSON.parse(project.implementing_agency) :
                 [];
-
-            console.log('Project:', project.mis, 'agencies:', agencies);
             return agencies.includes(selectedUnit);
           } catch (e) {
             console.error('Error parsing implementing_agency:', e, project);
@@ -296,24 +298,16 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           }
         });
 
-        console.log('Filtered projects:', filteredData);
-
-        const mappedProjects = filteredData.map((item: any) => {
+        return filteredData.map((item: any) => {
           let expenditureTypes: string[] = [];
-
-          console.log('Processing project:', item.mis, 'Raw expenditure_type:', item.expenditure_type);
 
           if (item.expenditure_type) {
             try {
-              // Parse expenditure_type field
               if (typeof item.expenditure_type === 'string') {
                 expenditureTypes = JSON.parse(item.expenditure_type);
               } else if (Array.isArray(item.expenditure_type)) {
                 expenditureTypes = item.expenditure_type;
-              } else if (item.expenditure_type === null) {
-                expenditureTypes = [];
               }
-              console.log('Project:', item.mis, 'Parsed expenditure types:', expenditureTypes);
             } catch (e) {
               console.error('Error parsing expenditure_type for project:', item.mis, e);
             }
@@ -325,15 +319,29 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             expenditure_types: expenditureTypes || []
           };
         });
-
-        console.log('Final mapped projects:', mappedProjects);
-        return mappedProjects;
       } catch (error) {
         console.error('Projects fetch error:', error);
         throw error;
       }
     },
     enabled: Boolean(selectedUnit)
+  });
+
+  // Filter projects based on search query
+  const filteredProjects = projects.filter(project => {
+    if (!searchQuery) return true;
+    const searchLower = searchQuery.toLowerCase();
+
+    // Extract NA853 code from project name
+    const na853Match = project.name.match(/NA853\d+/i);
+    const na853Code = na853Match ? na853Match[0] : '';
+    const last3Digits = na853Code.slice(-3);
+
+    return (
+      project.id.toLowerCase().includes(searchLower) ||
+      project.name.toLowerCase().includes(searchLower) ||
+      last3Digits.includes(searchLower)
+    );
   });
 
   const { data: budgetData, error: budgetError } = useQuery({
@@ -534,7 +542,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       const payload = {
         unit: data.unit,
         project_id: data.project_id,
-        region: data.region, // Include region in payload
+        region: data.region,
         expenditure_type: data.expenditure_type,
         recipients: data.recipients.map(r => ({
           firstname: r.firstname.trim(),
@@ -542,7 +550,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           fathername: r.fathername.trim(),
           afm: r.afm.trim(),
           amount: parseFloat(r.amount.toString()),
-          installment: r.installment // Assuming installment is a string from enum
+          installment: r.installment
         })),
         total_amount: totalAmount,
         status: "draft",
@@ -644,17 +652,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     if (selectedUnit) {
       form.setValue("project_id", "");
       form.setValue("expenditure_type", "");
-      form.setValue("region", ""); // Reset region when unit changes
+      form.setValue("region", "");
     }
   }, [selectedUnit, form]);
 
   useEffect(() => {
     if (selectedProjectId) {
       const project = projects.find(p => p.id === selectedProjectId);
-      console.log('Selected project:', project);
       if (project) {
-        console.log('Expenditure types:', project.expenditure_types);
-        // Reset expenditure type when project changes
         form.setValue('expenditure_type', '');
       }
     }
@@ -671,7 +676,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           fieldsToValidate = ["unit"];
           break;
         case 1:
-          fieldsToValidate = ["project_id", "region", "expenditure_type"]; // Added region
+          fieldsToValidate = ["project_id", "region", "expenditure_type"];
           break;
         case 2:
           fieldsToValidate = ["recipients"];
@@ -821,7 +826,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
         if (!data?.region?.region) return [];
 
-        // Data comes as JSONB with structure: {"region":["ΘΕΣΣΑΛΙΑΣ"],"municipality":["ΤΡΙΚΚΑΙΩΝ"],"regional_unit":["ΤΡΙΚΑΛΩΝ"]}
         const regionArray = data.region.region || [];
         const municipalityArray = data.region.municipality || [];
         const regionalUnitArray = data.region.regional_unit || [];
@@ -838,22 +842,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       }
     },
     enabled: Boolean(selectedProjectId)
-  });
-
-  const filteredProjects = projects.filter(project => {
-    if (!searchQuery) return true;
-    const searchLower = searchQuery.toLowerCase();
-
-    // Extract NA853 code from project name
-    const na853Match = project.name.match(/NA853\d+/i);
-    const na853Code = na853Match ? na853Match[0] : '';
-    const last3Digits = na853Code.slice(-3);
-
-    return (
-      project.id.toLowerCase().includes(searchLower) ||
-      project.name.toLowerCase().includes(searchLower) ||
-      last3Digits.includes(searchLower)
-    );
   });
 
   const renderStepContent = () => {
@@ -916,31 +904,33 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
               <div className="grid gap-4">
                 <FormField
                   control={form.control}
-                  name="project_id"
+                  name="`project_id"
                   render={({ field }) => (
                     <FormItem className="space-y-2">
                       <FormLabel>Έργο</FormLabel>
-                      <div className="space-y-2">
-                        <Input
-                          placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="mb-2"
-                          disabled={!selectedUnit || projectsLoading}
-                        />
+                      <div className="relative">
+                        <div className="relative">
+                          <Input
+                            placeholder="Αναζήτηση με MIS, NA853 (3 τελευταία ψηφία) ή όνομα έργου..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9"
+                          />
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        </div>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value}
                           disabled={!selectedUnit || projectsLoading}
                         >
                           <FormControl>
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger className="mt-2">
                               <SelectValue placeholder="Επιλέξτε έργο">
                                 {field.value ? projects.find((project) => project.id === field.value)?.name : "Επιλέξτε έργο"}
                               </SelectValue>
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent align="start">
                             <ScrollArea className="max-h-[300px]">
                               {!filteredProjects.length && (
                                 <div className="py-6 text-center text-sm text-muted-foreground">
@@ -951,9 +941,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                 <SelectItem
                                   key={project.id}
                                   value={project.id}
-                                  className="flex flex-col py-3 px-4 focus:bg-accent focus:text-accent-foreground"
                                 >
-                                  <div className="flex flex-col">
+                                  <div className="flex flex-col py-1">
                                     <div className="flex items-center gap-2">
                                       <span className="font-medium text-primary">MIS: {project.id}</span>
                                       {project.name.match(/NA853\d+/i) && (
@@ -962,7 +951,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                         </span>
                                       )}
                                     </div>
-                                    <span className="text-sm text-muted-foreground mt-1">
+                                    <span className="text-sm text-muted-foreground">
                                       {project.name.split(' - ').slice(1).join(' - ')}
                                     </span>
                                   </div>
