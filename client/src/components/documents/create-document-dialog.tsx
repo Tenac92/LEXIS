@@ -44,9 +44,11 @@ interface ProjectSelectProps {
 const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
   function ProjectSelect(props, ref) {
     const { value, onChange, projects, disabled } = props;
-    const [searchQuery, setSearchQuery] = useState("");
     const [open, setOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [isSearching, setIsSearching] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+
     const selectedProject = projects.find(project => project.id === value);
 
     useEffect(() => {
@@ -58,99 +60,96 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     }, [open]);
 
     const filteredProjects = useMemo(() => {
-      if (!searchQuery) return projects;
-      const searchLower = searchQuery.toLowerCase();
+      setIsSearching(true);
+      try {
+        if (!searchQuery.trim()) {
+          return projects;
+        }
 
-      return projects.filter(project => {
-        const na853Match = project.name.match(/NA853\d+/i);
-        const na853Code = na853Match ? na853Match[0].toLowerCase() : '';
-        const last3Digits = na853Code.slice(-3);
+        const searchTerms = searchQuery.toLowerCase().split(/\s+/);
 
-        return (
-          project.id.toLowerCase().includes(searchLower) ||
-          project.name.toLowerCase().includes(searchLower) ||
-          na853Code.includes(searchLower) ||
-          last3Digits.includes(searchLower)
-        );
-      });
+        return projects.filter(project => {
+          const projectText = `${project.id} ${project.name}`.toLowerCase();
+          const na853Match = project.name.match(/NA853\d+/i);
+          const na853Code = na853Match ? na853Match[0].toLowerCase() : '';
+
+          return searchTerms.every(term =>
+            projectText.includes(term) ||
+            na853Code.includes(term) ||
+            na853Code.slice(-3).includes(term)
+          );
+        });
+      } catch (error) {
+        console.error('Search error:', error);
+        return projects;
+      } finally {
+        setIsSearching(false);
+      }
     }, [projects, searchQuery]);
 
     return (
-      <div className="space-y-2">
-        <Select 
-          value={value} 
-          onValueChange={onChange}
-          disabled={disabled}
-          open={open}
-          onOpenChange={setOpen}
-        >
-          <SelectTrigger ref={ref} className="w-full">
-            <SelectValue placeholder="Επιλέξτε έργο">
-              {selectedProject && (
-                <div className="flex items-center gap-2 truncate">
-                  <span className="font-medium">MIS: {selectedProject.id}</span>
-                  {selectedProject.name.match(/NA853\d+/i) && (
-                    <span className="text-muted-foreground">
-                      (NA853: {selectedProject.name.match(/NA853\d+/i)?.[0]})
-                    </span>
-                  )}
+      <div className="relative w-full">
+        <Command className="relative">
+          <div className="flex items-center border rounded-md px-3 py-2 w-full">
+            <Search className="h-4 w-4 shrink-0 opacity-50 mr-2" />
+            <CommandInput
+              ref={inputRef}
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              placeholder="Αναζήτηση με MIS, NA853 ή όνομα έργου..."
+              className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground"
+            />
+            {isSearching && (
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+            )}
+          </div>
+
+          <CommandEmpty className="py-6 text-center text-sm">
+            Δεν βρέθηκαν έργα
+          </CommandEmpty>
+
+          <CommandGroup className="max-h-[300px] overflow-y-auto">
+            {filteredProjects.map((project) => (
+              <CommandItem
+                key={project.id}
+                value={project.id}
+                onSelect={onChange}
+                className="cursor-pointer py-2 px-4 hover:bg-accent"
+              >
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">MIS: {project.id}</span>
+                    {project.name.match(/NA853\d+/i) && (
+                      <Badge variant="outline" className="text-xs">
+                        NA853: {project.name.match(/NA853\d+/i)?.[0]}
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-sm text-muted-foreground truncate">
+                    {project.name.split(' - ').slice(1).join(' - ')}
+                  </span>
                 </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+
+        {selectedProject && (
+          <div className="mt-2 p-2 rounded-md bg-muted/50">
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Επιλεγμένο έργο:</span>
+              <span>MIS: {selectedProject.id}</span>
+              {selectedProject.name.match(/NA853\d+/i) && (
+                <Badge variant="outline" className="text-xs">
+                  NA853: {selectedProject.name.match(/NA853\d+/i)?.[0]}
+                </Badge>
               )}
-            </SelectValue>
-          </SelectTrigger>
-
-          <SelectContent 
-            className="p-0 max-h-[400px]" 
-            position="popper"
-            sideOffset={4}
-          >
-            <div className="sticky top-0 z-10 bg-background border-b p-2">
-              <div className="flex items-center gap-2">
-                <Search className="h-4 w-4 shrink-0 opacity-50" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex h-8 w-full rounded-md bg-transparent px-3 py-1 text-sm placeholder:text-muted-foreground focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Αναζήτηση με MIS, NA853 ή όνομα έργου..."
-                />
-              </div>
             </div>
-
-            <Command className="rounded-lg border shadow-md">
-              <CommandInput placeholder="Αναζήτηση έργου..." className="h-9" />
-              <CommandEmpty>Δεν βρέθηκαν έργα</CommandEmpty>
-              <CommandGroup className="max-h-[200px] overflow-y-auto">
-                {filteredProjects.map((project) => (
-                  <CommandItem
-                    key={project.id}
-                    value={project.id}
-                    onSelect={(value) => {
-                      onChange(value);
-                      // Remove the setValue call as it's not needed here
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <div className="flex flex-col py-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-primary">MIS: {project.id}</span>
-                        {project.name.match(/NA853\d+/i) && (
-                          <span className="text-sm text-muted-foreground">
-                            (NA853: {project.name.match(/NA853\d+/i)?.[0]})
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {project.name.split(' - ').slice(1).join(' - ')}
-                      </span>
-                    </div>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </Command>
-          </SelectContent>
-        </Select>
+            <p className="text-sm text-muted-foreground mt-1 truncate">
+              {selectedProject.name.split(' - ').slice(1).join(' - ')}
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -778,13 +777,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
     form.setValue("recipients", [
       ...currentRecipients,
-      { 
-        firstname: "", 
-        lastname: "", 
-        fathername: "", 
-        afm: "", 
-        amount: 0, 
-        installment: "" 
+      {
+        firstname: "",
+        lastname: "",
+        fathername: "",
+        afm: "",
+        amount: 0,
+        installment: ""
       }
     ]);
   };
@@ -879,8 +878,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       }
     } catch (error) {
       console.error('Navigation error:', error);
-      toast({        title: "Σφάλμα",
-        description: "Προέκυψε σφάλμα κατά την μετάβαση στο επόμενο βήμα",
+      toast({
+        title: "Σφάλμα",        description: "Προέκυψε σφάλμα κατά την μετάβαση στο επόμενο βήμα",
         variant: "destructive"
       });
     }
@@ -902,7 +901,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       } else {
         await handleNext();
       }
-    } catch (error) {      console.error('Form navigation/submission error:', error);
+    } catch (error) {
+      console.error('Form navigation/submission error:', error);
       toast({
         title: "Σφάλμα",
         description: error instanceof Error ? error.message : "Προέκυψε σφάλμα",
