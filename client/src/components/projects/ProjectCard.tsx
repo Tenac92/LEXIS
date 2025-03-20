@@ -10,7 +10,6 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
@@ -39,7 +38,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to delete project");
+        throw new Error(error.message || "Αποτυχία διαγραφής έργου");
       }
 
       return response.json();
@@ -47,14 +46,14 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       toast({
-        title: "Project Deleted",
-        description: "The project has been successfully deleted",
+        title: "Το έργο διαγράφηκε",
+        description: "Το έργο διαγράφηκε επιτυχώς",
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Delete Failed",
-        description: error.message || "Failed to delete project",
+        title: "Αποτυχία Διαγραφής",
+        description: error.message || "Αποτυχία διαγραφής έργου",
         variant: "destructive",
       });
     },
@@ -122,7 +121,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           <div className="mb-4">
             <div className="flex items-start justify-between gap-2">
               <h3 className="line-clamp-2 text-lg font-bold">
-                {project.event_description || project.project_title || "Untitled Project"}
+                {project.event_description || project.project_title || "Έργο Χωρίς Τίτλο"}
               </h3>
               <Badge variant="secondary" className={getStatusColor(project.status || '')}>
                 {getStatusText(project.status || '')}
@@ -133,7 +132,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
               <div className="space-y-2">
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Calendar className="mr-2 h-4 w-4" />
-                  Created: {new Date(project.created_at || '').toLocaleDateString('el-GR')}
+                  Δημιουργήθηκε: {new Date(project.created_at || '').toLocaleDateString('el-GR')}
                 </div>
                 {project.region && (
                   <div className="flex items-center text-sm text-muted-foreground">
@@ -144,11 +143,11 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
               </div>
               <div className="space-y-2">
                 <div className="font-medium">
-                  Budget NA853: {formatCurrency(Number(project.budget_na853))}
+                  Προϋπολογισμός ΣΑ853: {formatCurrency(Number(project.budget_na853))}
                 </div>
                 {project.budget_na271 && (
                   <div className="text-sm text-muted-foreground">
-                    Budget NA271: {formatCurrency(Number(project.budget_na271))}
+                    Προϋπολογισμός ΣΑ271: {formatCurrency(Number(project.budget_na271))}
                   </div>
                 )}
               </div>
@@ -156,12 +155,12 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
 
             <div className="mt-4 grid grid-cols-2 gap-2">
               <div className="rounded bg-gray-50 p-2">
-                <div className="text-xs text-gray-500">MIS</div>
-                <div className="font-medium">{project.mis || "N/A"}</div>
+                <div className="text-xs text-gray-500">Κωδικός MIS</div>
+                <div className="font-medium">{project.mis || "Δ/Υ"}</div>
               </div>
               <div className="rounded bg-gray-50 p-2">
-                <div className="text-xs text-gray-500">NA853</div>
-                <div className="font-medium">{project.na853 || "N/A"}</div>
+                <div className="text-xs text-gray-500">Κωδικός ΣΑ853</div>
+                <div className="font-medium">{project.na853 || "Δ/Υ"}</div>
               </div>
             </div>
           </div>
@@ -178,7 +177,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
               }}
             >
               <Edit className="mr-2 h-4 w-4" />
-              Edit
+              Επεξεργασία
             </Button>
 
             <AlertDialog>
@@ -191,18 +190,18 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
+                  Διαγραφή
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                  <AlertDialogTitle>Διαγραφή Έργου</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to delete this project? This action cannot be undone.
+                    Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτό το έργο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Ακύρωση</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={(e) => {
                       e.stopPropagation();
@@ -210,7 +209,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                     }}
                     className="bg-red-600 hover:bg-red-700"
                   >
-                    Delete
+                    Διαγραφή
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
