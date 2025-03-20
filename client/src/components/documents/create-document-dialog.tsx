@@ -15,7 +15,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { BudgetValidationResponse } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Check, ChevronDown, FileText, Plus, Trash2, User } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, ChevronRight, FileText, Plus, Trash2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatePresence, motion } from "framer-motion";
@@ -142,6 +142,12 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>((p
 
 ProjectSelect.displayName = "ProjectSelect";
 
+// Constants
+const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
+const DKA_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ'];
+const ALL_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
+
+// Interfaces
 interface BudgetData {
   current_budget: number;
   total_budget: number;
@@ -162,11 +168,6 @@ interface CreateDocumentDialogProps {
 
 type BadgeVariant = "default" | "destructive" | "outline" | "secondary";
 
-// Constants
-const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
-const DKA_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ'];
-const ALL_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
-
 // Supabase setup
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
@@ -180,12 +181,6 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: false
   }
 });
-
-// Fix the region array code
-const regionArray = (data: any) => {
-  if (!data?.region?.region) return [];
-  return data.region.region || [];
-};
 
 // Animation variants
 const stepVariants = {
@@ -205,7 +200,43 @@ const stepVariants = {
   })
 };
 
-// Components
+// Step Indicator Component
+const StepIndicator = ({ currentStep }: { currentStep: number }) => {
+  const steps = [
+    { title: "Επιλογή Μονάδας", icon: <User className="h-4 w-4" /> },
+    { title: "Στοιχεία Έργου", icon: <FileText className="h-4 w-4" /> },
+    { title: "Δικαιούχοι", icon: <User className="h-4 w-4" /> },
+    { title: "Συνημμένα", icon: <FileText className="h-4 w-4" /> }
+  ];
+
+  return (
+    <div className="flex items-center justify-center mb-8">
+      {steps.map((step, index) => (
+        <div key={index} className="flex items-center">
+          <div className={`flex items-center justify-center ${
+            index <= currentStep ? 'text-primary' : 'text-muted-foreground'
+          }`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+              index === currentStep ? 'border-primary bg-primary/10' :
+                index < currentStep ? 'border-primary bg-primary text-background' :
+                  'border-muted'
+            }`}>
+              {index < currentStep ? <Check className="h-4 w-4" /> : step.icon}
+            </div>
+            <span className="ml-2 text-sm font-medium hidden md:block">{step.title}</span>
+          </div>
+          {index < steps.length - 1 && (
+            <ChevronDown className={`mx-2 h-4 w-4 rotate-[-90deg] ${
+              index < currentStep ? 'text-primary' : 'text-muted-foreground'
+            }`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Budget Indicator Component
 const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
   const availableBudget = budgetData.current_budget - currentAmount;
   const percentageUsed = (currentAmount / budgetData.current_budget) * 100;
@@ -263,42 +294,6 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
   );
 };
 
-const StepIndicator = ({ currentStep }: { currentStep: number }) => {
-  const steps = [
-    { title: "Επιλογή Μονάδας", icon: <User className="h-4 w-4" /> },
-    { title: "Στοιχεία Έργου", icon: <FileText className="h-4 w-4" /> },
-    { title: "Δικαιούχοι", icon: <User className="h-4 w-4" /> },
-    { title: "Συνημμένα", icon: <FileText className="h-4 w-4" /> }
-  ];
-
-  return (
-    <div className="flex items-center justify-center mb-8">
-      {steps.map((step, index) => (
-        <div key={index} className="flex items-center">
-          <div className={`flex items-center justify-center ${
-            index <= currentStep ? 'text-primary' : 'text-muted-foreground'
-          }`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-              index === currentStep ? 'border-primary bg-primary/10' :
-                index < currentStep ? 'border-primary bg-primary text-background' :
-                  'border-muted'
-            }`}>
-              {index < currentStep ? <Check className="h-4 w-4" /> : step.icon}
-            </div>
-            <span className="ml-2 text-sm font-medium hidden md:block">{step.title}</span>
-          </div>
-          {index < steps.length - 1 && (
-            <ChevronRight className={`mx-2 h-4 w-4 ${
-              index < currentStep ? 'text-primary' : 'text-muted-foreground'
-            }`} />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-
 // Schemas
 const recipientSchema = z.object({
   firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
@@ -350,6 +345,35 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const currentAmount = recipients.reduce((sum, r) => {
     return sum + (typeof r.amount === 'number' ? r.amount : 0);
   }, 0);
+
+  // Add this function to get available installments based on expenditure type
+  const getAvailableInstallments = (expenditureType: string) => {
+    return DKA_TYPES.includes(expenditureType) ? DKA_INSTALLMENTS : ALL_INSTALLMENTS;
+  };
+
+  // Update the recipients section rendering
+  const renderRecipientInstallments = (index: number) => {
+    const expenditureType = form.watch('expenditure_type');
+    const availableInstallments = getAvailableInstallments(expenditureType);
+
+    return (
+      <Select
+        value={form.watch(`recipients.${index}.installment`)}
+        onValueChange={(value) => form.setValue(`recipients.${index}.installment`, value)}
+      >
+        <SelectTrigger className="flex-1">
+          <SelectValue placeholder="Δόση" className="placeholder:text-muted-foreground" />
+        </SelectTrigger>
+        <SelectContent>
+          {availableInstallments.map((value) => (
+            <SelectItem key={value} value={value}>
+              {value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
 
   // Queries
   const { data: units = [], isLoading: unitsLoading } = useQuery({
@@ -874,35 +898,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const handlePrevious = () => {
     setDirection(-1);
     setCurrentStep((prev) => Math.max(prev - 1, 0));
-  };
-
-  // Add this function to get available installments based on expenditure type
-  const getAvailableInstallments = (expenditureType: string) => {
-    return DKA_TYPES.includes(expenditureType) ? DKA_INSTALLMENTS : ALL_INSTALLMENTS;
-  };
-
-  // Update the recipients section rendering
-  const renderRecipientInstallments = (index: number) => {
-    constexpenditureType = form.watch('expenditure_type');
-    const availableInstallments = getAvailableInstallments(expenditureType);
-
-    return (
-      <Select
-        value={form.watch(`recipients.${index}.installment`)}
-        onValueChange={(value) => form.setValue(`recipients.${index}.installment`, value)}
-      >
-        <SelectTrigger className="flex-1">
-          <SelectValue placeholder="Δόση" className="placeholder:text-muted-foreground" />
-        </SelectTrigger>
-        <SelectContent>
-          {availableInstallments.map((value) => (
-            <SelectItem key={value} value={value}>
-              {value}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
   };
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
