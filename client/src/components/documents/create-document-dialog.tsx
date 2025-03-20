@@ -72,6 +72,17 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
         .replace(/[^a-z0-9\s]/g, "");
     }, []);
 
+    const extractNA853Info = useCallback((name: string) => {
+      const match = name.match(/NA853\d+/i);
+      if (!match) return null;
+      const code = match[0];
+      return {
+        full: code.toLowerCase(),
+        last3: code.slice(-3),
+        originalMatch: match
+      };
+    }, []);
+
     const filteredProjects = useMemo(() => {
       setIsSearching(true);
       setError(null);
@@ -87,15 +98,23 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
           .map(normalizeText);
 
         const results = projects.filter(project => {
-          const normalizedProjectText = normalizeText(`${project.name}`);
-          const na853Match = project.name.match(/NA853\d+/i);
-          const na853Code = na853Match ? normalizeText(na853Match[0]) : '';
+          const normalizedProjectText = normalizeText(project.name);
+          const na853Info = extractNA853Info(project.name);
 
-          return searchTerms.every(term =>
-            normalizedProjectText.includes(term) ||
-            na853Code.includes(term) ||
-            na853Code.slice(-3).includes(term)
-          );
+          return searchTerms.every(term => {
+            // Check if term matches last 3 digits of NA853
+            if (na853Info && term.length <= 3) {
+              return na853Info.last3.includes(term);
+            }
+
+            // Check full NA853 code
+            if (na853Info && term.includes('853')) {
+              return na853Info.full.includes(term);
+            }
+
+            // Check general text
+            return normalizedProjectText.includes(term);
+          });
         });
 
         if (results.length === 0 && searchTerms.length > 0) {
@@ -110,7 +129,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
       } finally {
         setIsSearching(false);
       }
-    }, [projects, debouncedSearchQuery, normalizeText]);
+    }, [projects, debouncedSearchQuery, normalizeText, extractNA853Info]);
 
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -127,13 +146,13 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     useEffect(() => {
       // Reset search query when selection changes
       if (selectedProject && !isFocused) {
-        const na853Match = selectedProject.name.match(/NA853\d+/i);
-        const displayText = na853Match ? 
-          `${na853Match[0]} - ${selectedProject.name.split(' - ').slice(1).join(' - ')}` :
+        const na853Info = extractNA853Info(selectedProject.name);
+        const displayText = na853Info ? 
+          `${na853Info.originalMatch[0]} - ${selectedProject.name.split(' - ').slice(1).join(' - ')}` :
           selectedProject.name;
         setSearchQuery(displayText);
       }
-    }, [selectedProject, isFocused]);
+    }, [selectedProject, isFocused, extractNA853Info]);
 
     const handleFocus = () => {
       setIsFocused(true);
@@ -143,9 +162,9 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     const handleBlur = () => {
       setTimeout(() => {
         if (selectedProject && !searchQuery.trim()) {
-          const na853Match = selectedProject.name.match(/NA853\d+/i);
-          const displayText = na853Match ? 
-            `${na853Match[0]} - ${selectedProject.name.split(' - ').slice(1).join(' - ')}` :
+          const na853Info = extractNA853Info(selectedProject.name);
+          const displayText = na853Info ? 
+            `${na853Info.originalMatch[0]} - ${selectedProject.name.split(' - ').slice(1).join(' - ')}` :
             selectedProject.name;
           setSearchQuery(displayText);
         }
@@ -155,9 +174,9 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
 
     return (
       <div className="relative w-full">
-        <Command className="relative rounded-lg border shadow-md" ref={commandRef}>
-          <div className="flex items-center px-3 py-2">
-            <Search className="h-4 w-4 shrink-0 opacity-50 mr-2" />
+        <Command className="relative rounded-lg border shadow-md overflow-visible" ref={commandRef}>
+          <div className="flex items-center px-3 py-2.5 gap-2 bg-background">
+            <Search className="h-4 w-4 shrink-0 opacity-50" />
             <CommandInput
               ref={inputRef}
               value={searchQuery}
@@ -165,12 +184,12 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
               onFocus={handleFocus}
               onBlur={handleBlur}
               placeholder="Αναζήτηση με NA853 ή όνομα έργου... (Ctrl + /)"
-              className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground focus:ring-0"
             />
             {isSearching && (
               <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
             )}
-            <kbd className="pointer-events-none ml-2 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+            <kbd className="pointer-events-none hidden md:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
               <span className="text-xs">⌘</span>K
             </kbd>
           </div>
@@ -834,7 +853,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     }
   };
 
-  const addRecipient = () => {
+  const addRecipient = ()=> {
     const currentRecipients = form.watch("recipients") || [];
     if (currentRecipients.length >= 10) {
       toast({
