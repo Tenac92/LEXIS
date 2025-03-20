@@ -598,14 +598,29 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (!selectedProjectId) return null;
 
       try {
+        console.log('[Budget] Fetching budget data for project:', selectedProjectId);
+
         const { data: budgetData, error } = await supabase
           .from('budget_na853_split')
           .select('user_view, proip, ethsia_pistosi, katanomes_etous')
           .eq('mis', selectedProjectId)
-          .single();
+          .maybeSingle(); // Use maybeSingle() instead of single()
 
-        if (error) throw error;
-        if (!budgetData) throw new Error('Budget data not found');
+        if (error) {
+          console.error('[Budget] Supabase query error:', error);
+          throw error;
+        }
+
+        // Handle case where no budget data exists
+        if (!budgetData) {
+          console.log('[Budget] No budget data found for project:', selectedProjectId);
+          return {
+            current_budget: 0,
+            total_budget: 0,
+            annual_budget: 0,
+            katanomes_etous: 0
+          };
+        }
 
         return {
           current_budget: parseFloat(budgetData.user_view?.toString() || '0'),
@@ -614,13 +629,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0')
         };
       } catch (error) {
-        console.error('Budget fetch error:', error);
-        toast({
-          title: "Σφάλμα",
-          description: error instanceof Error ? error.message : "Αποτυχία φόρτωσης πληροφοριών προϋπολογισμού.",
-          variant: "destructive"
-        });
-        return null;
+        console.error('[Budget] Error fetching budget data:', error);
+        // Don't throw the error, return default values instead
+        return {
+          current_budget: 0,
+          total_budget: 0,
+          annual_budget: 0,
+          katanomes_etous: 0
+        };
       }
     },
     enabled: Boolean(selectedProjectId)
@@ -1033,41 +1049,45 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
-  const { data: regions = [], isLoading: regionsLoading } = useQuery({
+  const { data: regions = [] } = useQuery({
     queryKey: ["regions", selectedProjectId],
     queryFn: async () => {
       if (!selectedProjectId) return [];
 
       try {
+        console.log('[Regions] Fetching regions for project:', selectedProjectId);
+
         const { data, error } = await supabase
           .from('Projects')
           .select('region')
           .eq('mis', selectedProjectId)
-          .single();
+          .maybeSingle();
 
         if (error) {
-          console.error('Error fetching regions:', error);
-          toast({
-            title: "Σφάλμα",
-            description: "Αποτυχία φόρτωσης περιφερειών. Παρακαλώ δοκιμάστε ξανά.",
-            variant: "destructive"
-          });
-          throw error;
+          console.error('[Regions] Supabase query error:', error);
+          return [];
         }
 
-        if (!data?.region?.region) return [];
-        const regionArrayData = regionArray(data);
-        const municipalityArray = data.region.municipality || [];
-        const regionalUnitArray = data.region.regional_unit || [];
+        if (!data || !data.region) {
+          console.log('[Regions] No regions found for project:', selectedProjectId);
+          return [];
+        }
 
-        return regionArrayData.map((region: string, index: number) => ({
-          id: region,
-          name: region,
-          municipality: municipalityArray[index] || '',
-          regional_unit: regionalUnitArray[index] || ''
-        }));
+        // Handle region data which might be a string or array
+        let regionList: string[] = [];
+        try {
+          if (typeof data.region === 'string') {
+            regionList = JSON.parse(data.region);
+          } else if (Array.isArray(data.region)) {
+            regionList = data.region;
+          }
+        } catch (e) {
+          console.error('[Regions] Error parsing region data:', e);
+        }
+
+        return regionList;
       } catch (error) {
-        console.error('Regions fetch error:', error);
+        console.error('[Regions] Error fetching regions:', error);
         return [];
       }
     },
