@@ -4,11 +4,13 @@ import type { GeneratedDocument } from "@shared/schema";
 import { authenticateSession } from '../auth';
 import { DocumentManager } from '../utils/DocumentManager';
 
+// Create the router
 export const router = Router();
+const documentsRouter = router; // Alias for clarity
 const documentManager = new DocumentManager();
 
-// Export the router 
-export default router;
+// Export the router as both default and named export for flexibility
+export default documentsRouter;
 
 // List documents with filters
 router.get('/', authenticateSession, async (req: Request, res: Response) => {
