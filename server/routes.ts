@@ -225,24 +225,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get project NA853 from Supabase if not provided
         let project_na853 = req.body.project_na853;
         if (!project_na853) {
-          console.log('[TEST] Fetching NA853 for project:', project_id);
-          const { data: projectData, error: projectError } = await supabase
-            .from('Projects')
-            .select('na853')
-            .eq('mis', project_id)
-            .single();
-
-          if (projectError || !projectData) {
-            console.error('[TEST] Error fetching project:', projectError);
-            return res.status(200).json({ 
-              success: false,
-              message: 'Project not found, using fallback',
-              receivedData: req.body,
-              id: `test-${Date.now()}`
-            });
+          // In the database, the project_id is stored as mis in the Projects table
+          console.log('[TEST] Fetching NA853 for project with MIS:', project_id);
+          
+          try {
+            // Use Projects table with mis field
+            const { data: projectData, error: projectError } = await supabase
+              .from('Projects')
+              .select('na853')
+              .eq('mis', project_id)
+              .single();
+            
+            if (!projectError && projectData && projectData.na853) {
+              project_na853 = projectData.na853;
+              console.log('[TEST] Retrieved NA853 from Projects table:', project_na853);
+            } else {
+              // If not found in Projects table, use project_mis directly from the payload
+              if (req.body.project_mis) {
+                console.log('[TEST] Using project_mis directly as fallback');
+                project_na853 = req.body.project_mis;
+              } else {
+                console.error('[TEST] Could not find project information:', projectError);
+                return res.status(200).json({ 
+                  success: false,
+                  message: 'Project not found in Projects table, using fallback ID',
+                  receivedData: req.body,
+                  id: `test-${Date.now()}`
+                });
+              }
+            }
+          } catch (error) {
+            console.error('[TEST] Error during project lookup:', error);
+            // If error happens, use project_mis as fallback if available
+            if (req.body.project_mis) {
+              console.log('[TEST] Using project_mis directly due to error');
+              project_na853 = req.body.project_mis;
+            } else {
+              return res.status(200).json({ 
+                success: false,
+                message: 'Error looking up project, using fallback',
+                receivedData: req.body,
+                id: `test-${Date.now()}`
+              });
+            }
           }
-
-          project_na853 = projectData.na853;
           console.log('[TEST] Retrieved NA853:', project_na853);
         }
 
@@ -325,7 +351,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Get project NA853 value using project_mis
+        // Get project NA853 value using project_id or project_mis if available
+        const project_mis = req.body.project_mis;
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
           .select('na853')
