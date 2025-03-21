@@ -317,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         console.log('[DIRECT_ROUTE_V2] Document creation request with body:', req.body);
         
-        const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [] } = req.body;
+        const { unit, project_id, region, expenditure_type, recipients, total_amount, attachments = [] } = req.body;
         
         if (!recipients?.length || !project_id || !unit || !expenditure_type) {
           return res.status(400).json({
@@ -325,15 +325,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        // Get project NA853 value
+        const { data: projectData, error: projectError } = await supabase
+          .from('project_catalog')
+          .select('na853')
+          .eq('mis', project_id)
+          .single();
+
+        if (projectError) {
+          console.error('[DIRECT_ROUTE_V2] Project fetch error:', projectError);
+          return res.status(404).json({ message: 'Project not found' });
+        }
+
         const { data, error } = await supabase
           .from('generated_documents')
           .insert([{
             unit,
             project_id,
-            project_mis,
+            project_na853: projectData.na853,
             expenditure_type,
             recipients,
             total_amount,
+            region,
             status: 'draft',
             attachments
           }])
