@@ -435,6 +435,8 @@ type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
 // Main component
 export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocumentDialogProps) {
+  // Reference to programmatically close the dialog
+  const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
   const [loading, setLoading] = useState(false);
