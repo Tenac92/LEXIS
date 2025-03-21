@@ -1,0 +1,50 @@
+[vite] connecting...
+DOMException {stack: "Error: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.↵    at…"}
+
+Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+[Supabase] Testing connection with URL: https://rlzrtiufwxlljrtmpwsr.supabase.co
+[Supabase] Connection successful, found records: 
+Object {count: 1, sample: {…}}
+[Supabase] Initial connection test: successful
+Υποβολή φόρμας σύνδεσης με δεδομένα: 
+Object {email: "test@test.gr", password: "12345678"}
+Attempting login with: test@test.gr
+Login successful: 
+Object {id: 65, email: "test@test.gr", name: "test", role: "user", units: Array(11), …}
+Login mutation succeeded, updating cache with user: 
+Object {id: 65, email: "test@test.gr", name: "test", role: "user", units: Array(11), …}
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[Budget] Fetching budget data for project: 
+Object {id: "2024ΝΑ85300001", mis: "5174692"}
+[Regions] Fetching regions for project: 
+Object {id: "2024ΝΑ85300001", mis: "5174692"}
+[Regions] Using regional_unit data: 
+Array ["ΦΩΚΙΔΑΣ"]
+Search debug: 
+Object {searchTerm: "2024να85300001 - 2021 σεισμος φωκιδας", isNumericSearch: false, projectCount: 78}
+Search results: 
+Object {searchTerm: "2024να85300001 - 2021 σεισμος φωκιδας", resultCount: 1, results: Array(1)}
+Starting form submission with data: 
+Object {unit: "ΔΑΕΦΚ-ΚΕ", project_id: "2024ΝΑ85300001", region: "ΦΩΚΙΔΑΣ", expenditure_type: "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", recipients: Array(1), …}
+Found project for submission: 
+Object {id: "2024ΝΑ85300001", mis: "5174692"}
+Sending payload to create document: 
+Object {unit: "ΔΑΕΦΚ-ΚΕ", project_id: "2024ΝΑ85300001", project_mis: "5174692", region: "ΦΩΚΙΔΑΣ", expenditure_type: "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", …}
+[API] Το αίτημα απέτυχε: 
+Error {}
+message: "Σφάλμα HTTP! κατάσταση: 404"
+stack: "Error: Σφάλμα HTTP! κατάσταση: 404↵ at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:20:13)↵ at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:879:24)↵ at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-BW5TH624.js?v=7ec152b7:1675:9"
+get stack: ƒ ()
+length: 0
+name: ""
+[[Prototype]]: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Document creation error: 
+Error {}
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

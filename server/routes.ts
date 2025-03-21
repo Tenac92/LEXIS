@@ -51,6 +51,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use('/api/units', authenticateSession, unitsRouter);
     log('[Routes] Units routes registered');
 
+    // Make sure document routes are mounted BEFORE the general API router with catch-all
+    app.use('/api/documents', authenticateSession, documentsRouter);
+    
     // Mount other API routes under /api - these don't conflict with the ones above
     app.use('/api', apiRouter);
 

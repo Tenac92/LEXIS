@@ -28,8 +28,12 @@ router.get('/health', (_req, res) => {
   });
 });
 
-// Error handling for unmatched routes
-router.use('*', (req, res) => {
+// Error handling for unmatched routes - but exclude /api/documents routes
+router.use('*', (req, res, next) => {
+  // Skip this middleware for documents routes
+  if (req.originalUrl.includes('/api/documents')) {
+    return next();
+  }
   res.status(404).json({
     error: 'Not Found',
     message: `Route ${req.originalUrl} not found`,
