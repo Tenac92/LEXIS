@@ -7,6 +7,7 @@ import { errorMiddleware } from "./middleware/errorMiddleware";
 import { securityHeaders } from "./middleware/securityHeaders";
 import { setupAuth, sessionMiddleware } from './auth';
 import { createWebSocketServer } from './websocket';
+import { supabase } from './config/db';
 
 // Enhanced error handlers
 process.on('uncaughtException', (error) => {
@@ -150,7 +151,7 @@ async function startServer() {
           // Check if there's a session but don't require auth for testing
           console.log('[DIRECT_ROUTE_V2] Session info:', (req as any).session);
           
-          const { unit, project_id, expenditure_type, recipients, total_amount } = req.body;
+          const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [] } = req.body;
           
           if (!recipients?.length || !project_id || !unit || !expenditure_type) {
             return res.status(400).json({
@@ -158,13 +159,76 @@ async function startServer() {
             });
           }
           
-          // Minimal validation for testing
-          const documentId = `test-${Date.now()}`;
+          // Get project NA853 from Supabase if not provided
+          let project_na853 = req.body.project_na853;
+          if (!project_na853) {
+            console.log('[DIRECT_ROUTE_V2] Fetching NA853 for project:', project_id);
+            const { data: projectData, error: projectError } = await supabase
+              .from('project_catalog')
+              .select('na853')
+              .eq('mis', project_id)
+              .single();
+            
+            if (projectError || !projectData) {
+              console.error('[DIRECT_ROUTE_V2] Error fetching project:', projectError);
+              return res.status(404).json({ 
+                message: 'Project not found', 
+                error: projectError?.message 
+              });
+            }
+            
+            project_na853 = projectData.na853;
+            console.log('[DIRECT_ROUTE_V2] Retrieved NA853:', project_na853);
+          }
           
-          console.log('[DIRECT_ROUTE_V2] Document created with ID:', documentId);
+          // Format recipients data
+          const formattedRecipients = recipients.map((r: any) => ({
+            firstname: String(r.firstname).trim(),
+            lastname: String(r.lastname).trim(),
+            fathername: String(r.fathername || '').trim(),
+            afm: String(r.afm).trim(),
+            amount: parseFloat(String(r.amount)),
+            installment: String(r.installment).trim()
+          }));
+          
+          const now = new Date().toISOString();
+          
+          // Create document payload
+          const documentPayload = {
+            unit,
+            project_id,
+            project_na853,
+            expenditure_type,
+            status: 'pending', // Always set initial status to pending
+            recipients: formattedRecipients,
+            total_amount: parseFloat(String(total_amount)) || 0,
+            attachments: attachments || [],
+            created_at: now,
+            updated_at: now
+          };
+          
+          console.log('[DIRECT_ROUTE_V2] Inserting document with payload:', documentPayload);
+          
+          // Insert into database
+          const { data, error } = await supabase
+            .from('generated_documents')
+            .insert([documentPayload])
+            .select('id')
+            .single();
+          
+          if (error) {
+            console.error('[DIRECT_ROUTE_V2] Supabase error:', error);
+            return res.status(500).json({ 
+              message: 'Error creating document in database', 
+              error: error.message,
+              details: error.details
+            });
+          }
+          
+          console.log('[DIRECT_ROUTE_V2] Document created successfully with ID:', data.id);
           res.status(201).json({ 
-            id: documentId,
-            message: 'Document created via direct bypass route'
+            id: data.id,
+            message: 'Document created and stored in database'
           });
         } catch (error) {
           console.error('[DIRECT_ROUTE_V2] Error:', error);

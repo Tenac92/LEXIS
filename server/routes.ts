@@ -201,14 +201,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     
     // Test document creation route without authentication
-    app.post('/api/test-document-post', (req, res) => {
-      console.log('[TEST] Document test route received payload:', req.body);
-      res.status(200).json({
-        success: true,
-        message: 'Document test route works',
-        receivedData: req.body,
-        id: `test-${Date.now()}`
-      });
+    app.post('/api/test-document-post', async (req, res) => {
+      try {
+        console.log('[TEST] Document test route received payload:', req.body);
+        
+        const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [] } = req.body;
+        
+        if (!recipients?.length || !project_id || !unit || !expenditure_type) {
+          console.error('[TEST] Missing required fields:', { 
+            hasRecipients: Boolean(recipients?.length), 
+            hasProjectId: Boolean(project_id), 
+            hasUnit: Boolean(unit), 
+            hasExpenditureType: Boolean(expenditure_type) 
+          });
+          return res.status(200).json({
+            success: false,
+            message: 'Missing required fields',
+            receivedData: req.body,
+            id: `test-${Date.now()}`
+          });
+        }
+        
+        // Get project NA853 from Supabase if not provided
+        let project_na853 = req.body.project_na853;
+        if (!project_na853) {
+          console.log('[TEST] Fetching NA853 for project:', project_id);
+          const { data: projectData, error: projectError } = await supabase
+            .from('project_catalog')
+            .select('na853')
+            .eq('mis', project_id)
+            .single();
+          
+          if (projectError || !projectData) {
+            console.error('[TEST] Error fetching project:', projectError);
+            return res.status(200).json({ 
+              success: false,
+              message: 'Project not found, using fallback',
+              receivedData: req.body,
+              id: `test-${Date.now()}`
+            });
+          }
+          
+          project_na853 = projectData.na853;
+          console.log('[TEST] Retrieved NA853:', project_na853);
+        }
+        
+        // Format recipients data
+        const formattedRecipients = recipients.map((r: any) => ({
+          firstname: String(r.firstname).trim(),
+          lastname: String(r.lastname).trim(),
+          fathername: String(r.fathername || '').trim(),
+          afm: String(r.afm).trim(),
+          amount: parseFloat(String(r.amount)),
+          installment: String(r.installment).trim()
+        }));
+        
+        const now = new Date().toISOString();
+        
+        // Create document payload
+        const documentPayload = {
+          unit,
+          project_id,
+          project_na853,
+          expenditure_type,
+          status: 'pending', // Always set initial status to pending
+          recipients: formattedRecipients,
+          total_amount: parseFloat(String(total_amount)) || 0,
+          attachments: attachments || [],
+          created_at: now,
+          updated_at: now
+        };
+        
+        console.log('[TEST] Attempting to insert document with payload:', documentPayload);
+        
+        // Insert into database
+        const { data, error } = await supabase
+          .from('generated_documents')
+          .insert([documentPayload])
+          .select('id')
+          .single();
+        
+        if (error) {
+          console.error('[TEST] Supabase insert error:', error);
+          return res.status(200).json({ 
+            success: false,
+            message: 'Database insert failed, but returning test ID',
+            error: error.message,
+            receivedData: req.body,
+            id: `test-${Date.now()}`
+          });
+        }
+        
+        console.log('[TEST] Document created successfully with ID:', data.id);
+        return res.status(200).json({
+          success: true,
+          message: 'Document created and stored in database',
+          receivedData: req.body,
+          id: data.id
+        });
+      } catch (error) {
+        console.error('[TEST] Unexpected error:', error);
+        return res.status(200).json({
+          success: false,
+          message: 'Error in test route, returning fallback',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          receivedData: req.body,
+          id: `test-${Date.now()}`
+        });
+      }
     });
     
     // Mount other API routes under /api 
