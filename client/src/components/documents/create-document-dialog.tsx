@@ -439,6 +439,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [user, setUser] = useState<any>(null); // Add user state
 
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
@@ -860,9 +861,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ["budget", data.project_id] }),
         queryClient.refetchQueries({ queryKey: ["budget-validation", data.project_id, totalAmount] })
-      ]);      toast({
-        title: "Επιτυχία",
-        description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
+      ]);
+      toast({
+        title: "Επιτυχία",        description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
       });
 
       form.reset();
@@ -955,6 +956,19 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     }
   }, [units, form]);
 
+  useEffect(() => {
+    // Auto-select unit if user has only one unit
+    if (user?.units?.length === 1) {
+      form.setValue("unit", user.units[0]);
+    }
+  }, [user?.units, form]);
+
+  useEffect(() => {
+    // Auto-select region if there's only one available
+    if (regions.length === 1) {
+      form.setValue("region", regions[0].id);
+    }
+  }, [regions, form]);
 
   const handleNext = async () => {
     try {
@@ -1098,7 +1112,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
         let regionData;
         try {
-          regionData = typeof data.region === 'string' ? 
+          regionData = typeof data.region === 'string' ?
             JSON.parse(data.region) : data.region;
         } catch (e) {
           console.error('[Regions] Error parsing region data:', e);
@@ -1161,7 +1175,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
-                      disabled={unitsLoading}
+                      disabled={unitsLoading || user?.units?.length === 1} // Added disabled condition
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
@@ -1217,12 +1231,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     <Select
                       value={form.watch("region")}
                       onValueChange={(value) => form.setValue("region", value)}
+                      disabled={regions.length === 1} // Added disabled condition
                     >
                       <SelectTrigger>
                         <SelectValue placeholder={
-                          regions[0]?.type === 'regional_unit' ? 
-                          'Επιλέξτε Περιφερειακή Ενότητα' : 
-                          'Επιλέξτε Περιφέρεια'
+                          regions[0]?.type === 'regional_unit' ?
+                            'Επιλέξτε Περιφερειακή Ενότητα' :
+                            'Επιλέξτε Περιφέρεια'
                         } />
                       </SelectTrigger>
                       <SelectContent>
