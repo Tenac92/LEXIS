@@ -1,0 +1,181 @@
+client:535 WebSocket connection to 'wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/' failed: 
+setupWebSocket @ client:535
+(ανώνυμες) @ client:530
+client:535 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.
+    at setupWebSocket (client:535:19)
+    at fallback (client:508:16)
+    at WebSocket.<anonymous> (client:551:7)
+setupWebSocket @ client:535
+fallback @ client:508
+(ανώνυμες) @ client:551
+chunk-276SZO74.js?v=7ec152b7:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+supabase.ts:12 Multiple GoTrueClient instances detected in the same browser context. It is not an error, but this should be avoided as it may produce undefined behavior when used concurrently under the same storage key.
+_GoTrueClient @ @supabase_supabase-js.js?v=7ec152b7:4892
+SupabaseAuthClient @ @supabase_supabase-js.js?v=7ec152b7:6682
+_initSupabaseAuthClient @ @supabase_supabase-js.js?v=7ec152b7:6878
+SupabaseClient @ @supabase_supabase-js.js?v=7ec152b7:6751
+createClient @ @supabase_supabase-js.js?v=7ec152b7:6918
+(ανώνυμες) @ supabase.ts:12
+Εμφάνιση 5 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+supabase.ts:28 [Supabase] Testing connection with URL: https://rlzrtiufwxlljrtmpwsr.supabase.co
+use-auth.tsx:113 
+        
+        
+       GET https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/auth/me 401 (Unauthorized)
+queryFn @ use-auth.tsx:113
+fetchFn @ @tanstack_react-query.js?v=7ec152b7:842
+run @ @tanstack_react-query.js?v=7ec152b7:493
+start @ @tanstack_react-query.js?v=7ec152b7:535
+fetch @ @tanstack_react-query.js?v=7ec152b7:929
+executeFetch_fn @ @tanstack_react-query.js?v=7ec152b7:2247
+onSubscribe @ @tanstack_react-query.js?v=7ec152b7:1934
+subscribe @ @tanstack_react-query.js?v=7ec152b7:24
+(ανώνυμες) @ @tanstack_react-query.js?v=7ec152b7:3075
+subscribeToStore @ chunk-276SZO74.js?v=7ec152b7:11984
+commitHookEffectListMount @ chunk-276SZO74.js?v=7ec152b7:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=7ec152b7:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=7ec152b7:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=7ec152b7:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=7ec152b7:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=7ec152b7:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=7ec152b7:19447
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=7ec152b7:18868
+flushSyncCallbacks @ chunk-276SZO74.js?v=7ec152b7:9119
+commitRootImpl @ chunk-276SZO74.js?v=7ec152b7:19432
+commitRoot @ chunk-276SZO74.js?v=7ec152b7:19277
+finishConcurrentRender @ chunk-276SZO74.js?v=7ec152b7:18805
+performConcurrentWorkOnRoot @ chunk-276SZO74.js?v=7ec152b7:18718
+workLoop @ chunk-276SZO74.js?v=7ec152b7:197
+flushWork @ chunk-276SZO74.js?v=7ec152b7:176
+performWorkUntilDeadline @ chunk-276SZO74.js?v=7ec152b7:384
+Εμφάνιση 25 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+supabase.ts:39 [Supabase] Connection successful, found records: {count: 1, sample: {…}}
+supabase.ts:52 [Supabase] Initial connection test: successful
+auth-page.tsx:38 Υποβολή φόρμας σύνδεσης με δεδομένα: {email: 'test@test.gr', password: '12345678'}
+use-auth.tsx:26 Attempting login with: test@test.gr
+use-auth.tsx:43 Login successful: {id: 65, email: 'test@test.gr', name: 'test', role: 'user', units: Array(11), …}
+use-auth.tsx:54 Login mutation succeeded, updating cache with user: {id: 65, email: 'test@test.gr', name: 'test', role: 'user', units: Array(11), …}
+queryClient.ts:55 [DEBUG] Making query to: /api/dashboard/stats
+chunk-UWELLWEH.js?v=7ec152b7:1396 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(ανώνυμες) @ chunk-UWELLWEH.js?v=7ec152b7:1396
+commitHookEffectListMount @ chunk-276SZO74.js?v=7ec152b7:16915
+commitPassiveMountOnFiber @ chunk-276SZO74.js?v=7ec152b7:18156
+commitPassiveMountEffects_complete @ chunk-276SZO74.js?v=7ec152b7:18129
+commitPassiveMountEffects_begin @ chunk-276SZO74.js?v=7ec152b7:18119
+commitPassiveMountEffects @ chunk-276SZO74.js?v=7ec152b7:18109
+flushPassiveEffectsImpl @ chunk-276SZO74.js?v=7ec152b7:19490
+flushPassiveEffects @ chunk-276SZO74.js?v=7ec152b7:19447
+commitRootImpl @ chunk-276SZO74.js?v=7ec152b7:19416
+commitRoot @ chunk-276SZO74.js?v=7ec152b7:19277
+performSyncWorkOnRoot @ chunk-276SZO74.js?v=7ec152b7:18895
+flushSyncCallbacks @ chunk-276SZO74.js?v=7ec152b7:9119
+(ανώνυμες) @ chunk-276SZO74.js?v=7ec152b7:18627
+Εμφάνιση 13 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:614 [Budget] Fetching budget data for project: {id: '2024ΝΑ85300001', mis: '5174692'}
+create-document-dialog.tsx:1040 [Regions] Fetching regions for project: {id: '2024ΝΑ85300001', mis: '5174692'}
+create-document-dialog.tsx:1071 [Regions] Using regional_unit data: ['ΦΩΚΙΔΑΣ']
+create-document-dialog.tsx:103 Search debug: {searchTerm: '2024να85300001 - 2021 σεισμος φωκιδας', isNumericSearch: false, projectCount: 78}
+create-document-dialog.tsx:129 Search results: {searchTerm: '2024να85300001 - 2021 σεισμος φωκιδας', resultCount: 1, results: Array(1)}
+queryClient.ts:8 [DEBUG] Making API request to: /api/budget/validate
+queryClient.ts:22 [DEBUG] Request options: {method: 'POST', headers: {…}, credentials: 'include'}
+create-document-dialog.tsx:759 Starting form submission with data: {unit: 'ΔΑΕΦΚ-ΚΕ', project_id: '2024ΝΑ85300001', region: 'ΦΩΚΙΔΑΣ', expenditure_type: 'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', recipients: Array(1), …}
+create-document-dialog.tsx:786 Found project for submission: {id: '2024ΝΑ85300001', mis: '5174692'}
+queryClient.ts:8 [DEBUG] Making API request to: /api/budget/validate
+queryClient.ts:22 [DEBUG] Request options: {method: 'POST', headers: {…}, credentials: 'include'}
+create-document-dialog.tsx:840 Sending payload to create document: {unit: 'ΔΑΕΦΚ-ΚΕ', project_id: '2024ΝΑ85300001', project_mis: '5174692', region: 'ΦΩΚΙΔΑΣ', expenditure_type: 'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', …}
+create-document-dialog.tsx:843 [DEBUG] Testing route access with test endpoint
+queryClient.ts:8 [DEBUG] Making API request to: /api/test-route
+queryClient.ts:22 [DEBUG] Request options: {method: 'GET', headers: {…}, credentials: 'include'}
+create-document-dialog.tsx:848 [DEBUG] Test route response: {message: 'Test route works'}
+create-document-dialog.tsx:855 [DEBUG] Attempting document creation with v2 API
+queryClient.ts:8 [DEBUG] Making API request to: /api/v2-documents
+queryClient.ts:22 [DEBUG] Request options: {method: 'POST', headers: {…}, credentials: 'include'}
+queryClient.ts:28 
+        
+        
+       POST https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/v2-documents 404 (Not Found)
+apiRequest @ queryClient.ts:28
+handleSubmit @ create-document-dialog.tsx:857
+await in handleSubmit
+(ανώνυμες) @ chunk-BW5TH624.js?v=7ec152b7:1675
+await in (ανώνυμες)
+onClick @ create-document-dialog.tsx:1488
+callCallback2 @ chunk-276SZO74.js?v=7ec152b7:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=7ec152b7:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=7ec152b7:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=7ec152b7:3736
+executeDispatch @ chunk-276SZO74.js?v=7ec152b7:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=7ec152b7:7034
+processDispatchQueue @ chunk-276SZO74.js?v=7ec152b7:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=7ec152b7:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=7ec152b7:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=7ec152b7:18913
+batchedUpdates @ chunk-276SZO74.js?v=7ec152b7:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=7ec152b7:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=7ec152b7:5478
+dispatchEvent @ chunk-276SZO74.js?v=7ec152b7:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=7ec152b7:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+queryClient.ts:46 [API] Το αίτημα απέτυχε: Error: Σφάλμα HTTP! κατάσταση: 404
+    at apiRequest (queryClient.ts:41:13)
+    at async handleSubmit (create-document-dialog.tsx:857:28)
+    at async chunk-BW5TH624.js?v=7ec152b7:1675:9
+apiRequest @ queryClient.ts:46
+await in apiRequest
+handleSubmit @ create-document-dialog.tsx:857
+await in handleSubmit
+(ανώνυμες) @ chunk-BW5TH624.js?v=7ec152b7:1675
+await in (ανώνυμες)
+onClick @ create-document-dialog.tsx:1488
+callCallback2 @ chunk-276SZO74.js?v=7ec152b7:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=7ec152b7:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=7ec152b7:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=7ec152b7:3736
+executeDispatch @ chunk-276SZO74.js?v=7ec152b7:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=7ec152b7:7034
+processDispatchQueue @ chunk-276SZO74.js?v=7ec152b7:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=7ec152b7:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=7ec152b7:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=7ec152b7:18913
+batchedUpdates @ chunk-276SZO74.js?v=7ec152b7:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=7ec152b7:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=7ec152b7:5478
+dispatchEvent @ chunk-276SZO74.js?v=7ec152b7:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=7ec152b7:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:871 [DEBUG] V2 API request failed: Error: Σφάλμα HTTP! κατάσταση: 404
+    at apiRequest (queryClient.ts:41:13)
+    at async handleSubmit (create-document-dialog.tsx:857:28)
+    at async chunk-BW5TH624.js?v=7ec152b7:1675:9
+handleSubmit @ create-document-dialog.tsx:871
+await in handleSubmit
+(ανώνυμες) @ chunk-BW5TH624.js?v=7ec152b7:1675
+await in (ανώνυμες)
+onClick @ create-document-dialog.tsx:1488
+callCallback2 @ chunk-276SZO74.js?v=7ec152b7:3674
+invokeGuardedCallbackDev @ chunk-276SZO74.js?v=7ec152b7:3699
+invokeGuardedCallback @ chunk-276SZO74.js?v=7ec152b7:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-276SZO74.js?v=7ec152b7:3736
+executeDispatch @ chunk-276SZO74.js?v=7ec152b7:7014
+processDispatchQueueItemsInOrder @ chunk-276SZO74.js?v=7ec152b7:7034
+processDispatchQueue @ chunk-276SZO74.js?v=7ec152b7:7043
+dispatchEventsForPlugins @ chunk-276SZO74.js?v=7ec152b7:7051
+(ανώνυμες) @ chunk-276SZO74.js?v=7ec152b7:7174
+batchedUpdates$1 @ chunk-276SZO74.js?v=7ec152b7:18913
+batchedUpdates @ chunk-276SZO74.js?v=7ec152b7:3579
+dispatchEventForPluginEventSystem @ chunk-276SZO74.js?v=7ec152b7:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-276SZO74.js?v=7ec152b7:5478
+dispatchEvent @ chunk-276SZO74.js?v=7ec152b7:5472
+dispatchDiscreteEvent @ chunk-276SZO74.js?v=7ec152b7:5449
+Εμφάνιση 16 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:875 [DEBUG] Testing document creation with test endpoint
+queryClient.ts:8 [DEBUG] Making API request to: /api/test-document-post
+queryClient.ts:22 [DEBUG] Request options: {method: 'POST', headers: {…}, credentials: 'include'}
+create-document-dialog.tsx:884 [DEBUG] Test document route response: {success: false, message: 'Project not found, using fallback', receivedData: {…}, id: 'test-1742551164228'}
+create-document-dialog.tsx:889 [DEBUG] Document created successfully via test endpoint
