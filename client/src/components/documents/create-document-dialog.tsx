@@ -964,7 +964,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       form.reset();
       setCurrentStep(0);
+      
+      // Close the dialog by using both methods
       onClose();
+      onOpenChange(false);
     } catch (error) {
       console.error('Document creation error:', error);
       toast({
