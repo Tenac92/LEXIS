@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { authenticateSession } from "./auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
-import documentsRouter from "./controllers/documentsController";
 import { router as budgetRouter } from "./controllers/budgetController";
 import { router as generatedDocumentsRouter } from "./controllers/generatedDocuments";
 import { router as unitsRouter } from "./controllers/unitsController";
@@ -11,6 +10,7 @@ import { router as usersRouter } from "./controllers/usersController";
 import { router as projectRouter } from "./controllers/projectController";
 import templatePreviewRouter from "./routes/template-preview";
 import authRouter from "./routes/auth";
+import documentsRouter from "./routes/documents"; // Import from our new dedicated route file
 import { log } from "./vite";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -50,11 +50,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Registering units routes...');
     app.use('/api/units', authenticateSession, unitsRouter);
     log('[Routes] Units routes registered');
-
-    // Make sure document routes are mounted BEFORE the general API router with catch-all
-    app.use('/api/documents', authenticateSession, documentsRouter);
     
-    // Mount other API routes under /api - these don't conflict with the ones above
+    // Mount other API routes under /api 
     app.use('/api', apiRouter);
 
     // Create and return HTTP server
