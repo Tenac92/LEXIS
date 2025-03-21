@@ -233,6 +233,14 @@ async function startServer() {
           
           const now = new Date().toISOString();
           
+          // Log user authentication status
+          console.log('[DIRECT_ROUTE_V2] User info for document creation:', {
+            hasSession: !!req.session,
+            hasUser: !!req.session?.user,
+            userId: req.session?.user?.id,
+            userDepartment: req.session?.user?.department
+          });
+
           // Create document payload
           const documentPayload = {
             unit,
@@ -243,6 +251,8 @@ async function startServer() {
             recipients: formattedRecipients,
             total_amount: parseFloat(String(total_amount)) || 0,
             attachments: attachments || [],
+            generated_by: req.session?.user?.id || null, // Add user ID if available
+            department: req.session?.user?.department || null, // Add department if available
             created_at: now,
             updated_at: now
           };

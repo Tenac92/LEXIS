@@ -309,9 +309,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           recipients: formattedRecipients,
           total_amount: parseFloat(String(total_amount)) || 0,
           attachments: attachments || [],
+          generated_by: req.session?.user?.id || null, // Add user ID if available
+          department: req.session?.user?.department || null, // Add department if available
           created_at: now,
           updated_at: now
         };
+        
+        // Log user authentication status
+        console.log('[TEST] User info for document creation:', {
+          hasSession: !!req.session,
+          hasUser: !!req.session?.user,
+          userId: req.session?.user?.id,
+          userDepartment: req.session?.user?.department
+        });
 
         console.log('[TEST] Attempting to insert document with payload:', documentPayload);
 
@@ -421,6 +431,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
+        // Log user authentication status
+        console.log('[V2_ENDPOINT] User info for document creation:', {
+          hasSession: !!req.session,
+          hasUser: !!req.session?.user,
+          userId: req.session?.user?.id,
+          userDepartment: req.session?.user?.department
+        });
+
         const { data, error } = await supabase
           .from('generated_documents')
           .insert([{
@@ -432,7 +450,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             total_amount,
             region,
             status: 'draft',
-            attachments
+            attachments,
+            generated_by: req.session?.user?.id || null, // Add user ID if available
+            department: req.session?.user?.department || null // Add department if available
           }])
           .select('id')
           .single();
