@@ -51,7 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use('/api/units', authenticateSession, unitsRouter);
     log('[Routes] Units routes registered');
 
-    // Mount all API routes under /api
+    // Mount other API routes under /api - these don't conflict with the ones above
     app.use('/api', apiRouter);
 
     // Create and return HTTP server

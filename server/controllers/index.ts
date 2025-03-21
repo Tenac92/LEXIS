@@ -12,8 +12,9 @@ const router = express.Router();
 // Mount budget routes
 router.use('/budget', authenticateSession, budgetRouter);
 
-// Mount other controllers with authentication middleware
-router.use('/documents', authenticateSession, documentsRouter);
+// Documents route is registered directly in routes.ts
+// Commented out to avoid conflicts
+// router.use('/documents', authenticateSession, documentsRouter);
 router.use('/recipients', authenticateSession, recipientsRouter);
 router.use('/stats', authenticateSession, statsRouter);
 router.use('/users', authenticateSession, usersRouter);
