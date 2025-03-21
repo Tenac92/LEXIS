@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { authenticateSession } from "./auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
-import { router as documentsRouter } from "./controllers/documentsController";
+import documentsRouter from "./controllers/documentsController";
 import { router as budgetRouter } from "./controllers/budgetController";
 import { router as generatedDocumentsRouter } from "./controllers/generatedDocuments";
 import { router as unitsRouter } from "./controllers/unitsController";
@@ -39,9 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Documents routes
     log('[Routes] Setting up document routes...');
-    // Mount more specific routes first
-    app.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
-    // Then mount base documents routes
+    // Handle documents routes - the correct order matters here
     app.use('/api/documents', authenticateSession, documentsRouter);
     log('[Routes] Document routes setup complete');
 

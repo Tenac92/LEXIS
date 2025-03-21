@@ -7,6 +7,9 @@ import { DocumentManager } from '../utils/DocumentManager';
 export const router = Router();
 const documentManager = new DocumentManager();
 
+// Export the router 
+export default router;
+
 // List documents with filters
 router.get('/', authenticateSession, async (req: Request, res: Response) => {
   try {
