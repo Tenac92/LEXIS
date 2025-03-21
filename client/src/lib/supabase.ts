@@ -8,23 +8,24 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-console.log('[Supabase] Initializing client...');
-
+// Create a single instance of the Supabase client
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
   },
-  global: {
-    headers: { 'x-client-info': 'supabase-js' }
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
   }
 });
 
 // Add debug helper
 export async function debugSupabaseConnection() {
   try {
-    console.log('[Supabase] Testing connection...');
+    console.log('[Supabase] Testing connection with URL:', supabaseUrl);
     const { data, error } = await supabase
       .from('generated_documents')
       .select('id, unit, status')

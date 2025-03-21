@@ -442,8 +442,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  // Initialize regions state
-  const [regions, setRegions] = useState<Array<{ id: string; name: string; type: string }>>([]);
 
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
@@ -608,8 +606,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       try {
         // Find the project to get its MIS
         const project = projects.find(p => p.id === selectedProjectId);
-        if (!project) {
-          console.error('[Budget] Project not found:', selectedProjectId);
+        if (!project || !project.mis) {
+          console.error('[Budget] Project or MIS not found:', selectedProjectId);
           return null;
         }
 
@@ -630,7 +628,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         }
 
         if (!budgetData) {
-          console.log('[Budget] No budget data found for project:', project.mis);
+          console.log('[Budget] No budget data found for project MIS:', project.mis);
           return {
             current_budget: 0,
             total_budget: 0,
@@ -758,40 +756,15 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   const handleSubmit = async (data: CreateDocumentForm) => {
     try {
-      if (isSubmitDisabled) {
-        toast({
-          title: "Σφάλμα",
-          description: validationResult?.message || "Δεν είναι δυνατή η υποβολή της φόρμας λόγω σφαλμάτων επικύρωσης",
-          variant: "destructive"
-        });
-        return;
-      }
-      // Add debug logging
-      console.log('Form data before submission:', data);
-      console.log('Validation state:', form.formState);
-      console.log('Submit disabled state:', {
-        loading,
-        isSubmitDisabled,
-        validationResult
-      });
-      setLoading(true);
+      console.log('Starting form submission with data:', data);
 
+      // Basic form validation
       if (!data.project_id) {
-        toast({
-          title: "Σφάλμα",
-          description: "Πρέπει να επιλέξετε έργο",
-          variant: "destructive"
-        });
-        return;
+        throw new Error("Πρέπει να επιλέξετε έργο");
       }
 
       if (!data.recipients?.length) {
-        toast({
-          title: "Σφάλμα",
-          description: "Απαιτείται τουλάχιστον ένας δικαιούχος",
-          variant: "destructive"
-        });
-        return;
+        throw new Error("Απαιτείται τουλάχιστον ένας δικαιούχος");
       }
 
       const invalidRecipients = data.recipients.some(r =>
@@ -799,41 +772,56 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       );
 
       if (invalidRecipients) {
-        toast({
-          title: "Σφάλμα",
-          description: "Όλα τα πεδία δικαιούχου πρέπει να συμπληρωθούν",
-          variant: "destructive"
-        });
-        return;
+        throw new Error("Όλα τα πεδία δικαιούχου πρέπει να συμπληρωθούν");
       }
+
+      setLoading(true);
+
+      // Find project to get MIS
+      const projectForSubmission = projects.find(p => p.id === data.project_id);
+      if (!projectForSubmission?.mis) {
+        throw new Error("Δεν βρέθηκε το MIS του έργου");
+      }
+
+      console.log('Found project for submission:', {
+        id: projectForSubmission.id,
+        mis: projectForSubmission.mis
+      });
 
       const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
 
-      const projectForBudgetUpdate = projects.find(p => p.id === data.project_id);
-      if (!projectForBudgetUpdate) {
-        throw new Error("Project not found for budget update");
+      // Validate budget
+      const budgetValidation = await apiRequest<BudgetValidationResponse>('/api/budget/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mis: projectForSubmission.mis, // Use MIS instead of NA853
+          amount: totalAmount.toString()
+        })
+      });
+
+      if (!budgetValidation.canCreate) {
+        throw new Error(budgetValidation.message || "Δεν είναι δυνατή η δημιουργία εγγράφου λόγω περιορισμών προϋπολογισμού");
       }
+
+      // Update budget using project MIS
       const budgetUpdateResponse = await supabase
         .from('budget_na853_split')
         .update({
           user_view: budgetData ? budgetData.current_budget - totalAmount : 0
         })
-        .eq('mis', projectForBudgetUpdate.mis)
-        .select();
+        .eq('mis', projectForSubmission.mis)
+        .single();
 
       if (budgetUpdateResponse.error) {
-        console.error('Budget update error:', budgetUpdateResponse.error);
-        toast({
-          title: "Σφάλμα",
-          description: "Αποτυχία ενημέρωσης προϋπολογισμού",
-          variant: "destructive"
-        });
-        return;
+        throw new Error(`Σφάλμα ενημέρωσης προϋπολογισμού: ${budgetUpdateResponse.error.message}`);
       }
 
+      // Prepare payload with project MIS
       const payload = {
         unit: data.unit,
         project_id: data.project_id,
+        project_mis: projectForSubmission.mis,
         region: data.region,
         expenditure_type: data.expenditure_type,
         recipients: data.recipients.map(r => ({
@@ -849,6 +837,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         attachments: data.selectedAttachments || []
       };
 
+      console.log('Sending payload to create document:', payload);
+
       const response = await apiRequest<{ id: string }>('/api/documents', {
         method: 'POST',
         headers: {
@@ -858,24 +848,21 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       });
 
       if (!response || !response.id) {
-        throw new Error('Failed to create document: Invalid response');
+        throw new Error('Σφάλμα δημιουργίας εγγράφου: Μη έγκυρη απάντηση από τον διακομιστή');
       }
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["documents"] }),
         queryClient.invalidateQueries({ queryKey: ["budget"] }),
-        queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] }), // Fix typo
+        queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] }),
         queryClient.invalidateQueries({
-          queryKey: ["budget-validation", data.project_id, totalAmount]
+          queryKey: ["budget-validation", projectForSubmission.mis, totalAmount]
         })
       ]);
 
-      await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["budget", data.project_id] }), // Fix typo
-        queryClient.refetchQueries({ queryKey: ["budget-validation", data.project_id, totalAmount] })
-      ]);
       toast({
-        title: "Επιτυχία",        description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
+        title: "Επιτυχία",
+        description: "Το έγγραφο δημιουργήθηκε επιτυχώς"
       });
 
       form.reset();
@@ -883,31 +870,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       onClose();
     } catch (error) {
       console.error('Document creation error:', error);
-
-      let errorMessage = "Αποτυχία δημιουργίας εγγράφου";
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-
-        if (error.message.includes('HTTP') && 'cause' in error) {
-                    try {
-            const responseData = await (error.cause as Response).json();
-            if (responseData && responseData.message) {
-              errorMessage = responseData.message;
-            }
-            if (responseData && responseData.error) {
-              errorMessage += `: ${responseData.error}`;
-            }
-          } catch (e) {
-            console.error('Σφάλμα ανάλυσης απάντησης σφάλματος:', e);          }
-        }
-      } else if (typeof error === 'object' && error !== null && 'message' in error) {
-        errorMessage = String(error.message);
-      }
-
       toast({
         title: "Σφάλμα",
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "Αποτυχία δημιουργίας εγγράφου",
         variant: "destructive"
       });
     } finally {
@@ -975,20 +940,17 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     }
   }, [user?.units, form]);
 
-  useEffect(() => {
-    // Fetch regions when selectedProjectId changes
-    const fetchRegions = async () => {
-      if (!selectedProjectId) {
-        setRegions([]);
-        return;
-      }
+  const { data: regions = [], isLoading: regionsLoading } = useQuery({
+    queryKey: ["regions", selectedProjectId],
+    queryFn: async () => {
+      if (!selectedProjectId) return [];
+
       try {
         // Find the project to get its MIS
         const project = projects.find(p => p.id === selectedProjectId);
         if (!project) {
           console.error('[Regions] Project not found:', selectedProjectId);
-          setRegions([]);
-          return;
+          return [];
         }
 
         console.log('[Regions] Fetching regions for project:', {
@@ -1004,14 +966,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
         if (error) {
           console.error('[Regions] Supabase query error:', error);
-          setRegions([]);
-          return;
+          return [];
         }
 
         if (!data || !data.region) {
           console.log('[Regions] No regions found for project:', project.mis);
-          setRegions([]);
-          return;
+          return [];
         }
 
         let regionData;
@@ -1020,39 +980,36 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             JSON.parse(data.region) : data.region;
         } catch (e) {
           console.error('[Regions] Error parsing region data:', e);
-          setRegions([]);
-          return;
+          return [];
         }
 
-        // First try to get regional_unit
         if (regionData.regional_unit && Array.isArray(regionData.regional_unit) && regionData.regional_unit.length > 0) {
           console.log('[Regions] Using regional_unit data:', regionData.regional_unit);
-          setRegions(regionData.regional_unit.map((unit: string) => ({
+          return regionData.regional_unit.map((unit: string) => ({
             id: unit,
             name: unit,
             type: 'regional_unit'
-          })));
+          }));
         }
-        // Fallback to region if no regional_unit
-        else if (regionData.region && Array.isArray(regionData.region) && regionData.region.length > 0) {
+
+        if (regionData.region && Array.isArray(regionData.region) && regionData.region.length > 0) {
           console.log('[Regions] Falling back to region data:', regionData.region);
-          setRegions(regionData.region.map((region: string) => ({
+          return regionData.region.map((region: string) => ({
             id: region,
             name: region,
             type: 'region'
-          })));
-        } else {
-          console.log('[Regions] No valid region or regional_unit data found');
-          setRegions([]);
+          }));
         }
+
+        console.log('[Regions] No valid region or regional_unit data found');
+        return [];
       } catch (error) {
         console.error('[Regions] Error fetching regions:', error);
-        setRegions([]);
+        return [];
       }
-    };
-
-    fetchRegions();
-  }, [selectedProjectId, projects, supabase]);
+    },
+    enabled: Boolean(selectedProjectId) && projects.length > 0
+  });
 
   const handleNext = async () => {
     try {
@@ -1241,7 +1198,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                       <Select
                         value={form.watch("region")}
                         onValueChange={(value) => form.setValue("region", value)}
-                        disabled={regions.length === 1}
+                        disabled={regions.length === 1 || regionsLoading}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={
@@ -1442,19 +1399,19 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   >
                     Προηγούμενο
                   </Button>
-                  <Button 
+                  <Button
                     type="button"
-                    onClick={() => {
-                      console.log('Save button clicked');
-                      console.log('Form state:', form.formState);
-                      form.handleSubmit(handleSubmit)();
-                    }}
-                    disabled={loading}
+                    onClick={() => form.handleSubmit(handleSubmit)()}
+                    disabled={loading || !form.formState.isValid}
                   >
                     {loading ? (
-                      <FileText className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
-                    Αποθήκευση
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2" />
+                        <span>Αποθήκευση...</span>
+                      </>
+                    ) : (
+                      'Αποθήκευση'
+                    )}
                   </Button>
                 </div>
               </>
@@ -1506,7 +1463,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         </DialogHeader>
         <StepIndicator currentStep={currentStep} />
         <Form {...form}>
-          {renderStepContent()}
+          <div className="space-y-6">
+            {renderStepContent()}
+          </div>
         </Form>
       </DialogContent>
     </Dialog>
