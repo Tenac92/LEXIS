@@ -198,15 +198,15 @@ router.post('/', authenticateSession, async (req: Request, res: Response) => {
   try {
     console.log('[Documents] Creating new document:', JSON.stringify(req.body, null, 2));
 
-    const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
+    const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments } = req.body;
 
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    if (!recipients?.length || !project_id || !unit || !expenditure_type) {
+    if (!recipients?.length || !project_id || !unit || !expenditure_type || !project_mis) {
       return res.status(400).json({
-        message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
+        message: 'Missing required fields: recipients, project_id, project_mis, unit, and expenditure_type are required'
       });
     }
 
@@ -214,7 +214,7 @@ router.post('/', authenticateSession, async (req: Request, res: Response) => {
     const { data: projectData, error: projectError } = await supabase
       .from('project_catalog')
       .select('na853')
-      .eq('mis', project_id)
+      .eq('mis', project_mis)
       .single();
 
     if (projectError || !projectData) {
@@ -354,3 +354,5 @@ router.get('/generated/:id/export', authenticateSession, async (req: Request, re
     });
   }
 });
+
+export default router;
