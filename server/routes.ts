@@ -325,11 +325,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Get project NA853 value
+        // Get project NA853 value using project_mis
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
           .select('na853')
-          .eq('mis', project_id)
+          .eq('mis', project_mis || project_id)
           .single();
 
         if (projectError) {
