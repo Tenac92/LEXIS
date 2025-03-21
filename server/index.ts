@@ -55,20 +55,6 @@ async function startServer() {
     app.use('/', router);
     console.log('[Startup] Routes mounted');
 
-    // Log all registered routes
-    console.log('[Startup] Registered routes:');
-    app._router.stack.forEach(r => {
-      if (r.route && r.route.path) {
-        console.log(`${r.route.stack[0].method.toUpperCase()} ${r.route.path}`);
-      } else if (r.name === 'router') {
-        r.handle.stack.forEach(route => {
-          if (route.route) {
-            console.log(`${route.route.stack[0].method.toUpperCase()} ${route.route.path}`);
-          }
-        });
-      }
-    });
-
     // Setup Vite in development
     if (app.get("env") === "development") {
       await setupVite(app);

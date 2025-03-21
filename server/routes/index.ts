@@ -8,7 +8,7 @@ import { router as generatedDocumentsRouter } from '../controllers/generatedDocu
 
 const router = Router();
 
-// Mount routers with /api prefix and authentication
+// Mount API routes
 router.use('/api/documents', authenticateSession, documentsRouter);
 router.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
 router.use('/api/documents/export', authenticateSession, documentExportRouter);
@@ -18,7 +18,7 @@ router.use('/api/templates', authenticateSession, templateController);
 // Debug logging for mounted routes
 console.log('[Routes] API endpoints mounted:', [
   '/api/documents',
-  '/api/documents/generated',
+  '/api/documents/generated', 
   '/api/documents/export',
   '/api/budget',
   '/api/templates'
