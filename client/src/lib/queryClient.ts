@@ -5,12 +5,27 @@ export async function apiRequest<T = unknown>(
   options: RequestInit = {}
 ): Promise<T> {
   try {
+    console.log(`[DEBUG] Making API request to: ${url}`);
+    
+    // Ensure URL starts with / but not // (avoiding protocol-relative URLs)
+    let formattedUrl = url;
+    if (!url.startsWith('/')) {
+      formattedUrl = `/${url}`;
+      console.log(`[DEBUG] Fixed URL path to: ${formattedUrl}`);
+    }
+
     const headers = new Headers({
       "Content-Type": "application/json",
       ...options.headers,
     });
 
-    const response = await fetch(url, {
+    console.log(`[DEBUG] Request options:`, {
+      method: options.method || 'GET',
+      headers: Object.fromEntries(headers.entries()),
+      credentials: 'include'
+    });
+
+    const response = await fetch(formattedUrl, {
       ...options,
       headers,
       credentials: 'include' // Include cookies for session handling
@@ -36,7 +51,17 @@ export async function apiRequest<T = unknown>(
 export const getQueryFn = ({ on401 = "throw" }: { on401?: "returnNull" | "throw" } = {}): QueryFunction => 
   async ({ queryKey }) => {
     try {
-      const response = await fetch(queryKey[0] as string, { 
+      const url = queryKey[0] as string;
+      console.log(`[DEBUG] Making query to: ${url}`);
+      
+      // Ensure URL starts with / but not // (avoiding protocol-relative URLs)
+      let formattedUrl = url;
+      if (!url.startsWith('/')) {
+        formattedUrl = `/${url}`;
+        console.log(`[DEBUG] Fixed URL path to: ${formattedUrl}`);
+      }
+      
+      const response = await fetch(formattedUrl, { 
         credentials: 'include'
       });
 
