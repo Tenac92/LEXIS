@@ -351,17 +351,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Get project NA853 value using project_id or project_mis if available
+        // Get project NA853 value - project_id is the MIS field in Projects table
         const project_mis = req.body.project_mis;
-        const { data: projectData, error: projectError } = await supabase
-          .from('Projects')
-          .select('na853')
-          .eq('mis', project_mis || project_id)
-          .single();
-
-        if (projectError) {
-          console.error('[DIRECT_ROUTE_V2] Project fetch error:', projectError);
-          return res.status(404).json({ message: 'Project not found' });
+        let project_na853: string;
+        
+        try {
+          const { data: projectData, error: projectError } = await supabase
+            .from('Projects')
+            .select('na853')
+            .eq('mis', project_mis || project_id)
+            .single();
+  
+          if (projectError || !projectData) {
+            console.error('[V2_ENDPOINT] Project fetch error:', projectError);
+            
+            if (project_mis) {
+              // Use project_mis as fallback
+              console.log('[V2_ENDPOINT] Using project_mis as fallback:', project_mis);
+              project_na853 = project_mis;
+            } else {
+              return res.status(400).json({ 
+                message: 'Project not found in database and no fallback available' 
+              });
+            }
+          } else {
+            project_na853 = projectData.na853;
+            console.log('[V2_ENDPOINT] Found project NA853:', project_na853);
+          }
+        } catch (error) {
+          console.error('[V2_ENDPOINT] Error looking up project:', error);
+          
+          if (project_mis) {
+            console.log('[V2_ENDPOINT] Using project_mis as fallback due to error');
+            project_na853 = project_mis;
+          } else {
+            return res.status(500).json({ 
+              message: 'Error looking up project data',
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
+          }
         }
 
         const { data, error } = await supabase
@@ -369,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .insert([{
             unit,
             project_id,
-            project_na853: projectData.na853,
+            project_na853,
             expenditure_type,
             recipients,
             total_amount,

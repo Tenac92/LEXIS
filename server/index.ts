@@ -165,7 +165,7 @@ async function startServer() {
             console.log('[DIRECT_ROUTE_V2] Fetching NA853 for project with MIS:', project_id);
             
             try {
-              // First try Projects table where mis is the projectId
+              // Look up in the Projects table - using the project_id as the MIS value
               const { data: projectData, error: projectError } = await supabase
                 .from('Projects')
                 .select('na853')
@@ -176,33 +176,16 @@ async function startServer() {
                 project_na853 = projectData.na853;
                 console.log('[DIRECT_ROUTE_V2] Retrieved NA853 from Projects table:', project_na853);
               } else {
-                console.log('[DIRECT_ROUTE_V2] Not found in Projects table, trying project_catalog');
-                
-                // Fallback - try project_catalog table
-                const { data: catalogData, error: catalogError } = await supabase
-                  .from('project_catalog')
-                  .select('na853')
-                  .eq('mis', project_id)
-                  .single();
-                
-                if (!catalogError && catalogData && catalogData.na853) {
-                  project_na853 = catalogData.na853;
-                  console.log('[DIRECT_ROUTE_V2] Retrieved NA853 from project_catalog:', project_na853);
+                // If no data found in Projects table, use project_mis as fallback
+                if (req.body.project_mis) {
+                  console.log('[DIRECT_ROUTE_V2] Using project_mis directly as fallback');
+                  project_na853 = req.body.project_mis;
                 } else {
-                  // If all else fails, use project_mis directly from the payload
-                  if (req.body.project_mis) {
-                    console.log('[DIRECT_ROUTE_V2] Using project_mis directly as fallback');
-                    project_na853 = req.body.project_mis;
-                  } else {
-                    console.error('[DIRECT_ROUTE_V2] Could not find project information:', {
-                      projectError,
-                      catalogError
-                    });
-                    return res.status(400).json({ 
-                      message: 'Project information not found and no fallback available', 
-                      error: 'Project NA853 could not be determined'
-                    });
-                  }
+                  console.error('[DIRECT_ROUTE_V2] Could not find project in Projects table:', projectError);
+                  return res.status(400).json({ 
+                    message: 'Project not found in Projects table and no fallback available', 
+                    error: 'Project NA853 could not be determined'
+                  });
                 }
               }
             } catch (error) {

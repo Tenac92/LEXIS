@@ -851,15 +851,23 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       }
       
       // Try multiple API endpoints in sequence to find one that works
-      // 1. First, try our dedicated v2 API endpoint
+      // 1. First, try v2 API endpoint which uses Projects table directly
       console.log('[DEBUG] Attempting document creation with v2 API');
       try {
+        // Enhance payload with project MIS
+        const enhancedPayload = {
+          ...payload,
+          project_mis: projectForSubmission.mis, // Ensure we always pass project_mis
+        };
+        
+        console.log('[DEBUG] Sending payload to v2 API:', enhancedPayload);
+        
         const v2Response = await apiRequest('/api/v2-documents', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(enhancedPayload)
         });
         console.log('[DEBUG] V2 API response:', v2Response);
         
@@ -871,20 +879,30 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         console.error('[DEBUG] V2 API request failed:', v2Error);
       }
       
-      // 2. Try test document endpoint
-      console.log('[DEBUG] Testing document creation with test endpoint');
+      // 2. Try test document endpoint as fallback
+      console.log('[DEBUG] Falling back to test document endpoint');
       try {
+        // Enhanced payload with additional debug info
+        const testPayload = {
+          ...payload,
+          project_mis: projectForSubmission.mis,
+          debug_info: {
+            project_from_projects_table: true,
+            timestamp: new Date().toISOString()
+          }
+        };
+        
+        console.log('[DEBUG] Sending enhanced payload to test endpoint:', testPayload);
+        
         const testDocResponse = await apiRequest('/api/test-document-post', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(testPayload)
         });
         console.log('[DEBUG] Test document route response:', testDocResponse);
         
-        // If test route succeeds, we'll try to use it directly for document creation
-        // and skip the authentication-dependent routes
         if (testDocResponse && testDocResponse.id) {
           console.log('[DEBUG] Document created successfully via test endpoint');
           return testDocResponse;
@@ -893,16 +911,22 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         console.error('[DEBUG] Test document route failed:', testDocError);
       }
       
-      // Now try the actual document creation
+      // 3. Last resort - try the authenticated route
+      console.log('[DEBUG] Falling back to authenticated /api/documents route');
       let response;
       try {
-        console.log('[DEBUG] Attempting document creation with direct /api/documents URL');
+        // Final attempt with direct fetch to ensure we bypass any caching/middleware issues
+        console.log('[DEBUG] Attempting with direct fetch to /api/documents');
         response = await fetch('/api/documents', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            ...payload,
+            project_mis: projectForSubmission.mis,
+            is_final_attempt: true
+          }),
           credentials: 'include'
         });
         
@@ -916,19 +940,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         console.log('[DEBUG] Document creation succeeded with direct fetch response:', data);
         response = data;
       } catch (error) {
-        console.error('[DEBUG] Direct fetch document creation failed:', error);
-        
-        // Fall back to apiRequest
-        console.log('[DEBUG] Attempting with apiRequest and /api/documents URL');
-        response = await apiRequest<{ id: string }>('/api/documents', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-        
-        console.log('[DEBUG] Document creation succeeded with response:', response);
+        console.error('[DEBUG] All document creation attempts failed:', error);
+        throw new Error('Αποτυχία δημιουργίας εγγράφου μετά από πολλαπλές προσπάθειες. Παρακαλώ προσπαθήστε ξανά αργότερα.');
       }
 
       if (!response || !response.id) {
