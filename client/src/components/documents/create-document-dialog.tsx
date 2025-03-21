@@ -864,7 +864,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         errorMessage = error.message;
 
         if (error.message.includes('HTTP') && 'cause' in error) {
-          try {
+                    try {
             const responseData = await (error.cause as Response).json();
             if (responseData && responseData.message) {
               errorMessage = responseData.message;
@@ -1073,19 +1073,38 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           return [];
         }
 
-        // Handle region data which might be a string or array
-        let regionList: string[] = [];
+        let regionData;
         try {
-          if (typeof data.region === 'string') {
-            regionList = JSON.parse(data.region);
-          } else if (Array.isArray(data.region)) {
-            regionList = data.region;
-          }
+          // Parse region data if it's a string
+          regionData = typeof data.region === 'string' ? 
+            JSON.parse(data.region) : data.region;
         } catch (e) {
           console.error('[Regions] Error parsing region data:', e);
+          return [];
         }
 
-        return regionList;
+        // First try to get regional_unit
+        if (regionData.regional_unit && Array.isArray(regionData.regional_unit) && regionData.regional_unit.length > 0) {
+          console.log('[Regions] Using regional_unit data:', regionData.regional_unit);
+          return regionData.regional_unit.map((unit: string) => ({
+            id: unit,
+            name: unit,
+            type: 'regional_unit'
+          }));
+        }
+
+        // Fallback to region if no regional_unit
+        if (regionData.region && Array.isArray(regionData.region) && regionData.region.length > 0) {
+          console.log('[Regions] Falling back to region data:', regionData.region);
+          return regionData.region.map((region: string) => ({
+            id: region,
+            name: region,
+            type: 'region'
+          }));
+        }
+
+        console.log('[Regions] No valid region or regional_unit data found');
+        return [];
       } catch (error) {
         console.error('[Regions] Error fetching regions:', error);
         return [];
@@ -1168,34 +1187,31 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     </FormItem>
                   )}
                 />
-                {selectedProject?.region && (
-                  <FormField
-                    control={form.control}
-                    name="region"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Περιφέρεια</FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Επιλέξτε περιφέρεια" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {(Array.isArray(selectedProject.region) ? selectedProject.region : []).map((region) => (
-                              <SelectItem key={region} value={region}>
-                                {region}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                {regions.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {regions[0]?.type === 'regional_unit' ? 'Περιφερειακή Ενότητα' : 'Περιφέρεια'}
+                    </label>
+                    <Select
+                      value={form.watch("region")}
+                      onValueChange={(value) => form.setValue("region", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={
+                          regions[0]?.type === 'regional_unit' ? 
+                          'Επιλέξτε Περιφερειακή Ενότητα' : 
+                          'Επιλέξτε Περιφέρεια'
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {regions.map((region) => (
+                          <SelectItem key={region.id} value={region.id}>
+                            {region.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
                 {currentStep === 1 && selectedProject && (
                   <FormField
@@ -1429,8 +1445,4 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       </DialogContent>
     </Dialog>
   );
-}
-
-function regionArray(data: any): string[] {
-  return data.region.region || [];
 }
