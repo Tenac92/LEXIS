@@ -766,6 +766,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         });
         return;
       }
+      // Add debug logging
+      console.log('Form data before submission:', data);
+      console.log('Validation state:', form.formState);
+      console.log('Submit disabled state:', {
+        loading,
+        isSubmitDisabled,
+        validationResult
+      });
       setLoading(true);
 
       if (!data.project_id) {
@@ -856,14 +864,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["documents"] }),
         queryClient.invalidateQueries({ queryKey: ["budget"] }),
-        queryClient.invalidateQueries({ queryKey:["budget", data.project_id] }),
+        queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] }), // Fix typo
         queryClient.invalidateQueries({
           queryKey: ["budget-validation", data.project_id, totalAmount]
         })
       ]);
 
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ["budget", data.projectid] }),
+        queryClient.refetchQueries({ queryKey: ["budget", data.project_id] }), // Fix typo
         queryClient.refetchQueries({ queryKey: ["budget-validation", data.project_id, totalAmount] })
       ]);
       toast({
@@ -1435,8 +1443,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     Προηγούμενο
                   </Button>
                   <Button 
-                    onClick={form.handleSubmit(handleSubmit)}
-                    disabled={loading || isSubmitDisabled}
+                    type="button"
+                    onClick={() => {
+                      console.log('Save button clicked');
+                      console.log('Form state:', form.formState);
+                      form.handleSubmit(handleSubmit)();
+                    }}
+                    disabled={loading}
                   >
                     {loading ? (
                       <FileText className="h-4 w-4 animate-spin mr-2" />
