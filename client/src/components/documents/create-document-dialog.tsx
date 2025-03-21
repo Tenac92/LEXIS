@@ -437,6 +437,7 @@ type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocumentDialogProps) {
   // Reference to programmatically close the dialog
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
+  const dialogCloseRef = React.useRef<HTMLButtonElement>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -967,9 +968,24 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       form.reset();
       setCurrentStep(0);
       
-      // Close the dialog by using both methods
+      // Close the dialog using all available methods to ensure it closes
+      if (dialogCloseRef.current) {
+        // Force close using the ref (most direct method)
+        console.log('Forcing dialog close with ref click');
+        dialogCloseRef.current.click();
+      }
+      
+      // Also use the provided callback methods as backup
       onClose();
       onOpenChange(false);
+      
+      // Schedule another attempt after a small delay
+      setTimeout(() => {
+        if (dialogCloseRef.current) {
+          dialogCloseRef.current.click();
+        }
+        onOpenChange(false);
+      }, 100);
     } catch (error) {
       console.error('Document creation error:', error);
       toast({
@@ -1569,6 +1585,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             {renderStepContent()}
           </div>
         </Form>
+        {/* Hidden close button with ref for programmatic closing */}
+        <DialogClose ref={dialogCloseRef} className="hidden" />
       </DialogContent>
     </Dialog>
   );
