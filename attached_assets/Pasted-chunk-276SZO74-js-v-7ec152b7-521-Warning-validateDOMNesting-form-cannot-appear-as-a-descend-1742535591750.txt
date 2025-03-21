@@ -1,0 +1,73 @@
+chunk-276SZO74.js?v=7ec152b7:521 Warning: validateDOMNesting(...): <form> cannot appear as a descendant of <form>.
+    at form
+    at FormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-BW5TH624.js?v=7ec152b7:102:11)
+    at form
+    at FormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-BW5TH624.js?v=7ec152b7:102:11)
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:199:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…unner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:228:7
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:121:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:102:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:199:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…unner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:427:5
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…ner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:1292:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…ner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:1215:58
+    at Presence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:648:11)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…ner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:1206:64
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:121:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:102:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:199:13
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:630:22
+    at Presence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:648:11)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…unner/workspace/node_modules/.vite/deps/chunk-XSD2Y4RK.js?v=7ec152b7:38:15)
+    at DialogPortal (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…ner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:1169:11)
+    at _c3 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/dialog.tsx:49:12)
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…unner/workspace/node_modules/.vite/deps/chunk-XSD2Y4RK.js?v=7ec152b7:38:15)
+    at Dialog (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/chunk-UWELLWEH.js?v=7ec152b7:1110:5)
+    at CreateDocumentDialog (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:539:40)
+    at FAB (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/fab.tsx:51:20)
+    at div
+    at HomePage (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/home-page.tsx:25:25)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=7ec152b7:247:17)
+    at div
+    at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/framer-motion.js?v=7ec152b7:6536:40)
+    at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/framer-motion.js?v=7ec152b7:7742:24)
+    at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/framer-motion.js?v=7ec152b7:7800:26)
+    at PageTransition (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/page-transition.tsx:42:34)
+    at Router
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:109:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…rkspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7ec152b7:2848:3)
+    at App
+chunk-UWELLWEH.js?v=7ec152b7:1396 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+create-document-dialog.tsx:616 [Budget] Fetching budget data for project: 
+{id: '2024ΝΑ85300016', mis: '5173997'}
+create-document-dialog.tsx:986 [Regions] Fetching regions for project: 
+{id: '2024ΝΑ85300016', mis: '5173997'}
+create-document-dialog.tsx:1021 [Regions] Using regional_unit data: 
+['ΚΑΛΥΜΝΟΥ']
+create-document-dialog.tsx:103 Search debug: 
+{searchTerm: '2024να85300016 - 2021 πλημμυρα δ. πατμου', isNumericSearch: false, projectCount: 78}
+create-document-dialog.tsx:129 Search results: 
+{searchTerm: '2024να85300016 - 2021 πλημμυρα δ. πατμου', resultCount: 1, results: Array(1)}
+create-document-dialog.tsx:616 [Budget] Fetching budget data for project: 
+{id: '2024ΝΑ85300030', mis: '5174688'}
+create-document-dialog.tsx:986 [Regions] Fetching regions for project: 
+{id: '2024ΝΑ85300030', mis: '5174688'}
+create-document-dialog.tsx:1004 [Regions] No regions found for project: 5174688
+create-document-dialog.tsx:103 Search debug: 
+{searchTerm: '2024να85300016 - 2021 πλημμυρα δ. πατμου', isNumericSearch: false, projectCount: 78}
+create-document-dialog.tsx:129 Search results: 
+{searchTerm: '2024να85300016 - 2021 πλημμυρα δ. πατμου', resultCount: 1, results: Array(1)}
+create-document-dialog.tsx:616 [Budget] Fetching budget data for project: 
+{id: '2024ΝΑ85300001', mis: '5174692'}
+create-document-dialog.tsx:986 [Regions] Fetching regions for project: 
+{id: '2024ΝΑ85300001', mis: '5174692'}
+create-document-dialog.tsx:1021 [Regions] Using regional_unit data: 
+['ΦΩΚΙΔΑΣ']
+create-document-dialog.tsx:103 Search debug: 
+{searchTerm: '2024να85300030 - 2019 πλημμυρες νοτ. αιγαιο', isNumericSearch: false, projectCount: 78}
+create-document-dialog.tsx:129 Search results: 
+{searchTerm: '2024να85300030 - 2019 πλημμυρες νοτ. αιγαιο', resultCount: 1, results: Array(1)}
+﻿
+
