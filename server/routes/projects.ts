@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { supabase } from '../config/db';
-import { authenticateSession } from '../auth';
+import { supabase } from '../db';
+import { authenticateToken } from '../middleware/authMiddleware';
 import { Project } from '@shared/schema';
 import * as xlsx from 'xlsx';
 import multer from 'multer';
@@ -10,7 +10,7 @@ const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Get all projects with improved error handling and logging
-router.get('/', authenticateSession, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   const requestId = Math.random().toString(36).substring(7);
   console.log(`[Projects ${requestId}] Starting request to fetch all projects`);
 
@@ -27,7 +27,7 @@ router.get('/', authenticateSession, async (req, res) => {
 
     // Fetch projects with error handling
     const { data: projects, error } = await supabase
-      .from('projects')  // Changed to lowercase to match Supabase table name
+      .from('Projects')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -45,6 +45,15 @@ router.get('/', authenticateSession, async (req, res) => {
     }
 
     console.log(`[Projects ${requestId}] Successfully fetched ${projects.length} projects`);
+
+    // Log sample project for debugging
+    if (projects.length > 0) {
+      console.log(`[Projects ${requestId}] Sample project:`, {
+        mis: projects[0].mis,
+        event_description: projects[0].event_description
+      });
+    }
+
     return res.json(projects);
 
   } catch (error) {
@@ -57,7 +66,7 @@ router.get('/', authenticateSession, async (req, res) => {
 });
 
 // Get project expenditure types
-router.get('/:projectId/expenditure-types', authenticateSession, async (req, res) => {
+router.get('/:projectId/expenditure-types', authenticateToken, async (req, res) => {
   try {
     const { projectId } = req.params;
 
@@ -93,8 +102,46 @@ router.get('/:projectId/expenditure-types', authenticateSession, async (req, res
   }
 });
 
+// Get project expenditure types
+router.get('/:mis/expenditure-types', authenticateToken, async (req, res) => {
+  try {
+    const { mis } = req.params;
+    console.log(`[Projects] Fetching expenditure types for project ${mis}`);
+
+    const { data: project, error } = await supabase
+      .from('project_catalog')
+      .select('expenditure_type')
+      .eq('mis', mis)
+      .single();
+
+    if (error) throw error;
+
+    let expenditureTypes: string[] = [];
+    if (project?.expenditure_type) {
+      if (Array.isArray(project.expenditure_type)) {
+        expenditureTypes = project.expenditure_type;
+      } else if (typeof project.expenditure_type === 'string') {
+        expenditureTypes = project.expenditure_type
+          .replace(/[{}]/g, '')
+          .split(',')
+          .map(type => type.trim())
+          .filter(Boolean);
+      }
+    }
+
+    res.json(expenditureTypes);
+  } catch (error) {
+    console.error('[Projects] Error fetching expenditure types:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch expenditure types',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get single project by MIS
-router.get('/:mis', authenticateSession, async (req, res) => {
+router.get('/:mis', authenticateToken, async (req, res) => {
   try {
     const { mis } = req.params;
     console.log(`[Projects] Fetching project with MIS: ${mis}`);
@@ -107,7 +154,7 @@ router.get('/:mis', authenticateSession, async (req, res) => {
     }
 
     const { data: project, error } = await supabase
-      .from('projects')  // Changed to lowercase to match Supabase table name
+      .from('Projects') // Note the capital P to match the table name
       .select('*')
       .eq('mis', mis)
       .single();
@@ -137,12 +184,13 @@ router.get('/:mis', authenticateSession, async (req, res) => {
   }
 });
 
+
 // Export projects to XLSX
-router.get('/export/xlsx', authenticateSession, async (req, res) => {
+router.get('/export/xlsx', authenticateToken, async (req, res) => {
   try {
     console.log('[Projects] Starting XLSX export');
     const { data: projects, error } = await supabase
-      .from('projects')
+      .from('Projects')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -206,7 +254,7 @@ router.get('/export/xlsx', authenticateSession, async (req, res) => {
 });
 
 // Bulk upload
-router.post('/bulk-upload', authenticateSession, upload.single('file'), async (req, res) => {
+router.post('/bulk-upload', authenticateToken, upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({
       success: false,
@@ -260,7 +308,7 @@ router.post('/bulk-upload', authenticateSession, upload.single('file'), async (r
 
 
 // Bulk update
-router.put('/bulk-update', authenticateSession, async (req, res) => {
+router.put('/bulk-update', authenticateToken, async (req, res) => {
   try {
     console.log('[Projects] Starting bulk update');
     const { updates } = req.body;
@@ -282,7 +330,7 @@ router.put('/bulk-update', authenticateSession, async (req, res) => {
 
       // Validate MIS exists
       const { data: existing, error: checkError } = await supabase
-        .from('projects')
+        .from('Projects')
         .select('id')
         .eq('mis', mis)
         .single();
@@ -292,7 +340,7 @@ router.put('/bulk-update', authenticateSession, async (req, res) => {
       }
 
       const { error: updateError } = await supabase
-        .from('projects')
+        .from('Projects')
         .update(data)
         .eq('mis', mis);
 

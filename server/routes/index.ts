@@ -1,36 +1,14 @@
 import { Router } from 'express';
 import { documentExportRouter } from './document-export';
-import { authenticateSession } from '../auth';
+import { authenticateSession } from '../middleware/auth';
 import budgetRouter from './budget';
-import projectsRouter from './projects';
 import templateController from '../controllers/templateController';
-import { router as documentsRouter } from '../controllers/documentsController';
-import { router as generatedDocumentsRouter } from '../controllers/generatedDocuments';
 
 const router = Router();
 
-// Add JSON content-type middleware for all API routes
-router.use('/api', (req, res, next) => {
-  res.setHeader('Content-Type', 'application/json');
-  next();
-});
-
-// Mount API routes with authentication
-router.use('/api/projects', authenticateSession, projectsRouter);
-router.use('/api/documents', authenticateSession, documentsRouter);
-router.use('/api/documents/generated', authenticateSession, generatedDocumentsRouter);
-router.use('/api/documents/export', authenticateSession, documentExportRouter);
-router.use('/api/budget', authenticateSession, budgetRouter);
-router.use('/api/templates', authenticateSession, templateController);
-
-// Debug logging for mounted routes
-console.log('[Routes] API endpoints mounted:', [
-  '/api/projects',
-  '/api/documents',
-  '/api/documents/generated',
-  '/api/documents/export',
-  '/api/budget',
-  '/api/templates'
-]);
+// Mount routers
+router.use('/documents', authenticateSession, documentExportRouter);
+router.use('/budget', authenticateSession, budgetRouter);
+router.use('/templates', authenticateSession, templateController);
 
 export default router;

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateSession } from '../auth';
+import { authenticateToken } from '../middleware/auth';
 import { BudgetService } from '../services/budgetService';
 import { storage } from '../storage';
 import { supabase } from '../config/db';
@@ -7,10 +7,10 @@ import { supabase } from '../config/db';
 const router = Router();
 
 // Get budget notifications - always handle this route first
-router.get('/notifications', authenticateSession, async (req, res) => {
+router.get('/notifications', authenticateToken, async (req, res) => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json([]); // Return empty array even for auth errors
+      return res.status(401).json([]);  // Return empty array even for auth errors
     }
 
     console.log('[BudgetController] Fetching notifications...');
@@ -18,14 +18,16 @@ router.get('/notifications', authenticateSession, async (req, res) => {
     try {
       const notifications = await BudgetService.getNotifications();
       console.log('[BudgetController] Successfully fetched notifications:', notifications.length);
-      return res.json(notifications);
+
+      // Return the array directly without wrapping
+      res.json(notifications);
     } catch (error) {
       console.error('[BudgetController] Error fetching notifications:', error);
-      return res.json([]); // Return empty array on error
+      res.json([]); // Return empty array on error
     }
   } catch (error) {
     console.error('[BudgetController] Error in notifications route:', error);
-    return res.json([]); // Return empty array on error
+    res.json([]); // Return empty array on error
   }
 });
 
@@ -53,7 +55,7 @@ router.get('/data/:mis([0-9]+)', async (req, res) => {
 });
 
 // Validate budget for document
-router.post('/validate', authenticateSession, async (req, res) => {
+router.post('/validate', authenticateToken, async (req, res) => {
   try {
     const { mis, amount } = req.body;
     const requestedAmount = parseFloat(amount.toString());
@@ -97,7 +99,7 @@ router.post('/validate', authenticateSession, async (req, res) => {
 });
 
 // Get available MIS and NA853 combinations
-router.get('/records', authenticateSession, async (req, res) => {
+router.get('/records', authenticateToken, async (req, res) => {
   try {
     console.log('[Budget] Fetching available MIS and NA853 combinations');
 
@@ -139,7 +141,7 @@ router.get('/records', authenticateSession, async (req, res) => {
 });
 
 // Get budget history with pagination
-router.get('/history', authenticateSession, async (req, res) => {
+router.get('/history', authenticateToken, async (req, res) => {
   try {
     console.log('[Budget] Fetching budget history');
 
@@ -217,7 +219,7 @@ router.get('/history', authenticateSession, async (req, res) => {
   }
 });
 
-router.put('/bulk-update', authenticateSession, async (req, res) => {
+router.put('/bulk-update', authenticateToken, async (req, res) => {
   try {
     console.log('[Budget] Starting bulk update for budget_na853_split');
 
