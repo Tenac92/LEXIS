@@ -229,21 +229,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('[TEST] Fetching NA853 for project with MIS:', project_id);
           
           try {
-            // Use Projects table with mis field
+            // Use project_mis if it's available, otherwise use project_id (both should be the MIS field in Projects table)
+            const lookupID = project_mis || project_id;
+            console.log('[TEST] Looking up project using MIS:', lookupID);
+            
             const { data: projectData, error: projectError } = await supabase
               .from('Projects')
               .select('na853')
-              .eq('mis', project_id)
+              .eq('mis', lookupID)
               .single();
             
             if (!projectError && projectData && projectData.na853) {
               project_na853 = projectData.na853;
               console.log('[TEST] Retrieved NA853 from Projects table:', project_na853);
             } else {
-              // If not found in Projects table, use project_mis directly from the payload
-              if (req.body.project_mis) {
-                console.log('[TEST] Using project_mis directly as fallback');
-                project_na853 = req.body.project_mis;
+              // If not found in Projects table, use project_mis directly as the fallback
+              if (project_mis) {
+                console.log('[TEST] Using project_mis directly as fallback:', project_mis);
+                project_na853 = project_mis;
               } else {
                 console.error('[TEST] Could not find project information:', projectError);
                 return res.status(200).json({ 
@@ -257,9 +260,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } catch (error) {
             console.error('[TEST] Error during project lookup:', error);
             // If error happens, use project_mis as fallback if available
-            if (req.body.project_mis) {
-              console.log('[TEST] Using project_mis directly due to error');
-              project_na853 = req.body.project_mis;
+            if (project_mis) {
+              console.log('[TEST] Using project_mis directly due to error:', project_mis);
+              project_na853 = project_mis;
             } else {
               return res.status(200).json({ 
                 success: false,
