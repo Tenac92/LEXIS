@@ -302,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create document payload
         const documentPayload = {
           unit,
-          project_id,
+          project_id: project_mis || project_id, // Use numeric project_mis if available
           project_na853,
           expenditure_type,
           status: 'pending', // Always set initial status to pending
@@ -425,7 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from('generated_documents')
           .insert([{
             unit,
-            project_id,
+            project_id: project_mis || project_id, // Use numeric project_mis if available
             project_na853,
             expenditure_type,
             recipients,
