@@ -839,13 +839,69 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       console.log('Sending payload to create document:', payload);
 
-      const response = await apiRequest<{ id: string }>('/api/documents', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+      // Try testing the route with our test endpoint first
+      console.log('[DEBUG] Testing route access with test endpoint');
+      try {
+        const testResponse = await apiRequest('/api/test-route', {
+          method: 'GET'
+        });
+        console.log('[DEBUG] Test route response:', testResponse);
+      } catch (testError) {
+        console.error('[DEBUG] Test route failed:', testError);
+      }
+      
+      // Test document creation with unprotected test endpoint
+      console.log('[DEBUG] Testing document creation with test endpoint');
+      try {
+        const testDocResponse = await apiRequest('/api/test-documents', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        console.log('[DEBUG] Test document route response:', testDocResponse);
+      } catch (testDocError) {
+        console.error('[DEBUG] Test document route failed:', testDocError);
+      }
+      
+      // Now try the actual document creation
+      let response;
+      try {
+        console.log('[DEBUG] Attempting document creation with direct /api/documents URL');
+        response = await fetch('/api/documents', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[DEBUG] Error ${response.status}: ${errorText}`);
+          throw new Error(`Server returned ${response.status}: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        console.log('[DEBUG] Document creation succeeded with direct fetch response:', data);
+        response = data;
+      } catch (error) {
+        console.error('[DEBUG] Direct fetch document creation failed:', error);
+        
+        // Fall back to apiRequest
+        console.log('[DEBUG] Attempting with apiRequest and /api/documents URL');
+        response = await apiRequest<{ id: string }>('/api/documents', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        console.log('[DEBUG] Document creation succeeded with response:', response);
+      }
 
       if (!response || !response.id) {
         throw new Error('Σφάλμα δημιουργίας εγγράφου: Μη έγκυρη απάντηση από τον διακομιστή');

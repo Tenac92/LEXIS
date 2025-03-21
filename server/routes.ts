@@ -104,6 +104,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
+    // Test diagnostics route
+    app.get('/api/test-route', (req, res) => {
+      console.log('[TEST] Test route accessed');
+      res.status(200).json({ message: 'Test route works' });
+    });
+    
+    // Test document creation route
+    app.post('/api/test-documents', (req, res) => {
+      console.log('[TEST] Document test route accessed with payload:', req.body);
+      res.status(200).json({ 
+        message: 'Document test route works',
+        receivedData: req.body
+      });
+    });
+    
     // Authentication routes
     log('[Routes] Setting up authentication routes...');
     app.use('/api/auth', authRouter);
@@ -139,6 +154,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Registering units routes...');
     app.use('/api/units', authenticateSession, unitsRouter);
     log('[Routes] Units routes registered');
+    
+    // Diagnostic route to see all registered routes
+    app.get('/api/diagnostics/routes', (_req, res) => {
+      console.log('[DIAGNOSTICS] Getting registered routes');
+      
+      // Collect and format all registered routes
+      const routes: any[] = [];
+      
+      // Helper function to extract routes from the router stack
+      function extractRoutes(stack: any[], basePath = '') {
+        stack.forEach(layer => {
+          if (layer.route) {
+            // It's a route
+            const path = basePath + (layer.route?.path || '');
+            const methods = Object.keys(layer.route.methods || {})
+              .filter(m => layer.route.methods[m])
+              .join('|').toUpperCase();
+            
+            routes.push({ path, methods });
+          } else if (layer.name === 'router' && layer.handle?.stack) {
+            // It's a sub-router, extract its path prefix
+            let path = basePath;
+            if (layer.regexp) {
+              const match = layer.regexp.toString().match(/^\/\^\\\/([^\\]+)/);
+              if (match) {
+                path += '/' + match[1];
+              }
+            }
+            
+            // Recursively process this router's stack
+            extractRoutes(layer.handle.stack, path);
+          }
+        });
+      }
+      
+      // Process the main app router
+      if (app._router?.stack) {
+        extractRoutes(app._router.stack);
+      }
+      
+      res.json({
+        routes,
+        timestamp: new Date().toISOString()
+      });
+    });
+    
+    // Test document creation route without authentication
+    app.post('/api/test-document-post', (req, res) => {
+      console.log('[TEST] Document test route received payload:', req.body);
+      res.status(200).json({
+        success: true,
+        message: 'Document test route works',
+        receivedData: req.body,
+        id: `test-${Date.now()}`
+      });
+    });
     
     // Mount other API routes under /api 
     app.use('/api', apiRouter);
