@@ -312,6 +312,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     
     // Mount other API routes under /api 
+    // V2 document creation endpoint
+    app.post('/api/v2-documents', express.json(), async (req: Request, res: Response) => {
+      try {
+        console.log('[DIRECT_ROUTE_V2] Document creation request with body:', req.body);
+        
+        const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [] } = req.body;
+        
+        if (!recipients?.length || !project_id || !unit || !expenditure_type) {
+          return res.status(400).json({
+            message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
+          });
+        }
+
+        const { data, error } = await supabase
+          .from('generated_documents')
+          .insert([{
+            unit,
+            project_id,
+            project_mis,
+            expenditure_type,
+            recipients,
+            total_amount,
+            status: 'draft',
+            attachments
+          }])
+          .select('id')
+          .single();
+          
+        if (error) {
+          console.error('[DIRECT_ROUTE_V2] Supabase error:', error);
+          return res.status(500).json({ 
+            message: 'Error creating document in database', 
+            error: error.message
+          });
+        }
+        
+        console.log('[DIRECT_ROUTE_V2] Document created successfully with ID:', data.id);
+        res.status(201).json({ 
+          id: data.id,
+          message: 'Document created and stored in database'
+        });
+
+      } catch (error) {
+        console.error('[DIRECT_ROUTE_V2] Error:', error);
+        res.status(500).json({ 
+          message: 'Error in direct route', 
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
     app.use('/api', apiRouter);
 
     // Create and return HTTP server
