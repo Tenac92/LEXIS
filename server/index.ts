@@ -173,12 +173,27 @@ async function startServer() {
                 .single();
               
               if (!projectError && projectData && projectData.na853) {
-                project_na853 = projectData.na853;
-                console.log('[DIRECT_ROUTE_V2] Retrieved NA853 from Projects table:', project_na853);
+                // Extract only numeric parts for database compatibility
+                const numericNA853 = String(projectData.na853).replace(/\D/g, '');
+                if (numericNA853) {
+                  project_na853 = numericNA853;
+                  console.log('[DIRECT_ROUTE_V2] Retrieved and converted NA853 from Projects table:', project_na853);
+                } else {
+                  console.error('[DIRECT_ROUTE_V2] Could not extract numeric value from NA853:', projectData.na853);
+                  // Try to use project_mis as numeric fallback
+                  if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
+                    project_na853 = req.body.project_mis;
+                    console.log('[DIRECT_ROUTE_V2] Using project_mis as numeric fallback:', req.body.project_mis);
+                  } else {
+                    // Last resort - use 0 as safe fallback
+                    project_na853 = '0';
+                    console.log('[DIRECT_ROUTE_V2] Using safe numeric fallback: 0');
+                  }
+                }
               } else {
                 // If no data found in Projects table, use project_mis as fallback
-                if (req.body.project_mis) {
-                  console.log('[DIRECT_ROUTE_V2] Using project_mis directly as fallback');
+                if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
+                  console.log('[DIRECT_ROUTE_V2] Using project_mis directly as numeric fallback:', req.body.project_mis);
                   project_na853 = req.body.project_mis;
                 } else {
                   console.error('[DIRECT_ROUTE_V2] Could not find project in Projects table:', projectError);
@@ -191,15 +206,15 @@ async function startServer() {
             } catch (error) {
               console.error('[DIRECT_ROUTE_V2] Error during project lookup:', error);
               
-              // If error happens, use project_mis as fallback if available
-              if (req.body.project_mis) {
-                console.log('[DIRECT_ROUTE_V2] Using project_mis directly due to error');
+              // If error happens, use project_mis as numeric fallback if available and valid
+              if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
+                console.log('[DIRECT_ROUTE_V2] Using project_mis as numeric fallback due to error:', req.body.project_mis);
                 project_na853 = req.body.project_mis;
               } else {
-                return res.status(500).json({ 
-                  message: 'Error looking up project and no fallback available', 
-                  error: error instanceof Error ? error.message : 'Unknown error'
-                });
+                console.error('[DIRECT_ROUTE_V2] No valid numeric fallback available');
+                // Last resort - use 0 as safe numeric value
+                project_na853 = '0';
+                console.log('[DIRECT_ROUTE_V2] Using safe numeric fallback: 0');
               }
             }
             

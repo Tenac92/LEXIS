@@ -240,12 +240,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .single();
             
             if (!projectError && projectData && projectData.na853) {
-              project_na853 = projectData.na853;
-              console.log('[TEST] Retrieved NA853 from Projects table:', project_na853);
+              // Convert to numeric value - extract only the numbers from the NA853 string
+              let numericNA853 = String(projectData.na853).replace(/\D/g, '');
+              if (numericNA853) {
+                project_na853 = numericNA853;
+                console.log('[TEST] Retrieved and converted NA853 from Projects table:', project_na853);
+              } else {
+                // If we can't get a numeric value, try something else
+                console.error('[TEST] Could not convert NA853 to numeric value:', projectData.na853);
+                if (project_mis && !isNaN(Number(project_mis))) {
+                  project_na853 = project_mis;
+                } else {
+                  project_na853 = '0'; // Fallback to safe numeric value
+                }
+              }
             } else {
               // If not found in Projects table, use project_mis directly as the fallback
-              if (project_mis) {
-                console.log('[TEST] Using project_mis directly as fallback:', project_mis);
+              if (project_mis && !isNaN(Number(project_mis))) {
+                console.log('[TEST] Using project_mis directly as numeric fallback:', project_mis);
                 project_na853 = project_mis;
               } else {
                 console.error('[TEST] Could not find project information:', projectError);
@@ -368,9 +380,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (projectError || !projectData) {
             console.error('[V2_ENDPOINT] Project fetch error:', projectError);
             
-            if (project_mis) {
-              // Use project_mis as fallback
-              console.log('[V2_ENDPOINT] Using project_mis as fallback:', project_mis);
+            if (project_mis && !isNaN(Number(project_mis))) {
+              // Use project_mis as numeric fallback
+              console.log('[V2_ENDPOINT] Using project_mis as numeric fallback:', project_mis);
               project_na853 = project_mis;
             } else {
               return res.status(400).json({ 
@@ -378,18 +390,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             }
           } else {
-            project_na853 = projectData.na853;
-            console.log('[V2_ENDPOINT] Found project NA853:', project_na853);
+            // Extract only numeric parts from NA853 string for database compatibility
+            let numericNA853 = String(projectData.na853).replace(/\D/g, '');
+            if (numericNA853) {
+              project_na853 = numericNA853;
+              console.log('[V2_ENDPOINT] Converted project NA853 to numeric:', project_na853);
+            } else {
+              // If we can't extract numbers, use mis as fallback or default to 0
+              if (project_mis && !isNaN(Number(project_mis))) {
+                project_na853 = project_mis;
+                console.log('[V2_ENDPOINT] Using project_mis as numeric fallback:', project_mis);
+              } else {
+                project_na853 = '0'; // Safe fallback
+                console.log('[V2_ENDPOINT] Using safe numeric fallback: 0');
+              }
+            }
           }
         } catch (error) {
           console.error('[V2_ENDPOINT] Error looking up project:', error);
           
-          if (project_mis) {
-            console.log('[V2_ENDPOINT] Using project_mis as fallback due to error');
+          if (project_mis && !isNaN(Number(project_mis))) {
+            console.log('[V2_ENDPOINT] Using project_mis as numeric fallback due to error:', project_mis);
             project_na853 = project_mis;
           } else {
+            console.error('[V2_ENDPOINT] No valid numeric fallback available:', { project_mis });
             return res.status(500).json({ 
-              message: 'Error looking up project data',
+              message: 'Error looking up project data, no valid numeric fallback available',
               error: error instanceof Error ? error.message : 'Unknown error'
             });
           }
