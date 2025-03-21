@@ -51,11 +51,11 @@ async function startServer() {
     app.use(securityHeaders);
     console.log('[Startup] Security headers applied');
 
-    // Mount API routes
+    // Mount API routes BEFORE Vite middleware
     app.use('/', router);
-    console.log('[Startup] Routes mounted');
+    console.log('[Startup] API routes mounted');
 
-    // Setup Vite in development
+    // In development, setup Vite AFTER API routes
     if (app.get("env") === "development") {
       await setupVite(app);
       console.log('[Startup] Vite development server initialized');
@@ -63,14 +63,19 @@ async function startServer() {
       serveStatic(app);
     }
 
-    // Catch-all route for SPA
-    app.get('*', (req, res) => {
-      res.setHeader('Content-Type', 'text/html');
-      res.sendFile(join(__dirname, '../client/index.html'));
-    });
-
     // Error handling middleware
     app.use(errorMiddleware);
+
+    // Catch-all route for SPA must be LAST
+    app.get('*', (req, res) => {
+      // Only handle HTML requests, let API requests fall through
+      if (req.accepts('html')) {
+        res.setHeader('Content-Type', 'text/html');
+        res.sendFile(join(__dirname, '../client/index.html'));
+      } else {
+        res.status(404).json({ error: 'Not found' });
+      }
+    });
 
     // Start the server
     const PORT = 5000;

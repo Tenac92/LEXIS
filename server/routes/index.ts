@@ -9,6 +9,12 @@ import { router as generatedDocumentsRouter } from '../controllers/generatedDocu
 
 const router = Router();
 
+// Add JSON content-type middleware for all API routes
+router.use('/api', (req, res, next) => {
+  res.setHeader('Content-Type', 'application/json');
+  next();
+});
+
 // Mount API routes with authentication
 router.use('/api/projects', authenticateSession, projectsRouter);
 router.use('/api/documents', authenticateSession, documentsRouter);
