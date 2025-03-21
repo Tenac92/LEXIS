@@ -30,6 +30,7 @@ const ALL_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 
 // Project selection component
 interface Project {
   id: string;
+  mis?: string;
   name: string;
   expenditure_types: string[];
 }
@@ -571,13 +572,15 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             }
           }
 
-          // Format name to include NA853 code properly
+          // Store both MIS and NA853 for proper querying
+          const projectId = item.na853 || String(item.mis);
           const name = item.na853 ?
             `${item.na853} - ${item.event_description || item.project_title || 'No description'}` :
             item.event_description || item.project_title || 'No description';
 
           return {
-            id: item.na853 || String(item.mis), // Use NA853 as ID if available
+            id: projectId,
+            mis: String(item.mis), // Store MIS separately
             name,
             expenditure_types: expenditureTypes || []
           };
@@ -598,22 +601,31 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (!selectedProjectId) return null;
 
       try {
-        console.log('[Budget] Fetching budget data for project:', selectedProjectId);
+        // Find the project to get its MIS
+        const project = projects.find(p => p.id === selectedProjectId);
+        if (!project) {
+          console.error('[Budget] Project not found:', selectedProjectId);
+          return null;
+        }
+
+        console.log('[Budget] Fetching budget data for project:', {
+          id: selectedProjectId,
+          mis: project.mis
+        });
 
         const { data: budgetData, error } = await supabase
           .from('budget_na853_split')
           .select('user_view, proip, ethsia_pistosi, katanomes_etous')
-          .eq('mis', selectedProjectId)
-          .maybeSingle(); // Use maybeSingle() instead of single()
+          .eq('mis', project.mis)
+          .maybeSingle();
 
         if (error) {
           console.error('[Budget] Supabase query error:', error);
           throw error;
         }
 
-        // Handle case where no budget data exists
         if (!budgetData) {
-          console.log('[Budget] No budget data found for project:', selectedProjectId);
+          console.log('[Budget] No budget data found for project:', project.mis);
           return {
             current_budget: 0,
             total_budget: 0,
@@ -630,7 +642,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         };
       } catch (error) {
         console.error('[Budget] Error fetching budget data:', error);
-        // Don't throw the error, return default values instead
         return {
           current_budget: 0,
           total_budget: 0,
@@ -785,12 +796,16 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
 
+      const projectForBudgetUpdate = projects.find(p => p.id === data.project_id);
+      if (!projectForBudgetUpdate) {
+        throw new Error("Project not found for budget update");
+      }
       const budgetUpdateResponse = await supabase
         .from('budget_na853_split')
         .update({
           user_view: budgetData ? budgetData.current_budget - totalAmount : 0
         })
-        .eq('mis', data.project_id)
+        .eq('mis', projectForBudgetUpdate.mis)
         .select();
 
       if (budgetUpdateResponse.error) {
@@ -845,9 +860,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ["budget", data.project_id] }),
         queryClient.refetchQueries({ queryKey: ["budget-validation", data.project_id, totalAmount] })
-      ]);
-
-      toast({
+      ]);      toast({
         title: "Επιτυχία",
         description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
       });
@@ -1055,12 +1068,22 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (!selectedProjectId) return [];
 
       try {
-        console.log('[Regions] Fetching regions for project:', selectedProjectId);
+        // Find the project to get its MIS
+        const project = projects.find(p => p.id === selectedProjectId);
+        if (!project) {
+          console.error('[Regions] Project not found:', selectedProjectId);
+          return [];
+        }
+
+        console.log('[Regions] Fetching regions for project:', {
+          id: selectedProjectId,
+          mis: project.mis
+        });
 
         const { data, error } = await supabase
           .from('Projects')
           .select('region')
-          .eq('mis', selectedProjectId)
+          .eq('mis', project.mis)
           .maybeSingle();
 
         if (error) {
@@ -1069,13 +1092,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         }
 
         if (!data || !data.region) {
-          console.log('[Regions] No regions found for project:', selectedProjectId);
+          console.log('[Regions] No regions found for project:', project.mis);
           return [];
         }
 
         let regionData;
         try {
-          // Parse region data if it's a string
           regionData = typeof data.region === 'string' ? 
             JSON.parse(data.region) : data.region;
         } catch (e) {
@@ -1110,7 +1132,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return [];
       }
     },
-    enabled: Boolean(selectedProjectId)
+    enabled: Boolean(selectedProjectId) && projects.length > 0
   });
 
   const renderStepContent = () => {
