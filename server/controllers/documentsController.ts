@@ -12,7 +12,7 @@ const documentManager = new DocumentManager();
 export default router;
 
 // List documents with filters
-router.get('/', authenticateSession, async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
     console.log('[Documents] Starting document fetch request');
     console.log('[Documents] Query parameters:', req.query);
@@ -41,7 +41,7 @@ router.get('/', authenticateSession, async (req: Request, res: Response) => {
 });
 
 // Get single document
-router.get('/:id', authenticateSession, async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { data: document, error } = await supabase
       .from('generated_documents')
@@ -70,7 +70,7 @@ router.get('/:id', authenticateSession, async (req: Request, res: Response) => {
 });
 
 // Update document
-router.patch('/:id', authenticateSession, async (req: Request, res: Response) => {
+router.patch('/:id', async (req: Request, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -103,7 +103,7 @@ router.patch('/:id', authenticateSession, async (req: Request, res: Response) =>
 });
 
 // Update document protocol
-router.patch('/generated/:id/protocol', authenticateSession, async (req: Request, res: Response) => {
+router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { protocol_number, protocol_date } = req.body;
@@ -198,7 +198,7 @@ router.patch('/generated/:id/protocol', authenticateSession, async (req: Request
 });
 
 // Create new document
-router.post('/', authenticateSession, async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     console.log('[Documents] Creating new document:', JSON.stringify(req.body, null, 2));
 
@@ -300,7 +300,7 @@ router.post('/', authenticateSession, async (req: Request, res: Response) => {
 });
 
 // Export document
-router.get('/generated/:id/export', authenticateSession, async (req: Request, res: Response) => {
+router.get('/generated/:id/export', async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {

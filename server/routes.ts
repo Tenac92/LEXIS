@@ -39,8 +39,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Documents routes
     log('[Routes] Setting up document routes...');
-    // Handle documents routes - ensuring we directly use the imported router
-    app.use('/api/documents', documentsRouter);
+    // Handle documents routes with proper authentication
+    app.use('/api/documents', authenticateSession, documentsRouter);
     log('[Routes] Document routes setup complete');
 
     // Template preview route
