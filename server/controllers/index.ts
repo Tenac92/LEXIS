@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateSession } from '../auth';
-import { router as documentsRouter } from './documentsController';
+import documentsRouter from './documentsController';
 import { router as budgetRouter } from './budgetController';
 import { router as recipientsRouter } from './recipientsController';
 import { router as statsRouter } from './statsController';
