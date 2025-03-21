@@ -1,0 +1,58 @@
+create-document-dialog.tsx:971 Uncaught ReferenceError: Cannot access 'regions' before initialization
+    at CreateDocumentDialog (create-document-dialog.tsx:971:7)
+    at renderWithHooks (chunk-276SZO74.js?v=7ec152b7:11548:26)
+    at mountIndeterminateComponent (chunk-276SZO74.js?v=7ec152b7:14926:21)
+    at beginWork (chunk-276SZO74.js?v=7ec152b7:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-276SZO74.js?v=7ec152b7:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-276SZO74.js?v=7ec152b7:3699:24)
+    at invokeGuardedCallback (chunk-276SZO74.js?v=7ec152b7:3733:39)
+    at beginWork$1 (chunk-276SZO74.js?v=7ec152b7:19765:15)
+    at performUnitOfWork (chunk-276SZO74.js?v=7ec152b7:19198:20)
+    at workLoopSync (chunk-276SZO74.js?v=7ec152b7:19137:13)
+create-document-dialog.tsx:971 Uncaught ReferenceError: Cannot access 'regions' before initialization
+    at CreateDocumentDialog (create-document-dialog.tsx:971:7)
+    at renderWithHooks (chunk-276SZO74.js?v=7ec152b7:11548:26)
+    at mountIndeterminateComponent (chunk-276SZO74.js?v=7ec152b7:14926:21)
+    at beginWork (chunk-276SZO74.js?v=7ec152b7:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-276SZO74.js?v=7ec152b7:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-276SZO74.js?v=7ec152b7:3699:24)
+    at invokeGuardedCallback (chunk-276SZO74.js?v=7ec152b7:3733:39)
+    at beginWork$1 (chunk-276SZO74.js?v=7ec152b7:19765:15)
+    at performUnitOfWork (chunk-276SZO74.js?v=7ec152b7:19198:20)
+    at workLoopSync (chunk-276SZO74.js?v=7ec152b7:19137:13)
+chunk-276SZO74.js?v=7ec152b7:14032 The above error occurred in the <CreateDocumentDialog> component:
+
+    at CreateDocumentDialog (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:540:40)
+    at FAB (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/fab.tsx:51:20)
+    at div
+    at HomePage (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/home-page.tsx:25:25)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=7ec152b7:247:17)
+    at div
+    at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/framer-motion.js?v=7ec152b7:6536:40)
+    at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/framer-motion.js?v=7ec152b7:7742:24)
+    at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…nner/workspace/node_modules/.vite/deps/framer-motion.js?v=7ec152b7:7800:26)
+    at PageTransition (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/page-transition.tsx:42:34)
+    at Router
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:109:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.…rkspace/node_modules/.vite/deps/@tanstack_react-query.js?v=7ec152b7:2848:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+chunk-276SZO74.js?v=7ec152b7:9129 Uncaught ReferenceError: Cannot access 'regions' before initialization
+    at CreateDocumentDialog (create-document-dialog.tsx:971:7)
+    at renderWithHooks (chunk-276SZO74.js?v=7ec152b7:11548:26)
+    at mountIndeterminateComponent (chunk-276SZO74.js?v=7ec152b7:14926:21)
+    at beginWork (chunk-276SZO74.js?v=7ec152b7:15914:22)
+    at beginWork$1 (chunk-276SZO74.js?v=7ec152b7:19753:22)
+    at performUnitOfWork (chunk-276SZO74.js?v=7ec152b7:19198:20)
+    at workLoopSync (chunk-276SZO74.js?v=7ec152b7:19137:13)
+    at renderRootSync (chunk-276SZO74.js?v=7ec152b7:19116:15)
+    at recoverFromConcurrentError (chunk-276SZO74.js?v=7ec152b7:18736:28)
+    at performSyncWorkOnRoot (chunk-276SZO74.js?v=7ec152b7:18879:28)
+supabase.ts:38 [Supabase] Connection successful, found records: 
+{count: 1, sample: {…}}
+supabase.ts:51 [Supabase] Initial connection test: successful
+﻿
+

@@ -21,6 +21,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { useAuth } from "@/hooks/use-auth";
 
 // Constants
 const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
@@ -422,7 +423,7 @@ const recipientSchema = z.object({
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
   project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
-  region: z.string().optional(), // Make region optional
+  region: z.string().optional(),
   expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
   recipients: z.array(recipientSchema).optional().default([]),
   total_amount: z.number().optional(),
@@ -439,7 +440,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [user, setUser] = useState<any>(null); // Add user state
+  const { user } = useAuth();
+
+  // Initialize regions state
+  const [regions, setRegions] = useState<Array<{ id: string; name: string; type: string }>>([]);
 
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
@@ -852,7 +856,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["documents"] }),
         queryClient.invalidateQueries({ queryKey: ["budget"] }),
-        queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] }),
+        queryClient.invalidateQueries({ queryKey:["budget", data.project_id] }),
         queryClient.invalidateQueries({
           queryKey: ["budget-validation", data.project_id, totalAmount]
         })
@@ -964,11 +968,83 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   }, [user?.units, form]);
 
   useEffect(() => {
-    // Auto-select region if there's only one available
-    if (regions.length === 1) {
-      form.setValue("region", regions[0].id);
-    }
-  }, [regions, form]);
+    // Fetch regions when selectedProjectId changes
+    const fetchRegions = async () => {
+      if (!selectedProjectId) {
+        setRegions([]);
+        return;
+      }
+      try {
+        // Find the project to get its MIS
+        const project = projects.find(p => p.id === selectedProjectId);
+        if (!project) {
+          console.error('[Regions] Project not found:', selectedProjectId);
+          setRegions([]);
+          return;
+        }
+
+        console.log('[Regions] Fetching regions for project:', {
+          id: selectedProjectId,
+          mis: project.mis
+        });
+
+        const { data, error } = await supabase
+          .from('Projects')
+          .select('region')
+          .eq('mis', project.mis)
+          .maybeSingle();
+
+        if (error) {
+          console.error('[Regions] Supabase query error:', error);
+          setRegions([]);
+          return;
+        }
+
+        if (!data || !data.region) {
+          console.log('[Regions] No regions found for project:', project.mis);
+          setRegions([]);
+          return;
+        }
+
+        let regionData;
+        try {
+          regionData = typeof data.region === 'string' ?
+            JSON.parse(data.region) : data.region;
+        } catch (e) {
+          console.error('[Regions] Error parsing region data:', e);
+          setRegions([]);
+          return;
+        }
+
+        // First try to get regional_unit
+        if (regionData.regional_unit && Array.isArray(regionData.regional_unit) && regionData.regional_unit.length > 0) {
+          console.log('[Regions] Using regional_unit data:', regionData.regional_unit);
+          setRegions(regionData.regional_unit.map((unit: string) => ({
+            id: unit,
+            name: unit,
+            type: 'regional_unit'
+          })));
+        }
+        // Fallback to region if no regional_unit
+        else if (regionData.region && Array.isArray(regionData.region) && regionData.region.length > 0) {
+          console.log('[Regions] Falling back to region data:', regionData.region);
+          setRegions(regionData.region.map((region: string) => ({
+            id: region,
+            name: region,
+            type: 'region'
+          })));
+        } else {
+          console.log('[Regions] No valid region or regional_unit data found');
+          setRegions([]);
+        }
+      } catch (error) {
+        console.error('[Regions] Error fetching regions:', error);
+        setRegions([]);
+      }
+    };
+
+    fetchRegions();
+  }, [selectedProjectId, projects, supabase]);
 
   const handleNext = async () => {
     try {
@@ -1076,79 +1152,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
-  const { data: regions = [] } = useQuery({
-    queryKey: ["regions", selectedProjectId],
-    queryFn: async () => {
-      if (!selectedProjectId) return [];
-
-      try {
-        // Find the project to get its MIS
-        const project = projects.find(p => p.id === selectedProjectId);
-        if (!project) {
-          console.error('[Regions] Project not found:', selectedProjectId);
-          return [];
-        }
-
-        console.log('[Regions] Fetching regions for project:', {
-          id: selectedProjectId,
-          mis: project.mis
-        });
-
-        const { data, error } = await supabase
-          .from('Projects')
-          .select('region')
-          .eq('mis', project.mis)
-          .maybeSingle();
-
-        if (error) {
-          console.error('[Regions] Supabase query error:', error);
-          return [];
-        }
-
-        if (!data || !data.region) {
-          console.log('[Regions] No regions found for project:', project.mis);
-          return [];
-        }
-
-        let regionData;
-        try {
-          regionData = typeof data.region === 'string' ?
-            JSON.parse(data.region) : data.region;
-        } catch (e) {
-          console.error('[Regions] Error parsing region data:', e);
-          return [];
-        }
-
-        // First try to get regional_unit
-        if (regionData.regional_unit && Array.isArray(regionData.regional_unit) && regionData.regional_unit.length > 0) {
-          console.log('[Regions] Using regional_unit data:', regionData.regional_unit);
-          return regionData.regional_unit.map((unit: string) => ({
-            id: unit,
-            name: unit,
-            type: 'regional_unit'
-          }));
-        }
-
-        // Fallback to region if no regional_unit
-        if (regionData.region && Array.isArray(regionData.region) && regionData.region.length > 0) {
-          console.log('[Regions] Falling back to region data:', regionData.region);
-          return regionData.region.map((region: string) => ({
-            id: region,
-            name: region,
-            type: 'region'
-          }));
-        }
-
-        console.log('[Regions] No valid region or regional_unit data found');
-        return [];
-      } catch (error) {
-        console.error('[Regions] Error fetching regions:', error);
-        return [];
-      }
-    },
-    enabled: Boolean(selectedProjectId) && projects.length > 0
-  });
-
   const renderStepContent = () => {
     return (
       <AnimatePresence mode="wait" custom={direction}>
@@ -1175,7 +1178,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
-                      disabled={unitsLoading || user?.units?.length === 1} // Added disabled condition
+                      disabled={unitsLoading || user?.units?.length === 1}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
@@ -1231,7 +1234,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     <Select
                       value={form.watch("region")}
                       onValueChange={(value) => form.setValue("region", value)}
-                      disabled={regions.length === 1} // Added disabled condition
+                      disabled={regions.length === 1}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder={
@@ -1464,6 +1467,18 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       </AnimatePresence>
     );
   };
+
+  useEffect(() => {
+    if (user?.units?.length === 1) {
+      form.setValue("unit", user.units[0]);
+    }
+  }, [user?.units, form]);
+
+  useEffect(() => {
+    if (regions.length === 1) {
+      form.setValue("region", regions[0].id);
+    }
+  }, [regions, form]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
