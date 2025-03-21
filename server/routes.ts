@@ -21,7 +21,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.post('/api/documents', authenticateSession, async (req: Request & { user?: User }, res: Response) => {
       try {
         console.log('[DIRECT_ROUTE] Document creation request received:', JSON.stringify(req.body));
-        
+
         if (!req.user?.id) {
           return res.status(401).json({ message: 'Authentication required' });
         }
@@ -36,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get project NA853
         const { data: projectData, error: projectError } = await supabase
-          .from('project_catalog')
+          .from('Projects')
           .select('na853')
           .eq('mis', project_id)
           .single();
@@ -56,7 +56,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }));
 
         const now = new Date().toISOString();
-        
+
         // Create document with exact schema match and set initial status to pending
         const documentPayload = {
           unit,
@@ -103,13 +103,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     });
-    
+
     // Test diagnostics route
     app.get('/api/test-route', (req, res) => {
       console.log('[TEST] Test route accessed');
       res.status(200).json({ message: 'Test route works' });
     });
-    
+
     // Test document creation route
     app.post('/api/test-documents', (req, res) => {
       console.log('[TEST] Document test route accessed with payload:', req.body);
@@ -118,7 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         receivedData: req.body
       });
     });
-    
+
     // Authentication routes
     log('[Routes] Setting up authentication routes...');
     app.use('/api/auth', authRouter);
@@ -154,14 +154,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Registering units routes...');
     app.use('/api/units', authenticateSession, unitsRouter);
     log('[Routes] Units routes registered');
-    
+
     // Diagnostic route to see all registered routes
     app.get('/api/diagnostics/routes', (_req, res) => {
       console.log('[DIAGNOSTICS] Getting registered routes');
-      
+
       // Collect and format all registered routes
       const routes: any[] = [];
-      
+
       // Helper function to extract routes from the router stack
       function extractRoutes(stack: any[], basePath = '') {
         stack.forEach(layer => {
@@ -171,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const methods = Object.keys(layer.route.methods || {})
               .filter(m => layer.route.methods[m])
               .join('|').toUpperCase();
-            
+
             routes.push({ path, methods });
           } else if (layer.name === 'router' && layer.handle?.stack) {
             // It's a sub-router, extract its path prefix
@@ -182,31 +182,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 path += '/' + match[1];
               }
             }
-            
+
             // Recursively process this router's stack
             extractRoutes(layer.handle.stack, path);
           }
         });
       }
-      
+
       // Process the main app router
       if (app._router?.stack) {
         extractRoutes(app._router.stack);
       }
-      
+
       res.json({
         routes,
         timestamp: new Date().toISOString()
       });
     });
-    
+
     // Test document creation route without authentication
     app.post('/api/test-document-post', async (req, res) => {
       try {
         console.log('[TEST] Document test route received payload:', req.body);
-        
+
         const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [] } = req.body;
-        
+
         if (!recipients?.length || !project_id || !unit || !expenditure_type) {
           console.error('[TEST] Missing required fields:', { 
             hasRecipients: Boolean(recipients?.length), 
@@ -221,17 +221,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: `test-${Date.now()}`
           });
         }
-        
+
         // Get project NA853 from Supabase if not provided
         let project_na853 = req.body.project_na853;
         if (!project_na853) {
           console.log('[TEST] Fetching NA853 for project:', project_id);
           const { data: projectData, error: projectError } = await supabase
-            .from('project_catalog')
+            .from('Projects')
             .select('na853')
             .eq('mis', project_id)
             .single();
-          
+
           if (projectError || !projectData) {
             console.error('[TEST] Error fetching project:', projectError);
             return res.status(200).json({ 
@@ -241,11 +241,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               id: `test-${Date.now()}`
             });
           }
-          
+
           project_na853 = projectData.na853;
           console.log('[TEST] Retrieved NA853:', project_na853);
         }
-        
+
         // Format recipients data
         const formattedRecipients = recipients.map((r: any) => ({
           firstname: String(r.firstname).trim(),
@@ -255,9 +255,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: parseFloat(String(r.amount)),
           installment: String(r.installment).trim()
         }));
-        
+
         const now = new Date().toISOString();
-        
+
         // Create document payload
         const documentPayload = {
           unit,
@@ -271,16 +271,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           created_at: now,
           updated_at: now
         };
-        
+
         console.log('[TEST] Attempting to insert document with payload:', documentPayload);
-        
+
         // Insert into database
         const { data, error } = await supabase
           .from('generated_documents')
           .insert([documentPayload])
           .select('id')
           .single();
-        
+
         if (error) {
           console.error('[TEST] Supabase insert error:', error);
           return res.status(200).json({ 
@@ -291,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             id: `test-${Date.now()}`
           });
         }
-        
+
         console.log('[TEST] Document created successfully with ID:', data.id);
         return res.status(200).json({
           success: true,
@@ -310,15 +310,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     });
-    
+
     // Mount other API routes under /api 
     // V2 document creation endpoint
     app.post('/api/v2-documents', express.json(), async (req: Request, res: Response) => {
       try {
         console.log('[DIRECT_ROUTE_V2] Document creation request with body:', req.body);
-        
+
         const { unit, project_id, region, expenditure_type, recipients, total_amount, attachments = [] } = req.body;
-        
+
         if (!recipients?.length || !project_id || !unit || !expenditure_type) {
           return res.status(400).json({
             message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
@@ -327,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get project NA853 value
         const { data: projectData, error: projectError } = await supabase
-          .from('project_catalog')
+          .from('Projects')
           .select('na853')
           .eq('mis', project_id)
           .single();
@@ -352,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }])
           .select('id')
           .single();
-          
+
         if (error) {
           console.error('[DIRECT_ROUTE_V2] Supabase error:', error);
           return res.status(500).json({ 
@@ -360,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             error: error.message
           });
         }
-        
+
         console.log('[DIRECT_ROUTE_V2] Document created successfully with ID:', data.id);
         res.status(201).json({ 
           id: data.id,
