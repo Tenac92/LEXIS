@@ -1,44 +1,91 @@
+/**
+ * Database Configuration Module
+ * Centralizes database connection parameters and configuration
+ */
+
+import pg from 'pg';
 import { createClient } from '@supabase/supabase-js';
+import { log } from '../vite';
 import type { Database } from '@shared/schema';
-import * as dotenv from 'dotenv';
 
-dotenv.config();
+const { Pool } = pg;
 
-// Validate environment variables
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
-  throw new Error('SUPABASE_URL and SUPABASE_KEY must be set in environment variables');
+// Get database connection parameters from environment variables
+const postgresUrl = process.env.DATABASE_URL;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
+
+// Validate required config
+if (!postgresUrl) {
+  log('[Database] DATABASE_URL environment variable is required', 'error');
 }
 
-console.log('[Supabase] Initializing client...');
+if (supabaseUrl && !supabaseKey) {
+  log('[Database] SUPABASE_KEY or SUPABASE_ANON_KEY is required when SUPABASE_URL is provided', 'error');
+}
 
-// Create Supabase client with proper typing
+// PostgreSQL pool configuration
+export const poolConfig = {
+  connectionString: postgresUrl,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+};
+
+// Export pool instance for reuse across the application
+export const pool = new Pool(poolConfig);
+
+// Initialize connection error handling
+pool.on('error', (err) => {
+  log(`[Database] PostgreSQL pool error: ${err.message}`, 'error');
+  console.error('[Database] PostgreSQL pool error:', err);
+});
+
+// Create and export Supabase client
 export const supabase = createClient<Database>(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY,
+  supabaseUrl || '',
+  supabaseKey || '',
   {
     auth: {
       persistSession: false,
-      autoRefreshToken: false
-    }
+      autoRefreshToken: true,
+    },
   }
 );
 
-// Simple connection test
-supabase.from('generated_documents')
-  .select('id, unit, status')
-  .limit(1)
-  .then(({ data, error }) => {
-    if (error) {
-      console.error('[Supabase] Initial connection test failed:', error.message);
-    } else {
-      console.log('[Supabase] Initial connection test successful:', {
-        count: data?.length || 0,
-        sample: data?.[0] ? { id: data[0].id, unit: data[0].unit } : null
-      });
+// Test database connection
+export async function testConnection() {
+  try {
+    // Test PostgreSQL connection
+    const pgClient = await pool.connect();
+    const pgResult = await pgClient.query('SELECT 1 AS pg_connection_test');
+    pgClient.release();
+    log('[Database] PostgreSQL connection successful', 'info');
+    
+    // Test Supabase connection if configured
+    if (supabaseUrl && supabaseKey) {
+      const { data: supabaseData, error: supabaseError } = await supabase
+        .from('users')
+        .select('count(*)', { count: 'exact' })
+        .limit(1);
+      
+      if (supabaseError) {
+        throw new Error(`Supabase connection error: ${supabaseError.message}`);
+      }
+      
+      log('[Database] Supabase connection successful', 'info');
     }
-  })
-  .catch(err => {
-    console.error('[Supabase] Connection test error:', err);
-  });
+    
+    return true;
+  } catch (error) {
+    log(`[Database] Connection test failed: ${error}`, 'error');
+    console.error('[Database] Connection test failed:', error);
+    return false;
+  }
+}
 
-export default supabase;
+// Close all database connections
+export async function closeConnections() {
+  await pool.end();
+  log('[Database] All database connections closed', 'info');
+}
