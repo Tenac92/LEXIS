@@ -693,6 +693,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           proip: parseFloat(budgetData.current_budget?.toString() || '0'),
           current_budget: parseFloat(budgetData.current_budget?.toString() || '0'),
           annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
+          total_spent: parseFloat(budgetData.total_spent?.toString() || '0'),
+          remaining_budget: parseFloat(budgetData.remaining_budget?.toString() || 
+                           (budgetData.current_budget ? budgetData.current_budget : '0')),
           quarterly: {
             q1: parseFloat(budgetData.q1?.toString() || '0'),
             q2: parseFloat(budgetData.q2?.toString() || '0'),
@@ -717,6 +720,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           proip: 0,
           current_budget: 0,
           annual_budget: 0,
+          total_spent: 0,
+          remaining_budget: 0,
           quarterly: { q1: 0, q2: 0, q3: 0, q4: 0 }
         };
       }

@@ -236,14 +236,13 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Creating budget history entry for MIS: ${entry.mis}`);
       
-      // Make sure createdAt is set if not provided
-      if (!entry.created_at) {
-        entry.created_at = new Date().toISOString();
-      }
+      // createdAt is automatically handled by the database
+      // Remove any created_at property to avoid type errors
+      const { created_at, ...entryData } = entry;
       
       const { error } = await supabase
         .from('budget_history')
-        .insert(entry);
+        .insert(entryData);
         
       if (error) {
         console.error('[Storage] Error creating budget history entry:', error);
