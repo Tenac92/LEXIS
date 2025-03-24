@@ -144,7 +144,8 @@ async function startServer() {
 
       // DIRECT document creation route bypass - added as a direct fix for 404 issues
       // This is added after all other routes are registered to ensure it catches the request
-      app.post('/api/v2-documents', express.json(), async (req: Request, res: Response) => {
+      // Removed duplicate express.json() middleware that was causing issues with request parsing
+      app.post('/api/v2-documents', async (req: Request, res: Response) => {
         try {
           console.log('[DIRECT_ROUTE_V2] Document creation request with body:', req.body);
           
