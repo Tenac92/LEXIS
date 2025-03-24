@@ -85,18 +85,50 @@ export class BudgetService {
         };
       }
 
-      // Get current budget data
-      const { data: budgetData, error } = await supabase
+      console.log(`[BudgetService] Validating budget for MIS: ${mis}, amount: ${amount}`);
+
+      // Try to get current budget data
+      let { data: budgetData, error } = await supabase
         .from('budget_na853_split')
         .select('user_view, ethsia_pistosi, katanomes_etous')
         .eq('mis', mis)
         .single();
 
+      // If not found, try to get project data to find the correct MIS
       if (error || !budgetData) {
+        console.log(`[BudgetService] Budget not found directly for MIS: ${mis}, trying project lookup`);
+        
+        // Try to find project by either its ID or MIS field
+        const { data: projectData } = await supabase
+          .from('Projects')
+          .select('id, mis')
+          .or(`id.eq.${mis},mis.eq.${mis}`)
+          .single();
+        
+        if (projectData?.mis) {
+          console.log(`[BudgetService] Found project with MIS: ${projectData.mis}`);
+          
+          // Try again with the project's MIS value
+          const retryResult = await supabase
+            .from('budget_na853_split')
+            .select('user_view, ethsia_pistosi, katanomes_etous')
+            .eq('mis', projectData.mis)
+            .single();
+            
+          budgetData = retryResult.data;
+          error = retryResult.error;
+        }
+      }
+
+      // If we still don't have budget data, return an error but allow document creation
+      if (error || !budgetData) {
+        console.log(`[BudgetService] Budget not found for MIS: ${mis} after lookup attempts`);
+        
         return {
-          status: 'error',
-          canCreate: false,
-          message: 'Budget not found'
+          status: 'warning',
+          canCreate: true, // Allow document creation even without budget data
+          message: 'Budget not found, but document creation is allowed. No budget validation performed.',
+          allowDocx: true
         };
       }
 
@@ -151,15 +183,59 @@ export class BudgetService {
         };
       }
 
-      // Get current budget data
-      const { data: budgetData, error: fetchError } = await supabase
+      console.log(`[BudgetService] Updating budget for MIS: ${mis}, amount: ${amount}, userId: ${userId}`);
+
+      // Try to get current budget data
+      let { data: budgetData, error: fetchError } = await supabase
         .from('budget_na853_split')
         .select('*')
         .eq('mis', mis)
         .single();
 
+      // If not found, try to get project data to find the correct MIS
       if (fetchError || !budgetData) {
-        throw new Error('Failed to fetch budget data');
+        console.log(`[BudgetService] Budget not found directly for MIS: ${mis}, trying project lookup`);
+        
+        // Try to find project by either its ID or MIS field
+        const { data: projectData } = await supabase
+          .from('Projects')
+          .select('id, mis')
+          .or(`id.eq.${mis},mis.eq.${mis}`)
+          .single();
+        
+        if (projectData?.mis) {
+          console.log(`[BudgetService] Found project with MIS: ${projectData.mis}`);
+          
+          // Try again with the project's MIS value
+          const retryResult = await supabase
+            .from('budget_na853_split')
+            .select('*')
+            .eq('mis', projectData.mis)
+            .single();
+            
+          budgetData = retryResult.data;
+          fetchError = retryResult.error;
+        }
+      }
+
+      // If we still don't have budget data, return a default success response
+      if (fetchError || !budgetData) {
+        console.log(`[BudgetService] Budget not found for MIS: ${mis} after lookup attempts`);
+        
+        return {
+          status: 'warning',
+          message: 'Budget not found, but update is allowed without budget tracking',
+          data: {
+            user_view: '0',
+            ethsia_pistosi: '0',
+            q1: '0',
+            q2: '0',
+            q3: '0',
+            q4: '0',
+            total_spent: amount.toString(),
+            current_budget: '0'
+          }
+        };
       }
 
       // Parse current values
