@@ -521,38 +521,21 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (!selectedUnit) return [];
 
       try {
-        const { data, error } = await supabase
-          .from('Projects')
-          .select('*');
-
-        if (error) {
-          console.error('Error fetching projects:', error);
+        const response = await apiRequest(`/api/projects/by-unit/${encodeURIComponent(selectedUnit)}`);
+        
+        if (!response || !Array.isArray(response)) {
+          console.error('Error fetching projects: Invalid response format');
           toast({
             title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
             variant: "destructive"
           });
-          throw error;
+          return [];
         }
-
-        const filteredData = data.filter(project => {
-          if (!project.implementing_agency) return false;
-          try {
-            const agencies = Array.isArray(project.implementing_agency) ?
-              project.implementing_agency :
-              typeof project.implementing_agency === 'string' ?
-                JSON.parse(project.implementing_agency) :
-                [];
-            return agencies.includes(selectedUnit);
-          } catch (e) {
-            console.error('Error parsing implementing_agency:', e, project);
-            return false;
-          }
-        });
-
-        return filteredData.map((item: any) => {
+        
+        return response.map((item: any) => {
+          // Process expenditure types
           let expenditureTypes: string[] = [];
-
           if (item.expenditure_type) {
             try {
               if (typeof item.expenditure_type === 'string') {
@@ -578,10 +561,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             expenditure_types: expenditureTypes || []
           };
         });
-
       } catch (error) {
         console.error('Projects fetch error:', error);
-        throw error;
+        toast({
+          title: "Σφάλμα",
+          description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
+          variant: "destructive"
+        });
+        return [];
       }
     },
     enabled: Boolean(selectedUnit)
@@ -606,18 +593,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           mis: project.mis
         });
 
-        const { data: budgetData, error } = await supabase
-          .from('budget_na853_split')
-          .select('user_view, proip, ethsia_pistosi, katanomes_etous')
-          .eq('mis', project.mis)
-          .maybeSingle();
-
-        if (error) {
-          console.error('[Budget] Supabase query error:', error);
-          throw error;
-        }
-
-        if (!budgetData) {
+        const response = await apiRequest(`/api/budget/${encodeURIComponent(project.mis)}`);
+        
+        if (!response) {
           console.log('[Budget] No budget data found for project MIS:', project.mis);
           return {
             current_budget: 0,
@@ -626,15 +604,20 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             katanomes_etous: 0
           };
         }
-
+        
         return {
-          current_budget: parseFloat(budgetData.user_view?.toString() || '0'),
-          total_budget: parseFloat(budgetData.proip?.toString() || '0'),
-          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
-          katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0')
+          current_budget: parseFloat(response.user_view?.toString() || '0'),
+          total_budget: parseFloat(response.proip?.toString() || '0'),
+          annual_budget: parseFloat(response.ethsia_pistosi?.toString() || '0'),
+          katanomes_etous: parseFloat(response.katanomes_etous?.toString() || '0')
         };
       } catch (error) {
         console.error('[Budget] Error fetching budget data:', error);
+        toast({
+          title: "Σφάλμα",
+          description: "Αποτυχία φόρτωσης δεδομένων προϋπολογισμού",
+          variant: "destructive"
+        });
         return {
           current_budget: 0,
           total_budget: 0,
@@ -657,27 +640,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           return [];
         }
 
-        const { data, error } = await supabase
-          .from('attachments')
-          .select('id, expediture_type, installment, attachments')
-          .eq('expediture_type', expenditureType)
-          .eq('installment', installment);
-
-        if (error) {
-          console.error('Error fetching attachments:', error);
-          toast({
-            title: "Σφάλμα",
-            description: "Αποτυχία φόρτωσης συνημμένων",
-            variant: "destructive"
-          });
+        const response = await apiRequest(`/api/attachments/${expenditureType}/${installment}`);
+        
+        if (!response || !Array.isArray(response)) {
           return [];
         }
 
-        if (!data || !Array.isArray(data)) {
-          return [];
-        }
-
-        return data.reduce((acc: any[], row) => {
+        return response.reduce((acc: any[], row) => {
           if (row.attachments && Array.isArray(row.attachments)) {
             const items = row.attachments.map((title: string) => ({
               id: `${row.id}-${title}`,
@@ -691,6 +660,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         }, []);
       } catch (error) {
         console.error('Error fetching attachments:', error);
+        toast({
+          title: "Σφάλμα",
+          description: "Αποτυχία φόρτωσης συνημμένων",
+          variant: "destructive"
+        });
         return [];
       }
     },
@@ -795,16 +769,20 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       }
 
       // Update budget using project MIS
-      const budgetUpdateResponse = await supabase
-        .from('budget_na853_split')
-        .update({
-          user_view: budgetData ? budgetData.current_budget - totalAmount : 0
+      const budgetUpdateResponse = await apiRequest(`/api/budget/${encodeURIComponent(projectForSubmission.mis)}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          amount: totalAmount.toString()
         })
-        .eq('mis', projectForSubmission.mis)
-        .single();
+      });
 
-      if (budgetUpdateResponse.error) {
-        throw new Error(`Σφάλμα ενημέρωσης προϋπολογισμού: ${budgetUpdateResponse.error.message}`);
+      if (!budgetUpdateResponse || budgetUpdateResponse.error) {
+        throw new Error(`Σφάλμα ενημέρωσης προϋπολογισμού: ${
+          budgetUpdateResponse?.error?.message || 'Αποτυχία επικοινωνίας με τον διακομιστή'
+        }`);
       }
 
       // Prepare payload with project MIS
@@ -1063,43 +1041,25 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           mis: project.mis
         });
 
-        const { data, error } = await supabase
-          .from('Projects')
-          .select('region')
-          .eq('mis', project.mis)
-          .maybeSingle();
-
-        if (error) {
-          console.error('[Regions] Supabase query error:', error);
-          return [];
-        }
-
-        if (!data || !data.region) {
+        const response = await apiRequest(`/api/projects/${encodeURIComponent(project.mis)}/regions`);
+        
+        if (!response || (!response.regional_unit && !response.region)) {
           console.log('[Regions] No regions found for project:', project.mis);
           return [];
         }
 
-        let regionData;
-        try {
-          regionData = typeof data.region === 'string' ?
-            JSON.parse(data.region) : data.region;
-        } catch (e) {
-          console.error('[Regions] Error parsing region data:', e);
-          return [];
-        }
-
-        if (regionData.regional_unit && Array.isArray(regionData.regional_unit) && regionData.regional_unit.length > 0) {
-          console.log('[Regions] Using regional_unit data:', regionData.regional_unit);
-          return regionData.regional_unit.map((unit: string) => ({
+        if (response.regional_unit && Array.isArray(response.regional_unit) && response.regional_unit.length > 0) {
+          console.log('[Regions] Using regional_unit data:', response.regional_unit);
+          return response.regional_unit.map((unit: string) => ({
             id: unit,
             name: unit,
             type: 'regional_unit'
           }));
         }
 
-        if (regionData.region && Array.isArray(regionData.region) && regionData.region.length > 0) {
-          console.log('[Regions] Falling back to region data:', regionData.region);
-          return regionData.region.map((region: string) => ({
+        if (response.region && Array.isArray(response.region) && response.region.length > 0) {
+          console.log('[Regions] Falling back to region data:', response.region);
+          return response.region.map((region: string) => ({
             id: region,
             name: region,
             type: 'region'
@@ -1110,6 +1070,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return [];
       } catch (error) {
         console.error('[Regions] Error fetching regions:', error);
+        toast({
+          title: "Σφάλμα",
+          description: "Αποτυχία φόρτωσης περιοχών",
+          variant: "destructive"
+        });
         return [];
       }
     },

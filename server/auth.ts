@@ -26,10 +26,10 @@ export const sessionMiddleware = session({
   store: storage.sessionStore,
   name: 'sid', // Custom session ID name
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // Secure in production
+    secure: false, // Set to false in development to work over HTTP
     httpOnly: true,
-    maxAge: 8 * 60 * 60 * 1000, // 8 hours
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site cookies in production
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax', // Use 'lax' for better compatibility
     path: '/',
   },
   proxy: true // Enable proxy support
@@ -204,8 +204,8 @@ export async function setupAuth(app: Express) {
         }
         res.clearCookie('sid', { 
           path: '/',
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          secure: false,  // Match session setting
+          sameSite: 'lax',
           httpOnly: true,
           domain: undefined // Let the browser determine the domain
         });
