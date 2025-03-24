@@ -199,6 +199,107 @@ router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
   }
 });
 
+// Get project regions
+router.get('/:mis/regions', async (req: Request, res: Response) => {
+  try {
+    const { mis } = req.params;
+    
+    if (!mis) {
+      return res.status(400).json({ 
+        message: "Project MIS is required" 
+      });
+    }
+    
+    console.log(`[Projects] Fetching regions for project: ${mis}`);
+    
+    // Query the Projects table to get the region data
+    const { data, error } = await supabase
+      .from('Projects')
+      .select('region, regional_unit')
+      .eq('mis', mis)
+      .single();
+    
+    if (error) {
+      console.error('[Projects] Error fetching regions:', error);
+      return res.status(500).json({ 
+        message: "Failed to fetch regions", 
+        error: error.message 
+      });
+    }
+    
+    if (!data) {
+      console.log(`[Projects] No project found with MIS: ${mis}`);
+      return res.status(404).json({ 
+        message: "Project not found" 
+      });
+    }
+    
+    // Process region/regional_unit data
+    let response: { region?: string[], regional_unit?: string[] } = {};
+    
+    // Handle region field 
+    if (data.region) {
+      try {
+        let regionData: string | string[] = data.region;
+        
+        // If it's a string that looks like JSON, try to parse it
+        if (typeof regionData === 'string' && 
+            (regionData.startsWith('[') || regionData.startsWith('{'))) {
+          try {
+            regionData = JSON.parse(regionData);
+          } catch (e) {
+            console.log('[Projects] Could not parse region JSON, using as string:', e);
+          }
+        }
+        
+        // Convert to array if it's not already
+        if (!Array.isArray(regionData)) {
+          regionData = [regionData];
+        }
+        
+        response.region = regionData;
+      } catch (e) {
+        console.error('[Projects] Error processing region data:', e);
+      }
+    }
+    
+    // Handle regional_unit field
+    if (data.regional_unit) {
+      try {
+        let unitData: string | string[] = data.regional_unit;
+        
+        // If it's a string that looks like JSON, try to parse it
+        if (typeof unitData === 'string' && 
+            (unitData.startsWith('[') || unitData.startsWith('{'))) {
+          try {
+            unitData = JSON.parse(unitData);
+          } catch (e) {
+            console.log('[Projects] Could not parse regional_unit JSON, using as string:', e);
+          }
+        }
+        
+        // Convert to array if it's not already
+        if (!Array.isArray(unitData)) {
+          unitData = [unitData];
+        }
+        
+        response.regional_unit = unitData;
+      } catch (e) {
+        console.error('[Projects] Error processing regional_unit data:', e);
+      }
+    }
+    
+    console.log(`[Projects] Regions for project ${mis}:`, response);
+    res.json(response);
+  } catch (error) {
+    console.error('[Projects] Error fetching regions:', error);
+    res.status(500).json({ 
+      message: "Server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 // Mount routes
 router.get('/', listProjects);
 router.get('/export', exportProjectsXLSX);
