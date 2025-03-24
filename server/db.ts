@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
+// TODO: Refactor - Multiple Supabase client instances are created:
+// - This one in db.ts using SUPABASE_ANON_KEY
+// - Another in config/db.ts using SUPABASE_KEY
+// Consider consolidating to a single Supabase client instance
+
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
   throw new Error('Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_ANON_KEY environment variables.');
 }

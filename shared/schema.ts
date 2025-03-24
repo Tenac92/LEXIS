@@ -180,8 +180,11 @@ export const projects = pgTable("Projects", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
+// TODO: Refactor - There are duplicate type definitions in this file
+// Project type is defined both here and at line 387
+// InsertProject type is defined both here and at line 296
 // Export project types
-export type Project = typeof projects.$inferSelect;
+export type Project = typeof projects.$inferSelect; 
 export type InsertProject = typeof projects.$inferInsert;
 
 // Create insert schema for Projects
@@ -213,6 +216,7 @@ export const insertProjectSchema = createInsertSchema(projects, {
   updated_at: true
 });
 
+// TODO: Refactor - InsertGeneratedDocument is defined both here and at line 282
 // Keep existing types and schemas but update document-related ones
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type InsertGeneratedDocument = typeof generatedDocuments.$inferInsert;
@@ -259,6 +263,7 @@ export const insertBudgetNotificationSchema = createInsertSchema(budgetNotificat
   status: z.enum(["pending", "approved", "rejected"]).default("pending")
 }).omit({ id: true, created_at: true, updated_at: true });
 
+// TODO: Refactor - recipientSchema is defined after it's used (line 225)
 // Enhanced recipient schema with better validation
 const recipientSchema = z.object({
   firstname: z.string().min(2, "First name must be at least 2 characters"),
