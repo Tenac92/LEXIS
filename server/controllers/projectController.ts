@@ -170,27 +170,16 @@ router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
     
     console.log(`[Projects] Fetching projects for unit: ${unitName}`);
     
-    const { data, error } = await supabase
-      .from('Projects')
-      .select('*')
-      .eq('unit', unitName)
-      .order('created_at', { ascending: false });
-      
-    if (error) {
-      console.error("[Projects] Database error:", error);
-      return res.status(500).json({ 
-        message: "Failed to fetch projects for unit",
-        error: error.message
-      });
-    }
+    // Use the storage method which correctly handles filtering by implementing_agency
+    const projects = await storage.getProjectsByUnit(unitName);
     
-    if (!data || data.length === 0) {
+    if (!projects || projects.length === 0) {
       console.log(`[Projects] No projects found for unit: ${unitName}`);
       return res.json([]);
     }
     
-    // Map projects and validate with our model
-    const formattedProjects = data.map(project => {
+    // Map projects and validate with our model to ensure consistency
+    const formattedProjects = projects.map(project => {
       try {
         return projectHelpers.validateProject(project);
       } catch (error) {

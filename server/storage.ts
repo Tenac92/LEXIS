@@ -1,4 +1,5 @@
 import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project } from "@shared/schema";
+import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
@@ -8,6 +9,7 @@ const { Pool } = pg;
 export interface IStorage {
   sessionStore: session.Store;
   getProjectsByUnit(unit: string): Promise<Project[]>;
+  getProjectExpenditureTypes(projectId: string): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -54,6 +56,43 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('[Storage] Error fetching projects by unit:', error);
       throw error;
+    }
+  }
+  
+  async getProjectExpenditureTypes(projectId: string): Promise<string[]> {
+    try {
+      console.log(`[Storage] Fetching expenditure types for project: ${projectId}`);
+      
+      const { data, error } = await supabase
+        .from('Projects')
+        .select('expenditure_type')
+        .eq('mis', projectId)
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error fetching project expenditure types:', error);
+        throw error;
+      }
+      
+      if (!data || !data.expenditure_type) {
+        console.log(`[Storage] No expenditure types found for project: ${projectId}`);
+        return [];
+      }
+      
+      // Handle expenditure_type which could be a JSONB array
+      try {
+        if (Array.isArray(data.expenditure_type)) {
+          return data.expenditure_type;
+        } else {
+          return JSON.parse(data.expenditure_type);
+        }
+      } catch (e) {
+        console.error('[Storage] Error parsing expenditure_type:', e);
+        return [];
+      }
+    } catch (error) {
+      console.error('[Storage] Error in getProjectExpenditureTypes:', error);
+      return [];
     }
   }
 }
