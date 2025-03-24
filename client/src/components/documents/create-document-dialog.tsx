@@ -735,7 +735,25 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
         const response = await apiRequest(`/api/attachments/${expenditureType}/${installment}`);
         
-        if (!response || !Array.isArray(response)) {
+        console.log('[Debug] Attachments API response:', response);
+        
+        if (!response) {
+          return [];
+        }
+        
+        // Fix: Handle the standard API response format which returns {status, attachments}
+        if (response.status === 'success' && Array.isArray(response.attachments)) {
+          console.log('[Debug] Found attachments in standard format:', response.attachments);
+          // Convert to the expected format for rendering
+          return response.attachments.map((title: string) => ({
+            id: title,
+            title,
+            file_type: 'document',
+            description: `Απαιτείται για ${expenditureType}`
+          }));
+        }
+        
+        if (!Array.isArray(response)) {
           return [];
         }
 
