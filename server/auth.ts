@@ -2,9 +2,20 @@ import { Request, Response, NextFunction, Express } from "express";
 import { supabase } from "./config/db";
 import session from "express-session";
 import { storage } from "./storage";
-import type { User } from "@shared/schema";
+import type { User as SchemaUser } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { rateLimit } from 'express-rate-limit';
+
+// Define a simplified User type for sessions
+type User = {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  units?: string[];
+  department?: string;
+  telephone?: string;
+};
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -44,7 +55,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   // Configure rate limiter for proxy environment
   skipFailedRequests: false,
-  trustProxy: true
+  // Note: removed trustProxy as it's not a valid option
 });
 
 // Authentication middleware with enhanced logging
@@ -71,9 +82,27 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
         message: 'Authentication required'
       });
     }
+    
+    // Make sure we have a complete user object
+    const sessionUser = req.session.user;
+    if (!sessionUser || !sessionUser.id || !sessionUser.email || !sessionUser.role) {
+      console.log('[Auth] Invalid user data in session:', sessionUser);
+      return res.status(401).json({
+        message: 'Invalid session data'
+      });
+    }
 
-    // Add user to request
-    req.user = req.session.user;
+    // Add user to request with all required fields
+    req.user = {
+      id: sessionUser.id,
+      email: sessionUser.email,
+      name: sessionUser.name || '',
+      role: sessionUser.role,
+      units: sessionUser.units || [],
+      department: sessionUser.department,
+      telephone: sessionUser.telephone
+    };
+    
     console.log('[Auth] User authenticated:', { 
       id: req.user.id,
       role: req.user.role,
