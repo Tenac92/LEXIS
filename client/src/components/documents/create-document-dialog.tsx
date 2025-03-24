@@ -806,8 +806,21 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           ];
         }
         
-        // Check if the response has the standard API format
-        if (data.status === 'success' && Array.isArray(data.attachments)) {
+        // Check if the response has a message about no attachments found
+        if (data.status === 'success' && data.message && Array.isArray(data.attachments) && data.attachments.length === 0) {
+          console.log('[Debug] No attachments found with message:', data.message);
+          
+          // Return a special "no attachments" entry that will be displayed differently in the UI
+          return [{
+            id: 'no-attachments',
+            title: 'Δεν βρέθηκαν συνημμένα',
+            file_type: 'none',
+            description: data.message || 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.'
+          }];
+        }
+        
+        // Check if the response has attachments in the standard API format
+        if (data.status === 'success' && Array.isArray(data.attachments) && data.attachments.length > 0) {
           console.log('[Debug] Found attachments in standard format:', data.attachments);
           
           // Convert each attachment title to our display format
@@ -843,21 +856,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           }));
         }
         
-        // If we couldn't extract anything, return default attachments
-        return [
-          {
-            id: 'Διαβιβαστικό',
-            title: 'Διαβιβαστικό',
-            file_type: 'document',
-            description: `Απαιτείται για ${expenditureType}`
-          },
-          {
-            id: 'ΔΚΑ',
-            title: 'ΔΚΑ',
-            file_type: 'document',
-            description: `Απαιτείται για ${expenditureType}`
-          }
-        ];
+        // If we couldn't extract anything, return a "no attachments" message
+        return [{
+          id: 'no-attachments-fallback',
+          title: 'Δεν βρέθηκαν συνημμένα',
+          file_type: 'none',
+          description: 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.'
+        }];
       } catch (error) {
         console.error('Error fetching attachments:', error);
         // Return default attachments instead of showing error toast

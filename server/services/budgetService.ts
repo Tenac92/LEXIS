@@ -127,7 +127,7 @@ export class BudgetService {
         return {
           status: 'warning',
           canCreate: true, // Allow document creation even without budget data
-          message: 'Budget not found, but document creation is allowed. No budget validation performed.',
+          message: 'Ο προϋπολογισμός δεν βρέθηκε για αυτό το MIS. Η δημιουργία εγγράφου επιτρέπεται χωρίς έλεγχο προϋπολογισμού.',
           allowDocx: true
         };
       }

@@ -173,12 +173,12 @@ router.get('/:type/:installment', async (req: Request, res: Response) => {
 
           // If there's an error or no default attachments found, return a standard set
           if (defaultError || !defaultData?.attachments?.length) {
-            const standardAttachments = ['Διαβιβαστικό', 'ΔΚΑ'];
-            console.log(`[Attachments] Using standard attachments:`, standardAttachments);
+            console.log(`[Attachments] No attachments found for this expenditure type.`);
             
             return res.json({
               status: 'success',
-              attachments: standardAttachments
+              message: 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.',
+              attachments: []
             });
           }
 
