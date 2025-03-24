@@ -524,6 +524,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         console.log(`[Projects] Fetching projects for unit: ${selectedUnit}`);
         const response = await apiRequest(`/api/projects/by-unit/${encodeURIComponent(selectedUnit)}`);
         
+        // Force response to be an array
+        let projectsArray: any[] = [];
+        
         if (!response) {
           console.error('[Projects] Error fetching projects: No response received');
           toast({
@@ -534,8 +537,24 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           return [];
         }
         
-        // Handle empty array response
-        if (Array.isArray(response) && response.length === 0) {
+        // Determine if we have a valid response
+        if (Array.isArray(response)) {
+          projectsArray = response;
+        } else if (response && typeof response === 'object' && response.data && Array.isArray(response.data)) {
+          // Handle wrapped API response {data: [...]}
+          projectsArray = response.data;
+        } else {
+          console.error('[Projects] Error fetching projects: Invalid response format', response);
+          toast({
+            title: "Σφάλμα", 
+            description: "Αποτυχία φόρτωσης έργων. Μη έγκυρη μορφή απάντησης.",
+            variant: "destructive"
+          });
+          return [];
+        }
+        
+        // Handle empty array case
+        if (projectsArray.length === 0) {
           console.log(`[Projects] No projects found for unit: ${selectedUnit}`);
           toast({
             title: "Πληροφορία",
@@ -545,21 +564,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           return [];
         }
         
-        // Handle non-array response
-        if (!Array.isArray(response)) {
-          console.error('[Projects] Error fetching projects: Invalid response format', response);
-          toast({
-            title: "Σφάλμα",
-            description: "Αποτυχία φόρτωσης έργων. Μη έγκυρη μορφή απάντησης.",
-            variant: "destructive"
-          });
-          return [];
-        }
-        
-        console.log(`[Projects] Found ${response.length} projects for unit: ${selectedUnit}`);
+        console.log(`[Projects] Found ${projectsArray.length} projects for unit: ${selectedUnit}`);
         
         // Map and transform the projects data
-        return response.map((item: any) => {
+        return projectsArray.map((item: any) => {
+          if (!item) return null;
+          
           // Process expenditure types
           let expenditureTypes: string[] = [];
           if (item.expenditure_type) {
@@ -586,7 +596,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             name,
             expenditure_types: expenditureTypes || []
           };
-        });
+        }).filter(Boolean); // Remove any null values
       } catch (error) {
         console.error('[Projects] Projects fetch error:', error);
         toast({
@@ -601,17 +611,29 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   });
 
 
-  const { data: budgetData, error: budgetError } = useQuery({
+  const { data: budgetData, error: budgetError } = useQuery<BudgetData>({
     queryKey: ["budget", selectedProjectId],
     queryFn: async () => {
-      if (!selectedProjectId) return null;
+      if (!selectedProjectId) {
+        // Return empty but valid budget data structure
+        return {
+          user_view: 0,
+          total_budget: 0,
+          ethsia_pistosi: 0,
+          katanomes_etous: 0,
+          proip: 0,
+          current_budget: 0,
+          annual_budget: 0,
+          quarterly: { q1: 0, q2: 0, q3: 0, q4: 0 }
+        };
+      }
 
       try {
         // Find the project to get its MIS
         const project = projects.find(p => p.id === selectedProjectId);
         if (!project || !project.mis) {
           console.error('[Budget] Project or MIS not found:', selectedProjectId);
-          return null;
+          throw new Error('Project MIS not found');
         }
 
         console.log('[Budget] Fetching budget data for project:', {
@@ -623,20 +645,41 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         
         console.log('[Budget] Budget API response:', response);
         
-        if (!response || response.status === 'error') {
-          console.log('[Budget] No budget data found for project MIS:', project.mis);
-          // Return properly formatted empty budget data
-          return {
-            user_view: 0,
-            total_budget: 0,
-            ethsia_pistosi: 0,
-            katanomes_etous: 0,
-            proip: 0
-          };
+        // Define a complete empty budget data structure
+        const emptyBudget: BudgetData = {
+          user_view: 0,
+          total_budget: 0,
+          ethsia_pistosi: 0,
+          katanomes_etous: 0,
+          proip: 0,
+          current_budget: 0,
+          annual_budget: 0,
+          quarterly: { q1: 0, q2: 0, q3: 0, q4: 0 }
+        };
+
+        // Handle different response formats
+        if (!response) {
+          console.log('[Budget] No response received for project MIS:', project.mis);
+          return emptyBudget;
         }
         
-        // The response has a data property with the budget info
-        const budgetData = response.data || {};
+        // Handle error response
+        if (typeof response === 'object' && 'status' in response && response.status === 'error') {
+          console.log('[Budget] Error response for project MIS:', project.mis);
+          return emptyBudget;
+        }
+        
+        // Extract budget data from response
+        let budgetData: Record<string, any> = {}; 
+        
+        if (typeof response === 'object' && 'data' in response && response.data) {
+          // Response has a data property
+          budgetData = response.data;
+        } else if (typeof response === 'object' && !('data' in response)) {
+          // Response is directly the budget data
+          budgetData = response;
+        }
+        
         console.log('[Budget] Extracted budget data:', budgetData);
         
         // Map the response to match the BudgetData interface completely
@@ -646,9 +689,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           ethsia_pistosi: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
           katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0'),
           proip: parseFloat(budgetData.current_budget?.toString() || '0'),
-          // Add compatibility fields
           current_budget: parseFloat(budgetData.current_budget?.toString() || '0'),
-          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0')
+          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
+          quarterly: {
+            q1: parseFloat(budgetData.q1?.toString() || '0'),
+            q2: parseFloat(budgetData.q2?.toString() || '0'),
+            q3: parseFloat(budgetData.q3?.toString() || '0'),
+            q4: parseFloat(budgetData.q4?.toString() || '0')
+          }
         };
       } catch (error) {
         console.error('[Budget] Error fetching budget data:', error);
@@ -657,7 +705,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           description: "Αποτυχία φόρτωσης δεδομένων προϋπολογισμού",
           variant: "destructive"
         });
-        // Return properly formatted empty budget data with all required properties
+        
+        // Always return a valid budget data structure
         return {
           user_view: 0,
           total_budget: 0,
@@ -665,7 +714,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           katanomes_etous: 0,
           proip: 0,
           current_budget: 0,
-          annual_budget: 0
+          annual_budget: 0,
+          quarterly: { q1: 0, q2: 0, q3: 0, q4: 0 }
         };
       }
     },
