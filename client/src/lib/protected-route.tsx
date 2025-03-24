@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
+import { NewHeader } from "@/components/header/new-header";
 
 export function ProtectedRoute({
   path,
@@ -29,5 +30,12 @@ export function ProtectedRoute({
     );
   }
 
-  return <Component />
+  return (
+    <Route path={path}>
+      <NewHeader />
+      <main className="container mx-auto px-4 py-6">
+        <Component />
+      </main>
+    </Route>
+  );
 }
