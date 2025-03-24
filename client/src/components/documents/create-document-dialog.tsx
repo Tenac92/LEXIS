@@ -621,7 +621,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
         const response = await apiRequest(`/api/budget/${encodeURIComponent(project.mis)}`);
         
-        if (!response) {
+        console.log('[Budget] Budget API response:', response);
+        
+        if (!response || response.status === 'error') {
           console.log('[Budget] No budget data found for project MIS:', project.mis);
           // Return properly formatted empty budget data
           return {
@@ -633,13 +635,20 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           };
         }
         
-        // Match the response to the BudgetData interface
+        // The response has a data property with the budget info
+        const budgetData = response.data || {};
+        console.log('[Budget] Extracted budget data:', budgetData);
+        
+        // Map the response to match the BudgetData interface completely
         return {
-          user_view: parseFloat(response.user_view?.toString() || '0'),
-          total_budget: parseFloat(response.proip?.toString() || '0'),
-          ethsia_pistosi: parseFloat(response.ethsia_pistosi?.toString() || '0'),
-          katanomes_etous: parseFloat(response.katanomes_etous?.toString() || '0'),
-          proip: parseFloat(response.proip?.toString() || '0')
+          user_view: parseFloat(budgetData.user_view?.toString() || '0'),
+          total_budget: parseFloat(budgetData.current_budget?.toString() || '0'), 
+          ethsia_pistosi: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
+          katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0'),
+          proip: parseFloat(budgetData.current_budget?.toString() || '0'),
+          // Add compatibility fields
+          current_budget: parseFloat(budgetData.current_budget?.toString() || '0'),
+          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0')
         };
       } catch (error) {
         console.error('[Budget] Error fetching budget data:', error);
@@ -648,13 +657,15 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           description: "Αποτυχία φόρτωσης δεδομένων προϋπολογισμού",
           variant: "destructive"
         });
-        // Return properly formatted empty budget data for error case
+        // Return properly formatted empty budget data with all required properties
         return {
           user_view: 0,
           total_budget: 0,
           ethsia_pistosi: 0,
           katanomes_etous: 0,
-          proip: 0
+          proip: 0,
+          current_budget: 0,
+          annual_budget: 0
         };
       }
     },

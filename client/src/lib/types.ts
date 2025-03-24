@@ -14,6 +14,8 @@ export interface BudgetData {
   katanomes_etous: number;
   ethsia_pistosi: number;
   proip?: number;
+  current_budget?: number;  // Added for compatibility with BudgetIndicator
+  annual_budget?: number;   // Added for compatibility with BudgetIndicator
   quarterly?: {
     q1: number;
     q2: number;
