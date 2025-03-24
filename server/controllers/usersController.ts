@@ -32,7 +32,11 @@ router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res
       }
     });
 
-    const unitsList = Array.from(uniqueUnits).sort();
+    const unitsList = Array.from(uniqueUnits).sort().map(unitName => ({
+      id: unitName,
+      name: unitName
+    }));
+    
     res.json(unitsList);
   } catch (error) {
     console.error('[Units] Units fetch error:', error);
