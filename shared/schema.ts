@@ -270,9 +270,10 @@ const recipientSchema = z.object({
 
 // Update generated document schema with enhanced validation and protocol fields
 
-export const insertBudgetHistorySchema = createInsertSchema(budgetHistory).omit({
-  id: true,
-  created_at: true
+export const insertBudgetHistorySchema = createInsertSchema(budgetHistory, {
+  metadata: z.any().optional()
+}).omit({
+  id: true
 });
 
 // Export types for insert operations

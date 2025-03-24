@@ -77,11 +77,32 @@ export class BudgetService {
 
   static async validateBudget(mis: string, amount: number): Promise<BudgetValidationResult> {
     try {
-      if (!mis || isNaN(amount) || amount <= 0) {
+      // Input validation with improved error messages
+      if (!mis) {
+        console.log('[BudgetService] Missing MIS parameter');
         return {
           status: 'error',
           canCreate: false,
-          message: !mis ? 'MIS parameter is required' : 'Valid amount parameter is required'
+          message: 'Απαιτείται ο κωδικός MIS του έργου'
+        };
+      }
+      
+      // Check if amount is a valid number and greater than zero
+      if (isNaN(amount)) {
+        console.log('[BudgetService] Invalid amount parameter (not a number)');
+        return {
+          status: 'error',
+          canCreate: false,
+          message: 'Το ποσό πρέπει να είναι αριθμός'
+        };
+      }
+      
+      if (amount <= 0) {
+        console.log('[BudgetService] Invalid amount parameter (zero or negative)');
+        return {
+          status: 'error',
+          canCreate: false,
+          message: 'Το ποσό πρέπει να είναι μεγαλύτερο από 0'
         };
       }
 
@@ -90,28 +111,30 @@ export class BudgetService {
       // Try to get current budget data
       let { data: budgetData, error } = await supabase
         .from('budget_na853_split')
-        .select('user_view, ethsia_pistosi, katanomes_etous')
+        .select('user_view, ethsia_pistosi, katanomes_etous, q1, q2, q3, q4')
         .eq('mis', mis)
         .single();
 
-      // If not found, try to get project data to find the correct MIS
+      // If not found directly, try to get project data to find the correct MIS
       if (error || !budgetData) {
         console.log(`[BudgetService] Budget not found directly for MIS: ${mis}, trying project lookup`);
         
         // Try to find project by either its ID or MIS field
-        const { data: projectData } = await supabase
+        const { data: projectData, error: projectError } = await supabase
           .from('Projects')
           .select('id, mis')
           .or(`id.eq.${mis},mis.eq.${mis}`)
           .single();
         
-        if (projectData?.mis) {
+        if (projectError) {
+          console.log(`[BudgetService] Project not found for MIS/ID: ${mis}`);
+        } else if (projectData?.mis) {
           console.log(`[BudgetService] Found project with MIS: ${projectData.mis}`);
           
           // Try again with the project's MIS value
           const retryResult = await supabase
             .from('budget_na853_split')
-            .select('user_view, ethsia_pistosi, katanomes_etous')
+            .select('user_view, ethsia_pistosi, katanomes_etous, q1, q2, q3, q4')
             .eq('mis', projectData.mis)
             .single();
             
@@ -120,7 +143,7 @@ export class BudgetService {
         }
       }
 
-      // If we still don't have budget data, return an error but allow document creation
+      // If we still don't have budget data, return a warning but allow document creation
       if (error || !budgetData) {
         console.log(`[BudgetService] Budget not found for MIS: ${mis} after lookup attempts`);
         
@@ -132,44 +155,111 @@ export class BudgetService {
         };
       }
 
+      // Parse budget values and handle potential null/undefined values
       const userView = parseFloat(budgetData.user_view?.toString() || '0');
+      const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
       const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
-
-      // Calculate 20% threshold of katanomes_etous
-      const threshold = katanomesEtous * 0.2;
-      const remainingAfterOperation = userView - amount;
-
-      // Check if remaining budget falls below 20% threshold
-      if (remainingAfterOperation <= threshold) {
+      
+      // Get quarterly data 
+      const q1 = parseFloat(budgetData.q1?.toString() || '0');
+      const q2 = parseFloat(budgetData.q2?.toString() || '0');
+      const q3 = parseFloat(budgetData.q3?.toString() || '0');
+      const q4 = parseFloat(budgetData.q4?.toString() || '0');
+      
+      // Ensure we have at least some budget data
+      if (userView === 0 && katanomesEtous === 0 && ethsiaPistosi === 0) {
         return {
           status: 'warning',
           canCreate: true,
-          message: 'Budget will fall below 20% of annual allocation. Admin notification required.',
-          requiresNotification: true,
-          notificationType: 'low_budget',
-          priority: 'high',
+          message: 'Ο προϋπολογισμός του έργου έχει μηδενικές τιμές. Η δημιουργία εγγράφου επιτρέπεται με προσοχή.',
+          allowDocx: true,
           metadata: {
-            remainingBudget: remainingAfterOperation,
-            threshold: threshold,
-            percentageRemaining: (remainingAfterOperation / katanomesEtous) * 100
+            budgetValues: { userView, ethsiaPistosi, katanomesEtous, q1, q2, q3, q4 }
           }
         };
       }
 
+      // Calculate remaining budget after the operation
+      const remainingAfterOperation = userView - amount;
+      
+      // If remaining amount is negative, return an error
+      if (remainingAfterOperation < 0) {
+        return {
+          status: 'error',
+          canCreate: false,
+          message: `Ανεπαρκές διαθέσιμο υπόλοιπο προϋπολογισμού. Διαθέσιμο: ${userView}, Απαιτούμενο: ${amount}`,
+          metadata: {
+            available: userView,
+            requested: amount,
+            shortfall: Math.abs(remainingAfterOperation)
+          }
+        };
+      }
+
+      // Calculate 20% threshold of katanomes_etous (or ethsia_pistosi if katanomes_etous is 0)
+      const baseValue = katanomesEtous > 0 ? katanomesEtous : ethsiaPistosi;
+      const threshold = baseValue * 0.2;
+      
+      // Check if remaining budget falls below 20% threshold
+      if (remainingAfterOperation <= threshold && baseValue > 0) {
+        return {
+          status: 'warning',
+          canCreate: true,
+          message: 'Ο προϋπολογισμός θα πέσει κάτω από το 20% της ετήσιας κατανομής. Απαιτείται ειδοποίηση διαχειριστή.',
+          requiresNotification: true,
+          notificationType: 'low_budget',
+          priority: 'high',
+          allowDocx: true,
+          metadata: {
+            remainingBudget: remainingAfterOperation,
+            threshold: threshold,
+            baseValue: baseValue,
+            percentageRemaining: (remainingAfterOperation / baseValue) * 100
+          }
+        };
+      }
+      
+      // Check if budget is getting low (below 30%)
+      if (remainingAfterOperation <= baseValue * 0.3 && baseValue > 0) {
+        return {
+          status: 'warning',
+          canCreate: true,
+          message: 'Ο προϋπολογισμός είναι χαμηλός (κάτω από 30% της ετήσιας κατανομής).',
+          requiresNotification: false,
+          allowDocx: true,
+          metadata: {
+            remainingBudget: remainingAfterOperation,
+            threshold: baseValue * 0.3,
+            baseValue: baseValue,
+            percentageRemaining: (remainingAfterOperation / baseValue) * 100
+          }
+        };
+      }
+
+      // All checks passed, return success
       return {
         status: 'success',
         canCreate: true,
+        allowDocx: true,
+        message: 'Επαρκής προϋπολογισμός για τη δημιουργία του εγγράφου.',
         metadata: {
           remainingBudget: remainingAfterOperation,
-          percentageRemaining: (remainingAfterOperation / katanomesEtous) * 100
+          previousBudget: userView,
+          baseValue: baseValue,
+          percentageRemaining: baseValue > 0 ? (remainingAfterOperation / baseValue) * 100 : 100
         }
       };
     } catch (error) {
       console.error('[BudgetService] Budget validation error:', error);
+      // In case of unexpected errors, still allow document creation but with a warning
       return {
-        status: 'error',
-        canCreate: false,
-        message: 'Failed to validate budget'
+        status: 'warning',
+        canCreate: true,
+        message: 'Σφάλμα κατά την επικύρωση του προϋπολογισμού. Η δημιουργία εγγράφου επιτρέπεται με προσοχή.',
+        allowDocx: true,
+        metadata: {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
       };
     }
   }

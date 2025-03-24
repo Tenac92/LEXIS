@@ -59,43 +59,98 @@ router.get('/:mis', async (req: Request, res: Response) => {
 // Validate budget
 router.post('/validate', async (req: AuthRequest, res: Response) => {
   try {
+    // Validate input
+    if (!req.body) {
+      return res.status(400).json({
+        status: 'error',
+        canCreate: false,
+        message: 'Απαιτούνται δεδομένα προϋπολογισμού για επικύρωση'
+      });
+    }
+    
     const { mis, amount } = req.body as BudgetValidation;
-    const requestedAmount = parseFloat(amount.toString());
+    
+    // Handle missing MIS
+    if (!mis) {
+      return res.status(400).json({
+        status: 'error',
+        canCreate: false,
+        message: 'Απαιτείται ο κωδικός MIS του έργου'
+      });
+    }
+    
+    // Parse amount, handling potential string input
+    let requestedAmount: number;
+    
+    try {
+      requestedAmount = typeof amount === 'number' 
+        ? amount 
+        : parseFloat(amount?.toString() || '0');
+        
+      if (isNaN(requestedAmount)) {
+        throw new Error('Invalid amount format');
+      }
+    } catch (parseError) {
+      console.error('Error parsing amount:', parseError);
+      return res.status(400).json({
+        status: 'error',
+        canCreate: false,
+        message: 'Το ποσό πρέπει να είναι έγκυρος αριθμός'
+      });
+    }
 
+    // Validate budget through service
+    console.log(`[BudgetController] Validating MIS: ${mis}, amount: ${requestedAmount}`);
     const result = await BudgetService.validateBudget(mis, requestedAmount);
 
-    // If validation requires notification, create it
+    // If validation requires notification, create budget history entry
     if (result.requiresNotification && result.notificationType && req.user?.id) {
       try {
+        console.log(`[BudgetController] Creating budget notification record for MIS: ${mis}`);
         const budgetData = await storage.getBudgetData(mis);
 
-        await storage.createBudgetHistoryEntry({
-          mis,
-          previous_amount: budgetData?.user_view?.toString() || '0',
-          new_amount: (parseFloat(budgetData?.user_view?.toString() || '0') - requestedAmount).toString(),
-          change_type: 'notification_created',
-          change_reason: `Budget notification created: ${result.notificationType}`,
-          created_by: req.user.id,
-          metadata: {
-            notification_type: result.notificationType,
-            priority: result.priority,
-            current_budget: budgetData?.user_view,
-            requested_amount: requestedAmount
-          }
-        });
+        if (budgetData) {
+          await storage.createBudgetHistoryEntry({
+            mis,
+            previous_amount: budgetData.user_view?.toString() || '0',
+            new_amount: (parseFloat(budgetData.user_view?.toString() || '0') - requestedAmount).toString(),
+            change_type: 'notification_created',
+            change_reason: `Budget notification created: ${result.notificationType}`,
+            created_by: req.user.id,
+            metadata: {
+              notification_type: result.notificationType,
+              priority: result.priority || 'medium',
+              current_budget: budgetData.user_view,
+              requested_amount: requestedAmount
+            }
+          });
+          
+          console.log(`[BudgetController] Successfully created budget history entry for MIS: ${mis}`);
+        } else {
+          console.log(`[BudgetController] No budget data found for MIS: ${mis}, skipping history entry`);
+        }
       } catch (notifError) {
-        console.error('Failed to create budget notification:', notifError);
+        console.error('[BudgetController] Failed to create budget notification:', notifError);
         // Continue with validation response even if notification creation fails
       }
     }
 
-    return res.json(result);
+    // Send full result back to client
+    return res.json({
+      ...result,
+      // Ensure these fields are always present for consistent frontend handling
+      status: result.status || 'warning',
+      canCreate: result.canCreate !== undefined ? result.canCreate : true,
+      allowDocx: result.allowDocx !== undefined ? result.allowDocx : true
+    });
   } catch (error) {
-    console.error("Budget validation error:", error);
+    console.error("[BudgetController] Budget validation error:", error);
+    // In production, we gracefully handle errors and allow document creation
     return res.status(500).json({ 
-      status: 'error',
-      canCreate: false,
-      message: "Failed to validate budget"
+      status: 'warning',
+      canCreate: true,
+      message: "Σφάλμα κατά την επικύρωση προϋπολογισμού. Η δημιουργία εγγράφου επιτρέπεται με προσοχή.",
+      allowDocx: true
     });
   }
 });

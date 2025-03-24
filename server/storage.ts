@@ -1,4 +1,4 @@
-import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project, type BudgetNA853Split, type InsertBudgetHistory } from "@shared/schema";
 import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
 import session from 'express-session';
@@ -10,6 +10,9 @@ export interface IStorage {
   sessionStore: session.Store;
   getProjectsByUnit(unit: string): Promise<Project[]>;
   getProjectExpenditureTypes(projectId: string): Promise<string[]>;
+  getBudgetData(mis: string): Promise<BudgetNA853Split | null>;
+  createBudgetHistoryEntry(entry: InsertBudgetHistory): Promise<void>;
+  getBudgetHistory(mis: string): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -175,6 +178,114 @@ export class DatabaseStorage implements IStorage {
       }
     } catch (error) {
       console.error('[Storage] Error in getProjectExpenditureTypes:', error);
+      return [];
+    }
+  }
+
+  async getBudgetData(mis: string): Promise<BudgetNA853Split | null> {
+    try {
+      console.log(`[Storage] Fetching budget data for MIS: ${mis}`);
+      
+      // Try to get budget data directly using MIS
+      const { data, error } = await supabase
+        .from('budget_na853_split')
+        .select('*')
+        .eq('mis', mis)
+        .single();
+        
+      if (error) {
+        console.log(`[Storage] Budget not found directly for MIS: ${mis}, trying project lookup`);
+        
+        // Try to find project by either its ID or MIS field
+        const { data: projectData } = await supabase
+          .from('Projects')
+          .select('id, mis')
+          .or(`id.eq.${mis},mis.eq.${mis}`)
+          .single();
+        
+        if (projectData?.mis) {
+          console.log(`[Storage] Found project with MIS: ${projectData.mis}`);
+          
+          // Try again with the project's MIS value
+          const retryResult = await supabase
+            .from('budget_na853_split')
+            .select('*')
+            .eq('mis', projectData.mis)
+            .single();
+            
+          if (retryResult.error) {
+            console.log(`[Storage] Budget still not found for MIS: ${projectData.mis}`);
+            return null;
+          }
+          
+          return retryResult.data as BudgetNA853Split;
+        }
+        
+        console.log(`[Storage] Could not find project for MIS: ${mis}`);
+        return null;
+      }
+      
+      return data as BudgetNA853Split;
+    } catch (error) {
+      console.error('[Storage] Error fetching budget data:', error);
+      return null;
+    }
+  }
+  
+  async createBudgetHistoryEntry(entry: InsertBudgetHistory): Promise<void> {
+    try {
+      console.log(`[Storage] Creating budget history entry for MIS: ${entry.mis}`);
+      
+      // Make sure createdAt is set if not provided
+      if (!entry.created_at) {
+        entry.created_at = new Date().toISOString();
+      }
+      
+      const { error } = await supabase
+        .from('budget_history')
+        .insert(entry);
+        
+      if (error) {
+        console.error('[Storage] Error creating budget history entry:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully created budget history entry');
+    } catch (error) {
+      console.error('[Storage] Error in createBudgetHistoryEntry:', error);
+      throw error;
+    }
+  }
+  
+  async getBudgetHistory(mis: string): Promise<any[]> {
+    try {
+      console.log(`[Storage] Fetching budget history for MIS: ${mis}`);
+      
+      const { data, error } = await supabase
+        .from('budget_history')
+        .select(`
+          id,
+          mis,
+          previous_amount,
+          new_amount,
+          change_type,
+          change_reason,
+          document_id,
+          created_by,
+          created_at,
+          metadata
+        `)
+        .eq('mis', mis)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error('[Storage] Error fetching budget history:', error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getBudgetHistory:', error);
       return [];
     }
   }
