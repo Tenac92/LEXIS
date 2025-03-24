@@ -14,6 +14,7 @@ import documentsRouter from "./routes/documents"; // Import from our new dedicat
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
 import { log } from "./vite";
 import { supabase } from "./config/db";
+import { BudgetService } from "./services/budgetService"; // Import the BudgetService
 import { User } from "../shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
