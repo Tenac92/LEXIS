@@ -1907,10 +1907,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-4xl" aria-describedby="dialog-description">
         <DialogHeader>
           <DialogTitle>Δημιουργία Εγγράφου</DialogTitle>
         </DialogHeader>
+        <span id="dialog-description" className="sr-only">
+          Φόρμα δημιουργίας νέου εγγράφου με βήματα για την επιλογή μονάδας, έργου, και δικαιούχων
+        </span>
         <StepIndicator currentStep={currentStep} />
         <Form {...form}>
           <div className="space-y-6">
@@ -1918,7 +1921,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           </div>
         </Form>
         {/* Hidden close button with ref for programmatic closing */}
-        <DialogClose ref={dialogCloseRef} className="hidden" />
+        <DialogClose ref={dialogCloseRef} className="hidden" data-dialog-close="true" />
       </DialogContent>
     </Dialog>
   );
