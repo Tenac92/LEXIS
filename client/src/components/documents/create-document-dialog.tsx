@@ -1019,78 +1019,82 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         
         // Handle the nested structure of the response
         try {
-          // Check if response.region is an array of objects
-          if (Array.isArray(response.region) && response.region.length > 0) {
-            console.log('[Regions] Processing nested region data');
+          let processedRegions: Array<{id: string, name: string, type: string}> = [];
+          
+          // Handle object with nested arrays
+          if (response.region && Array.isArray(response.region)) {
+            console.log('[Regions] Processing region data with format:', typeof response.region[0]);
             
-            // Extract regional_unit values if available
-            const results: Array<{id: string, name: string, type: string}> = [];
-            
-            // Process each region object
-            response.region.forEach((regionObj: any) => {
-              // First try to get regional_unit values
-              if (regionObj.regional_unit && Array.isArray(regionObj.regional_unit)) {
-                regionObj.regional_unit.forEach((unit: string) => {
-                  if (unit && unit.trim()) {
-                    results.push({
-                      id: unit,
-                      name: unit,
-                      type: 'regional_unit'
-                    });
+            // Handle case where response.region contains region objects
+            if (response.region.length > 0 && typeof response.region[0] === 'object') {
+              // Extract and flatten the regional_unit values if available
+              for (const regionItem of response.region) {
+                if (regionItem.regional_unit && Array.isArray(regionItem.regional_unit)) {
+                  // Process regional_unit values first (preferred)
+                  for (const unit of regionItem.regional_unit) {
+                    if (typeof unit === 'string' && unit.trim()) {
+                      processedRegions.push({
+                        id: unit,
+                        name: unit,
+                        type: 'regional_unit'
+                      });
+                    }
                   }
-                });
-              }
-              
-              // If no regional_unit, then use region values
-              if (results.length === 0 && regionObj.region && Array.isArray(regionObj.region)) {
-                regionObj.region.forEach((region: string) => {
-                  if (region && region.trim()) {
-                    results.push({
-                      id: region,
-                      name: region,
-                      type: 'region'
-                    });
+                }
+                
+                // If no regional_unit found, fall back to region values
+                if (processedRegions.length === 0 && regionItem.region && Array.isArray(regionItem.region)) {
+                  for (const region of regionItem.region) {
+                    if (typeof region === 'string' && region.trim()) {
+                      processedRegions.push({
+                        id: region,
+                        name: region,
+                        type: 'region'
+                      });
+                    }
                   }
-                });
+                }
               }
-            });
-            
-            console.log('[Regions] Processed region data:', results);
-            if (results.length > 0) {
-              return results;
+            } 
+            // Handle case where response.region is a direct array of strings
+            else if (response.region.length > 0 && typeof response.region[0] === 'string') {
+              for (const region of response.region) {
+                if (region.trim()) {
+                  processedRegions.push({
+                    id: region,
+                    name: region,
+                    type: 'region'
+                  });
+                }
+              }
             }
           }
           
-          // Traditional flat structure (fallback to old behavior)
-          const regionalUnit = Array.isArray(response.regional_unit) ? response.regional_unit : [];
-          const regionData = Array.isArray(response.region) ? response.region : [];
-          
-          if (regionalUnit.length === 0 && regionData.length === 0) {
-            console.log('[Regions] No regions found for project:', project.mis);
-            return [];
+          // Also check for regional_unit at the top level
+          if (processedRegions.length === 0 && response.regional_unit && Array.isArray(response.regional_unit)) {
+            for (const unit of response.regional_unit) {
+              if (typeof unit === 'string' && unit.trim()) {
+                processedRegions.push({
+                  id: unit,
+                  name: unit,
+                  type: 'regional_unit'
+                });
+              }
+            }
           }
           
-          // Prefer regional_unit if available (flat structure)
-          if (regionalUnit.length > 0 && typeof regionalUnit[0] === 'string') {
-            console.log('[Regions] Using flat regional_unit data:', regionalUnit);
-            return regionalUnit.map((unit: string) => ({
-              id: unit,
-              name: unit,
-              type: 'regional_unit'
-            }));
+          // If we found any regions in any format, return them
+          if (processedRegions.length > 0) {
+            console.log('[Regions] Processed region data:', processedRegions);
+            return processedRegions;
           }
           
-          // Fall back to region data (flat structure)
-          if (regionData.length > 0 && typeof regionData[0] === 'string') {
-            console.log('[Regions] Using flat region data:', regionData);
-            return regionData.map((region: string) => ({
-              id: region,
-              name: region,
-              type: 'region'
-            }));
-          }
+          // No valid regions were found
+          console.log('[Regions] No regions found for project:', project.mis);
+          return [];
         } catch (err) {
           console.error('[Regions] Error processing region data:', err);
+          return [];
         }
         
         // Shouldn't reach here due to earlier check, but just in case
