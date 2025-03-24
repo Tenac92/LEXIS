@@ -11,7 +11,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
-import { createClient } from '@supabase/supabase-js';
 import type { BudgetValidationResponse } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -284,20 +283,6 @@ interface CreateDocumentDialogProps {
 
 type BadgeVariant = "default" | "destructive" | "outline" | "secondary";
 
-// Supabase setup
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Supabase URL and Key must be defined in environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: false
-  }
-});
-
 // Animation variants
 const stepVariants = {
   enter: (direction: number) => ({
@@ -501,28 +486,30 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     queryKey: ["units"],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
-          .from('unit_det')
-          .select('unit, unit_name')
-          .order('unit');
-
-        if (error) {
-          console.error('Error fetching units:', error);
+        const response = await apiRequest('/api/users/units');
+        
+        if (!response || !Array.isArray(response)) {
+          console.error('Error fetching units: Invalid response format');
           toast({
             title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
             variant: "destructive"
           });
-          throw error;
+          return [];
         }
-
-        return data.map((item: any) => ({
-          id: item.unit,
-          name: item.unit_name
+        
+        return response.map((item: any) => ({
+          id: item.unit || item.id,
+          name: item.unit_name || item.name
         }));
       } catch (error) {
         console.error('Units fetch error:', error);
-        throw error;
+        toast({
+          title: "Σφάλμα",
+          description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
+          variant: "destructive"
+        });
+        return [];
       }
     },
     retry: 2
