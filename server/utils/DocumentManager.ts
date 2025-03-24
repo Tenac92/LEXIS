@@ -24,7 +24,7 @@ export class DocumentManager {
 
   async loadDocuments(filters: DocumentFilters = {}) {
     try {
-      console.log('[DocumentManager] Loading documents with filters:', filters);
+      // Loading documents with the specified filters
 
       let query = supabase.from('generated_documents')
                          .select('*')
@@ -32,12 +32,12 @@ export class DocumentManager {
 
       // Apply basic filters
       if (filters.unit) {
-        console.log('[DocumentManager] Applying unit filter:', filters.unit);
+        // Applying unit filter
         query = query.eq('unit', filters.unit);
       }
 
       if (filters.status) {
-        console.log('[DocumentManager] Applying status filter:', filters.status);
+        // Applying status filter with special handling for corrections
         if (filters.status === 'orthi_epanalipsi') {
           query = query.eq('is_correction', true);
         } else {
@@ -47,21 +47,21 @@ export class DocumentManager {
 
       // Apply date range filters
       if (filters.dateFrom) {
-        console.log('[DocumentManager] Applying date from filter:', filters.dateFrom);
+        // Applying date from filter for created_at
         query = query.gte('created_at', filters.dateFrom);
       }
       if (filters.dateTo) {
-        console.log('[DocumentManager] Applying date to filter:', filters.dateTo);
+        // Applying date to filter for created_at
         query = query.lte('created_at', filters.dateTo);
       }
 
       // Apply amount range filters
       if (filters.amountFrom !== undefined) {
-        console.log('[DocumentManager] Applying amount from filter:', filters.amountFrom);
+        // Applying amount from filter for total_amount
         query = query.gte('total_amount', filters.amountFrom);
       }
       if (filters.amountTo !== undefined) {
-        console.log('[DocumentManager] Applying amount to filter:', filters.amountTo);
+        // Applying amount to filter for total_amount
         query = query.lte('total_amount', filters.amountTo);
       }
 
