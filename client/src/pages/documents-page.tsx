@@ -24,7 +24,6 @@ import { ViewDocumentModal, EditDocumentModal, DeleteDocumentModal } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
-// Removed direct Supabase import
 import type { GeneratedDocument } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
