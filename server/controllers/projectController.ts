@@ -159,6 +159,57 @@ router.post('/bulk-update', async (req: Request, res: Response) => {
   }
 });
 
+// Get projects by unit
+router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
+  try {
+    const { unitName } = req.params;
+    
+    if (!unitName) {
+      return res.status(400).json({ message: 'Unit name is required' });
+    }
+    
+    console.log(`[Projects] Fetching projects for unit: ${unitName}`);
+    
+    const { data, error } = await supabase
+      .from('Projects')
+      .select('*')
+      .eq('unit', unitName)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error("[Projects] Database error:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch projects for unit",
+        error: error.message
+      });
+    }
+    
+    if (!data || data.length === 0) {
+      console.log(`[Projects] No projects found for unit: ${unitName}`);
+      return res.json([]);
+    }
+    
+    // Map projects and validate with our model
+    const formattedProjects = data.map(project => {
+      try {
+        return projectHelpers.validateProject(project);
+      } catch (error) {
+        console.error('[Projects] Project validation error:', error);
+        return null;
+      }
+    }).filter((project): project is Project => project !== null);
+    
+    console.log(`[Projects] Found ${formattedProjects.length} projects for unit: ${unitName}`);
+    res.json(formattedProjects);
+  } catch (error) {
+    console.error("[Projects] Error fetching projects by unit:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch projects by unit",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Mount routes
 router.get('/', listProjects);
 router.get('/export', exportProjectsXLSX);
