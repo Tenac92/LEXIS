@@ -989,8 +989,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
     queryKey: ["regions", selectedProjectId],
     queryFn: async () => {
-      if (!selectedProjectId) return [];
-
+      // If no project selected, return empty array
+      if (!selectedProjectId) {
+        return [];
+      }
+      
       try {
         // Find the project to get its MIS
         const project = projects.find(p => p.id === selectedProjectId);
@@ -1004,34 +1007,51 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           mis: project.mis
         });
 
+        // Fetch regions data from API
         const response = await apiRequest(`/api/projects/${encodeURIComponent(project.mis)}/regions`);
+        console.log('[Regions] Response:', response);
         
-        if (!response || (!response.regional_unit && !response.region)) {
+        // Handle invalid response
+        if (!response || typeof response !== 'object') {
+          console.log('[Regions] Invalid response format:', response);
+          return [];
+        }
+        
+        // Extract data with fallbacks
+        const regionalUnit = Array.isArray(response.regional_unit) ? response.regional_unit : [];
+        const regionData = Array.isArray(response.region) ? response.region : [];
+        
+        // If we have no data from either source
+        if (regionalUnit.length === 0 && regionData.length === 0) {
           console.log('[Regions] No regions found for project:', project.mis);
           return [];
         }
-
-        if (response.regional_unit && Array.isArray(response.regional_unit) && response.regional_unit.length > 0) {
-          console.log('[Regions] Using regional_unit data:', response.regional_unit);
-          return response.regional_unit.map((unit: string) => ({
+        
+        // Prefer regional_unit if available
+        if (regionalUnit.length > 0) {
+          console.log('[Regions] Using regional_unit data:', regionalUnit);
+          return regionalUnit.map((unit: string) => ({
             id: unit,
             name: unit,
             type: 'regional_unit'
           }));
         }
-
-        if (response.region && Array.isArray(response.region) && response.region.length > 0) {
-          console.log('[Regions] Falling back to region data:', response.region);
-          return response.region.map((region: string) => ({
+        
+        // Fall back to region data
+        if (regionData.length > 0) {
+          console.log('[Regions] Using region data:', regionData);
+          return regionData.map((region: string) => ({
             id: region,
             name: region,
             type: 'region'
           }));
         }
-
+        
+        // Shouldn't reach here due to earlier check, but just in case
         console.log('[Regions] No valid region or regional_unit data found');
         return [];
       } catch (error) {
+        // Handle any errors
         console.error('[Regions] Error fetching regions:', error);
         toast({
           title: "Σφάλμα",

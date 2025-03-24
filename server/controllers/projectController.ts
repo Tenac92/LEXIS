@@ -213,9 +213,10 @@ router.get('/:mis/regions', async (req: Request, res: Response) => {
     console.log(`[Projects] Fetching regions for project: ${mis}`);
     
     // Query the Projects table to get the region data
+    // Check which columns actually exist in the Projects table
     const { data, error } = await supabase
       .from('Projects')
-      .select('region, regional_unit')
+      .select('*')
       .eq('mis', mis)
       .single();
     
@@ -234,58 +235,95 @@ router.get('/:mis/regions', async (req: Request, res: Response) => {
       });
     }
     
-    // Process region/regional_unit data
+    // Process region data
     let response: { region?: string[], regional_unit?: string[] } = {};
     
-    // Handle region field 
-    if (data.region) {
+    // Log the actual columns to help debug
+    console.log('[Projects] Available columns in Projects table:', Object.keys(data));
+    
+    // Check if region exists in any column
+    const regionData = data.region || data.regions || data.regional_data || null;
+    
+    // Handle region field - whatever column name it uses
+    if (regionData) {
       try {
-        let regionData: string | string[] = data.region;
+        let parsedRegionData: string | string[] = regionData;
         
         // If it's a string that looks like JSON, try to parse it
-        if (typeof regionData === 'string' && 
-            (regionData.startsWith('[') || regionData.startsWith('{'))) {
+        if (typeof parsedRegionData === 'string' && 
+            (parsedRegionData.startsWith('[') || parsedRegionData.startsWith('{'))) {
           try {
-            regionData = JSON.parse(regionData);
+            parsedRegionData = JSON.parse(parsedRegionData);
           } catch (e) {
             console.log('[Projects] Could not parse region JSON, using as string:', e);
           }
         }
         
         // Convert to array if it's not already
-        if (!Array.isArray(regionData)) {
-          regionData = [regionData];
+        if (!Array.isArray(parsedRegionData)) {
+          parsedRegionData = [parsedRegionData];
         }
         
-        response.region = regionData;
+        response.region = parsedRegionData;
       } catch (e) {
         console.error('[Projects] Error processing region data:', e);
       }
     }
     
-    // Handle regional_unit field
-    if (data.regional_unit) {
+    // For regional unit, use any column that might contain it
+    const unitData = data.regional_unit || data.regionalUnit || data.regional_units || data.regionalUnits || null;
+    
+    // Handle regional_unit field - whatever column name it uses
+    if (unitData) {
       try {
-        let unitData: string | string[] = data.regional_unit;
+        let parsedUnitData: string | string[] = unitData;
         
         // If it's a string that looks like JSON, try to parse it
-        if (typeof unitData === 'string' && 
-            (unitData.startsWith('[') || unitData.startsWith('{'))) {
+        if (typeof parsedUnitData === 'string' && 
+            (parsedUnitData.startsWith('[') || parsedUnitData.startsWith('{'))) {
           try {
-            unitData = JSON.parse(unitData);
+            parsedUnitData = JSON.parse(parsedUnitData);
           } catch (e) {
             console.log('[Projects] Could not parse regional_unit JSON, using as string:', e);
           }
         }
         
         // Convert to array if it's not already
-        if (!Array.isArray(unitData)) {
-          unitData = [unitData];
+        if (!Array.isArray(parsedUnitData)) {
+          parsedUnitData = [parsedUnitData];
         }
         
-        response.regional_unit = unitData;
+        response.regional_unit = parsedUnitData;
       } catch (e) {
         console.error('[Projects] Error processing regional_unit data:', e);
+      }
+    }
+    
+    // If we still don't have data for regions, use a placeholder based on other fields
+    if (!response.region && !response.regional_unit) {
+      console.log('[Projects] No region data found, checking other columns');
+      
+      // Check if there are any columns that might contain region-related info
+      const possibleRegions = [];
+      
+      if (data.address) {
+        possibleRegions.push(data.address);
+      }
+      
+      if (data.location) {
+        possibleRegions.push(data.location);
+      }
+      
+      if (data.municipality) {
+        possibleRegions.push(data.municipality);
+      }
+      
+      if (data.prefectures) {
+        possibleRegions.push(data.prefectures);
+      }
+      
+      if (possibleRegions.length > 0) {
+        response.region = possibleRegions;
       }
     }
     
