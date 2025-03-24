@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
 export class DocumentValidator {
+  /**
+   * Validates a single recipient using simple validation rules
+   * @param recipient The recipient to validate
+   * @returns Object containing validation result and errors
+   */
   static validateRecipient(recipient: any) {
     const errors: string[] = [];
 
@@ -21,28 +26,12 @@ export class DocumentValidator {
       errors
     };
   }
-
-  static validateAttachment(attachment: any) {
-    const errors: string[] = [];
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-
-    if (!attachment.file) errors.push('File is required');
-    if (!allowedTypes.includes(attachment.file?.type)) {
-      errors.push('Invalid file type');
-    }
-    if (attachment.file?.size > 5 * 1024 * 1024) {
-      errors.push('File size exceeds 5MB limit');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  }
-}
-import { z } from 'zod';
-
-export class DocumentValidator {
+  
+  /**
+   * Validates an array of recipients using Zod schemas
+   * @param recipients The array of recipients to validate
+   * @returns True if all recipients are valid, throws error otherwise
+   */
   static validateRecipients(recipients: any[]) {
     if (!Array.isArray(recipients)) {
       throw new Error('Recipients must be an array');
@@ -78,5 +67,28 @@ export class DocumentValidator {
     });
     
     return true;
+  }
+  
+  /**
+   * Validates a document attachment
+   * @param attachment The attachment to validate
+   * @returns Object containing validation result and errors
+   */
+  static validateAttachment(attachment: any) {
+    const errors: string[] = [];
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+
+    if (!attachment.file) errors.push('File is required');
+    if (!allowedTypes.includes(attachment.file?.type)) {
+      errors.push('Invalid file type');
+    }
+    if (attachment.file?.size > 5 * 1024 * 1024) {
+      errors.push('File size exceeds 5MB limit');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   }
 }
