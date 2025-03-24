@@ -22,8 +22,10 @@ import { DocumentCard } from "@/components/documents/document-card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ViewDocumentModal, EditDocumentModal, DeleteDocumentModal } from "@/components/documents/document-modals";
 import { useToast } from "@/hooks/use-toast";
+import { Header } from "@/components/header";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
+// Removed direct Supabase import
 import type { GeneratedDocument } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -191,6 +193,7 @@ export default function DocumentsPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <div className="container mx-auto px-4 pt-6 pb-8">
         <Card className="bg-card">
           <div className="p-4">

@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Dashboard } from "@/components/dashboard/dashboard";
 import { Loader2 } from "lucide-react";
 import { FAB } from "@/components/ui/fab";
+import { Header } from "@/components/header";
 
 export default function HomePage() {
   const { isLoading } = useAuth();
@@ -16,6 +17,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       <main className="container mx-auto px-4 py-6">
         <Dashboard />
       </main>
