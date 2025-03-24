@@ -1211,23 +1211,46 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       setCurrentStep(0);
       
       // Close the dialog using all available methods to ensure it closes
-      if (dialogCloseRef.current) {
+      try {
         // Force close using the ref (most direct method)
-        console.log('Forcing dialog close with ref click');
-        dialogCloseRef.current.click();
-      }
-      
-      // Also use the provided callback methods as backup
-      onClose();
-      onOpenChange(false);
-      
-      // Schedule another attempt after a small delay
-      setTimeout(() => {
+        console.log('[DEBUG] Forcing dialog close with ref click');
         if (dialogCloseRef.current) {
           dialogCloseRef.current.click();
         }
+        
+        // Also use the provided callback methods as backup
+        onClose();
         onOpenChange(false);
-      }, 100);
+        
+        // Schedule multiple attempts with increasing delays
+        const closeAttempts = [100, 300, 500];
+        closeAttempts.forEach(delay => {
+          setTimeout(() => {
+            console.log(`[DEBUG] Attempting dialog close after ${delay}ms delay`);
+            if (dialogCloseRef.current) {
+              dialogCloseRef.current.click();
+            }
+            onOpenChange(false); 
+            onClose();
+          }, delay);
+        });
+        
+        // Final attempt with more direct DOM approach
+        setTimeout(() => {
+          // Try to find and click any dialog close buttons in the DOM as a last resort
+          console.log('[DEBUG] Final dialog close attempt with direct DOM targeting');
+          const closeButtons = document.querySelectorAll('[data-dialog-close="true"], [aria-label="Close"], .dialog-close-button');
+          closeButtons.forEach(button => {
+            try {
+              (button as HTMLElement).click();
+            } catch (e) {
+              console.error('[DEBUG] Error clicking close button:', e);
+            }
+          });
+        }, 700);
+      } catch (closeError) {
+        console.error('[DEBUG] Error during dialog close attempts:', closeError);
+      }
     } catch (error) {
       console.error('Document creation error:', error);
       toast({
