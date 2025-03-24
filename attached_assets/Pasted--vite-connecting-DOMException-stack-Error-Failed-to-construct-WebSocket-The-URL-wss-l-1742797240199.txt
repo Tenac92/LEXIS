@@ -1,0 +1,23 @@
+[vite] connecting...
+DOMException {stack: "Error: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.↵    at…"}
+
+[DEBUG] Making query to: /api/dashboard/stats
+[DEBUG] Query request query-1742797219450-asjlqf1 to /api/dashboard/stats
+[DEBUG] Making API request to /api/users/units
+[DEBUG] Request options for req-1742797219456-d8j2lfx: 
+Object {method: "GET", url: "/api/users/units", headers: {…}, credentials: "include", bodySize: 0}
+[DEBUG] Response received for req-1742797219456-d8j2lfx in 664ms - status: 200
+[DEBUG] Successful response for req-1742797219456-d8j2lfx: 
+Object {status: 200, dataSize: 1777}
+[DEBUG] Query response for query-1742797219450-asjlqf1 in 1393ms with status: 200
+[DEBUG] Successful query response for query-1742797219450-asjlqf1: 
+Object {status: 200, dataSize: 279}
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[Projects] Fetching projects for unit: ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ
+[DEBUG] Making API request to /api/projects/by-unit/%CE%94%CE%99%CE%95%CE%A5%CE%98%CE%A5%CE%9D%CE%A3%CE%97%20%CE%91%CE%A0%CE%9F%CE%9A%CE%91%CE%A4%CE%91%CE%A3%CE%A4%CE%91%CE%A3%CE%97%CE%A3%20%CE%95%CE%A0%CE%99%CE%A0%CE%A4%CE%A9%CE%A3%CE%95%CE%A9%CE%9D%20%CE%A6%CE%A5%CE%A3%CE%99%CE%9A%CE%A9%CE%9D%20%CE%9A%CE%91%CE%A4%CE%91%CE%A3%CE%A4%CE%A1%CE%9F%CE%A6%CE%A9%CE%9D%20%CE%9A%CE%95%CE%9D%CE%A4%CE%A1%CE%99%CE%9A%CE%97%CE%A3%20%CE%95%CE%9B%CE%9B%CE%91%CE%94%CE%9F%CE%A3
+[DEBUG] Request options for req-1742797228004-zog5mw7: 
+Object {method: "GET", url: "/api/projects/by-unit/%CE%94%CE%99%CE%95%CE%A5%CE%98%CE%A5%CE%9D%CE%A3%CE%97%20%CE%91%CE%A0%CE%9F%C…", headers: {…}, credentials: "include", bodySize: 0}
+[DEBUG] Response received for req-1742797228004-zog5mw7 in 1271ms - status: 200
+[DEBUG] Successful response for req-1742797228004-zog5mw7: 
+Object {status: 200, dataSize: 2}
+[Projects] No projects found for unit: ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ

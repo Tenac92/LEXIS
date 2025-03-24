@@ -540,7 +540,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           toast({
             title: "Πληροφορία",
             description: "Δεν βρέθηκαν έργα για την επιλεγμένη μονάδα.",
-            variant: "default"
+            variant: "warning"
           });
           return [];
         }
