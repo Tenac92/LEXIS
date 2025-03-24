@@ -34,25 +34,43 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectsByUnit(unit: string): Promise<Project[]> {
     try {
+      console.log(`[Storage] Getting projects for unit: ${unit}`);
+      
+      // First, fetch all projects
       const { data, error } = await supabase
         .from('Projects')
         .select('*');
 
       if (error) throw error;
-
+      
+      // Normalize the unit name to handle different casing or spacing
+      // (since the unitName is decoded from URL)
+      const normalizedUnitName = unit.trim().toLowerCase();
+      console.log(`[Storage] Normalized unit name: ${normalizedUnitName}`);
+      
       // Filter in JavaScript since PostgREST JSONB filtering is problematic
-      return (data || []).filter(project => {
+      const filteredProjects = (data || []).filter(project => {
         if (!project.implementing_agency) return false;
+        
         try {
+          // Parse implementing_agency if it's a string or use it directly if it's an array
           const agencies = Array.isArray(project.implementing_agency) ? 
             project.implementing_agency : 
             JSON.parse(project.implementing_agency);
-          return agencies.includes(unit);
+            
+          // Normalize each agency name for comparison
+          return agencies.some((agency: any) => {
+            if (typeof agency !== 'string') return false;
+            return agency.trim().toLowerCase() === normalizedUnitName;
+          });
         } catch (e) {
           console.error('[Storage] Error parsing implementing_agency:', e);
           return false;
         }
       });
+      
+      console.log(`[Storage] Found ${filteredProjects.length} projects for unit: ${unit}`);
+      return filteredProjects;
     } catch (error) {
       console.error('[Storage] Error fetching projects by unit:', error);
       throw error;
