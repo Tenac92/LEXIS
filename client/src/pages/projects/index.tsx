@@ -17,7 +17,6 @@ import { Plus, FileUp, Download, LayoutGrid, LayoutList } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRef } from "react";
-import { Header } from "@/components/header";
 
 export default function ProjectsPage() {
   const { toast } = useToast();
@@ -100,7 +99,6 @@ export default function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
       <main className="container mx-auto px-4 py-6">
         <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
           <h1 className="text-3xl font-bold">Projects</h1>
