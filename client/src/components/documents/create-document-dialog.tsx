@@ -748,41 +748,25 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         // Handle authentication errors (401)
         if (response.status === 401) {
           console.warn('[DEBUG] Authentication required for attachments');
-          // Return default attachments without redirecting to login
-          return [
-            {
-              id: 'Διαβιβαστικό',
-              title: 'Διαβιβαστικό',
-              file_type: 'document',
-              description: `Απαιτείται για ${expenditureType}`
-            },
-            {
-              id: 'ΔΚΑ',
-              title: 'ΔΚΑ',
-              file_type: 'document',
-              description: `Απαιτείται για ${expenditureType}`
-            }
-          ];
+          // Show authentication error message instead of hardcoded defaults
+          return [{
+            id: 'auth-error',
+            title: 'Απαιτείται σύνδεση',
+            file_type: 'none',
+            description: 'Παρακαλώ συνδεθείτε ξανά για να δείτε τα διαθέσιμα συνημμένα.'
+          }];
         }
         
         // Handle other errors
         if (!response.ok) {
           console.error('[DEBUG] Attachments request failed:', response.status);
-          // Return default attachments for error scenarios
-          return [
-            {
-              id: 'Διαβιβαστικό',
-              title: 'Διαβιβαστικό',
-              file_type: 'document',
-              description: `Απαιτείται για ${expenditureType}`
-            },
-            {
-              id: 'ΔΚΑ',
-              title: 'ΔΚΑ',
-              file_type: 'document',
-              description: `Απαιτείται για ${expenditureType}`
-            }
-          ];
+          // Show error message instead of hardcoded defaults
+          return [{
+            id: 'server-error',
+            title: 'Σφάλμα εύρεσης συνημμένων',
+            file_type: 'none',
+            description: `Σφάλμα διακομιστή: ${response.status}. Παρακαλώ δοκιμάστε ξανά αργότερα.`
+          }];
         }
         
         // Process successful response
@@ -790,20 +774,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         console.log('[Debug] Attachments API response:', data);
         
         if (!data) {
-          return [
-            {
-              id: 'Διαβιβαστικό',
-              title: 'Διαβιβαστικό',
-              file_type: 'document',
-              description: `Απαιτείται για ${expenditureType}`
-            },
-            {
-              id: 'ΔΚΑ',
-              title: 'ΔΚΑ',
-              file_type: 'document',
-              description: `Απαιτείται για ${expenditureType}`
-            }
-          ];
+          // Return a message about empty data response instead of hardcoded defaults
+          return [{
+            id: 'empty-response',
+            title: 'Δεν βρέθηκαν συνημμένα',
+            file_type: 'none',
+            description: 'Ο διακομιστής δεν επέστρεψε δεδομένα συνημμένων.'
+          }];
         }
         
         // Check if the response has a message about no attachments found
@@ -865,21 +842,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         }];
       } catch (error) {
         console.error('Error fetching attachments:', error);
-        // Return default attachments instead of showing error toast
-        return [
-          {
-            id: 'Διαβιβαστικό',
-            title: 'Διαβιβαστικό',
-            file_type: 'document',
-            description: `Απαιτείται για ${expenditureType}`
-          },
-          {
-            id: 'ΔΚΑ',
-            title: 'ΔΚΑ',
-            file_type: 'document',
-            description: `Απαιτείται για ${expenditureType}`
-          }
-        ];
+        // Return a message about the error instead of hardcoded defaults
+        return [{
+          id: 'fetch-error',
+          title: 'Σφάλμα εύρεσης συνημμένων',
+          file_type: 'none',
+          description: 'Παρουσιάστηκε σφάλμα κατά την αναζήτηση συνημμένων. Παρακαλώ επικοινωνήστε με τον διαχειριστή.'
+        }];
       }
     },
     enabled: Boolean(form.watch('expenditure_type'))
