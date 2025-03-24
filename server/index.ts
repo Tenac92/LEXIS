@@ -88,14 +88,7 @@ async function startServer() {
       const ip = req.ip;
       const method = req.method;
 
-      // Special attention to document routes to debug our issue
-      if (path.includes('document') || path.includes('documents')) {
-        console.log(`[DOCUMENT_DEBUG] ${method} ${path} requested from ${ip}`);
-        console.log(`[DOCUMENT_DEBUG] Headers:`, req.headers);
-        if (method === 'POST') {
-          console.log(`[DOCUMENT_DEBUG] Body:`, req.body);
-        }
-      }
+      // Document route logging is handled by the standard logging system
       
       if (path.startsWith('/api')) {
         log(`[Request] ${method} ${path} from ${ip}`);
@@ -112,10 +105,7 @@ async function startServer() {
           log(`${method} ${path} ${res.statusCode} in ${duration}ms`);
         }
         
-        // Special attention to document routes
-        if (path.includes('document') || path.includes('documents')) {
-          console.log(`[DOCUMENT_DEBUG] Response for ${method} ${path}: status=${res.statusCode}, duration=${duration}ms`);
-        }
+        // Document route responses are now handled by the standard logging system
         
         // @ts-ignore
         return originalEnd.apply(this, args);

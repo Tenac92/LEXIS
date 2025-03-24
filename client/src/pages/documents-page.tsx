@@ -101,7 +101,7 @@ export default function DocumentsPage() {
     queryKey: ['/api/documents', activeFilters],
     queryFn: async () => {
       try {
-        console.log('[Documents] Starting document fetch with filters:', activeFilters);
+        // Fetching documents with current filters
         
         // Build query parameters for the API request
         const queryParams = new URLSearchParams();
@@ -145,12 +145,12 @@ export default function DocumentsPage() {
         }
         
         const url = `/api/documents?${queryParams.toString()}`;
-        console.log('[Documents] Fetching from API:', url);
+        // Constructing API URL for document fetch
         
         const data = await apiRequest(url);
         return data || [];
       } catch (error) {
-        console.error('[Documents] Error in document fetch:', error);
+        // Log error and notify user about document fetch failure
         toast({
           title: "Error",
           description: error instanceof Error ? error.message : "Failed to fetch documents",
@@ -169,7 +169,7 @@ export default function DocumentsPage() {
 
   // Handle document refresh
   const handleRefresh = () => {
-    console.log('[Documents] Manually refreshing documents...');
+    // Manual refresh triggered by user
     refetch();
   };
 
