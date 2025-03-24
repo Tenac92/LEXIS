@@ -1,9 +1,11 @@
 export interface User {
   id: number;
   name: string;
-  username?: string;
   email: string;
   role: 'admin' | 'user';
+  units?: string[];
+  department?: string;
+  telephone?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -14,16 +16,14 @@ export interface BudgetData {
   katanomes_etous: number;
   ethsia_pistosi: number;
   proip?: number;
-  current_budget?: number;  // Added for compatibility with BudgetIndicator
-  annual_budget?: number;   // Added for compatibility with BudgetIndicator
+  current_budget?: number;  // Current budget remaining
+  annual_budget?: number;   // Annual budget allocation
   total_spent?: number;     // Total amount spent so far
   remaining_budget?: number; // Current remaining budget after spending
-  quarterly?: {
-    q1: number;
-    q2: number;
-    q3: number;
-    q4: number;
-  };
+  q1: number;
+  q2: number;
+  q3: number;
+  q4: number;
 }
 
 export interface BudgetNotification {
@@ -45,9 +45,9 @@ export interface BudgetValidationResponse {
   message?: string;
   canCreate: boolean;
   requiresNotification?: boolean;
-  notificationType?: 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning' | 'exceeded_proip';
-  priority?: 'high' | 'medium' | 'low';
+  notificationType?: 'funding' | 'reallocation' | 'exceeded_proip' | 'low_budget' | 'threshold_warning';
   allowDocx?: boolean;
+  priority?: 'high' | 'medium' | 'low';
   metadata?: {
     remainingBudget?: number;
     threshold?: number;

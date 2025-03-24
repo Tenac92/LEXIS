@@ -51,8 +51,10 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
+  // Check user roles - only 'admin' and 'user' roles are supported in the schema
   const isAdmin = user?.role === 'admin';
-  const isManager = user?.role === 'manager';
+  // Backward compatibility check - we'll treat any role that's not admin or user as a manager
+  const isManager = user?.role && user?.role !== 'admin' && user?.role !== 'user';
   const isRegularUser = user?.role === 'user';
 
   useEffect(() => {
@@ -88,7 +90,7 @@ export function Header() {
                 >
                   <div className="text-center">
                     <span className="text-lg font-medium text-foreground flex items-center gap-2">
-                      {user?.username || user?.name || 'Χρήστης'}
+                      {user?.name || 'Χρήστης'}
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     </span>
                   </div>
