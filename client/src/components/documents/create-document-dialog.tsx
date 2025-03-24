@@ -818,103 +818,40 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         console.error('[DEBUG] Test route failed:', testError);
       }
       
-      // Try multiple API endpoints in sequence to find one that works
-      // 1. First, try v2 API endpoint which uses Projects table directly
-      console.log('[DEBUG] Attempting document creation with v2 API');
+      // Attempt document creation with v2 API endpoint
+      console.log('[DEBUG] Creating document with API');
       try {
-        // Enhance payload with project MIS
+        // Prepare enhanced payload with project MIS
         const enhancedPayload = {
           ...payload,
           project_mis: projectForSubmission.mis, // Ensure we always pass project_mis
         };
         
-        console.log('[DEBUG] Sending payload to v2 API:', enhancedPayload);
+        console.log('[DEBUG] Sending payload to API:', enhancedPayload);
         
-        const v2Response = await apiRequest('/api/v2-documents', {
+        // Use the v2-documents endpoint which handles document creation with proper error handling
+        const response = await apiRequest('/api/v2-documents', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(enhancedPayload)
         });
-        console.log('[DEBUG] V2 API response:', v2Response);
         
-        if (v2Response && v2Response.id) {
-          console.log('[DEBUG] Document created successfully via v2 API');
-          return v2Response;
-        }
-      } catch (v2Error) {
-        console.error('[DEBUG] V2 API request failed:', v2Error);
-      }
-      
-      // 2. Try test document endpoint as fallback
-      console.log('[DEBUG] Falling back to test document endpoint');
-      try {
-        // Enhanced payload with additional debug info
-        const testPayload = {
-          ...payload,
-          project_mis: projectForSubmission.mis,
-          debug_info: {
-            project_from_projects_table: true,
-            timestamp: new Date().toISOString()
-          }
-        };
+        console.log('[DEBUG] API response:', response);
         
-        console.log('[DEBUG] Sending enhanced payload to test endpoint:', testPayload);
-        
-        const testDocResponse = await apiRequest('/api/test-document-post', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(testPayload)
-        });
-        console.log('[DEBUG] Test document route response:', testDocResponse);
-        
-        if (testDocResponse && testDocResponse.id) {
-          console.log('[DEBUG] Document created successfully via test endpoint');
-          return testDocResponse;
-        }
-      } catch (testDocError) {
-        console.error('[DEBUG] Test document route failed:', testDocError);
-      }
-      
-      // 3. Last resort - try the authenticated route
-      console.log('[DEBUG] Falling back to authenticated /api/documents route');
-      let response;
-      try {
-        // Final attempt with direct fetch to ensure we bypass any caching/middleware issues
-        console.log('[DEBUG] Attempting with direct fetch to /api/documents');
-        response = await fetch('/api/documents', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            ...payload,
-            project_mis: projectForSubmission.mis,
-            is_final_attempt: true
-          }),
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`[DEBUG] Error ${response.status}: ${errorText}`);
-          throw new Error(`Server returned ${response.status}: ${errorText}`);
+        if (!response || !response.id) {
+          throw new Error('Σφάλμα δημιουργίας εγγράφου: Μη έγκυρη απάντηση από τον διακομιστή');
         }
         
-        const data = await response.json();
-        console.log('[DEBUG] Document creation succeeded with direct fetch response:', data);
-        response = data;
+        console.log('[DEBUG] Document created successfully with ID:', response.id);
+        return response;
       } catch (error) {
-        console.error('[DEBUG] All document creation attempts failed:', error);
-        throw new Error('Αποτυχία δημιουργίας εγγράφου μετά από πολλαπλές προσπάθειες. Παρακαλώ προσπαθήστε ξανά αργότερα.');
+        console.error('[DEBUG] Document creation failed:', error);
+        throw new Error(error instanceof Error ? error.message : 'Αποτυχία δημιουργίας εγγράφου. Παρακαλώ προσπαθήστε ξανά αργότερα.');
       }
 
-      if (!response || !response.id) {
-        throw new Error('Σφάλμα δημιουργίας εγγράφου: Μη έγκυρη απάντηση από τον διακομιστή');
-      }
+      // Response validation is already performed in the document creation try-catch block above
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["documents"] }),
