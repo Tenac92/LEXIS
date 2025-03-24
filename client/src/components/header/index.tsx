@@ -9,6 +9,10 @@ import {
   History,
   Bell,
   Key,
+  LayoutDashboard,
+  Settings,
+  FileSpreadsheet,
+  Library,
   ChevronDown
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
@@ -25,10 +29,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+// Import enhanced navigation menu components
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
 
+/**
+ * Enhanced Header component that includes features from various implementations
+ * while maintaining the original dashboard functionality
+ */
 export function Header() {
   const { user, logoutMutation } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -37,6 +53,7 @@ export function Header() {
 
   const isAdmin = user?.role === 'admin';
   const isManager = user?.role === 'manager';
+  const isRegularUser = user?.role === 'user';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
