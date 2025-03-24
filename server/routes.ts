@@ -359,6 +359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Budget routes
     log('[Routes] Setting up budget routes...');
+    // TODO: Refactor - Move this public budget endpoint to budgetController
     // Allow public access to budget data by MIS for document creation
     app.get('/api/budget/:mis', async (req, res) => {
       try {
@@ -402,6 +403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Units routes
     log('[Routes] Registering units routes...');
     
+    // TODO: Refactor - Move this public units endpoint to unitsController
     // Allow public access to units endpoint for document creation
     app.get('/api/users/units', async (req, res) => {
       try {
@@ -485,6 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     });
 
+    // TODO: Refactor - Consider removing this test route or move it to a test controller
     // Test document creation route without authentication
     app.post('/api/test-document-post', async (req, res) => {
       try {
