@@ -106,20 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
 
-    // Test diagnostics route
-    app.get('/api/test-route', (req, res) => {
-      console.log('[TEST] Test route accessed');
-      res.status(200).json({ message: 'Test route works' });
-    });
-
-    // Test document creation route
-    app.post('/api/test-documents', (req, res) => {
-      console.log('[TEST] Document test route accessed with payload:', req.body);
-      res.status(200).json({ 
-        message: 'Document test route works',
-        receivedData: req.body
-      });
-    });
+    // Removed test routes for production code
     
     // VERSION 2 DOCUMENT CREATION ENDPOINT - Direct access for client-side
     // This is the endpoint that the create-document-dialog.tsx component uses
