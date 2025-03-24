@@ -134,11 +134,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
 
     // Project catalog routes - maintaining both /catalog and /projects endpoints for backwards compatibility
+    
+    // Public access to project regions for document creation
+    app.get('/api/projects/:mis/regions', async (req, res) => {
+      try {
+        const { mis } = req.params;
+        
+        if (!mis) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'MIS parameter is required'
+          });
+        }
+        
+        console.log('[Projects] Public access fetching regions for project:', mis);
+        
+        // Query project to get regions
+        const { data: projectData, error: projectError } = await supabase
+          .from('Projects')
+          .select('region')
+          .eq('mis', mis)
+          .single();
+        
+        if (projectError) {
+          console.error('[Projects] Error fetching project regions:', projectError);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch project regions'
+          });
+        }
+        
+        console.log('[Projects] Regions for project', mis, ':', projectData?.region);
+        return res.json(projectData?.region || {});
+      } catch (error) {
+        console.error('[Projects] Error in public regions access:', error);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to fetch project regions'
+        });
+      }
+    });
+    
+    // Public access to project search for document creation
+    app.get('/api/projects/search', async (req, res) => {
+      try {
+        const { query } = req.query;
+        
+        if (!query || typeof query !== 'string') {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Search query is required'
+          });
+        }
+        
+        console.log('[Projects] Public access searching for projects with query:', query);
+        
+        // Query projects based on search term
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('Projects')
+          .select('id, mis, name, expenditure_types')
+          .or(`mis.ilike.%${query}%,name.ilike.%${query}%`)
+          .limit(25);
+        
+        if (projectsError) {
+          console.error('[Projects] Error searching projects:', projectsError);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Failed to search projects'
+          });
+        }
+        
+        console.log('[Projects] Found', projectsData?.length || 0, 'projects for query:', query);
+        return res.json(projectsData || []);
+      } catch (error) {
+        console.error('[Projects] Error in public project search:', error);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to search projects'
+        });
+      }
+    });
+    
+    // Use authentication for all other project routes
     app.use('/api/projects', authenticateSession, projectRouter);
     app.use('/api/catalog', authenticateSession, projectRouter);
 
     // Budget routes
     log('[Routes] Setting up budget routes...');
+    // Allow public access to budget data by MIS for document creation
+    app.get('/api/budget/:mis', async (req, res) => {
+      try {
+        const { mis } = req.params;
+        
+        if (!mis) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'MIS parameter is required'
+          });
+        }
+        
+        console.log('[Budget] Public access to budget data for MIS:', mis);
+        // Use the BudgetService directly without require
+        const result = await BudgetService.getBudget(mis);
+        return res.json(result);
+      } catch (error) {
+        console.error('[Budget] Error in public budget access:', error);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to fetch budget data'
+        });
+      }
+    });
+    
+    // Use authentication for all other budget routes
     app.use('/api/budget', authenticateSession, budgetRouter);
     log('[Routes] Budget routes setup complete');
 
@@ -153,6 +261,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Units routes
     log('[Routes] Registering units routes...');
+    
+    // Allow public access to units endpoint for document creation
+    app.get('/api/users/units', async (req, res) => {
+      try {
+        console.log('[Units] Public access to units list');
+        
+        // Query Monada table for units
+        const { data: unitsData, error } = await supabase
+          .from('Monada')
+          .select('unit, unit_name');
+        
+        if (error) {
+          console.error('[Units] Error fetching units:', error);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch units'
+          });
+        }
+        
+        console.log('[Units] Successfully fetched units:', unitsData?.length || 0);
+        return res.json(unitsData || []);
+      } catch (error) {
+        console.error('[Units] Error in public units access:', error);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to fetch units'
+        });
+      }
+    });
+    
+    // Use authentication for other units routes
     app.use('/api/units', authenticateSession, unitsRouter);
     log('[Routes] Units routes registered');
     
