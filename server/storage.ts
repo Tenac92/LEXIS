@@ -47,13 +47,26 @@ export class DatabaseStorage implements IStorage {
       const normalizedUnitName = unit.trim().toLowerCase();
       console.log(`[Storage] Normalized unit name: ${normalizedUnitName}`);
       
+      // Map specific full unit names to their abbreviated forms as stored in the database
+      const unitAbbreviationMap: Record<string, string[]> = {
+        'διευθυνση αποκαταστασης επιπτωσεων φυσικων καταστροφων κεντρικης ελλαδος': ['δαεφκ-κε', 'δαεφκ κε'],
+        'διευθυνση αποκαταστασης επιπτωσεων φυσικων καταστροφων βορειου ελλαδος': ['δαεφκ-βε', 'δαεφκ βε'],
+        'διευθυνση αποκαταστασης επιπτωσεων φυσικων καταστροφων δυτικης ελλαδος': ['δαεφκ-δε', 'δαεφκ δε'],
+        'διευθυνση αποκαταστασης επιπτωσεων φυσικων καταστροφων αττικης και κυκλαδων': ['δαεφκ-ακ', 'δαεφκ ακ'],
+        'τομεας αποκαταστασης επιπτωσεων φυσικων καταστροφων ανατολικης αττικης': ['ταεφκ-αα', 'ταεφκ αα'],
+        'τομεας αποκαταστασης επιπτωσεων φυσικων καταστροφων δυτικης αττικης': ['ταεφκ-δα', 'ταεφκ δα'],
+        'τομεας αποκαταστασης επιπτωσεων φυσικων καταστροφων χανιων': ['ταεφκ χανιων'],
+        'τομεας αποκαταστασης επιπτωσεων φυσικων καταστροφων ηρακλειου': ['ταεφκ ηρακλειου'],
+        'περιφερεια αττικης': ['π. αττικησ', 'αττικησ', 'αττικη']
+      };
+      
+      // Get abbreviations for this unit if they exist
+      const specificAbbreviations = unitAbbreviationMap[normalizedUnitName] || [];
+      
       // Search terms based on common abbreviations or partial matches
       const searchTerms = [
         normalizedUnitName,
-        // Add common abbreviations or alternative ways the unit could be stored
-        'π. αττικησ', // For "Περιφέρεια Αττικής"
-        'αττικησ',
-        'αττικη',
+        ...specificAbbreviations,
         // If the unit contains "διευθυνση", also search for just the region part
         ...(normalizedUnitName.includes('διευθυνση') ? 
           [normalizedUnitName.split('διευθυνση')[1]?.trim()] : 
