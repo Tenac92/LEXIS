@@ -12,7 +12,7 @@ const documentManager = new DocumentManager();
 // Create new document
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    console.log('Creating document with data:', JSON.stringify(req.body, null, 2));
+    // Processing document creation request
 
     const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
 
@@ -65,7 +65,7 @@ router.post('/', authenticateToken, async (req, res) => {
       updated_at: now
     };
 
-    console.log('Document payload:', JSON.stringify(documentPayload, null, 2));
+    // Document payload prepared with normalized data
 
     const { data, error } = await supabase
       .from('generated_documents')

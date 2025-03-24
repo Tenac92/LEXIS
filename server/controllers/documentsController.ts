@@ -93,7 +93,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
 
     res.json(document);
   } catch (error) {
-    console.error('[Documents] Error updating document:', error);
+    console.error('Error updating document:', error);
     res.status(500).json({
       error: 'Failed to update document',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -132,7 +132,7 @@ router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
       .single();
 
     if (fetchError) {
-      console.error('[Documents] Error fetching document:', fetchError);
+      console.error('Error fetching document for protocol update:', fetchError);
       throw fetchError;
     }
 
@@ -173,7 +173,7 @@ router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
       .single();
 
     if (updateError) {
-      console.error('[Documents] Protocol update error:', updateError);
+      console.error('Protocol update error:', updateError);
       throw updateError;
     }
 
@@ -184,7 +184,7 @@ router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
       data: updatedDocument
     });
   } catch (error) {
-    console.error('[Documents] Protocol update error:', error);
+    console.error('Protocol update error:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to update protocol',
@@ -258,7 +258,7 @@ router.post('/', async (req: Request, res: Response) => {
       .single();
 
     if (error) {
-      console.error('[Documents] Creation error:', error);
+      console.error('Document creation error:', error);
       return res.status(500).json({
         message: 'Failed to create document',
         error: error.message
@@ -280,14 +280,14 @@ router.post('/', async (req: Request, res: Response) => {
         );
 
       if (attachError) {
-        console.error('[Documents] Attachment creation error:', attachError);
+        console.error('Attachment creation error:', attachError);
         // Continue even if attachment creation fails
       }
     }
 
     return res.status(201).json(data);
   } catch (error) {
-    console.error('[Documents] Error creating document:', error);
+    console.error('Error creating document:', error);
     return res.status(500).json({
       message: 'Failed to create document',
       error: error instanceof Error ? error.message : 'Unknown error'
