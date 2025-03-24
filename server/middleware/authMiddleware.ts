@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { User } from "@shared/schema";
 
+// TODO: Refactor - Authentication middleware is duplicated across multiple files
+// This file implements authentication logic that's also in auth.ts
+// Consider consolidating all authentication logic into a single location
+
 interface AuthenticatedRequest extends Request {
   user?: Required<User>;
 }
