@@ -4,13 +4,12 @@ import { authenticateSession } from "./auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
 import { router as budgetRouter } from "./controllers/budgetController";
-import { router as generatedDocumentsRouter } from "./controllers/generatedDocuments";
 import { router as unitsRouter } from "./controllers/unitsController";
 import { router as usersRouter } from "./controllers/usersController";
 import { router as projectRouter } from "./controllers/projectController";
+import { router as documentsRouter } from "./controllers/documentsController";
 import templatePreviewRouter from "./routes/template-preview";
 import authRouter from "./routes/auth";
-import documentsRouter from "./routes/documents"; // Import from our new dedicated route file
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
 import { log } from "./vite";
 import { supabase } from "./config/db";

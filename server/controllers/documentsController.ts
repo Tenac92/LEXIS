@@ -427,8 +427,17 @@ router.get('/generated/:id/export', async (req: Request, res: Response) => {
 
     // Create and send document
     const documentFormatter = new DocumentFormatter();
-    const buffer = await documentFormatter.formatOrthiEpanalipsi({ 
-      originalDocument: documentData 
+    const buffer = await documentFormatter.formatOrthiEpanalipsi({
+      originalDocument: documentData,
+      comments: 'Διόρθωση στοιχείων',
+      project_id: document.project_id || '',
+      project_na853: document.project_na853 || '',
+      protocol_number_input: document.protocol_number_input || '',
+      protocol_date: document.protocol_date || '',
+      unit: document.unit || '',
+      expenditure_type: document.expenditure_type || '',
+      recipients: document.recipients || [],
+      total_amount: document.total_amount || 0
     });
 
     // Set response headers
