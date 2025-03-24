@@ -1249,7 +1249,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                   </SelectItem>
                                 ))
                               ) : (
-                                <SelectItem value="" disabled>
+                                <SelectItem key="no-expenditure-types" value="" disabled>
                                   Δεν υπάρχουν διαθέσιμοι τύποι δαπάνης
                                 </SelectItem>
                               )}
