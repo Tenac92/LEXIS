@@ -119,7 +119,7 @@ router.post('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    console.log(`[Generated Documents] Fetching document with ID: ${id}`);
+    // Retrieving document by ID with user details
 
     const { data: document, error } = await supabase
       .from('generated_documents')
@@ -163,7 +163,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Update document
 router.patch('/:id', authenticateToken, async (req, res) => {
   try {
-    console.log('[Documents] Updating document:', req.params.id, req.body);
+    // Processing document update for document ID
 
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -177,7 +177,7 @@ router.patch('/:id', authenticateToken, async (req, res) => {
       .single();
 
     if (fetchError || !existingDoc) {
-      console.error('[Documents] Document not found:', req.params.id);
+      console.error('Document not found:', req.params.id);
       return res.status(404).json({ 
         message: 'Document not found',
         error: fetchError?.message 
@@ -197,7 +197,7 @@ router.patch('/:id', authenticateToken, async (req, res) => {
       .single();
 
     if (error) {
-      console.error('[Documents] Update error:', error);
+      console.error('Document update error:', error);
       return res.status(500).json({
         message: 'Failed to update document',
         error: error.message
@@ -213,7 +213,7 @@ router.patch('/:id', authenticateToken, async (req, res) => {
 
     return res.json(data);
   } catch (error) {
-    console.error('[Documents] Error updating document:', error);
+    console.error('Error updating document:', error);
     return res.status(500).json({
       message: 'Failed to update document',
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -311,8 +311,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('[Controllers] Starting orthi epanalipsi update for document:', id);
-    console.log('[Controllers] Request body:', JSON.stringify(req.body, null, 2));
+    // Processing orthi epanalipsi (correction) document generation
 
     // Get the document first to check if it exists
     const { data: existingDoc, error: fetchError } = await supabase
@@ -322,7 +321,7 @@ router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
       .single();
 
     if (fetchError || !existingDoc) {
-      console.error('[Controllers] Document not found:', id, fetchError);
+      console.error('Document not found:', id, fetchError);
       return res.status(404).json({ 
         message: 'Document not found',
         error: fetchError?.message 
@@ -348,10 +347,7 @@ router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
         data: result.document
       });
 
-      console.log('[Controllers] Orthi epanalipsi generated successfully:', {
-        id: result.document.id,
-        bufferSize: result.buffer.length
-      });
+      // Document correction successfully generated and ready for download
 
       // Set response headers for Word document download
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -359,14 +355,14 @@ router.post('/:id/orthi-epanalipsi', authenticateToken, async (req, res) => {
       return res.send(result.buffer);
 
     } catch (generateError) {
-      console.error('[Controllers] Error in document generation:', generateError);
+      console.error('Error in document generation:', generateError);
       return res.status(500).json({
         message: 'Failed to generate orthi epanalipsi',
         error: generateError instanceof Error ? generateError.message : 'Unknown error'
       });
     }
   } catch (error) {
-    console.error('[Controllers] Error handling orthi epanalipsi request:', error);
+    console.error('Error handling document correction request:', error);
     return res.status(500).json({
       message: 'Failed to process orthi epanalipsi request',
       error: error instanceof Error ? error.message : 'Unknown error'
