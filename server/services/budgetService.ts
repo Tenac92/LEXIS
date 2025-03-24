@@ -49,17 +49,20 @@ export class BudgetService {
         throw budgetError;
       }
 
+      // Use user_view as current_budget if current_budget is not set or zero
+      const userView = budgetData?.user_view?.toString() || '0';
+      
       return {
         status: 'success',
         data: {
-          user_view: budgetData?.user_view?.toString() || '0',
+          user_view: userView,
           ethsia_pistosi: budgetData?.ethsia_pistosi?.toString() || '0',
           q1: budgetData?.q1?.toString() || '0',
           q2: budgetData?.q2?.toString() || '0',
           q3: budgetData?.q3?.toString() || '0',
           q4: budgetData?.q4?.toString() || '0',
           total_spent: budgetData?.total_spent?.toString() || '0',
-          current_budget: budgetData?.current_budget?.toString() || '0'
+          current_budget: userView // Set current_budget to match user_view
         }
       };
     } catch (error) {
