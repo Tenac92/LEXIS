@@ -426,48 +426,26 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   
   // Function to handle dialog closing with multiple fallback mechanisms
   const closeDialogCompletely = useCallback(() => {
-    console.log('[DEBUG] Closing dialog with all available methods');
-    
-    // First approach - use the ref for direct click
+    // Direct click approach using ref
     if (dialogCloseRef.current) {
       dialogCloseRef.current.click();
     }
     
-    // Second approach - use the provided callbacks
+    // Use the provided callback functions
     onClose();
     onOpenChange(false);
-    
-    // Third approach - schedule multiple attempts with delays
-    [100, 300, 500].forEach(delay => {
-      setTimeout(() => {
-        if (dialogCloseRef.current) {
-          dialogCloseRef.current.click();
-        }
-        onOpenChange(false);
-        onClose();
-      }, delay);
-    });
-    
-    // Fourth approach - direct DOM manipulation
+
+    // Fallback with Escape key
     setTimeout(() => {
-      // Find all close buttons in the DOM
-      const closeButtons = document.querySelectorAll('[data-dialog-close="true"], [aria-label="Close"], .dialog-close-button');
-      closeButtons.forEach(button => {
-        try {
-          (button as HTMLElement).click();
-        } catch (e) {
-          console.error('[DEBUG] Error clicking close button:', e);
-        }
-      });
-      
-      // Final attempt - try to dispatch ESC key event
-      try {
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
-      } catch (e) {
-        console.error('[DEBUG] Error dispatching Escape key event:', e);
+      if (open) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { 
+          key: 'Escape', 
+          code: 'Escape', 
+          bubbles: true 
+        }));
       }
-    }, 700);
-  }, [onOpenChange, onClose]);
+    }, 100);
+  }, [onOpenChange, onClose, open]);
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -785,8 +763,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           return [];
         }
 
-        console.log('[DEBUG] Making manual fetch request to /api/attachments/' + encodeURIComponent(expenditureType) + '/' + encodeURIComponent(installment));
-        
         // Use direct fetch instead of apiRequest to prevent authentication issues
         const response = await fetch(`/api/attachments/${encodeURIComponent(expenditureType)}/${encodeURIComponent(installment)}`, {
           method: 'GET',
