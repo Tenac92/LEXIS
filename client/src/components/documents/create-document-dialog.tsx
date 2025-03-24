@@ -775,7 +775,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         
         // Handle authentication errors (401)
         if (response.status === 401) {
-          console.warn('[DEBUG] Authentication required for attachments');
+          console.warn('Authentication required for attachments');
           // Show authentication error message instead of hardcoded defaults
           return [{
             id: 'auth-error',
@@ -787,7 +787,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         
         // Handle other errors
         if (!response.ok) {
-          console.error('[DEBUG] Attachments request failed:', response.status);
+          console.error('Attachments request failed:', response.status);
           // Show error message instead of hardcoded defaults
           return [{
             id: 'server-error',
@@ -799,8 +799,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         
         // Process successful response
         const data = await response.json();
-        console.log('[Debug] Attachments API response:', data);
-        
         if (!data) {
           // Return a message about empty data response instead of hardcoded defaults
           return [{
@@ -813,7 +811,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         
         // Check if the response has a message about no attachments found
         if (data.status === 'success' && data.message && Array.isArray(data.attachments) && data.attachments.length === 0) {
-          console.log('[Debug] No attachments found with message:', data.message);
+          // No attachments found with message
           
           // Return a special "no attachments" entry that will be displayed differently in the UI
           return [{
@@ -826,7 +824,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         
         // Check if the response has attachments in the standard API format
         if (data.status === 'success' && Array.isArray(data.attachments) && data.attachments.length > 0) {
-          console.log('[Debug] Found attachments in standard format:', data.attachments);
+          // Found attachments in standard format
           
           // Convert each attachment title to our display format
           return data.attachments.map((title: string) => ({
@@ -838,7 +836,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         }
         
         // Fallback for legacy format or unexpected response format
-        console.warn('[Debug] Attachments response is not in expected format:', data);
+        // Unexpected format, trying fallback extraction
         
         // For safety, attempt to extract attachments from any response format
         let extractedAttachments: string[] = [];
@@ -1052,7 +1050,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       // Validate budget with our own fetch to prevent auth redirects
       try {
-        console.log('[DEBUG] Making manual budget validation request for submit');
+        // Making manual budget validation request for submit
         const budgetValidationResponse = await fetch('/api/budget/validate', {
           method: 'POST',
           headers: { 
@@ -1068,7 +1066,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         
         // Handle authorization issues gracefully
         if (budgetValidationResponse.status === 401) {
-          console.warn('[DEBUG] Auth warning for budget validation during submit');
+          console.warn('Auth warning for budget validation during submit');
           toast({
             title: "Προειδοποίηση",
             description: "Απαιτείται επαναλογίνση για πλήρη έλεγχο προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
