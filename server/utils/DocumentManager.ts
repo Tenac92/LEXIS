@@ -89,10 +89,7 @@ export class DocumentManager {
         });
       }
 
-      console.log('[DocumentManager] Documents loaded successfully:', {
-        totalCount: filteredData.length,
-        sample: filteredData[0] ? { id: filteredData[0].id, unit: filteredData[0].unit } : null
-      });
+      // Documents loaded successfully with filtering applied
 
       return filteredData;
     } catch (error) {
@@ -118,7 +115,7 @@ export class DocumentManager {
 
   async createDocument(documentData: any) {
     try {
-      console.log('Creating document with data:', JSON.stringify(documentData, null, 2));
+      // Document creation initiated with validated data
       
       // Validate recipients array
       if (documentData.recipients && Array.isArray(documentData.recipients)) {
@@ -206,8 +203,7 @@ export class DocumentManager {
 
   async generateOrthiEpanalipsi(documentId: number, documentData: any) {
     try {
-      console.log('[DocumentManager] Starting orthi epanalipsi update for document:', documentId);
-      console.log('[DocumentManager] Update data:', JSON.stringify(documentData, null, 2));
+      // Starting orthi epanalipsi (correction document) update procedure
 
       // Get the current document
       const { data: existingDoc, error: fetchError } = await supabase
@@ -244,9 +240,7 @@ export class DocumentManager {
       // Remove correctionReason as it's stored in comments
       delete documentToUpdate.correctionReason;
 
-      console.log('[DocumentManager] Updating document with:', 
-        JSON.stringify(documentToUpdate, null, 2)
-      );
+      // Updating document with correction data
 
       // Update the document
       const { data: updatedDoc, error: updateError } = await supabase
@@ -269,7 +263,7 @@ export class DocumentManager {
           originalDocument: existingDoc
         });
 
-        console.log('[DocumentManager] Document formatted successfully');
+        // Document formatting completed successfully
         return { document: updatedDoc, buffer: docxBuffer };
       } catch (formatError) {
         console.error('[DocumentManager] Error formatting document:', formatError);

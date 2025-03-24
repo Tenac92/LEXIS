@@ -14,8 +14,7 @@ export default router;
 // List documents with filters
 router.get('/', async (req: Request, res: Response) => {
   try {
-    console.log('[Documents] Starting document fetch request');
-    console.log('[Documents] Query parameters:', req.query);
+    // Starting document fetch with filters
 
     const filters = {
       unit: req.query.unit as string,
@@ -108,10 +107,7 @@ router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
     const { id } = req.params;
     const { protocol_number, protocol_date } = req.body;
 
-    console.log('[Documents] Updating protocol for document:', id, {
-      protocol_number,
-      protocol_date
-    });
+    // Updating protocol information for document
 
     if (!protocol_number?.trim()) {
       return res.status(400).json({
@@ -181,7 +177,7 @@ router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
       throw updateError;
     }
 
-    console.log('[Documents] Protocol updated successfully for document:', id);
+    // Protocol updated successfully
     return res.json({
       success: true,
       message: 'Protocol updated successfully',
@@ -200,7 +196,7 @@ router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
 // Create new document
 router.post('/', async (req: Request, res: Response) => {
   try {
-    console.log('[Documents] Creating new document:', JSON.stringify(req.body, null, 2));
+    // Creating new document with provided data
 
     const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
 
