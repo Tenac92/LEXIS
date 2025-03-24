@@ -44,27 +44,79 @@ export class DatabaseStorage implements IStorage {
       if (error) throw error;
       
       // Normalize the unit name to handle different casing or spacing
-      // (since the unitName is decoded from URL)
       const normalizedUnitName = unit.trim().toLowerCase();
       console.log(`[Storage] Normalized unit name: ${normalizedUnitName}`);
       
-      // Filter in JavaScript since PostgREST JSONB filtering is problematic
+      // Search terms based on common abbreviations or partial matches
+      const searchTerms = [
+        normalizedUnitName,
+        // Add common abbreviations or alternative ways the unit could be stored
+        'π. αττικησ', // For "Περιφέρεια Αττικής"
+        'αττικησ',
+        'αττικη',
+        // If the unit contains "διευθυνση", also search for just the region part
+        ...(normalizedUnitName.includes('διευθυνση') ? 
+          [normalizedUnitName.split('διευθυνση')[1]?.trim()] : 
+          []),
+        // If it's a long name with spaces, try searching for parts
+        ...normalizedUnitName.split(' ').filter(part => part.length > 5)
+      ].filter(Boolean); // Remove any undefined/empty values
+      
+      console.log('[Storage] Search terms:', searchTerms);
+      
+      // Filter projects based on search terms
       const filteredProjects = (data || []).filter(project => {
         if (!project.implementing_agency) return false;
         
         try {
-          // Parse implementing_agency if it's a string or use it directly if it's an array
-          const agencies = Array.isArray(project.implementing_agency) ? 
-            project.implementing_agency : 
-            JSON.parse(project.implementing_agency);
+          // Clean up and parse the implementing_agency
+          let agencyRaw = project.implementing_agency;
+          
+          // Handle the complex JSON escaping that occurs in the database 
+          // The format looks like {""\""ΣΕΡΡΩΝ\""""}
+          if (typeof agencyRaw === 'string') {
+            // Try to normalize the string by removing extra escaping
+            agencyRaw = agencyRaw.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
             
-          // Normalize each agency name for comparison
+            try {
+              // Try to parse the JSON
+              const parsed = JSON.parse(agencyRaw);
+              
+              // Handle different possible formats
+              if (typeof parsed === 'string') {
+                // Single string value
+                agencyRaw = parsed;
+              } else if (Array.isArray(parsed)) {
+                // Array of values
+                agencyRaw = parsed;
+              }
+            } catch (parseError) {
+              // If parsing fails, just use the original string
+              console.log(`[Storage] Parse error for: ${agencyRaw}`, parseError);
+            }
+          }
+          
+          // Convert to array if it's not already
+          const agencies = Array.isArray(agencyRaw) ? agencyRaw : [agencyRaw];
+          
+          // Debug output to see actual values
+          console.log(`[Storage] Project ${project.mis} agencies:`, agencies);
+          
+          // Check if any agency matches any search term
           return agencies.some((agency: any) => {
             if (typeof agency !== 'string') return false;
-            return agency.trim().toLowerCase() === normalizedUnitName;
+            
+            // Normalize the agency string
+            const normalizedAgency = agency.trim().toLowerCase();
+            
+            // Check against all search terms
+            return searchTerms.some(term => 
+              normalizedAgency.includes(term) || 
+              term.includes(normalizedAgency)
+            );
           });
         } catch (e) {
-          console.error('[Storage] Error parsing implementing_agency:', e);
+          console.error('[Storage] Error comparing implementing_agency:', e);
           return false;
         }
       });
