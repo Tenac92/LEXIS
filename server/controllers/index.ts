@@ -12,9 +12,8 @@ const router = express.Router();
 // Mount budget routes
 router.use('/budget', authenticateSession, budgetRouter);
 
-// Documents route is registered directly in routes.ts
-// Commented out to avoid conflicts
-// router.use('/documents', authenticateSession, documentsRouter);
+// Register the consolidated documents controller
+router.use('/documents', authenticateSession, documentsRouter);
 router.use('/recipients', authenticateSession, recipientsRouter);
 router.use('/stats', authenticateSession, statsRouter);
 router.use('/users', authenticateSession, usersRouter);
@@ -28,12 +27,8 @@ router.get('/health', (_req, res) => {
   });
 });
 
-// Error handling for unmatched routes - but exclude /api/documents routes
+// Error handling for unmatched routes
 router.use('*', (req, res, next) => {
-  // Skip this middleware for documents routes
-  if (req.originalUrl.includes('/api/documents')) {
-    return next();
-  }
   res.status(404).json({
     error: 'Not Found',
     message: `Route ${req.originalUrl} not found`,

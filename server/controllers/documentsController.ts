@@ -2,7 +2,10 @@ import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
 import type { GeneratedDocument } from "@shared/schema";
 import { authenticateSession } from '../auth';
+import { authenticateToken } from '../middleware/authMiddleware';
 import { DocumentManager } from '../utils/DocumentManager';
+import { DocumentFormatter } from '../utils/DocumentFormatter';
+import { broadcastDocumentUpdate } from '../services/websocketService';
 
 // Create the router
 export const router = Router();
@@ -15,7 +18,6 @@ export default router;
 router.get('/', async (req: Request, res: Response) => {
   try {
     // Starting document fetch with filters
-
     const filters = {
       unit: req.query.unit as string,
       status: req.query.status as string,
@@ -44,7 +46,15 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { data: document, error } = await supabase
       .from('generated_documents')
-      .select()
+      .select(`
+        *,
+        generated_by:users!generated_documents_generated_by_fkey (
+          name,
+          email,
+          department,
+          telephone
+        )
+      `)
       .eq('id', parseInt(req.params.id))
       .single();
 
@@ -75,12 +85,28 @@ router.patch('/:id', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    // Get the document first to check if it exists
+    const { data: existingDoc, error: fetchError } = await supabase
+      .from('generated_documents')
+      .select('id, unit')
+      .eq('id', parseInt(req.params.id))
+      .single();
+
+    if (fetchError || !existingDoc) {
+      console.error('Document not found:', req.params.id);
+      return res.status(404).json({ 
+        message: 'Document not found',
+        error: fetchError?.message 
+      });
+    }
+
+    // Update the document
     const { data: document, error } = await supabase
       .from('generated_documents')
       .update({
         ...req.body,
         updated_by: req.user.id,
-        updated_at: new Date()
+        updated_at: new Date().toISOString()
       })
       .eq('id', parseInt(req.params.id))
       .select()
@@ -90,6 +116,13 @@ router.patch('/:id', async (req: Request, res: Response) => {
     if (!document) {
       return res.status(404).json({ error: 'Document not found' });
     }
+
+    // Broadcast update to connected clients
+    broadcastDocumentUpdate({
+      type: 'DOCUMENT_UPDATE',
+      documentId: document.id,
+      data: document
+    });
 
     res.json(document);
   } catch (error) {
@@ -177,6 +210,15 @@ router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
       throw updateError;
     }
 
+    // Broadcast protocol update to connected clients
+    if (updatedDocument) {
+      broadcastDocumentUpdate({
+        type: 'PROTOCOL_UPDATE',
+        documentId: parseInt(id),
+        data: updatedDocument
+      });
+    }
+
     // Protocol updated successfully
     return res.json({
       success: true,
@@ -197,7 +239,6 @@ router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     // Creating new document with provided data
-
     const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
 
     if (!req.user?.id) {
@@ -210,22 +251,66 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    // Get project NA853
-    const { data: projectData, error: projectError } = await supabase
-      .from('project_catalog')
-      .select('na853')
-      .eq('mis', project_id)
-      .single();
+    // Get project NA853 - try project_catalog first
+    let projectData: any = null;
+    let projectError: any = null;
+    let project_na853: string = '';
 
-    if (projectError || !projectData) {
-      return res.status(404).json({ message: 'Project not found' });
+    try {
+      // First attempt to get from project_catalog
+      const result = await supabase
+        .from('project_catalog')
+        .select('na853')
+        .eq('mis', project_id)
+        .single();
+        
+      projectData = result.data;
+      projectError = result.error;
+      
+      if (projectError || !projectData) {
+        // If not found in project_catalog, try Projects table
+        console.log('[DOCUMENT_CONTROLLER] Looking up project in Projects table using MIS:', project_id);
+        
+        const projectResult = await supabase
+          .from('Projects')
+          .select('na853')
+          .eq('mis', project_id)
+          .single();
+          
+        if (projectResult.data && projectResult.data.na853) {
+          // Found in Projects table
+          project_na853 = String(projectResult.data.na853);
+          console.log('[DOCUMENT_CONTROLLER] Retrieved NA853 from Projects table:', project_na853);
+        } else if (project_id && !isNaN(Number(project_id))) {
+          // Use MIS as fallback if it's a number
+          project_na853 = project_id;
+          console.log('[DOCUMENT_CONTROLLER] Using project_id as numeric fallback:', project_id);
+        } else {
+          return res.status(404).json({ message: 'Project not found and no valid fallback available' });
+        }
+      } else {
+        // Found in project_catalog
+        project_na853 = projectData.na853;
+      }
+    } catch (error) {
+      console.error('[DOCUMENT_CONTROLLER] Error during project lookup:', error);
+      
+      // If error happens, use project_id as numeric fallback if available and valid
+      if (project_id && !isNaN(Number(project_id))) {
+        project_na853 = project_id;
+      } else {
+        return res.status(500).json({ 
+          message: 'Error looking up project and no valid fallback available',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
     }
 
     // Format recipients data
-    const formattedRecipients = recipients.map(r => ({
+    const formattedRecipients = recipients.map((r: any) => ({
       firstname: String(r.firstname).trim(),
       lastname: String(r.lastname).trim(),
-      fathername: String(r.fathername).trim(),
+      fathername: String(r.fathername || '').trim(),
       afm: String(r.afm).trim(),
       amount: parseFloat(String(r.amount)),
       installment: String(r.installment).trim()
@@ -237,7 +322,7 @@ router.post('/', async (req: Request, res: Response) => {
     const documentPayload = {
       unit,
       project_id,
-      project_na853: projectData.na853,
+      project_na853,
       expenditure_type,
       status: 'pending', // Always set initial status to pending
       recipients: formattedRecipients,
@@ -249,8 +334,7 @@ router.post('/', async (req: Request, res: Response) => {
       updated_at: now
     };
 
-    // Document payload prepared with normalized data and pending status
-
+    // Insert document
     const { data, error } = await supabase
       .from('generated_documents')
       .insert([documentPayload])
@@ -270,7 +354,7 @@ router.post('/', async (req: Request, res: Response) => {
       const { error: attachError } = await supabase
         .from('attachments')
         .insert(
-          attachments.map(att => ({
+          attachments.map((att: any) => ({
             document_id: data.id,
             file_path: att.path,
             type: att.type,
@@ -306,7 +390,10 @@ router.get('/generated/:id/export', async (req: Request, res: Response) => {
       .select(`
         *,
         generated_by:users!generated_documents_generated_by_fkey (
-          name
+          name,
+          email,
+          department,
+          telephone
         )
       `)
       .eq('id', parseInt(id))
@@ -333,18 +420,21 @@ router.get('/generated/:id/export', async (req: Request, res: Response) => {
     };
 
     // Get unit details
-    //const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
-    //if (!unitDetails) {
-    //  throw new Error('Unit details not found');
-    //}
+    const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
+    if (!unitDetails) {
+      throw new Error('Unit details not found');
+    }
 
     // Create and send document
-    //const buffer = await DocumentFormatter.generateDocument(documentData, unitDetails);
+    const documentFormatter = new DocumentFormatter();
+    const buffer = await documentFormatter.formatOrthiEpanalipsi({ 
+      originalDocument: documentData 
+    });
 
     // Set response headers
-    //res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    //res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
-    //res.send(buffer);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
+    res.send(buffer);
 
   } catch (error) {
     console.error('Export error:', error);
