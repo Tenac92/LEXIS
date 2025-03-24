@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/lib/supabase";
+// Removed direct Supabase import
 import type { GeneratedDocument } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -96,77 +96,58 @@ export default function DocumentsPage() {
     enabled: !!user?.units
   });
 
-  // Query for documents
+  // Query for documents using the server API endpoint
   const { data: documents = [], isLoading, error, refetch } = useQuery<GeneratedDocument[]>({
     queryKey: ['/api/documents', activeFilters],
     queryFn: async () => {
       try {
-        console.log('[Documents] Starting document fetch with filters:', filters);
-
-        let query = supabase
-          .from('generated_documents')
-          .select(`
-            id,
-            unit,
-            status,
-            project_id,
-            project_na853,
-            total_amount,
-            recipients,
-            protocol_number_input,
-            protocol_date,
-            created_at,
-            department,
-            attachments,
-            expenditure_type,
-            generated_by,
-            is_correction,
-            original_protocol_number,
-            original_protocol_date,
-            comments,
-            updated_at
-          `)
-          .order('created_at', { ascending: false });
-
-        if (filters.unit && filters.unit !== 'all') {
-          query = query.eq('unit', filters.unit);
+        console.log('[Documents] Starting document fetch with filters:', activeFilters);
+        
+        // Build query parameters for the API request
+        const queryParams = new URLSearchParams();
+        
+        if (activeFilters.unit && activeFilters.unit !== 'all') {
+          queryParams.append('unit', activeFilters.unit);
         }
-
-        if (filters.status !== 'all') {
-          if (filters.status === 'orthi_epanalipsi') {
-            query = query.eq('is_correction', true);
-          } else {
-            query = query.eq('status', filters.status);
-          }
+        
+        if (activeFilters.status !== 'all') {
+          queryParams.append('status', activeFilters.status);
         }
-
-        if (filters.user === 'current' && user?.id) {
-          query = query.eq('generated_by', user.id);
-        } else if (filters.user !== 'all') {
-          query = query.eq('generated_by', parseInt(filters.user));
+        
+        if (activeFilters.user === 'current' && user?.id) {
+          queryParams.append('generated_by', user.id.toString());
+        } else if (activeFilters.user !== 'all') {
+          queryParams.append('generated_by', activeFilters.user);
         }
-
-        if (filters.dateFrom) {
-          query = query.gte('created_at', filters.dateFrom);
+        
+        if (activeFilters.dateFrom) {
+          queryParams.append('dateFrom', activeFilters.dateFrom);
         }
-        if (filters.dateTo) {
-          query = query.lte('created_at', filters.dateTo);
+        
+        if (activeFilters.dateTo) {
+          queryParams.append('dateTo', activeFilters.dateTo);
         }
-
-        if (filters.amountFrom) {
-          query = query.gte('total_amount', parseFloat(filters.amountFrom));
+        
+        if (activeFilters.amountFrom) {
+          queryParams.append('amountFrom', activeFilters.amountFrom);
         }
-        if (filters.amountTo) {
-          query = query.lte('total_amount', parseFloat(filters.amountTo));
+        
+        if (activeFilters.amountTo) {
+          queryParams.append('amountTo', activeFilters.amountTo);
         }
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error('[Documents] Supabase query error:', error);
-          throw error;
+        
+        if (activeFilters.recipient) {
+          queryParams.append('recipient', activeFilters.recipient);
         }
-
+        
+        if (activeFilters.afm) {
+          queryParams.append('afm', activeFilters.afm);
+        }
+        
+        const url = `/api/documents?${queryParams.toString()}`;
+        console.log('[Documents] Fetching from API:', url);
+        
+        const data = await apiRequest(url);
         return data || [];
       } catch (error) {
         console.error('[Documents] Error in document fetch:', error);
