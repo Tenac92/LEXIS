@@ -10,8 +10,7 @@ const documentManager = new DocumentManager();
 // List documents with filters
 router.get('/', async (req: Request, res: Response) => {
   try {
-    console.log('[Documents] Starting document fetch request');
-    console.log('[Documents] Query parameters:', req.query);
+    // Processing document fetch with filters
 
     const filters = {
       unit: req.query.unit as string,
@@ -25,7 +24,7 @@ router.get('/', async (req: Request, res: Response) => {
     };
 
     const documents = await documentManager.loadDocuments(filters);
-    console.log(`[Documents] Found ${documents.length} documents matching filters`);
+    // Documents retrieved successfully
 
     res.json(documents);
   } catch (error) {
@@ -37,7 +36,7 @@ router.get('/', async (req: Request, res: Response) => {
 // Get single document by ID
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    console.log('[Documents] Fetching document with ID:', req.params.id);
+    // Fetching single document by ID
     
     const { data, error } = await supabase
       .from('generated_documents')
@@ -48,7 +47,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ message: 'Document not found' });
     
-    console.log('[Documents] Document found:', data.id);
+    // Document retrieved successfully
     res.json(data);
   } catch (error) {
     console.error('[Documents] Error fetching document:', error);
@@ -59,7 +58,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // Update document
 router.patch('/:id', async (req: Request, res: Response) => {
   try {
-    console.log('[Documents] Updating document:', req.params.id);
+    // Updating existing document
     
     const { protocol_number, protocol_date, status } = req.body;
     
@@ -77,7 +76,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
     
     if (error) throw error;
     
-    console.log('[Documents] Document updated successfully:', data.id);
+    // Document updates applied successfully
     res.json(data);
   } catch (error) {
     console.error('[Documents] Error updating document:', error);
@@ -88,7 +87,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
 // Create new document
 router.post('/', async (req: Request, res: Response) => {
   try {
-    console.log('[Documents] Creating new document:', JSON.stringify(req.body, null, 2));
+    // Creating new document with user-submitted data
 
     const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
 
@@ -159,7 +158,7 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    console.log('[Documents] Document created successfully:', data.id);
+    // Document created successfully with ID
     res.status(201).json({ id: data.id });
   } catch (error) {
     console.error('[Documents] Error creating document:', error);

@@ -249,7 +249,7 @@ router.post('/', async (req: Request, res: Response) => {
       updated_at: now
     };
 
-    console.log('[Documents] Document payload:', JSON.stringify(documentPayload, null, 2));
+    // Document payload prepared with normalized data and pending status
 
     const { data, error } = await supabase
       .from('generated_documents')
