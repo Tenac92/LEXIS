@@ -1225,10 +1225,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       
       // Close the dialog using the dedicated helper function
       try {
-        console.log('[DEBUG] Closing dialog after successful document creation');
+        console.log('Closing dialog after successful document creation');
         closeDialogCompletely();
       } catch (closeError) {
-        console.error('[DEBUG] Error during dialog close attempts:', closeError);
+        console.error('Error during dialog close attempts:', closeError);
       }
     } catch (error) {
       console.error('Document creation error:', error);
@@ -1314,22 +1314,22 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         // Find the project to get its MIS
         const project = projects.find(p => p.id === selectedProjectId);
         if (!project) {
-          console.error('[Regions] Project not found:', selectedProjectId);
+          console.error('Project not found:', selectedProjectId);
           return [];
         }
 
-        console.log('[Regions] Fetching regions for project:', {
+        console.log('Fetching regions for project:', {
           id: selectedProjectId,
           mis: project.mis
         });
 
         // Fetch regions data from API
         const response = await apiRequest(`/api/projects/${encodeURIComponent(project.mis)}/regions`);
-        console.log('[Regions] Response:', response);
+        console.log('Region API response:', response);
         
         // Handle invalid response
         if (!response || typeof response !== 'object') {
-          console.log('[Regions] Invalid response format:', response);
+          console.log('Invalid response format:', response);
           return [];
         }
         
@@ -1339,7 +1339,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           
           // Handle object with nested arrays
           if (response.region && Array.isArray(response.region)) {
-            console.log('[Regions] Processing region data with format:', typeof response.region[0]);
+            console.log('Processing region data with format:', typeof response.region[0]);
             
             // Handle case where response.region contains region objects
             if (response.region.length > 0 && typeof response.region[0] === 'object') {
@@ -1401,24 +1401,24 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           
           // If we found any regions in any format, return them
           if (processedRegions.length > 0) {
-            console.log('[Regions] Processed region data:', processedRegions);
+            console.log('Processed region data:', processedRegions);
             return processedRegions;
           }
           
           // No valid regions were found
-          console.log('[Regions] No regions found for project:', project.mis);
+          console.log('No regions found for project:', project.mis);
           return [];
         } catch (err) {
-          console.error('[Regions] Error processing region data:', err);
+          console.error('Error processing region data:', err);
           return [];
         }
         
         // Shouldn't reach here due to earlier check, but just in case
-        console.log('[Regions] No valid region or regional_unit data found');
+        console.log('No valid region or regional_unit data found');
         return [];
       } catch (error) {
         // Handle any errors
-        console.error('[Regions] Error fetching regions:', error);
+        console.error('Error fetching regions:', error);
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης περιοχών",
