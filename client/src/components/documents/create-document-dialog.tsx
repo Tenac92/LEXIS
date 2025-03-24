@@ -521,10 +521,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (!selectedUnit) return [];
 
       try {
+        console.log(`[Projects] Fetching projects for unit: ${selectedUnit}`);
         const response = await apiRequest(`/api/projects/by-unit/${encodeURIComponent(selectedUnit)}`);
         
-        if (!response || !Array.isArray(response)) {
-          console.error('Error fetching projects: Invalid response format');
+        if (!response) {
+          console.error('[Projects] Error fetching projects: No response received');
           toast({
             title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
@@ -533,6 +534,31 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           return [];
         }
         
+        // Handle empty array response
+        if (Array.isArray(response) && response.length === 0) {
+          console.log(`[Projects] No projects found for unit: ${selectedUnit}`);
+          toast({
+            title: "Πληροφορία",
+            description: "Δεν βρέθηκαν έργα για την επιλεγμένη μονάδα.",
+            variant: "default"
+          });
+          return [];
+        }
+        
+        // Handle non-array response
+        if (!Array.isArray(response)) {
+          console.error('[Projects] Error fetching projects: Invalid response format', response);
+          toast({
+            title: "Σφάλμα",
+            description: "Αποτυχία φόρτωσης έργων. Μη έγκυρη μορφή απάντησης.",
+            variant: "destructive"
+          });
+          return [];
+        }
+        
+        console.log(`[Projects] Found ${response.length} projects for unit: ${selectedUnit}`);
+        
+        // Map and transform the projects data
         return response.map((item: any) => {
           // Process expenditure types
           let expenditureTypes: string[] = [];
@@ -544,7 +570,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                 expenditureTypes = item.expenditure_type;
               }
             } catch (e) {
-              console.error('Error parsing expenditure_type for project:', item.mis, e);
+              console.error('[Projects] Error parsing expenditure_type for project:', item.mis, e);
             }
           }
 
@@ -562,7 +588,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           };
         });
       } catch (error) {
-        console.error('Projects fetch error:', error);
+        console.error('[Projects] Projects fetch error:', error);
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
