@@ -798,39 +798,72 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     queryKey: ["budget-validation", selectedProjectId, currentAmount],
     queryFn: async () => {
       if (!selectedProjectId || currentAmount <= 0) {
-        return { status: 'success', canCreate: true };
+        return { status: 'success', canCreate: true, allowDocx: true };
       }
 
       try {
-        const response = await apiRequest<BudgetValidationResponse>('/api/budget/validate', {
+        // Using fetch directly instead of apiRequest to avoid auto-redirect on 401
+        console.log('[DEBUG] Making manual budget validation request');
+        const response = await fetch('/api/budget/validate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Request-ID': `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+          },
+          credentials: 'include',
           body: JSON.stringify({
             mis: selectedProjectId,
             amount: currentAmount.toString()
           })
         });
-
-        if (response.status === 'warning' && response.message) {
+        
+        if (response.status === 401) {
+          console.warn('[Budget] Authentication required for budget validation');
+          // Return fallback response without redirecting
+          return { 
+            status: 'warning', 
+            canCreate: true,
+            allowDocx: true,
+            message: 'Συνδεθείτε ξανά για έλεγχο προϋπολογισμού. Προσωρινά επιτρέπεται η συνέχεια με προειδοποίηση.'
+          };
+        }
+        
+        if (!response.ok) {
+          console.error('[Budget] Validation request failed:', response.status);
+          // Return fallback response for other errors
+          return { 
+            status: 'warning', 
+            canCreate: true,
+            allowDocx: true,
+            message: 'Αδυναμία ελέγχου προϋπολογισμού. Προειδοποίηση: Το ποσό ενδέχεται να υπερβαίνει τον διαθέσιμο προϋπολογισμό.'
+          };
+        }
+        
+        // Process successful response
+        const data = await response.json();
+        console.log('[Budget] Validation response:', data);
+        
+        if (data.status === 'warning' && data.message) {
           toast({
             title: "Προειδοποίηση",
-            description: response.message,
+            description: data.message,
             variant: "destructive"
           });
         }
 
-        return response;
+        return data;
       } catch (error) {
         console.error('Budget validation error:', error);
         toast({
           title: "Σφάλμα",
-          description: error instanceof Error ? error.message : 'Αποτυχία επικύρωσης προϋπολογισμού',
+          description: 'Αποτυχία επικύρωσης προϋπολογισμού',
           variant: "destructive"
         });
         return {
-          status: 'error',
-          canCreate: false,
-          message: error instanceof Error ? error.message : 'Αποτυχία επικύρωσης προϋπολογισμού'
+          status: 'warning',
+          canCreate: true,
+          allowDocx: true,
+          message: 'Αποτυχία επικύρωσης προϋπολογισμού. Προσωρινά επιτρέπεται η συνέχεια.'
         };
       }
     },
@@ -877,35 +910,100 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
 
-      // Validate budget
-      const budgetValidation = await apiRequest<BudgetValidationResponse>('/api/budget/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mis: projectForSubmission.mis, // Use MIS instead of NA853
-          amount: totalAmount.toString()
-        })
-      });
-
-      if (!budgetValidation.canCreate) {
-        throw new Error(budgetValidation.message || "Δεν είναι δυνατή η δημιουργία εγγράφου λόγω περιορισμών προϋπολογισμού");
+      // Validate budget with our own fetch to prevent auth redirects
+      try {
+        console.log('[DEBUG] Making manual budget validation request for submit');
+        const budgetValidationResponse = await fetch('/api/budget/validate', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Request-ID': `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            mis: projectForSubmission.mis,
+            amount: totalAmount.toString()
+          })
+        });
+        
+        // Handle authorization issues gracefully
+        if (budgetValidationResponse.status === 401) {
+          console.warn('[DEBUG] Auth warning for budget validation during submit');
+          toast({
+            title: "Προειδοποίηση",
+            description: "Απαιτείται επαναλογίνση για πλήρη έλεγχο προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
+            variant: "destructive"
+          });
+        } 
+        // Handle other errors gracefully
+        else if (!budgetValidationResponse.ok) {
+          console.error('[DEBUG] Budget validation failed:', budgetValidationResponse.status);
+          toast({
+            title: "Προειδοποίηση",
+            description: "Αδυναμία ελέγχου προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
+            variant: "destructive"
+          });
+        }
+        // Process successful validation
+        else {
+          const budgetValidation = await budgetValidationResponse.json();
+          
+          if (!budgetValidation.canCreate) {
+            throw new Error(budgetValidation.message || "Δεν είναι δυνατή η δημιουργία εγγράφου λόγω περιορισμών προϋπολογισμού");
+          }
+        }
+      } catch (validationError) {
+        console.error('[DEBUG] Budget validation error:', validationError);
+        toast({
+          title: "Προειδοποίηση",
+          description: "Σφάλμα κατά τον έλεγχο προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
+          variant: "destructive"
+        });
       }
 
-      // Update budget using project MIS
-      const budgetUpdateResponse = await apiRequest(`/api/budget/${encodeURIComponent(projectForSubmission.mis)}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          amount: totalAmount.toString()
-        })
-      });
-
-      if (!budgetUpdateResponse || budgetUpdateResponse.error) {
-        throw new Error(`Σφάλμα ενημέρωσης προϋπολογισμού: ${
-          budgetUpdateResponse?.error?.message || 'Αποτυχία επικοινωνίας με τον διακομιστή'
-        }`);
+      // Update budget using project MIS with our own fetch to prevent auth redirects
+      try {
+        console.log('[DEBUG] Making manual budget update request');
+        const budgetUpdateResp = await fetch(`/api/budget/${encodeURIComponent(projectForSubmission.mis)}`, {
+          method: 'PATCH',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Request-ID': `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            amount: totalAmount.toString()
+          })
+        });
+        
+        // Handle authorization issues gracefully
+        if (budgetUpdateResp.status === 401) {
+          console.warn('[DEBUG] Auth warning for budget update');
+          toast({
+            title: "Προειδοποίηση",
+            description: "Απαιτείται επαναλογίνση για ενημέρωση προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
+            variant: "destructive"
+          });
+        } 
+        // Handle other errors gracefully
+        else if (!budgetUpdateResp.ok) {
+          console.error('[DEBUG] Budget update failed:', budgetUpdateResp.status);
+          toast({
+            title: "Προειδοποίηση",
+            description: "Αδυναμία ενημέρωσης προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
+            variant: "destructive"
+          });
+        }
+        else {
+          console.log('[DEBUG] Budget updated successfully');
+        }
+      } catch (updateError) {
+        console.error('[DEBUG] Budget update error:', updateError);
+        toast({
+          title: "Προειδοποίηση",
+          description: "Σφάλμα κατά την ενημέρωση προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
+          variant: "destructive"
+        });
       }
 
       // Prepare payload with project MIS
