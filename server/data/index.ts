@@ -27,6 +27,8 @@ class DatabaseConfig {
     if (this.supabaseUrl && !this.supabaseKey) {
       throw new Error('SUPABASE_KEY or SUPABASE_ANON_KEY environment variable is required when SUPABASE_URL is provided');
     }
+    
+    console.log('[Database] Configuration validated');
   }
 }
 

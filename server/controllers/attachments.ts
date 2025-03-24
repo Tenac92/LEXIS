@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware/authMiddleware";
-import { supabase } from "../config/db";
+import { supabase } from "../data"; // Import from the unified data layer
 import type { Request, Response } from "express";
 
 const router = Router();

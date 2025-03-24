@@ -25,6 +25,10 @@ export class DocumentManager {
   async loadDocuments(filters: DocumentFilters = {}) {
     try {
       // Loading documents with the specified filters
+      console.log('[DocumentManager] Loading documents with filters:', JSON.stringify(filters));
+
+      // Get the supabase client from the unified data layer
+      const { supabase } = await import('../data');
 
       let query = supabase.from('generated_documents')
                          .select('*')
@@ -33,7 +37,13 @@ export class DocumentManager {
       // Apply basic filters
       if (filters.unit) {
         // Applying unit filter
-        query = query.eq('unit', filters.unit);
+        if (Array.isArray(filters.unit)) {
+          // If unit is an array, use 'in' query
+          query = query.in('unit', filters.unit);
+        } else {
+          // Otherwise use exact match
+          query = query.eq('unit', filters.unit);
+        }
       }
 
       if (filters.status) {
@@ -100,6 +110,9 @@ export class DocumentManager {
 
   async loadRecipients(documentId: string) {
     try {
+      // Get the supabase client from the unified data layer
+      const { supabase } = await import('../data');
+      
       const { data, error } = await supabase
         .from('recipients')
         .select('*')
@@ -108,7 +121,7 @@ export class DocumentManager {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Load recipients error:', error);
+      console.error('[DocumentManager] Load recipients error:', error);
       throw error;
     }
   }
@@ -116,13 +129,17 @@ export class DocumentManager {
   async createDocument(documentData: any) {
     try {
       // Document creation initiated with validated data
+      console.log('[DocumentManager] Creating document with data:', JSON.stringify(documentData));
+      
+      // Get the supabase client from the unified data layer
+      const { supabase } = await import('../data');
       
       // Validate recipients array
       if (documentData.recipients && Array.isArray(documentData.recipients)) {
         for (const recipient of documentData.recipients) {
           if (!recipient.afm || !recipient.firstname || !recipient.lastname || 
               typeof recipient.amount !== 'number' || typeof recipient.installment !== 'number') {
-            console.error('Invalid recipient data:', recipient);
+            console.error('[DocumentManager] Invalid recipient data:', recipient);
             throw new Error('Invalid recipient data. Please check all required fields are provided.');
           }
         }
@@ -135,14 +152,14 @@ export class DocumentManager {
         .single();
       
       if (error) {
-        console.error('Supabase insert error:', error);
+        console.error('[DocumentManager] Supabase insert error:', error);
         throw error;
       }
 
-      if (error) throw error;
+      console.log('[DocumentManager] Document created successfully, ID:', data?.id);
       return data;
     } catch (error) {
-      console.error('Create document error:', error);
+      console.error('[DocumentManager] Create document error:', error);
       throw error;
     }
   }
