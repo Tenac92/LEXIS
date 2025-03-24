@@ -28,7 +28,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json(documents);
   } catch (error) {
-    console.error('[Documents] Error fetching documents:', error);
+    console.error('Error fetching documents:', error);
     res.status(500).json({ message: 'Error fetching documents', error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -50,7 +50,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     // Document retrieved successfully
     res.json(data);
   } catch (error) {
-    console.error('[Documents] Error fetching document:', error);
+    console.error('Error fetching document:', error);
     res.status(500).json({ message: 'Error fetching document', error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -79,7 +79,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
     // Document updates applied successfully
     res.json(data);
   } catch (error) {
-    console.error('[Documents] Error updating document:', error);
+    console.error('Error updating document:', error);
     res.status(500).json({ message: 'Error updating document', error: error instanceof Error ? error.message : 'Unknown error' });
   }
 });
@@ -150,7 +150,7 @@ router.post('/', async (req: Request, res: Response) => {
       .single();
 
     if (error) {
-      console.error('[Documents] Error creating document:', error);
+      console.error('Error creating document:', error);
       return res.status(500).json({ 
         message: 'Error creating document', 
         error: error.message,
@@ -161,7 +161,7 @@ router.post('/', async (req: Request, res: Response) => {
     // Document created successfully with ID
     res.status(201).json({ id: data.id });
   } catch (error) {
-    console.error('[Documents] Error creating document:', error);
+    console.error('Error creating document:', error);
     res.status(500).json({ 
       message: 'Error creating document', 
       error: error instanceof Error ? error.message : 'Unknown error' 

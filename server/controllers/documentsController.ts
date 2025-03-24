@@ -31,7 +31,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     return res.json(documents || []);
   } catch (error) {
-    console.error('[Documents] Error fetching documents:', error);
+    console.error('Error fetching documents:', error);
     return res.status(500).json({
       message: 'Failed to fetch documents',
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -60,7 +60,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     res.json(document);
   } catch (error) {
-    console.error('[Documents] Error fetching document:', error);
+    console.error('Error fetching document:', error);
     res.status(500).json({
       error: 'Failed to fetch document',
       details: error instanceof Error ? error.message : 'Unknown error'
