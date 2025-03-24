@@ -947,18 +947,18 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   }, [selectedProjectId, projects, form]);
 
   useEffect(() => {
-    // Auto-select unit if only one option exists
+    // Auto-select unit based on available options
     if (units?.length === 1) {
+      // If only one unit option exists, select it automatically
       form.setValue("unit", units[0].id);
+    } else if (user?.units?.length === 1 && units?.length > 0) {
+      // If user has only one assigned unit, find its matching unit object and select it
+      const matchingUnit = units.find(unit => unit.id === user.units[0]);
+      if (matchingUnit) {
+        form.setValue("unit", matchingUnit.id);
+      }
     }
-  }, [units, form]);
-
-  useEffect(() => {
-    // Auto-select unit if user has only one unit
-    if (user?.units?.length === 1) {
-      form.setValue("unit", user.units[0]);
-    }
-  }, [user?.units, form]);
+  }, [units, user?.units, form]);
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
     queryKey: ["regions", selectedProjectId],
