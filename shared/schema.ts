@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, numeric, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, numeric, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -117,6 +117,16 @@ export const attachmentsRows = pgTable("attachments", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// Add expenditure_attachments table for storing attachments by expenditure type and installment
+export const expenditureAttachments = pgTable("expenditure_attachments", {
+  id: serial("id").primaryKey(),
+  expediture_type: text("expediture_type").notNull(),
+  installment: text("installment").notNull(),
+  attachments: text("attachments").array(),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
 // Add document version table definition
 export const documentVersions = pgTable("document_versions", {
   id: serial("id").primaryKey(),
@@ -217,6 +227,15 @@ export const insertProjectSchema = createInsertSchema(projects, {
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type InsertGeneratedDocument = typeof generatedDocuments.$inferInsert;
 
+// Enhanced recipient schema with better validation
+const recipientSchema = z.object({
+  firstname: z.string().min(2, "First name must be at least 2 characters"),
+  lastname: z.string().min(2, "Last name must be at least 2 characters"),
+  afm: z.string().length(9, "AFM must be exactly 9 digits").regex(/^\d+$/, "AFM must contain only numbers"),
+  amount: z.number().min(0.01, "Amount must be greater than 0"),
+  installment: z.number().int().min(1).max(12, "Installment must be between 1 and 12")
+});
+
 // Update the generated document schema to include region
 export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments, {
   recipients: z.array(recipientSchema)
@@ -259,14 +278,7 @@ export const insertBudgetNotificationSchema = createInsertSchema(budgetNotificat
   status: z.enum(["pending", "approved", "rejected"]).default("pending")
 }).omit({ id: true, created_at: true, updated_at: true });
 
-// Enhanced recipient schema with better validation
-const recipientSchema = z.object({
-  firstname: z.string().min(2, "First name must be at least 2 characters"),
-  lastname: z.string().min(2, "Last name must be at least 2 characters"),
-  afm: z.string().length(9, "AFM must be exactly 9 digits").regex(/^\d+$/, "AFM must contain only numbers"),
-  amount: z.number().min(0.01, "Amount must be greater than 0"),
-  installment: z.number().int().min(1).max(12, "Installment must be between 1 and 12")
-});
+
 
 // Update generated document schema with enhanced validation and protocol fields
 
@@ -349,7 +361,7 @@ export type Database = {
   monada: Monada;
   projects: Project;
 };
-import { integer } from "drizzle-orm/pg-core";
+
 export const insertProjectCatalogSchema = createInsertSchema(projectCatalog, {
   implementing_agency: z.array(z.string()).min(1, "At least one implementing agency is required"),
   budget_na853: z.coerce.number().min(0, "Budget NA853 must be non-negative"),
