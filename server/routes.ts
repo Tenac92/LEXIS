@@ -11,6 +11,7 @@ import { router as documentsRouter } from "./controllers/documentsController";
 import templatePreviewRouter from "./routes/template-preview";
 import authRouter from "./routes/auth";
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
+// Note: We now use the consolidated documentsController instead of multiple document route files
 import { log } from "./vite";
 import { supabase } from "./config/db";
 import { BudgetService } from "./services/budgetService"; // Import the BudgetService
@@ -18,6 +19,7 @@ import { User } from "../shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   try {
+    // TODO: Refactor - Move these direct document routes to the consolidated DocumentController
     // IMPORTANT: Register direct document creation route first to bypass any routing conflicts
     app.post('/api/documents', authenticateSession, async (req: Request & { user?: User }, res: Response) => {
       try {
@@ -109,6 +111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // VERSION 2 DOCUMENT CREATION ENDPOINT - Direct access for client-side
     // This is the endpoint that the create-document-dialog.tsx component uses
+    // TODO: Refactor - Move to DocumentsController and standardize with the v1 endpoint
     app.post('/api/v2-documents', async (req: Request, res: Response) => {
       try {
         console.log('[DIRECT_ROUTE_V2] Document creation request with body:', req.body);
@@ -269,6 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Project catalog routes - maintaining both /catalog and /projects endpoints for backwards compatibility
     
+    // TODO: Refactor - Move these project-related public endpoints to projectController
     // Public access to project regions for document creation
     app.get('/api/projects/:mis/regions', async (req, res) => {
       try {
@@ -386,6 +390,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Documents routes
     log('[Routes] Setting up document routes...');
+    // NOTE: The above direct document routes need to be consolidated here
+    // The documentsController should handle all document-related operations
     // Handle documents routes with proper authentication
     app.use('/api/documents', authenticateSession, documentsRouter);
     log('[Routes] Document routes setup complete');
