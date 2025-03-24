@@ -14,7 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { BudgetValidationResponse } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Check, ChevronDown, FileText, Plus, Search, Trash2, User } from "lucide-react";
+import { AlertCircle, Check, ChevronDown, FileText, FileX, Plus, Search, Trash2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1748,26 +1748,36 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   ) : attachments.length > 0 ? (
                     <div className="space-y-2">
                       {attachments.map((attachment) => (
-                        <div
-                          key={attachment.id}
-                          className="flex items-center space-x-2 rounded-lg border p-3"
-                        >
-                          <Checkbox
-                            checked={form.watch("selectedAttachments")?.includes(attachment.id)}
-                            onCheckedChange={(checked) => {
-                              const current = form.watch("selectedAttachments") || [];
-                              if (checked) {
-                                form.setValue("selectedAttachments", [...current, attachment.id]);
-                              } else {
-                                form.setValue(
-                                  "selectedAttachments",
-                                  current.filter((id) => id !== attachment.id)
-                                );
-                              }
-                            }}
-                          />
-                          <span>{attachment.title}</span>
-                        </div>
+                        attachment.file_type === 'none' ? (
+                          // Display message for no attachments found
+                          <div key={attachment.id} className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                            <FileX className="h-12 w-12 mb-4" />
+                            <p className="font-medium">{attachment.title}</p>
+                            <p className="text-sm">{attachment.description}</p>
+                          </div>
+                        ) : (
+                          // Display regular attachments with checkboxes
+                          <div
+                            key={attachment.id}
+                            className="flex items-center space-x-2 rounded-lg border p-3"
+                          >
+                            <Checkbox
+                              checked={form.watch("selectedAttachments")?.includes(attachment.id)}
+                              onCheckedChange={(checked) => {
+                                const current = form.watch("selectedAttachments") || [];
+                                if (checked) {
+                                  form.setValue("selectedAttachments", [...current, attachment.id]);
+                                } else {
+                                  form.setValue(
+                                    "selectedAttachments",
+                                    current.filter((id) => id !== attachment.id)
+                                  );
+                                }
+                              }}
+                            />
+                            <span>{attachment.title}</span>
+                          </div>
+                        )
                       ))}
                     </div>
                   ) : (
