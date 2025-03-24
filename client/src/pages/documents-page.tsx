@@ -209,7 +209,7 @@ export default function DocumentsPage() {
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Όλες οι Μονάδες</SelectItem>
+                    <SelectItem key="all-units" value="all">Όλες οι Μονάδες</SelectItem>
                     {user?.units?.map((unit: string) => (
                       <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                     ))}
@@ -227,10 +227,10 @@ export default function DocumentsPage() {
                     <SelectValue placeholder="Επιλέξτε κατάσταση" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Όλες οι Καταστάσεις</SelectItem>
-                    <SelectItem value="pending">Σε Εκκρεμότητα</SelectItem>
-                    <SelectItem value="completed">Ολοκληρωμένο</SelectItem>
-                    <SelectItem value="orthi_epanalipsi">Ορθή Επανάληψη</SelectItem>
+                    <SelectItem key="all" value="all">Όλες οι Καταστάσεις</SelectItem>
+                    <SelectItem key="pending" value="pending">Σε Εκκρεμότητα</SelectItem>
+                    <SelectItem key="completed" value="completed">Ολοκληρωμένο</SelectItem>
+                    <SelectItem key="orthi_epanalipsi" value="orthi_epanalipsi">Ορθή Επανάληψη</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -245,8 +245,8 @@ export default function DocumentsPage() {
                     <SelectValue placeholder="Επιλέξτε χρήστη" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Όλοι οι Χρήστες</SelectItem>
-                    <SelectItem value="current">Τα Έγγραφά μου</SelectItem>
+                    <SelectItem key="all-users" value="all">Όλοι οι Χρήστες</SelectItem>
+                    <SelectItem key="current-user" value="current">Τα Έγγραφά μου</SelectItem>
                     {matchingUsers?.map((u: { id: number; name?: string; email?: string }) => (
                       <SelectItem key={u.id} value={u.id.toString()}>
                         {u.name || u.email}
