@@ -1075,7 +1075,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         } 
         // Handle other errors gracefully
         else if (!budgetValidationResponse.ok) {
-          console.error('[DEBUG] Budget validation failed:', budgetValidationResponse.status);
+          console.error('Budget validation failed:', budgetValidationResponse.status);
           toast({
             title: "Προειδοποίηση",
             description: "Αδυναμία ελέγχου προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
@@ -1091,7 +1091,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           }
         }
       } catch (validationError) {
-        console.error('[DEBUG] Budget validation error:', validationError);
+        console.error('Budget validation error:', validationError);
         toast({
           title: "Προειδοποίηση",
           description: "Σφάλμα κατά τον έλεγχο προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
@@ -1101,7 +1101,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       // Update budget using project MIS with our own fetch to prevent auth redirects
       try {
-        console.log('[DEBUG] Making manual budget update request');
+        // Making manual budget update request
         const budgetUpdateResp = await fetch(`/api/budget/${encodeURIComponent(projectForSubmission.mis)}`, {
           method: 'PATCH',
           headers: { 
@@ -1116,7 +1116,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         
         // Handle authorization issues gracefully
         if (budgetUpdateResp.status === 401) {
-          console.warn('[DEBUG] Auth warning for budget update');
+          console.warn('Auth warning for budget update');
           toast({
             title: "Προειδοποίηση",
             description: "Απαιτείται επαναλογίνση για ενημέρωση προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
@@ -1125,7 +1125,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         } 
         // Handle other errors gracefully
         else if (!budgetUpdateResp.ok) {
-          console.error('[DEBUG] Budget update failed:', budgetUpdateResp.status);
+          console.error('Budget update failed:', budgetUpdateResp.status);
           toast({
             title: "Προειδοποίηση",
             description: "Αδυναμία ενημέρωσης προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
@@ -1133,10 +1133,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           });
         }
         else {
-          console.log('[DEBUG] Budget updated successfully');
+          console.log('Budget updated successfully');
         }
       } catch (updateError) {
-        console.error('[DEBUG] Budget update error:', updateError);
+        console.error('Budget update error:', updateError);
         toast({
           title: "Προειδοποίηση",
           description: "Σφάλμα κατά την ενημέρωση προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
@@ -1167,26 +1167,22 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       console.log('Sending payload to create document:', payload);
 
       // Try testing the route with our test endpoint first
-      console.log('[DEBUG] Testing route access with test endpoint');
       try {
         const testResponse = await apiRequest('/api/test-route', {
           method: 'GET'
         });
-        console.log('[DEBUG] Test route response:', testResponse);
+        console.log('Test route response:', testResponse);
       } catch (testError) {
-        console.error('[DEBUG] Test route failed:', testError);
+        console.error('Test route failed:', testError);
       }
       
       // Attempt document creation with v2 API endpoint
-      console.log('[DEBUG] Creating document with API');
       try {
         // Prepare enhanced payload with project MIS
         const enhancedPayload = {
           ...payload,
           project_mis: projectForSubmission.mis, // Ensure we always pass project_mis
         };
-        
-        console.log('[DEBUG] Sending payload to API:', enhancedPayload);
         
         // Use the v2-documents endpoint which handles document creation with proper error handling
         const response = await apiRequest('/api/v2-documents', {
@@ -1197,16 +1193,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           body: JSON.stringify(enhancedPayload)
         });
         
-        console.log('[DEBUG] API response:', response);
-        
         if (!response || !response.id) {
           throw new Error('Σφάλμα δημιουργίας εγγράφου: Μη έγκυρη απάντηση από τον διακομιστή');
         }
         
-        console.log('[DEBUG] Document created successfully with ID:', response.id);
+        console.log('Document created successfully with ID:', response.id);
         return response;
       } catch (error) {
-        console.error('[DEBUG] Document creation failed:', error);
+        console.error('Document creation failed:', error);
         throw new Error(error instanceof Error ? error.message : 'Αποτυχία δημιουργίας εγγράφου. Παρακαλώ προσπαθήστε ξανά αργότερα.');
       }
 
