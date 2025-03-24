@@ -11,6 +11,7 @@ import { router as projectRouter } from "./controllers/projectController";
 import templatePreviewRouter from "./routes/template-preview";
 import authRouter from "./routes/auth";
 import documentsRouter from "./routes/documents"; // Import from our new dedicated route file
+import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
 import { log } from "./vite";
 import { supabase } from "./config/db";
 import { User } from "../shared/schema";
@@ -154,6 +155,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Registering units routes...');
     app.use('/api/units', authenticateSession, unitsRouter);
     log('[Routes] Units routes registered');
+    
+    // Attachments routes
+    log('[Routes] Registering attachments routes...');
+    app.use('/api/attachments', authenticateSession, attachmentsRouter);
+    log('[Routes] Attachments routes registered');
 
     // Diagnostic route to see all registered routes
     app.get('/api/diagnostics/routes', (_req, res) => {
