@@ -1889,7 +1889,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     // Handler to help force close the dialog when escape is pressed
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && open) {
-        console.log('[DEBUG] Detected Escape key - forcing dialog close');
+        // Close dialog when Escape key is pressed
         if (dialogCloseRef.current) {
           dialogCloseRef.current.click();
         }
@@ -1903,7 +1903,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       const closeButtons = document.querySelectorAll('[data-dialog-close="true"], .dialog-close');
       closeButtons.forEach(button => {
         button.addEventListener('click', () => {
-          console.log('[DEBUG] Dialog close button clicked');
+          // Handle dialog close button click
           onOpenChange(false);
           onClose();
         });
