@@ -16,6 +16,8 @@ export interface BudgetData {
   proip?: number;
   current_budget?: number;  // Added for compatibility with BudgetIndicator
   annual_budget?: number;   // Added for compatibility with BudgetIndicator
+  total_spent?: number;     // Total amount spent so far
+  remaining_budget?: number; // Current remaining budget after spending
   quarterly?: {
     q1: number;
     q2: number;
@@ -43,6 +45,20 @@ export interface BudgetValidationResponse {
   message?: string;
   canCreate: boolean;
   requiresNotification?: boolean;
-  notificationType?: 'funding' | 'reallocation' | 'low_budget';
-  allowDocx: boolean;
+  notificationType?: 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning' | 'exceeded_proip';
+  priority?: 'high' | 'medium' | 'low';
+  allowDocx?: boolean;
+  metadata?: {
+    remainingBudget?: number;
+    threshold?: number;
+    baseValue?: number;
+    percentageRemaining?: number;
+    available?: number;
+    requested?: number;
+    shortfall?: number;
+    previousBudget?: number;
+    budgetValues?: Record<string, number>;
+    error?: string;
+    [key: string]: any;
+  };
 }

@@ -654,6 +654,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           proip: 0,
           current_budget: 0,
           annual_budget: 0,
+          total_spent: 0,
+          remaining_budget: 0,
           quarterly: { q1: 0, q2: 0, q3: 0, q4: 0 }
         };
 
@@ -854,16 +856,35 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     enabled: Boolean(form.watch('expenditure_type'))
   });
 
-  const { data: validationResult } = useQuery<BudgetValidationResponse>({
+  const { data: validationResult, isLoading: validationLoading } = useQuery<BudgetValidationResponse>({
     queryKey: ["budget-validation", selectedProjectId, currentAmount],
     queryFn: async () => {
       if (!selectedProjectId || currentAmount <= 0) {
-        return { status: 'success', canCreate: true, allowDocx: true };
+        return { 
+          status: 'warning',
+          canCreate: false,
+          allowDocx: true,
+          message: 'Συμπληρώστε έργο και δικαιούχους για έλεγχο προϋπολογισμού'
+        };
       }
 
       try {
+        // Get the project MIS from the selected project
+        const project = projects.find(p => p.id === selectedProjectId);
+        if (!project?.mis) {
+          console.error('[Budget] Project or MIS not found', { selectedProjectId });
+          return { 
+            status: 'error', 
+            canCreate: false,
+            allowDocx: false,
+            message: 'Δεν βρέθηκε το MIS του έργου. Επιλέξτε έγκυρο έργο.'
+          };
+        }
+
+        // Use the project's MIS for validation
+        console.log(`[Budget] Validating budget for MIS: ${project.mis}, amount: ${currentAmount}`);
+        
         // Using fetch directly instead of apiRequest to avoid auto-redirect on 401
-        console.log('[DEBUG] Making manual budget validation request');
         const response = await fetch('/api/budget/validate', {
           method: 'POST',
           headers: { 
@@ -872,30 +893,29 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           },
           credentials: 'include',
           body: JSON.stringify({
-            mis: selectedProjectId,
-            amount: currentAmount.toString()
+            mis: project.mis, // Use the actual MIS, not the selectedProjectId
+            amount: currentAmount
           })
         });
         
         if (response.status === 401) {
           console.warn('[Budget] Authentication required for budget validation');
-          // Return fallback response without redirecting
+          // Return authentication error response
           return { 
             status: 'warning', 
-            canCreate: true,
-            allowDocx: true,
-            message: 'Συνδεθείτε ξανά για έλεγχο προϋπολογισμού. Προσωρινά επιτρέπεται η συνέχεια με προειδοποίηση.'
+            canCreate: false,
+            allowDocx: false,
+            message: 'Απαιτείται σύνδεση για έλεγχο προϋπολογισμού. Παρακαλώ συνδεθείτε ξανά.'
           };
         }
         
         if (!response.ok) {
           console.error('[Budget] Validation request failed:', response.status);
-          // Return fallback response for other errors
           return { 
-            status: 'warning', 
-            canCreate: true,
-            allowDocx: true,
-            message: 'Αδυναμία ελέγχου προϋπολογισμού. Προειδοποίηση: Το ποσό ενδέχεται να υπερβαίνει τον διαθέσιμο προϋπολογισμό.'
+            status: 'error', 
+            canCreate: false,
+            allowDocx: false,
+            message: 'Σφάλμα επικοινωνίας κατά τον έλεγχο προϋπολογισμού. Δοκιμάστε ξανά.'
           };
         }
         
@@ -903,27 +923,61 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         const data = await response.json();
         console.log('[Budget] Validation response:', data);
         
+        // Show toast notifications for different validation statuses
         if (data.status === 'warning' && data.message) {
           toast({
-            title: "Προειδοποίηση",
+            title: "Προειδοποίηση προϋπολογισμού",
+            description: data.message,
+            variant: "warning"
+          });
+        } else if (data.status === 'error' && data.message) {
+          toast({
+            title: "Σφάλμα προϋπολογισμού",
             description: data.message,
             variant: "destructive"
           });
+        } else if (data.status === 'success' && data.message) {
+          toast({
+            title: "Επιτυχής έλεγχος προϋπολογισμού",
+            description: data.message,
+            variant: "default"
+          });
+        }
+
+        // Enhance response with metadata information for UI display
+        if (data.metadata?.remainingBudget !== undefined && data.metadata?.previousBudget !== undefined) {
+          const remainingBudget = Number(data.metadata.remainingBudget);
+          const previousBudget = Number(data.metadata.previousBudget);
+          const requestedAmount = Number(currentAmount);
+          
+          // Add percentage calculation for UI
+          if (!data.metadata.percentAfterOperation && previousBudget > 0) {
+            data.metadata.percentAfterOperation = (remainingBudget / previousBudget) * 100;
+          }
+          
+          // Add amount used for UI
+          if (!data.metadata.amountUsed) {
+            data.metadata.amountUsed = requestedAmount;
+          }
         }
 
         return data;
       } catch (error) {
-        console.error('Budget validation error:', error);
+        console.error('[Budget] Budget validation error:', error);
         toast({
-          title: "Σφάλμα",
-          description: 'Αποτυχία επικύρωσης προϋπολογισμού',
+          title: "Σφάλμα ελέγχου προϋπολογισμού",
+          description: error instanceof Error ? error.message : 'Αποτυχία επικύρωσης προϋπολογισμού',
           variant: "destructive"
         });
+        
         return {
-          status: 'warning',
-          canCreate: true,
-          allowDocx: true,
-          message: 'Αποτυχία επικύρωσης προϋπολογισμού. Προσωρινά επιτρέπεται η συνέχεια.'
+          status: 'error',
+          canCreate: false,
+          allowDocx: false,
+          message: 'Αποτυχία επικύρωσης προϋπολογισμού. Δοκιμάστε ξανά αργότερα.',
+          metadata: {
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }
         };
       }
     },
