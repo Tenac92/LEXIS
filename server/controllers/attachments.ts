@@ -114,11 +114,11 @@ router.get('/:type/:installment', authenticateToken, async (req: Request, res: R
       
       if (isNaN(parsedInstallment)) {
         // Try to parse the installment from other formats
-        if (installment.toLowerCase() === 'first' || installment.toLowerCase() === 'πρώτη') {
+        if (installment.toLowerCase() === 'first' || installment.toLowerCase() === 'πρώτη' || installment === 'Α') {
           parsedInstallment = 1;
-        } else if (installment.toLowerCase() === 'second' || installment.toLowerCase() === 'δεύτερη') {
+        } else if (installment.toLowerCase() === 'second' || installment.toLowerCase() === 'δεύτερη' || installment === 'Β') {
           parsedInstallment = 2;
-        } else if (installment.toLowerCase() === 'third' || installment.toLowerCase() === 'τρίτη') {
+        } else if (installment.toLowerCase() === 'third' || installment.toLowerCase() === 'τρίτη' || installment === 'Γ') {
           parsedInstallment = 3;
         } else {
           // Still couldn't parse it, default to 1
@@ -135,42 +135,76 @@ router.get('/:type/:installment', authenticateToken, async (req: Request, res: R
     
     console.log(`[Attachments] Fetching attachments for type: ${decodedType}, installment: ${parsedInstallment}`);
   
-
-    const { data, error } = await supabase
-      .from('attachments')
-      .select('*')
-      .eq('expediture_type', decodedType)
-      .eq('installment', parsedInstallment)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      console.error('Database error:', error);
-      return res.status(500).json({ 
-        status: 'error',
-        message: 'Database error',
-        error: error.message 
-      });
-    }
-
-    // Get default attachments if no specific ones found
-    if (!data?.attachments?.length) {
-      const { data: defaultData } = await supabase
+    try {
+      const { data, error } = await supabase
         .from('attachments')
         .select('*')
-        .eq('expediture_type', 'default')
-        .eq('installment', 1)
+        .eq('expediture_type', decodedType)
+        .eq('installment', parsedInstallment)
         .single();
 
+      console.log(`[Attachments] Database query result:`, { data, error });
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Database error:', error);
+        return res.status(500).json({ 
+          status: 'error',
+          message: 'Database error',
+          error: error.message 
+        });
+      }
+
+      // Get default attachments if no specific ones found
+      if (!data?.attachments?.length) {
+        console.log(`[Attachments] No specific attachments found for ${decodedType}, using defaults`);
+        
+        try {
+          const { data: defaultData, error: defaultError } = await supabase
+            .from('attachments')
+            .select('*')
+            .eq('expediture_type', 'default')
+            .eq('installment', 1)
+            .single();
+            
+          console.log(`[Attachments] Default attachments query result:`, { data: defaultData, error: defaultError });
+
+          // If there's an error or no default attachments found, return a standard set
+          if (defaultError || !defaultData?.attachments?.length) {
+            const standardAttachments = ['Διαβιβαστικό', 'ΔΚΑ'];
+            console.log(`[Attachments] Using standard attachments:`, standardAttachments);
+            
+            return res.json({
+              status: 'success',
+              attachments: standardAttachments
+            });
+          }
+
+          console.log(`[Attachments] Using default attachments from database:`, defaultData.attachments);
+          return res.json({
+            status: 'success',
+            attachments: defaultData.attachments
+          });
+        } catch (defaultError) {
+          console.error(`[Attachments] Error fetching default attachments:`, defaultError);
+          return res.json({
+            status: 'success',
+            attachments: ['Διαβιβαστικό', 'ΔΚΑ']
+          });
+        }
+      }
+
+      console.log(`[Attachments] Returning attachments for ${decodedType}:`, data.attachments);
+      res.json({
+        status: 'success',
+        attachments: data.attachments
+      });
+    } catch (dbError) {
+      console.error(`[Attachments] Database operation error:`, dbError);
       return res.json({
         status: 'success',
-        attachments: defaultData?.attachments || ['Διαβιβαστικό', 'ΔΚΑ']
+        attachments: ['Διαβιβαστικό', 'ΔΚΑ']
       });
     }
-
-    res.json({
-      status: 'success',
-      attachments: data.attachments
-    });
 
   } catch (error) {
     console.error('Error fetching attachments:', error);

@@ -733,6 +733,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           return [];
         }
 
+        // This endpoint returns a response in the format: { status: 'success', attachments: string[] }
         const response = await apiRequest(`/api/attachments/${expenditureType}/${installment}`);
         
         console.log('[Debug] Attachments API response:', response);
@@ -741,11 +742,36 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           return [];
         }
         
-        // Fix: Handle the standard API response format which returns {status, attachments}
+        // Check if the response has the standard API format
         if (response.status === 'success' && Array.isArray(response.attachments)) {
           console.log('[Debug] Found attachments in standard format:', response.attachments);
-          // Convert to the expected format for rendering
+          
+          // Convert each attachment title to our display format
           return response.attachments.map((title: string) => ({
+            id: title, // Use the title as the ID for selection
+            title,
+            file_type: 'document',
+            description: `Απαιτείται για ${expenditureType}`
+          }));
+        }
+        
+        // Fallback for legacy format or unexpected response format
+        console.warn('[Debug] Attachments response is not in expected format:', response);
+        
+        // For safety, attempt to extract attachments from any response format
+        let extractedAttachments: string[] = [];
+        
+        // Try to extract from response.attachments if it exists
+        if (response.attachments && Array.isArray(response.attachments)) {
+          extractedAttachments = response.attachments;
+        } 
+        // Try to extract from root array
+        else if (Array.isArray(response)) {
+          extractedAttachments = response;
+        }
+        
+        if (extractedAttachments.length > 0) {
+          return extractedAttachments.map((title: string) => ({
             id: title,
             title,
             file_type: 'document',
@@ -753,22 +779,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           }));
         }
         
-        if (!Array.isArray(response)) {
-          return [];
-        }
-
-        return response.reduce((acc: any[], row) => {
-          if (row.attachments && Array.isArray(row.attachments)) {
-            const items = row.attachments.map((title: string) => ({
-              id: `${row.id}-${title}`,
-              title,
-              file_type: 'document',
-              description: `Required for ${row.expediture_type} - Installment ${row.installment}`
-            }));
-            return [...acc, ...items];
-          }
-          return acc;
-        }, []);
+        // If we couldn't extract anything, return empty array
+        return [];
       } catch (error) {
         console.error('Error fetching attachments:', error);
         toast({
