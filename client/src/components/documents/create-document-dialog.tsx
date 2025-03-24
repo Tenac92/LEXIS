@@ -423,6 +423,51 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   // Reference to programmatically close the dialog
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const dialogCloseRef = React.useRef<HTMLButtonElement>(null);
+  
+  // Function to handle dialog closing with multiple fallback mechanisms
+  const closeDialogCompletely = useCallback(() => {
+    console.log('[DEBUG] Closing dialog with all available methods');
+    
+    // First approach - use the ref for direct click
+    if (dialogCloseRef.current) {
+      dialogCloseRef.current.click();
+    }
+    
+    // Second approach - use the provided callbacks
+    onClose();
+    onOpenChange(false);
+    
+    // Third approach - schedule multiple attempts with delays
+    [100, 300, 500].forEach(delay => {
+      setTimeout(() => {
+        if (dialogCloseRef.current) {
+          dialogCloseRef.current.click();
+        }
+        onOpenChange(false);
+        onClose();
+      }, delay);
+    });
+    
+    // Fourth approach - direct DOM manipulation
+    setTimeout(() => {
+      // Find all close buttons in the DOM
+      const closeButtons = document.querySelectorAll('[data-dialog-close="true"], [aria-label="Close"], .dialog-close-button');
+      closeButtons.forEach(button => {
+        try {
+          (button as HTMLElement).click();
+        } catch (e) {
+          console.error('[DEBUG] Error clicking close button:', e);
+        }
+      });
+      
+      // Final attempt - try to dispatch ESC key event
+      try {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+      } catch (e) {
+        console.error('[DEBUG] Error dispatching Escape key event:', e);
+      }
+    }, 700);
+  }, [onOpenChange, onClose]);
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -1210,44 +1255,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       form.reset();
       setCurrentStep(0);
       
-      // Close the dialog using all available methods to ensure it closes
+      // Close the dialog using the dedicated helper function
       try {
-        // Force close using the ref (most direct method)
-        console.log('[DEBUG] Forcing dialog close with ref click');
-        if (dialogCloseRef.current) {
-          dialogCloseRef.current.click();
-        }
-        
-        // Also use the provided callback methods as backup
-        onClose();
-        onOpenChange(false);
-        
-        // Schedule multiple attempts with increasing delays
-        const closeAttempts = [100, 300, 500];
-        closeAttempts.forEach(delay => {
-          setTimeout(() => {
-            console.log(`[DEBUG] Attempting dialog close after ${delay}ms delay`);
-            if (dialogCloseRef.current) {
-              dialogCloseRef.current.click();
-            }
-            onOpenChange(false); 
-            onClose();
-          }, delay);
-        });
-        
-        // Final attempt with more direct DOM approach
-        setTimeout(() => {
-          // Try to find and click any dialog close buttons in the DOM as a last resort
-          console.log('[DEBUG] Final dialog close attempt with direct DOM targeting');
-          const closeButtons = document.querySelectorAll('[data-dialog-close="true"], [aria-label="Close"], .dialog-close-button');
-          closeButtons.forEach(button => {
-            try {
-              (button as HTMLElement).click();
-            } catch (e) {
-              console.error('[DEBUG] Error clicking close button:', e);
-            }
-          });
-        }, 700);
+        console.log('[DEBUG] Closing dialog after successful document creation');
+        closeDialogCompletely();
       } catch (closeError) {
         console.error('[DEBUG] Error during dialog close attempts:', closeError);
       }
@@ -1904,6 +1915,43 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       form.setValue("region", regions[0].id);
     }
   }, [regions, form]);
+  
+  // Add an effect for enhanced dialog close handling
+  useEffect(() => {
+    // Handler to help force close the dialog when escape is pressed
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        console.log('[DEBUG] Detected Escape key - forcing dialog close');
+        if (dialogCloseRef.current) {
+          dialogCloseRef.current.click();
+        }
+        onOpenChange(false);
+        onClose();
+      }
+    };
+    
+    // Get any close buttons after render to allow additional close mechanisms
+    const setupCloseHandlers = () => {
+      const closeButtons = document.querySelectorAll('[data-dialog-close="true"], .dialog-close');
+      closeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          console.log('[DEBUG] Dialog close button clicked');
+          onOpenChange(false);
+          onClose();
+        });
+      });
+    };
+    
+    // Setup handlers after a short delay to ensure DOM is ready
+    if (open) {
+      setTimeout(setupCloseHandlers, 100);
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, onOpenChange, onClose]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
