@@ -280,7 +280,19 @@ router.get('/database', async (req: Request, res: Response) => {
     origin, referer, host, ip: req.ip
   })}`, 'healthcheck');
   
-  let dbStatus = {
+  type DbTestError = { test: string; message: string; code: string | undefined };
+  
+  let dbStatus: {
+    postgres: boolean;
+    supabase: boolean;
+    poolConnections: { total: number; idle: number; waiting: number } | null;
+    testQueries: {
+      simple: boolean;
+      documents: boolean;
+      users: boolean;
+    };
+    errors: DbTestError[];
+  } = {
     postgres: false,
     supabase: false,
     poolConnections: null,
@@ -294,7 +306,7 @@ router.get('/database', async (req: Request, res: Response) => {
   
   try {
     // Import database utilities
-    const { pool, supabase, verifyDatabaseConnections } = await import('../../data');
+    const { pool, supabase, verifyDatabaseConnections } = await import('../data/index');
     
     // Verify basic database connectivity
     const connectionStatus = await verifyDatabaseConnections();

@@ -452,6 +452,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Register the healthcheck router (no authentication required)
     log('[Routes] Registering healthcheck routes...');
     app.use('/api/healthcheck', healthcheckRouter);
+    
+    // Register sdegdaefk.gr diagnostic routes (special domain-specific diagnostic endpoints)
+    try {
+      log('[Routes] Registering sdegdaefk.gr diagnostic routes...');
+      // Import using dynamic import for ESM compatibility
+      const sdegdaefkDiagnosticModule = await import('./routes/sdegdaefk-diagnostic');
+      app.use('/api/sdegdaefk-diagnostic', sdegdaefkDiagnosticModule.default);
+      log('[Routes] sdegdaefk.gr diagnostic routes registered successfully');
+    } catch (error) {
+      log(`[Routes] Error registering sdegdaefk.gr diagnostic routes: ${error}`, 'error');
+    }
     log('[Routes] Healthcheck routes registered');
 
     // Diagnostic route to see all registered routes
