@@ -38,9 +38,18 @@ declare module 'express-session' {
   }
 }
 
-// Get session secret from environment
+// Get environment variables and configuration
 const sessionSecret = process.env.SESSION_SECRET || 'your-session-secret-1234567890';
 const isProduction = process.env.NODE_ENV === 'production';
+const cookieDomain = process.env.COOKIE_DOMAIN;
+
+// Log cookie configuration on startup
+if (cookieDomain) {
+  log(`[Auth] Using cookie domain: ${cookieDomain}`, 'auth');
+  log(`[Auth] Cross-domain cookies enabled with SameSite=None and Secure=${isProduction}`, 'auth');
+} else {
+  log(`[Auth] Using default cookie settings (no domain specified) with SameSite=Lax`, 'auth');
+}
 
 // Create PostgreSQL session store
 const PgStore = pgSession(session);
@@ -48,6 +57,7 @@ const PgStore = pgSession(session);
 /**
  * Session Middleware
  * Configures session management with enhanced security settings
+ * With special handling for sdegdaefk.gr cross-domain support
  */
 export const sessionMiddleware = session({
   store: new PgStore({
@@ -61,12 +71,13 @@ export const sessionMiddleware = session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // Set secure cookies in production
+    secure: isProduction, // Set secure cookies in production
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: process.env.COOKIE_DOMAIN ? 'none' : 'lax', // 'none' needed for cross-site cookies
+    sameSite: cookieDomain ? 'none' : 'lax', // 'none' needed for cross-site cookies
     // Set domain conditionally to support sdegdaefk.gr
-    ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {})
-  }
+    ...(cookieDomain ? { domain: cookieDomain } : {})
+  },
+  proxy: true // Trust the proxy to properly handle secure cookies
 });
 
 /**
@@ -240,6 +251,29 @@ export async function setupAuth(app: Express) {
   // Basic login and logout routes for backward compatibility
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
+      // Extract request origin information
+      const origin = req.headers.origin || '';
+      const referer = req.headers.referer || '';
+      const host = req.headers.host || '';
+      
+      // Check if request is from sdegdaefk.gr domain
+      const isSdegdaefkRequest = 
+        origin.includes('sdegdaefk.gr') || 
+        referer.includes('sdegdaefk.gr') || 
+        host.includes('sdegdaefk.gr');
+      
+      // Log detailed login attempt for cross-domain debugging
+      if (isSdegdaefkRequest) {
+        log(`[Auth] Cross-domain login attempt from sdegdaefk.gr: ${JSON.stringify({
+          origin,
+          referer, 
+          host,
+          headers: req.headers,
+          cookies: req.headers.cookie,
+          ip: req.ip
+        })}`, 'auth');
+      }
+      
       const { email, password } = req.body;
       
       if (!email || !password) {
@@ -256,20 +290,41 @@ export async function setupAuth(app: Express) {
       req.session.user = user;
       req.session.createdAt = new Date();
       
-      log(`[Auth] Session created for user: ${email}`, 'auth');
-      
-      // Create user session object to return
-      const sessionUser: AuthenticatedUser = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        units: user.units,
-        department: user.department,
-        telephone: user.telephone
-      };
-      
-      res.status(200).json({ user: sessionUser });
+      // Force session save to ensure cookie is set correctly 
+      req.session.save((err) => {
+        if (err) {
+          log(`[Auth] Error saving session: ${err}`, 'error');
+          return res.status(500).json({ message: 'Session creation failed' });
+        }
+        
+        log(`[Auth] Session created for user: ${email} with ID: ${req.sessionID}`, 'auth');
+        
+        // Create user session object to return
+        const sessionUser: AuthenticatedUser = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          units: user.units,
+          department: user.department,
+          telephone: user.telephone
+        };
+        
+        // For cross-domain requests, log cookie details
+        if (isSdegdaefkRequest) {
+          log(`[Auth] Cross-domain session created with: ${JSON.stringify({
+            sessionID: req.sessionID,
+            cookieDomain: process.env.COOKIE_DOMAIN || 'none set',
+            sameSite: cookieDomain ? 'none' : 'lax',
+            secure: isProduction 
+          })}`, 'auth');
+        }
+        
+        res.status(200).json({ 
+          user: sessionUser,
+          sessionID: req.sessionID // Include session ID in response for debugging
+        });
+      });
     } catch (error) {
       log(`[Auth] Login error: ${error}`, 'error');
       res.status(500).json({ message: 'Login failed', error: String(error) });
