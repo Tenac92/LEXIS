@@ -15,7 +15,16 @@ import bcrypt from 'bcrypt';
 import pgSession from 'connect-pg-simple';
 import { pool } from '../config/db';
 
-export type AuthenticatedUser = Pick<User, 'id' | 'email' | 'name' | 'role' | 'units' | 'department' | 'telephone'>;
+// Define a safer type for authenticated users that ensures required fields
+export type AuthenticatedUser = {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  units?: string[];
+  department?: string;
+  telephone?: string;
+};
 
 export interface AuthenticatedRequest extends Request {
   user?: AuthenticatedUser;
@@ -75,8 +84,20 @@ export const authLimiter = rateLimit({
 /**
  * Authentication Middleware
  * Verifies user session and adds user data to request
+ * Enhanced for cross-domain support with sdegdaefk.gr
  */
 export function authenticateSession(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  // Extract request origin information
+  const origin = req.headers.origin || '';
+  const referer = req.headers.referer || '';
+  const host = req.headers.host || '';
+  
+  // Check if request is from sdegdaefk.gr domain
+  const isSdegdaefkRequest = 
+    origin.includes('sdegdaefk.gr') || 
+    referer.includes('sdegdaefk.gr') || 
+    host.includes('sdegdaefk.gr');
+  
   // Log session information
   log(`[Auth] Checking session: ${JSON.stringify({
     hasSession: !!req.session,
@@ -89,11 +110,37 @@ export function authenticateSession(req: AuthenticatedRequest, res: Response, ne
   })}`, 'auth');
 
   if (!req.session || !req.session.user) {
+    // Different handling for sdegdaefk.gr domain
+    if (isSdegdaefkRequest) {
+      log(`[Auth] Cross-domain auth failed for sdegdaefk.gr: ${JSON.stringify({
+        origin, 
+        referer,
+        host,
+        cookies: req.headers.cookie,
+        sessionID: req.sessionID
+      })}`, 'auth');
+    }
+    
     return res.status(401).json({ message: 'Authentication required' });
   }
 
-  // Set user on request
-  req.user = req.session.user;
+  // Ensure session user has all required fields before assigning to req.user
+  const sessionUser = req.session.user;
+  if (!sessionUser.id || !sessionUser.email || !sessionUser.name || !sessionUser.role) {
+    log(`[Auth] Invalid user object in session: ${JSON.stringify(sessionUser)}`, 'error');
+    return res.status(401).json({ message: 'Invalid session data' });
+  }
+
+  // Set user on request with the required fields
+  req.user = {
+    id: sessionUser.id,
+    email: sessionUser.email,
+    name: sessionUser.name,
+    role: sessionUser.role,
+    units: sessionUser.units,
+    department: sessionUser.department,
+    telephone: sessionUser.telephone
+  };
 
   // Log authenticated user
   log(`[Auth] User authenticated: ${JSON.stringify({
@@ -230,6 +277,27 @@ export async function setupAuth(app: Express) {
   });
   
   app.post('/api/auth/logout', (req: Request, res: Response) => {
+    // Extract request origin information
+    const origin = req.headers.origin || '';
+    const referer = req.headers.referer || '';
+    const host = req.headers.host || '';
+    
+    // Check if request is from sdegdaefk.gr domain
+    const isSdegdaefkRequest = 
+      origin.includes('sdegdaefk.gr') || 
+      referer.includes('sdegdaefk.gr') || 
+      host.includes('sdegdaefk.gr');
+      
+    // Log logout attempt with detailed info for troubleshooting
+    log(`[Auth] Logout attempt: ${JSON.stringify({
+      sessionID: req.sessionID,
+      isSdegdaefkRequest,
+      origin,
+      host,
+      referer,
+      cookies: req.headers.cookie
+    })}`, 'auth');
+    
     req.session.destroy((err) => {
       if (err) {
         log(`[Auth] Logout error: ${err}`, 'error');
@@ -237,7 +305,15 @@ export async function setupAuth(app: Express) {
       }
       
       // Clear the cookie with the same settings used to set it
-      const cookieDomain = process.env.COOKIE_DOMAIN;
+      const cookieDomain = process.env.COOKIE_DOMAIN || (isSdegdaefkRequest ? 'sdegdaefk.gr' : undefined);
+      
+      // Log cookie clearing details
+      log(`[Auth] Clearing cookie with settings: ${JSON.stringify({
+        domain: cookieDomain,
+        sameSite: cookieDomain ? 'none' : 'lax',
+        secure: process.env.NODE_ENV === 'production'
+      })}`, 'auth');
+      
       res.clearCookie('sid', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -261,18 +337,36 @@ export async function setupAuth(app: Express) {
         return res.status(401).json({ message: 'No authenticated user found' });
       }
       
+      // Ensure session user has all required fields
+      const sessionUser = req.session.user;
+      if (!sessionUser.id || !sessionUser.email || !sessionUser.name || !sessionUser.role) {
+        log(`[Auth] Invalid user object in session: ${JSON.stringify(sessionUser)}`, 'error');
+        return res.status(401).json({ message: 'Invalid session data' });
+      }
+      
+      // Create a proper authenticated user object
+      const user: AuthenticatedUser = {
+        id: sessionUser.id,
+        email: sessionUser.email,
+        name: sessionUser.name,
+        role: sessionUser.role,
+        units: sessionUser.units,
+        department: sessionUser.department,
+        telephone: sessionUser.telephone
+      };
+      
       // Set user on request
-      req.user = req.session.user;
+      req.user = user;
       
       // Log authenticated user
       log(`[Auth] Returning current user: ${JSON.stringify({
-        id: req.user.id,
-        role: req.user.role,
+        id: user.id,
+        role: user.role,
         sessionID: req.sessionID,
         ip: req.ip
       })}`, 'auth');
       
-      res.status(200).json({ user: req.user });
+      res.status(200).json({ user });
     } catch (error) {
       log(`[Auth] Error retrieving user: ${error}`, 'error');
       res.status(500).json({ message: 'Error retrieving user data', error: String(error) });
