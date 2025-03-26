@@ -320,12 +320,13 @@ router.post('/:id/reject', authenticateSession, async (req: AuthRequest, res: Re
       status: 'success',
       message: 'Notification rejected successfully'
     });
-  } catch (error) {
-    console.error('[BudgetNotificationsController] Unexpected error in reject endpoint:', error);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[BudgetNotificationsController] Unexpected error in reject endpoint:', errorMessage);
     return res.status(500).json({
       status: 'error',
       message: 'An unexpected error occurred',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: errorMessage
     });
   }
 });
