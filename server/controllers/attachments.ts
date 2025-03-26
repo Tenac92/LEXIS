@@ -1,263 +1,190 @@
 import { Router } from "express";
-import { authenticateToken } from "../middleware/authMiddleware";
-import { supabase } from "../data"; // Import from the unified data layer
 import type { Request, Response } from "express";
+import { supabase } from "../config/db";
+
+/**
+ * Attachments Controller
+ * Provides API endpoints for fetching document attachment requirements
+ * based on expenditure type and installment number
+ */
 
 const router = Router();
 
-// Add a default route that returns generic attachments
-router.get('/', async (req: Request, res: Response) => {
-  // Note: We removed the authenticateToken middleware to prevent auth errors during document creation
-  console.log('[Attachments] Default attachments route accessed');
+// Define fallback attachments if database fails
+const DEFAULT_ATTACHMENTS = ['Διαβιβαστικό', 'ΔΚΑ'];
+
+/**
+ * Map Greek letters to installment numbers
+ */
+const INSTALLMENT_MAP: Record<string, number> = {
+  'α': 1, 'a': 1, 'first': 1, 'πρώτη': 1,
+  'β': 2, 'b': 2, 'second': 2, 'δεύτερη': 2,
+  'γ': 3, 'c': 3, 'third': 3, 'τρίτη': 3,
+  'δ': 4, 'd': 4, 'fourth': 4, 'τέταρτη': 4,
+};
+
+/**
+ * Parse installment parameter to numeric value
+ * @param installment - The installment parameter
+ * @returns Parsed installment number (defaults to 1)
+ */
+function parseInstallment(installment: string | undefined): number {
+  if (!installment || installment === 'undefined' || installment === 'null') {
+    return 1;
+  }
+  
+  // Try to parse as number first
+  const parsed = parseInt(installment);
+  if (!isNaN(parsed) && parsed > 0) {
+    return parsed;
+  }
+  
+  // Try to match against known formats
+  const normalized = installment.toLowerCase();
+  return INSTALLMENT_MAP[normalized] || 1;
+}
+
+/**
+ * Fetch attachments for a specific expenditure type and installment
+ * @param expenditureType - The expenditure type
+ * @param installment - The installment number
+ * @returns Attachments data
+ */
+async function fetchAttachments(expenditureType: string, installment: number) {
+  console.log(`[Attachments] Fetching attachments for type: ${expenditureType}, installment: ${installment}`);
   
   try {
-    // Return default attachments
+    // Try to fetch specific attachments for this expenditure type
+    const { data, error } = await supabase
+      .from('attachments')
+      .select('*')
+      .eq('expenditure_type', expenditureType)
+      .eq('installment', installment)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      console.error('[Attachments] Database error:', error);
+    }
+    
+    // Return specific attachments if found
+    if (data?.attachments?.length) {
+      return { 
+        status: 'success',
+        attachments: data.attachments 
+      };
+    }
+    
+    // Try to fetch default attachments
+    console.log(`[Attachments] No specific attachments found for ${expenditureType}, using defaults`);
+    const { data: defaultData, error: defaultError } = await supabase
+      .from('attachments')
+      .select('*')
+      .eq('expenditure_type', 'default')
+      .eq('installment', 1)
+      .single();
+    
+    if (defaultError) {
+      console.error('[Attachments] Error fetching default attachments:', defaultError);
+    }
+    
+    // Return default attachments if found
+    if (defaultData?.attachments?.length) {
+      return { 
+        status: 'success',
+        attachments: defaultData.attachments 
+      };
+    }
+    
+    // Return empty attachments with message if nothing found
+    return { 
+      status: 'success',
+      message: 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.',
+      attachments: DEFAULT_ATTACHMENTS
+    };
+    
+  } catch (error) {
+    console.error('[Attachments] Error in fetchAttachments:', error);
+    // Return fallback attachments on error
+    return { 
+      status: 'success',
+      attachments: DEFAULT_ATTACHMENTS
+    };
+  }
+}
+
+/**
+ * GET /api/attachments
+ * Return default attachments list
+ */
+router.get('/', async (_req: Request, res: Response) => {
+  try {
+    const result = await fetchAttachments('default', 1);
+    res.json(result);
+  } catch (error) {
+    console.error('[Attachments] Error in default route:', error);
     res.json({
       status: 'success',
-      attachments: ['Διαβιβαστικό', 'ΔΚΑ', 'Πρακτικό παραλαβής', 'Τιμολόγιο']
-    });
-  } catch (error) {
-    console.error('[Attachments] Error in default attachments route:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Error fetching default attachments',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      attachments: DEFAULT_ATTACHMENTS
     });
   }
 });
 
-// Add a route for just the type without installment
+/**
+ * GET /api/attachments/:type
+ * Return attachments for a specific expenditure type (using default installment 1)
+ */
 router.get('/:type', async (req: Request, res: Response) => {
-  // Note: We removed the authenticateToken middleware to prevent auth errors during document creation
-  console.log(`[Attachments] Request received for type route: ${req.params.type}, query:`, req.query);
   try {
     const { type } = req.params;
     
     if (!type) {
-      console.log('[Attachments] Missing expenditure type in request params');
       return res.status(400).json({ 
         status: 'error',
         message: 'Expenditure type is required' 
       });
     }
-
+    
     const decodedType = decodeURIComponent(type).trim();
-    console.log(`[Attachments] Fetching attachments for type: ${decodedType}, default installment`);
-    
-    // Default to installment 1
-    const parsedInstallment = 1;
-    
-    try {
-      const { data, error } = await supabase
-        .from('attachments')
-        .select('*')
-        .eq('expenditure_type', decodedType)
-        .eq('installment', parsedInstallment)
-        .single();
-      
-      console.log(`[Attachments] Database query result:`, { data, error });
-      
-      if (error && error.code !== 'PGRST116') {
-        console.error('[Attachments] Database error:', error);
-        // Continue instead of returning an error
-      }
-      
-      // Get default attachments if no specific ones found
-      if (!data?.attachments?.length) {
-        console.log(`[Attachments] No specific attachments found for ${decodedType}, using defaults`);
-        
-        try {
-          const { data: defaultData, error: defaultError } = await supabase
-            .from('attachments')
-            .select('*')
-            .eq('expenditure_type', 'default')
-            .eq('installment', 1)
-            .single();
-            
-          console.log(`[Attachments] Default attachments query result:`, { data: defaultData, error: defaultError });
-          
-          if (defaultError || !defaultData?.attachments?.length) {
-            console.log(`[Attachments] No default attachments found, using hardcoded values`);
-            return res.json({
-              status: 'success',
-              attachments: ['Διαβιβαστικό', 'ΔΚΑ']
-            });
-          }
-          
-          console.log(`[Attachments] Using default attachments:`, defaultData.attachments);
-          return res.json({
-            status: 'success',
-            attachments: defaultData.attachments
-          });
-        } catch (defaultError) {
-          console.error(`[Attachments] Error fetching default attachments:`, defaultError);
-          console.error(`[Attachments] Error stack:`, defaultError instanceof Error ? defaultError.stack : 'No stack available');
-          
-          // Return hardcoded defaults
-          return res.json({
-            status: 'success',
-            attachments: ['Διαβιβαστικό', 'ΔΚΑ']
-          });
-        }
-      }
-      
-      console.log(`[Attachments] Returning attachments for ${decodedType}:`, data.attachments);
-      return res.json({
-        status: 'success',
-        attachments: data.attachments
-      });
-    } catch (dbError) {
-      console.error(`[Attachments] Database operation error:`, dbError);
-      console.error(`[Attachments] Error stack:`, dbError instanceof Error ? dbError.stack : 'No stack available');
-      
-      // Return hardcoded defaults
-      return res.json({
-        status: 'success',
-        attachments: ['Διαβιβαστικό', 'ΔΚΑ']
-      });
-    }
+    const result = await fetchAttachments(decodedType, 1);
+    res.json(result);
     
   } catch (error) {
-    console.error('[Attachments] Error fetching attachments:', error);
-    console.error('[Attachments] Error stack:', error instanceof Error ? error.stack : 'No stack available');
-    console.error('[Attachments] Error details:', JSON.stringify(error, null, 2));
-    
-    // Return a successful response with default attachments to prevent UI errors
-    return res.json({
+    console.error('[Attachments] Error in type route:', error);
+    res.json({
       status: 'success',
-      attachments: ['Διαβιβαστικό', 'ΔΚΑ']
+      attachments: DEFAULT_ATTACHMENTS
     });
   }
 });
 
+/**
+ * GET /api/attachments/:type/:installment
+ * Return attachments for a specific expenditure type and installment
+ */
 router.get('/:type/:installment', async (req: Request, res: Response) => {
-  // Note: We removed the authenticateToken middleware to prevent auth errors during document creation
-  console.log(`[Attachments] Request received for type: ${req.params.type}, installment: ${req.params.installment}, query:`, req.query);
   try {
     const { type, installment } = req.params;
     
     if (!type) {
-      console.log('[Attachments] Missing expenditure type in request');
       return res.status(400).json({ 
         status: 'error',
         message: 'Expenditure type is required' 
       });
     }
-
+    
     const decodedType = decodeURIComponent(type).trim();
+    const parsedInstallment = parseInstallment(installment);
     
-    // Be more flexible with installment format
-    let parsedInstallment: number;
+    console.log(`[Attachments] Request received for type: ${decodedType}, parsed installment: ${parsedInstallment}`);
     
-    if (!installment || installment === 'undefined' || installment === 'null') {
-      // Default to installment 1 if not provided
-      parsedInstallment = 1;
-      console.log(`[Attachments] Using default installment (1) for type: ${decodedType}`);
-    } else {
-      parsedInstallment = parseInt(installment);
-      
-      if (isNaN(parsedInstallment)) {
-        // Try to parse the installment from other formats
-        if (installment.toLowerCase() === 'first' || installment.toLowerCase() === 'πρώτη' || installment === 'Α') {
-          parsedInstallment = 1;
-        } else if (installment.toLowerCase() === 'second' || installment.toLowerCase() === 'δεύτερη' || installment === 'Β') {
-          parsedInstallment = 2;
-        } else if (installment.toLowerCase() === 'third' || installment.toLowerCase() === 'τρίτη' || installment === 'Γ') {
-          parsedInstallment = 3;
-        } else {
-          // Still couldn't parse it, default to 1
-          parsedInstallment = 1;
-          console.log(`[Attachments] Falling back to default installment (1) for type: ${decodedType}, received: ${installment}`);
-        }
-      }
-    }
+    const result = await fetchAttachments(decodedType, parsedInstallment);
+    res.json(result);
     
-    // Ensure we have a valid positive integer
-    if (parsedInstallment < 1) {
-      parsedInstallment = 1;
-    }
-    
-    console.log(`[Attachments] Fetching attachments for type: ${decodedType}, installment: ${parsedInstallment}`);
-  
-    try {
-      const { data, error } = await supabase
-        .from('attachments')
-        .select('*')
-        .eq('expenditure_type', decodedType)
-        .eq('installment', parsedInstallment)
-        .single();
-
-      console.log(`[Attachments] Database query result:`, { data, error });
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('[Attachments] Database error:', error);
-        // Continue instead of returning an error to avoid UI failures
-      }
-
-      // Get default attachments if no specific ones found
-      if (!data?.attachments?.length) {
-        console.log(`[Attachments] No specific attachments found for ${decodedType}, using defaults`);
-        
-        try {
-          const { data: defaultData, error: defaultError } = await supabase
-            .from('attachments')
-            .select('*')
-            .eq('expenditure_type', 'default')
-            .eq('installment', 1)
-            .single();
-            
-          console.log(`[Attachments] Default attachments query result:`, { data: defaultData, error: defaultError });
-
-          // If there's an error or no default attachments found, return a standard set
-          if (defaultError || !defaultData?.attachments?.length) {
-            console.log(`[Attachments] No attachments found for this expenditure type.`);
-            
-            return res.json({
-              status: 'success',
-              message: 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.',
-              attachments: []
-            });
-          }
-
-          console.log(`[Attachments] Using default attachments from database:`, defaultData.attachments);
-          return res.json({
-            status: 'success',
-            attachments: defaultData.attachments
-          });
-        } catch (defaultError) {
-          console.error(`[Attachments] Error fetching default attachments:`, defaultError);
-          return res.json({
-            status: 'success',
-            attachments: ['Διαβιβαστικό', 'ΔΚΑ']
-          });
-        }
-      }
-
-      console.log(`[Attachments] Returning attachments for ${decodedType}:`, data.attachments);
-      res.json({
-        status: 'success',
-        attachments: data.attachments
-      });
-    } catch (dbError) {
-      console.error(`[Attachments] Database operation error:`, dbError);
-      console.error(`[Attachments] Error stack:`, dbError instanceof Error ? dbError.stack : 'No stack available');
-      
-      // Return a successful response with default attachments to prevent UI errors
-      return res.json({
-        status: 'success',
-        attachments: ['Διαβιβαστικό', 'ΔΚΑ']
-      });
-    }
-
   } catch (error) {
-    console.error('[Attachments] Error fetching attachments:', error);
-    console.error('[Attachments] Error stack:', error instanceof Error ? error.stack : 'No stack available');
-    console.error('[Attachments] Error details:', JSON.stringify(error, null, 2));
-    
-    // Return a successful response with default attachments to prevent UI errors
-    return res.json({
+    console.error('[Attachments] Error processing request:', error);
+    res.json({
       status: 'success',
-      attachments: ['Διαβιβαστικό', 'ΔΚΑ']
+      attachments: DEFAULT_ATTACHMENTS
     });
   }
 });
