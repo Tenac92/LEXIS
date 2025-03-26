@@ -337,8 +337,8 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
       role: req.body.role,
       units: req.body.units,
       telephone: req.body.telephone,
-      department: req.body.department,
-      updated_at: new Date()
+      department: req.body.department
+      // removed updated_at as it's causing errors with the schema
     };
     
     // Only update password if it's provided
