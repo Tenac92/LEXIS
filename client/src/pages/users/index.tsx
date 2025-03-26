@@ -35,6 +35,7 @@ import * as z from "zod";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -53,17 +54,34 @@ interface User {
   department?: string;
 }
 
-const userSchema = z.object({
+// Base schema for user data validation
+const baseUserSchema = {
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.string().min(1, "Role is required"),
   units: z.array(z.string()).optional(),
   telephone: z.string().optional(),
   department: z.string().optional(),
+};
+
+// Schema for creating a new user (password required)
+const createUserSchema = z.object({
+  ...baseUserSchema,
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-type UserFormData = z.infer<typeof userSchema>;
+// Schema for editing an existing user (password optional)
+const editUserSchema = z.object({
+  ...baseUserSchema,
+  password: z.string().optional(),
+  id: z.number(),
+});
+
+// Default schema for the form
+const userSchema = createUserSchema;
+
+type UserFormData = z.infer<typeof createUserSchema>;
+type EditUserFormData = z.infer<typeof editUserSchema>;
 
 export default function UsersPage() {
   const { toast } = useToast();
@@ -584,6 +602,222 @@ export default function UsersPage() {
                 </Button>
                 <Button type="submit" disabled={createUserMutation.isPending}>
                   {createUserMutation.isPending ? "Creating..." : "Create User"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editUserDialogOpen} onOpenChange={setEditUserDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update the user details below
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="user@example.com" autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="password" 
+                        placeholder="Leave empty to keep current password" 
+                        autoComplete="new-password" 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <FormDescription>
+                      Leave blank to keep the current password
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="units"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Units</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        const currentUnits = field.value || [];
+                        const newUnits = currentUnits.includes(value)
+                          ? currentUnits.filter(unit => unit !== value)
+                          : [...currentUnits, value];
+                        field.onChange(newUnits);
+                      }}
+                      defaultValue={field.value?.[0]}
+                      multiple
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select units">
+                            {field.value?.length 
+                              ? `${field.value.length} units selected` 
+                              : "Select units"}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 border rounded flex items-center justify-center ${
+                                field.value?.includes(unit.id) ? "bg-primary" : ""
+                              }`}>
+                                {field.value?.includes(unit.id) && "✓"}
+                              </div>
+                              {unit.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="telephone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telephone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter telephone number" autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => {
+                  const selectedUnitIds = form.watch('units') || [];
+                  const { data: departments = [] } = useQuery({
+                    queryKey: ['departments', selectedUnitIds],
+                    queryFn: async () => {
+                      if (selectedUnitIds.length === 0) return [];
+                      
+                      // Find the full unit objects from their IDs
+                      const selectedUnitNames = units
+                        .filter(unit => selectedUnitIds.includes(unit.id))
+                        .map(unit => unit.name);
+                        
+                      // Now use the unit names to fetch departments
+                      const params = new URLSearchParams();
+                      selectedUnitNames.forEach(unitName => params.append('units', unitName));
+                      const response = await fetch(`/api/users/units/parts?${params}`);
+                      if (!response.ok) throw new Error('Failed to fetch departments');
+                      return response.json();
+                    },
+                    enabled: selectedUnitIds.length > 0
+                  });
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      {departments.length > 0 ? (
+                        <>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select department" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {departments.map((dept) => (
+                                <SelectItem key={dept} value={dept}>
+                                  {dept}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </>
+                      ) : (
+                        <div className="text-sm text-muted-foreground mt-1">
+                          The selected units don't have any associated departments. This field will be left empty.
+                        </div>
+                      )}
+                    </FormItem>
+                  );
+                }}
+              />
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditUserDialogOpen(false)}
+                  type="button"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateUserMutation.isPending}>
+                  {updateUserMutation.isPending ? "Updating..." : "Update User"}
                 </Button>
               </DialogFooter>
             </form>

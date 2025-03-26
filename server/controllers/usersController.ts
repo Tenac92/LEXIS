@@ -306,6 +306,79 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
   }
 });
 
+// Update user
+router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    console.log('[Users] Update request received for user ID:', req.params.id);
+    
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    // Convert id to number since IDs are stored as numbers in the database
+    const userId = parseInt(req.params.id, 10);
+    
+    // Check if user exists before update
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('id', userId)
+      .single();
+      
+    if (checkError || !existingUser) {
+      console.error('[Users] User not found:', checkError || 'No user with that ID');
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Prepare update data
+    const updateData: Record<string, any> = {
+      name: req.body.name,
+      email: req.body.email,
+      role: req.body.role,
+      units: req.body.units,
+      telephone: req.body.telephone,
+      department: req.body.department,
+      updated_at: new Date()
+    };
+    
+    // Only update password if it's provided
+    if (req.body.password && req.body.password.trim() !== '') {
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+      updateData.password = hashedPassword;
+    }
+    
+    // Update the user with extra logging
+    console.log('[Users] Updating user with ID:', userId);
+    const { error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', userId);
+
+    if (error) {
+      console.error('[Users] Supabase update error:', error);
+      throw error;
+    }
+
+    console.log('[Users] User updated successfully, ID:', userId);
+    res.status(200).json({ 
+      message: 'User updated successfully',
+      user: {
+        id: userId,
+        email: req.body.email,
+        name: req.body.name,
+        role: req.body.role
+      }
+    });
+  } catch (error) {
+    console.error('[Users] User update error:', error);
+    res.status(500).json({ 
+      message: 'Failed to update user',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Delete user
 router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
