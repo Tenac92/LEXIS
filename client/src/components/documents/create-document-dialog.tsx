@@ -1173,16 +1173,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
       console.log('Sending payload to create document:', payload);
 
-      // Try testing the route with our test endpoint first
-      try {
-        const testResponse = await apiRequest('/api/test-route', {
-          method: 'GET'
-        });
-        console.log('Test route response:', testResponse);
-      } catch (testError) {
-        console.error('Test route failed:', testError);
-      }
-      
       // Attempt document creation with v2 API endpoint
       try {
         // Prepare enhanced payload with project MIS
@@ -1205,38 +1195,43 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         }
         
         console.log('Document created successfully with ID:', response.id);
+
+        // Invalidate queries and show success message before returning
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["documents"] }),
+          queryClient.invalidateQueries({ queryKey: ["budget"] }),
+          queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] }),
+          queryClient.invalidateQueries({
+            queryKey: ["budget-validation", projectForSubmission.mis, totalAmount]
+          })
+        ]);
+
+        toast({
+          title: "Επιτυχία",
+          description: "Το έγγραφο δημιουργήθηκε επιτυχώς"
+        });
+
+        // Reset form and close dialog
+        form.reset();
+        setCurrentStep(0);
+        
+        // Force close the dialog
+        onClose();
+        onOpenChange(false);
+        
+        if (dialogCloseRef.current) {
+          dialogCloseRef.current.click();
+        }
+        
+        // Return response after dialog closing logic
         return response;
       } catch (error) {
         console.error('Document creation failed:', error);
         throw new Error(error instanceof Error ? error.message : 'Αποτυχία δημιουργίας εγγράφου. Παρακαλώ προσπαθήστε ξανά αργότερα.');
       }
 
-      // Response validation is already performed in the document creation try-catch block above
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["documents"] }),
-        queryClient.invalidateQueries({ queryKey: ["budget"] }),
-        queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] }),
-        queryClient.invalidateQueries({
-          queryKey: ["budget-validation", projectForSubmission.mis, totalAmount]
-        })
-      ]);
-
-      toast({
-        title: "Επιτυχία",
-        description: "Το έγγραφο δημιουργήθηκε επιτυχώς"
-      });
-
-      form.reset();
-      setCurrentStep(0);
-      
-      // Close the dialog using the dedicated helper function
-      try {
-        console.log('Closing dialog after successful document creation');
-        closeDialogCompletely();
-      } catch (closeError) {
-        console.error('Error during dialog close attempts:', closeError);
-      }
+      // Nothing needed here as the document creation logic
+      // and dialog closing are all handled in the try-catch block above
     } catch (error) {
       console.error('Document creation error:', error);
       toast({

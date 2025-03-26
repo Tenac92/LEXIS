@@ -16,13 +16,44 @@ export function useWebSocketUpdates() {
       try {
         // Get the correct websocket URL based on current location
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
-
+        // Ensure we have a valid host - use current window host
+        const host = window.location.host || document.location.host;
+        
+        if (!host) {
+          console.error('[WebSocket] Cannot connect: No valid host detected');
+          return;
+        }
+        
+        const wsUrl = `${protocol}//${host}/ws`;
         console.log('[WebSocket] Attempting to connect:', wsUrl);
 
-        const ws = new WebSocket(wsUrl, ['notifications']);
-        wsRef.current = ws;
+        // Add error handling to WebSocket constructor
+        let ws: WebSocket;
+        try {
+          ws = new WebSocket(wsUrl, ['notifications']);
+          wsRef.current = ws;
+        } catch (wsError) {
+          console.error('[WebSocket] Failed to create WebSocket connection:', wsError);
+          setIsConnected(false);
+          
+          // Don't attempt immediate reconnect on constructor error to avoid infinite loops
+          if (retryCount < MAX_RETRIES) {
+            const timeout = Math.min(1000 * Math.pow(2, retryCount), 10000);
+            console.log(`[WebSocket] Will retry in ${timeout}ms after constructor error`);
+            
+            if (reconnectTimeoutRef.current) {
+              clearTimeout(reconnectTimeoutRef.current);
+            }
+            
+            reconnectTimeoutRef.current = window.setTimeout(() => {
+              retryCount++;
+              connect();
+            }, timeout);
+          }
+          return;
+        }
 
+        // Now that we have a valid ws object, set up event handlers
         ws.onopen = () => {
           console.log('[WebSocket] Connected successfully');
           setIsConnected(true);
