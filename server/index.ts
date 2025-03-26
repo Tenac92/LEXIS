@@ -7,6 +7,7 @@ import { errorMiddleware } from "./middleware/errorMiddleware";
 import { securityHeaders } from "./middleware/securityHeaders";
 import { setupAuth, sessionMiddleware } from './auth';
 import corsMiddleware from './middleware/corsMiddleware';
+import { geoIpRestriction } from './middleware/geoIpMiddleware';
 import { createWebSocketServer } from './websocket';
 import { supabase } from './config/db';
 
@@ -68,6 +69,10 @@ async function startServer() {
     // Apply CORS middleware for sdegdaefk.gr
     app.use(corsMiddleware);
     console.log('[Startup] CORS middleware for sdegdaefk.gr applied');
+    
+    // Apply GeoIP restriction middleware to limit access to Greece only
+    app.use(geoIpRestriction);
+    console.log('[Startup] GeoIP restriction middleware applied (Greece only)');
 
     // Body parsing middleware with size limits
     app.use(express.json({ limit: '10mb' }));

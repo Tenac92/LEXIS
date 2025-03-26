@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import geoip from 'geoip-lite';
 
 export const router = Router();
 
@@ -57,6 +58,57 @@ router.get('/cors-test', (req: Request, res: Response) => {
       'Access-Control-Allow-Methods': res.getHeader('Access-Control-Allow-Methods'),
       'Access-Control-Allow-Headers': res.getHeader('Access-Control-Allow-Headers'),
       'Access-Control-Allow-Credentials': res.getHeader('Access-Control-Allow-Credentials')
+    }
+  };
+  
+  res.status(200).json(response);
+});
+
+/**
+ * GeoIP restriction test endpoint
+ * GET /api/healthcheck/geoip-test
+ * 
+ * This endpoint tests the GeoIP restriction functionality
+ */
+router.get('/geoip-test', (req: Request, res: Response) => {
+  // Extract client IP
+  let clientIp = 
+    req.headers['x-forwarded-for'] || 
+    req.socket.remoteAddress || 
+    req.ip || 'Unknown IP';
+  
+  // If x-forwarded-for contains multiple IPs, take the first one
+  if (typeof clientIp === 'string' && clientIp.includes(',')) {
+    clientIp = clientIp.split(',')[0].trim();
+  }
+
+  // Get GeoIP data if available
+  let geoData = null;
+  try {
+    geoData = geoip.lookup(clientIp as string);
+  } catch (error) {
+    console.error('Error performing GeoIP lookup:', error);
+  }
+
+  const response = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    message: 'GeoIP restriction test endpoint',
+    clientInfo: {
+      ip: clientIp,
+      headers: {
+        'x-forwarded-for': req.headers['x-forwarded-for'],
+        'x-real-ip': req.headers['x-real-ip'],
+        'referer': req.headers.referer,
+        'origin': req.headers.origin,
+        'user-agent': req.headers['user-agent']
+      }
+    },
+    geoIpData: geoData || 'GeoIP data not available',
+    restrictionConfig: {
+      allowedCountries: ['GR'],
+      exemptDomains: ['sdegdaefk.gr', 'replit.app', 'replit.dev', 'repl.co'],
+      ipWhitelistExample: ['127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
     }
   };
   
