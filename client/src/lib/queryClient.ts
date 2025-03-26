@@ -52,6 +52,19 @@ export async function apiRequest<T = unknown>(
       }
     }
 
+    // Special handling for DELETE requests that might return empty responses
+    if (options.method === 'DELETE') {
+      try {
+        // Try to parse JSON, but if it fails, return empty object
+        const data = await response.json();
+        return data;
+      } catch (jsonError) {
+        console.log("[API] DELETE request returned non-JSON response, returning empty object");
+        return {} as T;
+      }
+    }
+    
+    // Regular JSON response
     const data = await response.json();
     return data;
   } catch (error) {
