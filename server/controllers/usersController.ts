@@ -181,9 +181,9 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 
     const { email, name, password, role, units, department, telephone } = req.body;
 
-    // Validate required fields
-    const requiredFields = { email, name, password, role, units, department };
-    const missingFields = Object.entries(requiredFields)
+    // Validate required fields (department conditionally required)
+    const basicFields = { email, name, password, role, units };
+    const missingFields = Object.entries(basicFields)
       .filter(([_, value]) => !value)
       .map(([key]) => key);
 
@@ -234,12 +234,13 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     // Use validUnits instead of unitData for the next steps
     const unitData = validUnits;
 
-    // Verify department exists in units' parts
+    // Verify department exists in units' parts, if department is provided
     const allParts = Array.from(new Set(
       unitData.flatMap(unit => Object.values(unit.parts || {}))
     ));
 
-    if (!allParts.includes(department)) {
+    // Only validate department if it's provided and there are parts available
+    if (department && allParts.length > 0 && !allParts.includes(department)) {
       console.error('[Users] Invalid department:', department, 'Available parts:', allParts);
       return res.status(400).json({
         message: 'Selected department is not valid for the selected units',
@@ -262,19 +263,26 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Create user
+    // Create user - department is optional
     console.log('[Users] Creating new user:', { email, name, role, units, department });
+    
+    const userData = {
+      email,
+      name,
+      role,
+      password: hashedPassword,
+      units,
+      telephone: telephone || null
+    };
+    
+    // Only add department if it's provided
+    if (department) {
+      Object.assign(userData, { department });
+    }
+    
     const { data: newUser, error } = await supabase
       .from('users')
-      .insert([{
-        email,
-        name,
-        role,
-        password: hashedPassword,
-        units, 
-        department,
-        telephone: telephone || null
-      }])
+      .insert([userData])
       .select('id, email, name, role, units, department, telephone')
       .single();
 
