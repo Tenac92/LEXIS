@@ -135,10 +135,34 @@ export default function UsersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: number) => {
-      // apiRequest already handles response parsing and error handling
-      return await apiRequest(`/api/users/${userId}`, {
-        method: "DELETE"
+      console.log("[Users] Attempting to delete user with ID:", userId);
+      
+      // Directly use fetch with error handling to have more control over errors
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        }
       });
+      
+      // Handle non-successful responses
+      if (!response.ok) {
+        const text = await response.text();
+        let error;
+        try {
+          // Try to parse error as JSON
+          const data = JSON.parse(text);
+          error = new Error(data.message || `Delete failed with status ${response.status}`);
+        } catch (e) {
+          // If parsing fails, use the text as is
+          error = new Error(text || `Delete failed with status ${response.status}`);
+        }
+        throw error;
+      }
+      
+      // Should reach here only if response was OK
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -149,9 +173,10 @@ export default function UsersPage() {
       setIsDeleteDialogOpen(false);
     },
     onError: (error: Error) => {
+      console.error("[Users] Delete error:", error);
       toast({
         title: "Delete Failed",
-        description: error.message,
+        description: error.message || "An error occurred when deleting the user",
         variant: "destructive",
       });
     },

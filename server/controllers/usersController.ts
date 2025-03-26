@@ -412,14 +412,22 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
 
     if (error) {
       console.error('[Users] Supabase deletion error:', error);
-      throw error;
+      return res.status(500).json({ 
+        success: false,
+        message: 'Failed to delete user', 
+        error: error.message 
+      });
     }
 
     console.log('[Users] User deleted successfully, ID:', userId);
-    res.status(200).json({ message: 'User deleted successfully' });
+    return res.status(200).json({ 
+      success: true,
+      message: 'User deleted successfully'
+    });
   } catch (error) {
     console.error('[Users] User deletion error:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
+      success: false,
       message: 'Failed to delete user',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
