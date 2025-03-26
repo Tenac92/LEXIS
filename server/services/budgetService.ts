@@ -264,7 +264,7 @@ export class BudgetService {
     }
   }
 
-  static async updateBudget(mis: string, amount: number, userId: number): Promise<BudgetResponse> {
+  static async updateBudget(mis: string, amount: number, userId: number, documentId?: number, changeReason?: string): Promise<BudgetResponse> {
     try {
       if (!mis || isNaN(amount) || amount <= 0 || !userId) {
         return {
@@ -273,7 +273,7 @@ export class BudgetService {
         };
       }
 
-      console.log(`[BudgetService] Updating budget for MIS: ${mis}, amount: ${amount}, userId: ${userId}`);
+      console.log(`[BudgetService] Updating budget for MIS: ${mis}, amount: ${amount}, userId: ${userId}, documentId: ${documentId || 'none'}`);
 
       // Try to get current budget data
       let { data: budgetData, error: fetchError } = await supabase
@@ -312,6 +312,27 @@ export class BudgetService {
       if (fetchError || !budgetData) {
         console.log(`[BudgetService] Budget not found for MIS: ${mis} after lookup attempts`);
         
+        // Even though we couldn't find the budget, log the attempted operation in budget_history
+        try {
+          await supabase
+            .from('budget_history')
+            .insert({
+              mis,
+              previous_amount: '0',
+              new_amount: '0',
+              change_type: documentId ? 'document_creation' : 'manual_adjustment',
+              change_reason: changeReason || 'Budget update attempted but no budget record found',
+              document_id: documentId || null,
+              created_by: userId,
+              metadata: {
+                error: 'Budget record not found',
+                attempted_deduction: amount
+              }
+            });
+        } catch (historyError) {
+          console.error('[BudgetService] Failed to create history entry for missing budget:', historyError);
+        }
+        
         return {
           status: 'warning',
           message: 'Budget not found, but update is allowed without budget tracking',
@@ -331,19 +352,27 @@ export class BudgetService {
       // Parse current values
       const currentUserView = parseFloat(budgetData.user_view?.toString() || '0');
       const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+      const currentKatanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+      const total_spent = parseFloat(budgetData.total_spent?.toString() || '0');
 
       // Get current quarter
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth() + 1;
       const quarterKey = `q${Math.ceil(currentMonth / 3)}` as 'q1' | 'q2' | 'q3' | 'q4';
 
-      // Parse current quarter value
+      // Parse current quarter values
+      const currentQ1 = parseFloat(budgetData.q1?.toString() || '0');
+      const currentQ2 = parseFloat(budgetData.q2?.toString() || '0');
+      const currentQ3 = parseFloat(budgetData.q3?.toString() || '0');
+      const currentQ4 = parseFloat(budgetData.q4?.toString() || '0');
       const currentQuarterValue = parseFloat(budgetData[quarterKey]?.toString() || '0');
 
       // Calculate new amounts
       const newUserView = Math.max(0, currentUserView - amount);
       const newEthsiaPistosi = Math.max(0, currentEthsiaPistosi - amount);
       const newQuarterValue = Math.max(0, currentQuarterValue - amount);
+      const newKatanomesEtous = Math.max(0, currentKatanomesEtous - amount);
+      const newTotalSpent = total_spent + amount;
 
       // Update budget amounts
       const { error: updateError } = await supabase
@@ -351,7 +380,9 @@ export class BudgetService {
         .update({
           user_view: newUserView.toString(),
           ethsia_pistosi: newEthsiaPistosi.toString(),
+          katanomes_etous: newKatanomesEtous.toString(),
           [quarterKey]: newQuarterValue.toString(),
+          total_spent: newTotalSpent.toString(),
           updated_at: new Date().toISOString()
         })
         .eq('mis', mis);
@@ -360,22 +391,53 @@ export class BudgetService {
         throw updateError;
       }
 
-      // Create budget history entry
-      await supabase
+      // Create a detailed budget history entry
+      const historyEntry = {
+        mis,
+        previous_amount: currentUserView.toString(),
+        new_amount: newUserView.toString(),
+        change_type: documentId ? 'document_creation' : 'manual_adjustment',
+        change_reason: changeReason || (documentId ? 'Document creation reduced available budget' : 'Manual budget adjustment'),
+        document_id: documentId || null,
+        created_by: userId,
+        metadata: {
+          quarters: {
+            q1: { previous: currentQ1, new: quarterKey === 'q1' ? newQuarterValue : currentQ1 },
+            q2: { previous: currentQ2, new: quarterKey === 'q2' ? newQuarterValue : currentQ2 },
+            q3: { previous: currentQ3, new: quarterKey === 'q3' ? newQuarterValue : currentQ3 },
+            q4: { previous: currentQ4, new: quarterKey === 'q4' ? newQuarterValue : currentQ4 }
+          },
+          active_quarter: quarterKey,
+          previous: {
+            ethsia_pistosi: currentEthsiaPistosi,
+            katanomes_etous: currentKatanomesEtous,
+            user_view: currentUserView,
+            total_spent: total_spent
+          },
+          new: {
+            ethsia_pistosi: newEthsiaPistosi,
+            katanomes_etous: newKatanomesEtous,
+            user_view: newUserView,
+            total_spent: newTotalSpent
+          },
+          amount_deducted: amount,
+          timestamp: new Date().toISOString()
+        }
+      };
+
+      console.log(`[BudgetService] Creating detailed budget history entry for MIS ${mis}`);
+
+      // Insert the history entry
+      const { error: historyError } = await supabase
         .from('budget_history')
-        .insert({
-          mis,
-          previous_amount: currentUserView.toString(),
-          new_amount: newUserView.toString(),
-          change_type: 'document_creation',
-          change_reason: 'Document creation reduced available budget',
-          created_by: userId,
-          metadata: {
-            quarter: quarterKey,
-            quarter_previous: currentQuarterValue,
-            quarter_new: newQuarterValue
-          }
-        });
+        .insert(historyEntry);
+
+      if (historyError) {
+        console.error('[BudgetService] Failed to create budget history entry:', historyError);
+        // Continue execution even if history logging fails
+      } else {
+        console.log('[BudgetService] Budget history entry created successfully');
+      }
 
       return {
         status: 'success',
@@ -386,12 +448,34 @@ export class BudgetService {
           q2: quarterKey === 'q2' ? newQuarterValue.toString() : budgetData.q2?.toString() || '0',
           q3: quarterKey === 'q3' ? newQuarterValue.toString() : budgetData.q3?.toString() || '0',
           q4: quarterKey === 'q4' ? newQuarterValue.toString() : budgetData.q4?.toString() || '0',
-          total_spent: (parseFloat(budgetData.total_spent?.toString() || '0') + amount).toString(),
+          total_spent: newTotalSpent.toString(),
           current_budget: newUserView.toString()
         }
       };
     } catch (error) {
       console.error('[BudgetService] Budget update error:', error);
+      
+      // Even on error, try to log the attempted operation
+      try {
+        await supabase
+          .from('budget_history')
+          .insert({
+            mis,
+            previous_amount: '0',
+            new_amount: '0',
+            change_type: 'error',
+            change_reason: 'Budget update failed due to error',
+            document_id: documentId || null,
+            created_by: userId,
+            metadata: {
+              error: error instanceof Error ? error.message : 'Unknown error',
+              attempted_deduction: amount
+            }
+          });
+      } catch (historyError) {
+        console.error('[BudgetService] Failed to create error history entry:', historyError);
+      }
+      
       return {
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to update budget'

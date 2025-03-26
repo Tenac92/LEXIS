@@ -38,7 +38,7 @@ router.get('/notifications', authenticateToken, async (req: AuthenticatedRequest
 });
 
 // Budget data routes - with explicit paths
-router.get('/data/:mis([0-9]+)', async (req, res) => {
+router.get('/data/:mis([0-9]+)', async (req: Request, res: Response) => {
   try {
     const { mis } = req.params;
     if (!mis) {
@@ -105,7 +105,7 @@ router.post('/validate', authenticateToken, async (req: AuthenticatedRequest, re
 });
 
 // Get available MIS and NA853 combinations
-router.get('/records', authenticateToken, async (req, res) => {
+router.get('/records', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     console.log('[Budget] Fetching available MIS and NA853 combinations');
 
@@ -264,7 +264,7 @@ router.get('/history', authenticateToken, async (req: AuthenticatedRequest, res:
   }
 });
 
-router.put('/bulk-update', authenticateToken, async (req, res) => {
+router.put('/bulk-update', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     console.log('[Budget] Starting bulk update for budget_na853_split');
 
