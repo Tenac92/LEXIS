@@ -62,7 +62,7 @@ const baseUserSchema = {
   name: z.string().min(1, "Name is required"),
   role: z.string().min(1, "Role is required"),
   units: z.array(z.string()).optional(),
-  telephone: z.string().optional(),
+  telephone: z.string().optional().or(z.coerce.string()),
   department: z.string().optional(),
 };
 
@@ -75,7 +75,9 @@ const createUserSchema = z.object({
 // Schema for editing an existing user (password optional)
 const editUserSchema = z.object({
   ...baseUserSchema,
-  password: z.string().optional().or(z.string().min(6, "Password must be at least 6 characters")),
+  password: z.string().refine(val => val === '' || val.length >= 6, {
+    message: "Password must be at least 6 characters or empty to keep current"
+  }),
   id: z.number(),
 });
 
@@ -96,8 +98,12 @@ export default function UsersPage() {
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
   const [editUserDialogOpen, setEditUserDialogOpen] = useState(false);
 
+  // Use React.useState to trigger re-render when the resolver changes
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+
+  // Create the form with the appropriate resolver based on mode
   const form = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(formMode === 'create' ? createUserSchema : editUserSchema),
     defaultValues: {
       email: "",
       name: "",
@@ -107,6 +113,8 @@ export default function UsersPage() {
       telephone: "",
       department: ""
     },
+    // This ensures the validation rules are updated when formMode changes
+    context: { mode: formMode },
   });
 
   const { data: users, isLoading } = useQuery<User[]>({
@@ -296,7 +304,21 @@ export default function UsersPage() {
     <div className="container mx-auto py-8">
       <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <h1 className="text-3xl font-bold">Users Management</h1>
-        <Button onClick={() => setNewUserDialogOpen(true)}>
+        <Button 
+          onClick={() => {
+            setFormMode('create');
+            form.reset({
+              email: "",
+              name: "",
+              password: "",
+              role: "user",
+              units: [],
+              telephone: "",
+              department: ""
+            });
+            setNewUserDialogOpen(true);
+          }}
+        >
           <UserPlus className="mr-2 h-4 w-4" />
           Add New User
         </Button>
@@ -363,6 +385,7 @@ export default function UsersPage() {
                         size="icon"
                         onClick={() => {
                           setSelectedUser(user);
+                          setFormMode('edit');
                           setEditUserDialogOpen(true);
                           
                           // Map user's unit names to unit IDs for the form
@@ -436,7 +459,24 @@ export default function UsersPage() {
       </Dialog>
 
       {/* New User Dialog */}
-      <Dialog open={newUserDialogOpen} onOpenChange={setNewUserDialogOpen}>
+      <Dialog 
+        open={newUserDialogOpen} 
+        onOpenChange={(open) => {
+          setNewUserDialogOpen(open);
+          if (!open) {
+            // Reset form when dialog is closed
+            form.reset({
+              email: "",
+              name: "",
+              password: "",
+              role: "user",
+              units: [],
+              telephone: "",
+              department: ""
+            });
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
