@@ -116,13 +116,15 @@ export default function UsersPage() {
     context: { mode: formMode },
   });
 
-  const { data: users, isLoading } = useQuery<User[]>({
+  const { data: users, isLoading, refetch } = useQuery<User[]>({
     queryKey: ["/api/users"],
     queryFn: async () => {
       const response = await fetch("/api/users");
       if (!response.ok) throw new Error("Failed to fetch users");
       return response.json();
     },
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Consider the data stale immediately
   });
 
   // Define a type for the unit data
@@ -163,7 +165,9 @@ export default function UsersPage() {
     },
     onSuccess: (data) => {
       console.log("[Users] Delete success response:", data);
+      // Invalidate the cache AND explicitly refetch the data
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      refetch(); // Explicitly trigger a refetch
       toast({
         title: "User Deleted",
         description: "User has been successfully deleted",
@@ -182,17 +186,31 @@ export default function UsersPage() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: UserFormData) => {
-      // apiRequest already handles response parsing and error handling
-      return await apiRequest("/api/users", {
+      console.log("[Users] Attempting to create new user with data:", data);
+      
+      // Make a direct fetch request instead of using apiRequest to have better control
+      const response = await fetch("/api/users", {
         method: "POST",
+        credentials: "include",
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(data)
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("[Users] Create response error:", errorData);
+        throw new Error(errorData.message || `Failed to create user: ${response.status}`);
+      }
+      
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("[Users] Create success response:", data);
+      // Invalidate the cache AND explicitly refetch the data
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      refetch(); // Explicitly trigger a refetch
       toast({
         title: "User Created",
         description: "New user has been successfully created",
@@ -201,9 +219,10 @@ export default function UsersPage() {
       form.reset();
     },
     onError: (error: Error) => {
+      console.error("[Users] Create error:", error);
       toast({
         title: "Create Failed",
-        description: error.message,
+        description: error.message || "An error occurred when creating the user",
         variant: "destructive",
       });
     },
@@ -237,7 +256,9 @@ export default function UsersPage() {
     },
     onSuccess: (data) => {
       console.log("[Users] Update success response:", data);
+      // Invalidate the cache AND explicitly refetch the data
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      refetch(); // Explicitly trigger a refetch
       toast({
         title: "User Updated",
         description: "User has been successfully updated",
