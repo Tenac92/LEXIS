@@ -102,6 +102,7 @@ export default function DocumentsPage() {
     queryFn: async () => {
       try {
         // Fetching documents with current filters
+        console.log('[DocumentsPage] Fetching documents with filters:', JSON.stringify(activeFilters));
         
         // Build query parameters for the API request
         const queryParams = new URLSearchParams();
@@ -145,18 +146,25 @@ export default function DocumentsPage() {
         }
         
         const url = `/api/documents?${queryParams.toString()}`;
-        // Constructing API URL for document fetch
+        console.log('[DocumentsPage] Requesting documents from:', url);
         
-        const data = await apiRequest(url);
-        return data || [];
+        const data = await apiRequest<GeneratedDocument[]>(url);
+        
+        // Ensure we always return an array, even if API returns null or undefined
+        const documentsArray = Array.isArray(data) ? data : [];
+        console.log(`[DocumentsPage] Received ${documentsArray.length} documents`);
+        
+        return documentsArray;
       } catch (error) {
         // Log error and notify user about document fetch failure
+        console.error('[DocumentsPage] Error fetching documents:', error);
         toast({
           title: "Error",
           description: error instanceof Error ? error.message : "Failed to fetch documents",
           variant: "destructive",
         });
-        throw error;
+        // Return empty array in case of error
+        return [];
       }
     }
   });
