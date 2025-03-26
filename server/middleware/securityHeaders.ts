@@ -4,17 +4,18 @@ import {Request, Response, NextFunction} from 'express';
 export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
+      defaultSrc: ["'self'", "https://sdegdaefk.gr"],
       scriptSrc: [
         "'self'",
         "'unsafe-inline'", 
         "'unsafe-eval'", 
         "https://unpkg.com",
         "https://ga.jspm.io",
-        "https://esm.sh"
+        "https://esm.sh",
+        "https://sdegdaefk.gr"
       ],
-      styleSrc: ["'self'", "'unsafe-inline'"], 
-      imgSrc: ["'self'", "data:", "https:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://sdegdaefk.gr"], 
+      imgSrc: ["'self'", "data:", "https:", "https://sdegdaefk.gr"],
       connectSrc: [
         "'self'",
         "https://ga.jspm.io",
@@ -22,26 +23,23 @@ export const securityHeaders = helmet({
         "https://cdnjs.cloudflare.com",
         "https://fonts.googleapis.com",
         "https://fonts.gstatic.com",
-        "https://*.supabase.co"
+        "https://*.supabase.co",
+        "https://sdegdaefk.gr"
       ],
-      fontSrc: ["'self'", "https:", "data:"],
+      fontSrc: ["'self'", "https:", "data:", "https://sdegdaefk.gr"],
       objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-      formAction: ["'self'"],
-      frameAncestors: ["'none'"],
+      mediaSrc: ["'self'", "https://sdegdaefk.gr"],
+      frameSrc: ["'none'", "https://sdegdaefk.gr"],
+      formAction: ["'self'", "https://sdegdaefk.gr"],
+      frameAncestors: ["'none'", "https://sdegdaefk.gr"],
       baseUri: ["'none'"],
       upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
     }
   },
-  crossOriginEmbedderPolicy: { policy: "require-corp" },
-  crossOriginOpenerPolicy: { policy: "same-origin" },
-  crossOriginResourcePolicy: { policy: "same-origin" },
+  crossOriginEmbedderPolicy: { policy: "credentialless" },
+  crossOriginOpenerPolicy: { policy: "unsafe-none" },
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   dnsPrefetchControl: { allow: false },
-  expectCt: {
-    maxAge: 86400,
-    enforce: true
-  },
   frameguard: { action: "deny" },
   hidePoweredBy: true,
   hsts: {
@@ -69,8 +67,14 @@ export function additionalSecurity(req: Request, res: Response, next: NextFuncti
   res.setHeader('X-Download-Options', 'noopen');
   res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
 
-  // Prevent clickjacking
-  res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
+  // Allow sdegdaefk.gr connections
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'none' https://sdegdaefk.gr");
+  
+  // Add CORS headers for sdegdaefk.gr
+  res.setHeader('Access-Control-Allow-Origin', 'https://sdegdaefk.gr');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   next();
 }
