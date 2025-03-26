@@ -63,7 +63,47 @@ export const errorMiddleware = (
     } : {})
   };
 
-  // Send error response
+  // Special handling for sdegdaefk.gr domain errors
+  if (isSdegdaefkRequest && req.headers.accept?.includes('text/html')) {
+    // For browser requests from sdegdaefk.gr domain, send a friendly HTML error page with a redirect
+    log('[SDEGDAEFK ERROR] Responding with HTML error page for browser request', 'info');
+    
+    const errorHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta http-equiv="refresh" content="5;url=/">
+          <title>ΣΔΕΓΔΑΕΦΚ - Σφάλμα Συστήματος</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+            h1 { color: #cc0000; }
+            .error-box { background-color: #f8f8f8; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
+            .btn { display: inline-block; background: #0066cc; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          <h1>Σφάλμα Συστήματος</h1>
+          <div class="error-box">
+            <p>Παρουσιάστηκε ένα σφάλμα κατά την επεξεργασία του αιτήματός σας.</p>
+            <p>Το σύστημα θα σας ανακατευθύνει αυτόματα στην αρχική σελίδα σε 5 δευτερόλεπτα.</p>
+            <p><a class="btn" href="/">Επιστροφή στην αρχική σελίδα</a></p>
+          </div>
+          <p><small>Κωδικός σφάλματος: ${err.code || 'XX000'}</small></p>
+        </body>
+      </html>
+    `;
+    
+    return res
+      .status(err.status || 500)
+      .set({
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache'
+      })
+      .send(errorHtml);
+  }
+  
+  // For API requests or other domains, send a JSON response
   res.status(err.status || 500).json(responseBody);
 };
 

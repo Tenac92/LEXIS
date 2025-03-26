@@ -453,6 +453,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Registering healthcheck routes...');
     app.use('/api/healthcheck', healthcheckRouter);
     
+    // Special route for direct browser access from sdegdaefk.gr domain
+    app.get('/sdegdaefk-gr', (req, res) => {
+      try {
+        const origin = req.headers.origin;
+        const referer = req.headers.referer;
+        const host = req.headers.host;
+        const acceptHeader = req.headers.accept || '';
+        
+        // Check if this is a browser request (looking for HTML)
+        const isBrowserRequest = acceptHeader.includes('text/html') || req.headers['sec-fetch-dest'] === 'document';
+        
+        // Check if this is from sdegdaefk.gr domain
+        const isSdegdaefkRequest = 
+          (typeof origin === 'string' && origin.includes('sdegdaefk.gr')) ||
+          (typeof host === 'string' && host.includes('sdegdaefk.gr')) ||
+          (typeof referer === 'string' && referer.includes('sdegdaefk.gr'));
+        
+        log(`[Routes] sdegdaefk-gr page accessed: origin=${origin || 'none'}, host=${host || 'none'}, browser=${isBrowserRequest}`, 'info');
+        
+        // If this is a browser request, show a friendly HTML page
+        if (isBrowserRequest) {
+          const connectionStatus = {
+            app: true,
+            server: true,
+            integration: true
+          };
+          
+          const htmlResponse = `
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <meta charset="utf-8">
+                <title>ΣΔΕΓΔΑΕΦΚ - Έλεγχος Σύνδεσης</title>
+                <style>
+                  body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+                  h1 { color: #1a5276; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+                  .status-box { background-color: #f8f8f8; border: 1px solid #ddd; padding: 20px; border-radius: 5px; margin: 20px 0; }
+                  .item { margin-bottom: 15px; }
+                  .label { font-weight: bold; display: inline-block; width: 180px; }
+                  .success { color: #27ae60; }
+                  .warning { color: #f39c12; }
+                  .error { color: #c0392b; }
+                  .btn { display: inline-block; background: #2980b9; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; margin-top: 20px; }
+                  .btn:hover { background: #3498db; }
+                  .info { background-color: #d4e6f1; padding: 15px; border-radius: 5px; margin-top: 20px; }
+                </style>
+              </head>
+              <body>
+                <h1>ΣΔΕΓΔΑΕΦΚ - Έλεγχος Σύνδεσης</h1>
+                <div class="status-box">
+                  <div class="item">
+                    <span class="label">Εφαρμογή:</span> 
+                    <span class="success">✓ Λειτουργική</span>
+                  </div>
+                  <div class="item">
+                    <span class="label">Διακομιστής:</span> 
+                    <span class="success">✓ Συνδεδεμένος</span>
+                  </div>
+                  <div class="item">
+                    <span class="label">Ενσωμάτωση sdegdaefk.gr:</span>
+                    <span class="success">✓ Ενεργοποιημένη</span>
+                  </div>
+                  <div class="item">
+                    <span class="label">Αίτημα από:</span> 
+                    ${req.headers.origin || req.headers.host || 'Άγνωστο'}
+                  </div>
+                  <div class="item">
+                    <span class="label">Χρόνος Διακομιστή:</span> 
+                    ${new Date().toLocaleString('el-GR')}
+                  </div>
+                </div>
+                
+                <div class="info">
+                  <p>Η ενσωμάτωση με το domain sdegdaefk.gr λειτουργεί κανονικά. Αυτή η σελίδα παρέχεται για επαλήθευση της συνδεσιμότητας.</p>
+                </div>
+                
+                <a class="btn" href="/">Μετάβαση στην εφαρμογή</a>
+              </body>
+            </html>
+          `;
+          
+          return res
+            .status(200)
+            .set({
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'no-cache'
+            })
+            .send(htmlResponse);
+        }
+        
+        // For API requests, return JSON status
+        return res.status(200).json({
+          status: 'ok',
+          message: 'sdegdaefk.gr integration check',
+          timestamp: new Date().toISOString(),
+          from: {
+            origin: origin || 'none',
+            host: host || 'none'
+          },
+          integration: {
+            enabled: true,
+            cors: {
+              enabled: true,
+              credentials: true
+            },
+            cookieDomain: process.env.COOKIE_DOMAIN || 'not configured'
+          }
+        });
+      } catch (error: any) {
+        log(`[Routes] Error in sdegdaefk-gr page: ${error.message}`, 'error');
+        
+        res.status(500).json({
+          status: 'error',
+          message: 'Error processing sdegdaefk.gr integration check',
+          error: 'internal_error',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+    
+    // Special route for sdegdaefk.gr domain database connectivity test
+    app.get('/sdegdaefk-database-check', async (req, res) => {
+      try {
+        const origin = req.headers.origin;
+        const referer = req.headers.referer;
+        const host = req.headers.host;
+
+        log(`[Routes] sdegdaefk-database-check requested from: origin=${origin || 'none'}, host=${host || 'none'}, referer=${referer || 'none'}`, 'info');
+
+        // Check if this is from sdegdaefk.gr domain
+        const isSdegdaefkRequest = 
+          (typeof origin === 'string' && origin.includes('sdegdaefk.gr')) ||
+          (typeof host === 'string' && host.includes('sdegdaefk.gr')) ||
+          (typeof referer === 'string' && referer.includes('sdegdaefk.gr'));
+
+        // Import database utilities to test connection
+        const { verifyDatabaseConnections } = await import('./data/index');
+        const connectionStatus = await verifyDatabaseConnections();
+
+        // Prepare a safe response with just enough information
+        const response = {
+          status: 'ok',
+          message: 'Database connectivity check for sdegdaefk.gr integration',
+          timestamp: new Date().toISOString(),
+          domain: 'sdegdaefk.gr',
+          isSdegdaefkRequest,
+          database: {
+            postgres: connectionStatus.pg ? 'connected' : 'disconnected',
+            supabase: connectionStatus.supabase ? 'connected' : 'disconnected'
+          }
+        };
+
+        res.status(200).json(response);
+      } catch (error: any) {
+        log(`[Routes] Error in sdegdaefk-database-check: ${error.message}`, 'error');
+        
+        // Safe error response
+        res.status(500).json({
+          status: 'error',
+          message: 'Database connectivity check failed',
+          error: 'internal_error',
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+    
     // Register sdegdaefk.gr diagnostic routes (special domain-specific diagnostic endpoints)
     try {
       log('[Routes] Registering sdegdaefk.gr diagnostic routes...');

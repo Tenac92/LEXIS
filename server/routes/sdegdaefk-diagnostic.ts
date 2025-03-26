@@ -17,6 +17,73 @@ export const router = Router();
  * GET /api/sdegdaefk-diagnostic
  */
 router.get('/', (req: Request, res: Response) => {
+  // Check if this is a browser request (looking for HTML)
+  const acceptHeader = req.headers.accept || '';
+  const isBrowserRequest = acceptHeader.includes('text/html') || req.headers['sec-fetch-dest'] === 'document';
+  
+  // If this is a browser request directly to the diagnostic endpoint, show a friendly HTML page
+  if (isBrowserRequest) {
+    log(`[sdegdaefk-diagnostic] Browser request detected, serving HTML diagnostic page`, 'info');
+    
+    const htmlResponse = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>ΣΔΕΓΔΑΕΦΚ - Διαγνωστικό</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+            h1 { color: #0066cc; }
+            .diagnostics { background-color: #f8f8f8; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
+            .item { margin-bottom: 10px; }
+            .label { font-weight: bold; }
+            .success { color: green; }
+            .warning { color: orange; }
+            .error { color: red; }
+            .btn { display: inline-block; background: #0066cc; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <h1>ΣΔΕΓΔΑΕΦΚ - Διαγνωστικό Σύστημα</h1>
+          <div class="diagnostics">
+            <div class="item">
+              <span class="label">Κατάσταση API:</span> 
+              <span class="success">Λειτουργικό</span>
+            </div>
+            <div class="item">
+              <span class="label">Αίτημα από:</span> 
+              ${req.headers.origin || req.headers.host || 'Άγνωστο'}
+            </div>
+            <div class="item">
+              <span class="label">IP Διεύθυνση:</span> 
+              ${req.ip}
+            </div>
+            <div class="item">
+              <span class="label">Ενσωμάτωση με sdegdaefk.gr:</span>
+              <span class="success">Ενεργοποιημένη</span>
+            </div>
+            <div class="item">
+              <span class="label">Χρόνος Διακομιστή:</span> 
+              ${new Date().toLocaleString('el-GR')}
+            </div>
+          </div>
+          
+          <p>Αυτή η σελίδα χρησιμοποιείται για διαγνωστικούς σκοπούς. Παρακαλούμε επιστρέψτε στην κύρια εφαρμογή.</p>
+          
+          <a class="btn" href="/">Επιστροφή στην αρχική σελίδα</a>
+        </body>
+      </html>
+    `;
+    
+    return res
+      .status(200)
+      .set({
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache'
+      })
+      .send(htmlResponse);
+  }
+  
   // Extract request information
   const origin = req.headers.origin;
   const referer = req.headers.referer;

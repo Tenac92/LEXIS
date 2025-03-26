@@ -75,19 +75,65 @@ router.options('*', (req: Request, res: Response) => {
 
 // Special middleware to handle direct browser requests to /documents
 router.use('/', (req: Request, res: Response, next: NextFunction) => {
-  // Check if this is a direct browser request rather than an API call
-  const acceptHeader = req.get('accept') || '';
-  const isBrowserRequest = acceptHeader.includes('text/html') 
-    && req.get('sec-fetch-dest') === 'document';
+  try {
+    // Check if this is a direct browser request rather than an API call
+    const acceptHeader = req.get('accept') || '';
+    const isBrowserRequest = acceptHeader.includes('text/html') || 
+      req.get('sec-fetch-dest') === 'document';
+      
+    const origin = req.get('origin');
+    const host = req.get('host') || '';
+    const sdegdaefkDomain = 'sdegdaefk.gr';
     
-  if (isBrowserRequest) {
-    console.log('[DocumentsRoute] Browser request detected, redirecting to HTML handler');
-    // Redirect browser requests to our HTML handler
-    return res.redirect('/documents/html');
+    // Check if request is from sdegdaefk.gr domain
+    const isFromSdegdaefkDomain = 
+      (origin && origin.includes(sdegdaefkDomain)) || 
+      host.includes(sdegdaefkDomain) ||
+      req.hostname === sdegdaefkDomain;
+    
+    // Log detailed information about this request
+    console.log(`[DocumentsRoute] Request received: method=${req.method}, path=${req.path}`);
+    console.log(`[DocumentsRoute] Browser request: ${isBrowserRequest}, sdegdaefk.gr domain: ${isFromSdegdaefkDomain}`);
+    console.log(`[DocumentsRoute] Headers: accept=${acceptHeader}, host=${host}, origin=${origin || 'none'}`);
+    
+    // If it's a browser request and especially from sdegdaefk.gr, handle it specifically
+    if (isBrowserRequest || isFromSdegdaefkDomain) {
+      console.log('[DocumentsRoute] Browser or sdegdaefk.gr request detected, redirecting to HTML handler');
+      
+      // Create HTML with a redirect
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0;url=/">
+            <title>ΣΔΕΓΔΑΕΦΚ - Ανακατεύθυνση</title>
+            <script>window.location.href = "/";</script>
+          </head>
+          <body>
+            <h1>Ανακατεύθυνση...</h1>
+            <p>Παρακαλώ περιμένετε καθώς ανακατευθύνεστε στην αρχική σελίδα της εφαρμογής.</p>
+            <p>Εάν δεν ανακατευθυνθείτε αυτόματα, <a href="/">πατήστε εδώ</a>.</p>
+          </body>
+        </html>
+      `;
+      
+      return res
+        .status(200)
+        .set({
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache'
+        })
+        .send(html);
+    }
+    
+    // Continue with API processing for non-browser requests
+    next();
+  } catch (error) {
+    console.error('[DocumentsRoute] Error in request processing middleware:', error);
+    // Ensure we don't throw an unhandled exception
+    next();
   }
-  
-  // Continue with API processing for non-browser requests
-  next();
 });
 
 // List documents with filters
