@@ -178,6 +178,19 @@ export const attachmentsRows = pgTable("attachments", {
 });
 
 /**
+ * Attachment Requirements Table
+ * Stores the required attachment list for each expenditure type and installment
+ */
+export const attachmentRequirements = pgTable("attachment_requirements", {
+  id: serial("id").primaryKey(),
+  expenditure_type: text("expenditure_type").notNull(),
+  installment: integer("installment").notNull().default(1),
+  attachments: text("attachments").array().notNull().default([]),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow()
+});
+
+/**
  * Document Versions Table
  * Tracks version history for documents
  */
@@ -265,6 +278,9 @@ export const insertBudgetHistorySchema = createInsertSchema(budgetHistory);
 
 export const insertBudgetNotificationSchema = createInsertSchema(budgetNotifications);
 
+// Schema for inserting new attachment requirements
+export const insertAttachmentRequirementSchema = createInsertSchema(attachmentRequirements);
+
 // Budget validation schema for validating budget changes
 export const budgetValidationSchema = z.object({
   mis: z.string().min(1, 'Κωδικός MIS απαιτείται'),
@@ -285,6 +301,7 @@ export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
 export type BudgetHistory = typeof budgetHistory.$inferSelect;
 export type BudgetNotification = typeof budgetNotifications.$inferSelect;
 export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
+export type AttachmentRequirement = typeof attachmentRequirements.$inferSelect;
 export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 
@@ -299,6 +316,7 @@ export type InsertProjectCatalog = z.infer<typeof insertProjectCatalogSchema>;
 export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
 export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
 export type InsertBudgetNotification = z.infer<typeof insertBudgetNotificationSchema>;
+export type InsertAttachmentRequirement = z.infer<typeof insertAttachmentRequirementSchema>;
 export type Recipient = z.infer<typeof recipientSchema>;
 
 // ==============================================================
@@ -387,6 +405,7 @@ export type Database = {
   budgetHistory: typeof budgetHistory.$inferSelect;
   budgetNotifications: typeof budgetNotifications.$inferSelect;
   attachmentsRows: typeof attachmentsRows.$inferSelect;
+  attachmentRequirements: typeof attachmentRequirements.$inferSelect;
   documentVersions: typeof documentVersions.$inferSelect;
   documentTemplates: typeof documentTemplates.$inferSelect;
   monada: Monada;
