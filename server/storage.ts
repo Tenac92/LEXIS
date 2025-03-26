@@ -256,11 +256,11 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async getBudgetHistory(mis: string): Promise<any[]> {
+  async getBudgetHistory(mis?: string): Promise<any[]> {
     try {
-      console.log(`[Storage] Fetching budget history for MIS: ${mis}`);
+      console.log(`[Storage] Fetching budget history${mis ? ` for MIS: ${mis}` : ' for all projects'}`);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('budget_history')
         .select(`
           id,
@@ -272,17 +272,40 @@ export class DatabaseStorage implements IStorage {
           document_id,
           created_by,
           created_at,
-          metadata
+          metadata,
+          users(id, name, email),
+          generated_documents(id, status)
         `)
-        .eq('mis', mis)
         .order('created_at', { ascending: false });
+        
+      // If MIS is provided, filter by it
+      if (mis) {
+        query = query.eq('mis', mis);
+      }
+      
+      const { data, error } = await query;
         
       if (error) {
         console.error('[Storage] Error fetching budget history:', error);
         throw error;
       }
       
-      return data || [];
+      // Format the response data with user information
+      const formattedData = data?.map(entry => ({
+        id: entry.id,
+        mis: entry.mis,
+        previous_amount: entry.previous_amount || '0',
+        new_amount: entry.new_amount || '0',
+        change_type: entry.change_type,
+        change_reason: entry.change_reason,
+        document_id: entry.document_id,
+        document_status: entry.generated_documents?.[0]?.status,
+        created_by: entry.users?.name || 'System',
+        created_at: entry.created_at,
+        metadata: entry.metadata
+      })) || [];
+      
+      return formattedData;
     } catch (error) {
       console.error('[Storage] Error in getBudgetHistory:', error);
       return [];

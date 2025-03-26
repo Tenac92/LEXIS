@@ -1,13 +1,19 @@
-import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { Router, Request, Response } from 'express';
+import { authenticateToken } from '../middleware/authMiddleware';
 import { BudgetService } from '../services/budgetService';
 import { storage } from '../storage';
 import { supabase } from '../config/db';
+import { User } from '@shared/schema';
+
+// Extend Request type to include user property
+interface AuthenticatedRequest extends Request {
+  user?: User;
+}
 
 const router = Router();
 
 // Get budget notifications - always handle this route first
-router.get('/notifications', authenticateToken, async (req, res) => {
+router.get('/notifications', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json([]);  // Return empty array even for auth errors
@@ -55,7 +61,7 @@ router.get('/data/:mis([0-9]+)', async (req, res) => {
 });
 
 // Validate budget for document
-router.post('/validate', authenticateToken, async (req, res) => {
+router.post('/validate', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis, amount } = req.body;
     const requestedAmount = parseFloat(amount.toString());
@@ -141,22 +147,57 @@ router.get('/records', authenticateToken, async (req, res) => {
 });
 
 // Get budget history with pagination
-router.get('/history', authenticateToken, async (req, res) => {
+router.get('/history', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     console.log('[Budget] Fetching budget history');
+    
+    // Check authentication
+    if (!req.user?.id) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required',
+        data: [],
+        pagination: { total: 0, page: 1, limit: 10, pages: 0 }
+      });
+    }
+    
+    // Only admin and manager roles can access budget history
+    if (req.user.role !== 'admin' && req.user.role !== 'manager') {
+      console.log(`[Budget] Unauthorized access attempt by user ${req.user.id} with role ${req.user.role}`);
+      return res.status(403).json({
+        status: 'error',
+        message: 'Insufficient permissions to access budget history',
+        data: [],
+        pagination: { total: 0, page: 1, limit: 10, pages: 0 }
+      });
+    }
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
+    const mis = req.query.mis as string | undefined;
+    const changeType = req.query.change_type as string | undefined;
 
+    console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}`);
+
+    // Build query filter
+    let queryFilter = supabase.from('budget_history');
+    
+    // Filter by MIS if provided
+    if (mis) {
+      queryFilter = queryFilter.eq('mis', mis);
+    }
+    
+    // Filter by change type if provided
+    if (changeType && changeType !== 'all') {
+      queryFilter = queryFilter.eq('change_type', changeType);
+    }
+    
     // Get total count for pagination
-    const { count } = await supabase
-      .from('budget_history')
-      .select('*', { count: 'exact', head: true });
+    const { count } = await queryFilter.select('*', { count: 'exact', head: true });
 
     // Get paginated data with joins for user information
-    const { data, error } = await supabase
-      .from('budget_history')
+    const { data, error } = await queryFilter
       .select(`
         id,
         mis,
@@ -168,7 +209,7 @@ router.get('/history', authenticateToken, async (req, res) => {
         created_by,
         created_at,
         metadata,
-        users(name),
+        users(id, name, email),
         generated_documents(id, status)
       `)
       .order('created_at', { ascending: false })
@@ -179,7 +220,9 @@ router.get('/history', authenticateToken, async (req, res) => {
       return res.status(500).json({
         status: 'error',
         message: 'Failed to fetch budget history',
-        details: error.message
+        details: error.message,
+        data: [],
+        pagination: { total: 0, page: 1, limit: 10, pages: 0 }
       });
     }
 
@@ -187,22 +230,24 @@ router.get('/history', authenticateToken, async (req, res) => {
     const formattedData = data?.map(entry => ({
       id: entry.id,
       mis: entry.mis,
-      previous_amount: entry.previous_amount,
-      new_amount: entry.new_amount,
+      previous_amount: entry.previous_amount || '0',
+      new_amount: entry.new_amount || '0',
       change_type: entry.change_type,
-      change_reason: entry.change_reason,
+      change_reason: entry.change_reason || '',
       document_id: entry.document_id,
       document_status: entry.generated_documents?.[0]?.status,
       created_by: entry.users?.name || 'System',
       created_at: entry.created_at,
-      metadata: entry.metadata
-    }));
+      metadata: entry.metadata || {}
+    })) || [];
+    
+    console.log(`[Budget] Successfully fetched ${formattedData.length} history records`);
 
     return res.json({
       status: 'success',
       data: formattedData,
       pagination: {
-        total: count,
+        total: count || 0,
         page,
         limit,
         pages: Math.ceil((count || 0) / limit)
@@ -223,7 +268,16 @@ router.put('/bulk-update', authenticateToken, async (req, res) => {
   try {
     console.log('[Budget] Starting bulk update for budget_na853_split');
 
+    // Check authentication
+    if (!req.user?.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
     const { updates } = req.body;
+    const userId = req.user.id;
 
     if (!Array.isArray(updates)) {
       return res.status(400).json({
@@ -240,15 +294,15 @@ router.put('/bulk-update', authenticateToken, async (req, res) => {
         throw new Error(`Invalid update data: missing mis or na853`);
       }
 
-      // Validate MIS and NA853 combination exists
-      const { data: existing, error: checkError } = await supabase
+      // Get current budget data before updating
+      const { data: currentBudget, error: fetchError } = await supabase
         .from('budget_na853_split')
-        .select('id')
+        .select('*')
         .eq('mis', mis)
         .eq('na853', na853)
         .single();
 
-      if (checkError || !existing) {
+      if (fetchError || !currentBudget) {
         throw new Error(`Budget split record not found for MIS ${mis} and NA853 ${na853}`);
       }
 
@@ -272,12 +326,45 @@ router.put('/bulk-update', authenticateToken, async (req, res) => {
         throw new Error(`Failed to update budget split for MIS ${mis}: ${updateError.message}`);
       }
 
-      console.log(`[Budget] Successfully updated budget split for MIS ${mis}`);
+      // Log the change in budget history
+      await supabase
+        .from('budget_history')
+        .insert({
+          mis,
+          previous_amount: currentBudget.user_view?.toString() || '0',
+          new_amount: data.user_view?.toString() || '0',
+          change_type: 'manual_adjustment',
+          change_reason: 'Bulk update of budget data',
+          created_by: userId,
+          metadata: {
+            previous: {
+              ethsia_pistosi: currentBudget.ethsia_pistosi,
+              q1: currentBudget.q1,
+              q2: currentBudget.q2,
+              q3: currentBudget.q3,
+              q4: currentBudget.q4,
+              katanomes_etous: currentBudget.katanomes_etous,
+              user_view: currentBudget.user_view
+            },
+            new: {
+              ethsia_pistosi: data.ethsia_pistosi,
+              q1: data.q1,
+              q2: data.q2,
+              q3: data.q3,
+              q4: data.q4,
+              katanomes_etous: data.katanomes_etous,
+              user_view: data.user_view
+            },
+            na853
+          }
+        });
+
+      console.log(`[Budget] Successfully updated budget split for MIS ${mis} and tracked in history`);
     }
 
     res.json({ 
       success: true, 
-      message: `Successfully updated ${updates.length} budget splits` 
+      message: `Successfully updated ${updates.length} budget splits and tracked changes in history` 
     });
   } catch (error) {
     console.error('[Budget] Bulk update error:', error);
