@@ -64,7 +64,7 @@ export default function DocumentsPage() {
     delete: false,
   });
 
-  // Initialize filters state (no separate active filters)
+  // Initialize both main filters and advanced filters states
   const [filters, setFilters] = useState<Filters>({
     unit: user?.units?.[0] || 'all',
     status: 'pending',
@@ -76,15 +76,39 @@ export default function DocumentsPage() {
     recipient: '',
     afm: ''
   });
+  
+  // For advanced filters, we'll keep a separate state that doesn't trigger refresh
+  const [advancedFilters, setAdvancedFilters] = useState({
+    dateFrom: '',
+    dateTo: '',
+    amountFrom: '',
+    amountTo: '',
+    recipient: '',
+    afm: ''
+  });
 
-  // Apply filters immediately when they change
-  const setFiltersWithRefresh = (newFilters: Filters, shouldRefresh = true) => {
-    setFilters(newFilters);
-    // Always refresh by default for a seamless experience
-    if (shouldRefresh) {
-      // No need for a separate handleApplyFilters call, refetch directly
-      refetch();
-    }
+  // For main category filters (unit, status, user) - apply immediately
+  const setMainFilters = (newFilters: Partial<Filters>) => {
+    const updatedFilters = { ...filters, ...newFilters };
+    setFilters(updatedFilters);
+    // Always refresh for main filters
+    refetch();
+  };
+  
+  // For advanced filters - only store the values, don't refresh
+  const setAdvancedFilterValues = (newValues: Partial<typeof advancedFilters>) => {
+    setAdvancedFilters(prev => ({ ...prev, ...newValues }));
+  };
+  
+  // Apply advanced filters only when button is clicked
+  const applyAdvancedFilters = () => {
+    // Update the main filters with advanced filter values
+    setFilters(prev => ({
+      ...prev,
+      ...advancedFilters
+    }));
+    // Then trigger a refresh
+    refetch();
   };
 
   // Fetch users with same units
@@ -206,7 +230,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Μονάδα</label>
                 <Select
                   value={filters.unit}
-                  onValueChange={(value: string) => setFiltersWithRefresh({ ...filters, unit: value })}
+                  onValueChange={(value: string) => setMainFilters({ unit: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
@@ -224,7 +248,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Κατάσταση</label>
                 <Select
                   value={filters.status}
-                  onValueChange={(value: string) => setFiltersWithRefresh({ ...filters, status: value })}
+                  onValueChange={(value: string) => setMainFilters({ status: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε κατάσταση" />
@@ -242,7 +266,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Χρήστης</label>
                 <Select
                   value={filters.user}
-                  onValueChange={(value: string) => setFiltersWithRefresh({ ...filters, user: value })}
+                  onValueChange={(value: string) => setMainFilters({ user: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε χρήστη" />
@@ -282,16 +306,16 @@ export default function DocumentsPage() {
                         <label className="text-xs text-muted-foreground">Από</label>
                         <Input
                           type="date"
-                          value={filters.dateFrom}
-                          onChange={(e) => setFiltersWithRefresh({ ...filters, dateFrom: e.target.value }, false)}
+                          value={advancedFilters.dateFrom}
+                          onChange={(e) => setAdvancedFilterValues({ dateFrom: e.target.value })}
                         />
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground">Έως</label>
                         <Input
                           type="date"
-                          value={filters.dateTo}
-                          onChange={(e) => setFiltersWithRefresh({ ...filters, dateTo: e.target.value }, false)}
+                          value={advancedFilters.dateTo}
+                          onChange={(e) => setAdvancedFilterValues({ dateTo: e.target.value })}
                         />
                       </div>
                     </div>
@@ -305,8 +329,8 @@ export default function DocumentsPage() {
                         <Input
                           type="number"
                           placeholder="Ελάχιστο ποσό"
-                          value={filters.amountFrom}
-                          onChange={(e) => setFiltersWithRefresh({ ...filters, amountFrom: e.target.value }, false)}
+                          value={advancedFilters.amountFrom}
+                          onChange={(e) => setAdvancedFilterValues({ amountFrom: e.target.value })}
                         />
                       </div>
                       <div>
@@ -314,8 +338,8 @@ export default function DocumentsPage() {
                         <Input
                           type="number"
                           placeholder="Μέγιστο ποσό"
-                          value={filters.amountTo}
-                          onChange={(e) => setFiltersWithRefresh({ ...filters, amountTo: e.target.value }, false)}
+                          value={advancedFilters.amountTo}
+                          onChange={(e) => setAdvancedFilterValues({ amountTo: e.target.value })}
                         />
                       </div>
                     </div>
@@ -325,8 +349,8 @@ export default function DocumentsPage() {
                     <label className="text-sm font-medium">Αναζήτηση Παραλήπτη</label>
                     <Input
                       placeholder="Αναζήτηση με όνομα παραλήπτη"
-                      value={filters.recipient}
-                      onChange={(e) => setFiltersWithRefresh({ ...filters, recipient: e.target.value }, false)}
+                      value={advancedFilters.recipient}
+                      onChange={(e) => setAdvancedFilterValues({ recipient: e.target.value })}
                     />
                   </div>
 
@@ -334,8 +358,8 @@ export default function DocumentsPage() {
                     <label className="text-sm font-medium">ΑΦΜ</label>
                     <Input
                       placeholder="Αναζήτηση με ΑΦΜ"
-                      value={filters.afm}
-                      onChange={(e) => setFiltersWithRefresh({ ...filters, afm: e.target.value }, false)}
+                      value={advancedFilters.afm}
+                      onChange={(e) => setAdvancedFilterValues({ afm: e.target.value })}
                     />
                   </div>
                 </div>
