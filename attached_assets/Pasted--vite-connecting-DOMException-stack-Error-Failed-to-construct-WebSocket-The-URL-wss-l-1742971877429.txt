@@ -1,0 +1,54 @@
+[vite] connecting...
+DOMException {stack: "Error: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.↵    at…"}
+
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[Projects] Fetching projects for unit: ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ
+[Projects] Found 79 projects for unit: ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ
+[Budget] Fetching budget data for project: 
+Object {id: "2024ΝΑ85300001", mis: "5174692"}
+Fetching regions for project: 
+Object {id: "2024ΝΑ85300001", mis: "5174692"}
+Search debug: 
+Object {searchTerm: "2024να85300001 - 2021 σεισμος φωκιδας", isNumericSearch: false, projectCount: 79}
+Search results: 
+Object {searchTerm: "2024να85300001 - 2021 σεισμος φωκιδας", resultCount: 1, results: Array(1)}
+[Budget] Budget API response: 
+Object {status: "success", data: {…}}
+[Budget] Extracted budget data: 
+Object {user_view: "3668", ethsia_pistosi: "21598", q1: "21598", q2: "0", q3: "0", …}
+Region API response: 
+Object {region: Array(1), municipality: Array(1), regional_unit: Array(1)}
+Processing region data with format: string
+Processed region data: 
+Array [{…}]
+[Budget] Validating budget for MIS: 5174692, amount: 4
+[Budget] Validation response: 
+Object {status: "success", canCreate: true, allowDocx: true, message: "Επαρκής προϋπολογισμός για τη δημιουργία του εγγράφου.", metadata: {…}}
+Starting form submission with data: 
+Object {unit: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ", project_id: "2024ΝΑ85300001", region: "ΣΤ. ΕΛΛΑΔΑΣ", expenditure_type: "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", recipients: Array(1), …}
+Found project for submission: 
+Object {id: "2024ΝΑ85300001", mis: "5174692"}
+Budget updated successfully
+Sending payload to create document: 
+Object {unit: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ", project_id: "2024ΝΑ85300001", project_mis: "5174692", region: "ΣΤ. ΕΛΛΑΔΑΣ", expenditure_type: "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", …}
+[API] Request failed: 
+Error {}
+message: "Σφάλμα HTTP! κατάσταση: 404"
+stack: "Error: Σφάλμα HTTP! κατάσταση: 404↵ at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:36:15)↵ at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1148:30)↵ at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-BW5TH624.js?v=c6b19be7:1675:9"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Test route failed: 
+Error {}
+message: "Σφάλμα HTTP! κατάσταση: 404"
+stack: "Error: Σφάλμα HTTP! κατάσταση: 404↵ at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:36:15)↵ at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1148:30)↵ at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-BW5TH624.js?v=c6b19be7:1675:9"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Document created successfully with ID: 156
