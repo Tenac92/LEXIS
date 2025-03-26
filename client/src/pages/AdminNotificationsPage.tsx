@@ -6,9 +6,22 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { RotateCw, CheckCircle, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { BudgetNotification } from '@/lib/types';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+
+// Extend the BudgetNotification type to include the added properties
+import { BudgetNotification as BaseBudgetNotification } from '@/lib/types';
+
+// Extended type for admin notifications
+interface BudgetNotification extends BaseBudgetNotification {
+  na853?: string | null;
+  user?: {
+    id: number;
+    name: string;
+    email?: string;
+    department?: string;
+  } | null;
+}
 
 const notificationStyles = {
   funding: {
@@ -240,11 +253,26 @@ export default function AdminNotificationsPage() {
                         {notification.reason}
                       </p>
                       
+                      {notification.user && (
+                        <div className="mb-2 text-xs text-muted-foreground">
+                          <span className="font-semibold">Requested by:</span> {notification.user.name || 'Unknown user'} 
+                          {notification.user.email && (
+                            <span> ({notification.user.email})</span>
+                          )}
+                          {notification.user.department && (
+                            <span> • {notification.user.department}</span>
+                          )}
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between items-center text-sm">
                         <div>
                           <span className="font-semibold">Amount:</span> €{notification.amount.toLocaleString()} | 
                           <span className="font-semibold ml-2">Current Budget:</span> €{notification.current_budget.toLocaleString()} | 
                           <span className="font-semibold ml-2">Annual Credit:</span> €{notification.ethsia_pistosi.toLocaleString()}
+                          {notification.na853 && (
+                            <span className="ml-2">| <span className="font-semibold">NA853:</span> {notification.na853}</span>
+                          )}
                         </div>
                         
                         {notification.status === 'pending' && (

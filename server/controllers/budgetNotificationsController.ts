@@ -23,7 +23,8 @@ router.get('/admin', authenticateSession, async (req: AuthRequest, res: Response
 
     console.log('[BudgetNotificationsController] Admin fetching all notifications...');
 
-    const { data, error } = await supabase
+    // First get the notifications
+    const { data: notificationsData, error } = await supabase
       .from('budget_notifications')
       .select(`
         id,
@@ -39,7 +40,7 @@ router.get('/admin', authenticateSession, async (req: AuthRequest, res: Response
         updated_at
       `)
       .order('created_at', { ascending: false });
-
+      
     if (error) {
       console.error('[BudgetNotificationsController] Error fetching notifications:', error);
       return res.status(500).json({
@@ -48,18 +49,92 @@ router.get('/admin', authenticateSession, async (req: AuthRequest, res: Response
         error: error.message
       });
     }
+    
+    // Ensure we have notifications data
+    if (!notificationsData || !notificationsData.length) {
+      return res.json([]);
+    }
+    
+    // Get unique MIS values to fetch project data
+    const misSet = new Set<string>();
+    notificationsData.forEach(notification => {
+      if (notification.mis) {
+        misSet.add(notification.mis);
+      }
+    });
+    const misValues = Array.from(misSet);
+    
+    // Get unique user IDs to fetch user data
+    const userIdSet = new Set<number>();
+    notificationsData.forEach(notification => {
+      if (notification.user_id) {
+        userIdSet.add(notification.user_id);
+      }
+    });
+    const userIds = Array.from(userIdSet);
+    
+    // Fetch project data for the MIS values
+    const { data: projectsData, error: projectsError } = await supabase
+      .from('Projects')
+      .select('mis, na853')
+      .in('mis', misValues);
+      
+    if (projectsError) {
+      console.error('[BudgetNotificationsController] Error fetching projects:', projectsError);
+      // Continue even if there's an error getting projects
+    }
+    
+    // Create a map of MIS to NA853 values
+    const misToNa853Map = new Map();
+    if (projectsData && projectsData.length) {
+      projectsData.forEach(project => {
+        misToNa853Map.set(project.mis, project.na853);
+      });
+    }
+    
+    // Fetch user data
+    const { data: usersData, error: usersError } = await supabase
+      .from('users')
+      .select('id, name, email, department')
+      .in('id', userIds);
+      
+    if (usersError) {
+      console.error('[BudgetNotificationsController] Error fetching users:', usersError);
+      // Continue even if there's an error getting users
+    }
+    
+    // Create a map of user ID to user details
+    const userMap = new Map();
+    if (usersData && usersData.length) {
+      usersData.forEach(user => {
+        userMap.set(user.id, user);
+      });
+    }
+    
+    // Combine the data
+    const data = notificationsData.map(notification => {
+      const na853 = misToNa853Map.get(notification.mis) || null;
+      const user = userMap.get(notification.user_id) || null;
+      
+      return {
+        ...notification,
+        na853,
+        user
+      };
+    });
 
     // Ensure we return an array even if data is null
     const notifications = data || [];
     console.log(`[BudgetNotificationsController] Successfully fetched ${notifications.length} notifications`);
     
     return res.json(notifications);
-  } catch (error) {
-    console.error('[BudgetNotificationsController] Unexpected error:', error);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[BudgetNotificationsController] Unexpected error:', errorMessage);
     return res.status(500).json({
       status: 'error',
       message: 'An unexpected error occurred',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: errorMessage
     });
   }
 });
@@ -149,12 +224,13 @@ router.post('/:id/approve', authenticateSession, async (req: AuthRequest, res: R
       status: 'success',
       message: 'Notification approved successfully'
     });
-  } catch (error) {
-    console.error('[BudgetNotificationsController] Unexpected error in approve endpoint:', error);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[BudgetNotificationsController] Unexpected error in approve endpoint:', errorMessage);
     return res.status(500).json({
       status: 'error',
       message: 'An unexpected error occurred',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: errorMessage
     });
   }
 });
