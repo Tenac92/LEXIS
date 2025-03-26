@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -27,8 +28,9 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Search, Edit2, Trash2, UserPlus } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, UserPlus, X as XIcon } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -73,7 +75,7 @@ const createUserSchema = z.object({
 // Schema for editing an existing user (password optional)
 const editUserSchema = z.object({
   ...baseUserSchema,
-  password: z.string().optional(),
+  password: z.string().optional().or(z.string().min(6, "Password must be at least 6 characters")),
   id: z.number(),
 });
 
