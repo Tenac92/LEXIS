@@ -14,48 +14,58 @@ const router = Router();
 const DEFAULT_ATTACHMENTS = ['Διαβιβαστικό', 'ΔΚΑ'];
 
 /**
- * Map Greek letters to installment values
- * The database may store installments as letters (e.g., 'Α', 'Β') or numbers
+ * Map Greek letters and other formats to installment numbers
+ * The database stores installments as integers (1, 2, 3, etc.)
  */
-const INSTALLMENT_MAP: Record<string, string> = {
-  'α': 'Α', 'a': 'Α', 'first': 'Α', 'πρώτη': 'Α', '1': 'Α', 
-  'β': 'Β', 'b': 'Β', 'second': 'Β', 'δεύτερη': 'Β', '2': 'Β',
-  'γ': 'Γ', 'c': 'Γ', 'third': 'Γ', 'τρίτη': 'Γ', '3': 'Γ',
-  'δ': 'Δ', 'd': 'Δ', 'fourth': 'Δ', 'τέταρτη': 'Δ', '4': 'Δ',
+const INSTALLMENT_MAP: Record<string, number> = {
+  'α': 1, 'a': 1, 'first': 1, 'πρώτη': 1, 'α\'': 1, 'a\'': 1, 'Α': 1, 
+  'β': 2, 'b': 2, 'second': 2, 'δεύτερη': 2, 'β\'': 2, 'b\'': 2, 'Β': 2, 
+  'γ': 3, 'c': 3, 'third': 3, 'τρίτη': 3, 'γ\'': 3, 'c\'': 3, 'Γ': 3,
+  'δ': 4, 'd': 4, 'fourth': 4, 'τέταρτη': 4, 'δ\'': 4, 'd\'': 4, 'Δ': 4,
 };
 
 /**
- * Parse installment parameter to the format stored in the database
- * @param installment - The installment parameter
- * @returns Parsed installment value (defaults to 'Α')
+ * Parse installment parameter to the numeric format stored in the database
+ * @param installment - The installment parameter (can be Greek letter, number, etc.)
+ * @returns Parsed installment number (defaults to 1)
  */
-function parseInstallment(installment: string | undefined): string {
+function parseInstallment(installment: string | undefined): number {
   if (!installment || installment === 'undefined' || installment === 'null') {
-    return 'Α'; // Default to first installment
+    return 1; // Default to first installment
   }
   
-  // Try to match against known formats
+  // Try to parse as number first
+  const parsed = parseInt(installment);
+  if (!isNaN(parsed) && parsed > 0) {
+    return parsed;
+  }
+  
+  // Try to match against known formats (Greek letters, etc.)
   const normalized = installment.toLowerCase();
-  if (INSTALLMENT_MAP[normalized]) {
+  if (INSTALLMENT_MAP[normalized] !== undefined) {
     return INSTALLMENT_MAP[normalized];
   }
   
-  // If it's already an uppercase Greek letter, use it directly
-  if (['Α', 'Β', 'Γ', 'Δ'].includes(installment)) {
-    return installment;
+  // Check uppercase Greek letters
+  if (INSTALLMENT_MAP[installment] !== undefined) {
+    return INSTALLMENT_MAP[installment];
   }
   
   // Default fallback to first installment
-  return 'Α';
+  return 1;
 }
 
 /**
  * Fetch attachments for a specific expenditure type and installment
  * @param expenditureType - The expenditure type
- * @param installment - The installment value (e.g. 'Α', 'Β')
+ * @param installment - The installment number
  * @returns Attachments data
  */
-async function fetchAttachments(expenditureType: string, installment: string) {
+async function fetchAttachments(expenditureType: string, installment: number | string) {
+  // Convert string to number if needed
+  if (typeof installment === 'string') {
+    installment = parseInstallment(installment);
+  }
   console.log(`[Attachments] Fetching attachments for type: ${expenditureType}, installment: ${installment}`);
   
   try {
@@ -63,7 +73,7 @@ async function fetchAttachments(expenditureType: string, installment: string) {
     const { data, error } = await supabase
       .from('attachments')
       .select('*')
-      .eq('expenditure_type', expenditureType)
+      .eq('expenditure_type', expenditureType)  // Note the column name: expenditure_type (with 'n')
       .eq('installment', installment)
       .single();
     
@@ -88,8 +98,8 @@ async function fetchAttachments(expenditureType: string, installment: string) {
     const { data: defaultData, error: defaultError } = await supabase
       .from('attachments')
       .select('*')
-      .eq('expenditure_type', 'default')
-      .eq('installment', 'Α')  // Default is first installment with Greek letter
+      .eq('expenditure_type', 'default')  // Note the column name: expenditure_type (with 'n')
+      .eq('installment', 1)  // Default is first installment as integer
       .single();
     
     if (defaultError) {
@@ -129,8 +139,8 @@ async function fetchAttachments(expenditureType: string, installment: string) {
  */
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    // Use 'Α' (Greek letter alpha) for default first installment
-    const result = await fetchAttachments('default', 'Α');
+    // Use 1 for default first installment
+    const result = await fetchAttachments('default', 1);
     res.json(result);
   } catch (error) {
     console.error('[Attachments] Error in default route:', error);
@@ -143,7 +153,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
 /**
  * GET /api/attachments/:type
- * Return attachments for a specific expenditure type (using default installment Α)
+ * Return attachments for a specific expenditure type (using default installment 1)
  */
 router.get('/:type', async (req: Request, res: Response) => {
   try {
@@ -157,8 +167,8 @@ router.get('/:type', async (req: Request, res: Response) => {
     }
     
     const decodedType = decodeURIComponent(type).trim();
-    // Use 'Α' (Greek letter alpha) for default first installment
-    const result = await fetchAttachments(decodedType, 'Α');
+    // Use 1 for default first installment
+    const result = await fetchAttachments(decodedType, 1);
     res.json(result);
     
   } catch (error) {
