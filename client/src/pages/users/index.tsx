@@ -144,16 +144,25 @@ export default function UsersPage() {
     mutationFn: async (userId: number) => {
       console.log("[Users] Attempting to delete user with ID:", userId);
       
-      // Use apiRequest helper to handle errors and parsing
-      return await apiRequest(`/api/users/${userId}`, {
+      // Make a direct fetch request instead of using apiRequest to have better control
+      const response = await fetch(`/api/users/${userId}`, {
         method: "DELETE",
         credentials: "include",
         headers: {
           "Content-Type": "application/json"
         }
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("[Users] Delete response error:", errorData);
+        throw new Error(errorData.message || `Failed to delete user: ${response.status}`);
+      }
+      
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("[Users] Delete success response:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
         title: "User Deleted",
@@ -206,15 +215,28 @@ export default function UsersPage() {
       // Don't send empty password during update
       const finalData = userData.password ? userData : { ...userData, password: undefined };
       
-      return await apiRequest(`/api/users/${id}`, {
+      console.log("[Users] Attempting to update user with ID:", id, "and data:", finalData);
+      
+      // Make a direct fetch request instead of using apiRequest to have better control
+      const response = await fetch(`/api/users/${id}`, {
         method: "PATCH",
+        credentials: "include",
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(finalData)
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("[Users] Update response error:", errorData);
+        throw new Error(errorData.message || `Failed to update user: ${response.status}`);
+      }
+      
+      return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("[Users] Update success response:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
         title: "User Updated",
@@ -224,9 +246,10 @@ export default function UsersPage() {
       form.reset();
     },
     onError: (error: Error) => {
+      console.error("[Users] Update error:", error);
       toast({
         title: "Update Failed",
-        description: error.message,
+        description: error.message || "An error occurred when updating the user",
         variant: "destructive",
       });
     },
