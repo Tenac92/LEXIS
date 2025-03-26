@@ -46,11 +46,11 @@ export default function AdminNotificationsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   
   const { data: notifications = [], isLoading, refetch } = useQuery<BudgetNotification[]>({
-    queryKey: ['/api/budget/notifications/admin'],
+    queryKey: ['/api/budget-notifications/admin'],
     queryFn: async () => {
       console.log('[AdminNotificationsPage] Fetching notifications...');
       try {
-        const response = await fetch('/api/budget/notifications/admin', {
+        const response = await fetch('/api/budget-notifications/admin', {
           credentials: 'include',
         });
         
@@ -89,7 +89,7 @@ export default function AdminNotificationsPage() {
   
   const handleApprove = async (id: number) => {
     try {
-      const response = await fetch(`/api/budget/notifications/${id}/approve`, {
+      const response = await fetch(`/api/budget-notifications/${id}/approve`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -115,7 +115,7 @@ export default function AdminNotificationsPage() {
   
   const handleReject = async (id: number) => {
     try {
-      const response = await fetch(`/api/budget/notifications/${id}/reject`, {
+      const response = await fetch(`/api/budget-notifications/${id}/reject`, {
         method: 'POST',
         credentials: 'include',
       });

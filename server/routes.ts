@@ -386,9 +386,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
+    // Budget notifications routes - must be registered BEFORE the main budget routes
+    log('[Routes] Setting up budget notifications routes...');
+    app.use('/api/budget-notifications', authenticateSession, budgetNotificationsRouter);
+    log('[Routes] Budget notifications routes setup complete');
+    
     // Use authentication for all other budget routes
     app.use('/api/budget', authenticateSession, budgetRouter);
-    log('[Routes] Budget routes setup complete');
 
     // Documents routes
     log('[Routes] Setting up document routes...');
