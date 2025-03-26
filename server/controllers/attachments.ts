@@ -48,7 +48,7 @@ router.get('/:type', async (req: Request, res: Response) => {
     const { data, error } = await supabase
       .from('attachments')
       .select('*')
-      .eq('expediture_type', decodedType)
+      .eq('expenditure_type', decodedType)
       .eq('installment', parsedInstallment)
       .single();
     
@@ -66,7 +66,7 @@ router.get('/:type', async (req: Request, res: Response) => {
       const { data: defaultData } = await supabase
         .from('attachments')
         .select('*')
-        .eq('expediture_type', 'default')
+        .eq('expenditure_type', 'default')
         .eq('installment', 1)
         .single();
       
@@ -142,7 +142,7 @@ router.get('/:type/:installment', async (req: Request, res: Response) => {
       const { data, error } = await supabase
         .from('attachments')
         .select('*')
-        .eq('expediture_type', decodedType)
+        .eq('expenditure_type', decodedType)
         .eq('installment', parsedInstallment)
         .single();
 
@@ -165,7 +165,7 @@ router.get('/:type/:installment', async (req: Request, res: Response) => {
           const { data: defaultData, error: defaultError } = await supabase
             .from('attachments')
             .select('*')
-            .eq('expediture_type', 'default')
+            .eq('expenditure_type', 'default')
             .eq('installment', 1)
             .single();
             
