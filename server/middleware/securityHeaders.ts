@@ -4,7 +4,7 @@ import {Request, Response, NextFunction} from 'express';
 export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'", "https://sdegdaefk.gr", "*"],
+      defaultSrc: ["'self'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
       scriptSrc: [
         "'self'",
         "'unsafe-inline'", 
@@ -13,10 +13,11 @@ export const securityHeaders = helmet({
         "https://ga.jspm.io",
         "https://esm.sh",
         "https://sdegdaefk.gr",
+        "http://sdegdaefk.gr",
         "*"
       ],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://sdegdaefk.gr", "*"], 
-      imgSrc: ["'self'", "data:", "https:", "https://sdegdaefk.gr", "*"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"], 
+      imgSrc: ["'self'", "data:", "https:", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
       connectSrc: [
         "'self'",
         "https://ga.jspm.io",
@@ -26,14 +27,15 @@ export const securityHeaders = helmet({
         "https://fonts.gstatic.com",
         "https://*.supabase.co",
         "https://sdegdaefk.gr",
+        "http://sdegdaefk.gr",
         "*"
       ],
-      fontSrc: ["'self'", "https:", "data:", "https://sdegdaefk.gr", "*"],
+      fontSrc: ["'self'", "https:", "data:", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
       objectSrc: ["'self'"],
-      mediaSrc: ["'self'", "https://sdegdaefk.gr", "*"],
-      frameSrc: ["'self'", "https://sdegdaefk.gr", "*"],
-      formAction: ["'self'", "https://sdegdaefk.gr", "*"],
-      frameAncestors: ["'self'", "https://sdegdaefk.gr", "*"],
+      mediaSrc: ["'self'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
+      frameSrc: ["'self'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
+      formAction: ["'self'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
+      frameAncestors: ["'self'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
       baseUri: ["'self'"],
       upgradeInsecureRequests: null,
     }
@@ -65,9 +67,10 @@ export function additionalSecurity(req: Request, res: Response, next: NextFuncti
   // Add security headers, but allow sdegdaefk.gr
   res.setHeader('X-Content-Type-Options', 'nosniff');
   
-  // Allow frames from sdegdaefk.gr
-  if (req.headers.origin === 'https://sdegdaefk.gr') {
-    res.setHeader('X-Frame-Options', 'ALLOW-FROM https://sdegdaefk.gr');
+  // Allow frames from sdegdaefk.gr (both HTTP and HTTPS)
+  const allowedOrigins = ['https://sdegdaefk.gr', 'http://sdegdaefk.gr'];
+  if (req.headers.origin && allowedOrigins.includes(req.headers.origin)) {
+    res.setHeader('X-Frame-Options', `ALLOW-FROM ${req.headers.origin}`);
   } else {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   }
@@ -75,15 +78,16 @@ export function additionalSecurity(req: Request, res: Response, next: NextFuncti
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('X-Download-Options', 'noopen');
   
-  // Set more permissive CSP for sdegdaefk.gr
-  res.setHeader('Content-Security-Policy', "default-src 'self' https://sdegdaefk.gr *; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdegdaefk.gr *; connect-src 'self' https://sdegdaefk.gr *; frame-ancestors 'self' https://sdegdaefk.gr *");
+  // Set more permissive CSP for sdegdaefk.gr (both HTTP and HTTPS)
+  res.setHeader('Content-Security-Policy', "default-src 'self' https://sdegdaefk.gr http://sdegdaefk.gr *; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdegdaefk.gr http://sdegdaefk.gr *; connect-src 'self' https://sdegdaefk.gr http://sdegdaefk.gr *; frame-ancestors 'self' https://sdegdaefk.gr http://sdegdaefk.gr *");
   
   // Add CORS headers for external domains with special handling for sdegdaefk.gr
   const origin = req.headers.origin;
-  if (origin === 'https://sdegdaefk.gr') {
+  // Using the same allowedOrigins array defined above
+  if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token, X-API-Key, Cache-Control, Pragma, withcredentials');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
   }

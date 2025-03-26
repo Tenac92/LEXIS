@@ -26,7 +26,7 @@ router.get('/', (_req: Request, res: Response) => {
     message: 'Server is running and healthy',
     cors: {
       enabled: true,
-      domains: ['https://sdegdaefk.gr']
+      domains: ['https://sdegdaefk.gr', 'http://sdegdaefk.gr']
     },
   };
   
@@ -50,7 +50,7 @@ router.get('/cors-test', (req: Request, res: Response) => {
     requestReferer: referer,
     corsEnabled: true,
     message: 'CORS test endpoint',
-    allowedOrigins: ['https://sdegdaefk.gr'],
+    allowedOrigins: ['https://sdegdaefk.gr', 'http://sdegdaefk.gr'],
     allowCredentials: true,
     responseHeaders: {
       'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),

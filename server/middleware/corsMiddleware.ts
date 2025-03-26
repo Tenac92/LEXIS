@@ -8,9 +8,12 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
   // Get the request origin
   const origin = req.headers.origin;
   
-  // Special handling for sdegdaefk.gr
-  if (origin === 'https://sdegdaefk.gr') {
-    // Allow the specific origin
+  // List of allowed origins for sdegdaefk.gr (both http and https)
+  const allowedOrigins = ['https://sdegdaefk.gr', 'http://sdegdaefk.gr'];
+  
+  // Special handling for sdegdaefk.gr domain
+  if (origin && allowedOrigins.includes(origin)) {
+    // Allow the specific origin that made the request
     res.setHeader('Access-Control-Allow-Origin', origin);
     
     // Allow common methods
@@ -38,7 +41,7 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
   }
   
   // Log CORS-related requests in development
-  if (process.env.NODE_ENV !== 'production' && origin === 'https://sdegdaefk.gr') {
+  if (process.env.NODE_ENV !== 'production' && origin && ['https://sdegdaefk.gr', 'http://sdegdaefk.gr'].includes(origin)) {
     console.log(`[CORS] Request from ${origin} to ${req.method} ${req.path}`);
   }
 
