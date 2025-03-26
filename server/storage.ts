@@ -12,7 +12,20 @@ export interface IStorage {
   getProjectExpenditureTypes(projectId: string): Promise<string[]>;
   getBudgetData(mis: string): Promise<BudgetNA853Split | null>;
   createBudgetHistoryEntry(entry: InsertBudgetHistory): Promise<void>;
-  getBudgetHistory(mis: string): Promise<any[]>;
+  getBudgetHistory(
+    mis?: string, 
+    page?: number, 
+    limit?: number, 
+    changeType?: string
+  ): Promise<{
+    data: any[], 
+    pagination: {
+      total: number, 
+      page: number, 
+      limit: number, 
+      pages: number
+    }
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -256,10 +269,13 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async getBudgetHistory(mis?: string): Promise<any[]> {
+  async getBudgetHistory(mis?: string, page: number = 1, limit: number = 10, changeType?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}}> {
     try {
-      console.log(`[Storage] Fetching budget history${mis ? ` for MIS: ${mis}` : ' for all projects'}`);
+      console.log(`[Storage] Fetching budget history${mis ? ` for MIS: ${mis}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}`);
       
+      const offset = (page - 1) * limit;
+      
+      // Build the base query
       let query = supabase
         .from('budget_history')
         .select(`
@@ -275,18 +291,32 @@ export class DatabaseStorage implements IStorage {
           metadata,
           users(id, name, email),
           generated_documents(id, status)
-        `)
-        .order('created_at', { ascending: false });
-        
-      // If MIS is provided, filter by it
+        `, { count: 'exact' });
+      
+      // Apply filters
       if (mis) {
         query = query.eq('mis', mis);
       }
       
-      const { data, error } = await query;
+      if (changeType && changeType !== 'all') {
+        query = query.eq('change_type', changeType);
+      }
+      
+      // Get total count first
+      const { count, error: countError } = await query.select('id', { count: 'exact', head: true });
+      
+      if (countError) {
+        console.error('[Storage] Error getting count of budget history records:', countError);
+        throw countError;
+      }
+      
+      // Now get the paginated data with all columns
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
         
       if (error) {
-        console.error('[Storage] Error fetching budget history:', error);
+        console.error('[Storage] Error fetching budget history data:', error);
         throw error;
       }
       
@@ -297,18 +327,41 @@ export class DatabaseStorage implements IStorage {
         previous_amount: entry.previous_amount || '0',
         new_amount: entry.new_amount || '0',
         change_type: entry.change_type,
-        change_reason: entry.change_reason,
+        change_reason: entry.change_reason || '',
         document_id: entry.document_id,
         document_status: entry.generated_documents?.[0]?.status,
         created_by: entry.users?.name || 'System',
         created_at: entry.created_at,
-        metadata: entry.metadata
+        metadata: entry.metadata || {}
       })) || [];
       
-      return formattedData;
+      // Calculate pagination data
+      const totalPages = Math.ceil((count || 0) / limit);
+      
+      console.log(`[Storage] Successfully fetched ${formattedData.length} of ${count} budget history records (page ${page}/${totalPages})`);
+      
+      return {
+        data: formattedData,
+        pagination: {
+          total: count || 0,
+          page,
+          limit,
+          pages: totalPages
+        }
+      };
     } catch (error) {
       console.error('[Storage] Error in getBudgetHistory:', error);
-      return [];
+      
+      // Return empty data with pagination info on error
+      return {
+        data: [],
+        pagination: {
+          total: 0,
+          page,
+          limit,
+          pages: 0
+        }
+      };
     }
   }
 }
