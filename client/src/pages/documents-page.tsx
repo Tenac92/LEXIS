@@ -292,6 +292,13 @@ export default function DocumentsPage() {
                     <Filter className="h-4 w-4" />
                     Προχωρημένα Φίλτρα
                   </span>
+                  {(advancedFilters.dateFrom || advancedFilters.dateTo || 
+                    advancedFilters.amountFrom || advancedFilters.amountTo || 
+                    advancedFilters.recipient || advancedFilters.afm) && (
+                    <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
+                      Ενεργά
+                    </span>
+                  )}
                 </Button>
               </SheetTrigger>
               <SheetContent>
@@ -363,9 +370,27 @@ export default function DocumentsPage() {
                     />
                   </div>
                 </div>
-                <SheetClose asChild>
-                  <Button className="w-full mt-4" onClick={() => refetch()}>Εφαρμογή Φίλτρων</Button>
-                </SheetClose>
+                <div className="flex gap-2 mt-4">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1" 
+                    onClick={() => {
+                      setAdvancedFilterValues({
+                        dateFrom: '',
+                        dateTo: '',
+                        amountFrom: '',
+                        amountTo: '',
+                        recipient: '',
+                        afm: ''
+                      });
+                    }}
+                  >
+                    Καθαρισμός
+                  </Button>
+                  <SheetClose asChild>
+                    <Button className="flex-1" onClick={applyAdvancedFilters}>Εφαρμογή</Button>
+                  </SheetClose>
+                </div>
               </SheetContent>
             </Sheet>
 
