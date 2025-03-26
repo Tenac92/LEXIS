@@ -176,7 +176,17 @@ export default function UsersPage() {
   });
 
   const onSubmit = (data: UserFormData) => {
-    createUserMutation.mutate(data);
+    // Convert unit IDs to unit names for the backend
+    const modifiedData = {
+      ...data,
+      units: data.units?.map((unitId) => {
+        const unit = units.find(u => u.id === unitId);
+        return unit ? unit.name : unitId;
+      })
+    };
+    
+    console.log('Submitting user data:', modifiedData);
+    createUserMutation.mutate(modifiedData as UserFormData);
   };
 
   const filteredUsers = users?.filter((user) => {
@@ -184,7 +194,10 @@ export default function UsersPage() {
       !search ||
       user.name.toLowerCase().includes(search.toLowerCase()) ||
       user.email.toLowerCase().includes(search.toLowerCase()) ||
-      user.units?.toLowerCase().includes(search.toLowerCase());
+      (user.units && Array.isArray(user.units) && 
+        user.units.some(unit => 
+          typeof unit === 'string' && unit.toLowerCase().includes(search.toLowerCase())
+        ));
 
     const roleMatch = selectedRole === "all" || user.role === selectedRole;
 

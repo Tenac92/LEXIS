@@ -57,29 +57,41 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
     }
 
     const unitsList = Array.isArray(units) ? units : [units];
-
-    const { data, error } = await supabase
+    console.log('[Units] Fetching parts for units:', unitsList);
+    
+    // Get all units first and filter manually to avoid JSON path issues with Greek characters
+    const { data: allUnits, error } = await supabase
       .from('Monada')
-      .select('parts')
-      .in('unit_name->name', unitsList);
-
+      .select('unit_name, parts');
+    
     if (error) {
-      console.error('[Units] Error fetching parts:', error);
+      console.error('[Units] Error fetching units:', error);
       throw error;
     }
-
+    
+    // Filter to get only the selected units
+    const selectedUnits = allUnits?.filter(unit => 
+      unit.unit_name && 
+      typeof unit.unit_name === 'object' && 
+      unit.unit_name.name && 
+      unitsList.includes(unit.unit_name.name)
+    );
+    
+    console.log('[Units] Found matching units:', selectedUnits?.length || 0);
+    
     // Combine all parts from selected units
-    const allParts = data?.reduce<string[]>((acc, unit) => {
+    const allParts = selectedUnits?.reduce<string[]>((acc, unit) => {
       if (unit.parts && typeof unit.parts === 'object') {
         // Extract values from the parts object
         return [...acc, ...Object.values(unit.parts)];
       }
       return acc;
-    }, []);
+    }, []) || [];
 
     // Remove duplicates
     const uniqueParts = Array.from(new Set(allParts));
-
+    
+    console.log('[Units] Found parts:', uniqueParts);
     res.json(uniqueParts.sort());
   } catch (error) {
     console.error('[Units] Error fetching unit parts:', error);
