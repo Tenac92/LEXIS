@@ -1,10 +1,23 @@
 import helmet from 'helmet';
 import {Request, Response, NextFunction} from 'express';
+import { log } from '../vite';
 
+/**
+ * Main helmet security configuration
+ * Relaxed to support cross-domain communication with sdegdaefk.gr
+ */
 export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
+      // Allow all content from sdegdaefk.gr domain and subdomains
+      defaultSrc: [
+        "'self'", 
+        "https://sdegdaefk.gr", 
+        "http://sdegdaefk.gr",
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr",
+        "*"
+      ],
       scriptSrc: [
         "'self'",
         "'unsafe-inline'", 
@@ -14,10 +27,29 @@ export const securityHeaders = helmet({
         "https://esm.sh",
         "https://sdegdaefk.gr",
         "http://sdegdaefk.gr",
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr",
         "*"
       ],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"], 
-      imgSrc: ["'self'", "data:", "https:", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
+      styleSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "https://sdegdaefk.gr", 
+        "http://sdegdaefk.gr", 
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr",
+        "*"
+      ], 
+      imgSrc: [
+        "'self'", 
+        "data:", 
+        "https:",
+        "https://sdegdaefk.gr", 
+        "http://sdegdaefk.gr", 
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr",
+        "*"
+      ],
       connectSrc: [
         "'self'",
         "https://ga.jspm.io",
@@ -28,24 +60,72 @@ export const securityHeaders = helmet({
         "https://*.supabase.co",
         "https://sdegdaefk.gr",
         "http://sdegdaefk.gr",
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr",
         "*"
       ],
-      fontSrc: ["'self'", "https:", "data:", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
-      objectSrc: ["'self'"],
-      mediaSrc: ["'self'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
-      frameSrc: ["'self'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
-      formAction: ["'self'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
-      frameAncestors: ["'self'", "https://sdegdaefk.gr", "http://sdegdaefk.gr", "*"],
+      fontSrc: [
+        "'self'", 
+        "https:", 
+        "data:", 
+        "https://sdegdaefk.gr", 
+        "http://sdegdaefk.gr", 
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr",
+        "*"
+      ],
+      objectSrc: [
+        "'self'", 
+        "https://sdegdaefk.gr", 
+        "http://sdegdaefk.gr", 
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr"
+      ],
+      mediaSrc: [
+        "'self'", 
+        "https://sdegdaefk.gr", 
+        "http://sdegdaefk.gr", 
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr",
+        "*"
+      ],
+      frameSrc: [
+        "'self'", 
+        "https://sdegdaefk.gr", 
+        "http://sdegdaefk.gr", 
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr",
+        "*"
+      ],
+      formAction: [
+        "'self'", 
+        "https://sdegdaefk.gr", 
+        "http://sdegdaefk.gr", 
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr",
+        "*"
+      ],
+      frameAncestors: [
+        "'self'", 
+        "https://sdegdaefk.gr", 
+        "http://sdegdaefk.gr", 
+        "https://*.sdegdaefk.gr",
+        "http://*.sdegdaefk.gr",
+        "*"
+      ],
       baseUri: ["'self'"],
+      // Don't automatically upgrade HTTP to HTTPS for sdegdaefk.gr to support both protocols
       upgradeInsecureRequests: null,
     }
   },
+  // Disable cross-origin policies that might interfere with sdegdaefk.gr integration
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: false,
   crossOriginResourcePolicy: false,
   dnsPrefetchControl: false,
-  frameguard: false,  // Allow framing
+  frameguard: false,  // Allow framing for sdegdaefk.gr
   hidePoweredBy: true,
+  // Keep HSTS for production security
   hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
@@ -55,20 +135,26 @@ export const securityHeaders = helmet({
   noSniff: true,
   originAgentCluster: true,
   permittedCrossDomainPolicies: false,
+  // Use more permissive referrer policy to support cross-domain links
   referrerPolicy: { policy: "no-referrer-when-downgrade" },
   xssFilter: true
 });
 
-// Additional security middleware
+/**
+ * Additional security middleware with enhanced cross-domain support
+ * This adds explicit CORS headers and frame permissions for sdegdaefk.gr domain
+ */
 export function additionalSecurity(req: Request, res: Response, next: NextFunction) {
   // Clear sensitive headers
   res.removeHeader('X-Powered-By');
 
-  // Add security headers, but allow sdegdaefk.gr and subdomains
+  // Add basic security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
   
-  // Get the request origin
+  // Get the request information
   const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const host = req.headers.host;
   
   // Allow frames from sdegdaefk.gr and its subdomains (both HTTP and HTTPS)
   const allowedOrigins = [
@@ -88,52 +174,97 @@ export function additionalSecurity(req: Request, res: Response, next: NextFuncti
     }
   }
   
+  // Enhanced detection of sdegdaefk.gr requests
+  const isSdegdaefkRequest = 
+    (origin && (allowedOrigins.includes(origin) || origin.endsWith('.sdegdaefk.gr'))) ||
+    (referer && referer.includes('sdegdaefk.gr')) ||
+    (host && host.includes('sdegdaefk.gr'));
+  
   // Check if the origin is allowed
   const isAllowedDomain = origin && (
     allowedOrigins.includes(origin) || 
-    (origin.endsWith('.sdegdaefk.gr'))
+    origin.endsWith('.sdegdaefk.gr') ||
+    (process.env.NODE_ENV !== 'production' && (
+      origin.includes('replit.dev') || 
+      origin.includes('replit.app') ||
+      origin.includes('repl.co')
+    ))
   );
   
-  // Log request information in development
-  if (process.env.NODE_ENV !== 'production' && origin) {
-    console.log(`[Security] Request from origin: ${origin}, isAllowed: ${isAllowedDomain}`);
-  }
+  // Log request information for debugging
+  log(`[Security] Request from origin: ${origin || 'none'}, referer: ${referer || 'none'}, host: ${host || 'none'}`, 'security');
+  log(`[Security] Is allowed domain: ${isAllowedDomain}, is sdegdaefk request: ${isSdegdaefkRequest}`, 'security');
   
-  if (origin && isAllowedDomain) {
-    // Modern browsers ignore ALLOW-FROM, but we'll set it anyway for older browsers
-    res.setHeader('X-Frame-Options', `ALLOW-FROM ${origin}`);
+  // Handle frame permissions
+  if (isAllowedDomain || isSdegdaefkRequest) {
+    // Set more permissive frame options for sdegdaefk.gr
+    if (origin) {
+      // Modern browsers ignore ALLOW-FROM, but we'll set it anyway for older browsers
+      res.setHeader('X-Frame-Options', `ALLOW-FROM ${origin}`);
+    } else {
+      // If no origin but still from sdegdaefk.gr, use a default
+      res.setHeader('X-Frame-Options', 'ALLOW-FROM https://sdegdaefk.gr');
+    }
   } else {
+    // Default to same-origin framing for all other domains
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   }
   
+  // Basic XSS protection
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('X-Download-Options', 'noopen');
   
-  // Set more permissive CSP for sdegdaefk.gr domains (with wildcards for subdomains)
-  res.setHeader('Content-Security-Policy', 
-    "default-src 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr *; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sdegdaefk.gr http://*.sdegdaefk.gr *; " +
-    "connect-src 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr *; " +
-    "frame-ancestors 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr *"
-  );
+  // Set comprehensive CSP for sdegdaefk.gr domains
+  // This is a backup CSP if helmet's doesn't apply (which should be rare)
+  const cspValue = 
+    "default-src 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *; " +
+    "connect-src 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *; " +
+    "frame-ancestors 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *; " +
+    "img-src 'self' data: https: https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *; " +
+    "font-src 'self' data: https: https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *;";
   
-  // Add CORS headers for external domains with special handling for sdegdaefk.gr domain and subdomains
-  if (origin && isAllowedDomain) {
-    // Log more detailed information in development
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Security] Setting CORS headers for: ${origin}`);
-      console.log(`[Security] Request method: ${req.method}, path: ${req.path}`);
-      console.log(`[Security] Cookie headers: ${req.headers.cookie}`);
+  // Only set CSP if it's not already set by helmet
+  if (!res.getHeader('Content-Security-Policy')) {
+    res.setHeader('Content-Security-Policy', cspValue);
+  }
+  
+  // Enhanced CORS headers for cross-domain communication
+  if (isAllowedDomain || isSdegdaefkRequest) {
+    // Log detailed CORS information
+    log(`[Security] Setting enhanced CORS headers for sdegdaefk.gr domain access`, 'security');
+    log(`[Security] Method: ${req.method}, Path: ${req.path}`, 'security');
+    
+    // Set CORS headers with origin reflection
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    } else if (isSdegdaefkRequest) {
+      // If no origin header but other indicators suggest sdegdaefk.gr, use a default
+      res.setHeader('Access-Control-Allow-Origin', 'https://sdegdaefk.gr');
     }
     
-    res.setHeader('Access-Control-Allow-Origin', origin);
+    // Allow all common methods
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    
+    // Allow a comprehensive set of headers for cross-domain requests
     res.setHeader('Access-Control-Allow-Headers', 
-      'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token, X-API-Key, ' +
-      'Cache-Control, Pragma, withcredentials, Cookie, cookie'
+      'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token, X-Referrer, ' +
+      'X-API-Key, Cache-Control, Pragma, Set-Cookie, Cookie, withcredentials'
     );
+    
+    // Critical for cookie/session authentication across domains
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+    
+    // Expose important headers like Set-Cookie for cross-domain access
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Type, X-Requested-With, Set-Cookie, ETag, Date');
+    
+    // Cache preflight results for 24 hours to reduce OPTIONS requests
+    res.setHeader('Access-Control-Max-Age', '86400');
+    
+    // Check if this is an authentication route
+    if (req.path.includes('/api/auth')) {
+      log(`[Security] Processing authentication route with enhanced cross-domain support: ${req.path}`, 'security-auth');
+    }
   }
 
   next();

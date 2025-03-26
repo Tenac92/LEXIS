@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import geoip from 'geoip-lite';
+import { log } from '../vite';
 
 export const router = Router();
 
@@ -43,15 +44,35 @@ router.get('/', (_req: Request, res: Response) => {
 router.get('/cors-test', (req: Request, res: Response) => {
   const origin = req.headers.origin || 'No origin header';
   const referer = req.headers.referer || 'No referer header';
+  const host = req.headers.host || 'No host header';
+  
+  // Check if this appears to be from sdegdaefk.gr
+  const isSdegdaefkRequest = 
+    (typeof origin === 'string' && origin.includes('sdegdaefk.gr')) ||
+    (typeof referer === 'string' && referer.includes('sdegdaefk.gr')) ||
+    (typeof host === 'string' && host.includes('sdegdaefk.gr'));
+    
+  // Log detailed information for debugging
+  if (isSdegdaefkRequest) {
+    log(`[HealthCheck] CORS test from sdegdaefk.gr domain: ${JSON.stringify({
+      origin, 
+      referer,
+      host,
+      cookies: req.headers.cookie
+    })}`, 'healthcheck');
+  }
   
   const response = {
     status: 'ok',
     timestamp: new Date().toISOString(),
     requestOrigin: origin,
     requestReferer: referer,
+    requestHost: host,
     corsEnabled: true,
     message: 'CORS test endpoint',
-    allowedOrigins: ['https://sdegdaefk.gr', 'http://sdegdaefk.gr'],
+    isSdegdaefkRequest,
+    cookies: req.headers.cookie ? 'Present' : 'None',
+    allowedOrigins: ['https://sdegdaefk.gr', 'http://sdegdaefk.gr', 'https://*.sdegdaefk.gr', 'http://*.sdegdaefk.gr'],
     allowCredentials: true,
     responseHeaders: {
       'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
@@ -87,7 +108,7 @@ router.get('/geoip-test', (req: Request, res: Response) => {
   try {
     geoData = geoip.lookup(clientIp as string);
   } catch (error) {
-    console.error('Error performing GeoIP lookup:', error);
+    log(`[HealthCheck] Error performing GeoIP lookup: ${error}`, 'healthcheck');
   }
 
   const response = {
@@ -113,6 +134,126 @@ router.get('/geoip-test', (req: Request, res: Response) => {
   };
   
   res.status(200).json(response);
+});
+
+/**
+ * Cross-domain authentication test endpoint
+ * GET /api/healthcheck/auth-test
+ * 
+ * This endpoint tests if authentication cookies are properly working across domains
+ */
+router.get('/auth-test', (req: Request, res: Response) => {
+  // Extract session information
+  const hasSession = !!req.session;
+  const hasUser = !!(req.session && req.session.user);
+  const sessionID = req.sessionID;
+  
+  // Extract request details
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const host = req.headers.host;
+  
+  // Check for sdegdaefk.gr related request
+  const isSdegdaefkRequest = 
+    (typeof origin === 'string' && origin.includes('sdegdaefk.gr')) ||
+    (typeof referer === 'string' && referer.includes('sdegdaefk.gr')) ||
+    (typeof host === 'string' && host.includes('sdegdaefk.gr'));
+  
+  // Log detailed information for debugging cross-domain auth
+  log(`[HealthCheck] Auth test: ${JSON.stringify({
+    hasSession,
+    hasUser,
+    sessionID,
+    origin,
+    referer,
+    host,
+    isSdegdaefkRequest,
+    cookies: req.headers.cookie,
+    ip: req.ip
+  })}`, 'healthcheck');
+  
+  // Return authentication status
+  res.status(200).json({
+    status: 'ok',
+    message: 'Authentication test endpoint',
+    auth: {
+      hasSession,
+      hasUser,
+      sessionID,
+      userRole: hasUser && req.session.user ? req.session.user.role : null,
+      userName: hasUser && req.session.user ? req.session.user.name : null
+    },
+    request: {
+      origin: origin || 'None',
+      referer: referer || 'None',
+      host: host || 'None',
+      ip: req.ip,
+      isSdegdaefkRequest,
+      cookies: req.headers.cookie ? 'Present' : 'None'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
+ * Special endpoint for sdegdaefk.gr domain testing
+ * GET /api/healthcheck/sdegdaefk
+ * 
+ * This endpoint specifically tests sdegdaefk.gr domain connectivity
+ */
+router.get('/sdegdaefk', (req: Request, res: Response) => {
+  // Extract all request information
+  const cookies = req.headers.cookie;
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const host = req.headers.host;
+  
+  // Check if this is from sdegdaefk.gr
+  const isSdegdaefkRequest = 
+    (typeof origin === 'string' && origin.includes('sdegdaefk.gr')) ||
+    (typeof referer === 'string' && referer.includes('sdegdaefk.gr')) ||
+    (typeof host === 'string' && host.includes('sdegdaefk.gr'));
+  
+  // Log detailed information
+  log(`[HealthCheck] sdegdaefk.gr test: ${JSON.stringify({
+    isSdegdaefkRequest,
+    origin,
+    referer,
+    host,
+    cookies,
+    ip: req.ip,
+    headers: {
+      cookie: cookies ? 'Present' : 'None',
+      origin: origin || 'None',
+      referer: referer || 'None',
+      host: host || 'None'
+    }
+  })}`, 'healthcheck');
+  
+  // Return comprehensive information
+  res.status(200).json({
+    status: 'ok',
+    message: 'sdegdaefk.gr connectivity test endpoint',
+    connection: {
+      isSdegdaefkRequest,
+      origin: origin || 'None',
+      referer: referer || 'None',
+      host: host || 'None',
+      hasCookies: !!cookies,
+      ip: req.ip
+    },
+    environment: {
+      cookieDomain: process.env.COOKIE_DOMAIN || 'Not set',
+      nodeEnv: process.env.NODE_ENV || 'Not set'
+    },
+    headers: {
+      'Access-Control-Allow-Origin': res.getHeader('Access-Control-Allow-Origin'),
+      'Access-Control-Allow-Credentials': res.getHeader('Access-Control-Allow-Credentials'),
+      'Content-Security-Policy': res.getHeader('Content-Security-Policy') ? 'Present (truncated)' : 'Not set',
+      'Vary': res.getHeader('Vary')
+    },
+    timestamp: new Date().toISOString()
+  });
 });
 
 export default router;

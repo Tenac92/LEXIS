@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import geoip from 'geoip-lite';
+import { log } from '../vite';
 
 /**
  * Allowed country codes
@@ -18,8 +19,9 @@ const IP_WHITELIST = [
   '10.0.0.0/8',       // Internal network
   '172.16.0.0/12',    // Internal network
   '192.168.0.0/16',   // Internal network
-  '35.192.0.0/12',    // Replit/Google Cloud IPs (may need adjustment)
-  '34.0.0.0/8',       // Replit/Google Cloud IPs (may need adjustment)
+  '35.192.0.0/12',    // Replit/Google Cloud IPs
+  '34.0.0.0/8',       // Replit/Google Cloud IPs
+  '84.205.0.0/16',    // Common Greek ISP range (for testing)
 ];
 
 /**
@@ -27,10 +29,27 @@ const IP_WHITELIST = [
  * This allows specific domains to bypass geo-restrictions
  */
 const EXEMPT_DOMAINS = [
+  // Main sdegdaefk.gr domains
   'sdegdaefk.gr',
+  'www.sdegdaefk.gr',
+  // Subdomains of sdegdaefk.gr
+  '.sdegdaefk.gr',
+  // Replit domains
   'replit.app',
   'replit.dev',
-  'repl.co'
+  'repl.co',
+  'replit.com'
+];
+
+/**
+ * Exempt paths from geo-restrictions
+ * Critical paths that should always be accessible
+ */
+const EXEMPT_PATHS = [
+  '/api/healthcheck',
+  '/api/auth/login',
+  '/api/auth/logout',
+  '/api/auth/me',
 ];
 
 /**
@@ -44,7 +63,8 @@ function isIpWhitelisted(ip: string): boolean {
   if (ip.startsWith('10.') || 
       ip.startsWith('127.') || 
       (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31) ||
-      ip.startsWith('192.168.')) {
+      ip.startsWith('192.168.') ||
+      ip.startsWith('84.205.')) {  // Added common Greek IP range
     return true;
   }
 
@@ -61,7 +81,18 @@ function isDomainExempt(req: Request): boolean {
   
   // In development mode, always exempt
   if (process.env.NODE_ENV !== 'production') {
-    console.log(`[GeoIP] Dev environment exempt from GeoIP restrictions`);
+    log(`[GeoIP] Dev environment exempt from GeoIP restrictions`, 'geoip');
+    return true;
+  }
+  
+  // Enhanced check for sdegdaefk.gr specifically
+  const isSdegdaefkDomain = 
+    origin.includes('sdegdaefk.gr') || 
+    referer.includes('sdegdaefk.gr') || 
+    host.includes('sdegdaefk.gr');
+  
+  if (isSdegdaefkDomain) {
+    log(`[GeoIP] sdegdaefk.gr domain exempt from GeoIP restrictions: ${origin || referer || host}`, 'geoip');
     return true;
   }
   
@@ -77,11 +108,22 @@ function isDomainExempt(req: Request): boolean {
            header.includes('repl.co');
   });
   
-  if (isReplitDomain && process.env.NODE_ENV !== 'production') {
-    console.log(`[GeoIP] Replit domain exempt from GeoIP restrictions: ${host}`);
+  if (isReplitDomain) {
+    log(`[GeoIP] Replit domain exempt from GeoIP restrictions: ${host}`, 'geoip');
+    return true;
   }
   
   return isExempt || isReplitDomain;
+}
+
+/**
+ * Check if a path should be exempt from geo-restrictions
+ */
+function isPathExempt(path: string): boolean {
+  // Check for direct matches or if the path starts with any exempt path
+  return EXEMPT_PATHS.some(exemptPath => 
+    path === exemptPath || path.startsWith(exemptPath)
+  );
 }
 
 /**
@@ -89,14 +131,21 @@ function isDomainExempt(req: Request): boolean {
  * 
  * This middleware blocks traffic from countries not in the ALLOWED_COUNTRIES list,
  * with exceptions for IP_WHITELIST and EXEMPT_DOMAINS.
+ * Enhanced for sdegdaefk.gr domain support.
  */
 export function geoIpRestriction(req: Request, res: Response, next: NextFunction) {
-  // Allow health checks and preflight requests to bypass geo-restriction
-  if (req.path.includes('/api/healthcheck') || req.method === 'OPTIONS') {
+  // Allow preflight requests to bypass geo-restriction
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+  
+  // Allow exempt paths to bypass geo-restriction
+  if (isPathExempt(req.path)) {
+    log(`[GeoIP] Exempt path ${req.path} bypassing geo-restrictions`, 'geoip');
     return next();
   }
 
-  // Skip for exempt domains
+  // Skip for exempt domains (including sdegdaefk.gr)
   if (isDomainExempt(req)) {
     return next();
   }
@@ -111,9 +160,13 @@ export function geoIpRestriction(req: Request, res: Response, next: NextFunction
   if (typeof clientIp === 'string' && clientIp.includes(',')) {
     clientIp = clientIp.split(',')[0].trim();
   }
+  
+  // Log IP check for debugging
+  log(`[GeoIP] Checking IP: ${clientIp} for path ${req.path}`, 'geoip');
 
   // If IP is in whitelist, allow access
   if (isIpWhitelisted(clientIp as string)) {
+    log(`[GeoIP] IP ${clientIp} is whitelisted, allowing access`, 'geoip');
     return next();
   }
 
@@ -123,17 +176,18 @@ export function geoIpRestriction(req: Request, res: Response, next: NextFunction
   // If geo lookup failed, allow access (fail open for production environments)
   // For stricter security, change this to deny by default
   if (!geo) {
-    console.warn(`GeoIP lookup failed for IP: ${clientIp}`);
+    log(`[GeoIP] GeoIP lookup failed for IP: ${clientIp}`, 'geoip');
     return next();
   }
 
-  // Check if country is allowed
+  // Check if country is allowed (Greece)
   if (ALLOWED_COUNTRIES.includes(geo.country)) {
+    log(`[GeoIP] Access allowed from Greece (${geo.country}) IP: ${clientIp}`, 'geoip');
     return next();
   }
 
   // Log blocked access
-  console.warn(`Access blocked: IP ${clientIp} from ${geo.country} attempted to access ${req.path}`);
+  log(`[GeoIP] Access blocked: IP ${clientIp} from ${geo.country} attempted to access ${req.path}`, 'geoip-blocked');
   
   // Return 403 Forbidden
   return res.status(403).json({
