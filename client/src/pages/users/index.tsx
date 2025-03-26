@@ -339,13 +339,20 @@ export default function UsersPage() {
                         onClick={() => {
                           setSelectedUser(user);
                           setEditUserDialogOpen(true);
+                          
+                          // Map user's unit names to unit IDs for the form
+                          const userUnitIds = (user.units || []).map(unitName => {
+                            const unit = units.find(u => u.name === unitName);
+                            return unit ? unit.id : "";
+                          }).filter(id => id !== "");
+                          
                           // Pre-populate form with user data
                           form.reset({
                             email: user.email,
                             name: user.name,
                             password: "", // Don't pre-populate password for security
                             role: user.role as "admin" | "user" | "manager",
-                            units: [], // Will be set below if needed
+                            units: userUnitIds,
                             telephone: user.telephone || "",
                             department: user.department || ""
                           });
@@ -484,41 +491,15 @@ export default function UsersPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Units</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        const currentUnits = field.value || [];
-                        const newUnits = currentUnits.includes(value)
-                          ? currentUnits.filter(unit => unit !== value)
-                          : [...currentUnits, value];
-                        field.onChange(newUnits);
-                      }}
-                      defaultValue={field.value?.[0]}
-                      multiple
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select units">
-                            {field.value?.length 
-                              ? `${field.value.length} units selected` 
-                              : "Select units"}
-                          </SelectValue>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {units.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.id}>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 border rounded flex items-center justify-center ${
-                                field.value?.includes(unit.id) ? "bg-primary" : ""
-                              }`}>
-                                {field.value?.includes(unit.id) && "✓"}
-                              </div>
-                              {unit.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <MultiSelect
+                        options={units}
+                        value={field.value || []}
+                        onChange={field.onChange}
+                        placeholder="Select units"
+                        addLabel="Add more units"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -700,41 +681,15 @@ export default function UsersPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Units</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        const currentUnits = field.value || [];
-                        const newUnits = currentUnits.includes(value)
-                          ? currentUnits.filter(unit => unit !== value)
-                          : [...currentUnits, value];
-                        field.onChange(newUnits);
-                      }}
-                      defaultValue={field.value?.[0]}
-                      multiple
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select units">
-                            {field.value?.length 
-                              ? `${field.value.length} units selected` 
-                              : "Select units"}
-                          </SelectValue>
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {units.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.id}>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 border rounded flex items-center justify-center ${
-                                field.value?.includes(unit.id) ? "bg-primary" : ""
-                              }`}>
-                                {field.value?.includes(unit.id) && "✓"}
-                              </div>
-                              {unit.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <MultiSelect
+                        options={units}
+                        value={field.value || []}
+                        onChange={field.onChange}
+                        placeholder="Select units"
+                        addLabel="Add more units"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
