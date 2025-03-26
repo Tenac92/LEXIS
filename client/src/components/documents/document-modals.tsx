@@ -224,7 +224,7 @@ interface GeneratedDocument {
 interface EditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  document: GeneratedDocument;
+  document?: GeneratedDocument;
   onEdit: (id: string) => void;
 }
 
@@ -306,6 +306,10 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
 
   const handleEdit = async () => {
     try {
+      if (!document) {
+        throw new Error('No document selected for editing');
+      }
+      
       setLoading(true);
       console.log('[EditDocument] Starting edit for document:', document.id);
 

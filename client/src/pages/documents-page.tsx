@@ -255,7 +255,7 @@ export default function DocumentsPage() {
                   <SelectContent>
                     <SelectItem key="all-users" value="all">Όλοι οι Χρήστες</SelectItem>
                     <SelectItem key="current-user" value="current">Τα Έγγραφά μου</SelectItem>
-                    {matchingUsers?.map((u: { id: number; name?: string; email?: string }) => (
+                    {Array.isArray(matchingUsers) && matchingUsers.map((u: { id: number; name?: string; email?: string }) => (
                       <SelectItem key={u.id} value={u.id.toString()}>
                         {u.name || u.email}
                       </SelectItem>
@@ -415,7 +415,7 @@ export default function DocumentsPage() {
       <EditDocumentModal
         isOpen={modalState.edit}
         onClose={() => setModalState(prev => ({ ...prev, edit: false }))}
-        document={selectedDocument}
+        document={selectedDocument || undefined}
         onEdit={(id: string) => {
           queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
         }}

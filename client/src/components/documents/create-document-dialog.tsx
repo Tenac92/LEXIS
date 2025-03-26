@@ -540,12 +540,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ["projects", selectedUnit],
-    queryFn: async () => {
+    queryFn: async (): Promise<Project[]> => {
       if (!selectedUnit) return [];
 
       try {
         console.log(`[Projects] Fetching projects for unit: ${selectedUnit}`);
-        const response = await apiRequest(`/api/projects/by-unit/${encodeURIComponent(selectedUnit)}`);
+        const response = await apiRequest<any>(`/api/projects/by-unit/${encodeURIComponent(selectedUnit)}`);
         
         // Force response to be an array
         let projectsArray: any[] = [];
