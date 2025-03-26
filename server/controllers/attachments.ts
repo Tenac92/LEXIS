@@ -59,7 +59,7 @@ async function fetchAttachments(expenditureType: string, installment: number) {
     const { data, error } = await supabase
       .from('attachments')
       .select('*')
-      .eq('expediture_type', expenditureType)
+      .eq('expenditure_type', expenditureType)
       .eq('installment', String(installment))
       .single();
     
@@ -83,7 +83,7 @@ async function fetchAttachments(expenditureType: string, installment: number) {
     const { data: defaultData, error: defaultError } = await supabase
       .from('attachments')
       .select('*')
-      .eq('expediture_type', 'default')
+      .eq('expenditure_type', 'default')
       .eq('installment', '1')
       .single();
     
