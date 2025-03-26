@@ -172,94 +172,43 @@ router.get('/history', authenticateToken, async (req: AuthenticatedRequest, res:
       });
     }
 
+    // Parse query parameters
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const offset = (page - 1) * limit;
     const mis = req.query.mis as string | undefined;
     const changeType = req.query.change_type as string | undefined;
 
     console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}`);
 
-    // Build query filter
-    let queryFilter = supabase.from('budget_history');
-    
-    // Filter by MIS if provided
-    if (mis) {
-      queryFilter = queryFilter.eq('mis', mis);
-    }
-    
-    // Filter by change type if provided
-    if (changeType && changeType !== 'all') {
-      queryFilter = queryFilter.eq('change_type', changeType);
-    }
-    
-    // Get total count for pagination
-    const { count } = await queryFilter.select('*', { count: 'exact', head: true });
+    try {
+      // Use the enhanced storage method with pagination
+      const result = await storage.getBudgetHistory(mis, page, limit, changeType);
+      
+      console.log(`[Budget] Successfully fetched ${result.data.length} of ${result.pagination.total} history records`);
 
-    // Get paginated data with joins for user information
-    const { data, error } = await queryFilter
-      .select(`
-        id,
-        mis,
-        previous_amount,
-        new_amount,
-        change_type,
-        change_reason,
-        document_id,
-        created_by,
-        created_at,
-        metadata,
-        users(id, name, email),
-        generated_documents(id, status)
-      `)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    if (error) {
-      console.error('[Budget] Error fetching history:', error);
+      return res.json({
+        status: 'success',
+        data: result.data,
+        pagination: result.pagination
+      });
+    } catch (storageError) {
+      console.error('[Budget] Error from storage.getBudgetHistory:', storageError);
       return res.status(500).json({
         status: 'error',
         message: 'Failed to fetch budget history',
-        details: error.message,
+        details: storageError instanceof Error ? storageError.message : 'Storage error',
         data: [],
-        pagination: { total: 0, page: 1, limit: 10, pages: 0 }
+        pagination: { total: 0, page, limit, pages: 0 }
       });
     }
-
-    // Format the response data
-    const formattedData = data?.map(entry => ({
-      id: entry.id,
-      mis: entry.mis,
-      previous_amount: entry.previous_amount || '0',
-      new_amount: entry.new_amount || '0',
-      change_type: entry.change_type,
-      change_reason: entry.change_reason || '',
-      document_id: entry.document_id,
-      document_status: entry.generated_documents?.[0]?.status,
-      created_by: entry.users?.name || 'System',
-      created_at: entry.created_at,
-      metadata: entry.metadata || {}
-    })) || [];
-    
-    console.log(`[Budget] Successfully fetched ${formattedData.length} history records`);
-
-    return res.json({
-      status: 'success',
-      data: formattedData,
-      pagination: {
-        total: count || 0,
-        page,
-        limit,
-        pages: Math.ceil((count || 0) / limit)
-      }
-    });
-
   } catch (error) {
     console.error('[Budget] History fetch error:', error);
     return res.status(500).json({
       status: 'error',
       message: 'Failed to fetch budget history',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      data: [],
+      pagination: { total: 0, page: 1, limit: 10, pages: 0 }
     });
   }
 });
@@ -286,86 +235,119 @@ router.put('/bulk-update', authenticateToken, async (req: AuthenticatedRequest, 
       });
     }
 
+    // Track success and failure counts
+    const results = {
+      success: 0,
+      failures: 0,
+      errors: [] as string[]
+    };
+
     // Process each update sequentially
     for (const update of updates) {
-      const { mis, na853, data } = update;
+      try {
+        const { mis, na853, data } = update;
 
-      if (!mis || !na853) {
-        throw new Error(`Invalid update data: missing mis or na853`);
-      }
+        if (!mis || !na853) {
+          throw new Error(`Invalid update data: missing mis or na853`);
+        }
 
-      // Get current budget data before updating
-      const { data: currentBudget, error: fetchError } = await supabase
-        .from('budget_na853_split')
-        .select('*')
-        .eq('mis', mis)
-        .eq('na853', na853)
-        .single();
+        // Get current budget data before updating
+        const { data: currentBudget, error: fetchError } = await supabase
+          .from('budget_na853_split')
+          .select('*')
+          .eq('mis', mis)
+          .eq('na853', na853)
+          .single();
 
-      if (fetchError || !currentBudget) {
-        throw new Error(`Budget split record not found for MIS ${mis} and NA853 ${na853}`);
-      }
+        if (fetchError || !currentBudget) {
+          throw new Error(`Budget split record not found for MIS ${mis} and NA853 ${na853}`);
+        }
 
-      // Update the budget split record
-      const { error: updateError } = await supabase
-        .from('budget_na853_split')
-        .update({
-          ethsia_pistosi: data.ethsia_pistosi,
-          q1: data.q1,
-          q2: data.q2,
-          q3: data.q3,
-          q4: data.q4,
-          katanomes_etous: data.katanomes_etous,
-          user_view: data.user_view,
-          updated_at: new Date().toISOString()
-        })
-        .eq('mis', mis)
-        .eq('na853', na853);
+        // Calculate the difference between current and new values
+        // Note: If this is not a budget reduction but rather a budget update that might increase,
+        // you may need to modify the approach
+        const currentUserView = parseFloat(currentBudget.user_view?.toString() || '0');
+        const newUserView = parseFloat(data.user_view?.toString() || '0');
+        
+        // Create a detailed change reason for traceability
+        const changeReason = `Bulk update of budget data for MIS ${mis} (NA853: ${na853})`;
+        
+        // Update the budget split record directly
+        const { error: updateError } = await supabase
+          .from('budget_na853_split')
+          .update({
+            ethsia_pistosi: data.ethsia_pistosi,
+            q1: data.q1,
+            q2: data.q2,
+            q3: data.q3,
+            q4: data.q4,
+            katanomes_etous: data.katanomes_etous,
+            user_view: data.user_view,
+            updated_at: new Date().toISOString()
+          })
+          .eq('mis', mis)
+          .eq('na853', na853);
 
-      if (updateError) {
-        throw new Error(`Failed to update budget split for MIS ${mis}: ${updateError.message}`);
-      }
+        if (updateError) {
+          throw new Error(`Failed to update budget split for MIS ${mis}: ${updateError.message}`);
+        }
 
-      // Log the change in budget history
-      await supabase
-        .from('budget_history')
-        .insert({
+        // Create a budget history entry with detailed metadata
+        await storage.createBudgetHistoryEntry({
           mis,
           previous_amount: currentBudget.user_view?.toString() || '0',
           new_amount: data.user_view?.toString() || '0',
           change_type: 'manual_adjustment',
-          change_reason: 'Bulk update of budget data',
+          change_reason: changeReason,
           created_by: userId,
           metadata: {
+            operation_type: 'bulk_update',
+            na853,
+            quarters: {
+              q1: { previous: parseFloat(currentBudget.q1?.toString() || '0'), new: parseFloat(data.q1?.toString() || '0') },
+              q2: { previous: parseFloat(currentBudget.q2?.toString() || '0'), new: parseFloat(data.q2?.toString() || '0') },
+              q3: { previous: parseFloat(currentBudget.q3?.toString() || '0'), new: parseFloat(data.q3?.toString() || '0') },
+              q4: { previous: parseFloat(currentBudget.q4?.toString() || '0'), new: parseFloat(data.q4?.toString() || '0') }
+            },
             previous: {
               ethsia_pistosi: currentBudget.ethsia_pistosi,
-              q1: currentBudget.q1,
-              q2: currentBudget.q2,
-              q3: currentBudget.q3,
-              q4: currentBudget.q4,
               katanomes_etous: currentBudget.katanomes_etous,
-              user_view: currentBudget.user_view
+              user_view: currentBudget.user_view,
+              total_spent: currentBudget.total_spent || 0
             },
             new: {
               ethsia_pistosi: data.ethsia_pistosi,
-              q1: data.q1,
-              q2: data.q2,
-              q3: data.q3,
-              q4: data.q4,
               katanomes_etous: data.katanomes_etous,
-              user_view: data.user_view
+              user_view: data.user_view,
+              total_spent: currentBudget.total_spent || 0 // Total spent remains unchanged
             },
-            na853
+            timestamp: new Date().toISOString()
           }
         });
 
-      console.log(`[Budget] Successfully updated budget split for MIS ${mis} and tracked in history`);
+        console.log(`[Budget] Successfully updated budget split for MIS ${mis} and tracked in history`);
+        results.success++;
+      } catch (updateError) {
+        // Log the error but continue with other updates
+        console.error(`[Budget] Error updating budget: ${updateError instanceof Error ? updateError.message : 'Unknown error'}`);
+        results.failures++;
+        results.errors.push(updateError instanceof Error ? updateError.message : 'Unknown error');
+      }
     }
 
-    res.json({ 
-      success: true, 
-      message: `Successfully updated ${updates.length} budget splits and tracked changes in history` 
-    });
+    // Return summary of results
+    if (results.failures === 0) {
+      res.json({ 
+        success: true, 
+        message: `Successfully updated ${results.success} budget splits and tracked changes in history` 
+      });
+    } else {
+      res.json({ 
+        success: results.success > 0, 
+        message: `Processed ${results.success + results.failures} updates: ${results.success} succeeded, ${results.failures} failed`,
+        errors: results.errors
+      });
+    }
   } catch (error) {
     console.error('[Budget] Bulk update error:', error);
     res.status(500).json({ 
