@@ -1,9 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { pool } from "../config/db";
-import { db } from "../drizzle";
-import { eq, and } from "drizzle-orm";
-import * as schema from "../../shared/schema";
+import { supabase } from "../config/db";
 
 /**
  * Attachments Controller
@@ -57,56 +54,56 @@ async function fetchAttachments(expenditureType: string, installment: number) {
   console.log(`[Attachments] Fetching attachments for type: ${expenditureType}, installment: ${installment}`);
   
   try {
-    // Use direct query first for maximum flexibility
-    const query = `
-      SELECT * FROM attachments 
-      WHERE expenditure_type = $1 AND installment = $2
-    `;
-    
     // Try to fetch specific attachments for this expenditure type
-    console.log(`[Attachments] Querying for type: ${expenditureType}, installment: ${installment}`);
-    const client = await pool.connect();
+    const { data, error } = await supabase
+      .from('attachments')
+      .select('*')
+      .eq('expenditure_type', expenditureType)
+      .eq('installment', installment)
+      .single();
     
-    try {
-      const result = await client.query(query, [expenditureType, installment]);
-      
-      // Log and return data if found
-      if (result.rows.length > 0) {
-        console.log('[Attachments] Data found:', result.rows[0]);
-        if (result.rows[0]?.attachments?.length) {
-          return { 
-            status: 'success',
-            attachments: result.rows[0].attachments
-          };
-        }
-      }
-      
-      // Try to fetch default attachments
-      console.log(`[Attachments] No specific attachments found for ${expenditureType}, using defaults`);
-      const defaultResult = await client.query(query, ['default', 1]);
-      
-      // Return default attachments if found
-      if (defaultResult.rows.length > 0 && defaultResult.rows[0]?.attachments?.length) {
-        console.log('[Attachments] Using default attachments:', defaultResult.rows[0].attachments);
-        return { 
-          status: 'success',
-          attachments: defaultResult.rows[0].attachments
-        };
-      }
-      
-      // Fall back to default attachments with message
-      console.log('[Attachments] No attachments found in database, using hardcoded defaults');
+    if (error && error.code !== 'PGRST116') {
+      console.error('[Attachments] Database error:', error);
+    }
+    
+    // Return specific attachments if found
+    if (data?.attachments?.length) {
       return { 
         status: 'success',
-        message: 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.',
-        attachments: DEFAULT_ATTACHMENTS
+        attachments: data.attachments 
       };
-    } finally {
-      client.release();
     }
+    
+    // Try to fetch default attachments
+    console.log(`[Attachments] No specific attachments found for ${expenditureType}, using defaults`);
+    const { data: defaultData, error: defaultError } = await supabase
+      .from('attachments')
+      .select('*')
+      .eq('expenditure_type', 'default')
+      .eq('installment', 1)
+      .single();
+    
+    if (defaultError) {
+      console.error('[Attachments] Error fetching default attachments:', defaultError);
+    }
+    
+    // Return default attachments if found
+    if (defaultData?.attachments?.length) {
+      return { 
+        status: 'success',
+        attachments: defaultData.attachments 
+      };
+    }
+    
+    // Return empty attachments with message if nothing found
+    return { 
+      status: 'success',
+      message: 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.',
+      attachments: DEFAULT_ATTACHMENTS
+    };
+    
   } catch (error) {
     console.error('[Attachments] Error in fetchAttachments:', error);
-    
     // Return fallback attachments on error
     return { 
       status: 'success',
