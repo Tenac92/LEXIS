@@ -4,6 +4,7 @@ import { authenticateSession } from "./auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
 import { router as budgetRouter } from "./controllers/budgetController";
+import { router as budgetNotificationsRouter } from "./controllers/budgetNotificationsController";
 import { router as unitsRouter } from "./controllers/unitsController";
 import { router as usersRouter } from "./controllers/usersController";
 import { router as projectRouter } from "./controllers/projectController";

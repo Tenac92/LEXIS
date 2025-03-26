@@ -403,55 +403,62 @@ export class BudgetService {
     try {
       console.log('[BudgetService] Fetching notifications...');
 
-      const { data, error } = await supabase
-        .from('budget_notifications')
-        .select(`
-          id,
-          mis,
-          type,
-          amount,
-          current_budget,
-          ethsia_pistosi,
-          reason,
-          status,
-          user_id,
-          created_at,
-          updated_at
-        `)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      // Use a more robust approach to fetch data from Supabase
+      try {
+        const { data, error } = await supabase
+          .from('budget_notifications')
+          .select(`
+            id,
+            mis,
+            type,
+            amount,
+            current_budget,
+            ethsia_pistosi,
+            reason,
+            status,
+            user_id,
+            created_at,
+            updated_at
+          `)
+          .order('created_at', { ascending: false })
+          .limit(50);
 
-      if (error) {
-        console.error('[BudgetService] Error fetching notifications:', error);
-        // Return empty array instead of throwing error
+        if (error) {
+          console.error('[BudgetService] Error fetching notifications:', error);
+          // Return empty array instead of throwing error
+          return [];
+        }
+
+        // Ensure data is an array
+        const notificationArray = Array.isArray(data) ? data : [];
+
+        // Transform and validate the data
+        const transformedData = notificationArray.map(notification => ({
+          id: Number(notification.id),
+          mis: String(notification.mis),
+          type: notification.type,
+          amount: Number(notification.amount),
+          current_budget: Number(notification.current_budget),
+          ethsia_pistosi: Number(notification.ethsia_pistosi),
+          reason: String(notification.reason || ''),
+          status: notification.status,
+          user_id: Number(notification.user_id),
+          created_at: notification.created_at,
+          updated_at: notification.updated_at
+        }));
+
+        console.log('[BudgetService] Successfully fetched notifications:', {
+          count: transformedData.length,
+          isArray: Array.isArray(transformedData),
+          sample: transformedData.length > 0 ? 'sample exists' : 'no data'
+        });
+
+        return transformedData;
+      } catch (innerError) {
+        // If data from Supabase fails with an unexpected error, log and return empty array
+        console.error('[BudgetService] Unexpected error in supabase query:', innerError);
         return [];
       }
-
-      // Ensure data is an array
-      const notificationArray = Array.isArray(data) ? data : [];
-
-      // Transform and validate the data
-      const transformedData = notificationArray.map(notification => ({
-        id: Number(notification.id),
-        mis: String(notification.mis),
-        type: notification.type,
-        amount: Number(notification.amount),
-        current_budget: Number(notification.current_budget),
-        ethsia_pistosi: Number(notification.ethsia_pistosi),
-        reason: String(notification.reason || ''),
-        status: notification.status,
-        user_id: Number(notification.user_id),
-        created_at: notification.created_at,
-        updated_at: notification.updated_at
-      }));
-
-      console.log('[BudgetService] Successfully fetched notifications:', {
-        count: transformedData.length,
-        isArray: Array.isArray(transformedData),
-        sample: transformedData[0]
-      });
-
-      return transformedData;
     } catch (error) {
       console.error('[BudgetService] Error in getNotifications:', error);
       // Return empty array instead of throwing error
