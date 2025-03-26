@@ -55,6 +55,7 @@ async function fetchAttachments(expenditureType: string, installment: number) {
   
   try {
     // Try to fetch specific attachments for this expenditure type
+    console.log(`[Attachments] Querying for type: ${expenditureType}, installment: ${String(installment)}`);
     const { data, error } = await supabase
       .from('attachments')
       .select('*')
@@ -64,10 +65,13 @@ async function fetchAttachments(expenditureType: string, installment: number) {
     
     if (error && error.code !== 'PGRST116') {
       console.error('[Attachments] Database error:', error);
+    } else if (data) {
+      console.log('[Attachments] Data found:', data);
     }
     
     // Return specific attachments if found
     if (data?.attachments?.length) {
+      console.log('[Attachments] Returning attachments:', data.attachments);
       return { 
         status: 'success',
         attachments: data.attachments 
