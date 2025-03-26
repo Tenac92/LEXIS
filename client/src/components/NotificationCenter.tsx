@@ -49,11 +49,11 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
   const { isConnected } = useWebSocketUpdates();
 
   const { data: notifications = [], error, isError, isLoading, refetch } = useQuery({
-    queryKey: ['/api/budget/notifications'],
+    queryKey: ['/api/budget-notifications/admin'],
     queryFn: async () => {
       console.log('[NotificationCenter] Fetching notifications...');
       try {
-        const response = await fetch('/api/budget/notifications', {
+        const response = await fetch('/api/budget-notifications/admin', {
           credentials: 'include',
           headers: {
             'Accept': 'application/json',
