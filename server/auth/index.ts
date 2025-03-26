@@ -236,17 +236,47 @@ export async function setupAuth(app: Express) {
         return res.status(500).json({ message: 'Logout failed' });
       }
       
-      res.clearCookie('sid');
+      // Clear the cookie with the same settings used to set it
+      const cookieDomain = process.env.COOKIE_DOMAIN;
+      res.clearCookie('sid', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: cookieDomain ? 'none' : 'lax',
+        ...(cookieDomain ? { domain: cookieDomain } : {})
+      });
+      
       res.status(200).json({ message: 'Logout successful' });
     });
   });
   
-  app.get("/api/auth/me", authenticateSession, (req: AuthenticatedRequest, res: Response) => {
-    if (!req.user) {
-      return res.status(401).json({ message: 'No authenticated user found' });
+  app.get("/api/auth/me", (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Check if session exists before proceeding
+      if (!req.session) {
+        return res.status(401).json({ message: 'No session available' });
+      }
+      
+      // Check if user exists in session
+      if (!req.session.user) {
+        return res.status(401).json({ message: 'No authenticated user found' });
+      }
+      
+      // Set user on request
+      req.user = req.session.user;
+      
+      // Log authenticated user
+      log(`[Auth] Returning current user: ${JSON.stringify({
+        id: req.user.id,
+        role: req.user.role,
+        sessionID: req.sessionID,
+        ip: req.ip
+      })}`, 'auth');
+      
+      res.status(200).json({ user: req.user });
+    } catch (error) {
+      log(`[Auth] Error retrieving user: ${error}`, 'error');
+      res.status(500).json({ message: 'Error retrieving user data', error: String(error) });
     }
-    
-    res.status(200).json({ user: req.user });
   });
   
   return app;

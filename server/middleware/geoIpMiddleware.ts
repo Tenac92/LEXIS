@@ -9,7 +9,7 @@ const ALLOWED_COUNTRIES = ['GR'];
 
 /**
  * Whitelist of IPs that can bypass geo restrictions
- * Include internal IPs, localhost, development environments, etc.
+ * Include internal IPs, localhost, development environments, and Replit IPs
  */
 const IP_WHITELIST = [
   '127.0.0.1',
@@ -18,6 +18,8 @@ const IP_WHITELIST = [
   '10.0.0.0/8',       // Internal network
   '172.16.0.0/12',    // Internal network
   '192.168.0.0/16',   // Internal network
+  '35.192.0.0/12',    // Replit/Google Cloud IPs (may need adjustment)
+  '34.0.0.0/8',       // Replit/Google Cloud IPs (may need adjustment)
 ];
 
 /**
@@ -55,10 +57,31 @@ function isIpWhitelisted(ip: string): boolean {
 function isDomainExempt(req: Request): boolean {
   const referer = req.get('Referer') || '';
   const origin = req.get('Origin') || '';
+  const host = req.get('Host') || '';
   
-  return EXEMPT_DOMAINS.some(domain => {
-    return (referer.includes(domain) || origin.includes(domain));
+  // In development mode, always exempt
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[GeoIP] Dev environment exempt from GeoIP restrictions`);
+    return true;
+  }
+  
+  // Check if any of the headers indicate exempt domains
+  const isExempt = EXEMPT_DOMAINS.some(domain => {
+    return (referer.includes(domain) || origin.includes(domain) || host.includes(domain));
   });
+  
+  // Add extra check for Replit domains
+  const isReplitDomain = [referer, origin, host].some(header => {
+    return header.includes('replit.dev') || 
+           header.includes('replit.app') ||
+           header.includes('repl.co');
+  });
+  
+  if (isReplitDomain && process.env.NODE_ENV !== 'production') {
+    console.log(`[GeoIP] Replit domain exempt from GeoIP restrictions: ${host}`);
+  }
+  
+  return isExempt || isReplitDomain;
 }
 
 /**
