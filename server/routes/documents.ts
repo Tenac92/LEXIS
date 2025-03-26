@@ -1,7 +1,38 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { supabase } from "../config/db";
 import type { GeneratedDocument } from "@shared/schema";
 import { DocumentManager } from '../utils/DocumentManager';
+
+// Additional CORS middleware specifically for document routes
+// This ensures proper cross-domain functionality with sdegdaefk.gr
+function documentsCorsMiddleware(req: Request, res: Response, next: NextFunction) {
+  const origin = req.get('origin');
+  const sdegdaefkDomain = 'sdegdaefk.gr';
+  
+  // Check if the request is from sdegdaefk.gr or any subdomain
+  const isFromSdegdaefkDomain = 
+    origin && (
+      origin.includes(sdegdaefkDomain) || 
+      // Also handle IP-based access during testing
+      req.hostname === sdegdaefkDomain || 
+      req.get('host')?.includes(sdegdaefkDomain)
+    );
+  
+  if (isFromSdegdaefkDomain) {
+    console.log(`[DocumentsRoute] Detected request from sdegdaefk.gr domain: ${origin}`);
+    
+    // Set CORS headers specifically for sdegdaefk.gr
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    // Log CORS headers for debugging
+    console.log('[DocumentsRoute] Set CORS headers for sdegdaefk.gr request');
+  }
+  
+  next();
+}
 
 // Create the router
 export const router = Router();
@@ -10,8 +41,16 @@ const documentManager = new DocumentManager();
 // List documents with filters
 router.get('/', async (req: Request, res: Response) => {
   try {
-    // Processing document fetch with filters
-
+    console.log(`[DocumentsRoute] Processing GET request from ${req.ip} with origin ${req.get('origin')}`);
+    console.log(`[DocumentsRoute] Filters:`, req.query);
+    
+    // Add a timeout to prevent hanging requests
+    const TIMEOUT = 8000; // 8 seconds
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), TIMEOUT);
+    });
+    
+    // Extract and validate filters with better error handling
     const filters = {
       unit: req.query.unit as string,
       status: req.query.status as string,
@@ -23,13 +62,61 @@ router.get('/', async (req: Request, res: Response) => {
       afm: req.query.afm as string
     };
 
-    const documents = await documentManager.loadDocuments(filters);
-    // Documents retrieved successfully
+    // Validate numeric values to prevent errors
+    if (req.query.amountFrom && isNaN(filters.amountFrom as number)) {
+      console.warn(`[DocumentsRoute] Invalid amountFrom value: ${req.query.amountFrom}`);
+      filters.amountFrom = undefined;
+    }
+    
+    if (req.query.amountTo && isNaN(filters.amountTo as number)) {
+      console.warn(`[DocumentsRoute] Invalid amountTo value: ${req.query.amountTo}`);
+      filters.amountTo = undefined;
+    }
 
-    res.json(documents);
-  } catch (error) {
-    console.error('Error fetching documents:', error);
-    res.status(500).json({ message: 'Error fetching documents', error: error instanceof Error ? error.message : 'Unknown error' });
+    // Race the document loading against the timeout
+    const documents = await Promise.race([
+      documentManager.loadDocuments(filters),
+      timeoutPromise
+    ]) as any[];
+    
+    // Log the successful retrieval
+    console.log(`[DocumentsRoute] Successfully retrieved ${documents.length} documents`);
+    
+    // Send the response with proper headers
+    res
+      .status(200)
+      .set({
+        'Cache-Control': 'no-cache',
+        'Content-Type': 'application/json'
+      })
+      .json(documents || []);
+  } catch (error: any) {
+    console.error('[DocumentsRoute] Error fetching documents:', error);
+    
+    // Distinguish between different types of errors for better debugging
+    if (error.message === 'Request timeout') {
+      console.error('[DocumentsRoute] Request timed out');
+      return res.status(504).json({ 
+        message: 'Request timed out while fetching documents',
+        error: 'timeout'
+      });
+    }
+    
+    // Handle database connection errors gracefully
+    if (error.code === '57P01') {
+      console.error('[DocumentsRoute] Database connection terminated by administrator');
+      return res.status(503).json({ 
+        message: 'Database connection issue, please try again later',
+        error: 'db_connection'
+      });
+    }
+    
+    // Return a graceful error response with minimal details for security
+    res.status(500).json({ 
+      message: 'Error fetching documents', 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

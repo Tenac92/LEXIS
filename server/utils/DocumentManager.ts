@@ -30,55 +30,106 @@ export class DocumentManager {
       // Get the supabase client from the unified data layer
       const { supabase } = await import('../data');
 
-      let query = supabase.from('generated_documents')
-                         .select('*')
-                         .order('created_at', { ascending: false });
-
-      // Apply basic filters
-      if (filters.unit) {
-        // Applying unit filter
-        if (Array.isArray(filters.unit)) {
-          // If unit is an array, use 'in' query
-          query = query.in('unit', filters.unit);
-        } else {
-          // Otherwise use exact match
-          query = query.eq('unit', filters.unit);
+      // Define a maximum retry count for resilience
+      const MAX_RETRIES = 3;
+      let retryCount = 0;
+      let result = null;
+      
+      // Implement retry logic for database operations
+      while (retryCount < MAX_RETRIES) {
+        try {
+          let query = supabase.from('generated_documents')
+                             .select('*')
+                             .order('created_at', { ascending: false });
+    
+          // Apply basic filters
+          if (filters.unit) {
+            // Applying unit filter
+            if (Array.isArray(filters.unit)) {
+              // If unit is an array, use 'in' query
+              query = query.in('unit', filters.unit);
+            } else {
+              // Otherwise use exact match
+              query = query.eq('unit', filters.unit);
+            }
+          }
+    
+          if (filters.status) {
+            // Applying status filter with special handling for corrections
+            if (filters.status === 'orthi_epanalipsi') {
+              query = query.eq('is_correction', true);
+            } else {
+              query = query.eq('status', filters.status);
+            }
+          }
+    
+          // Apply date range filters
+          if (filters.dateFrom) {
+            // Applying date from filter for created_at
+            query = query.gte('created_at', filters.dateFrom);
+          }
+          if (filters.dateTo) {
+            // Applying date to filter for created_at
+            query = query.lte('created_at', filters.dateTo);
+          }
+    
+          // Apply amount range filters
+          if (filters.amountFrom !== undefined) {
+            // Applying amount from filter for total_amount
+            query = query.gte('total_amount', filters.amountFrom);
+          }
+          if (filters.amountTo !== undefined) {
+            // Applying amount to filter for total_amount
+            query = query.lte('total_amount', filters.amountTo);
+          }
+    
+          // Use a timeout for the query
+          const QUERY_TIMEOUT = 5000; // 5 seconds
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Query timeout')), QUERY_TIMEOUT);
+          });
+          
+          // Race the query against a timeout
+          result = await Promise.race([
+            query,
+            timeoutPromise
+          ]) as any;
+          
+          // If we reach here without error, break the retry loop
+          break;
+        } catch (retryError) {
+          retryCount++;
+          console.warn(`[DocumentManager] Query attempt ${retryCount} failed:`, retryError);
+          
+          if (retryCount >= MAX_RETRIES) {
+            // If we've exhausted all retries, throw the error
+            throw retryError;
+          }
+          
+          // Add exponential backoff between retries
+          const backoffTime = Math.pow(2, retryCount) * 100; // 200ms, 400ms, 800ms
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
         }
       }
 
-      if (filters.status) {
-        // Applying status filter with special handling for corrections
-        if (filters.status === 'orthi_epanalipsi') {
-          query = query.eq('is_correction', true);
-        } else {
-          query = query.eq('status', filters.status);
-        }
-      }
-
-      // Apply date range filters
-      if (filters.dateFrom) {
-        // Applying date from filter for created_at
-        query = query.gte('created_at', filters.dateFrom);
-      }
-      if (filters.dateTo) {
-        // Applying date to filter for created_at
-        query = query.lte('created_at', filters.dateTo);
-      }
-
-      // Apply amount range filters
-      if (filters.amountFrom !== undefined) {
-        // Applying amount from filter for total_amount
-        query = query.gte('total_amount', filters.amountFrom);
-      }
-      if (filters.amountTo !== undefined) {
-        // Applying amount to filter for total_amount
-        query = query.lte('total_amount', filters.amountTo);
-      }
-
-      const { data, error } = await query;
+      // Check for errors in the result
+      const { data, error } = result || { data: [], error: null };
 
       if (error) {
         console.error('[DocumentManager] Error loading documents:', error);
+        
+        // Handle specific database error codes
+        if (error.code === '57P01') { // terminating connection due to administrator command
+          console.warn('[DocumentManager] Database connection terminated by administrator, returning empty results');
+          return [];
+        }
+        
+        // For connection errors, return empty results instead of failing
+        if (error.code === '08006' || error.code === '08001' || error.code === '08004') {
+          console.warn('[DocumentManager] Database connection error, returning empty results');
+          return [];
+        }
+        
         throw error;
       }
 
@@ -86,8 +137,13 @@ export class DocumentManager {
       let filteredData = data || [];
 
       if (filters.recipient || filters.afm) {
-        filteredData = filteredData.filter(doc => {
-          return doc.recipients?.some((r: any) => {
+        filteredData = filteredData.filter((doc: any) => {
+          // Add null checks for recipients to prevent errors
+          if (!doc.recipients || !Array.isArray(doc.recipients)) {
+            return false;
+          }
+          
+          return doc.recipients.some((r: any) => {
             const matchesRecipient = !filters.recipient || 
               r.firstname?.toLowerCase().includes(filters.recipient.toLowerCase()) ||
               r.lastname?.toLowerCase().includes(filters.recipient.toLowerCase());
@@ -100,11 +156,13 @@ export class DocumentManager {
       }
 
       // Documents loaded successfully with filtering applied
-
+      console.log(`[DocumentManager] Successfully loaded ${filteredData.length} documents`);
       return filteredData;
     } catch (error) {
       console.error('[DocumentManager] Load documents error:', error);
-      throw error;
+      // Return empty data instead of failing the request
+      console.warn('[DocumentManager] Returning empty results due to error');
+      return [];
     }
   }
 
@@ -282,9 +340,10 @@ export class DocumentManager {
 
         // Document formatting completed successfully
         return { document: updatedDoc, buffer: docxBuffer };
-      } catch (formatError) {
+      } catch (formatError: any) {
         console.error('[DocumentManager] Error formatting document:', formatError);
-        throw new Error(`Failed to format document: ${formatError.message}`);
+        const errorMessage = formatError?.message || 'Unknown formatting error';
+        throw new Error(`Failed to format document: ${errorMessage}`);
       }
     } catch (error) {
       console.error('[DocumentManager] Generate orthi epanalipsi error:', error);

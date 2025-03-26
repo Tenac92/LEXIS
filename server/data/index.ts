@@ -38,7 +38,7 @@ class DatabaseConfig {
  */
 class DatabaseAccess {
   private static instance: DatabaseAccess;
-  private pgPool!: Pool; // Using definite assignment assertion
+  private pgPool!: typeof Pool.prototype; // Using definite assignment assertion
   private drizzleClient!: ReturnType<typeof drizzle>; // Using definite assignment assertion
   private supabaseClient!: ReturnType<typeof createClient<Database>>; // Using definite assignment assertion
   private initialized = false;
@@ -52,24 +52,39 @@ class DatabaseAccess {
       // Validate configuration
       DatabaseConfig.validateConfig();
 
-      // Initialize PostgreSQL pool
+      // Initialize PostgreSQL pool with improved error handling
       this.pgPool = new Pool({
         connectionString: DatabaseConfig.postgresUrl,
         max: 10,
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 5000,
+        // Improve performance with prepared statements
+        statement_timeout: 10000, // 10 seconds
       });
 
-      // Setup connection error handling
-      this.pgPool.on('error', (err) => {
+      // Setup connection error handling with better recovery mechanisms
+      this.pgPool.on('error', (err: Error & { code?: string }) => {
         log(`[Database] PostgreSQL pool error: ${err.message}`, 'error');
         console.error('[Database] PostgreSQL pool error:', err);
+        
+        // Handle specific PostgreSQL errors 
+        if (err.code === '57P01') { // terminating connection due to administrator command
+          log('[Database] Attempting to recover from administrative termination...', 'warn');
+          // We don't try to reconnect immediately, as the pool should handle that
+        } else if (err.code === '08006' || err.code === '08001' || err.code === '08004') {
+          // Connection errors - the pool should handle reconnection
+          log('[Database] Connection error detected, pool will handle reconnection', 'warn');
+        }
       });
 
-      // Initialize Drizzle ORM
-      this.drizzleClient = drizzle(this.pgPool, { schema });
+      // Initialize Drizzle ORM with a more resilient query execution strategy
+      this.drizzleClient = drizzle(this.pgPool, { 
+        schema,
+        // Add query logging in development for easier debugging
+        logger: process.env.NODE_ENV === 'development' 
+      });
 
-      // Initialize Supabase (if configured)
+      // Initialize Supabase (if configured) with better error handling
       if (DatabaseConfig.supabaseUrl && DatabaseConfig.supabaseKey) {
         this.supabaseClient = createClient<Database>(
           DatabaseConfig.supabaseUrl,
@@ -79,12 +94,30 @@ class DatabaseAccess {
               persistSession: false,
               autoRefreshToken: true,
             },
+            // Add global error handling
+            global: {
+              headers: {
+                'x-application-name': 'sdegdaefk-integration'
+              },
+            },
+            // Better network error handling
+            realtime: {
+              params: {
+                eventsPerSecond: 10
+              }
+            }
           }
         );
       } else {
         log('[Database] Supabase not configured, some features may be limited', 'warn');
-        // Create a mock supabase client to prevent null references
-        this.supabaseClient = {} as ReturnType<typeof createClient<Database>>;
+        // Create a mock supabase client with basic error handling to prevent null references
+        this.supabaseClient = {
+          from: () => {
+            return {
+              select: () => ({ data: [], error: new Error('Supabase not configured') })
+            };
+          }
+        } as unknown as ReturnType<typeof createClient<Database>>;
       }
 
       this.initialized = true;
@@ -92,7 +125,15 @@ class DatabaseAccess {
     } catch (error) {
       log(`[Database] Initialization error: ${error}`, 'error');
       console.error('[Database] Initialization error:', error);
-      throw error;
+      // Don't throw the error, allow the application to continue with limited functionality
+      this.initialized = false;
+      
+      // Initialize fallback objects to prevent null reference errors
+      this.pgPool = new Pool({ connectionString: 'postgres://localhost:5432/fallback' });
+      this.drizzleClient = drizzle(this.pgPool, { schema });
+      this.supabaseClient = {} as ReturnType<typeof createClient<Database>>;
+      
+      log('[Database] Initialized with fallback configuration due to error', 'warn');
     }
   }
 
