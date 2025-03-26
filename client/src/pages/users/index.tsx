@@ -114,15 +114,10 @@ export default function UsersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const response = await apiRequest(`/api/users/${userId}`, {
-        method: "DELETE",
+      // apiRequest already handles response parsing and error handling
+      return await apiRequest(`/api/users/${userId}`, {
+        method: "DELETE"
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to delete user");
-      }
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -143,19 +138,14 @@ export default function UsersPage() {
 
   const createUserMutation = useMutation({
     mutationFn: async (data: UserFormData) => {
-      const response = await apiRequest("/api/users", {
+      // apiRequest already handles response parsing and error handling
+      return await apiRequest("/api/users", {
         method: "POST",
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(data)
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to create user");
-      }
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
