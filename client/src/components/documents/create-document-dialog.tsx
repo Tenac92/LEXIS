@@ -647,7 +647,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           proip: 0,
           current_budget: 0,
           annual_budget: 0,
-          quarterly: { q1: 0, q2: 0, q3: 0, q4: 0 }
+          q1: 0,
+          q2: 0,
+          q3: 0,
+          q4: 0
         };
       }
 
@@ -679,7 +682,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           annual_budget: 0,
           total_spent: 0,
           remaining_budget: 0,
-          quarterly: { q1: 0, q2: 0, q3: 0, q4: 0 }
+          q1: 0,
+          q2: 0,
+          q3: 0,
+          q4: 0
         };
 
         // Handle different response formats
@@ -719,12 +725,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           total_spent: parseFloat(budgetData.total_spent?.toString() || '0'),
           remaining_budget: parseFloat(budgetData.remaining_budget?.toString() || 
                            (budgetData.current_budget ? budgetData.current_budget : '0')),
-          quarterly: {
-            q1: parseFloat(budgetData.q1?.toString() || '0'),
-            q2: parseFloat(budgetData.q2?.toString() || '0'),
-            q3: parseFloat(budgetData.q3?.toString() || '0'),
-            q4: parseFloat(budgetData.q4?.toString() || '0')
-          }
+          q1: parseFloat(budgetData.q1?.toString() || '0'),
+          q2: parseFloat(budgetData.q2?.toString() || '0'),
+          q3: parseFloat(budgetData.q3?.toString() || '0'),
+          q4: parseFloat(budgetData.q4?.toString() || '0')
         };
       } catch (error) {
         console.error('[Budget] Error fetching budget data:', error);
@@ -745,7 +749,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           annual_budget: 0,
           total_spent: 0,
           remaining_budget: 0,
-          quarterly: { q1: 0, q2: 0, q3: 0, q4: 0 }
+          q1: 0,
+          q2: 0,
+          q3: 0,
+          q4: 0
         };
       }
     },
@@ -1336,18 +1343,19 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         // Handle the nested structure of the response
         try {
           let processedRegions: Array<{id: string, name: string, type: string}> = [];
+          const typedResponse = response as Record<string, any>;
           
           // Handle object with nested arrays
-          if (response.region && Array.isArray(response.region)) {
-            console.log('Processing region data with format:', typeof response.region[0]);
+          if (typedResponse.region && Array.isArray(typedResponse.region)) {
+            console.log('Processing region data with format:', typeof typedResponse.region[0]);
             
-            // Handle case where response.region contains region objects
-            if (response.region.length > 0 && typeof response.region[0] === 'object') {
+            // Handle case where typedResponse.region contains region objects
+            if (typedResponse.region.length > 0 && typeof typedResponse.region[0] === 'object') {
               // Extract and flatten the regional_unit values if available
-              for (const regionItem of response.region) {
+              for (const regionItem of typedResponse.region as Record<string, any>[]) {
                 if (regionItem.regional_unit && Array.isArray(regionItem.regional_unit)) {
                   // Process regional_unit values first (preferred)
-                  for (const unit of regionItem.regional_unit) {
+                  for (const unit of regionItem.regional_unit as string[]) {
                     if (typeof unit === 'string' && unit.trim()) {
                       processedRegions.push({
                         id: unit,
@@ -1360,7 +1368,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                 
                 // If no regional_unit found, fall back to region values
                 if (processedRegions.length === 0 && regionItem.region && Array.isArray(regionItem.region)) {
-                  for (const region of regionItem.region) {
+                  for (const region of regionItem.region as string[]) {
                     if (typeof region === 'string' && region.trim()) {
                       processedRegions.push({
                         id: region,
@@ -1372,10 +1380,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                 }
               }
             } 
-            // Handle case where response.region is a direct array of strings
-            else if (response.region.length > 0 && typeof response.region[0] === 'string') {
-              for (const region of response.region) {
-                if (region.trim()) {
+            // Handle case where typedResponse.region is a direct array of strings
+            else if (typedResponse.region.length > 0 && typeof typedResponse.region[0] === 'string') {
+              for (const region of typedResponse.region as string[]) {
+                if (typeof region === 'string' && region.trim()) {
                   processedRegions.push({
                     id: region,
                     name: region,
@@ -1387,8 +1395,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           }
           
           // Also check for regional_unit at the top level
-          if (processedRegions.length === 0 && response.regional_unit && Array.isArray(response.regional_unit)) {
-            for (const unit of response.regional_unit) {
+          if (processedRegions.length === 0 && typedResponse.regional_unit && Array.isArray(typedResponse.regional_unit)) {
+            for (const unit of typedResponse.regional_unit as string[]) {
               if (typeof unit === 'string' && unit.trim()) {
                 processedRegions.push({
                   id: unit,
