@@ -12,6 +12,7 @@ import { router as documentsRouter } from "./controllers/documentsController";
 import templatePreviewRouter from "./routes/template-preview";
 import authRouter from "./routes/auth";
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
+import healthcheckRouter from "./routes/healthcheck"; // Import the healthcheck router
 // Note: We now use the consolidated documentsController instead of multiple document route files
 import { log } from "./vite";
 import { supabase } from "./config/db";
@@ -447,6 +448,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Allow public access to attachments routes for document creation
     app.use('/api/attachments', attachmentsRouter);
     log('[Routes] Attachments routes registered');
+    
+    // Register the healthcheck router (no authentication required)
+    log('[Routes] Registering healthcheck routes...');
+    app.use('/api/healthcheck', healthcheckRouter);
+    log('[Routes] Healthcheck routes registered');
 
     // Diagnostic route to see all registered routes
     app.get('/api/diagnostics/routes', (_req, res) => {
