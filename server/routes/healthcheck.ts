@@ -256,4 +256,152 @@ router.get('/sdegdaefk', (req: Request, res: Response) => {
   });
 });
 
+/**
+ * Database health check endpoint specifically for sdegdaefk.gr integration
+ * GET /api/healthcheck/database
+ * 
+ * This endpoint tests database connectivity with detailed diagnostics
+ * and includes special handling for sdegdaefk.gr domain
+ */
+router.get('/database', async (req: Request, res: Response) => {
+  // Extract request information
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const host = req.headers.host;
+  
+  // Check if this is from sdegdaefk.gr
+  const isSdegdaefkRequest = 
+    (typeof origin === 'string' && origin.includes('sdegdaefk.gr')) ||
+    (typeof referer === 'string' && referer.includes('sdegdaefk.gr')) ||
+    (typeof host === 'string' && host.includes('sdegdaefk.gr'));
+  
+  // Log this request for diagnostics
+  log(`[HealthCheck] Database test initiated${isSdegdaefkRequest ? ' from sdegdaefk.gr domain' : ''}: ${JSON.stringify({
+    origin, referer, host, ip: req.ip
+  })}`, 'healthcheck');
+  
+  let dbStatus = {
+    postgres: false,
+    supabase: false,
+    poolConnections: null,
+    testQueries: {
+      simple: false,
+      documents: false,
+      users: false
+    },
+    errors: []
+  };
+  
+  try {
+    // Import database utilities
+    const { pool, supabase, verifyDatabaseConnections } = await import('../../data');
+    
+    // Verify basic database connectivity
+    const connectionStatus = await verifyDatabaseConnections();
+    dbStatus.postgres = connectionStatus.pg;
+    dbStatus.supabase = connectionStatus.supabase;
+    
+    // Get pool statistics if available
+    if (pool) {
+      dbStatus.poolConnections = {
+        total: pool.totalCount,
+        idle: pool.idleCount,
+        waiting: pool.waitingCount
+      };
+    }
+    
+    // Test simple query
+    try {
+      const client = await pool.connect();
+      await client.query('SELECT 1 as test');
+      client.release();
+      dbStatus.testQueries.simple = true;
+    } catch (err: any) {
+      dbStatus.errors.push({
+        test: 'simple-query',
+        message: err.message,
+        code: err.code
+      });
+    }
+    
+    // Test documents query (most problematic for sdegdaefk.gr integration)
+    try {
+      const { data, error } = await supabase
+        .from('generated_documents')
+        .select('count(*)', { count: 'exact' })
+        .limit(1);
+        
+      if (!error) {
+        dbStatus.testQueries.documents = true;
+      } else {
+        throw error;
+      }
+    } catch (err: any) {
+      dbStatus.errors.push({
+        test: 'documents-query',
+        message: err.message,
+        code: err.code || err.details
+      });
+    }
+    
+    // Test users query
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('count(*)', { count: 'exact' })
+        .limit(1);
+        
+      if (!error) {
+        dbStatus.testQueries.users = true;
+      } else {
+        throw error;
+      }
+    } catch (err: any) {
+      dbStatus.errors.push({
+        test: 'users-query',
+        message: err.message,
+        code: err.code || err.details
+      });
+    }
+    
+    // Return comprehensive information
+    res.status(200).json({
+      status: 'ok',
+      message: 'Database health check for sdegdaefk.gr integration',
+      timestamp: new Date().toISOString(),
+      database: dbStatus,
+      request: {
+        origin: origin || 'None',
+        referer: referer || 'None',
+        host: host || 'None',
+        isSdegdaefkRequest,
+        ip: req.ip
+      },
+      environment: {
+        databaseUrl: process.env.DATABASE_URL ? 'Configured (redacted)' : 'Not configured',
+        supabaseUrl: process.env.SUPABASE_URL ? 'Configured (redacted)' : 'Not configured',
+        nodeEnv: process.env.NODE_ENV || 'Not set'
+      }
+    });
+  } catch (error: any) {
+    // Handle overall test error
+    log(`[HealthCheck] Database test error: ${error.message}`, 'error');
+    
+    res.status(500).json({
+      status: 'error',
+      message: 'Error performing database health check',
+      error: error.message,
+      timestamp: new Date().toISOString(),
+      database: dbStatus,
+      request: {
+        origin: origin || 'None',
+        referer: referer || 'None',
+        host: host || 'None',
+        isSdegdaefkRequest,
+        ip: req.ip
+      }
+    });
+  }
+});
+
 export default router;

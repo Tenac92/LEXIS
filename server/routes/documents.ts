@@ -38,6 +38,58 @@ function documentsCorsMiddleware(req: Request, res: Response, next: NextFunction
 export const router = Router();
 const documentManager = new DocumentManager();
 
+// Apply our specific CORS middleware to all document routes
+router.use(documentsCorsMiddleware);
+
+// Handle OPTIONS requests with special handling for sdegdaefk.gr domain
+router.options('*', (req: Request, res: Response) => {
+  const origin = req.get('origin');
+  const sdegdaefkDomain = 'sdegdaefk.gr';
+  
+  // Check if the request is from sdegdaefk.gr or any subdomain
+  const isFromSdegdaefkDomain = 
+    origin && (
+      origin.includes(sdegdaefkDomain) || 
+      req.hostname === sdegdaefkDomain || 
+      req.get('host')?.includes(sdegdaefkDomain)
+    );
+  
+  if (isFromSdegdaefkDomain) {
+    console.log(`[DocumentsRoute] Handling OPTIONS request from sdegdaefk.gr domain: ${origin}`);
+    
+    // Set comprehensive CORS headers for OPTIONS requests from sdegdaefk.gr
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-CSRF-Token, X-Referrer, X-API-Key, Cache-Control, Pragma, Set-Cookie, Cookie, withcredentials');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400'); // 24 hours
+    res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Type, X-Requested-With, Set-Cookie, ETag, Date');
+    
+    // End preflight request successfully
+    return res.status(204).end();
+  }
+  
+  // For other domains, just end successfully but without special headers
+  res.status(204).end();
+});
+
+// Special middleware to handle direct browser requests to /documents
+router.use('/', (req: Request, res: Response, next: NextFunction) => {
+  // Check if this is a direct browser request rather than an API call
+  const acceptHeader = req.get('accept') || '';
+  const isBrowserRequest = acceptHeader.includes('text/html') 
+    && req.get('sec-fetch-dest') === 'document';
+    
+  if (isBrowserRequest) {
+    console.log('[DocumentsRoute] Browser request detected, redirecting to HTML handler');
+    // Redirect browser requests to our HTML handler
+    return res.redirect('/documents/html');
+  }
+  
+  // Continue with API processing for non-browser requests
+  next();
+});
+
 // List documents with filters
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -254,6 +306,55 @@ router.post('/', async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error' 
     });
   }
+});
+
+// Add a direct html response route for direct browser access to /documents
+// This is to handle direct browser navigation to https://sdegdaefk.gr/documents
+router.get('/html', (req: Request, res: Response) => {
+  const origin = req.get('origin');
+  const sdegdaefkDomain = 'sdegdaefk.gr';
+  const isFromSdegdaefkDomain = 
+    origin && (
+      origin.includes(sdegdaefkDomain) || 
+      req.hostname === sdegdaefkDomain || 
+      req.get('host')?.includes(sdegdaefkDomain)
+    );
+    
+  // If it's a request directly to /documents from sdegdaefk.gr, serve a redirect
+  if (isFromSdegdaefkDomain || req.get('sec-fetch-dest') === 'document') {
+    console.log('[DocumentsRoute] Browser request detected, redirecting to client application');
+    
+    // Create HTML with a redirect
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta http-equiv="refresh" content="0;url=/">
+          <title>ΣΔΕΓΔΑΕΦΚ - Ανακατεύθυνση</title>
+          <script>window.location.href = "/";</script>
+        </head>
+        <body>
+          <h1>Ανακατεύθυνση...</h1>
+          <p>Παρακαλώ περιμένετε καθώς ανακατευθύνεστε στην αρχική σελίδα της εφαρμογής.</p>
+          <p>Εάν δεν ανακατευθυνθείτε αυτόματα, <a href="/">πατήστε εδώ</a>.</p>
+        </body>
+      </html>
+    `;
+    
+    return res
+      .status(200)
+      .set({
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache'
+      })
+      .send(html);
+  }
+  
+  // Otherwise proceed with JSON response
+  return res.status(200).json({
+    message: 'Documents API endpoint - Please use the client application to access this resource'
+  });
 });
 
 export default router;
