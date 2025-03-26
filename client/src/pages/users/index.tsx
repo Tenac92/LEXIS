@@ -97,7 +97,13 @@ export default function UsersPage() {
     },
   });
 
-  const { data: units = [] } = useQuery<string[]>({
+  // Define a type for the unit data
+  interface UnitData {
+    id: string;
+    name: string;
+  }
+
+  const { data: units = [] } = useQuery<UnitData[]>({
     queryKey: ["/api/users/units"],
     queryFn: async () => {
       const response = await fetch("/api/users/units");
@@ -414,14 +420,14 @@ export default function UsersPage() {
                       </FormControl>
                       <SelectContent>
                         {units.map((unit) => (
-                          <SelectItem key={unit} value={unit}>
+                          <SelectItem key={unit.id} value={unit.id}>
                             <div className="flex items-center gap-2">
                               <div className={`w-4 h-4 border rounded flex items-center justify-center ${
-                                field.value?.includes(unit) ? "bg-primary" : ""
+                                field.value?.includes(unit.id) ? "bg-primary" : ""
                               }`}>
-                                {field.value?.includes(unit) && "✓"}
+                                {field.value?.includes(unit.id) && "✓"}
                               </div>
-                              {unit}
+                              {unit.name}
                             </div>
                           </SelectItem>
                         ))}
@@ -448,18 +454,25 @@ export default function UsersPage() {
                 control={form.control}
                 name="department"
                 render={({ field }) => {
-                  const selectedUnits = form.watch('units') || [];
+                  const selectedUnitIds = form.watch('units') || [];
                   const { data: departments = [] } = useQuery({
-                    queryKey: ['departments', selectedUnits],
+                    queryKey: ['departments', selectedUnitIds],
                     queryFn: async () => {
-                      if (selectedUnits.length === 0) return [];
+                      if (selectedUnitIds.length === 0) return [];
+                      
+                      // Find the full unit objects from their IDs
+                      const selectedUnitNames = units
+                        .filter(unit => selectedUnitIds.includes(unit.id))
+                        .map(unit => unit.name);
+                        
+                      // Now use the unit names to fetch departments
                       const params = new URLSearchParams();
-                      selectedUnits.forEach(unit => params.append('units', unit));
+                      selectedUnitNames.forEach(unitName => params.append('units', unitName));
                       const response = await fetch(`/api/users/units/parts?${params}`);
                       if (!response.ok) throw new Error('Failed to fetch departments');
                       return response.json();
                     },
-                    enabled: selectedUnits.length > 0
+                    enabled: selectedUnitIds.length > 0
                   });
 
                   return (
