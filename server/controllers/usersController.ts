@@ -309,19 +309,40 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 // Delete user
 router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    console.log('[Users] Delete request received for user ID:', req.params.id);
+    
     if (req.user?.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
     }
 
+    // Convert id to number since IDs are stored as numbers in the database
+    const userId = parseInt(req.params.id, 10);
+    
+    // Check if user exists before deletion
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+      
+    if (checkError || !existingUser) {
+      console.error('[Users] User not found:', checkError || 'No user with that ID');
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Delete the user with extra logging
+    console.log('[Users] Deleting user with ID:', userId);
     const { error } = await supabase
       .from('users')
       .delete()
-      .eq('id', req.params.id);
+      .eq('id', userId);
 
     if (error) {
+      console.error('[Users] Supabase deletion error:', error);
       throw error;
     }
 
+    console.log('[Users] User deleted successfully, ID:', userId);
     res.status(200).json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('[Users] User deletion error:', error);

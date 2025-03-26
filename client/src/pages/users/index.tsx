@@ -74,6 +74,7 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
+  const [editUserDialogOpen, setEditUserDialogOpen] = useState(false);
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
@@ -164,6 +165,38 @@ export default function UsersPage() {
       });
     },
   });
+  
+  const updateUserMutation = useMutation({
+    mutationFn: async (data: UserFormData & { id: number }) => {
+      const { id, ...userData } = data;
+      // Don't send empty password during update
+      const finalData = userData.password ? userData : { ...userData, password: undefined };
+      
+      return await apiRequest(`/api/users/${id}`, {
+        method: "PATCH",
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(finalData)
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "User Updated",
+        description: "User has been successfully updated",
+      });
+      setEditUserDialogOpen(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const onSubmit = (data: UserFormData) => {
     // Convert unit IDs to unit names for the backend
@@ -176,7 +209,17 @@ export default function UsersPage() {
     };
     
     console.log('Submitting user data:', modifiedData);
-    createUserMutation.mutate(modifiedData as UserFormData);
+    
+    if (selectedUser && editUserDialogOpen) {
+      // Update existing user
+      updateUserMutation.mutate({
+        ...modifiedData as UserFormData,
+        id: selectedUser.id
+      });
+    } else {
+      // Create new user
+      createUserMutation.mutate(modifiedData as UserFormData);
+    }
   };
 
   const filteredUsers = users?.filter((user) => {
@@ -269,7 +312,27 @@ export default function UsersPage() {
                     <TableCell>{user.units?.join(", ") || "-"}</TableCell>
                     <TableCell>{user.telephone || "-"}</TableCell>
                     <TableCell>{user.department || "-"}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right flex justify-end space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setEditUserDialogOpen(true);
+                          // Pre-populate form with user data
+                          form.reset({
+                            email: user.email,
+                            name: user.name,
+                            password: "", // Don't pre-populate password for security
+                            role: user.role as "admin" | "user" | "manager",
+                            units: [], // Will be set below if needed
+                            telephone: user.telephone || "",
+                            department: user.department || ""
+                          });
+                        }}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
