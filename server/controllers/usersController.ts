@@ -1,9 +1,23 @@
 import { Router } from 'express';
-import { supabase } from '../config/db';
+import { createClient } from '@supabase/supabase-js';
 import { authenticateSession } from '../auth';
 import type { User } from '@shared/schema';
 import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
+
+// Create a Supabase client with SERVICE_ROLE key that can bypass RLS
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_KEY || '',
+  {
+    auth: {
+      persistSession: false
+    }
+  }
+);
+
+// Original Supabase client from config (using ANON key)
+import { supabase } from '../config/db';
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -280,7 +294,8 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       Object.assign(userData, { department });
     }
     
-    const { data: newUser, error } = await supabase
+    // Use supabaseAdmin with service role key to bypass RLS policies
+    const { data: newUser, error } = await supabaseAdmin
       .from('users')
       .insert([userData])
       .select('id, email, name, role, units, department, telephone')
@@ -350,7 +365,9 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
     
     // Update the user with extra logging
     console.log('[Users] Updating user with ID:', userId);
-    const { error } = await supabase
+    
+    // Use supabaseAdmin with service role key to bypass RLS policies
+    const { error } = await supabaseAdmin
       .from('users')
       .update(updateData)
       .eq('id', userId);
@@ -405,7 +422,9 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
     
     // Delete the user with extra logging
     console.log('[Users] Deleting user with ID:', userId);
-    const { error } = await supabase
+    
+    // Use supabaseAdmin with service role key to bypass RLS policies
+    const { error } = await supabaseAdmin
       .from('users')
       .delete()
       .eq('id', userId);
