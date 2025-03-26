@@ -12,6 +12,7 @@ import ProjectDetailsPage from "@/pages/projects/[mis]";
 import UsersPage from "@/pages/users";
 import BudgetHistoryPage from "@/pages/budget-history-page";
 import NotificationsPage from "@/pages/NotificationsPage";
+import AdminNotificationsPage from "@/pages/AdminNotificationsPage";
 import BulkUpdatePage from "@/pages/projects/bulk-update";
 import TemplatesPage from "@/pages/templates";
 import { ProtectedRoute } from "./lib/protected-route";
@@ -30,6 +31,7 @@ function Router() {
         <ProtectedRoute path="/users" component={UsersPage} />
         <ProtectedRoute path="/budget-history" component={BudgetHistoryPage} />
         <ProtectedRoute path="/notifications" component={NotificationsPage} />
+        <ProtectedRoute path="/admin/notifications" component={AdminNotificationsPage} />
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
       </Switch>
