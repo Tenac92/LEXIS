@@ -77,8 +77,7 @@ const editUserSchema = z.object({
   ...baseUserSchema,
   password: z.string().refine(val => val === '' || val.length >= 6, {
     message: "Password must be at least 6 characters or empty to keep current"
-  }),
-  id: z.number(),
+  })
 });
 
 // Default schema for the form
@@ -145,32 +144,14 @@ export default function UsersPage() {
     mutationFn: async (userId: number) => {
       console.log("[Users] Attempting to delete user with ID:", userId);
       
-      // Directly use fetch with error handling to have more control over errors
-      const response = await fetch(`/api/users/${userId}`, {
+      // Use apiRequest helper to handle errors and parsing
+      return await apiRequest(`/api/users/${userId}`, {
         method: "DELETE",
         credentials: "include",
         headers: {
           "Content-Type": "application/json"
         }
       });
-      
-      // Handle non-successful responses
-      if (!response.ok) {
-        const text = await response.text();
-        let error;
-        try {
-          // Try to parse error as JSON
-          const data = JSON.parse(text);
-          error = new Error(data.message || `Delete failed with status ${response.status}`);
-        } catch (e) {
-          // If parsing fails, use the text as is
-          error = new Error(text || `Delete failed with status ${response.status}`);
-        }
-        throw error;
-      }
-      
-      // Should reach here only if response was OK
-      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
