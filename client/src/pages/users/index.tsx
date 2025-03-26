@@ -622,7 +622,7 @@ export default function UsersPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {departments.map((dept) => (
+                              {departments.map((dept: string) => (
                                 <SelectItem key={dept} value={dept}>
                                   {dept}
                                 </SelectItem>
@@ -658,7 +658,16 @@ export default function UsersPage() {
       </Dialog>
 
       {/* Edit User Dialog */}
-      <Dialog open={editUserDialogOpen} onOpenChange={setEditUserDialogOpen}>
+      <Dialog 
+        open={editUserDialogOpen} 
+        onOpenChange={(open) => {
+          setEditUserDialogOpen(open);
+          if (!open) {
+            // Reset form mode when dialog is closed
+            setFormMode('create');
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
@@ -812,7 +821,7 @@ export default function UsersPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {departments.map((dept) => (
+                              {departments.map((dept: string) => (
                                 <SelectItem key={dept} value={dept}>
                                   {dept}
                                 </SelectItem>
