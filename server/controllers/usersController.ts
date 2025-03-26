@@ -96,15 +96,27 @@ router.get('/units/:unitName/parts', authenticateSession, async (req: Authentica
     const { unitName } = req.params;
 
     console.log('[Units] Fetching parts for unit:', unitName);
-    const { data: unitData, error } = await supabase
+    
+    // Get all units and filter manually to avoid JSON path issues with Greek characters
+    const { data: allUnits, error } = await supabase
       .from('Monada')
-      .select('parts')
-      .eq('unit_name->name', unitName)
-      .single();
+      .select('unit_name, parts');
 
     if (error) {
       console.error('[Units] Supabase query error:', error);
       throw error;
+    }
+
+    // Find the matching unit
+    const unitData = allUnits?.find(unit => 
+      unit.unit_name && 
+      typeof unit.unit_name === 'object' && 
+      unit.unit_name.name === unitName
+    );
+
+    if (!unitData) {
+      console.log('[Units] Unit not found:', unitName);
+      return res.json([]);
     }
 
     const parts = unitData?.parts ? Object.values(unitData.parts) : [];
@@ -175,18 +187,40 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 
     // Verify units exist
     console.log('[Users] Verifying units:', units);
-    const { data: unitData, error: unitError } = await supabase
+    
+    // Get all units first
+    const { data: allUnits, error: fetchError } = await supabase
       .from('Monada')
-      .select('unit_name, parts')
-      .in('unit_name->name', units);
-
-    if (unitError || !unitData || unitData.length !== units.length) {
-      console.error('[Users] Invalid units:', units, unitError);
-      return res.status(400).json({
-        message: 'One or more invalid units selected',
-        error: unitError?.message
+      .select('unit, unit_name, parts');
+      
+    if (fetchError) {
+      console.error('[Users] Error fetching units:', fetchError);
+      return res.status(500).json({
+        message: 'Failed to verify units',
+        error: fetchError.message
       });
     }
+    
+    // Filter units manually instead of using JSON path operations
+    const validUnits = allUnits?.filter(unit => {
+      // Check if this unit's name is in the requested units array
+      return unit.unit_name && 
+             typeof unit.unit_name === 'object' &&
+             unit.unit_name.name && 
+             units.includes(unit.unit_name.name);
+    });
+    
+    // Check if all requested units were found
+    if (!validUnits || validUnits.length !== units.length) {
+      console.error('[Users] Invalid units:', units, 'Found:', validUnits?.length || 0);
+      return res.status(400).json({
+        message: 'One or more invalid units selected',
+        error: 'Not all requested units are valid'
+      });
+    }
+    
+    // Use validUnits instead of unitData for the next steps
+    const unitData = validUnits;
 
     // Verify department exists in units' parts
     const allParts = Array.from(new Set(
