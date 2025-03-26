@@ -64,7 +64,7 @@ export default function DocumentsPage() {
     delete: false,
   });
 
-  // Initialize filters and active filters state
+  // Initialize filters state (no separate active filters)
   const [filters, setFilters] = useState<Filters>({
     unit: user?.units?.[0] || 'all',
     status: 'pending',
@@ -77,12 +77,13 @@ export default function DocumentsPage() {
     afm: ''
   });
 
-  const [activeFilters, setActiveFilters] = useState<Filters>(filters);
-
-  const setFiltersWithRefresh = (newFilters: Filters, shouldRefresh = false) => {
+  // Apply filters immediately when they change
+  const setFiltersWithRefresh = (newFilters: Filters, shouldRefresh = true) => {
     setFilters(newFilters);
+    // Always refresh by default for a seamless experience
     if (shouldRefresh) {
-      handleApplyFilters();
+      // No need for a separate handleApplyFilters call, refetch directly
+      refetch();
     }
   };
 
@@ -98,51 +99,51 @@ export default function DocumentsPage() {
 
   // Query for documents using the server API endpoint
   const { data: documents = [], isLoading, error, refetch } = useQuery<GeneratedDocument[]>({
-    queryKey: ['/api/documents', activeFilters],
+    queryKey: ['/api/documents', filters],
     queryFn: async () => {
       try {
         // Fetching documents with current filters
-        console.log('[DocumentsPage] Fetching documents with filters:', JSON.stringify(activeFilters));
+        console.log('[DocumentsPage] Fetching documents with filters:', JSON.stringify(filters));
         
         // Build query parameters for the API request
         const queryParams = new URLSearchParams();
         
-        if (activeFilters.unit && activeFilters.unit !== 'all') {
-          queryParams.append('unit', activeFilters.unit);
+        if (filters.unit && filters.unit !== 'all') {
+          queryParams.append('unit', filters.unit);
         }
         
-        if (activeFilters.status !== 'all') {
-          queryParams.append('status', activeFilters.status);
+        if (filters.status !== 'all') {
+          queryParams.append('status', filters.status);
         }
         
-        if (activeFilters.user === 'current' && user?.id) {
+        if (filters.user === 'current' && user?.id) {
           queryParams.append('generated_by', user.id.toString());
-        } else if (activeFilters.user !== 'all') {
-          queryParams.append('generated_by', activeFilters.user);
+        } else if (filters.user !== 'all') {
+          queryParams.append('generated_by', filters.user);
         }
         
-        if (activeFilters.dateFrom) {
-          queryParams.append('dateFrom', activeFilters.dateFrom);
+        if (filters.dateFrom) {
+          queryParams.append('dateFrom', filters.dateFrom);
         }
         
-        if (activeFilters.dateTo) {
-          queryParams.append('dateTo', activeFilters.dateTo);
+        if (filters.dateTo) {
+          queryParams.append('dateTo', filters.dateTo);
         }
         
-        if (activeFilters.amountFrom) {
-          queryParams.append('amountFrom', activeFilters.amountFrom);
+        if (filters.amountFrom) {
+          queryParams.append('amountFrom', filters.amountFrom);
         }
         
-        if (activeFilters.amountTo) {
-          queryParams.append('amountTo', activeFilters.amountTo);
+        if (filters.amountTo) {
+          queryParams.append('amountTo', filters.amountTo);
         }
         
-        if (activeFilters.recipient) {
-          queryParams.append('recipient', activeFilters.recipient);
+        if (filters.recipient) {
+          queryParams.append('recipient', filters.recipient);
         }
         
-        if (activeFilters.afm) {
-          queryParams.append('afm', activeFilters.afm);
+        if (filters.afm) {
+          queryParams.append('afm', filters.afm);
         }
         
         const url = `/api/documents?${queryParams.toString()}`;
@@ -168,12 +169,6 @@ export default function DocumentsPage() {
       }
     }
   });
-
-  // Query parameters - only updated when search is triggered
-  const handleApplyFilters = () => {
-    setActiveFilters(filters);
-    refetch();
-  };
 
   // Handle document refresh
   const handleRefresh = () => {
@@ -345,7 +340,7 @@ export default function DocumentsPage() {
                   </div>
                 </div>
                 <SheetClose asChild>
-                  <Button className="w-full mt-4" onClick={handleApplyFilters}>Εφαρμογή Φίλτρων</Button>
+                  <Button className="w-full mt-4" onClick={() => refetch()}>Εφαρμογή Φίλτρων</Button>
                 </SheetClose>
               </SheetContent>
             </Sheet>
