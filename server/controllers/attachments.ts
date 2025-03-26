@@ -56,10 +56,10 @@ async function fetchAttachments(expenditureType: string, installment: number) {
   try {
     // Try to fetch specific attachments for this expenditure type
     const { data, error } = await supabase
-      .from('attachment_requirements')
+      .from('attachments')
       .select('*')
-      .eq('expenditure_type', expenditureType)
-      .eq('installment', installment)
+      .eq('expediture_type', expenditureType)
+      .eq('installment', String(installment))
       .single();
     
     if (error && error.code !== 'PGRST116') {
@@ -77,10 +77,10 @@ async function fetchAttachments(expenditureType: string, installment: number) {
     // Try to fetch default attachments
     console.log(`[Attachments] No specific attachments found for ${expenditureType}, using defaults`);
     const { data: defaultData, error: defaultError } = await supabase
-      .from('attachment_requirements')
+      .from('attachments')
       .select('*')
-      .eq('expenditure_type', 'default')
-      .eq('installment', 1)
+      .eq('expediture_type', 'default')
+      .eq('installment', '1')
       .single();
     
     if (defaultError) {
