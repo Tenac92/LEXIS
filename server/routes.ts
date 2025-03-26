@@ -439,7 +439,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Attachments routes
     log('[Routes] Registering attachments routes...');
-    app.use('/api/attachments', authenticateSession, attachmentsRouter);
+    // Allow public access to attachments routes for document creation
+    app.use('/api/attachments', attachmentsRouter);
     log('[Routes] Attachments routes registered');
 
     // Diagnostic route to see all registered routes
