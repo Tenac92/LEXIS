@@ -845,6 +845,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // The v2-documents endpoint implementation has been moved to server/index.ts
     // to prevent duplicate endpoint registrations.
 
+    // Special handler for root path requests from sdegdaefk.gr domain
+    app.get('/', (req, res, next) => {
+      try {
+        const origin = req.headers.origin;
+        const referer = req.headers.referer;
+        const host = req.headers.host;
+        
+        // Check if this is from sdegdaefk.gr domain
+        const isSdegdaefkRequest = 
+          (typeof origin === 'string' && origin.includes('sdegdaefk.gr')) ||
+          (typeof host === 'string' && host.includes('sdegdaefk.gr')) ||
+          (typeof referer === 'string' && referer.includes('sdegdaefk.gr'));
+        
+        if (isSdegdaefkRequest) {
+          log(`[Routes] Root path accessed from sdegdaefk.gr domain: origin=${origin || 'none'}, host=${host || 'none'}`, 'info');
+          
+          // Continue to the next middleware (Vite will handle serving the client app)
+          next();
+        } else {
+          // For other domains, also just continue to next middleware
+          next();
+        }
+      } catch (error: any) {
+        // In case of error, just proceed to next middleware
+        log(`[Routes] Error handling root path request: ${error.message}`, 'error');
+        next();
+      }
+    });
+    
     app.use('/api', apiRouter);
 
     // Create and return HTTP server

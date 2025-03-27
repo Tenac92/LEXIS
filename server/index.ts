@@ -8,6 +8,7 @@ import { securityHeaders } from "./middleware/securityHeaders";
 import { setupAuth, sessionMiddleware } from './auth';
 import corsMiddleware from './middleware/corsMiddleware';
 import { geoIpRestriction } from './middleware/geoIpMiddleware';
+import sdegdaefkRootHandler from './middleware/sdegdaefk/rootHandler';
 import { createWebSocketServer } from './websocket';
 import { supabase } from './config/db';
 
@@ -125,6 +126,10 @@ async function startServer() {
     });
 
     console.log('[Startup] Request logging middleware configured');
+    
+    // Apply sdegdaefk.gr root path handler
+    app.use(sdegdaefkRootHandler);
+    console.log('[Startup] sdegdaefk.gr root path handler applied');
 
     // Setup authentication with enhanced error handling
     try {

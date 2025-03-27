@@ -63,8 +63,17 @@ export const errorMiddleware = (
     } : {})
   };
 
-  // Special handling for sdegdaefk.gr domain errors
-  if (isSdegdaefkRequest && req.headers.accept?.includes('text/html')) {
+  // Log extra debug information for sdegdaefk.gr errors
+  if (isSdegdaefkRequest) {
+    log(`[SDEGDAEFK DEBUG] Request URL: ${req.protocol}://${req.get('host')}${req.originalUrl}`, 'info');
+    log(`[SDEGDAEFK DEBUG] Request Method: ${req.method}`, 'info');
+    log(`[SDEGDAEFK DEBUG] Error Status: ${err.status || 500}`, 'info');
+    log(`[SDEGDAEFK DEBUG] Error Message: ${err.message}`, 'info');
+    log(`[SDEGDAEFK DEBUG] Accept Header: ${req.headers.accept || 'none'}`, 'info');
+  }
+
+  // Special handling for sdegdaefk.gr domain errors with browser requests
+  if (isSdegdaefkRequest) {
     // For browser requests from sdegdaefk.gr domain, send a friendly HTML error page with a redirect
     log('[SDEGDAEFK ERROR] Responding with HTML error page for browser request', 'info');
     
