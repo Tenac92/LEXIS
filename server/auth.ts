@@ -6,16 +6,8 @@ import type { User as SchemaUser } from "@shared/schema";
 import bcrypt from "bcrypt";
 import { rateLimit } from 'express-rate-limit';
 
-// Define a simplified User type for sessions
-type User = {
-  id: number;
-  email: string;
-  name: string;
-  role: string;
-  units?: string[];
-  department?: string;
-  telephone?: string;
-};
+// Use the schema User type for typings
+type User = Partial<SchemaUser>;
 
 interface AuthenticatedRequest extends Request {
   user?: User;
@@ -24,12 +16,12 @@ interface AuthenticatedRequest extends Request {
 // Properly extend express-session types
 declare module 'express-session' {
   interface SessionData {
-    user?: User;  // Make user optional to match runtime behavior
+    user?: Partial<SchemaUser>;  // Make user optional to match runtime behavior
     createdAt?: Date;
   }
 }
 
-// Session middleware with enhanced security settings
+// Session middleware with enhanced security settings for cross-domain support
 export const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'document-manager-secret',
   resave: false,
@@ -37,11 +29,12 @@ export const sessionMiddleware = session({
   store: storage.sessionStore,
   name: 'sid', // Custom session ID name
   cookie: {
-    secure: false, // Set to false in development to work over HTTP
+    secure: process.env.NODE_ENV === 'production', // Only true in production
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax', // Use 'lax' for better compatibility
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
     path: '/',
+    domain: process.env.COOKIE_DOMAIN || undefined, // Set domain for cross-domain cookies
   },
   proxy: true // Enable proxy support
 });
@@ -99,13 +92,13 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
       name: sessionUser.name || '',
       role: sessionUser.role,
       units: sessionUser.units || [],
-      department: sessionUser.department,
-      telephone: sessionUser.telephone
+      department: sessionUser.department || undefined,
+      telephone: sessionUser.telephone || undefined
     };
     
     console.log('[Auth] User authenticated:', { 
-      id: req.user.id,
-      role: req.user.role,
+      id: req.user?.id,
+      role: req.user?.role,
       sessionID: req.sessionID,
       ip: req.ip
     });
@@ -171,8 +164,8 @@ export async function setupAuth(app: Express) {
         name: userData.name,
         role: userData.role,
         units: userData.units || [],
-        department: userData.department,
-        telephone: userData.telephone
+        department: userData.department || undefined,
+        telephone: userData.telephone || undefined
       };
 
       // Store user data in session with expiry
@@ -231,13 +224,17 @@ export async function setupAuth(app: Express) {
             message: 'Logout failed'
           });
         }
+        
+        // Use same cookie settings as the session
         res.clearCookie('sid', { 
           path: '/',
-          secure: false,  // Match session setting
-          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',  // Match session setting
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
           httpOnly: true,
-          domain: undefined // Let the browser determine the domain
+          domain: process.env.COOKIE_DOMAIN || undefined // Use same domain as session cookie
         });
+        
+        console.log('[Auth] Cleared session cookie with domain:', process.env.COOKIE_DOMAIN || 'default');
         res.json({ message: 'Logged out successfully' });
       });
     } else {
@@ -253,8 +250,8 @@ export async function setupAuth(app: Express) {
     }
 
     console.log('[Auth] Returning current user:', { 
-      id: req.user.id,
-      role: req.user.role,
+      id: req.user?.id,
+      role: req.user?.role,
       sessionID: req.sessionID,
       ip: req.ip
     });

@@ -13,6 +13,8 @@ import templatePreviewRouter from "./routes/template-preview";
 import authRouter from "./routes/auth";
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
 import healthcheckRouter from "./routes/healthcheck"; // Import the healthcheck router
+import sdegdaefkDiagnosticRouter from "./routes/sdegdaefk-diagnostic"; // Import the sdegdaefk.gr diagnostic router
+import documentsBrowserHandler from "./middleware/sdegdaefk/documentsBrowserHandler"; // Import browser request handler for /documents
 // Note: We now use the consolidated documentsController instead of multiple document route files
 import { log } from "./vite";
 import { supabase } from "./config/db";
@@ -453,6 +455,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Registering healthcheck routes...');
     app.use('/api/healthcheck', healthcheckRouter);
     
+    // Register sdegdaefk.gr diagnostic endpoints (no authentication required)
+    log('[Routes] Registering sdegdaefk.gr diagnostic routes...');
+    app.use('/api/sdegdaefk-diagnostic', sdegdaefkDiagnosticRouter);
+    
     // Special route for direct browser access from sdegdaefk.gr domain
     app.get('/sdegdaefk-gr', (req, res) => {
       try {
@@ -619,16 +625,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
-    // Register sdegdaefk.gr diagnostic routes (special domain-specific diagnostic endpoints)
-    try {
-      log('[Routes] Registering sdegdaefk.gr diagnostic routes...');
-      // Import using dynamic import for ESM compatibility
-      const sdegdaefkDiagnosticModule = await import('./routes/sdegdaefk-diagnostic');
-      app.use('/api/sdegdaefk-diagnostic', sdegdaefkDiagnosticModule.default);
-      log('[Routes] sdegdaefk.gr diagnostic routes registered successfully');
-    } catch (error) {
-      log(`[Routes] Error registering sdegdaefk.gr diagnostic routes: ${error}`, 'error');
-    }
+    // Register the documents browser handler to fix direct browser access issues
+    app.use(documentsBrowserHandler);
+    log('[Routes] Special handler for /documents browser requests registered successfully');
+    
+    // Finish setup of diagnostic routes
     log('[Routes] Healthcheck routes registered');
 
     // Diagnostic route to see all registered routes
