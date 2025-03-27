@@ -7,9 +7,9 @@ import bcrypt from "bcrypt";
 import { rateLimit } from 'express-rate-limit';
 
 // Use the schema User type for typings
-type User = Partial<SchemaUser>;
+export type User = Partial<SchemaUser>;
 
-interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
@@ -45,7 +45,7 @@ export const sessionMiddleware = session({
 });
 
 // Rate limiting middleware for auth routes with proxy support
-const authLimiter = rateLimit({
+export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts per window
   message: { message: 'Too many login attempts, please try again later' },
@@ -126,6 +126,51 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
     next(error);
   }
 };
+
+/**
+ * Authenticate a user with email and password
+ * @param email User email
+ * @param password User password
+ * @returns User object if authentication is successful, null otherwise
+ */
+export async function authenticateUser(email: string, password: string): Promise<User | null> {
+  try {
+    // Get user from database
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, email, name, role, units, department, telephone, password')
+      .eq('email', email)
+      .single();
+
+    if (userError || !userData) {
+      console.error('[Auth] No user found for email:', email);
+      return null;
+    }
+
+    // Compare password with constant-time comparison
+    const isPasswordValid = await bcrypt.compare(password, userData.password);
+    if (!isPasswordValid) {
+      console.error('[Auth] Password validation failed for user:', email);
+      return null;
+    }
+
+    // Create user object, excluding sensitive fields
+    const user: User = {
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role,
+      units: userData.units || [],
+      department: userData.department || undefined,
+      telephone: userData.telephone || undefined
+    };
+
+    return user;
+  } catch (error) {
+    console.error('[Auth] Authentication error:', error);
+    return null;
+  }
+}
 
 export async function setupAuth(app: Express) {
   console.log('[Auth] Starting authentication setup...');

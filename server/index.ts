@@ -5,7 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { securityHeaders } from "./middleware/securityHeaders";
-import { setupAuth, sessionMiddleware } from './auth';
+import { sessionMiddleware } from './auth';
 import corsMiddleware from './middleware/corsMiddleware';
 import { geoIpRestriction } from './middleware/geoIpMiddleware';
 import sdegdaefkRootHandler from './middleware/sdegdaefk/rootHandler';
@@ -148,15 +148,8 @@ async function startServer() {
     app.use(documentsPreHandler);
     console.log('[Startup] sdegdaefk.gr documents pre-handler applied for DB error prevention');
 
-    // Setup authentication with enhanced error handling
-    try {
-      console.log('[Startup] Setting up authentication...');
-      await setupAuth(app);
-      console.log('[Startup] Authentication setup complete');
-    } catch (authError) {
-      console.error('[Fatal] Authentication setup failed:', authError);
-      throw authError;
-    }
+    // No need to call setupAuth - authentication is now handled by middleware and routes
+    console.log('[Startup] Authentication setup: using session middleware and auth routes');
 
     // Register API routes with enhanced error handling
     try {

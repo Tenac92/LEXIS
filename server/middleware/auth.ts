@@ -1,5 +1,26 @@
-// TODO: Refactor - Authentication middleware is duplicated across multiple files
-// This file re-exports from auth.ts while authMiddleware.ts has its own implementation
-// Consider consolidating all authentication logic into a single location
-import { authenticateSession } from '../auth';
-export { authenticateSession };
+/**
+ * Authentication Middleware Re-exports
+ * 
+ * This file centralizes authentication-related exports from the auth.ts file.
+ * It allows middleware to be imported consistently from a single location.
+ */
+
+import { Request } from 'express';
+import { 
+  authenticateSession, 
+  User,
+  authLimiter,
+  authenticateUser 
+} from '../auth';
+
+export { 
+  authenticateSession, 
+  authLimiter,
+  authenticateUser,
+  User
+};
+
+// Re-create the AuthenticatedRequest interface here to avoid circular dependencies
+export interface AuthenticatedRequest extends Request {
+  user?: User;
+}

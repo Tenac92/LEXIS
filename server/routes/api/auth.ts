@@ -8,19 +8,19 @@ import { z } from 'zod';
 import { log } from '../../vite';
 import { 
   authenticateSession, 
-  authenticateUser, 
-  authLimiter, 
-  AuthenticatedRequest 
+  sessionMiddleware,
+  AuthenticatedRequest,
+  authenticateUser
 } from '../../auth';
-import { db, supabase } from '../../data';
+import { authLimiter } from '../../middleware/auth';
+import { supabase } from '../../config/db';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import { User, insertUserSchema } from '@shared/schema';
 
 // Create router
 const router = Router();
 
-// Apply rate limiting to auth routes
+// Apply rate limiting to auth routes from auth.ts
 router.use(authLimiter);
 
 /**

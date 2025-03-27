@@ -264,16 +264,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Authentication routes
     log('[Routes] Setting up authentication routes...');
-    // Register auth router for change-password functionality
-    app.use('/api/auth/change-password', authRouter);
     
-    // IMPORTANT: These routes are already handled in server/auth.ts setupAuth() function:
+    // Import the consolidated auth router
+    const authApiRouter = await import('./routes/api/auth').then(m => m.default);
+    
+    // Use the consolidated auth router for all auth routes
+    app.use('/api/auth', authApiRouter);
+    
+    // Note: We are now using the consolidated auth routes from server/routes/api/auth.ts
+    // which includes all auth functionality:
     // - POST /api/auth/login
     // - POST /api/auth/logout
     // - GET /api/auth/me
+    // - PUT /api/auth/change-password
+    // - POST /api/auth/register
     
-    // Prevent conflicts with any potential duplicate routes in server/routes/api/auth.ts
-    log('[Routes] Authentication routes setup complete with proper separation of concerns');
+    log('[Routes] Authentication routes setup complete with consolidated router');
 
     // Mount users routes
     log('[Routes] Setting up users routes...');
