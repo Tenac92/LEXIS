@@ -9,8 +9,9 @@ import { setupAuth, sessionMiddleware } from './auth';
 import corsMiddleware from './middleware/corsMiddleware';
 import { geoIpRestriction } from './middleware/geoIpMiddleware';
 import sdegdaefkRootHandler from './middleware/sdegdaefk/rootHandler';
+import { databaseErrorRecoveryMiddleware } from './middleware/databaseErrorRecovery';
 import { createWebSocketServer } from './websocket';
-import { supabase } from './config/db';
+import { supabase, testConnection } from './config/db';
 
 // Enhanced error handlers
 process.on('uncaughtException', (error) => {
@@ -149,8 +150,12 @@ async function startServer() {
 
       // NOTE: The DIRECT document creation route has been moved to server/routes.ts
       // This improves maintainability and ensures proper middleware application
+      
+      // Database error recovery middleware (must come before the main error middleware)
+      app.use(databaseErrorRecoveryMiddleware);
+      console.log('[Startup] Database error recovery middleware applied');
 
-      // Error handling middleware
+      // Error handling middleware (catches all other errors)
       app.use(errorMiddleware);
 
       // Create WebSocket server with error handling

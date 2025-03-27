@@ -18,6 +18,11 @@ declare module 'express-session' {
   interface SessionData {
     user?: Partial<SchemaUser>;  // Make user optional to match runtime behavior
     createdAt?: Date;
+    diagnostic?: {
+      lastChecked?: string;
+      accessCount?: number;
+      [key: string]: any;  // Allow any additional diagnostic information
+    };
   }
 }
 
@@ -51,7 +56,7 @@ const authLimiter = rateLimit({
   // Note: removed trustProxy as it's not a valid option
 });
 
-// Authentication middleware with enhanced logging
+// Authentication middleware with enhanced logging and error handling for sdegdaefk.gr support
 export const authenticateSession = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     console.log('[Auth] Checking session:', { 
@@ -71,18 +76,30 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
         sessionID: req.sessionID,
         headers: req.headers
       });
-      return res.status(401).json({
-        message: 'Authentication required'
+      
+      // Create an error object with status code to be handled by our error middleware
+      const authError = new Error('Authentication required');
+      Object.defineProperty(authError, 'status', {
+        value: 401,
+        writable: true,
+        configurable: true
       });
+      throw authError;
     }
     
     // Make sure we have a complete user object
     const sessionUser = req.session.user;
     if (!sessionUser || !sessionUser.id || !sessionUser.email || !sessionUser.role) {
       console.log('[Auth] Invalid user data in session:', sessionUser);
-      return res.status(401).json({
-        message: 'Invalid session data'
+      
+      // Create an error object with status code to be handled by our error middleware
+      const invalidSessionError = new Error('Invalid session data');
+      Object.defineProperty(invalidSessionError, 'status', {
+        value: 401,
+        writable: true,
+        configurable: true
       });
+      throw invalidSessionError;
     }
 
     // Add user to request with all required fields
@@ -105,10 +122,8 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
     next();
   } catch (error) {
     console.error('[Auth] Authentication error:', error);
-    return res.status(500).json({
-      message: 'Authentication failed',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    // Pass the error to the next middleware (error middleware)
+    next(error);
   }
 };
 
@@ -242,20 +257,31 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Get current user route with enhanced error handling
-  app.get("/api/auth/me", authenticateSession, (req: AuthenticatedRequest, res) => {
-    if (!req.user) {
-      console.log('[Auth] No user found in authenticated request');
-      return res.status(401).json({ message: 'Authentication required' });
-    }
+  // Get current user route with enhanced error handling for sdegdaefk.gr support
+  app.get("/api/auth/me", authenticateSession, (req: AuthenticatedRequest, res, next) => {
+    try {
+      if (!req.user) {
+        console.log('[Auth] No user found in authenticated request');
+        // Create an error object with status code to be handled by our error middleware
+        const authError = new Error('Authentication required');
+        Object.defineProperty(authError, 'status', {
+          value: 401,
+          writable: true,
+          configurable: true
+        });
+        throw authError;
+      }
 
-    console.log('[Auth] Returning current user:', { 
-      id: req.user?.id,
-      role: req.user?.role,
-      sessionID: req.sessionID,
-      ip: req.ip
-    });
-    res.json(req.user);
+      console.log('[Auth] Returning current user:', { 
+        id: req.user?.id,
+        role: req.user?.role,
+        sessionID: req.sessionID,
+        ip: req.ip
+      });
+      res.json(req.user);
+    } catch (error) {
+      next(error); // Pass errors to the error middleware
+    }
   });
 
   console.log('[Auth] Authentication setup completed successfully');

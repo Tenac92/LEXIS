@@ -182,6 +182,8 @@ function createErrorHtml(req: Request, error: any, status: number): string {
 
 // Error middleware implementation
 export function errorMiddleware(err: any, req: Request, res: Response, next: NextFunction) {
+  console.log(`[DEBUG_ERROR_MIDDLEWARE] Error middleware invoked for: ${req.path}, host: ${req.headers.host}`);
+  
   // Default error status and messages
   let status = err.status || err.statusCode || 500;
   let errorMessage = err.message || 'Internal Server Error';
@@ -204,8 +206,85 @@ export function errorMiddleware(err: any, req: Request, res: Response, next: Nex
   
   // Determine client type for appropriate response format
   const clientType = getClientType(req);
+  const isFromSdegdaefk = isFromSdegdaefkDomain(req);
   
-  // Handle based on client type
+  // Special handling for sdegdaefk.gr domain
+  if (isFromSdegdaefk) {
+    log(`[Error] Special handling for sdegdaefk.gr request: ${req.path}, status: ${status}`, 'info');
+    
+    // Check if the request is for the API endpoint
+    const isApiRequest = req.path.startsWith('/api/');
+    const isAuthError = status === 401 || status === 403;
+    
+    // Always use HTTP 200 status for sdegdaefk.gr domain requests to ensure proper display
+    // The actual error will be communicated in the response body
+    if (clientType === 'browser' || !isApiRequest) {
+      // Browser requests from sdegdaefk.gr get user-friendly HTML with 200 status
+      return res
+        .status(200) // Always use 200 status to prevent browser error pages
+        .set({
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          // Set CORS headers for sdegdaefk.gr domain
+          'Access-Control-Allow-Origin': req.headers.origin || '*',
+          'Access-Control-Allow-Credentials': 'true'
+        })
+        .send(createErrorHtml(req, err, status));
+    } else {
+      // For authentication errors to API from sdegdaefk.gr, redirect to login page
+      if (isAuthError && isApiRequest) {
+        log(`[Error] Authentication error for sdegdaefk.gr API request, redirecting to login`, 'info');
+        
+        // Special handling for authentication errors - include a loginRequired flag
+        return res
+          .status(200) // Always use 200 status to prevent API error intercepts
+          .set({
+            'Content-Type': 'application/json; charset=utf-8',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            // Set CORS headers for sdegdaefk.gr domain
+            'Access-Control-Allow-Origin': req.headers.origin || '*',
+            'Access-Control-Allow-Credentials': 'true'
+          })
+          .json({
+            status: 'error',
+            originalStatus: status,
+            message: 'Απαιτείται σύνδεση για πρόσβαση στην υπηρεσία.',
+            loginRequired: true,
+            redirectUrl: '/login',
+            code: 'AUTH_REQUIRED',
+            path: req.path,
+            timestamp: new Date().toISOString()
+          });
+      }
+      
+      // Regular API requests from sdegdaefk.gr get JSON with 200 status
+      return res
+        .status(200) // Always use 200 status to prevent API error intercepts
+        .set({
+          'Content-Type': 'application/json; charset=utf-8',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          // Set CORS headers for sdegdaefk.gr domain
+          'Access-Control-Allow-Origin': req.headers.origin || '*',
+          'Access-Control-Allow-Credentials': 'true'
+        })
+        .json({
+          status: 'error',
+          originalStatus: status,
+          message: dbErrorDetails ? dbErrorDetails.userMessage : errorMessage,
+          code: errorCode,
+          path: req.path,
+          timestamp: new Date().toISOString()
+        });
+    }
+  }
+  
+  // Standard handling for other domains
   if (clientType === 'browser') {
     // Send HTML response for browser clients
     return res
