@@ -15,6 +15,7 @@ import attachmentsRouter from "./controllers/attachments"; // Import for attachm
 import healthcheckRouter from "./routes/healthcheck"; // Import the healthcheck router
 import sdegdaefkDiagnosticRouter from "./routes/sdegdaefk-diagnostic"; // Import the sdegdaefk.gr diagnostic router
 import documentsBrowserHandler from "./middleware/sdegdaefk/documentsBrowserHandler"; // Import browser request handler for /documents
+import authBrowserHandler from "./middleware/sdegdaefk/authBrowserHandler"; // Import browser request handler for /auth
 // Note: We now use the consolidated documentsController instead of multiple document route files
 import { log } from "./vite";
 import { supabase } from "./config/db";
@@ -263,7 +264,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Authentication routes
     log('[Routes] Setting up authentication routes...');
-    app.use('/api/auth', authRouter);
+    // Register auth router for change-password only, since login/logout are handled by auth.ts
+    app.use('/api/auth/change-password', authRouter);
     log('[Routes] Authentication routes setup complete');
 
     // Mount users routes
@@ -625,9 +627,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
-    // Register the documents browser handler to fix direct browser access issues
+    // Register special handlers for direct browser access issues from sdegdaefk.gr
+    
+    // Fix browser requests to /documents path
     app.use(documentsBrowserHandler);
     log('[Routes] Special handler for /documents browser requests registered successfully');
+    
+    // Fix browser requests to /auth paths
+    app.use(authBrowserHandler);
+    log('[Routes] Special handler for /auth browser requests registered successfully');
     
     // Finish setup of diagnostic routes
     log('[Routes] Healthcheck routes registered');

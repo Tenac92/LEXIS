@@ -12,7 +12,7 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(6),
 });
 
-router.post('/change-password', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     if (!req.session.user?.id) {
       return res.status(401).json({ message: 'Not authenticated' });
