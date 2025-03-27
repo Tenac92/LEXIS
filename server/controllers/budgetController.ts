@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
 import { storage } from "../storage";
-import type { User, BudgetValidation } from "@shared/schema";
+import type { User, BudgetValidation } from "@shared/schema.unified";
 import { BudgetService } from "../services/budgetService";
 
 interface AuthRequest extends Request {
@@ -83,9 +83,14 @@ router.post('/validate', async (req: AuthRequest, res: Response) => {
     let requestedAmount: number;
     
     try {
-      requestedAmount = typeof amount === 'number' 
-        ? amount 
-        : parseFloat(amount?.toString() || '0');
+      // Check if amount exists and convert it to a number
+      if (amount !== undefined && amount !== null) {
+        requestedAmount = typeof amount === 'number' 
+          ? amount 
+          : parseFloat(amount.toString());
+      } else {
+        requestedAmount = 0;
+      }
         
       if (isNaN(requestedAmount)) {
         throw new Error('Invalid amount format');
@@ -116,7 +121,7 @@ router.post('/validate', async (req: AuthRequest, res: Response) => {
             new_amount: (parseFloat(budgetData.user_view?.toString() || '0') - requestedAmount).toString(),
             change_type: 'notification_created',
             change_reason: `Budget notification created: ${result.notificationType}`,
-            created_by: req.user.id,
+            created_by: req.user.id.toString(),
             metadata: {
               notification_type: result.notificationType,
               priority: result.priority || 'medium',
@@ -169,7 +174,12 @@ router.patch('/:mis', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const result = await BudgetService.updateBudget(mis, parseFloat(amount.toString()), userId);
+    // Ensure amount is properly converted to number and userId to string
+    const result = await BudgetService.updateBudget(
+      mis,
+      parseFloat(typeof amount === 'number' ? amount.toString() : amount || '0'),
+      userId.toString()
+    );
     return res.json(result);
   } catch (error) {
     console.error('Budget update error:', error);

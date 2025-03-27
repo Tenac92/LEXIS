@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { TemplateManager } from "../utils/TemplateManager";
 import { authenticateSession } from '../auth';
-import type { User } from "@shared/schema";
+import type { User } from "@shared/schema.unified";
 
 interface AuthRequest extends Request {
   user?: User;
@@ -58,7 +58,7 @@ router.post('/', authenticateSession, async (req: AuthRequest, res: Response) =>
       description,
       category,
       templateData || { sections: [] },
-      req.user.id
+      req.user.id.toString()
     );
 
     res.status(201).json(template);
@@ -81,7 +81,7 @@ router.patch('/:id', authenticateSession, async (req: AuthRequest, res: Response
     const template = await TemplateManager.updateTemplate(
       parseInt(req.params.id),
       req.body,
-      req.user.id
+      req.user.id.toString()
     );
 
     res.json(template);

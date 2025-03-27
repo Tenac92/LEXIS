@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
-import type { GeneratedDocument } from "@shared/schema";
+import type { GeneratedDocument } from "@shared/schema.unified";
 import { authenticateSession } from '../auth';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { DocumentManager } from '../utils/DocumentManager';

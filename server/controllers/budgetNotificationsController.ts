@@ -2,7 +2,7 @@ import { Request, Response, Router } from 'express';
 import { db } from '../drizzle';
 import { supabase } from '../config/db';
 import { authenticateSession } from '../auth';
-import type { User } from '@shared/schema';
+import type { User } from '@shared/schema.unified';
 
 interface AuthRequest extends Request {
   user?: User;
