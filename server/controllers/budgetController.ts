@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
 import { storage } from "../storage";
-import type { User, BudgetValidation } from "@shared/schema.unified";
+import type { User, BudgetValidation } from "@shared/schema";
 import { BudgetService } from "../services/budgetService";
 
 interface AuthRequest extends Request {

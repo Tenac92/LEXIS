@@ -1,6 +1,7 @@
 import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { authenticateSession } from "./auth";
+// Import from the auth middleware which re-exports from the authentication module
+import { authenticateSession, User, AuthenticatedRequest } from "./middleware/auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
 import { router as budgetRouter } from "./controllers/budgetController";
@@ -20,13 +21,12 @@ import authBrowserHandler from "./middleware/sdegdaefk/authBrowserHandler"; // I
 import { log } from "./vite";
 import { supabase } from "./config/db";
 import { BudgetService } from "./services/budgetService"; // Import the BudgetService
-import { User } from "./middleware/auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   try {
     // TODO: Refactor - Move these direct document routes to the consolidated DocumentController
     // IMPORTANT: Register direct document creation route first to bypass any routing conflicts
-    app.post('/api/documents', authenticateSession, async (req: Request & { user?: User }, res: Response) => {
+    app.post('/api/documents', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
       try {
         console.log('[DIRECT_ROUTE] Document creation request received:', JSON.stringify(req.body));
 

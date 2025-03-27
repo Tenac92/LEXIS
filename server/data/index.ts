@@ -7,9 +7,9 @@ import pg from 'pg';
 const { Pool } = pg;
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { createClient } from '@supabase/supabase-js';
-import * as schema from '@shared/schema.unified';
+import * as schema from '@shared/schema';
 import { log } from '../vite';
-import type { Database } from '@shared/schema.unified';
+import type { Database } from '@shared/schema';
 
 /**
  * Database Connection Configuration

@@ -1,5 +1,5 @@
 import { Document, Packer, Paragraph, TextRun, ISectionOptions, PageOrientation } from 'docx';
-import { type DocumentTemplate } from '@shared/schema.unified';
+import { type DocumentTemplate } from '@shared/schema';
 import { supabase } from '../config/db';
 
 interface TemplateData {

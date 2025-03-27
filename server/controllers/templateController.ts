@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { TemplateManager } from "../utils/TemplateManager";
 import { authenticateSession } from '../auth';
-import type { User } from "@shared/schema.unified";
+import type { User } from "@shared/schema";
 
 interface AuthRequest extends Request {
   user?: User;

@@ -1,28 +1,32 @@
 /**
  * Authentication Middleware Re-exports
  * 
- * This file centralizes authentication-related exports from the auth.ts file.
+ * This file centralizes authentication-related exports from the authentication.ts file.
  * It allows middleware to be imported consistently from a single location.
  */
 
-import { Request } from 'express';
-import type { User as SchemaUser } from "@shared/schema.unified";
+import type { Request } from 'express';
+import type { User as SchemaUser } from '../../shared/schema';
 import { 
   authenticateSession, 
-  authLimiter,
-  authenticateUser 
-} from '../auth';
-
-// Define User type from schema
-export type User = Partial<SchemaUser>;
-
-export { 
-  authenticateSession, 
+  authenticateToken,
+  requireAdmin,
   authLimiter,
   authenticateUser
-};
+} from '../authentication';
 
-// Re-create the AuthenticatedRequest interface here to avoid circular dependencies
+// Define User type locally to avoid circular dependencies
+export type User = Partial<SchemaUser>;
+
+// Re-create the interface here to avoid circular dependencies
 export interface AuthenticatedRequest extends Request {
   user?: User;
 }
+
+export { 
+  authenticateSession, 
+  authenticateToken,
+  requireAdmin,
+  authLimiter,
+  authenticateUser
+};

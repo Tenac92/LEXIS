@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { supabase } from '../config/db';
-import type { User } from '@shared/schema.unified';
+import type { User } from '@shared/schema';
 
 interface AuthRequest extends Request {
   user?: User;

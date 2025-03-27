@@ -5,7 +5,8 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { errorMiddleware } from "./middleware/errorMiddleware";
 import { securityHeaders } from "./middleware/securityHeaders";
-import { sessionMiddleware } from './auth';
+// Import sessionMiddleware from the new centralized authentication module
+import { sessionMiddleware } from './authentication';
 import corsMiddleware from './middleware/corsMiddleware';
 import { geoIpRestriction } from './middleware/geoIpMiddleware';
 import sdegdaefkRootHandler from './middleware/sdegdaefk/rootHandler';

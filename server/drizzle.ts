@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import * as schema from "../shared/schema.unified";
+import * as schema from "../shared/schema";
 
 // TODO: Refactor - There are multiple database connection mechanisms:
 // - Direct PostgreSQL connection here using pg Pool
