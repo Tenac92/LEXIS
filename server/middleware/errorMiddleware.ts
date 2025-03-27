@@ -46,21 +46,32 @@ export const errorMiddleware = (
 
   // Provide appropriate error details in response
   // More detailed in development, more generic in production
+  // Enhanced error logging for production
+  console.error('[Error]', {
+    path: req.path,
+    method: req.method,
+    error: err.message,
+    stack: err.stack,
+    origin,
+    code: err.code
+  });
+
+  const isSdegdaefkRequest = origin?.includes('sdegdaefk.gr');
+  
   const responseBody = {
     status: 'error',
-    message: process.env.NODE_ENV === 'development' 
-      ? `${err.message} (see server logs for details)` 
+    message: isSdegdaefkRequest 
+      ? 'Παρουσιάστηκε σφάλμα κατά την επεξεργασία του αιτήματος' 
       : 'An unexpected error occurred',
     code: err.code || 'XX000',
-    // Include detailed information in development environment only
-    ...(process.env.NODE_ENV === 'development' ? {
-      path: req.path,
-      method: req.method,
-      stack: err.stack,
-      origin,
-      isCorsError: err.message && err.message.includes('CORS'),
-      isAuthError: err.message && err.message.includes('auth')
-    } : {})
+    // Include path information in production for better debugging
+    path: req.path,
+    // Include specific error types without exposing internals
+    type: err.message?.includes('CORS') 
+      ? 'cors_error' 
+      : err.message?.includes('auth')
+      ? 'auth_error'
+      : 'internal_error'
   };
 
   // Special handling for sdegdaefk.gr domain errors
