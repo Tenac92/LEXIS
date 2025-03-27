@@ -10,8 +10,9 @@ import corsMiddleware from './middleware/corsMiddleware';
 import { geoIpRestriction } from './middleware/geoIpMiddleware';
 import sdegdaefkRootHandler from './middleware/sdegdaefk/rootHandler';
 import { databaseErrorRecoveryMiddleware } from './middleware/databaseErrorRecovery';
+import documentsPreHandler from './middleware/sdegdaefk/documentsPreHandler';
 import { createWebSocketServer } from './websocket';
-import { supabase, testConnection } from './config/db';
+import { supabase, testConnection, resetConnectionPoolIfNeeded } from './config/db';
 
 // Enhanced error handlers
 process.on('uncaughtException', (error) => {
@@ -57,6 +58,17 @@ const __dirname = dirname(__filename);
 
 async function startServer() {
   try {
+    // Test database connection during startup with multiple attempts
+    console.log('[Startup] Testing database connection...');
+    const dbConnected = await testConnection(5, 10000);
+    if (!dbConnected) {
+      console.warn('[Startup] WARNING: Initial database connection test failed! ');
+      console.warn('[Startup] The server will start anyway, but document operations may fail');
+      console.warn('[Startup] Database error handling will attempt to recover during runtime');
+    } else {
+      console.log('[Startup] Database connection successfully verified');
+    }
+
     const app = express();
     console.log('[Startup] Express app created');
 
@@ -128,9 +140,13 @@ async function startServer() {
 
     console.log('[Startup] Request logging middleware configured');
     
-    // Apply sdegdaefk.gr root path handler
+    // Apply sdegdaefk.gr specific handlers
     app.use(sdegdaefkRootHandler);
     console.log('[Startup] sdegdaefk.gr root path handler applied');
+    
+    // Pre-handle sdegdaefk.gr document requests to prevent database errors 
+    app.use(documentsPreHandler);
+    console.log('[Startup] sdegdaefk.gr documents pre-handler applied for DB error prevention');
 
     // Setup authentication with enhanced error handling
     try {
@@ -193,6 +209,31 @@ async function startServer() {
             console.log(`[Startup] Server running at http://${HOST}:${PORT}`);
             console.log('[Startup] Environment:', app.get('env'));
             console.log('[Startup] Node version:', process.version);
+            
+            // Set up periodic database health checks
+            const DB_CHECK_INTERVAL = 15 * 60 * 1000; // 15 minutes
+            console.log(`[Startup] Scheduling database health checks every ${DB_CHECK_INTERVAL/60000} minutes`);
+            
+            // Schedule database health checks to prevent connection timeouts
+            setInterval(async () => {
+              try {
+                console.log('[Database] Running scheduled database health check...');
+                // Reset the connection pool if needed
+                resetConnectionPoolIfNeeded();
+                
+                // Test connection with short timeout
+                const dbStatus = await testConnection(2, 5000);
+                
+                if (dbStatus) {
+                  console.log('[Database] Scheduled health check: Database connection healthy');
+                } else {
+                  console.error('[Database] Scheduled health check: Database connection problem detected');
+                }
+              } catch (healthError) {
+                console.error('[Database] Error during scheduled health check:', healthError);
+              }
+            }, DB_CHECK_INTERVAL);
+            
             resolve(serverInstance);
           });
 
