@@ -1,8 +1,10 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
 import type { GeneratedDocument } from "@shared/schema";
+import type { User } from '@shared/schema';
+import type { AuthenticatedRequest } from '../middleware/auth';
 import { authenticateSession } from '../auth';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateToken } from '../middleware/auth';
 import { DocumentManager } from '../utils/DocumentManager';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
 import { broadcastDocumentUpdate } from '../services/websocketService';
@@ -13,6 +15,236 @@ const documentManager = new DocumentManager();
 
 // Export the router as default
 export default router;
+
+/**
+ * POST /api/documents
+ * Direct document creation route (V1)
+ * Priority route that handles document creation from the main application
+ */
+router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    console.log('[DocumentsController] Document creation request received:', JSON.stringify(req.body));
+
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
+
+    if (!recipients?.length || !project_id || !unit || !expenditure_type) {
+      return res.status(400).json({
+        message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
+      });
+    }
+
+    // Get project NA853
+    const { data: projectData, error: projectError } = await supabase
+      .from('Projects')
+      .select('na853')
+      .eq('mis', project_id)
+      .single();
+
+    if (projectError || !projectData) {
+      return res.status(404).json({ message: 'Project not found', error: projectError?.message });
+    }
+
+    // Format recipients data
+    const formattedRecipients = recipients.map((r: any) => ({
+      firstname: String(r.firstname).trim(),
+      lastname: String(r.lastname).trim(),
+      fathername: String(r.fathername).trim(),
+      afm: String(r.afm).trim(),
+      amount: parseFloat(String(r.amount)),
+      installment: String(r.installment).trim()
+    }));
+
+    const now = new Date().toISOString();
+
+    // Create document with exact schema match and set initial status to pending
+    const documentPayload = {
+      unit,
+      project_id,
+      project_na853: projectData.na853,
+      expenditure_type,
+      status: 'pending', // Always set initial status to pending
+      recipients: formattedRecipients,
+      total_amount: parseFloat(String(total_amount)) || 0,
+      generated_by: req.user.id,
+      department: req.user.department || null,
+      contact_number: req.user.telephone || null,
+      user_name: req.user.name || null,
+      attachments: attachments || [],
+      created_at: now,
+      updated_at: now
+    };
+
+    console.log('[DocumentsController] Document payload prepared:', documentPayload);
+
+    // Insert into database
+    const { data, error } = await supabase
+      .from('generated_documents')
+      .insert([documentPayload])
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[DocumentsController] Error creating document:', error);
+      return res.status(500).json({ 
+        message: 'Error creating document', 
+        error: error.message,
+        details: error.details
+      });
+    }
+
+    console.log('[DocumentsController] Document created successfully:', data.id);
+    res.status(201).json({ id: data.id });
+  } catch (error) {
+    console.error('[DocumentsController] Error creating document:', error);
+    res.status(500).json({ 
+      message: 'Error creating document', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
+/**
+ * POST /api/v2-documents
+ * Document creation route (V2)
+ * Alternative endpoint with different input validation
+ */
+router.post('/v2', async (req: Request, res: Response) => {
+  try {
+    console.log('[DocumentsController] V2 Document creation request with body:', req.body);
+    
+    // Check if there's a session but don't require auth for testing
+    console.log('[DocumentsController] V2 Session info:', (req as any).session);
+    
+    const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [] } = req.body;
+    
+    if (!recipients?.length || !project_id || !unit || !expenditure_type) {
+      return res.status(400).json({
+        message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
+      });
+    }
+    
+    // Get project NA853 from Supabase if not provided
+    let project_na853 = req.body.project_na853;
+    if (!project_na853) {
+      console.log('[DocumentsController] V2 Fetching NA853 for project with MIS:', project_id);
+      
+      try {
+        // Look up in the Projects table - using the project_id as the MIS value
+        const { data: projectData, error: projectError } = await supabase
+          .from('Projects')
+          .select('na853')
+          .eq('mis', project_id)
+          .single();
+        
+        if (!projectError && projectData && projectData.na853) {
+          // Extract only numeric parts for database compatibility
+          const numericNA853 = String(projectData.na853).replace(/\D/g, '');
+          if (numericNA853) {
+            project_na853 = numericNA853;
+            console.log('[DocumentsController] V2 Retrieved and converted NA853 from Projects table:', project_na853);
+          } else {
+            console.error('[DocumentsController] V2 Could not extract numeric value from NA853:', projectData.na853);
+            // Try to use project_mis as numeric fallback
+            if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
+              project_na853 = req.body.project_mis;
+              console.log('[DocumentsController] V2 Using project_mis as numeric fallback:', req.body.project_mis);
+            } else {
+              // Last resort - use 0 as safe fallback
+              project_na853 = '0';
+              console.log('[DocumentsController] V2 Using safe numeric fallback: 0');
+            }
+          }
+        } else {
+          // If no data found in Projects table, use project_mis as fallback
+          if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
+            console.log('[DocumentsController] V2 Using project_mis directly as numeric fallback:', req.body.project_mis);
+            project_na853 = req.body.project_mis;
+          } else {
+            console.error('[DocumentsController] V2 Could not find project in Projects table:', projectError);
+            return res.status(400).json({ 
+              message: 'Project not found in Projects table and no fallback available', 
+              error: 'Project NA853 could not be determined'
+            });
+          }
+        }
+      } catch (error) {
+        console.error('[DocumentsController] V2 Error during project lookup:', error);
+        
+        // If error happens, use project_mis as numeric fallback if available and valid
+        if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
+          console.log('[DocumentsController] V2 Using project_mis as numeric fallback due to error:', req.body.project_mis);
+          project_na853 = req.body.project_mis;
+        } else {
+          console.error('[DocumentsController] V2 No valid numeric fallback available');
+          // Last resort - use 0 as safe numeric value
+          project_na853 = '0';
+          console.log('[DocumentsController] V2 Using safe numeric fallback in error handler: 0');
+        }
+      }
+    }
+    
+    // Format recipients data consistently
+    const formattedRecipients = recipients.map((r: any) => ({
+      firstname: String(r.firstname || '').trim(),
+      lastname: String(r.lastname || '').trim(),
+      fathername: String(r.fathername || '').trim(),
+      afm: String(r.afm || '').trim(),
+      amount: parseFloat(String(r.amount || 0)),
+      installment: String(r.installment || 'Α').trim()
+    }));
+    
+    const now = new Date().toISOString();
+    
+    // Create document with exact schema match and default values where needed
+    const documentPayload = {
+      unit,
+      project_id,
+      project_na853,
+      expenditure_type,
+      status: 'pending', // Always set initial status to pending
+      recipients: formattedRecipients,
+      total_amount: parseFloat(String(total_amount)) || 0,
+      generated_by: (req as any).user?.id || null,
+      department: (req as any).user?.department || null,
+      contact_number: (req as any).user?.telephone || null,
+      user_name: (req as any).user?.name || null,
+      attachments: attachments || [],
+      created_at: now,
+      updated_at: now
+    };
+    
+    console.log('[DocumentsController] V2 Document payload prepared:', documentPayload);
+    
+    // Insert into database
+    const { data, error } = await supabase
+      .from('generated_documents')
+      .insert([documentPayload])
+      .select('id')
+      .single();
+    
+    if (error) {
+      console.error('[DocumentsController] V2 Error creating document:', error);
+      return res.status(500).json({ 
+        message: 'Error creating document', 
+        error: error.message,
+        details: error.details
+      });
+    }
+    
+    console.log('[DocumentsController] V2 Document created successfully:', data.id);
+    res.status(201).json({ id: data.id, message: 'Document created successfully' });
+  } catch (error) {
+    console.error('[DocumentsController] V2 Error creating document:', error);
+    res.status(500).json({ 
+      message: 'Error creating document', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
 
 // List documents with filters
 router.get('/', async (req: Request, res: Response) => {
@@ -79,7 +311,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // Update document
-router.patch('/:id', async (req: Request, res: Response) => {
+router.patch('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -135,7 +367,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
 });
 
 // Update document protocol
-router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
+router.patch('/generated/:id/protocol', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { protocol_number, protocol_date } = req.body;
@@ -236,7 +468,7 @@ router.patch('/generated/:id/protocol', async (req: Request, res: Response) => {
 });
 
 // Create new document
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Creating new document with provided data
     const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
@@ -380,7 +612,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // Export document
-router.get('/generated/:id/export', async (req: Request, res: Response) => {
+router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
 
   try {
