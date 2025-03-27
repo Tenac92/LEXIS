@@ -1,19 +1,31 @@
 /**
- * Special Root Request Handler for sdegdaefk.gr Domain
+ * Special handler for the root path when accessed directly via browser from sdegdaefk.gr
  * 
- * This middleware provides special handling for root path (/) requests
- * coming from the sdegdaefk.gr domain.
+ * This middleware detects browser requests to the root path and ensures proper SPA loading.
  */
 
 import { Request, Response, NextFunction } from 'express';
+import path from 'path';
 import { log } from '../../vite';
 
-/**
- * Detect if a request is from sdegdaefk.gr domain
- * @param req Express request object
- * @returns boolean indicating if request is from sdegdaefk.gr
- */
-export function isFromSdegdaefkDomain(req: Request): boolean {
+// Constants for detection
+const BROWSER_MARKERS = ['text/html', 'application/xhtml+xml'];
+
+// Helper to detect browser requests
+function isBrowserRequest(req: Request): boolean {
+  const accept = req.headers.accept || '';
+  // Check for browser content types in accept header
+  const wantsBrowserContent = BROWSER_MARKERS.some(marker => accept.includes(marker));
+  
+  // Check for browser-specific headers
+  const hasBrowserHeaders = req.headers['sec-fetch-dest'] === 'document' || 
+                         req.headers['sec-fetch-mode'] === 'navigate';
+  
+  return wantsBrowserContent || hasBrowserHeaders;
+}
+
+// Helper to detect if request came from sdegdaefk.gr
+function isFromSdegdaefkDomain(req: Request): boolean {
   const origin = req.headers.origin;
   const referer = req.headers.referer;
   const host = req.headers.host;
@@ -26,67 +38,34 @@ export function isFromSdegdaefkDomain(req: Request): boolean {
 }
 
 /**
- * Root path handler for sdegdaefk.gr domain
+ * Middleware to handle browser requests to the root path from sdegdaefk.gr
  */
-export function sdegdaefkRootHandler(req: Request, res: Response, next: NextFunction) {
-  try {
-    if (isFromSdegdaefkDomain(req)) {
-      log(`[SdegdaefkRootHandler] Request from sdegdaefk.gr domain detected: ${req.originalUrl}`, 'info');
-      
-      // Special handling for direct access to root path
-      if (req.originalUrl === '/' || req.originalUrl === '') {
-        log('[SdegdaefkRootHandler] Root path access, passing to React app', 'info');
-        // Continue to next middleware to serve the React app
-        return next();
-      }
-      
-      // For specific issues with browser requests to paths besides root
-      if (req.headers.accept?.includes('text/html') && req.originalUrl !== '/') {
-        log('[SdegdaefkRootHandler] Browser request to non-root path, redirecting to root', 'info');
-        
-        // Create redirect HTML with messaging
-        const redirectHtml = `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <meta http-equiv="refresh" content="3;url=/">
-              <title>ΣΔΕΓΔΑΕΦΚ - Ανακατεύθυνση</title>
-              <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
-                h1 { color: #0066cc; }
-                .info-box { background-color: #f8f8f8; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
-                .btn { display: inline-block; background: #0066cc; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; }
-              </style>
-            </head>
-            <body>
-              <h1>ΣΔΕΓΔΑΕΦΚ - Ανακατεύθυνση</h1>
-              <div class="info-box">
-                <p>Γίνεται ανακατεύθυνση στην αρχική σελίδα του συστήματος.</p>
-                <p>Παρακαλώ περιμένετε...</p>
-                <p><a class="btn" href="/">Επιστροφή στην αρχική σελίδα</a></p>
-              </div>
-              <p><small>Διαδρομή: ${req.originalUrl}</small></p>
-            </body>
-          </html>
-        `;
-        
-        return res
-          .status(200)
-          .set({
-            'Content-Type': 'text/html; charset=utf-8',
-            'Cache-Control': 'no-cache'
-          })
-          .send(redirectHtml);
-      }
-    }
+export function rootHandler(req: Request, res: Response, next: NextFunction) {
+  // Only handle GET requests to the root path from sdegdaefk.gr
+  const isRootPath = req.path === '/' || req.path === '';
+  const isFromSdegdaefk = isFromSdegdaefkDomain(req);
+  
+  if (req.method === 'GET' && isRootPath && isBrowserRequest(req) && isFromSdegdaefk) {
+    log(`[SdegdaefkHandler] Browser request from sdegdaefk.gr to root path detected`, 'info');
     
-    // For all other cases, continue to the next middleware
-    next();
-  } catch (error: any) {
-    log(`[SdegdaefkRootHandler] Error: ${error.message}`, 'error');
-    next(); // Continue to next middleware even on error
+    try {
+      // Log session cookie diagnostics
+      const cookies = req.cookies || {};
+      const sessionCookie = cookies.sid || null;
+      
+      log(`[SdegdaefkHandler] Session cookie present: ${sessionCookie ? 'yes' : 'no'}`, 'info');
+      
+      // Return index.html or other SPA entry point with proper headers
+      // Directly send file to avoid problems with Vite middleware
+      return next();
+    } catch (error: any) {
+      log(`[SdegdaefkHandler] Error handling root path request: ${error.message}`, 'error');
+      return next(error);
+    }
   }
+  
+  // Not a browser request or not from sdegdaefk.gr to root, continue to next middleware
+  return next();
 }
 
-export default sdegdaefkRootHandler;
+export default rootHandler;

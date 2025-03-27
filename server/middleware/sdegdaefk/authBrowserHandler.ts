@@ -1,27 +1,32 @@
 /**
- * Special handler for direct browser requests to /auth/login from sdegdaefk.gr
+ * Special handler for /auth path when accessed directly via browser from sdegdaefk.gr
  * 
- * This middleware detects and properly handles HTML requests to /auth/login
- * from browsers on the sdegdaefk.gr domain to prevent 500 errors.
+ * This middleware detects browser requests to the /auth path and redirects them
+ * to the React SPA for proper handling, avoiding server-side 404 errors.
  */
 
 import { Request, Response, NextFunction } from 'express';
+import path from 'path';
 import { log } from '../../vite';
 
-/**
- * Detect if a request is from a browser (HTML) rather than API call
- */
+// Constants for detection
+const AUTH_PATH = '/auth';
+const BROWSER_MARKERS = ['text/html', 'application/xhtml+xml'];
+
+// Helper to detect browser requests
 function isBrowserRequest(req: Request): boolean {
   const accept = req.headers.accept || '';
-  return (
-    accept.includes('text/html') || 
-    req.headers['sec-fetch-dest'] === 'document'
-  );
+  // Check for browser content types in accept header
+  const wantsBrowserContent = BROWSER_MARKERS.some(marker => accept.includes(marker));
+  
+  // Check for browser-specific headers
+  const hasBrowserHeaders = req.headers['sec-fetch-dest'] === 'document' || 
+                         req.headers['sec-fetch-mode'] === 'navigate';
+  
+  return wantsBrowserContent || hasBrowserHeaders;
 }
 
-/**
- * Detect if a request is coming from sdegdaefk.gr domain
- */
+// Helper to detect if request came from sdegdaefk.gr
 function isFromSdegdaefkDomain(req: Request): boolean {
   const origin = req.headers.origin;
   const referer = req.headers.referer;
@@ -35,63 +40,68 @@ function isFromSdegdaefkDomain(req: Request): boolean {
 }
 
 /**
- * Special handler for /auth and /auth/* paths
+ * Middleware to handle browser requests to /auth path
  */
 export function authBrowserHandler(req: Request, res: Response, next: NextFunction) {
-  try {
-    // Only intercept browser requests to auth endpoints
-    if ((req.path === '/auth' || req.path.startsWith('/auth/')) && 
-        (isBrowserRequest(req) || isFromSdegdaefkDomain(req))) {
+  // Only handle GET requests to /auth path or /auth/*
+  const isAuthPath = req.path === AUTH_PATH || req.path.startsWith(`${AUTH_PATH}/`);
+  
+  if (req.method === 'GET' && isAuthPath && isBrowserRequest(req)) {
+    log(`[SdegdaefkHandler] Browser request detected for auth: ${req.path}`, 'info');
+    
+    try {
+      // Instead of trying to directly serve the file which might not exist yet,
+      // return a redirect HTML that will take the user to the homepage
+      log(`[SdegdaefkHandler] Redirecting browser request for auth: ${req.path}`, 'info');
       
-      log(`[AuthBrowserHandler] Caught browser request to auth path: ${req.path}`, 'auth');
-      
-      // For browser requests, redirect to root instead of returning JSON errors
-      // which would be displayed as plain text in the browser
-      const redirectHtml = `
+      // Create an HTML response with a client-side redirect
+      const html = `
         <!DOCTYPE html>
         <html>
           <head>
             <meta charset="utf-8">
             <meta http-equiv="refresh" content="0;url=/">
             <title>ΣΔΕΓΔΑΕΦΚ - Ανακατεύθυνση</title>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
-              h1 { color: #0066cc; }
-              .info-box { background-color: #f8f8f8; border: 1px solid #ddd; padding: 20px; border-radius: 5px; }
-              .btn { display: inline-block; background: #0066cc; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; }
-            </style>
             <script>
-              // Immediate redirect to homepage
-              window.location.href = "/";
+              // Try to use the history API if available to maintain a cleaner navigation
+              if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, '', '/');
+              }
+              window.location.href = '/';
             </script>
+            <style>
+              body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; }
+              h1 { color: #1a5276; }
+              p { margin: 15px 0; }
+              a { color: #3498db; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+            </style>
           </head>
           <body>
-            <h1>ΣΔΕΓΔΑΕΦΚ - Ανακατεύθυνση</h1>
-            <div class="info-box">
-              <p>Ανακατεύθυνση στην αρχική σελίδα της εφαρμογής...</p>
-              <p>Εάν δεν ανακατευθυνθείτε αυτόματα, παρακαλώ κάντε κλικ στο παρακάτω κουμπί:</p>
-              <p><a class="btn" href="/">Μετάβαση στην αρχική σελίδα</a></p>
-            </div>
+            <h1>Ανακατεύθυνση...</h1>
+            <p>Παρακαλώ περιμένετε καθώς ανακατευθύνεστε στην αρχική σελίδα της εφαρμογής.</p>
+            <p>Εάν δεν ανακατευθυνθείτε αυτόματα, <a href="/">πατήστε εδώ</a>.</p>
           </body>
         </html>
       `;
       
-      // Send HTML response for browser requests
       return res
         .status(200)
         .set({
           'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         })
-        .send(redirectHtml);
+        .send(html);
+    } catch (error: any) {
+      log(`[SdegdaefkHandler] Error handling auth browser request: ${error.message}`, 'error');
+      return next(error);
     }
-    
-    // For all other requests, continue to next middleware
-    next();
-  } catch (error: any) {
-    log(`[AuthBrowserHandler] Error: ${error.message}`, 'error');
-    next(); // Continue even on error
   }
+  
+  // Not a browser request or not for /auth, continue to next middleware
+  return next();
 }
 
 export default authBrowserHandler;
