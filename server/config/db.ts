@@ -1,12 +1,12 @@
 /**
  * Database Configuration Module
- * Centralizes database connection parameters and configuration
+ * Centralizes database connection parameters and configuration for all database access in the application
  */
 
 import pg from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { log } from '../vite';
-import type { Database } from '@shared/schema.unified';
+import type { Database } from '@shared/schema';
 
 const { Pool } = pg;
 
