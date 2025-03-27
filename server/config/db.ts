@@ -6,7 +6,7 @@
 import pg from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { log } from '../vite';
-import type { Database } from '@shared/schema';
+import type { Database } from '@shared/schema.unified';
 
 const { Pool } = pg;
 

@@ -20,7 +20,7 @@ import authBrowserHandler from "./middleware/sdegdaefk/authBrowserHandler"; // I
 import { log } from "./vite";
 import { supabase } from "./config/db";
 import { BudgetService } from "./services/budgetService"; // Import the BudgetService
-import { User } from "../shared/schema";
+import { User } from "./middleware/auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   try {

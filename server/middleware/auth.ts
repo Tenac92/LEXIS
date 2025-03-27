@@ -6,18 +6,20 @@
  */
 
 import { Request } from 'express';
+import type { User as SchemaUser } from "@shared/schema.unified";
 import { 
   authenticateSession, 
-  User,
   authLimiter,
   authenticateUser 
 } from '../auth';
 
+// Define User type from schema
+export type User = Partial<SchemaUser>;
+
 export { 
   authenticateSession, 
   authLimiter,
-  authenticateUser,
-  User
+  authenticateUser
 };
 
 // Re-create the AuthenticatedRequest interface here to avoid circular dependencies

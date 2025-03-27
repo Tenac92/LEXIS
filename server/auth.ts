@@ -2,7 +2,7 @@ import { Request, Response, NextFunction, Express } from "express";
 import { supabase } from "./config/db";
 import session from "express-session";
 import { storage } from "./storage";
-import type { User as SchemaUser } from "@shared/schema";
+import type { User as SchemaUser } from "@shared/schema.unified";
 import bcrypt from "bcrypt";
 import { rateLimit } from 'express-rate-limit';
 

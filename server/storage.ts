@@ -1,4 +1,4 @@
-import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project, type BudgetNA853Split, type InsertBudgetHistory } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project, type BudgetNA853Split, type InsertBudgetHistory } from "@shared/schema.unified";
 import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
 import session from 'express-session';
