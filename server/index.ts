@@ -42,7 +42,7 @@ console.log('[Startup] Beginning server initialization');
 const requiredEnvVars = [
   'DATABASE_URL',
   'SUPABASE_URL',
-  'SUPABASE_ANON_KEY',
+  'SUPABASE_KEY',
   'SESSION_SECRET'
 ];
 

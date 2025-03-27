@@ -41,10 +41,10 @@ const AlertDialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <AlertDialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+      <AlertDialogCancel className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
         <X className="h-4 w-4" />
         <span className="sr-only">Κλείσιμο</span>
-      </AlertDialogPrimitive.Close>
+      </AlertDialogCancel>
     </AlertDialogPrimitive.Content>
   </AlertDialogPortal>
 ))
@@ -130,6 +130,34 @@ const AlertDialogCancel = React.forwardRef<
 ))
 AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
 
+// Custom close button component that is not dependent on AlertDialogPrimitive.Close
+type AlertDialogCloseProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  asChild?: boolean;
+};
+
+const AlertDialogClose = React.forwardRef<
+  HTMLButtonElement,
+  AlertDialogCloseProps
+>(({ className, children, ...props }, ref) => (
+  <button
+    type="button"
+    ref={ref}
+    className={cn(
+      "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none",
+      className
+    )}
+    {...props}
+  >
+    {children || (
+      <>
+        <X className="h-4 w-4" />
+        <span className="sr-only">Κλείσιμο</span>
+      </>
+    )}
+  </button>
+))
+AlertDialogClose.displayName = "AlertDialogClose"
+
 export {
   AlertDialog,
   AlertDialogPortal,
@@ -142,4 +170,5 @@ export {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
+  AlertDialogClose,
 }
