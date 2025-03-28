@@ -236,7 +236,7 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
     }
 
     // Validate user role
-    if (!['admin', 'user'].includes(sessionUser.role)) {
+    if (!['admin', 'user', 'manager'].includes(sessionUser.role)) {
       console.log('[Auth] Invalid user role');
       return res.status(403).json({ message: "Invalid user role" });
     }

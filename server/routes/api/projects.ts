@@ -157,9 +157,15 @@ router.get('/:mis/regions', async (req: Request, res: Response) => {
 /**
  * Export projects to XLSX
  * GET /api/projects/export/xlsx
+ * Accessible by both admin and manager roles
  */
-router.get('/export/xlsx', async (req: Request, res: Response) => {
+router.get('/export/xlsx', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    // Check user role - allow both admin and manager roles to export
+    if (req.user && req.user.role !== 'admin' && req.user.role !== 'manager') {
+      return res.status(403).json({ message: 'Admin or manager access required to export projects' });
+    }
+    
     // Get all projects
     const { data, error } = await supabase
       .from('Projects')

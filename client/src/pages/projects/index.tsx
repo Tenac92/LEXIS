@@ -23,6 +23,11 @@ export default function ProjectsPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  // Check if user is a manager (any role other than 'admin' or 'user' is considered a manager)
+  const isManager = user?.role === 'manager';
+  // Allow both admin and manager to access export functionality
+  const canExport = isAdmin || isManager;
+  
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
@@ -32,6 +37,7 @@ export default function ProjectsPage() {
 
   console.log("Current user:", user);
   console.log("Is admin:", isAdmin);
+  console.log("Is manager:", isManager);
 
   // Debounce search input
   useEffect(() => {
@@ -122,19 +128,23 @@ export default function ProjectsPage() {
                 <><LayoutGrid className="mr-2 h-4 w-4" /> Grid View</>
               )}
             </Button>
+            
+            {/* Only admin can create new projects */}
             {isAdmin && (
-              <>
-                <Link href="/projects/new">
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Project
-                  </Button>
-                </Link>
-                <Button variant="secondary" onClick={handleExport}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
+              <Link href="/projects/new">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Project
                 </Button>
-              </>
+              </Link>
+            )}
+            
+            {/* Both admin and manager can export projects */}
+            {canExport && (
+              <Button variant="secondary" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
             )}
           </div>
         </div>
