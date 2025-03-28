@@ -91,12 +91,14 @@ export const sessionMiddleware = session({
 // Rate limiting middleware for auth routes with proxy support
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts per window
+  max: 20, // 20 attempts per window (increased from 5)
   message: { message: 'Too many login attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
   // Configure rate limiter for proxy environment
   skipFailedRequests: false,
+  // Only count failed attempts to be more lenient
+  skipSuccessfulRequests: true,
 });
 
 // ============================================================================
