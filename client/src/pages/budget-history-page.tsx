@@ -238,23 +238,8 @@ export default function BudgetHistoryPage() {
     );
   };
 
-  // Check if user has permission to view the page
-  if (user && user.role !== 'admin' && user.role !== 'manager') {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container mx-auto px-4 pt-6 pb-8 flex items-center justify-center h-[80vh]">
-          <Card className="max-w-md p-6 text-center">
-            <h1 className="text-2xl font-bold mb-4">Access Denied</h1>
-            <p className="text-muted-foreground mb-6">
-              You don't have permission to view the budget history. This page is only accessible to administrators and managers.
-            </p>
-            <Button onClick={() => window.history.back()}>Go Back</Button>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  // Allow all users to view budget history
+  // Role-based access removed to ensure all users can access the data
 
   return (
     <div className="min-h-screen bg-background">

@@ -49,16 +49,8 @@ router.get('/history', async (req: AuthRequest, res: Response) => {
       });
     }
     
-    // Only admin and manager roles can access budget history
-    if (req.user.role !== 'admin' && req.user.role !== 'manager') {
-      console.log(`[Budget] Unauthorized access attempt by user ${req.user.id} with role ${req.user.role}`);
-      return res.status(403).json({
-        status: 'error',
-        message: 'Insufficient permissions to access budget history',
-        data: [],
-        pagination: { total: 0, page: 1, limit: 10, pages: 0 }
-      });
-    }
+    // Allow all authenticated users to access budget history
+    console.log(`[Budget] User ${req.user.id} with role ${req.user.role} accessing budget history`);
 
     // Parse query parameters
     const page = parseInt(req.query.page as string) || 1;
