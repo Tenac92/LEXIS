@@ -978,17 +978,41 @@ export class DocumentFormatter {
     recipients: Array<{
       firstname: string;
       lastname: string;
+      fathername?: string;
       afm: string;
       amount: number;
       installment: number;
     }>;
     total_amount: number;
+    id?: number; // Optional ID that might be passed
   }): Promise<Buffer> {
     try {
       console.log("Formatting orthi epanalipsi document with data:", data);
 
       // Get unit details
       const unitDetails = await DocumentFormatter.getUnitDetails(data.unit);
+
+      // Create a document data object compatible with our methods
+      const documentData: DocumentData = {
+        id: data.id || data.originalDocument.id,
+        unit: data.unit,
+        project_id: data.project_id,
+        project_na853: data.project_na853,
+        expenditure_type: data.expenditure_type,
+        protocol_number: data.protocol_number_input,
+        protocol_number_input: data.protocol_number_input,
+        protocol_date: data.protocol_date,
+        user_name: data.originalDocument.user_name,
+        department: data.originalDocument.department,
+        contact_number: data.originalDocument.contact_number,
+        generated_by: data.originalDocument.generated_by,
+        attachments: data.originalDocument.attachments,
+        recipients: data.recipients.map(r => ({
+          ...r,
+          fathername: r.fathername || "" // Ensure fathername exists
+        })),
+        total_amount: data.total_amount
+      };
 
       const sections = [
         {
@@ -1000,11 +1024,12 @@ export class DocumentFormatter {
             },
           },
           children: [
-            ...DocumentFormatter.createDocumentSubject(data, unitDetails || {}),
-            ...DocumentFormatter.createMainContent(data, unitDetails || {}),
-            DocumentFormatter.createPaymentTable(data.recipients),
+            await DocumentFormatter.createDocumentHeader(documentData, unitDetails),
+            ...DocumentFormatter.createDocumentSubject(documentData, unitDetails || {}),
+            ...DocumentFormatter.createMainContent(documentData, unitDetails || {}),
+            DocumentFormatter.createPaymentTable(documentData.recipients || []),
             DocumentFormatter.createNote(),
-            DocumentFormatter.createFooter(data, unitDetails),
+            DocumentFormatter.createFooter(documentData, unitDetails),
           ],
         },
       ];
