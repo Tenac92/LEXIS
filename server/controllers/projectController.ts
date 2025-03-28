@@ -64,7 +64,8 @@ router.get('/expenditure-types/:projectId', async (req: Request, res: Response) 
 
 export async function exportProjectsXLSX(req: Request, res: Response) {
   try {
-    console.log('[Projects] Starting XLSX export');
+    console.log('[Projects] Starting XLSX export with budget_na853_split data');
+    // Get all projects
     const { data: projects, error } = await supabase
       .from('Projects')
       .select('*');
@@ -77,20 +78,95 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
 
     console.log(`[Projects] Found ${projects.length} projects to export`);
 
-    const formattedProjects = projects.map(project => projectHelpers.formatForExcel(project));
+    // Get all budget_na853_split data
+    console.log('[Projects] Fetching budget_na853_split data');
+    const { data: budgetSplits, error: budgetError } = await supabase
+      .from('budget_na853_split')
+      .select('*');
 
+    if (budgetError) {
+      console.error('[Projects] Error fetching budget splits:', budgetError);
+    }
+
+    // Create a map of budget splits by project MIS for easier lookup
+    const budgetSplitsByMis = {};
+    if (budgetSplits && budgetSplits.length > 0) {
+      console.log(`[Projects] Found ${budgetSplits.length} budget splits`);
+      budgetSplits.forEach(split => {
+        // Use mis as the key
+        if (split.mis) {
+          if (!budgetSplitsByMis[split.mis]) {
+            budgetSplitsByMis[split.mis] = [];
+          }
+          budgetSplitsByMis[split.mis].push(split);
+        }
+      });
+    }
+
+    // Format projects for Excel, including budget split data
+    const formattedProjects = projects.map(project => {
+      const formattedProject = projectHelpers.formatForExcel(project);
+      
+      // Add budget split data if available
+      const projectSplits = budgetSplitsByMis[project.mis] || [];
+      if (projectSplits.length > 0) {
+        // Add a summary of budget splits
+        formattedProject['Budget Split Count'] = projectSplits.length;
+        formattedProject['Total Split Amount'] = projectSplits.reduce((sum, split) => 
+          sum + (parseFloat(split.amount) || 0), 0).toFixed(2);
+        
+        // Add the first few splits (up to 3) directly in the sheet
+        projectSplits.slice(0, 3).forEach((split, index) => {
+          formattedProject[`Split ${index+1} Year`] = split.year || 'N/A';
+          formattedProject[`Split ${index+1} Amount`] = split.amount || 0;
+          formattedProject[`Split ${index+1} Category`] = split.category || 'N/A';
+        });
+      } else {
+        formattedProject['Budget Split Count'] = 0;
+        formattedProject['Total Split Amount'] = '0.00';
+      }
+      
+      return formattedProject;
+    });
+
+    // Create the main workbook
     const wb = XLSX.utils.book_new();
+    
+    // Add the main projects worksheet
     const ws = XLSX.utils.json_to_sheet(formattedProjects);
 
-    // Set column widths
+    // Set column widths for main worksheet
     const colWidths = Object.keys(formattedProjects[0]).map(() => ({ wch: 20 }));
     ws['!cols'] = colWidths;
 
     XLSX.utils.book_append_sheet(wb, ws, 'Projects');
+
+    // Create a separate worksheet for detailed budget splits if we have data
+    if (budgetSplits && budgetSplits.length > 0) {
+      // Format budget splits for Excel
+      const formattedSplits = budgetSplits.map(split => ({
+        'MIS': split.mis || 'N/A',
+        'Year': split.year || 'N/A',
+        'Amount': split.amount || 0,
+        'Category': split.category || 'N/A',
+        'Date Created': split.created_at ? new Date(split.created_at).toLocaleString() : 'N/A',
+        'Date Updated': split.updated_at ? new Date(split.updated_at).toLocaleString() : 'N/A'
+      }));
+
+      const splitWs = XLSX.utils.json_to_sheet(formattedSplits);
+      
+      // Set column widths for the splits worksheet
+      const splitColWidths = Object.keys(formattedSplits[0]).map(() => ({ wch: 20 }));
+      splitWs['!cols'] = splitColWidths;
+      
+      XLSX.utils.book_append_sheet(wb, splitWs, 'Budget Splits');
+    }
+
+    // Generate buffer and send the response
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=projects-${new Date().toISOString().split('T')[0]}.xlsx`);
+    res.setHeader('Content-Disposition', `attachment; filename=projects-with-budgets-${new Date().toISOString().split('T')[0]}.xlsx`);
     res.send(buffer);
 
   } catch (error) {
