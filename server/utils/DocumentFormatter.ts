@@ -75,8 +75,57 @@ interface DocumentData {
   }>;
 }
 
+interface UnitDetails {
+  unit: string;
+  unit_name?: {
+    name: string;
+    prop: string;
+  };
+  address?: {
+    address: string;
+    tk: string;
+    region: string;
+  };
+  email?: string;
+  manager?: {
+    order: string;
+    title: string;
+    name: string;
+    degree: string;
+  };
+}
+
+interface DocumentData {
+  unit: string;
+  protocol_date?: string;
+  protocol_number?: string;
+  protocol_number_input?: string;
+  generated_by?: {
+    name: string;
+    department: string;
+    contact_number: string;
+  };
+  user_name?: string;
+  department?: string;
+  contact_number?: string;
+  recipients?: Array<{
+    firstname: string;
+    lastname: string;
+    fathername: string;
+    afm: string;
+    amount: number;
+    installment: number;
+  }>;
+  attachments?: string[];
+}
+
 export class DocumentFormatter {
   private static readonly DEFAULT_FONT_SIZE = 22;
+  private static readonly DEFAULT_ADDRESS = {
+    address: "Κηφισίας 124 & Ιατρίδου 2",
+    tk: "11526",
+    region: "Αθήνα"
+  };
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
     top: 0,
@@ -98,8 +147,11 @@ export class DocumentFormatter {
 
   private static async createDocumentHeader(
     documentData: DocumentData,
-    unitDetails?: UnitDetails,
+    unitDetails: UnitDetails | null,
   ): Promise<Table> {
+    if (!documentData) {
+      throw new Error('Document data is required');
+    }
     const logoBuffer = await this.getLogoImageData();
 
     // Extract user information with fallbacks
@@ -446,8 +498,11 @@ export class DocumentFormatter {
   }
 
   private static createMainContent(
-    documentData: DocumentData,  unitDetails: UnitDetails,
+    documentData: DocumentData,
+    unitDetails: UnitDetails,
   ): (Paragraph | Table)[] {
+    const unitName = unitDetails?.unit_name?.name || documentData.unit;
+    const unitProp = unitDetails?.unit_name?.prop || 'τη';
     return [
       this.createBlankLine(8),
       new Paragraph({
