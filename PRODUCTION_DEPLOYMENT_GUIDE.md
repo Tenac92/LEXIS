@@ -1,143 +1,162 @@
 # Production Deployment Guide
 
-This guide will help you deploy the Supabase migration changes to your production environment.
+This guide provides instructions for deploying the application to a production environment.
 
-## Pre-Deployment Checks
+## Prerequisites
 
-1. **Verify Supabase Connection**
-   - Run the diagnostic script to test your production server's connectivity to Supabase:
-   ```bash
-   node check-supabase-connection.js
-   ```
-   - Make sure it completes successfully before proceeding
+Before deploying to production, ensure you have:
 
-2. **Set Up Environment Variables**
-   - Ensure you have these environment variables configured in your production environment:
-   ```
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_KEY=your_supabase_key
-   SESSION_SECRET=your_session_secret
-   
-   # For Drizzle compatibility, add this derived URL:
-   DATABASE_URL=postgresql://postgres:[SUPABASE_KEY]@db.[project-ref].supabase.co:5432/postgres
-   ```
-   
-   - Replace `[SUPABASE_KEY]` with your actual Supabase key
-   - Replace `[project-ref]` with your Supabase project reference (from the URL)
-   - Keep this DATABASE_URL for Drizzle compatibility even though we're using Supabase client for data access
+1. A Supabase account and project set up
+2. Access to the production server environment
+3. Required environment variables
+
+## Environment Variables
+
+The following environment variables are required for production deployment:
+
+```
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-service-role-key
+SESSION_SECRET=your-secure-session-secret
+COOKIE_DOMAIN=.sdegdaefk.gr
+NODE_ENV=production
+```
 
 ## Deployment Steps
 
-### Option 1: Using the Deployment Script
+### 1. Clone the Repository
 
-1. **Upload the deployment script**
-   ```bash
-   scp deploy-supabase-migration.sh user@your-production-server:/path/to/app/
-   ```
+```bash
+git clone https://github.com/your-organization/your-repository.git
+cd your-repository
+```
 
-2. **Make the script executable**
-   ```bash
-   chmod +x deploy-supabase-migration.sh
-   ```
+### 2. Install Dependencies
 
-3. **Run the deployment script**
-   ```bash
-   ./deploy-supabase-migration.sh
-   ```
+```bash
+npm install
+```
 
-4. **Restart your application**
-   - This depends on how your application is hosted, common methods include:
-   ```bash
-   # For PM2
-   pm2 restart your-app
-   
-   # For systemd
-   sudo systemctl restart your-app.service
-   ```
+### 3. Build the Application
 
-### Option 2: Manual File Updates
+```bash
+npm run build
+```
 
-1. **Backup current files**
-   ```bash
-   mkdir -p backup_before_supabase
-   cp server/config/db.ts server/drizzle.ts server/middleware/databaseErrorRecovery.ts server/index.ts server/storage.ts backup_before_supabase/
-   ```
+### 4. Configure Environment Variables
 
-2. **Update core files**
-   - Upload all updated files from your development environment to production
+Create a `.env` file (or use environment configuration in your hosting platform) with the required variables listed above.
 
-3. **Verify updates**
-   - Double-check that the files were updated correctly:
-   ```bash
-   # Confirm DATABASE_URL reference is removed
-   grep -r "DATABASE_URL" server/index.ts
-   
-   # Check for Supabase configuration
-   grep -r "persistSession" server/config/db.ts
-   ```
+### 5. Test the Database Connection
 
-4. **Restart your application server**
+Before starting the server, verify that you can connect to the Supabase database:
 
-## Post-Deployment Verification
+```bash
+node check-supabase-connection.js
+```
 
-1. **Check Application Logs**
-   ```bash
-   # For PM2
-   pm2 logs your-app
-   
-   # For systemd
-   journalctl -u your-app.service -f
-   ```
-   
-2. **Look for Database Connection Messages**
-   - Watch for successful connection messages:
-   ```
-   [Database] Supabase connection successfully verified
-   ```
-   
-3. **Test Application Functionality**
-   - Verify login works
-   - Verify document operations work
-   - Check other critical features
+### 6. Start the Server
 
-## Troubleshooting
+For production, you'll want to use a process manager like PM2:
 
-### Common Issues and Solutions
+```bash
+npm install -g pm2
+pm2 start server/index.js --name budget-app
+```
 
-1. **Application doesn't start**
-   - Check logs for specific errors
-   - Verify environment variables are set correctly
+## Monitoring and Maintenance
 
-2. **Database connection errors**
-   - Run the diagnostic script to check connectivity
-   - Check firewall rules on your production server
-   - Verify your IP is allowed in Supabase dashboard
+### Health Checks
 
-3. **Authentication errors**
-   - Verify SUPABASE_KEY has correct permissions
-   - Check if your Supabase project is active
+Use the built-in health check endpoint to monitor the application:
 
-4. **Session-related issues**
-   - The app now uses in-memory session storage instead of PostgreSQL
-   - Users will need to log in again after deployment
-   - If multiple server instances are used, consider implementing a distributed session strategy
+```
+GET /api/health
+```
 
-### Reverting to Previous Version
+### Database Diagnostics
 
-If you need to roll back the changes:
+Regular database monitoring is essential. Use the provided diagnostic scripts:
 
-1. **Restore from backup**
-   ```bash
-   # For automatic deployment script backups
-   cp supabase_migration_backup_*/server/config/db.ts server/config/db.ts
-   cp supabase_migration_backup_*/server/drizzle.ts server/drizzle.ts
-   # etc.
-   
-   # For manual backups
-   cp backup_before_supabase/* .
-   ```
+```bash
+node test-supabase-network.js  # Check network connectivity
+node test-api-health.js        # Test API endpoints
+```
 
-2. **Restore environment variables**
-   - Add back the DATABASE_URL if needed
+### Authentication Maintenance
 
-3. **Restart your application**
+If user authentication issues occur, use the following tools to diagnose and fix:
+
+```bash
+node list-users.js     # List all users in the database
+node fix-password.js   # Fix user passwords if needed
+```
+
+## Troubleshooting Common Issues
+
+### 500 Errors in Greek
+
+If you see 500 errors with Greek text, this may indicate:
+
+1. Database connectivity issues
+2. Authentication problems
+3. Session management errors
+
+First, check the application logs for specific error messages related to Supabase connections.
+
+### Failed to Prune Sessions
+
+This error has been addressed by migrating to an in-memory session store. However, if you see excessive memory usage, consider restarting the application.
+
+### Invalid Email or Password
+
+If users cannot log in, first verify the user exists in the database using `list-users.js` and then reset their password using `fix-password.js`.
+
+### Cross-Domain Cookie Issues
+
+If users are being logged out when navigating between subdomains, verify that the `COOKIE_DOMAIN` is set correctly to `.sdegdaefk.gr`.
+
+## Backup and Recovery
+
+### Database Backup
+
+Supabase provides automatic backups. However, for critical data, you may want to implement additional backup procedures:
+
+```bash
+# Example script to export users data
+node export-users-to-json.js > users-backup.json
+```
+
+### Emergency Recovery
+
+If you need to restore the service quickly, consider the following steps:
+
+1. Verify Supabase connectivity using diagnostic tools
+2. Check for environment variable issues
+3. Restart the application server
+4. If necessary, restore from backups
+
+## Security Considerations
+
+1. Ensure `SUPABASE_KEY` uses the "service_role" key, but keep it secure
+2. Regularly rotate the `SESSION_SECRET`
+3. Enable HTTPS for all production traffic
+4. Monitor for unusual authentication patterns
+
+## Performance Optimization
+
+For optimal performance in production:
+
+1. Enable compression middleware
+2. Implement proper caching strategies
+3. Consider rate limiting on sensitive endpoints
+4. Monitor memory usage of the session store
+
+## Scaling Considerations
+
+If you need to scale the application:
+
+1. Consider moving to a distributed session store
+2. Implement horizontal scaling with load balancing
+3. Optimize database queries for heavy traffic
+4. Leverage Supabase's Realtime features for live updates

@@ -1,133 +1,98 @@
 # Supabase Migration Guide
 
-This document provides a comprehensive guide for migrating the application to use Supabase exclusively for all database operations. This migration resolves connectivity issues in production environments.
+This document provides an overview of the migration from our previous PostgreSQL database (Neon DB) to Supabase for all database operations. The migration includes changes to connection handling, error recovery, session management, and authentication systems.
 
-## Prerequisites
+## Migration Overview
 
-Before starting the migration, ensure you have:
+The application has been fully migrated to use Supabase as the primary database provider. This includes:
 
-1. A Supabase project set up with all required tables
-2. The Supabase URL and API key
-3. Network connectivity to Supabase services
-4. Appropriate permissions for your Supabase API key
-
-## Environment Variables
-
-The application requires the following environment variables:
-
-```
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_KEY=your-supabase-api-key
-SESSION_SECRET=your-session-secret
-```
-
-Notes:
-- `SUPABASE_URL` - The URL of your Supabase project
-- `SUPABASE_KEY` - Your Supabase project's service role API key (for server-side operations)
-- `DATABASE_URL` - No longer required, removed from dependency
-
-## Migration Steps
-
-1. **Verify Supabase Connection**
-
-   Run the connection test script:
-   ```bash
-   node test-supabase.js
-   ```
-
-   If this fails, run the network diagnostic script:
-   ```bash
-   node test-supabase-network.js
-   ```
-
-2. **Deploy the Updated Code**
-
-   Execute the migration script:
-   ```bash
-   bash migrate-to-supabase.sh
-   ```
-
-   This script:
-   - Verifies environment variables
-   - Tests Supabase connectivity
-   - Restarts the application
-   - Tests API health endpoints
-
-3. **Verify Application Health**
-
-   Access the health check endpoints:
-   ```
-   GET /api/health
-   GET /api/health/db
-   GET /api/health/db/detail
-   ```
-
-   These endpoints provide detailed diagnostics about database connectivity.
+1. Removing all direct PostgreSQL (Neon DB) dependencies
+2. Implementing Supabase-specific error handling and recovery
+3. Migrating session management to use MemoryStore instead of PostgreSQL
+4. Revising the authentication system to work with Supabase's user schema
 
 ## Key Changes
 
-The migration includes the following key changes:
+### Database Connection
 
-1. **Database Connectivity**
-   - Removed PostgreSQL direct connection dependency
-   - Updated all database operations to use Supabase client
-   - Enhanced error handling for Supabase-specific errors
+- Removed `DATABASE_URL` dependency in favor of `SUPABASE_URL` and `SUPABASE_KEY`
+- Implemented connection pooling and health checks for Supabase
+- Added robust error handling middleware with specialized handlers for Supabase database errors
 
-2. **Session Management**
-   - Migrated from PostgreSQL session store to in-memory session store
-   - This resolves authentication issues in production
+### Session Management
 
-3. **Error Handling**
-   - Added specialized error handlers for database connectivity issues
-   - Implemented automatic connection recovery mechanisms
-   - Enhanced error logs with database-specific diagnostics
+- Migrated from PostgreSQL session store to in-memory session store to resolve session pruning errors in production
+- Enhanced session cookie settings for cross-domain support with sdegdaefk.gr
 
-4. **Monitoring**
-   - Added health check endpoints for application monitoring
-   - Created diagnostic tools for connectivity troubleshooting
-   - Implemented periodic database health checks
+### Authentication System
+
+- Revised the authentication system in `server/authentication.ts` to work with Supabase's user schema
+- Created diagnostic tools for authentication verification with Supabase:
+  - `test-auth.js`: Tests user authentication against Supabase
+  - `list-users.js`: Lists all users in the Supabase database
+  - `fix-password.js`: Updates user passwords in Supabase
+
+### Error Handling
+
+- Implemented specialized middleware for Supabase error detection and recovery
+- Enhanced error responses for authentication failures
+
+## Testing Tools
+
+The repository includes several tools to verify the Supabase setup:
+
+1. `check-supabase-connection.js`: Performs a comprehensive test of Supabase connectivity
+2. `test-supabase.js`: Simple test for Supabase connection
+3. `test-supabase-network.js`: Diagnoses network connectivity issues for Supabase
+4. `test-api-health.js`: Tests API health after Supabase migration
+
+## User Schema
+
+The user schema in Supabase includes the following fields:
+
+```typescript
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default("user"),
+  units: text("units").array(),
+  department: text("department"),
+  telephone: text("telephone"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at")
+});
+```
+
+## Authentication Flow
+
+1. User provides email and password
+2. Server queries Supabase for user with matching email
+3. Password is verified using bcrypt against the stored password hash
+4. On successful authentication, a session is created with user information
+5. JWT tokens are not used; instead, session cookies manage user state
 
 ## Troubleshooting
 
-If you encounter issues after migration:
+### Common Issues
 
-1. **Database Connectivity Issues**
-   - Verify Supabase credentials are correct
-   - Check network connectivity with `test-supabase-network.js`
-   - Ensure Supabase service is operational
+1. **Invalid email or password error**: This can occur if the password in Supabase doesn't match the expected format. Use the `fix-password.js` script to update the password.
 
-2. **Authentication Problems**
-   - Clear browser cookies and session data
-   - Verify session secret is properly set
-   - Check user permissions in Supabase dashboard
+2. **Session pruning errors**: If you see errors related to session pruning, it indicates that the in-memory session store is working as expected, but may require server restart if memory usage becomes excessive.
 
-3. **Application Errors**
-   - Check server logs for detailed error messages
-   - Use the health check endpoints to diagnose specific issues
-   - Verify Row Level Security (RLS) policies are properly configured
+3. **Connection issues**: Use the `check-supabase-connection.js` script to diagnose connection problems.
 
-## Rollback Plan
+### Diagnostics
 
-If you need to rollback the migration:
+The application includes extensive logging, especially for authentication:
 
-1. Restore the previous code from version control
-2. Ensure the `DATABASE_URL` environment variable is properly set
-3. Restart the application
+- Authentication attempts and failures are logged with the `[Auth]` prefix
+- Database operations and errors are logged with the `[Database]` prefix
+- Network and connection issues are logged with the `[Network]` prefix
 
-## Testing
+## Future Improvements
 
-After migration, test the following critical functionality:
-
-1. User authentication (login/logout)
-2. Document creation and retrieval
-3. Project search and filtering
-4. Budget operations
-5. Admin functionality
-
-## Support
-
-For additional support:
-
-- Consult the Supabase documentation: https://supabase.com/docs
-- Check Supabase status: https://status.supabase.com/
-- Refer to the test scripts for connectivity diagnostics
+1. **Row Level Security (RLS)**: Implement Supabase RLS policies for enhanced data security
+2. **Real-time Subscriptions**: Leverage Supabase's real-time capabilities for live updates
+3. **Edge Functions**: Consider migrating specific functionality to Supabase Edge Functions

@@ -154,8 +154,8 @@ async function testSupabaseAPI(supabaseUrl, supabaseKey) {
     
     log('Supabase', 'Testing API connection...', colors.cyan);
     
-    // Test 1: Basic API connection
-    const { data: healthData, error: healthError } = await supabase.from('users').select('count(*)');
+    // Test 1: Basic API connection - using a correct query format for Supabase
+    const { data: healthData, error: healthError } = await supabase.from('users').select('id').limit(1);
     
     if (healthError) {
       log('Supabase', `API connection test failed: ${healthError.message}`, colors.red);
@@ -179,7 +179,7 @@ async function testSupabaseAPI(supabaseUrl, supabaseKey) {
     try {
       const { data: rlsData, error: rlsError } = await supabase
         .from('Projects')
-        .select('count(*)')
+        .select('id')
         .limit(1);
         
       if (rlsError) {

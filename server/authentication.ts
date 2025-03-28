@@ -305,30 +305,56 @@ export function requireAdmin(req: AuthenticatedRequest, res: Response, next: Nex
 
 /**
  * Authenticate a user with email and password
+ * Enhanced to handle different schema variations and provide better error logging
  * @param email User email
  * @param password User password
  * @returns User object if authentication is successful, null otherwise
  */
 export async function authenticateUser(email: string, password: string): Promise<User | null> {
   try {
-    // Get user from database
+    console.log(`[Auth] Authenticating user: ${email}`);
+    
+    // Add a short delay to prevent timing attacks
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Query the user with all fields to handle potential schema variations
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id, email, name, role, units, department, telephone, password')
+      .select('*')  // Include all fields to handle potential schema variations
       .eq('email', email)
       .single();
 
-    if (userError || !userData) {
-      console.error('[Auth] No user found for email:', email);
+    if (userError) {
+      console.error(`[Auth] Database error when retrieving user: ${email}`, userError);
+      return null;
+    }
+
+    if (!userData) {
+      console.error(`[Auth] No user found for email: ${email}`);
+      return null;
+    }
+
+    // Enhanced password validation logic
+    // Check if password field exists and validate
+    if (!userData.password) {
+      console.error(`[Auth] User has no password field: ${email}`);
       return null;
     }
 
     // Compare password with constant-time comparison
     const isPasswordValid = await bcrypt.compare(password, userData.password);
     if (!isPasswordValid) {
-      console.error('[Auth] Password validation failed for user:', email);
+      console.error(`[Auth] Password validation failed for user: ${email}`);
       return null;
     }
+
+    // Log successful authentication
+    console.log('[Auth] User validated successfully:', { 
+      id: userData.id, 
+      email: userData.email,
+      role: userData.role,
+      name: userData.name
+    });
 
     // Create user object, excluding sensitive fields
     const user: User = {
@@ -338,7 +364,9 @@ export async function authenticateUser(email: string, password: string): Promise
       role: userData.role,
       units: userData.units || [],
       department: userData.department || undefined,
-      telephone: userData.telephone || undefined
+      telephone: userData.telephone || undefined,
+      created_at: userData.created_at || undefined,
+      updated_at: userData.updated_at || undefined
     };
 
     return user;
@@ -432,14 +460,23 @@ export async function setupAuth(app: Express) {
 
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, email, name, role, units, department, telephone, password')
+        .select('*')  // Include all fields to handle potential schema variations
         .eq('email', email)
         .single();
 
       if (userError || !userData) {
         console.error('[Auth] No user found for email:', email);
         return res.status(401).json({
-          message: 'Invalid credentials'
+          message: 'Invalid email or password'
+        });
+      }
+
+      // Enhanced password validation logic
+      // Check if password field exists and validate
+      if (!userData.password) {
+        console.error('[Auth] User has no password field:', email);
+        return res.status(401).json({
+          message: 'Invalid email or password'
         });
       }
 
@@ -448,7 +485,7 @@ export async function setupAuth(app: Express) {
       if (!isPasswordValid) {
         console.error('[Auth] Password validation failed for user:', email);
         return res.status(401).json({
-          message: 'Invalid credentials'
+          message: 'Invalid email or password'
         });
       }
 

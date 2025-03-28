@@ -11,28 +11,30 @@ import { log } from '../vite';
 import { supabase } from '../config/db';
 import MemoryStore from 'memorystore';
 
-// Handle custom session data structure
-declare module 'express-session' {
-  interface SessionData {
-    user?: AuthenticatedUser;
-    createdAt?: Date;
-  }
-}
-
-// Type definition for an authenticated user
-export type AuthenticatedUser = {
+// Define minimal user information needed for authentication
+export interface AuthUser {
   id: number;
   email: string;
   name: string;
   role: string;
-  units?: string[];
-  department?: string;
-  telephone?: string;
-};
+  units?: string[] | null;
+  department?: string | null;
+  telephone?: string | null;
+  created_at?: Date | null;
+  updated_at?: Date | null;
+}
+
+// Handle custom session data structure
+declare module 'express-session' {
+  interface SessionData {
+    user?: AuthUser;
+    createdAt?: Date;
+  }
+}
 
 // Extend Express Request with user property
 export interface AuthenticatedRequest extends Request {
-  user?: AuthenticatedUser;
+  user?: AuthUser;
 }
 
 // Configure session management
@@ -141,7 +143,7 @@ export function requireRole(role: string) {
  * Login Authentication
  * Validates user credentials and creates a session
  */
-export async function authenticateUser(email: string, password: string): Promise<AuthenticatedUser | null> {
+export async function authenticateUser(email: string, password: string): Promise<AuthUser | null> {
   try {
     // Fetch user using Supabase instead of direct DB query
     const { data, error } = await supabase
@@ -156,13 +158,21 @@ export async function authenticateUser(email: string, password: string): Promise
     }
     
     // Verify password
-    const passwordMatch = await bcrypt.compare(password, data.password_hash);
+    // Check if we're using password_hash (new way) or password field directly
+    const passwordField = data.password_hash || data.password;
+    
+    if (!passwordField) {
+      console.error('Password field not found in user data');
+      return null;
+    }
+    
+    const passwordMatch = await bcrypt.compare(password, passwordField);
     
     if (!passwordMatch) {
       return null;
     }
     
-    // Return authenticated user object
+    // Map database user to AuthUser interface
     return {
       id: data.id,
       email: data.email,
@@ -170,7 +180,9 @@ export async function authenticateUser(email: string, password: string): Promise
       role: data.role,
       units: data.units,
       department: data.department,
-      telephone: data.telephone
+      telephone: data.telephone,
+      created_at: data.created_at,
+      updated_at: data.updated_at
     };
   } catch (error) {
     console.error('Authentication error:', error);
@@ -201,22 +213,12 @@ export async function setupAuth(app: Express) {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
       
-      // Create session
-      const sessionUser: AuthenticatedUser = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        units: user.units,
-        department: user.department,
-        telephone: user.telephone
-      };
-      
-      req.session.user = sessionUser;
+      // Store user in session (already sanitized from authenticateUser)
+      req.session.user = user;
       req.session.createdAt = new Date();
       
-      // Remove sensitive fields before sending response
-      return res.json({ user: sessionUser });
+      // Send user data back to client
+      return res.json({ user });
     } catch (error) {
       console.error('Login error:', error);
       return res.status(500).json({ message: 'An error occurred during login' });
@@ -242,17 +244,8 @@ export async function setupAuth(app: Express) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
     
-    const user: AuthenticatedUser = {
-      id: req.session.user.id,
-      email: req.session.user.email,
-      name: req.session.user.name,
-      role: req.session.user.role,
-      units: req.session.user.units,
-      department: req.session.user.department,
-      telephone: req.session.user.telephone
-    };
-    
-    return res.json({ user });
+    // Return user data from session (already sanitized of sensitive fields)
+    return res.json({ user: req.session.user });
   });
   
   log('[Auth] Authentication setup complete', 'auth');
