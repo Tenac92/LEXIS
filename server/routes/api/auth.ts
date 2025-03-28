@@ -197,9 +197,15 @@ router.post('/register', authenticateSession, async (req: AuthenticatedRequest, 
 
 /**
  * Change password
- * PUT /api/auth/change-password
+ * PUT/POST /api/auth/change-password
+ * Supports both PUT and POST methods for compatibility
  */
-router.put('/change-password', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+router.route('/change-password')
+  .put(authenticateSession, handleChangePassword)
+  .post(authenticateSession, handleChangePassword);
+
+// Handler function for change password
+async function handleChangePassword(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -256,6 +262,6 @@ router.put('/change-password', authenticateSession, async (req: AuthenticatedReq
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+}
 
 export default router;
