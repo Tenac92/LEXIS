@@ -5,17 +5,22 @@
 
 import { Request, Response, NextFunction, Express } from 'express';
 import session from 'express-session';
-import { rateLimit } from 'express-rate-limit';
-import { User } from '@shared/schema';
-import { log } from '../vite';
-import { db, supabase } from '../data';
-import bcrypt from 'bcrypt';
-
-// PostgreSQL session store
 import pgSession from 'connect-pg-simple';
-import { pool } from '../config/db';
+import { rateLimit } from 'express-rate-limit';
+import bcrypt from 'bcrypt';
+import { log } from '../vite';
+import { supabase } from '../config/db';
+import MemoryStore from 'memorystore';
 
-// Define a safer type for authenticated users that ensures required fields
+// Handle custom session data structure
+declare module 'express-session' {
+  interface SessionData {
+    user?: AuthenticatedUser;
+    createdAt?: Date;
+  }
+}
+
+// Type definition for an authenticated user
 export type AuthenticatedUser = {
   id: number;
   email: string;
@@ -26,33 +31,24 @@ export type AuthenticatedUser = {
   telephone?: string;
 };
 
+// Extend Express Request with user property
 export interface AuthenticatedRequest extends Request {
   user?: AuthenticatedUser;
 }
 
-// Extend express-session with our user types
-declare module 'express-session' {
-  interface SessionData {
-    user?: AuthenticatedUser;
-    createdAt?: Date;
-  }
-}
-
-// Get environment variables and configuration
-const sessionSecret = process.env.SESSION_SECRET || 'your-session-secret-1234567890';
+// Configure session management
 const isProduction = process.env.NODE_ENV === 'production';
-const cookieDomain = process.env.COOKIE_DOMAIN;
+const sessionSecret = process.env.SESSION_SECRET || 'budget-session-dev-secret';
+const cookieDomain = process.env.COOKIE_DOMAIN || null;
 
-// Log cookie configuration on startup
 if (cookieDomain) {
-  log(`[Auth] Using cookie domain: ${cookieDomain}`, 'auth');
-  log(`[Auth] Cross-domain cookies enabled with SameSite=None and Secure=${isProduction}`, 'auth');
+  log(`[Auth] Using cookie domain: ${cookieDomain} with SameSite=None`, 'auth');
 } else {
   log(`[Auth] Using default cookie settings (no domain specified) with SameSite=Lax`, 'auth');
 }
 
-// Create PostgreSQL session store
-const PgStore = pgSession(session);
+// Create MemoryStore for sessions (temporary solution until full Supabase implementation)
+const MemoryStoreSession = MemoryStore(session);
 
 /**
  * Session Middleware
@@ -60,10 +56,10 @@ const PgStore = pgSession(session);
  * With special handling for sdegdaefk.gr cross-domain support
  */
 export const sessionMiddleware = session({
-  store: new PgStore({
-    pool, // Use the pool instance directly
-    tableName: 'session',
-    createTableIfMissing: true
+  store: new MemoryStoreSession({
+    checkPeriod: 86400000, // prune expired entries every 24h
+    ttl: 24 * 60 * 60 * 1000, // 24 hours
+    stale: false
   }),
   name: 'sid',
   secret: sessionSecret,
@@ -98,69 +94,13 @@ export const authLimiter = rateLimit({
  * Enhanced for cross-domain support with sdegdaefk.gr
  */
 export function authenticateSession(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  // Extract request origin information
-  const origin = req.headers.origin || '';
-  const referer = req.headers.referer || '';
-  const host = req.headers.host || '';
-  
-  // Check if request is from sdegdaefk.gr domain
-  const isSdegdaefkRequest = 
-    origin.includes('sdegdaefk.gr') || 
-    referer.includes('sdegdaefk.gr') || 
-    host.includes('sdegdaefk.gr');
-  
-  // Log session information
-  log(`[Auth] Checking session: ${JSON.stringify({
-    hasSession: !!req.session,
-    hasUser: !!req.session?.user,
-    sessionID: req.sessionID,
-    cookies: req.headers.cookie,
-    ip: req.ip,
-    protocol: req.protocol,
-    secure: req.secure
-  })}`, 'auth');
-
-  if (!req.session || !req.session.user) {
-    // Different handling for sdegdaefk.gr domain
-    if (isSdegdaefkRequest) {
-      log(`[Auth] Cross-domain auth failed for sdegdaefk.gr: ${JSON.stringify({
-        origin, 
-        referer,
-        host,
-        cookies: req.headers.cookie,
-        sessionID: req.sessionID
-      })}`, 'auth');
-    }
-    
+  if (!req.session.user) {
     return res.status(401).json({ message: 'Authentication required' });
   }
-
-  // Ensure session user has all required fields before assigning to req.user
-  const sessionUser = req.session.user;
-  if (!sessionUser.id || !sessionUser.email || !sessionUser.name || !sessionUser.role) {
-    log(`[Auth] Invalid user object in session: ${JSON.stringify(sessionUser)}`, 'error');
-    return res.status(401).json({ message: 'Invalid session data' });
-  }
-
-  // Set user on request with the required fields
-  req.user = {
-    id: sessionUser.id,
-    email: sessionUser.email,
-    name: sessionUser.name,
-    role: sessionUser.role,
-    units: sessionUser.units,
-    department: sessionUser.department,
-    telephone: sessionUser.telephone
-  };
-
-  // Log authenticated user
-  log(`[Auth] User authenticated: ${JSON.stringify({
-    id: req.user.id,
-    role: req.user.role,
-    sessionID: req.sessionID,
-    ip: req.ip
-  })}`, 'auth');
-
+  
+  // Copy user from session to request for convenience
+  req.user = req.session.user;
+  
   next();
 }
 
@@ -172,11 +112,11 @@ export function requireAdmin(req: AuthenticatedRequest, res: Response, next: Nex
   if (!req.user) {
     return res.status(401).json({ message: 'Authentication required' });
   }
-
+  
   if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Admin access required' });
+    return res.status(403).json({ message: 'Admin privileges required' });
   }
-
+  
   next();
 }
 
@@ -189,11 +129,11 @@ export function requireRole(role: string) {
     if (!req.user) {
       return res.status(401).json({ message: 'Authentication required' });
     }
-
+    
     if (req.user.role !== role) {
-      return res.status(403).json({ message: `${role} access required` });
+      return res.status(403).json({ message: `Role ${role} required` });
     }
-
+    
     next();
   };
 }
@@ -204,38 +144,37 @@ export function requireRole(role: string) {
  */
 export async function authenticateUser(email: string, password: string): Promise<AuthenticatedUser | null> {
   try {
-    // Find user by email
-    const { data: user, error } = await supabase
+    // Fetch user using Supabase instead of direct DB query
+    const { data, error } = await supabase
       .from('users')
-      .select('id, email, name, role, units, department, telephone, password')
+      .select('*')
       .eq('email', email)
       .single();
     
-    if (error || !user) {
-      log(`[Auth] User not found: ${email}`, 'auth');
+    if (error || !data) {
+      console.error('User lookup error:', error);
       return null;
     }
     
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // Verify password
+    const passwordMatch = await bcrypt.compare(password, data.password_hash);
     
-    if (!isPasswordValid) {
-      log(`[Auth] Invalid password for user: ${email}`, 'auth');
+    if (!passwordMatch) {
       return null;
     }
     
-    // Return user without sensitive data
+    // Return authenticated user object
     return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      units: user.units,
-      department: user.department,
-      telephone: user.telephone
+      id: data.id,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      units: data.units,
+      department: data.department,
+      telephone: data.telephone
     };
   } catch (error) {
-    log(`[Auth] Authentication error: ${error}`, 'error');
+    console.error('Authentication error:', error);
     return null;
   }
 }
@@ -245,35 +184,12 @@ export async function authenticateUser(email: string, password: string): Promise
  * Configures all auth-related middleware and routes
  */
 export async function setupAuth(app: Express) {
-  // Register session middleware
+  // Apply session middleware
   app.use(sessionMiddleware);
   
-  // Basic login and logout routes for backward compatibility
+  // User login endpoint
   app.post('/api/auth/login', async (req: Request, res: Response) => {
     try {
-      // Extract request origin information
-      const origin = req.headers.origin || '';
-      const referer = req.headers.referer || '';
-      const host = req.headers.host || '';
-      
-      // Check if request is from sdegdaefk.gr domain
-      const isSdegdaefkRequest = 
-        origin.includes('sdegdaefk.gr') || 
-        referer.includes('sdegdaefk.gr') || 
-        host.includes('sdegdaefk.gr');
-      
-      // Log detailed login attempt for cross-domain debugging
-      if (isSdegdaefkRequest) {
-        log(`[Auth] Cross-domain login attempt from sdegdaefk.gr: ${JSON.stringify({
-          origin,
-          referer, 
-          host,
-          headers: req.headers,
-          cookies: req.headers.cookie,
-          ip: req.ip
-        })}`, 'auth');
-      }
-      
       const { email, password } = req.body;
       
       if (!email || !password) {
@@ -287,146 +203,58 @@ export async function setupAuth(app: Express) {
       }
       
       // Create session
-      req.session.user = user;
+      const sessionUser: AuthenticatedUser = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        units: user.units,
+        department: user.department,
+        telephone: user.telephone
+      };
+      
+      req.session.user = sessionUser;
       req.session.createdAt = new Date();
       
-      // Force session save to ensure cookie is set correctly 
-      req.session.save((err) => {
-        if (err) {
-          log(`[Auth] Error saving session: ${err}`, 'error');
-          return res.status(500).json({ message: 'Session creation failed' });
-        }
-        
-        log(`[Auth] Session created for user: ${email} with ID: ${req.sessionID}`, 'auth');
-        
-        // Create user session object to return
-        const sessionUser: AuthenticatedUser = {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          units: user.units,
-          department: user.department,
-          telephone: user.telephone
-        };
-        
-        // For cross-domain requests, log cookie details
-        if (isSdegdaefkRequest) {
-          log(`[Auth] Cross-domain session created with: ${JSON.stringify({
-            sessionID: req.sessionID,
-            cookieDomain: process.env.COOKIE_DOMAIN || 'none set',
-            sameSite: cookieDomain ? 'none' : 'lax',
-            secure: isProduction 
-          })}`, 'auth');
-        }
-        
-        res.status(200).json({ 
-          user: sessionUser,
-          sessionID: req.sessionID // Include session ID in response for debugging
-        });
-      });
+      // Remove sensitive fields before sending response
+      return res.json({ user: sessionUser });
     } catch (error) {
-      log(`[Auth] Login error: ${error}`, 'error');
-      res.status(500).json({ message: 'Login failed', error: String(error) });
+      console.error('Login error:', error);
+      return res.status(500).json({ message: 'An error occurred during login' });
     }
   });
   
+  // User logout endpoint
   app.post('/api/auth/logout', (req: Request, res: Response) => {
-    // Extract request origin information
-    const origin = req.headers.origin || '';
-    const referer = req.headers.referer || '';
-    const host = req.headers.host || '';
-    
-    // Check if request is from sdegdaefk.gr domain
-    const isSdegdaefkRequest = 
-      origin.includes('sdegdaefk.gr') || 
-      referer.includes('sdegdaefk.gr') || 
-      host.includes('sdegdaefk.gr');
-      
-    // Log logout attempt with detailed info for troubleshooting
-    log(`[Auth] Logout attempt: ${JSON.stringify({
-      sessionID: req.sessionID,
-      isSdegdaefkRequest,
-      origin,
-      host,
-      referer,
-      cookies: req.headers.cookie
-    })}`, 'auth');
-    
-    req.session.destroy((err) => {
+    req.session.destroy(err => {
       if (err) {
-        log(`[Auth] Logout error: ${err}`, 'error');
-        return res.status(500).json({ message: 'Logout failed' });
+        console.error('Logout error:', err);
+        return res.status(500).json({ message: 'An error occurred during logout' });
       }
       
-      // Clear the cookie with the same settings used to set it
-      const cookieDomain = process.env.COOKIE_DOMAIN || (isSdegdaefkRequest ? 'sdegdaefk.gr' : undefined);
-      
-      // Log cookie clearing details
-      log(`[Auth] Clearing cookie with settings: ${JSON.stringify({
-        domain: cookieDomain,
-        sameSite: cookieDomain ? 'none' : 'lax',
-        secure: process.env.NODE_ENV === 'production'
-      })}`, 'auth');
-      
-      res.clearCookie('sid', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: cookieDomain ? 'none' : 'lax',
-        ...(cookieDomain ? { domain: cookieDomain } : {})
-      });
-      
-      res.status(200).json({ message: 'Logout successful' });
+      res.clearCookie('sid');
+      return res.json({ message: 'Logged out successfully' });
     });
   });
   
+  // Current user endpoint
   app.get("/api/auth/me", (req: AuthenticatedRequest, res: Response) => {
-    try {
-      // Check if session exists before proceeding
-      if (!req.session) {
-        return res.status(401).json({ message: 'No session available' });
-      }
-      
-      // Check if user exists in session
-      if (!req.session.user) {
-        return res.status(401).json({ message: 'No authenticated user found' });
-      }
-      
-      // Ensure session user has all required fields
-      const sessionUser = req.session.user;
-      if (!sessionUser.id || !sessionUser.email || !sessionUser.name || !sessionUser.role) {
-        log(`[Auth] Invalid user object in session: ${JSON.stringify(sessionUser)}`, 'error');
-        return res.status(401).json({ message: 'Invalid session data' });
-      }
-      
-      // Create a proper authenticated user object
-      const user: AuthenticatedUser = {
-        id: sessionUser.id,
-        email: sessionUser.email,
-        name: sessionUser.name,
-        role: sessionUser.role,
-        units: sessionUser.units,
-        department: sessionUser.department,
-        telephone: sessionUser.telephone
-      };
-      
-      // Set user on request
-      req.user = user;
-      
-      // Log authenticated user
-      log(`[Auth] Returning current user: ${JSON.stringify({
-        id: user.id,
-        role: user.role,
-        sessionID: req.sessionID,
-        ip: req.ip
-      })}`, 'auth');
-      
-      res.status(200).json({ user });
-    } catch (error) {
-      log(`[Auth] Error retrieving user: ${error}`, 'error');
-      res.status(500).json({ message: 'Error retrieving user data', error: String(error) });
+    if (!req.session.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
     }
+    
+    const user: AuthenticatedUser = {
+      id: req.session.user.id,
+      email: req.session.user.email,
+      name: req.session.user.name,
+      role: req.session.user.role,
+      units: req.session.user.units,
+      department: req.session.user.department,
+      telephone: req.session.user.telephone
+    };
+    
+    return res.json({ user });
   });
   
-  return app;
+  log('[Auth] Authentication setup complete', 'auth');
 }

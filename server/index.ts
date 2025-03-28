@@ -40,7 +40,7 @@ console.log('[Startup] Beginning server initialization');
 
 // Verify required environment variables with detailed logging
 const requiredEnvVars = [
-  'DATABASE_URL',
+  // 'DATABASE_URL', // No longer required after Supabase migration
   'SUPABASE_URL',
   'SUPABASE_KEY',
   'SESSION_SECRET'
@@ -59,15 +59,24 @@ const __dirname = dirname(__filename);
 
 async function startServer() {
   try {
-    // Test database connection during startup with multiple attempts
-    console.log('[Startup] Testing database connection...');
-    const dbConnected = await testConnection(5, 10000);
-    if (!dbConnected) {
-      console.warn('[Startup] WARNING: Initial database connection test failed! ');
-      console.warn('[Startup] The server will start anyway, but document operations may fail');
-      console.warn('[Startup] Database error handling will attempt to recover during runtime');
-    } else {
-      console.log('[Startup] Database connection successfully verified');
+    try {
+      // Test database connection during startup with a short timeout to not block server startup
+      console.log('[Startup] Testing database connection...');
+      const dbConnected = await Promise.race([
+        testConnection(2, 5000),
+        new Promise<boolean>(resolve => setTimeout(() => resolve(false), 7000))
+      ]);
+      
+      if (!dbConnected) {
+        console.warn('[Startup] WARNING: Initial database connection test failed or timed out!');
+        console.warn('[Startup] The server will start anyway, and database functions will be retried at runtime');
+        console.warn('[Startup] Database error handling will attempt to recover during runtime');
+      } else {
+        console.log('[Startup] Database connection successfully verified');
+      }
+    } catch (connErr) {
+      console.error('[Startup] Error during database connection test:', connErr);
+      console.warn('[Startup] The server will start anyway, and database functions will be retried at runtime');
     }
 
     const app = express();

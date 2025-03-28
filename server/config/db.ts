@@ -1,190 +1,72 @@
 /**
  * Database Configuration Module
  * Centralizes database connection parameters and configuration for all database access in the application
+ * FULLY MIGRATED TO SUPABASE - All database operations now use Supabase exclusively
  */
 
-import pg from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { log } from '../vite';
 import type { Database } from '@shared/schema';
 
-const { Pool } = pg;
-
-// Custom PostgreSQL error type extension
-interface PostgresError extends Error {
+// Custom Error types
+interface DatabaseError extends Error {
   code?: string;
-  detail?: string;
+  details?: string;
   hint?: string;
-  position?: string;
-  severity?: string;
-  schema?: string;
-  table?: string;
-  column?: string;
-  dataType?: string;
-  constraint?: string;
-  file?: string;
-  line?: string;
-  routine?: string;
+  message: string;
 }
 
 // Get database connection parameters from environment variables
-const postgresUrl = process.env.DATABASE_URL;
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
 
 // Validate required config
-if (!postgresUrl) {
-  log('[Database] DATABASE_URL environment variable is required', 'error');
+if (!supabaseUrl || !supabaseKey) {
+  log('[Database] SUPABASE_URL and SUPABASE_KEY/SUPABASE_ANON_KEY environment variables are required', 'error');
+  throw new Error('Supabase configuration is missing. Please set the SUPABASE_URL and SUPABASE_KEY environment variables.');
 }
 
-if (supabaseUrl && !supabaseKey) {
-  log('[Database] SUPABASE_KEY or SUPABASE_ANON_KEY is required when SUPABASE_URL is provided', 'error');
-}
-
-// PostgreSQL pool configuration with enhanced resilience
-export const poolConfig = {
-  connectionString: postgresUrl,
-  max: 20,                           // Increased to handle more concurrent connections
-  min: 2,                            // Ensure some connections are always ready
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 15000,    // Increased timeout for slower networks
-  // Add these parameters to improve stability in high-load environments
-  allowExitOnIdle: false,
-  keepAlive: true,
-  keepAliveInitialDelayMillis: 30000, // 30 seconds initial delay
-  statement_timeout: 30000,           // 30 second query timeout
-  query_timeout: 30000,               // 30 second query timeout
-  // Error handling behavior
-  application_name: 'sdegdaefk-app',  // For identifying connections in logs
-  // Connection validation with frequency doubled
-  clientConnectionParamProps: { options: '-c statement_timeout=30000 -c idle_in_transaction_session_timeout=60000' },
-};
-
-// Create and export the connection pool
-export const pool = new Pool(poolConfig);
-
-// Add connection acquisition timeout tracking 
-let lastPoolReset = Date.now();
-const POOL_RESET_INTERVAL = 3600000; // 1 hour
-
-// Setup error handlers immediately after pool creation
-setupPoolErrorHandlers(pool);
-
-// Function to recreate the pool if needed
-export function resetConnectionPoolIfNeeded(force = false) {
-  const now = Date.now();
-  if (force || (now - lastPoolReset > POOL_RESET_INTERVAL)) {
-    log('[Database] ' + (force ? 'Forcing' : 'Performing scheduled') + ' connection pool reset', 'info');
-    try {
-      // End the existing pool with a timeout to prevent hanging
-      const oldPool = pool;
-      const endPromise = oldPool.end();
-      
-      // Create a new pool immediately without waiting for the old one to end
-      const newPool = new Pool(poolConfig);
-      
-      // Replace the pool object properties with the new pool
-      Object.setPrototypeOf(pool, Object.getPrototypeOf(newPool));
-      Object.assign(pool, newPool);
-      
-      // Setup reconnection logic for the new pool
-      setupPoolErrorHandlers(pool);
-      
-      // Log the end result of the old pool (but don't wait for it)
-      endPromise.catch(err => {
-        log(`[Database] Error ending old pool during reset: ${err.message}`, 'warn');
-      }).then(() => {
-        log('[Database] Old connection pool ended successfully', 'info');
-      });
-      
-      lastPoolReset = now;
-      log('[Database] Connection pool reset successfully', 'info');
-    } catch (error: any) {
-      log(`[Database] Failed to reset connection pool: ${error.message}`, 'error');
-    }
-  }
-}
-
-// Shared function to setup error handlers on pool
-function setupPoolErrorHandlers(poolInstance: any) {
-  // Clear any existing listeners to prevent duplicates
-  if (poolInstance.removeAllListeners) {
-    poolInstance.removeAllListeners('error');
-    poolInstance.removeAllListeners('connect');
-  }
-  
-  // Initialize connection error handling with enhanced logging
-  poolInstance.on('error', (err: Error) => {
-    const pgError = err as PostgresError;
-    const errorCode = pgError.code || 'UNKNOWN';
-    const errorMessage = pgError.message || 'Unknown database error';
-    
-    log(`[Database] PostgreSQL pool error: ${errorCode} - ${errorMessage}`, 'error');
-    console.error('[Database] PostgreSQL pool error:', {
-      code: errorCode,
-      message: errorMessage,
-      detail: pgError.detail,
-      hint: pgError.hint,
-      position: pgError.position,
-      severity: pgError.severity
-    });
-    
-    // Automatic reconnection for specific error codes
-    if (
-      errorCode === '57P01' || // administrator command termination
-      errorCode === '08006' || // connection failure 
-      errorCode === '08001' || // connection exception
-      errorCode === '08004' || // rejected connection
-      errorCode === 'XX000'    // internal error
-    ) {
-      log('[Database] Critical connection error detected, forcing pool reset', 'warn');
-      setTimeout(() => resetConnectionPoolIfNeeded(true), 1000);
-    }
-  });
-  
-  // Client Error Handler - Enhance error handling for individual clients from the pool
-  poolInstance.on('connect', (client: any) => {
-    // Clear any existing listeners to prevent duplicates
-    if (client.removeAllListeners) {
-      client.removeAllListeners('error');
-      client.removeAllListeners('notice');
-    }
-    
-    client.on('error', (err: Error) => {
-      const pgError = err as PostgresError;
-      log(`[Database] Client connection error: ${pgError.code || 'UNKNOWN'} - ${pgError.message}`, 'error');
-      
-      // If this is an administrator command termination, trigger pool reset
-      if (pgError.code === '57P01') {
-        log('[Database] Administrator command termination detected on client, initiating recovery', 'warn');
-        setTimeout(() => resetConnectionPoolIfNeeded(true), 1000);
-      }
-    });
-  
-    client.on('notice', (notice: any) => {
-      const name = notice.name || 'Notice';
-      const message = notice.message || String(notice);
-      log(`[Database] Notice: ${name} - ${message}`, 'info');
-    });
-  });
-}
-
-// Note: pool error handlers are now set up via setupPoolErrorHandlers() function above
-
-// Create and export Supabase client
+// Create and export Supabase client with enhanced configuration
 export const supabase = createClient<Database>(
-  supabaseUrl || '',
-  supabaseKey || '',
+  supabaseUrl,
+  supabaseKey,
   {
     auth: {
       persistSession: false,
-      autoRefreshToken: true,
+      autoRefreshToken: false,
     },
+    global: {
+      headers: {
+        'x-application-name': 'sdegdaefk-app'
+      },
+    }
+    // Removed potentially problematic config options
   }
 );
 
 // Helper utility for timing operations
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// For compatibility with existing code that expects a pool object
+export const pool = {
+  connect: async () => {
+    throw new Error('Direct PostgreSQL connections are no longer supported. Use Supabase client instead.');
+  },
+  query: async () => {
+    throw new Error('Direct PostgreSQL queries are no longer supported. Use Supabase client instead.');
+  },
+  end: async () => {
+    log('[Database] PostgreSQL pool is no longer used. No connections to close.', 'info');
+    return Promise.resolve();
+  }
+};
+
+// Compatibility export to maintain API compatibility
+export const poolConfig = {
+  // This is just a placeholder to avoid breaking existing code
+};
 
 /**
  * Test database connection with enhanced error handling and retries
@@ -193,125 +75,70 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  * @returns Promise resolving to boolean indicating connection success
  */
 export async function testConnection(retries = 3, timeoutMs = 5000): Promise<boolean> {
-  let attempt = 0;
+  let retriesLeft = retries;
+  let lastError: Error | null = null;
   
-  // Explicitly check for pool reset need
-  resetConnectionPoolIfNeeded();
+  console.log('[Database] Testing connection with Supabase URL:', supabaseUrl);
   
-  // Execute a safe, quick query to test the database
-  const attemptConnection = async (): Promise<boolean> => {
+  while (retriesLeft > 0) {
     try {
-      attempt++;
-      log(`[Database] Connection test attempt ${attempt}/${retries}`, 'info');
+      console.log(`[Database] Connection attempt ${retries - retriesLeft + 1}/${retries}`);
       
-      // Create a client with explicit timeout
-      const connectionPromise = pool.connect();
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error(`Connection timeout after ${timeoutMs}ms`)), timeoutMs)
-      );
+      // Simplified test - just check that we can connect to Supabase
+      const { data, error } = await supabase.from('users').select('id').limit(1);
       
-      // Race between connection acquisition and timeout
-      let pgClient: pg.PoolClient;
-      try {
-        pgClient = await Promise.race([connectionPromise, timeoutPromise]) as pg.PoolClient;
-      } catch (connErr: any) {
-        throw new Error(`Failed to acquire connection: ${connErr.message}`);
+      if (error) {
+        console.error('[Database] Query error:', error);
+        throw error;
       }
       
-      try {
-        // Run connection test query with row count validation
-        const pgResult = await pgClient.query('SELECT 1 AS pg_connection_test');
-        
-        // Validate query actually returned a result
-        if (!pgResult || !pgResult.rows || pgResult.rows.length === 0) {
-          throw new Error('Query succeeded but returned no results');
-        }
-        
-        // Additional health check query
-        const healthResult = await pgClient.query(`
-          SELECT 
-            current_setting('server_version') as version,
-            current_setting('max_connections') as max_connections,
-            (SELECT count(*) FROM pg_stat_activity) as active_connections
-        `);
-        
-        const dbInfo = healthResult.rows[0];
-        log(`[Database] PostgreSQL version: ${dbInfo.version}, Connections: ${dbInfo.active_connections}/${dbInfo.max_connections}`, 'info');
-        
-        // Check if we're approaching connection limits
-        const connectionUsage = parseInt(dbInfo.active_connections) / parseInt(dbInfo.max_connections);
-        if (connectionUsage > 0.8) {
-          log(`[Database] WARNING: High connection usage (${Math.round(connectionUsage * 100)}%)`, 'warn');
-        }
-      } catch (queryErr: any) {
-        // Make sure to release the client even if query fails
-        pgClient.release(true); // Release with error flag
-        throw queryErr;
-      }
-      
-      // Release the client back to the pool
-      pgClient.release();
-      
-      log('[Database] PostgreSQL connection successfully verified', 'info');
-      
-      // Test Supabase connection if configured
-      if (supabaseUrl && supabaseKey) {
-        try {
-          // First test with a lightweight query that doesn't require auth
-          const { data: healthData, error: healthError } = await supabase
-            .from('users')
-            .select('count(*)', { count: 'exact', head: true });
-            
-          if (healthError) {
-            log(`[Database] Supabase connection warning: ${healthError.message}`, 'warn');
-            // Don't fail the whole test if only Supabase has issues
-          } else {
-            log('[Database] Supabase connection successful', 'info');
-          }
-        } catch (supabaseErr: any) {
-          log(`[Database] Supabase test error: ${supabaseErr.message}`, 'warn');
-          // Don't fail the whole test if only Supabase has issues
-        }
-      }
+      log('[Database] Supabase connection successfully verified', 'info');
+      console.log('[Database] Connection test result:', { data });
       
       return true;
-    } catch (error: any) {
-      // Extract as many error details as possible
-      const errorDetails = {
-        message: error?.message || 'Unknown error',
-        code: error?.code || 'UNKNOWN',
-        detail: error?.detail,
-        hint: error?.hint,
-        severity: error?.severity,
-        position: error?.position,
-        stack: error?.stack?.split('\n').slice(0, 3).join('\n') || 'No stack trace',
-      };
+    } catch (err: any) {
+      lastError = err;
+      console.error(`[Database] Connection test failed (${retriesLeft} retries left)`);
       
-      log(`[Database] Connection test attempt ${attempt} failed: ${errorDetails.message} (${errorDetails.code})`, 'error');
-      console.error('[Database] Connection test error details:', errorDetails);
+      // Add detailed error logging
+      console.error('[Database] Error object:', err);
+      console.error('[Database] Error details:', {
+        message: err.message,
+        code: err.code,
+        details: err.details,
+        hint: err.hint,
+        status: err.status,
+        statusText: err.statusText
+      });
       
-      // Increase delay exponentially with each retry (backoff strategy)
-      const currentDelay = Math.min(30000, Math.pow(2, attempt) * 1000);
-      
-      // If we have retries left, wait and try again
-      if (attempt < retries) {
-        log(`[Database] Retrying connection in ${currentDelay}ms (attempt ${attempt+1}/${retries})...`, 'info');
-        await sleep(currentDelay);
-        return attemptConnection();
+      if (err.stack) {
+        console.error('[Database] Error stack:', err.stack);
       }
       
-      // After all retries, log additional diagnostic info
-      log('[Database] All connection attempts failed. Database might be down or unreachable.', 'error');
-      
-      return false;
+      // Decrease retries and wait before next attempt with simple backoff
+      retriesLeft--;
+      const backoffTime = retriesLeft > 0 ? 2000 : 0;
+      await sleep(backoffTime);
     }
-  };
+  }
   
-  return attemptConnection();
+  // If we got here, all retries failed
+  console.error('[Database] All connection attempts failed');
+  return false;
 }
 
-// Close all database connections
+// For compatibility with existing code that expects this function
+export function resetConnectionPoolIfNeeded() {
+  log('[Database] No connection pool to reset - using Supabase instead', 'info');
+  return true;
+}
+
+// For compatibility with existing code that expects this function
+export function setupPoolErrorHandlers() {
+  log('[Database] No pool error handlers to set up - using Supabase instead', 'info');
+}
+
 export async function closeConnections() {
-  await pool.end();
-  log('[Database] All database connections closed', 'info');
+  log('[Database] No direct database connections to close - using Supabase', 'info');
+  return Promise.resolve();
 }
