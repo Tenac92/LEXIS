@@ -891,12 +891,6 @@ export class DocumentFormatter {
       const unitDetails = await DocumentFormatter.getUnitDetails(data.unit);
       
       // Create default unit details if none found
-      const effectiveUnitDetails = unitDetails || {
-        unit_name: { name: "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ", prop: "ΤΟΥ ΥΠΟΥΡΓΕΙΟΥ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ ΚΑΙ ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ" },
-        manager: { name: "", order: "", title: "Ο ΠΡΟΪΣΤΑΜΕΝΟΣ", degree: "", prepose: "" },
-        address: { tk: "11526", region: "ΑΘΗΝΑ", address: "Κηφισίας 124 & Ιατρίδου 2" },
-        email: "daefk-ke@gcsl.gr"
-      };
 
       const sections = [
         {
