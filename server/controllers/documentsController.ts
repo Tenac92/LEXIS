@@ -653,8 +653,10 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
 
     // Get unit details
     const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
+    // Allow export even if unit details are not found, using fallback values
     if (!unitDetails) {
-      throw new Error('Unit details not found');
+      console.warn(`Unit details not found for unit code: ${document.unit}, using fallback values`);
+      // Continue with export using default/fallback values instead of throwing error
     }
 
     // Create and send document
