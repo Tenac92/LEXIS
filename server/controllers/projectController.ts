@@ -115,66 +115,66 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       if (projectSplits.length === 0) {
         combinedData.push({
           // Project Core Data (from Projects table)
-          'MIS': project.mis || '',
-          'Title': project.title || project.project_title || project.event_description || '',
-          'Status': project.status || '',
-          'NA853': project.na853 || '',
-          'NA271': project.na271 || '',
-          'E069': project.e069 || '',
-          'Budget NA853': project.budget_na853 || '',
-          'Budget NA271': project.budget_na271 || '',
-          'Budget E069': project.budget_e069 || '',
-          'Region': typeof project.region === 'object' ? JSON.stringify(project.region) : (project.region || ''),
-          'Implementing Agency': Array.isArray(project.implementing_agency) ? project.implementing_agency.join(', ') : (project.implementing_agency || ''),
-          'Event Type': Array.isArray(project.event_type) ? project.event_type.join(', ') : (project.event_type || ''),
-          'Event Year': Array.isArray(project.event_year) ? project.event_year.join(', ') : (project.event_year || ''),
-          'Created At': project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : '',
+          'ΜΙS': project.mis || '',
+          'Τίτλος': project.title || project.project_title || project.event_description || '',
+          'Κατάσταση': project.status || '',
+          'ΝΑ853': project.na853 || '',
+          'ΝΑ271': project.na271 || '',
+          'Ε069': project.e069 || '',
+          'Προϋπολογισμός ΝΑ853': project.budget_na853 || '',
+          'Προϋπολογισμός ΝΑ271': project.budget_na271 || '',
+          'Προϋπολογισμός Ε069': project.budget_e069 || '',
+          'Περιφέρεια': typeof project.region === 'object' ? JSON.stringify(project.region) : (project.region || ''),
+          'Φορέας Υλοποίησης': Array.isArray(project.implementing_agency) ? project.implementing_agency.join(', ') : (project.implementing_agency || ''),
+          'Τύπος Συμβάντος': Array.isArray(project.event_type) ? project.event_type.join(', ') : (project.event_type || ''),
+          'Έτος Συμβάντος': Array.isArray(project.event_year) ? project.event_year.join(', ') : (project.event_year || ''),
+          'Ημ/νία Δημιουργίας': project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : '',
           
           // Budget Split Data (empty for this row)
-          'Split ID': '',
-          'PROIP': '',
-          'Annual Credit': '',
-          'Q1': '',
-          'Q2': '',
-          'Q3': '',
-          'Q4': '',
-          'Year Allocations': '',
-          'User View': '',
-          'Split Created At': '',
-          'Split Updated At': ''
+          'ID Κατανομής': '',
+          'ΠΡΟΙΠ': '',
+          'Ετήσια Πίστωση': '',
+          'Α΄ Τρίμηνο': '',
+          'Β΄ Τρίμηνο': '',
+          'Γ΄ Τρίμηνο': '',
+          'Δ΄ Τρίμηνο': '',
+          'Κατανομές Έτους': '',
+          'Προβολή Χρήστη': '',
+          'Ημ/νία Δημ. Κατανομής': '',
+          'Ημ/νία Ενημ. Κατανομής': ''
         });
       } else {
         // For projects with splits, add one row per split with both project and split data
         projectSplits.forEach((split, index) => {
           combinedData.push({
             // Project Core Data (only include full project data in the first row for this project)
-            'MIS': project.mis || '',
-            'Title': project.title || project.project_title || project.event_description || '',
-            'Status': project.status || '',
-            'NA853': project.na853 || '',
-            'NA271': project.na271 || '',
-            'E069': project.e069 || '',
-            'Budget NA853': project.budget_na853 || '',
-            'Budget NA271': project.budget_na271 || '',
-            'Budget E069': project.budget_e069 || '',
-            'Region': typeof project.region === 'object' ? JSON.stringify(project.region) : (project.region || ''),
-            'Implementing Agency': Array.isArray(project.implementing_agency) ? project.implementing_agency.join(', ') : (project.implementing_agency || ''),
-            'Event Type': Array.isArray(project.event_type) ? project.event_type.join(', ') : (project.event_type || ''),
-            'Event Year': Array.isArray(project.event_year) ? project.event_year.join(', ') : (project.event_year || ''),
-            'Created At': project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : '',
+            'ΜΙS': project.mis || '',
+            'Τίτλος': project.title || project.project_title || project.event_description || '',
+            'Κατάσταση': project.status || '',
+            'ΝΑ853': project.na853 || '',
+            'ΝΑ271': project.na271 || '',
+            'Ε069': project.e069 || '',
+            'Προϋπολογισμός ΝΑ853': project.budget_na853 || '',
+            'Προϋπολογισμός ΝΑ271': project.budget_na271 || '',
+            'Προϋπολογισμός Ε069': project.budget_e069 || '',
+            'Περιφέρεια': typeof project.region === 'object' ? JSON.stringify(project.region) : (project.region || ''),
+            'Φορέας Υλοποίησης': Array.isArray(project.implementing_agency) ? project.implementing_agency.join(', ') : (project.implementing_agency || ''),
+            'Τύπος Συμβάντος': Array.isArray(project.event_type) ? project.event_type.join(', ') : (project.event_type || ''),
+            'Έτος Συμβάντος': Array.isArray(project.event_year) ? project.event_year.join(', ') : (project.event_year || ''),
+            'Ημ/νία Δημιουργίας': project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : '',
             
             // Budget Split Data
-            'Split ID': split.id || '',
-            'PROIP': split.proip || '',
-            'Annual Credit': split.ethsia_pistosi || '',
-            'Q1': split.q1 || '',
-            'Q2': split.q2 || '',
-            'Q3': split.q3 || '',
-            'Q4': split.q4 || '',
-            'Year Allocations': split.katanomes_etous || '',
-            'User View': split.user_view || '',
-            'Split Created At': split.created_at ? new Date(split.created_at).toLocaleDateString('el-GR') : '',
-            'Split Updated At': split.updated_at ? new Date(split.updated_at).toLocaleDateString('el-GR') : ''
+            'ID Κατανομής': split.id || '',
+            'ΠΡΟΙΠ': split.proip || '',
+            'Ετήσια Πίστωση': split.ethsia_pistosi || '',
+            'Α΄ Τρίμηνο': split.q1 || '',
+            'Β΄ Τρίμηνο': split.q2 || '',
+            'Γ΄ Τρίμηνο': split.q3 || '',
+            'Δ΄ Τρίμηνο': split.q4 || '',
+            'Κατανομές Έτους': split.katanomes_etous || '',
+            'Προβολή Χρήστη': split.user_view || '',
+            'Ημ/νία Δημ. Κατανομής': split.created_at ? new Date(split.created_at).toLocaleDateString('el-GR') : '',
+            'Ημ/νία Ενημ. Κατανομής': split.updated_at ? new Date(split.updated_at).toLocaleDateString('el-GR') : ''
           });
         });
       }
@@ -183,18 +183,18 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     // Create a separate Budget Splits Only worksheet 
     const budgetSplitsOnly = budgetSplits ? budgetSplits.map(split => ({
       'ID': split.id || '',
-      'MIS': split.mis || '',
-      'NA853': split.na853 || '',
-      'PROIP': split.proip || '',
-      'Annual Credit': split.ethsia_pistosi || '',
-      'Q1': split.q1 || '',
-      'Q2': split.q2 || '',
-      'Q3': split.q3 || '',
-      'Q4': split.q4 || '',
-      'Year Allocations': split.katanomes_etous || '',
-      'User View': split.user_view || '',
-      'Created At': split.created_at ? new Date(split.created_at).toLocaleDateString('el-GR') : '',
-      'Updated At': split.updated_at ? new Date(split.updated_at).toLocaleDateString('el-GR') : ''
+      'ΜΙS': split.mis || '',
+      'ΝΑ853': split.na853 || '',
+      'ΠΡΟΙΠ': split.proip || '',
+      'Ετήσια Πίστωση': split.ethsia_pistosi || '',
+      'Α΄ Τρίμηνο': split.q1 || '',
+      'Β΄ Τρίμηνο': split.q2 || '',
+      'Γ΄ Τρίμηνο': split.q3 || '',
+      'Δ΄ Τρίμηνο': split.q4 || '',
+      'Κατανομές Έτους': split.katanomes_etous || '',
+      'Προβολή Χρήστη': split.user_view || '',
+      'Ημ/νία Δημιουργίας': split.created_at ? new Date(split.created_at).toLocaleDateString('el-GR') : '',
+      'Ημ/νία Ενημέρωσης': split.updated_at ? new Date(split.updated_at).toLocaleDateString('el-GR') : ''
     })) : [];
 
     // Create the main workbook
@@ -206,39 +206,43 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     // Set column widths for integrated worksheet
     const colWidthsIntegrated = Object.keys(combinedData[0] || {}).map(() => ({ wch: 18 }));
     wsIntegrated['!cols'] = colWidthsIntegrated;
-    XLSX.utils.book_append_sheet(wb, wsIntegrated, 'Projects With Budgets');
+    XLSX.utils.book_append_sheet(wb, wsIntegrated, 'Έργα με Κατανομές');
 
     // Add a worksheet with only Projects data (simplified view)
     const projectsOnly = projects.map(project => ({
-      'MIS': project.mis || '',
-      'NA853': project.na853 || '',
-      'Title': project.title || project.project_title || project.event_description || '',
-      'Status': project.status || '',
-      'Budget NA853': project.budget_na853 || '',
-      'Budget NA271': project.budget_na271 || '',
-      'Budget E069': project.budget_e069 || '',
-      'Implementing Agency': Array.isArray(project.implementing_agency) ? project.implementing_agency.join(', ') : (project.implementing_agency || ''),
-      'Event Type': Array.isArray(project.event_type) ? project.event_type.join(', ') : (project.event_type || ''),
-      'Event Year': Array.isArray(project.event_year) ? project.event_year.join(', ') : (project.event_year || ''),
-      'Created At': project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : ''
+      'ΜΙS': project.mis || '',
+      'ΝΑ853': project.na853 || '',
+      'Τίτλος': project.title || project.project_title || project.event_description || '',
+      'Κατάσταση': project.status || '',
+      'Προϋπολογισμός ΝΑ853': project.budget_na853 || '',
+      'Προϋπολογισμός ΝΑ271': project.budget_na271 || '',
+      'Προϋπολογισμός Ε069': project.budget_e069 || '',
+      'Φορέας Υλοποίησης': Array.isArray(project.implementing_agency) ? project.implementing_agency.join(', ') : (project.implementing_agency || ''),
+      'Τύπος Συμβάντος': Array.isArray(project.event_type) ? project.event_type.join(', ') : (project.event_type || ''),
+      'Έτος Συμβάντος': Array.isArray(project.event_year) ? project.event_year.join(', ') : (project.event_year || ''),
+      'Ημ/νία Δημιουργίας': project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : ''
     }));
     
     const wsProjects = XLSX.utils.json_to_sheet(projectsOnly);
     const colWidthsProjects = Object.keys(projectsOnly[0] || {}).map(() => ({ wch: 18 }));
     wsProjects['!cols'] = colWidthsProjects;
-    XLSX.utils.book_append_sheet(wb, wsProjects, 'Projects Only');
+    XLSX.utils.book_append_sheet(wb, wsProjects, 'Μόνο Έργα');
 
     // Add the Budget Splits Only worksheet
     const wsBudgets = XLSX.utils.json_to_sheet(budgetSplitsOnly);
     const colWidthsBudgets = Object.keys(budgetSplitsOnly[0] || {}).map(() => ({ wch: 18 }));
     wsBudgets['!cols'] = colWidthsBudgets;
-    XLSX.utils.book_append_sheet(wb, wsBudgets, 'Budget Splits Only');
+    XLSX.utils.book_append_sheet(wb, wsBudgets, 'Μόνο Κατανομές');
 
     // Generate buffer and send the response
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
+    // Format current date as dd-mm-yyyy
+    const today = new Date();
+    const formattedDate = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getFullYear()}`;
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=integrated-projects-budgets-${new Date().toISOString().split('T')[0]}.xlsx`);
+    res.setHeader('Content-Disposition', `attachment; filename=Έργα-και-Κατανομές-${formattedDate}.xlsx`);
     res.send(buffer);
 
   } catch (error) {
