@@ -2,9 +2,7 @@ import { users, type User, type GeneratedDocument, type InsertGeneratedDocument,
 import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
 import session from 'express-session';
-import connectPgSimple from 'connect-pg-simple';
-import pg from 'pg';
-const { Pool } = pg;
+import MemoryStore from 'memorystore';
 
 export interface IStorage {
   sessionStore: session.Store;
@@ -32,20 +30,15 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
   
   constructor() {
-    // Set up PostgreSQL session store
-    const pgPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+    // Create an in-memory session store instead of using PostgreSQL
+    const MemoryStoreSession = MemoryStore(session);
+    this.sessionStore = new MemoryStoreSession({
+      checkPeriod: 86400000, // prune expired entries every 24h
+      ttl: 24 * 60 * 60 * 1000, // 24 hours
+      stale: false
     });
     
-    // Create session store
-    const PgStore = connectPgSimple(session);
-    this.sessionStore = new PgStore({
-      pool: pgPool,
-      tableName: 'user_sessions', // You may need to create this table
-      createTableIfMissing: true,
-    });
-    
-    console.log('[Storage] Session store initialized');
+    console.log('[Storage] In-memory session store initialized');
   }
 
   async getProjectsByUnit(unit: string): Promise<Project[]> {

@@ -89,7 +89,8 @@ router.get('/database', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
       database: {
         connected: connectionResult,
-        postgresUrl: process.env.DATABASE_URL ? 'configured' : 'not configured'
+        supabaseUrl: process.env.SUPABASE_URL ? 'configured' : 'not configured',
+        supabaseKey: process.env.SUPABASE_KEY ? 'configured' : 'not configured'
       }
     });
   } catch (error: any) {

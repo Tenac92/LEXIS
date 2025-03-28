@@ -390,8 +390,8 @@ router.get('/database', async (req: Request, res: Response) => {
         ip: req.ip
       },
       environment: {
-        databaseUrl: process.env.DATABASE_URL ? 'Configured (redacted)' : 'Not configured',
         supabaseUrl: process.env.SUPABASE_URL ? 'Configured (redacted)' : 'Not configured',
+        supabaseKey: process.env.SUPABASE_KEY ? 'Configured (redacted)' : 'Not configured',
         nodeEnv: process.env.NODE_ENV || 'Not set'
       }
     });

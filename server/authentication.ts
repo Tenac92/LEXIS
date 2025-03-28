@@ -71,7 +71,7 @@ export const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'document-manager-secret',
   resave: false,
   saveUninitialized: false,
-  store: storage.sessionStore,
+  store: storage.sessionStore, // Using the in-memory store from storage.ts
   name: 'sid', // Custom session ID name
   cookie: {
     secure: process.env.NODE_ENV === 'production', // Only true in production
