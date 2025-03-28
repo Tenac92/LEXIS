@@ -68,30 +68,42 @@ async function reconnectDatabase(): Promise<boolean> {
   try {
     log('[DatabaseRecovery] Attempting to reconnect to database...', 'info');
     
-    // Test if the database is still alive
-    const isAlive = await testConnection(1, 0);
+    // Import resetConnectionPoolIfNeeded function directly to avoid circular dependencies
+    const { resetConnectionPoolIfNeeded } = require('../config/db');
+    
+    // Force reset of the connection pool
+    resetConnectionPoolIfNeeded(true);
+    
+    // Test if the database is now alive
+    const isAlive = await testConnection(2, 5000);
     
     if (isAlive) {
-      log('[DatabaseRecovery] Database appears to still be connected', 'info');
+      log('[DatabaseRecovery] Database successfully reconnected', 'info');
       return true;
     }
     
-    // Clear the connection pool to force new connections
-    // This is a more aggressive approach when experiencing XX000 errors
-    log('[DatabaseRecovery] Clearing connection pool and reconnecting...', 'info');
-    await pool.end();
+    // If automatic reset failed, try more aggressive approach
+    log('[DatabaseRecovery] First reconnection attempt failed, trying more aggressive approach...', 'warn');
     
-    // Wait a moment for connections to fully close
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Reconnect and verify with a test query
-    log('[DatabaseRecovery] Attempting to reconnect to database...', 'info');
-    const client = await pool.connect();
-    await client.query('SELECT 1 AS recovery_test');
-    client.release();
-    
-    log('[DatabaseRecovery] Successfully reconnected to database', 'info');
-    return true;
+    try {
+      // Try to get a client connection with a shorter timeout
+      const client = await Promise.race([
+        pool.connect(),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Connection timeout during recovery')), 3000)
+        )
+      ]) as any;
+      
+      // Run a simple query to verify connection
+      await client.query('SELECT 1 AS recovery_test');
+      client.release();
+      
+      log('[DatabaseRecovery] Successfully reconnected to database with direct connection', 'info');
+      return true;
+    } catch (innerError) {
+      log(`[DatabaseRecovery] Second reconnection attempt failed: ${innerError}`, 'error');
+      return false;
+    }
   } catch (error) {
     log(`[DatabaseRecovery] Failed to reconnect: ${error}`, 'error');
     return false;

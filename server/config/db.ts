@@ -67,19 +67,35 @@ export const pool = new Pool(poolConfig);
 let lastPoolReset = Date.now();
 const POOL_RESET_INTERVAL = 3600000; // 1 hour
 
+// Setup error handlers immediately after pool creation
+setupPoolErrorHandlers(pool);
+
 // Function to recreate the pool if needed
-export function resetConnectionPoolIfNeeded() {
+export function resetConnectionPoolIfNeeded(force = false) {
   const now = Date.now();
-  if (now - lastPoolReset > POOL_RESET_INTERVAL) {
-    log('[Database] Performing scheduled connection pool reset', 'info');
+  if (force || (now - lastPoolReset > POOL_RESET_INTERVAL)) {
+    log('[Database] ' + (force ? 'Forcing' : 'Performing scheduled') + ' connection pool reset', 'info');
     try {
-      pool.end().catch(err => {
-        log(`[Database] Error ending pool during reset: ${err.message}`, 'error');
-      });
+      // End the existing pool with a timeout to prevent hanging
+      const oldPool = pool;
+      const endPromise = oldPool.end();
       
-      // Create a new pool with the same config
+      // Create a new pool immediately without waiting for the old one to end
       const newPool = new Pool(poolConfig);
+      
+      // Replace the pool object properties with the new pool
+      Object.setPrototypeOf(pool, Object.getPrototypeOf(newPool));
       Object.assign(pool, newPool);
+      
+      // Setup reconnection logic for the new pool
+      setupPoolErrorHandlers(pool);
+      
+      // Log the end result of the old pool (but don't wait for it)
+      endPromise.catch(err => {
+        log(`[Database] Error ending old pool during reset: ${err.message}`, 'warn');
+      }).then(() => {
+        log('[Database] Old connection pool ended successfully', 'info');
+      });
       
       lastPoolReset = now;
       log('[Database] Connection pool reset successfully', 'info');
@@ -89,39 +105,71 @@ export function resetConnectionPoolIfNeeded() {
   }
 }
 
-// Initialize connection error handling with enhanced logging
-pool.on('error', (err: Error) => {
-  const pgError = err as PostgresError;
-  const errorCode = pgError.code || 'UNKNOWN';
-  const errorMessage = pgError.message || 'Unknown database error';
-  
-  log(`[Database] PostgreSQL pool error: ${errorCode} - ${errorMessage}`, 'error');
-  console.error('[Database] PostgreSQL pool error:', {
-    code: errorCode,
-    message: errorMessage,
-    detail: pgError.detail,
-    hint: pgError.hint,
-    position: pgError.position,
-    severity: pgError.severity
-  });
-  
-  // Log if this is a connection error that might require reconnection
-  if (errorCode.startsWith('08') || errorCode === 'XX000') {
-    log('[Database] This appears to be a connection error, consider reconnecting', 'error');
+// Shared function to setup error handlers on pool
+function setupPoolErrorHandlers(poolInstance: any) {
+  // Clear any existing listeners to prevent duplicates
+  if (poolInstance.removeAllListeners) {
+    poolInstance.removeAllListeners('error');
+    poolInstance.removeAllListeners('connect');
   }
-});
-
-// Client Error Handler - Enhance error handling for individual clients from the pool
-pool.on('connect', (client) => {
-  client.on('error', (err: Error) => {
+  
+  // Initialize connection error handling with enhanced logging
+  poolInstance.on('error', (err: Error) => {
     const pgError = err as PostgresError;
-    log(`[Database] Client connection error: ${pgError.code || 'UNKNOWN'} - ${pgError.message}`, 'error');
+    const errorCode = pgError.code || 'UNKNOWN';
+    const errorMessage = pgError.message || 'Unknown database error';
+    
+    log(`[Database] PostgreSQL pool error: ${errorCode} - ${errorMessage}`, 'error');
+    console.error('[Database] PostgreSQL pool error:', {
+      code: errorCode,
+      message: errorMessage,
+      detail: pgError.detail,
+      hint: pgError.hint,
+      position: pgError.position,
+      severity: pgError.severity
+    });
+    
+    // Automatic reconnection for specific error codes
+    if (
+      errorCode === '57P01' || // administrator command termination
+      errorCode === '08006' || // connection failure 
+      errorCode === '08001' || // connection exception
+      errorCode === '08004' || // rejected connection
+      errorCode === 'XX000'    // internal error
+    ) {
+      log('[Database] Critical connection error detected, forcing pool reset', 'warn');
+      setTimeout(() => resetConnectionPoolIfNeeded(true), 1000);
+    }
   });
+  
+  // Client Error Handler - Enhance error handling for individual clients from the pool
+  poolInstance.on('connect', (client: any) => {
+    // Clear any existing listeners to prevent duplicates
+    if (client.removeAllListeners) {
+      client.removeAllListeners('error');
+      client.removeAllListeners('notice');
+    }
+    
+    client.on('error', (err: Error) => {
+      const pgError = err as PostgresError;
+      log(`[Database] Client connection error: ${pgError.code || 'UNKNOWN'} - ${pgError.message}`, 'error');
+      
+      // If this is an administrator command termination, trigger pool reset
+      if (pgError.code === '57P01') {
+        log('[Database] Administrator command termination detected on client, initiating recovery', 'warn');
+        setTimeout(() => resetConnectionPoolIfNeeded(true), 1000);
+      }
+    });
+  
+    client.on('notice', (notice: any) => {
+      const name = notice.name || 'Notice';
+      const message = notice.message || String(notice);
+      log(`[Database] Notice: ${name} - ${message}`, 'info');
+    });
+  });
+}
 
-  client.on('notice', (notice) => {
-    log(`[Database] Notice: ${notice.name} - ${notice.message}`, 'info');
-  });
-});
+// Note: pool error handlers are now set up via setupPoolErrorHandlers() function above
 
 // Create and export Supabase client
 export const supabase = createClient<Database>(
