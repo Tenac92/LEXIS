@@ -126,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if there's a session but don't require auth for testing
         console.log('[DIRECT_ROUTE_V2] Session info:', (req as any).session);
         
-        const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [] } = req.body;
+        const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [], region } = req.body;
         
         if (!recipients?.length || !project_id || !unit || !expenditure_type) {
           return res.status(400).json({
@@ -148,21 +148,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .single();
             
             if (!projectError && projectData && projectData.na853) {
-              // Extract only numeric parts for database compatibility
-              const numericNA853 = String(projectData.na853).replace(/\D/g, '');
-              if (numericNA853) {
-                project_na853 = numericNA853;
-                console.log('[DIRECT_ROUTE_V2] Retrieved and converted NA853 from Projects table:', project_na853);
-              } else {
-                console.error('[DIRECT_ROUTE_V2] Could not extract numeric value from NA853:', projectData.na853);
-                // Try to use project_mis as numeric fallback
-                if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
+              // Use the full NA853 value without stripping non-numeric characters
+              project_na853 = String(projectData.na853);
+              console.log('[DIRECT_ROUTE_V2] Retrieved NA853 from Projects table:', project_na853);
+              
+              // If NA853 is empty for some reason, use project_mis as fallback
+              if (!project_na853) {
+                console.error('[DIRECT_ROUTE_V2] NA853 value is empty:', projectData.na853);
+                // Try to use project_mis as fallback
+                if (req.body.project_mis) {
                   project_na853 = req.body.project_mis;
-                  console.log('[DIRECT_ROUTE_V2] Using project_mis as numeric fallback:', req.body.project_mis);
+                  console.log('[DIRECT_ROUTE_V2] Using project_mis as fallback:', req.body.project_mis);
                 } else {
-                  // Last resort - use 0 as safe fallback
-                  project_na853 = '0';
-                  console.log('[DIRECT_ROUTE_V2] Using safe numeric fallback: 0');
+                  // Last resort - use project_id as fallback
+                  project_na853 = project_id;
+                  console.log('[DIRECT_ROUTE_V2] Using project_id as fallback:', project_id);
                 }
               }
             } else {
@@ -226,6 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           recipients: formattedRecipients,
           total_amount: parseFloat(String(total_amount)) || 0,
           attachments: attachments || [],
+          region: region || null, // Add region field
           generated_by: (req as any).session?.user?.id || null, // Add user ID if available
           department: (req as any).session?.user?.department || null, // Add department if available
           created_at: now,
