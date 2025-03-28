@@ -77,7 +77,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           total_amount: parseFloat(String(total_amount)) || 0,
           generated_by: req.user.id,
           department: req.user.department || null,
-          contact_number: req.user.telephone || null,
+          // Instead of contact_number, use telephone field to match the schema
+          telephone: req.user.telephone || null,
           user_name: req.user.name || null,
           attachments: attachments || [],
           created_at: now,
@@ -233,10 +234,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log('[DIRECT_ROUTE_V2] Inserting document with payload:', documentPayload);
         
-        // Insert into database
+        // Insert into database - Use explicit ID generation with max+1 to avoid conflicts
+        // First check if we need to handle a conflict case
+        const { data: maxIdData } = await supabase
+          .from('generated_documents')
+          .select('id')
+          .order('id', { ascending: false })
+          .limit(1)
+          .single();
+        
+        // Get the max ID and add 1
+        const newId = (maxIdData?.id || 0) + 100; // Add 100 to ensure we're well clear of any existing IDs
+        console.log('[DIRECT_ROUTE_V2] Found max ID:', maxIdData?.id, 'Using new ID:', newId);
+        
+        // Create a copy of document payload with an explicit new ID
+        const finalPayload = { 
+          ...documentPayload,
+          id: newId
+        };
+        
+        // Insert into database with explicit ID
         const { data, error } = await supabase
           .from('generated_documents')
-          .insert([documentPayload])
+          .insert([finalPayload])
           .select('id')
           .single();
         
@@ -347,11 +367,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log('[Projects] Public access searching for projects with query:', query);
         
-        // Query projects based on search term
+        // First try to determine which columns are available in Projects table
+        let columns = 'mis';
+        // First check if 'mis' column exists - this should always exist
+        const { data: columnCheckData } = await supabase
+          .from('Projects')
+          .select('mis')
+          .limit(1);
+        
+        // If we got data with mis, then this column exists
+        if (columnCheckData && columnCheckData.length > 0) {
+          console.log('[Projects] Confirmed mis column exists');
+          
+          // Now check if we can select more columns
+          // Try name column first
+          try {
+            const { data: nameCheck } = await supabase
+              .from('Projects')
+              .select('mis, name')
+              .limit(1);
+            
+            if (nameCheck && nameCheck.length > 0) {
+              columns = 'mis, name';
+              console.log('[Projects] Using columns:', columns);
+            }
+          } catch (err) {
+            // Try title column next
+            try {
+              const { data: titleCheck } = await supabase
+                .from('Projects')
+                .select('mis, title')
+                .limit(1);
+              
+              if (titleCheck && titleCheck.length > 0) {
+                columns = 'mis, title';
+                console.log('[Projects] Using columns:', columns);
+              }
+            } catch (err2) {
+              // Just stick with mis
+              console.log('[Projects] Only using mis column');
+            }
+          }
+        }
+        
+        // Query projects based on search term with available columns
+        console.log('[Projects] Querying Projects with columns:', columns);
         const { data: projectsData, error: projectsError } = await supabase
           .from('Projects')
-          .select('id, mis, name, expenditure_types')
-          .or(`mis.ilike.%${query}%,name.ilike.%${query}%`)
+          .select(columns)
+          .ilike('mis', `%${query}%`)
           .limit(25);
         
         if (projectsError) {
@@ -415,6 +479,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Documents routes
     log('[Routes] Setting up document routes...');
+    
+    // Add public route to get document by ID - for testing purposes
+    app.get('/api/documents/public/:id', async (req, res) => {
+      try {
+        const { id } = req.params;
+        console.log('[Documents] Public access to document with ID:', id);
+        
+        // Fetch document from Supabase
+        const { data, error } = await supabase
+          .from('generated_documents')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (error) {
+          console.error('[Documents] Error fetching document:', error);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch document'
+          });
+        }
+        
+        if (!data) {
+          return res.status(404).json({
+            status: 'error',
+            message: 'Document not found'
+          });
+        }
+        
+        console.log('[Documents] Successfully retrieved document:', data.id);
+        return res.json(data);
+      } catch (error) {
+        console.error('[Documents] Error in public document access:', error);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to fetch document'
+        });
+      }
+    });
+    
     // NOTE: The above direct document routes need to be consolidated here
     // The documentsController should handle all document-related operations
     // Handle documents routes with proper authentication

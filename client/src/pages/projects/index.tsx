@@ -30,6 +30,9 @@ export default function ProjectsPage() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  console.log("Current user:", user);
+  console.log("Is admin:", isAdmin);
+
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -39,8 +42,11 @@ export default function ProjectsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: projects, isLoading } = useQuery<Project[]>({
+  const { data: projects, isLoading, error } = useQuery<Project[]>({
     queryKey: ["/api/projects", { search: debouncedSearch, status: status !== "all" ? status : undefined }],
+    onError: (err) => {
+      console.error("Error fetching projects:", err);
+    }
   });
 
   const handleExport = async () => {
