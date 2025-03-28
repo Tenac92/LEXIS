@@ -908,7 +908,7 @@ export class DocumentFormatter {
       }
 
       console.log("Fetching unit details for:", unitCode);
-      
+
       // Try exact match first
       let { data: unitData, error: unitError } = await supabase
         .from("Monada")
