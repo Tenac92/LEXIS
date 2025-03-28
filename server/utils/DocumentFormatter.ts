@@ -902,23 +902,67 @@ export class DocumentFormatter {
     unitCode: string,
   ): Promise<UnitDetails | null> {
     try {
+      if (!unitCode) {
+        console.error("No unit code provided");
+        return null;
+      }
+
       console.log("Fetching unit details for:", unitCode);
-      const { data: unitData, error: unitError } = await supabase
+      
+      // Try exact match first
+      let { data: unitData, error: unitError } = await supabase
         .from("Monada")
         .select("*")
         .eq("unit", unitCode)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to avoid error
+
+      if (!unitData && !unitError) {
+        // Try case-insensitive search if exact match fails
+        ({ data: unitData, error: unitError } = await supabase
+          .from("Monada")
+          .select("*")
+          .ilike("unit", unitCode)
+          .maybeSingle());
+      }
 
       if (unitError) {
         console.error("Error fetching unit details:", unitError);
         return null;
       }
 
+      if (!unitData) {
+        // Return default unit details instead of null
+        return {
+          unit: unitCode,
+          unit_name: {
+            name: unitCode,
+            prop: "τη"
+          },
+          address: {
+            address: "Κηφισίας 124 & Ιατρίδου 2",
+            tk: "11526",
+            region: "Αθήνα"
+          }
+        };
+      }
+
       console.log("Unit details fetched:", unitData);
       return unitData;
     } catch (error) {
       console.error("Error in getUnitDetails:", error);
-      return null;
+      // Return default unit details on error
+      return {
+        unit: unitCode,
+        unit_name: {
+          name: unitCode,
+          prop: "τη"
+        },
+        address: {
+          address: "Κηφισίας 124 & Ιατρίδου 2",
+          tk: "11526",
+          region: "Αθήνα"
+        }
+      };
     }
   }
 
