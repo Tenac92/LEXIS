@@ -39,8 +39,10 @@ function useLoginMutation() {
           throw new Error(error.message || 'Login failed');
         }
 
-        const user = await response.json();
-        console.log('Login successful:', user);
+        const data = await response.json();
+        console.log('Login successful:', data);
+        // Check if the data includes a user object (new format) or if it's the user itself (old format)
+        const user = data.user || data;
         return user as User;
       } catch (err) {
         console.error('Authentication error:', err);

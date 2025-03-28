@@ -496,7 +496,11 @@ export async function setupAuth(app: Express) {
         ip: req.ip
       });
 
-      res.json(sessionUser);
+      // Match the response format that the client expects
+      res.json({
+        message: "Login successful",
+        user: sessionUser
+      });
 
     } catch (error) {
       console.error('[Auth] Login error:', error);
