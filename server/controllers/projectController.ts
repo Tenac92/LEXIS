@@ -341,3 +341,4 @@ router.get('/:mis/regions', async (req: Request, res: Response) => {
 // Mount routes
 router.get('/', listProjects);
 router.get('/export', exportProjectsXLSX);
+router.get('/export/xlsx', exportProjectsXLSX);

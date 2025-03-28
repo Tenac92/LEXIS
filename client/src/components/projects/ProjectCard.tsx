@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type Project } from "@shared/schema";
 import { Edit, Trash2, Calendar, MapPin, Building2, Coins, FileText } from "lucide-react";
+import { useLocation } from "wouter";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +31,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   const [showDetails, setShowDetails] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -174,7 +176,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
               size="sm" 
               onClick={(e) => {
                 e.stopPropagation();
-                window.location.href = `/projects/${project.mis}/edit`;
+                setLocation(`/projects/${project.mis}/edit`);
               }}
             >
               <Edit className="mr-2 h-4 w-4" />
