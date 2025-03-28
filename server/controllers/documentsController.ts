@@ -645,10 +645,12 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     //  return res.status(403).json({ error: 'Access denied to this document' });
     //}
 
-    // Prepare document data with user name
+    // Prepare document data with user name and contact information
     const documentData = {
       ...document,
-      user_name: document.generated_by?.name || 'Unknown User'
+      user_name: document.generated_by?.name || 'Unknown User',
+      department: document.generated_by?.department || '',
+      contact_number: document.generated_by?.telephone || ''
     };
 
     // Get unit details
