@@ -1,43 +1,61 @@
 #!/bin/bash
+# Migration Script for Supabase
+# This script helps migrate the application to Supabase exclusively
 
-# Migration script to switch from Neon DB to Supabase
-# This script will replace the existing database connections with Supabase-only implementation
+# Color formatting
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-echo "Starting migration to Supabase..."
+echo -e "${BLUE}============================================${NC}"
+echo -e "${BLUE}Supabase Migration Deployment Script${NC}"
+echo -e "${BLUE}============================================${NC}"
 
-# Check if the new files exist
-if [ ! -f "./server/config/db.ts.new" ] || [ ! -f "./server/drizzle.ts.new" ] || [ ! -f "./server/data/index.ts.new" ] || [ ! -f "./server/middleware/databaseErrorRecovery.ts.new" ] || [ ! -f "./server/auth/index.ts.new" ]; then
-  echo "Error: One or more new configuration files are missing!"
-  echo "Please ensure all .new files are present before running this script."
+# Check required environment variables
+echo -e "\n${YELLOW}Checking environment variables...${NC}"
+
+if [ -z "$SUPABASE_URL" ]; then
+  echo -e "${RED}Error: SUPABASE_URL is not set${NC}"
   exit 1
 fi
 
-# Backup existing files
-echo "Creating backups of critical files..."
-mkdir -p ./backups
-cp ./server/config/db.ts ./backups/db.ts.bak
-cp ./server/drizzle.ts ./backups/drizzle.ts.bak
-cp ./server/data/index.ts ./backups/data-index.ts.bak
-cp ./server/middleware/databaseErrorRecovery.ts ./backups/databaseErrorRecovery.ts.bak
-cp ./server/auth/index.ts ./backups/auth-index.ts.bak
-
-# Install memorystore if not already present
-echo "Checking for memorystore package..."
-if ! grep -q "memorystore" package.json; then
-  echo "Installing memorystore package for session management..."
-  npm install --save memorystore
+if [ -z "$SUPABASE_KEY" ]; then
+  echo -e "${RED}Error: SUPABASE_KEY is not set${NC}"
+  exit 1
 fi
 
-# Apply new database configuration
-echo "Replacing database configuration files..."
-mv ./server/config/db.ts.new ./server/config/db.ts
-mv ./server/drizzle.ts.new ./server/drizzle.ts
-mv ./server/data/index.ts.new ./server/data/index.ts
-mv ./server/middleware/databaseErrorRecovery.ts.new ./server/middleware/databaseErrorRecovery.ts
-mv ./server/auth/index.ts.new ./server/auth/index.ts
+echo -e "${GREEN}✓ Environment variables verified${NC}"
 
-echo "Migration complete!"
-echo "Please restart your application to apply the changes."
-echo ""
-echo "NOTE: This migration has switched your session store to use memory storage temporarily."
-echo "Your users will need to log in again after deployment."
+# Test Supabase connection
+echo -e "\n${YELLOW}Testing Supabase connection...${NC}"
+node test-supabase.js
+
+if [ $? -ne 0 ]; then
+  echo -e "${RED}Error: Failed to connect to Supabase, please check credentials and network connectivity${NC}"
+  echo -e "${YELLOW}Running network diagnostics...${NC}"
+  node test-supabase-network.js
+  exit 1
+fi
+
+echo -e "${GREEN}✓ Supabase connection successful${NC}"
+
+# Restart the application
+echo -e "\n${YELLOW}Restarting application...${NC}"
+touch server/index.ts  # Touch a file to trigger rebuild
+
+echo -e "${GREEN}✓ Application restart triggered${NC}"
+
+# Test API health endpoints
+echo -e "\n${YELLOW}Testing API health endpoints...${NC}"
+sleep 5  # Wait for application to start
+node test-api-health.js
+
+echo -e "\n${GREEN}Migration to Supabase complete!${NC}"
+echo -e "${BLUE}============================================${NC}"
+echo -e "${YELLOW}Next steps:${NC}"
+echo -e "1. Verify all functionality in your browser"
+echo -e "2. Monitor logs for any database connectivity errors"
+echo -e "3. Deploy the application to production"
+echo -e "${BLUE}============================================${NC}"

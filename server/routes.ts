@@ -13,7 +13,8 @@ import { router as documentsRouter } from "./controllers/documentsController";
 import templatePreviewRouter from "./routes/template-preview";
 import authRouter from "./routes/auth";
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
-import healthcheckRouter from "./routes/healthcheck"; // Import the healthcheck router
+import healthcheckRouter from "./routes/healthcheck"; // Import the original healthcheck router
+import healthRouter from "./routes/health"; // Import our new enhanced health check router
 import sdegdaefkDiagnosticRouter from "./routes/sdegdaefk-diagnostic"; // Import the sdegdaefk.gr diagnostic router
 import documentsBrowserHandler from "./middleware/sdegdaefk/documentsBrowserHandler"; // Import browser request handler for /documents
 import authBrowserHandler from "./middleware/sdegdaefk/authBrowserHandler"; // Import browser request handler for /auth
@@ -469,6 +470,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Register the healthcheck router (no authentication required)
     log('[Routes] Registering healthcheck routes...');
     app.use('/api/healthcheck', healthcheckRouter);
+    
+    // Register enhanced health check router (no authentication required)
+    log('[Routes] Registering enhanced health check routes...');
+    app.use('/api/health', healthRouter);
     
     // Register sdegdaefk.gr diagnostic endpoints (no authentication required)
     log('[Routes] Registering sdegdaefk.gr diagnostic routes...');

@@ -5,7 +5,6 @@
 
 import { Request, Response, NextFunction, Express } from 'express';
 import session from 'express-session';
-import pgSession from 'connect-pg-simple';
 import { rateLimit } from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import { log } from '../vite';

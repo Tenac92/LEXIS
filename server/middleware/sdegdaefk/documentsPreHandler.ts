@@ -8,8 +8,23 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { log } from '../../vite';
-import { isFromSdegdaefkDomain } from '../databaseErrorRecovery';
 import { testConnection } from '../../config/db';
+
+/**
+ * Helper function to determine if a request is from the sdegdaefk.gr domain
+ */
+function isFromSdegdaefkDomain(req: Request): boolean {
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const host = req.headers.host;
+  
+  // Check if this is from sdegdaefk.gr domain
+  return (
+    (typeof origin === 'string' && origin.includes('sdegdaefk.gr')) ||
+    (typeof referer === 'string' && referer.includes('sdegdaefk.gr')) ||
+    (typeof host === 'string' && host.includes('sdegdaefk.gr'))
+  );
+}
 
 // Track database health status
 let lastDbCheck = 0;

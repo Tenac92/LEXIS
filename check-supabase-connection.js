@@ -1,23 +1,24 @@
 /**
- * Supabase Connection Diagnostic Tool
- * This script performs detailed diagnostics on your Supabase connection
+ * Enhanced Supabase Connection Test
+ * 
+ * This script performs a comprehensive test of Supabase connectivity
+ * including network connectivity, authentication, and database access.
  * 
  * Run with: node check-supabase-connection.js
  */
 
-// Required dependencies
-const https = require('https');
-const { createClient } = require('@supabase/supabase-js');
-const dns = require('dns').promises;
+import { createClient } from '@supabase/supabase-js';
+import * as dotenv from 'dotenv';
+import dns from 'dns';
+import { createConnection } from 'net';
+import { exec } from 'child_process';
+import https from 'https';
+import { promisify } from 'util';
 
-// Load environment variables if needed
-try {
-  require('dotenv').config();
-} catch (e) {
-  console.log('dotenv not available, using environment variables as is');
-}
+// Load environment variables
+dotenv.config();
 
-// ANSI color codes for better output formatting
+// Color formatting for console output
 const colors = {
   reset: '\x1b[0m',
   bright: '\x1b[1m',
@@ -25,236 +26,231 @@ const colors = {
   green: '\x1b[32m',
   yellow: '\x1b[33m',
   blue: '\x1b[34m',
+  magenta: '\x1b[35m',
   cyan: '\x1b[36m'
 };
 
-// Helper for formatted output
 function log(type, message, color = colors.reset) {
   const timestamp = new Date().toISOString();
-  console.log(`${color}[${timestamp}] [${type}]${colors.reset} ${message}`);
+  console.log(`${color}[${timestamp}] [${type}] ${message}${colors.reset}`);
 }
 
-// Test network connectivity to a domain
+// Step 1: Test basic domain connectivity
 async function testDomainConnectivity(domain, port = 443) {
-  log('Network', `Testing connectivity to ${domain}:${port}...`, colors.blue);
+  log('Network', `Testing DNS resolution for ${domain}...`, colors.cyan);
   
   try {
-    // First, try to resolve DNS
-    log('Network', `Looking up DNS for ${domain}...`, colors.blue);
-    const addresses = await dns.resolve4(domain);
-    log('Network', `DNS resolved: ${addresses.join(', ')}`, colors.green);
+    // DNS lookup
+    const addresses = await promisify(dns.lookup)(domain, { all: true });
+    log('Network', `DNS resolved ${domain} to:`, colors.green);
+    addresses.forEach(addr => log('Network', `  - ${addr.address} (${addr.family === 6 ? 'IPv6' : 'IPv4'})`, colors.green));
     
-    // Then try to open a connection
-    return new Promise((resolve) => {
-      const req = https.request({
-        hostname: domain,
-        port: port,
-        path: '/',
-        method: 'HEAD',
-        timeout: 5000
-      }, (res) => {
-        log('Network', `Connection to ${domain}:${port} successful (HTTP ${res.statusCode})`, colors.green);
+    // TCP connection test
+    log('Network', `Testing TCP connectivity to ${domain}:${port}...`, colors.cyan);
+    const connected = await new Promise((resolve) => {
+      const socket = createConnection(port, domain);
+      
+      socket.on('connect', () => {
+        log('Network', `TCP connection to ${domain}:${port} successful`, colors.green);
+        socket.end();
         resolve(true);
       });
       
-      req.on('timeout', () => {
-        log('Network', `Connection to ${domain}:${port} timed out`, colors.red);
-        req.destroy();
+      socket.on('error', (err) => {
+        log('Network', `TCP connection to ${domain}:${port} failed: ${err.message}`, colors.red);
         resolve(false);
       });
       
-      req.on('error', (err) => {
-        log('Network', `Error connecting to ${domain}:${port}: ${err.message}`, colors.red);
+      // Set a timeout for the connection attempt
+      socket.setTimeout(5000, () => {
+        log('Network', `TCP connection to ${domain}:${port} timed out`, colors.red);
+        socket.destroy();
         resolve(false);
       });
-      
-      req.end();
     });
-  } catch (error) {
-    log('Network', `DNS lookup failed for ${domain}: ${error.message}`, colors.red);
+    
+    // HTTP connectivity test
+    if (connected) {
+      log('Network', `Testing HTTPS connectivity to ${domain}...`, colors.cyan);
+      const httpConnected = await new Promise((resolve) => {
+        const req = https.request({
+          hostname: domain,
+          port: 443,
+          path: '/',
+          method: 'HEAD',
+          timeout: 5000,
+        }, (res) => {
+          log('Network', `HTTPS connection successful: ${res.statusCode} ${res.statusMessage}`, colors.green);
+          resolve(true);
+        });
+        
+        req.on('error', (err) => {
+          log('Network', `HTTPS request failed: ${err.message}`, colors.red);
+          resolve(false);
+        });
+        
+        req.on('timeout', () => {
+          log('Network', 'HTTPS request timed out', colors.red);
+          req.destroy();
+          resolve(false);
+        });
+        
+        req.end();
+      });
+      
+      return connected && httpConnected;
+    }
+    
+    return false;
+  } catch (err) {
+    log('Network', `Domain connectivity test failed: ${err.message}`, colors.red);
     return false;
   }
 }
 
-// Test environment variables
+// Step 2: Check environment variables
 function checkEnvironmentVariables() {
-  log('Config', 'Checking Supabase environment variables...', colors.blue);
+  log('Config', 'Checking environment variables...', colors.cyan);
   
   const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
+  const supabaseKey = process.env.SUPABASE_KEY;
   
   if (!supabaseUrl) {
-    log('Config', 'ERROR: SUPABASE_URL environment variable is not set', colors.red);
-    return false;
+    log('Config', 'SUPABASE_URL is missing', colors.red);
+  } else {
+    log('Config', `SUPABASE_URL: ${supabaseUrl}`, colors.green);
   }
   
   if (!supabaseKey) {
-    log('Config', 'ERROR: Neither SUPABASE_KEY nor SUPABASE_ANON_KEY environment variables are set', colors.red);
-    return false;
+    log('Config', 'SUPABASE_KEY is missing', colors.red);
+  } else {
+    const maskedKey = supabaseKey.substring(0, 4) + '...' + supabaseKey.substring(supabaseKey.length - 4);
+    log('Config', `SUPABASE_KEY: ${maskedKey}`, colors.green);
   }
-  
-  log('Config', `SUPABASE_URL found: ${supabaseUrl}`, colors.green);
-  log('Config', `SUPABASE_KEY found: ${supabaseKey.substring(0, 8)}...`, colors.green);
   
   return { supabaseUrl, supabaseKey };
 }
 
-// Test Supabase API
+// Step 3: Test Supabase API access
 async function testSupabaseAPI(supabaseUrl, supabaseKey) {
-  log('Supabase', 'Testing Supabase API access...', colors.blue);
-  
-  // Extract the domain from the Supabase URL
-  let domain;
-  try {
-    domain = new URL(supabaseUrl).hostname;
-    log('Supabase', `Extracted domain: ${domain}`, colors.blue);
-  } catch (error) {
-    log('Supabase', `Invalid Supabase URL format: ${error.message}`, colors.red);
+  if (!supabaseUrl || !supabaseKey) {
+    log('Supabase', 'Cannot test Supabase API: Missing configuration', colors.red);
     return false;
   }
   
-  // Test domain connectivity first
-  const canConnect = await testDomainConnectivity(domain);
-  if (!canConnect) {
-    log('Supabase', `Cannot connect to Supabase domain: ${domain}`, colors.red);
-    log('Supabase', 'This could be due to network restrictions, firewall rules, or DNS issues', colors.yellow);
-    return false;
-  }
-  
-  // Initialize Supabase client
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    }
-  });
-  
-  log('Supabase', 'Supabase client initialized, testing authentication...', colors.blue);
+  log('Supabase', 'Creating Supabase client...', colors.cyan);
   
   try {
-    const { data: authData, error: authError } = await supabase.auth.getSession();
+    // Create a Supabase client with enhanced options
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: { 'x-application-name': 'connection-test' },
+      },
+    });
     
-    if (authError) {
-      log('Supabase', `Auth error: ${authError.message}`, colors.red);
-    } else {
-      log('Supabase', 'Auth endpoint accessible', colors.green);
-    }
-  } catch (error) {
-    log('Supabase', `Auth test exception: ${error.message}`, colors.red);
-  }
-  
-  log('Supabase', 'Testing database access...', colors.blue);
-  
-  try {
-    // Testing a simple query to 'users' table
-    const { data: usersData, error: usersError } = await supabase
-      .from('users')
-      .select('id')
-      .limit(1);
+    log('Supabase', 'Testing API connection...', colors.cyan);
     
-    if (usersError) {
-      log('Supabase', `Database error: ${usersError.message}`, colors.red);
-      if (usersError.code) {
-        log('Supabase', `Error code: ${usersError.code}`, colors.red);
+    // Test 1: Basic API connection
+    const { data: healthData, error: healthError } = await supabase.from('users').select('count(*)');
+    
+    if (healthError) {
+      log('Supabase', `API connection test failed: ${healthError.message}`, colors.red);
+      
+      // Show more details about the error
+      if (healthError.code) {
+        log('Supabase', `Error code: ${healthError.code}`, colors.red);
       }
-      if (usersError.details) {
-        log('Supabase', `Error details: ${usersError.details}`, colors.red);
+      if (healthError.details) {
+        log('Supabase', `Error details: ${healthError.details}`, colors.red);
       }
+      
       return false;
     }
     
-    log('Supabase', `Database access successful: Found ${usersData.length} user records`, colors.green);
+    log('Supabase', 'API connection test passed', colors.green);
     
-    // Get and test additional tables
+    // Test 2: RLS policy test - try fetching a specific table that has RLS
+    log('Supabase', 'Testing Row Level Security policy access...', colors.cyan);
+    
     try {
-      log('Supabase', 'Testing access to other important tables...', colors.blue);
-      
-      const tables = [
-        'projects', 
-        'generatedDocuments',
-        'budgetNA853Split',
-        'Monada'
-      ];
-      
-      for (const table of tables) {
-        log('Supabase', `Testing access to "${table}" table...`, colors.blue);
-        const { data, error } = await supabase
-          .from(table)
-          .select('count')
-          .limit(1);
+      const { data: rlsData, error: rlsError } = await supabase
+        .from('Projects')
+        .select('count(*)')
+        .limit(1);
         
-        if (error) {
-          log('Supabase', `Table "${table}" access error: ${error.message}`, colors.red);
-        } else {
-          log('Supabase', `Table "${table}" is accessible`, colors.green);
-        }
+      if (rlsError) {
+        log('Supabase', `RLS test resulted in error: ${rlsError.message}`, colors.yellow);
+        log('Supabase', 'This may be expected if RLS policies are enforced and you are not authenticated', colors.yellow);
+      } else {
+        log('Supabase', 'RLS test passed or RLS not enforced for this table', colors.green);
       }
-    } catch (tableError) {
-      log('Supabase', `Error testing tables: ${tableError.message}`, colors.red);
+    } catch (rlsTestErr) {
+      log('Supabase', `RLS test exception: ${rlsTestErr.message}`, colors.yellow);
     }
     
     return true;
   } catch (error) {
-    log('Supabase', `Database test exception: ${error.message}`, colors.red);
+    log('Supabase', `Supabase client error: ${error.message}`, colors.red);
+    
+    // Show stack trace for debugging
     if (error.stack) {
-      log('Supabase', `Stack trace: ${error.stack}`, colors.yellow);
+      log('Supabase', `Stack trace: ${error.stack}`, colors.red);
     }
+    
     return false;
   }
 }
 
-// Main function
+// Main function to run all diagnostics
 async function runDiagnostics() {
-  log('Diagnostics', '🔍 Starting Supabase connection diagnostics...', colors.bright + colors.cyan);
+  log('System', 'Starting Supabase connection diagnostics', colors.bright);
+  log('System', `Node.js version: ${process.version}`, colors.cyan);
+  log('System', `Platform: ${process.platform}`, colors.cyan);
   
-  // Check for environment variables
-  const envConfig = checkEnvironmentVariables();
-  if (!envConfig) {
-    log('Diagnostics', '❌ Environment variable check failed', colors.red);
-    return;
+  // Extract domain from Supabase URL
+  const { supabaseUrl, supabaseKey } = checkEnvironmentVariables();
+  let domain = '';
+  
+  if (supabaseUrl) {
+    try {
+      domain = new URL(supabaseUrl).hostname;
+      log('Config', `Extracted domain: ${domain}`, colors.cyan);
+    } catch (err) {
+      log('Config', `Failed to parse Supabase URL: ${err.message}`, colors.red);
+    }
   }
   
-  const { supabaseUrl, supabaseKey } = envConfig;
-  
-  // Test network connectivity to Supabase
-  const domainBase = new URL(supabaseUrl).hostname;
-  log('Diagnostics', `Testing network connectivity to Supabase domain...`, colors.blue);
-  const networkOk = await testDomainConnectivity(domainBase);
-  
-  if (!networkOk) {
-    log('Diagnostics', '❌ Network connectivity test failed', colors.red);
-    log('Diagnostics', 'Recommendations:', colors.yellow);
-    log('Diagnostics', '1. Check if your server can reach the internet', colors.yellow);
-    log('Diagnostics', '2. Verify if there are any firewall rules blocking outbound connections', colors.yellow);
-    log('Diagnostics', '3. Check if your DNS resolution is working correctly', colors.yellow);
-    log('Diagnostics', '4. If behind a proxy, make sure it\'s configured correctly', colors.yellow);
-    return;
+  // Network connectivity tests
+  if (domain) {
+    const domainConnected = await testDomainConnectivity(domain);
+    if (!domainConnected) {
+      log('Network', 'Domain connectivity test failed - this indicates network issues', colors.red);
+      process.exit(1);
+    }
+  } else {
+    log('Network', 'Skipping network tests due to missing domain', colors.yellow);
   }
   
-  log('Diagnostics', '✅ Network connectivity test passed', colors.green);
+  // Supabase API tests
+  const apiConnected = await testSupabaseAPI(supabaseUrl, supabaseKey);
   
-  // Test Supabase API
-  log('Diagnostics', 'Testing Supabase API access...', colors.blue);
-  const apiOk = await testSupabaseAPI(supabaseUrl, supabaseKey);
-  
-  if (!apiOk) {
-    log('Diagnostics', '❌ Supabase API test failed', colors.red);
-    log('Diagnostics', 'Recommendations:', colors.yellow);
-    log('Diagnostics', '1. Verify your SUPABASE_KEY is correct and has appropriate permissions', colors.yellow);
-    log('Diagnostics', '2. Check if your Supabase project is active and not in maintenance mode', colors.yellow);
-    log('Diagnostics', '3. Verify the database schema matches what your application expects', colors.yellow);
-    return;
+  if (apiConnected) {
+    log('System', 'All Supabase API tests passed successfully!', colors.green);
+  } else {
+    log('System', 'Some Supabase API tests failed - see above for details', colors.red);
+    process.exit(1);
   }
-  
-  log('Diagnostics', '✅ Supabase API test passed', colors.green);
-  log('Diagnostics', '🎉 All diagnostics passed! Your Supabase connection is working correctly.', colors.bright + colors.green);
 }
 
-// Run the diagnostics
-runDiagnostics().catch(error => {
-  log('Diagnostics', `Uncaught error: ${error.message}`, colors.red);
-  if (error.stack) {
-    console.error(error.stack);
+// Run diagnostics
+runDiagnostics().catch(err => {
+  log('System', `Unhandled error: ${err.message}`, colors.red);
+  if (err.stack) {
+    console.error(err.stack);
   }
   process.exit(1);
 });

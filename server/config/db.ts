@@ -39,8 +39,30 @@ export const supabase = createClient<Database>(
       headers: {
         'x-application-name': 'sdegdaefk-app'
       },
-    }
-    // Removed potentially problematic config options
+    },
+    // Add more resilient network settings
+    realtime: {
+      params: {
+        eventsPerSecond: 5,
+      },
+    },
+  }
+);
+
+// Create a custom client for health checks to avoid interfering with main operations
+export const healthCheckClient = createClient(
+  supabaseUrl,
+  supabaseKey,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+    global: {
+      headers: {
+        'x-application-name': 'sdegdaefk-app-healthcheck'
+      },
+    },
   }
 );
 
@@ -80,20 +102,51 @@ export async function testConnection(retries = 3, timeoutMs = 5000): Promise<boo
   
   console.log('[Database] Testing connection with Supabase URL:', supabaseUrl);
   
+  // Create a promise with timeout
+  const timeoutPromise = (ms: number): Promise<never> => {
+    return new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Timeout exceeded')), ms);
+    });
+  };
+  
   while (retriesLeft > 0) {
     try {
       console.log(`[Database] Connection attempt ${retries - retriesLeft + 1}/${retries}`);
       
-      // Simplified test - just check that we can connect to Supabase
-      const { data, error } = await supabase.from('users').select('id').limit(1);
+      // First check basic auth connection
+      console.log('[Database] Testing authentication endpoint...');
+      const authTest = await Promise.race([
+        healthCheckClient.auth.getSession(),
+        timeoutPromise(timeoutMs / 2)
+      ]);
       
-      if (error) {
-        console.error('[Database] Query error:', error);
-        throw error;
+      if (authTest.error) {
+        console.error('[Database] Auth endpoint error:', authTest.error);
+        throw authTest.error;
+      }
+      
+      console.log('[Database] Auth endpoint is accessible');
+      
+      // Then check database access
+      console.log('[Database] Testing database access...');
+      const dbTest = await Promise.race([
+        healthCheckClient.from('users').select('id').limit(1),
+        timeoutPromise(timeoutMs / 2)
+      ]);
+      
+      if (dbTest.error) {
+        console.error('[Database] Query error:', dbTest.error);
+        throw dbTest.error;
       }
       
       log('[Database] Supabase connection successfully verified', 'info');
-      console.log('[Database] Connection test result:', { data });
+      console.log('[Database] Connection test result:', { 
+        data: dbTest.data, 
+        count: dbTest.data?.length || 0
+      });
+      
+      // Mark this as a successful connection for our health monitoring
+      markSuccessfulConnection();
       
       return true;
     } catch (err: any) {
@@ -101,41 +154,128 @@ export async function testConnection(retries = 3, timeoutMs = 5000): Promise<boo
       console.error(`[Database] Connection test failed (${retriesLeft} retries left)`);
       
       // Add detailed error logging
-      console.error('[Database] Error object:', err);
-      console.error('[Database] Error details:', {
-        message: err.message,
-        code: err.code,
-        details: err.details,
-        hint: err.hint,
-        status: err.status,
-        statusText: err.statusText
-      });
+      console.error('[Database] Error message:', err.message);
       
-      if (err.stack) {
+      // Structured error logging based on error type
+      if (err.code || err.details || err.hint || err.status) {
+        console.error('[Database] Error details:', {
+          message: err.message,
+          code: err.code,
+          details: err.details,
+          hint: err.hint,
+          status: err.status,
+          statusText: err.statusText
+        });
+      }
+      
+      // Only log stack in development to avoid sensitive info in production
+      if (err.stack && process.env.NODE_ENV !== 'production') {
         console.error('[Database] Error stack:', err.stack);
       }
       
-      // Decrease retries and wait before next attempt with simple backoff
+      // Mark this failed connection for health monitoring
+      markFailedConnection();
+      
+      // Decrease retries and wait before next attempt with exponential backoff
       retriesLeft--;
-      const backoffTime = retriesLeft > 0 ? 2000 : 0;
-      await sleep(backoffTime);
+      if (retriesLeft > 0) {
+        // Calculate backoff with some randomness (jitter) to prevent thundering herd
+        const jitter = Math.floor(Math.random() * 500);
+        const backoffTime = Math.min(2000 * (retries - retriesLeft) + jitter, 10000);
+        console.log(`[Database] Retrying in ${backoffTime}ms...`);
+        await sleep(backoffTime);
+      }
     }
   }
   
   // If we got here, all retries failed
   console.error('[Database] All connection attempts failed');
+  if (lastError) {
+    console.error('[Database] Last error:', lastError.message);
+  }
   return false;
 }
 
-// For compatibility with existing code that expects this function
+// Track last successful connection time for health monitoring
+let lastSuccessfulConnection = Date.now();
+let connectionErrors = 0;
+const MAX_ERRORS_BEFORE_RESET = 3;
+
+/**
+ * Resets Supabase connection if needed by creating a new healthcheck client
+ * This helps recover from connection issues or stale connections
+ */
 export function resetConnectionPoolIfNeeded() {
-  log('[Database] No connection pool to reset - using Supabase instead', 'info');
+  const currentTime = Date.now();
+  const timeSinceLastSuccess = currentTime - lastSuccessfulConnection;
+  
+  // If we've had too many errors or it's been too long since last success
+  if (connectionErrors >= MAX_ERRORS_BEFORE_RESET || timeSinceLastSuccess > 30 * 60 * 1000) {
+    log('[Database] Resetting Supabase connection due to errors or timeout', 'info');
+    
+    try {
+      // Ensure we have valid credentials
+      if (!supabaseUrl || !supabaseKey) {
+        log('[Database] Cannot reset connection - missing credentials', 'error');
+        return false;
+      }
+      
+      // Reset the health check client by creating a new one
+      const newHealthCheckClient = createClient(
+        supabaseUrl,
+        supabaseKey,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+          },
+          global: {
+            headers: {
+              'x-application-name': 'sdegdaefk-app-healthcheck-reset'
+            },
+          },
+        }
+      );
+      
+      // Replace the existing client
+      Object.keys(newHealthCheckClient).forEach(key => {
+        // @ts-ignore - Dynamically copying properties
+        healthCheckClient[key] = newHealthCheckClient[key];
+      });
+      
+      // Reset error counter
+      connectionErrors = 0;
+      log('[Database] Supabase health check client has been reset', 'info');
+      return true;
+    } catch (error) {
+      log('[Database] Failed to reset Supabase health check client', 'error');
+      console.error('[Database] Reset error:', error);
+      return false;
+    }
+  }
+  
   return true;
+}
+
+/**
+ * Mark a successful database operation to track connectivity health
+ */
+export function markSuccessfulConnection() {
+  lastSuccessfulConnection = Date.now();
+  connectionErrors = 0;
+}
+
+/**
+ * Mark a failed database operation to track connectivity health
+ */
+export function markFailedConnection() {
+  connectionErrors++;
+  console.warn(`[Database] Connection error count: ${connectionErrors}/${MAX_ERRORS_BEFORE_RESET}`);
 }
 
 // For compatibility with existing code that expects this function
 export function setupPoolErrorHandlers() {
-  log('[Database] No pool error handlers to set up - using Supabase instead', 'info');
+  log('[Database] Setting up Supabase error monitoring', 'info');
 }
 
 export async function closeConnections() {

@@ -5,120 +5,76 @@
  * Run with: node test-supabase-network.js
  */
 
-const https = require('https');
-const dns = require('dns').promises;
-const { execSync } = require('child_process');
+import * as dotenv from 'dotenv';
+import dns from 'dns';
+import { createConnection } from 'net';
+import https from 'https';
+import { promisify } from 'util';
+import { exec } from 'child_process';
 
-// Load environment variables if needed
-try {
-  require('dotenv').config();
-} catch (e) {
-  console.log('dotenv not available, using environment variables as is');
-}
+// Load environment variables
+dotenv.config();
 
-// Get Supabase URL from environment or use default
-const supabaseUrl = process.env.SUPABASE_URL || 'https://rlzrtiufwxlljrtmpwsr.supabase.co';
-let supabaseDomain;
+// Extract Supabase domain from URL
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseDomain = supabaseUrl ? new URL(supabaseUrl).hostname : '';
 
-try {
-  supabaseDomain = new URL(supabaseUrl).hostname;
-  console.log(`Testing connectivity to Supabase domain: ${supabaseDomain}`);
-} catch (error) {
-  console.error(`Invalid Supabase URL: ${supabaseUrl}`);
+if (!supabaseDomain) {
+  console.error('Error: Could not extract Supabase domain from SUPABASE_URL environment variable');
   process.exit(1);
 }
 
-// Test DNS resolution
+// DNS test
 async function testDns(domain) {
-  console.log('\n--- DNS Resolution Test ---');
+  console.log(`\n[DNS] Testing DNS resolution for ${domain}...`);
+  
   try {
-    console.log(`Resolving ${domain}...`);
-    const addresses = await dns.resolve4(domain);
-    console.log(`✅ DNS resolution successful. IP addresses: ${addresses.join(', ')}`);
+    const addresses = await promisify(dns.lookup)(domain, { all: true });
+    console.log(`[DNS] ✅ Successfully resolved ${domain} to:`);
+    addresses.forEach(addr => {
+      console.log(`[DNS]   - ${addr.address} (${addr.family === 6 ? 'IPv6' : 'IPv4'})`);
+    });
     return addresses;
-  } catch (error) {
-    console.error(`❌ DNS resolution failed: ${error.message}`);
+  } catch (err) {
+    console.error(`[DNS] ❌ DNS resolution failed: ${err.message}`);
     return null;
   }
 }
 
-// Test TCP connection
+// TCP connection test
 function testTcpConnection(domain, port = 443) {
-  console.log(`\n--- TCP Connection Test (Port ${port}) ---`);
+  console.log(`\n[TCP] Testing TCP connectivity to ${domain}:${port}...`);
+  
   return new Promise((resolve) => {
-    const req = https.request({
-      hostname: domain,
-      port: port,
-      path: '/',
-      method: 'HEAD',
-      timeout: 5000
-    }, (res) => {
-      console.log(`✅ TCP connection successful. Response status: ${res.statusCode}`);
+    const startTime = Date.now();
+    const socket = createConnection(port, domain);
+    
+    socket.on('connect', () => {
+      const duration = Date.now() - startTime;
+      console.log(`[TCP] ✅ TCP connection successful (${duration}ms)`);
+      socket.end();
       resolve(true);
     });
     
-    req.on('timeout', () => {
-      console.error('❌ Connection timed out');
-      req.destroy();
+    socket.on('error', (err) => {
+      console.error(`[TCP] ❌ TCP connection failed: ${err.message}`);
       resolve(false);
     });
     
-    req.on('error', (err) => {
-      console.error(`❌ Connection error: ${err.message}`);
+    socket.setTimeout(5000, () => {
+      console.error('[TCP] ❌ TCP connection timed out after 5 seconds');
+      socket.destroy();
       resolve(false);
     });
-    
-    req.end();
   });
 }
 
-// Try to determine the server's public IP
+// Get server's public IP
 function getServerPublicIp() {
-  console.log('\n--- Server Public IP ---');
-  try {
-    // Try multiple services to determine public IP
-    const services = [
-      'curl -s https://api.ipify.org',
-      'curl -s https://ipinfo.io/ip',
-      'curl -s https://icanhazip.com'
-    ];
-    
-    for (const cmd of services) {
-      try {
-        const ip = execSync(cmd).toString().trim();
-        if (ip && /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/.test(ip)) {
-          console.log(`✅ Server public IP: ${ip}`);
-          return ip;
-        }
-      } catch (e) {
-        // Try next service
-      }
-    }
-    console.error('❌ Could not determine server public IP');
-    return null;
-  } catch (error) {
-    console.error(`❌ Error determining public IP: ${error.message}`);
-    return null;
-  }
-}
-
-// Test HTTP connection
-async function testHttpConnection(domain) {
-  console.log('\n--- HTTP/HTTPS Connection Test ---');
+  console.log('\n[Network] Determining server public IP...');
   
   return new Promise((resolve) => {
-    console.log(`Testing HTTPS connection to ${domain}...`);
-    
-    const req = https.request({
-      hostname: domain,
-      port: 443,
-      path: '/',
-      method: 'GET',
-      timeout: 10000,
-      headers: {
-        'User-Agent': 'Supabase Connection Test'
-      }
-    }, (res) => {
+    https.get('https://api.ipify.org', (res) => {
       let data = '';
       
       res.on('data', (chunk) => {
@@ -126,20 +82,42 @@ async function testHttpConnection(domain) {
       });
       
       res.on('end', () => {
-        console.log(`✅ HTTPS connection successful. Status: ${res.statusCode}`);
-        console.log(`Response headers:`, res.headers);
-        resolve(true);
+        console.log(`[Network] ✅ Server public IP: ${data}`);
+        resolve(data);
       });
+    }).on('error', (err) => {
+      console.error(`[Network] ❌ Failed to get public IP: ${err.message}`);
+      resolve(null);
     });
-    
-    req.on('timeout', () => {
-      console.error('❌ HTTPS request timed out');
-      req.destroy();
-      resolve(false);
+  });
+}
+
+// HTTP connection test
+async function testHttpConnection(domain) {
+  console.log(`\n[HTTP] Testing HTTPS connectivity to ${domain}...`);
+  
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    const req = https.request({
+      hostname: domain,
+      port: 443,
+      path: '/',
+      method: 'HEAD',
+      timeout: 5000,
+    }, (res) => {
+      const duration = Date.now() - startTime;
+      console.log(`[HTTP] ✅ HTTPS connection successful: ${res.statusCode} ${res.statusMessage} (${duration}ms)`);
+      resolve(true);
     });
     
     req.on('error', (err) => {
-      console.error(`❌ HTTPS request error: ${err.message}`);
+      console.error(`[HTTP] ❌ HTTPS request failed: ${err.message}`);
+      resolve(false);
+    });
+    
+    req.on('timeout', () => {
+      console.error('[HTTP] ❌ HTTPS request timed out after 5 seconds');
+      req.destroy();
       resolve(false);
     });
     
@@ -147,163 +125,117 @@ async function testHttpConnection(domain) {
   });
 }
 
-// Run traceroute to identify network path issues
+// Run traceroute to Supabase domain
 function runTraceroute(domain) {
-  console.log('\n--- Network Path Test (Traceroute) ---');
+  console.log(`\n[Traceroute] Running traceroute to ${domain}...`);
   
-  try {
-    // Check if traceroute/tracepath is available
-    let cmd = 'traceroute';
-    try {
-      execSync('which traceroute >/dev/null 2>&1');
-    } catch (e) {
-      try {
-        execSync('which tracepath >/dev/null 2>&1');
-        cmd = 'tracepath';
-      } catch (e2) {
-        console.log('❌ Neither traceroute nor tracepath is available');
+  return new Promise((resolve) => {
+    // Use traceroute on Unix-like systems or tracert on Windows
+    const cmd = process.platform === 'win32'
+      ? `tracert -d -h 15 ${domain}`
+      : `traceroute -n -m 15 ${domain}`;
+    
+    exec(cmd, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`[Traceroute] ⚠️ Error running traceroute: ${error.message}`);
+        resolve(false);
         return;
       }
-    }
-    
-    // Run the command with a timeout
-    console.log(`Running ${cmd} to ${domain}...`);
-    const result = execSync(`${cmd} -m 15 ${domain} 2>&1`, { timeout: 15000 }).toString();
-    console.log(result);
-    
-    // Check for timeouts or routing issues in the output
-    if (result.includes('* * *')) {
-      console.log('⚠️ Some hops are not responding. This could indicate network filtering.');
-    }
-    
-  } catch (error) {
-    console.error(`❌ Error running network path test: ${error.message}`);
-  }
-}
-
-// Check for firewall or proxy settings
-function checkNetworkSettings() {
-  console.log('\n--- Network Settings Check ---');
-  
-  // Check for proxy environment variables
-  const proxyVars = ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY', 'all_proxy', 'ALL_PROXY'];
-  let proxyFound = false;
-  
-  for (const proxyVar of proxyVars) {
-    if (process.env[proxyVar]) {
-      console.log(`⚠️ Proxy setting found: ${proxyVar}=${process.env[proxyVar]}`);
-      proxyFound = true;
-    }
-  }
-  
-  if (!proxyFound) {
-    console.log('✅ No proxy environment variables detected');
-  }
-  
-  // Try to check iptables if available
-  try {
-    console.log('\nChecking for firewall rules (requires root/sudo access):');
-    const iptables = execSync('iptables -L -n 2>/dev/null || echo "Permission denied"').toString();
-    
-    if (iptables.includes('Permission denied')) {
-      console.log('⚠️ Cannot check firewall rules - insufficient permissions');
-    } else if (iptables.includes('Chain') && iptables.includes('policy')) {
-      console.log('✅ Firewall rules accessible. Look for any rules that might block outbound HTTPS (port 443)');
-      // Look for any DROP rules
-      if (iptables.includes('DROP')) {
-        console.log('⚠️ Firewall has DROP rules which might affect outbound connections');
+      
+      console.log('[Traceroute] Results:');
+      const lines = stdout.split('\n').slice(0, 20); // Limit output to first 20 lines
+      lines.forEach(line => console.log(`[Traceroute] ${line}`));
+      
+      if (lines.length > 20) {
+        console.log('[Traceroute] ... (output truncated)');
       }
-    }
-  } catch (error) {
-    console.log('⚠️ Cannot check firewall rules - iptables not available');
+      
+      resolve(true);
+    });
+  });
+}
+
+// Check network settings
+function checkNetworkSettings() {
+  console.log('\n[Network] Checking network settings...');
+  
+  // Check if we're running on a Replit environment
+  const isReplit = process.env.REPL_ID || process.env.REPL_OWNER;
+  if (isReplit) {
+    console.log('[Network] ℹ️ Running in Replit environment');
+    console.log('[Network] ℹ️ Replit uses proxies for outbound connections');
+  }
+  
+  // Check for HTTP_PROXY or HTTPS_PROXY environment variables
+  const httpProxy = process.env.HTTP_PROXY || process.env.http_proxy;
+  const httpsProxy = process.env.HTTPS_PROXY || process.env.https_proxy;
+  
+  if (httpProxy) {
+    console.log(`[Network] ℹ️ HTTP_PROXY is set to: ${httpProxy}`);
+  }
+  
+  if (httpsProxy) {
+    console.log(`[Network] ℹ️ HTTPS_PROXY is set to: ${httpsProxy}`);
+  }
+  
+  if (!httpProxy && !httpsProxy) {
+    console.log('[Network] ℹ️ No proxy environment variables detected');
   }
 }
 
-// Main function
+// Run all network tests
 async function runNetworkTests() {
-  console.log('=======================================================');
-  console.log('🔍 SUPABASE NETWORK CONNECTIVITY DIAGNOSTIC TOOL');
-  console.log('=======================================================');
-  console.log(`Testing connection to: ${supabaseUrl}`);
-  console.log('=======================================================');
+  console.log('=== Supabase Network Connectivity Test ===');
+  console.log(`Testing connectivity to Supabase domain: ${supabaseDomain}`);
   
-  // Get server's public IP
-  const publicIp = getServerPublicIp();
-  
-  // Test DNS resolution
-  const ipAddresses = await testDns(supabaseDomain);
-  
-  // Test TCP connection
-  const tcpResult = await testTcpConnection(supabaseDomain);
-  
-  // Test HTTP connection
-  const httpResult = await testHttpConnection(supabaseDomain);
-  
-  // Network path analysis
-  if (!tcpResult || !httpResult) {
-    runTraceroute(supabaseDomain);
-  }
-  
-  // Check network settings
+  // Check environment
   checkNetworkSettings();
   
-  // Summary and recommendations
-  console.log('\n=======================================================');
-  console.log('📊 TEST SUMMARY');
-  console.log('=======================================================');
+  // Get server public IP
+  await getServerPublicIp();
   
-  if (ipAddresses) {
-    console.log('✅ DNS Resolution: SUCCESS');
+  // DNS test
+  const dnsResults = await testDns(supabaseDomain);
+  
+  // TCP connection test
+  const tcpResult = await testTcpConnection(supabaseDomain);
+  
+  // HTTP connection test
+  const httpResult = await testHttpConnection(supabaseDomain);
+  
+  // Run traceroute if any tests failed
+  if (!dnsResults || !tcpResult || !httpResult) {
+    console.log('\n[Network] ⚠️ Some connectivity tests failed, running traceroute for additional diagnostics...');
+    await runTraceroute(supabaseDomain);
+  }
+  
+  // Show summary
+  console.log('\n=== Summary ===');
+  console.log(`Supabase Domain: ${supabaseDomain}`);
+  console.log(`DNS Resolution: ${dnsResults ? '✅ SUCCESS' : '❌ FAILED'}`);
+  console.log(`TCP Connection: ${tcpResult ? '✅ SUCCESS' : '❌ FAILED'}`);
+  console.log(`HTTP Connection: ${httpResult ? '✅ SUCCESS' : '❌ FAILED'}`);
+  
+  // Provide recommendation
+  if (dnsResults && tcpResult && httpResult) {
+    console.log('\n✅ All network tests passed. Network connectivity to Supabase looks good!');
+    console.log('If you are still experiencing issues connecting to Supabase, the problem may be related to:');
+    console.log('- API key permissions or configuration');
+    console.log('- Database permissions or Row Level Security (RLS) policies');
+    console.log('- Rate limiting or IP restrictions on the Supabase project');
   } else {
-    console.log('❌ DNS Resolution: FAILED');
+    console.log('\n⚠️ Some network tests failed. This indicates network connectivity issues to Supabase.');
+    console.log('Recommendations:');
+    console.log('- Check your firewall or network security settings');
+    console.log('- If using a proxy, ensure it allows connections to Supabase domains');
+    console.log('- Check if your hosting provider restricts outbound connections');
+    console.log('- Verify if the Supabase service is operational (status.supabase.com)');
   }
-  
-  if (tcpResult) {
-    console.log('✅ TCP Connection: SUCCESS');
-  } else {
-    console.log('❌ TCP Connection: FAILED');
-  }
-  
-  if (httpResult) {
-    console.log('✅ HTTP Connection: SUCCESS');
-  } else {
-    console.log('❌ HTTP Connection: FAILED');
-  }
-  
-  console.log('\n=======================================================');
-  console.log('🧠 RECOMMENDATIONS');
-  console.log('=======================================================');
-  
-  if (!ipAddresses) {
-    console.log('• Check your DNS server configuration');
-    console.log('• Ensure DNS resolution is working on this server');
-    console.log('• Try adding an entry to /etc/hosts for quick testing');
-  }
-  
-  if (!tcpResult) {
-    console.log('• Check if port 443 (HTTPS) is blocked by firewall');
-    console.log('• Verify outbound connections are allowed from this server');
-    console.log('• Check if a proxy server is required for external connections');
-  }
-  
-  if (!httpResult && tcpResult) {
-    console.log('• TCP works but HTTP fails - could be protocol filtering');
-    console.log('• Check for SSL/TLS inspection or HTTPS proxy requirements');
-    console.log('• Verify TLS versions supported by your server');
-  }
-  
-  if (tcpResult && httpResult) {
-    console.log('✅ Network connectivity to Supabase appears to be working correctly!');
-    console.log('• If you still have issues, check your SUPABASE_URL and SUPABASE_KEY values');
-    console.log('• Make sure your Supabase project is active and not in maintenance mode');
-    console.log('• Verify IP allow lists in Supabase dashboard if you have them enabled');
-  }
-  
-  console.log('\nFor further diagnostics, run the full check-supabase-connection.js script.');
 }
 
 // Run the network tests
-runNetworkTests().catch(error => {
-  console.error(`Uncaught error: ${error.message}`);
+runNetworkTests().catch(err => {
+  console.error(`Unhandled error: ${err.message}`);
+  console.error(err.stack);
   process.exit(1);
 });

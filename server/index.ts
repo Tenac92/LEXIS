@@ -14,6 +14,7 @@ import { databaseErrorRecoveryMiddleware } from './middleware/databaseErrorRecov
 import documentsPreHandler from './middleware/sdegdaefk/documentsPreHandler';
 import { createWebSocketServer } from './websocket';
 import { supabase, testConnection, resetConnectionPoolIfNeeded } from './config/db';
+import { errorHandler } from './middleware/errorHandler';
 
 // Enhanced error handlers
 process.on('uncaughtException', (error) => {
@@ -174,7 +175,11 @@ async function startServer() {
       app.use(databaseErrorRecoveryMiddleware);
       console.log('[Startup] Database error recovery middleware applied');
 
-      // Error handling middleware (catches all other errors)
+      // Enhanced error handling with Supabase-specific error detection
+      app.use(errorHandler);
+      console.log('[Startup] Enhanced Supabase error handler applied');
+      
+      // Legacy error handling middleware as fallback
       app.use(errorMiddleware);
 
       // Create WebSocket server with error handling

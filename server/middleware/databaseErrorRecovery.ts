@@ -1,295 +1,77 @@
 /**
  * Database Error Recovery Middleware
  * 
- * This middleware specifically intercepts database-related errors
- * and attempts to recover by refreshing the Supabase connection before proceeding.
+ * This middleware detects database errors, marks them, and attempts recovery
+ * by resetting connections and testing connectivity.
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { resetConnectionPoolIfNeeded, markFailedConnection, testConnection } from '../config/db';
 import { log } from '../vite';
-import { testConnection, supabase } from '../config/db';
 
 /**
- * A record of recent error recovery attempts to prevent infinite loops
- */
-const recoveryAttempts = new Map<string, {
-  count: number;
-  lastAttempt: number;
-}>();
-
-/**
- * Maximum number of recovery attempts in a time window
- */
-const MAX_RECOVERY_ATTEMPTS = 3;
-
-/**
- * Time window for recovery attempts (in milliseconds)
- * 5 minutes = 300,000 ms
- */
-const RECOVERY_WINDOW = 300000;
-
-/**
- * Generates a unique key for the request to track recovery attempts
- */
-function getRequestKey(req: Request): string {
-  return `${req.method}:${req.path}:${req.ip}`;
-}
-
-/**
- * Check if we've exceeded recovery attempts for this request
- */
-function canAttemptRecovery(key: string): boolean {
-  const now = Date.now();
-  const attempt = recoveryAttempts.get(key);
-  
-  // If no previous attempts or attempts were a long time ago, reset counter
-  if (!attempt || (now - attempt.lastAttempt > RECOVERY_WINDOW)) {
-    recoveryAttempts.set(key, { count: 1, lastAttempt: now });
-    return true;
-  }
-  
-  // Check if we've exceeded the max attempts
-  if (attempt.count >= MAX_RECOVERY_ATTEMPTS) {
-    return false;
-  }
-  
-  // Increment attempt counter
-  attempt.count += 1;
-  attempt.lastAttempt = now;
-  recoveryAttempts.set(key, attempt);
-  
-  return true;
-}
-
-/**
- * Attempt to reconnect to the database
- */
-async function reconnectDatabase(): Promise<boolean> {
-  try {
-    log('[DatabaseRecovery] Attempting to reconnect to the database', 'info');
-    
-    // Test connection with custom retry logic
-    return await testConnection();
-  } catch (error) {
-    log(`[DatabaseRecovery] Failed to reconnect to database: ${error}`, 'error');
-    return false;
-  }
-}
-
-/**
- * Checks if the request is from sdegdaefk.gr domain
- */
-export function isFromSdegdaefkDomain(req: Request): boolean {
-  const origin = req.headers.origin;
-  const referer = req.headers.referer;
-  const host = req.headers.host;
-  
-  return (
-    (typeof origin === 'string' && origin.includes('sdegdaefk.gr')) ||
-    (typeof host === 'string' && host.includes('sdegdaefk.gr')) ||
-    (typeof referer === 'string' && referer.includes('sdegdaefk.gr'))
-  );
-}
-
-/**
- * Determines if an error is database-related by examining its properties
+ * Check if an error is related to database connectivity
  */
 function isDatabaseError(err: any): boolean {
-  console.log('[DbErrorDetection] Analyzing error:', err);
-  console.log('[DbErrorDetection] Error type:', typeof err);
-  
   if (!err) return false;
   
-  // For network errors
-  if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND') {
-    console.log('[DbErrorDetection] Network error detected:', err.code);
+  // Check for common database error codes and messages
+  const dbErrorCodes = ['28P01', '3D000', '08006', '08001', '08004', 'PGCONNECTION'];
+  const dbErrorPatterns = [
+    'database', 'db', 'connection', 'postgres', 'pg', 'supabase', 
+    'timeout', 'connection refused', 'password authentication'
+  ];
+  
+  // Check error code
+  if (err.code && dbErrorCodes.includes(err.code)) {
     return true;
   }
   
-  // Specific Supabase error codes
-  if (err.code === 'PGRST301' || // Authentication failed
-      err.code === 'PGRST303' || // Database resource not found
-      err.code === 'PGRST500' || // Database error
-      err.code === '42P01' ||    // Undefined table
-      err.code === '42P07' ||    // Duplicate table
-      err.code === '42703' ||    // Undefined column
-      err.code === '22P02' ||    // Invalid input syntax
-      err.code === '23505') {    // Unique violation
-    console.log('[DbErrorDetection] Supabase error code detected:', err.code);
-    return true;
+  // Check error message
+  if (err.message) {
+    const message = err.message.toLowerCase();
+    for (const pattern of dbErrorPatterns) {
+      if (message.includes(pattern.toLowerCase())) {
+        return true;
+      }
+    }
   }
   
-  // For Supabase error object structure
-  if (err.error) {
-    console.log('[DbErrorDetection] Supabase error object detected');
-    return true;
-  }
-  
-  // Supabase errors might have different formatting
-  if (err.error_description && typeof err.error_description === 'string' && 
-      (err.error_description.includes('database') || err.error_description.includes('connection'))) {
-    console.log('[DbErrorDetection] Supabase error_description detected');
-    return true;
-  }
-  
-  // Check if this is a Supabase error by looking for properties
-  if (err.statusCode && err.statusText && (err.statusCode >= 400)) {
-    console.log('[DbErrorDetection] Supabase HTTP error detected:', err.statusCode);
-    return true;
-  }
-  
-  // Look for connection-related error messages
-  const errorMessage = err.message ? err.message.toLowerCase() : '';
-  if (
-    errorMessage.includes('database') || 
-    errorMessage.includes('supabase') ||
-    errorMessage.includes('connection') || 
-    errorMessage.includes('timeout') ||
-    errorMessage.includes('query')
-  ) {
-    console.log('[DbErrorDetection] Database-related message detected:', errorMessage);
-    return true;
-  }
-  
-  // Check stack trace for database mentions
-  const stackTrace = err.stack ? err.stack.toLowerCase() : '';
-  if (
-    (stackTrace.includes('supabase') || stackTrace.includes('postgres') || stackTrace.includes('database')) &&
-    (stackTrace.includes('connection') || stackTrace.includes('query') || stackTrace.includes('client'))
-  ) {
-    console.log('[DbErrorDetection] Database-related stack trace detected');
-    return true;
-  }
-  
-  console.log('[DbErrorDetection] Not a database error');
   return false;
 }
 
 /**
- * The actual error recovery middleware
+ * Middleware to detect database errors and attempt recovery
  */
-export async function databaseErrorRecoveryMiddleware(err: any, req: Request, res: Response, next: NextFunction) {
-  // Check if this is a database-related error
-  if (!isDatabaseError(err)) {
-    return next(err);
-  }
-  
-  const requestKey = getRequestKey(req);
-  
-  log(`[DatabaseRecovery] Detected database error for ${req.method} ${req.path}: ${err.code || 'unknown'}`, 'error');
-  log(`[DatabaseRecovery] Error message: ${err.message}`, 'error');
-  
-  // Check if we can attempt recovery
-  if (!canAttemptRecovery(requestKey)) {
-    log(`[DatabaseRecovery] Too many recovery attempts for ${requestKey}, proceeding to error handler`, 'error');
-    return next(err);
-  }
-  
-  // Attempt to recover the database connection
-  const recoverySucceeded = await reconnectDatabase();
-  
-  if (!recoverySucceeded) {
-    log(`[DatabaseRecovery] Recovery failed for ${requestKey}, proceeding to error handler`, 'error');
+export function databaseErrorRecoveryMiddleware(err: any, req: Request, res: Response, next: NextFunction) {
+  if (isDatabaseError(err)) {
+    log('[Database] Database error detected, initiating recovery procedure...', 'warn');
     
-    // Special handling for sdegdaefk.gr domain regardless of recovery success
-    if (isFromSdegdaefkDomain(req)) {
-      // For document requests, provide a user-friendly message and help options
-      if (req.path.startsWith('/documents') || req.path.includes('document')) {
-        log(`[DatabaseRecovery] Handling document request from sdegdaefk.gr during database error`, 'info');
-        
-        // For API requests, return a structured error response
-        if (req.headers.accept && req.headers.accept.includes('application/json')) {
-          return res.status(200).json({
-            status: 'error',
-            loginRequired: false,
-            error: {
-              code: 'DATABASE_ERROR',
-              message: 'Σφάλμα βάσης δεδομένων. Παρακαλούμε ανανεώστε τη σελίδα και προσπαθήστε ξανά.',
-            },
-            redirectUrl: '/'
-          });
+    // Mark the connection as failed
+    markFailedConnection();
+    
+    // Reset connection pool if needed
+    resetConnectionPoolIfNeeded();
+    
+    // Test the connection to see if it's now working
+    testConnection(1)
+      .then(success => {
+        if (success) {
+          log('[Database] Recovery successful - connection restored', 'info');
+        } else {
+          log('[Database] Recovery attempt failed - connection still down', 'error');
         }
-        
-        // For browser requests, show an HTML error page with retry options
-        return res.status(200).send(`
-          <!DOCTYPE html>
-          <html lang="el">
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Σφάλμα Σύνδεσης</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 0; padding: 20px; text-align: center; }
-              .error-container { max-width: 600px; margin: 100px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-              h1 { color: #d32f2f; }
-              .buttons { margin-top: 30px; }
-              .button { display: inline-block; margin: 0 10px; padding: 10px 20px; background-color: #1976d2; color: white; 
-                text-decoration: none; border-radius: 4px; }
-              .button.secondary { background-color: #757575; }
-            </style>
-          </head>
-          <body>
-            <div class="error-container">
-              <h1>Σφάλμα Σύνδεσης με τη Βάση Δεδομένων</h1>
-              <p>Παρουσιάστηκε πρόβλημα σύνδεσης με τη βάση δεδομένων. Παρακαλούμε δοκιμάστε ξανά σε λίγο.</p>
-              <div class="buttons">
-                <a href="/" class="button">Επιστροφή στην αρχική σελίδα</a>
-                <a href="javascript:window.location.reload()" class="button secondary">Ανανέωση σελίδας</a>
-              </div>
-            </div>
-          </body>
-          </html>
-        `);
-      }
-    }
-    
-    return next(err);
-  }
-  
-  // If recovery succeeded, retry the original request
-  log(`[DatabaseRecovery] Recovered database connection, retrying ${req.method} ${req.path}`, 'info');
-  
-  // Special handling for sdegdaefk.gr domain requests after successful recovery
-  if (isFromSdegdaefkDomain(req)) {
-    log(`[DatabaseRecovery] Request from sdegdaefk.gr domain, redirecting to home page`, 'info');
-    
-    // For API requests, return a special recovery message with refresh code
-    if (req.headers.accept && req.headers.accept.includes('application/json')) {
-      return res.status(200).json({
-        status: 'recovered',
-        message: 'Η σύνδεση με τη βάση δεδομένων αποκαταστάθηκε. Παρακαλούμε ανανεώστε τη σελίδα.',
-        code: 'DATABASE_RECOVERED',
-        refreshRequired: true
+      })
+      .catch(testError => {
+        log('[Database] Error during connection test: ' + testError.message, 'error');
+      })
+      .finally(() => {
+        // Always continue to the next error handler
+        // This middleware doesn't send a response, it just tries to recover
+        next(err);
       });
-    }
-    
-    // For browser requests, show a recovery page with automatic refresh
-    return res.status(200).send(`
-      <!DOCTYPE html>
-      <html lang="el">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="refresh" content="3;url=/">
-        <title>Η σύνδεση αποκαταστάθηκε</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; text-align: center; }
-          .success-container { max-width: 600px; margin: 100px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-          h1 { color: #388e3c; }
-          .redirect-message { margin-top: 20px; font-style: italic; color: #757575; }
-        </style>
-      </head>
-      <body>
-        <div class="success-container">
-          <h1>Η σύνδεση αποκαταστάθηκε</h1>
-          <p>Η σύνδεση με τη βάση δεδομένων αποκαταστάθηκε επιτυχώς.</p>
-          <p class="redirect-message">Ανακατεύθυνση στην αρχική σελίδα σε 3 δευτερόλεπτα...</p>
-        </div>
-      </body>
-      </html>
-    `);
+  } else {
+    // Not a database error, continue to next middleware
+    next(err);
   }
-  
-  // For other requests, let Express move on to handle it naturally
-  return next();
 }
