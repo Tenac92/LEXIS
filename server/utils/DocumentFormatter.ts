@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import { after } from "node:test";
 
 interface UnitDetails {
+  unit: string;
   unit_name?: {
     name: string;
     prop: string;
@@ -392,7 +393,7 @@ export class DocumentFormatter {
         italics: true,
       },
       {
-        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${documentData.unit}`,
+        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${unitDetails.unit}`,
         italics: true,
       },
     ];
@@ -461,7 +462,7 @@ export class DocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: `Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${documentData.unit}, σύμφωνα με τα παρακάτω στοιχεία.`,
+            text: `Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${unitDetails.unit}, σύμφωνα με τα παρακάτω στοιχεία.`,
           }),
         ],
       }),
@@ -900,30 +901,6 @@ export class DocumentFormatter {
             },
           },
           children: [
-            await DocumentFormatter.createDocumentHeader(data, unitDetails || undefined),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "ΟΡΘΗ ΕΠΑΝΑΛΗΨΗ",
-                  bold: true,
-                  size: 32,
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-              spacing: { before: 240, after: 240 },
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "Λόγος διόρθωσης: ",
-                  bold: true,
-                }),
-                new TextRun({
-                  text: data.comments || '',
-                }),
-              ],
-              spacing: { before: 240, after: 480 },
-            }),
             ...DocumentFormatter.createDocumentSubject(data, unitDetails || {}),
             ...DocumentFormatter.createMainContent(data, unitDetails || {}),
             DocumentFormatter.createPaymentTable(data.recipients),
