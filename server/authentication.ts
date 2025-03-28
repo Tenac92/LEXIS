@@ -165,7 +165,10 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
     
     console.log('[Auth] User authenticated:', { 
       id: req.user?.id,
+      name: req.user?.name,
+      email: req.user?.email,
       role: req.user?.role,
+      units: req.user?.units,
       sessionID: req.sessionID,
       ip: req.ip
     });
@@ -248,8 +251,11 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
 
     console.log('[Auth] User authenticated:', {
       id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
       role: req.user.role,
       units: req.user.units,
+      department: req.user.department,
       sessionID: req.sessionID
     });
 
@@ -479,7 +485,11 @@ export async function setupAuth(app: Express) {
 
       console.log('[Auth] Login successful:', {
         id: sessionUser.id,
+        name: sessionUser.name,
+        email: sessionUser.email,
         role: sessionUser.role,
+        units: sessionUser.units,
+        department: sessionUser.department,
         sessionID: req.sessionID,
         ip: req.ip
       });
@@ -546,7 +556,11 @@ export async function setupAuth(app: Express) {
 
       console.log('[Auth] Returning current user:', { 
         id: req.user?.id,
+        name: req.user?.name,
+        email: req.user?.email,
         role: req.user?.role,
+        units: req.user?.units,
+        department: req.user?.department,
         sessionID: req.sessionID,
         ip: req.ip
       });
