@@ -37,8 +37,8 @@ export function FAB() {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Show FAB for any authenticated user
-  if (!user) {
+  // Only show FAB for regular users, not for admin or manager roles
+  if (!user || user.role === 'admin' || user.role === 'manager') {
     return null;
   }
 
