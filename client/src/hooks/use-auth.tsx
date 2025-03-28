@@ -41,9 +41,22 @@ function useLoginMutation() {
 
         const data = await response.json();
         console.log('Login successful:', data);
+        
         // Check if the data includes a user object (new format) or if it's the user itself (old format)
-        const user = data.user || data;
-        return user as User;
+        const userData = data.user || data;
+        
+        // Make sure we have all required fields in the expected format
+        const user: User = {
+          id: userData.id,
+          name: userData.name || "Guest User",
+          email: userData.email,
+          role: userData.role as 'admin' | 'user',
+          units: userData.units || [],
+          department: userData.department || undefined,
+          telephone: userData.telephone || undefined
+        };
+        
+        return user;
       } catch (err) {
         console.error('Authentication error:', err);
         if (err instanceof Error) {
@@ -54,11 +67,25 @@ function useLoginMutation() {
     },
     onSuccess: (user) => {
       console.log('Login mutation succeeded, updating cache with user:', user);
-      queryClient.setQueryData(["/api/auth/me"], user);
+      // Ensure the user object has all required fields for display
+      const processedUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        units: user.units || [],
+        department: user.department || undefined,
+        telephone: user.telephone || undefined
+      };
+      console.log('Processed user for cache:', processedUser);
+      
+      // Update the cache with the processed user
+      queryClient.setQueryData(["/api/auth/me"], processedUser);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      
       toast({
         title: "Login successful",
-        description: `Welcome back, ${user.name}!`,
+        description: `Welcome back, ${processedUser.name}!`,
       });
     },
     onError: (error: Error) => {
@@ -119,7 +146,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (response.status === 401) return null;
           throw new Error('Failed to fetch user data');
         }
-        return await response.json();
+        
+        const userData = await response.json();
+        console.log('ME endpoint response:', userData);
+        
+        // Ensure consistent format for user data
+        const user: User = {
+          id: userData.id,
+          name: userData.name || "Guest User",
+          email: userData.email,
+          role: userData.role as 'admin' | 'user',
+          units: userData.units || [],
+          department: userData.department || undefined,
+          telephone: userData.telephone || undefined
+        };
+        
+        return user;
       } catch (error) {
         console.error('Error fetching user:', error);
         return null;
