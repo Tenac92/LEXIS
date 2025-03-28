@@ -222,7 +222,11 @@ export default function BudgetHistoryPage() {
         )}
         {metadata.timestamp && (
           <div className="mb-1">
-            <span className="font-medium">Timestamp:</span> {format(new Date(metadata.timestamp), 'dd/MM/yyyy HH:mm:ss')}
+            <span className="font-medium">Timestamp:</span> {
+              typeof metadata.timestamp === 'string' 
+                ? format(new Date(metadata.timestamp), 'dd/MM/yyyy HH:mm:ss')
+                : 'Invalid date'
+            }
           </div>
         )}
       </div>
@@ -351,7 +355,9 @@ export default function BudgetHistoryPage() {
                                   </CollapsibleTrigger>
                                 </TableCell>
                                 <TableCell>
-                                  {format(new Date(entry.created_at), 'dd/MM/yyyy HH:mm')}
+                                  {entry.created_at 
+                                    ? format(new Date(entry.created_at), 'dd/MM/yyyy HH:mm')
+                                    : 'N/A'}
                                 </TableCell>
                                 <TableCell>{entry.mis}</TableCell>
                                 <TableCell>{formatCurrency(previousAmount)}</TableCell>
@@ -361,12 +367,16 @@ export default function BudgetHistoryPage() {
                                   {formatCurrency(change)}
                                 </TableCell>
                                 <TableCell>
-                                  {getChangeTypeBadge(entry.change_type)}
+                                  {entry.change_type ? getChangeTypeBadge(entry.change_type) : '-'}
                                 </TableCell>
                                 <TableCell>
-                                  <div className="max-w-[200px] truncate" title={entry.change_reason}>
-                                    {entry.change_reason}
-                                  </div>
+                                  {entry.change_reason ? (
+                                    <div className="max-w-[200px] truncate" title={entry.change_reason}>
+                                      {entry.change_reason}
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">-</span>
+                                  )}
                                 </TableCell>
                                 <TableCell>{entry.created_by || 'System'}</TableCell>
                                 <TableCell>
