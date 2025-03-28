@@ -582,6 +582,46 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  // Change password route
+  app.post("/api/auth/change-password", authenticateSession, async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'Current password and new password are required' });
+      }
+      
+      // Validate password length
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+      }
+      
+      // Use the centralized change password function
+      const result = await changeUserPassword(
+        req.user.id, 
+        currentPassword, 
+        newPassword
+      );
+
+      if (!result.success) {
+        return res.status(400).json({ message: result.message });
+      }
+
+      console.log('[Auth] Password changed successfully for user:', req.user.id);
+      return res.status(200).json({ message: result.message });
+    } catch (error) {
+      console.error('[Auth] Error changing password:', error);
+      return res.status(500).json({ 
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Get current user route with enhanced error handling for sdegdaefk.gr support
   app.get("/api/auth/me", authenticateSession, (req: AuthenticatedRequest, res, next) => {
     try {
