@@ -64,7 +64,7 @@ router.get('/expenditure-types/:projectId', async (req: Request, res: Response) 
 
 export async function exportProjectsXLSX(req: Request, res: Response) {
   try {
-    console.log('[Projects] Starting XLSX export with budget_na853_split data');
+    console.log('[Projects] Starting XLSX export with integrated budget_na853_split data');
     // Get all projects
     const { data: projects, error } = await supabase
       .from('Projects')
@@ -103,70 +103,142 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       });
     }
 
-    // Format projects for Excel, including budget split data
-    const formattedProjects = projects.map(project => {
-      const formattedProject = projectHelpers.formatForExcel(project);
-      
-      // Add budget split data if available
+    // Create a combined dataset with projects and their budget data
+    const combinedData = [];
+    
+    // Process each project
+    projects.forEach(project => {
+      // Get the budget splits for this project
       const projectSplits = budgetSplitsByMis[project.mis] || [];
-      if (projectSplits.length > 0) {
-        // Add a summary of budget splits
-        formattedProject['Budget Split Count'] = projectSplits.length;
-        formattedProject['Total Split Amount'] = projectSplits.reduce((sum, split) => 
-          sum + (parseFloat(split.amount) || 0), 0).toFixed(2);
-        
-        // Add the first few splits (up to 3) directly in the sheet
-        projectSplits.slice(0, 3).forEach((split, index) => {
-          formattedProject[`Split ${index+1} Year`] = split.year || 'N/A';
-          formattedProject[`Split ${index+1} Amount`] = split.amount || 0;
-          formattedProject[`Split ${index+1} Category`] = split.category || 'N/A';
+      
+      // If there are no splits, add one row with just the project data
+      if (projectSplits.length === 0) {
+        combinedData.push({
+          // Project Core Data (from Projects table)
+          'MIS': project.mis || '',
+          'Title': project.title || project.project_title || project.event_description || '',
+          'Status': project.status || '',
+          'NA853': project.na853 || '',
+          'NA271': project.na271 || '',
+          'E069': project.e069 || '',
+          'Budget NA853': project.budget_na853 || '',
+          'Budget NA271': project.budget_na271 || '',
+          'Budget E069': project.budget_e069 || '',
+          'Region': typeof project.region === 'object' ? JSON.stringify(project.region) : (project.region || ''),
+          'Implementing Agency': Array.isArray(project.implementing_agency) ? project.implementing_agency.join(', ') : (project.implementing_agency || ''),
+          'Event Type': Array.isArray(project.event_type) ? project.event_type.join(', ') : (project.event_type || ''),
+          'Event Year': Array.isArray(project.event_year) ? project.event_year.join(', ') : (project.event_year || ''),
+          'Created At': project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : '',
+          
+          // Budget Split Data (empty for this row)
+          'Split ID': '',
+          'PROIP': '',
+          'Annual Credit': '',
+          'Q1': '',
+          'Q2': '',
+          'Q3': '',
+          'Q4': '',
+          'Year Allocations': '',
+          'User View': '',
+          'Split Created At': '',
+          'Split Updated At': ''
         });
       } else {
-        formattedProject['Budget Split Count'] = 0;
-        formattedProject['Total Split Amount'] = '0.00';
+        // For projects with splits, add one row per split with both project and split data
+        projectSplits.forEach((split, index) => {
+          combinedData.push({
+            // Project Core Data (only include full project data in the first row for this project)
+            'MIS': project.mis || '',
+            'Title': project.title || project.project_title || project.event_description || '',
+            'Status': project.status || '',
+            'NA853': project.na853 || '',
+            'NA271': project.na271 || '',
+            'E069': project.e069 || '',
+            'Budget NA853': project.budget_na853 || '',
+            'Budget NA271': project.budget_na271 || '',
+            'Budget E069': project.budget_e069 || '',
+            'Region': typeof project.region === 'object' ? JSON.stringify(project.region) : (project.region || ''),
+            'Implementing Agency': Array.isArray(project.implementing_agency) ? project.implementing_agency.join(', ') : (project.implementing_agency || ''),
+            'Event Type': Array.isArray(project.event_type) ? project.event_type.join(', ') : (project.event_type || ''),
+            'Event Year': Array.isArray(project.event_year) ? project.event_year.join(', ') : (project.event_year || ''),
+            'Created At': project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : '',
+            
+            // Budget Split Data
+            'Split ID': split.id || '',
+            'PROIP': split.proip || '',
+            'Annual Credit': split.ethsia_pistosi || '',
+            'Q1': split.q1 || '',
+            'Q2': split.q2 || '',
+            'Q3': split.q3 || '',
+            'Q4': split.q4 || '',
+            'Year Allocations': split.katanomes_etous || '',
+            'User View': split.user_view || '',
+            'Split Created At': split.created_at ? new Date(split.created_at).toLocaleDateString('el-GR') : '',
+            'Split Updated At': split.updated_at ? new Date(split.updated_at).toLocaleDateString('el-GR') : ''
+          });
+        });
       }
-      
-      return formattedProject;
     });
+
+    // Create a separate Budget Splits Only worksheet 
+    const budgetSplitsOnly = budgetSplits ? budgetSplits.map(split => ({
+      'ID': split.id || '',
+      'MIS': split.mis || '',
+      'NA853': split.na853 || '',
+      'PROIP': split.proip || '',
+      'Annual Credit': split.ethsia_pistosi || '',
+      'Q1': split.q1 || '',
+      'Q2': split.q2 || '',
+      'Q3': split.q3 || '',
+      'Q4': split.q4 || '',
+      'Year Allocations': split.katanomes_etous || '',
+      'User View': split.user_view || '',
+      'Created At': split.created_at ? new Date(split.created_at).toLocaleDateString('el-GR') : '',
+      'Updated At': split.updated_at ? new Date(split.updated_at).toLocaleDateString('el-GR') : ''
+    })) : [];
 
     // Create the main workbook
     const wb = XLSX.utils.book_new();
     
-    // Add the main projects worksheet
-    const ws = XLSX.utils.json_to_sheet(formattedProjects);
+    // Add the integrated projects and budget data worksheet
+    const wsIntegrated = XLSX.utils.json_to_sheet(combinedData);
+    
+    // Set column widths for integrated worksheet
+    const colWidthsIntegrated = Object.keys(combinedData[0] || {}).map(() => ({ wch: 18 }));
+    wsIntegrated['!cols'] = colWidthsIntegrated;
+    XLSX.utils.book_append_sheet(wb, wsIntegrated, 'Projects With Budgets');
 
-    // Set column widths for main worksheet
-    const colWidths = Object.keys(formattedProjects[0]).map(() => ({ wch: 20 }));
-    ws['!cols'] = colWidths;
+    // Add a worksheet with only Projects data (simplified view)
+    const projectsOnly = projects.map(project => ({
+      'MIS': project.mis || '',
+      'NA853': project.na853 || '',
+      'Title': project.title || project.project_title || project.event_description || '',
+      'Status': project.status || '',
+      'Budget NA853': project.budget_na853 || '',
+      'Budget NA271': project.budget_na271 || '',
+      'Budget E069': project.budget_e069 || '',
+      'Implementing Agency': Array.isArray(project.implementing_agency) ? project.implementing_agency.join(', ') : (project.implementing_agency || ''),
+      'Event Type': Array.isArray(project.event_type) ? project.event_type.join(', ') : (project.event_type || ''),
+      'Event Year': Array.isArray(project.event_year) ? project.event_year.join(', ') : (project.event_year || ''),
+      'Created At': project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : ''
+    }));
+    
+    const wsProjects = XLSX.utils.json_to_sheet(projectsOnly);
+    const colWidthsProjects = Object.keys(projectsOnly[0] || {}).map(() => ({ wch: 18 }));
+    wsProjects['!cols'] = colWidthsProjects;
+    XLSX.utils.book_append_sheet(wb, wsProjects, 'Projects Only');
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Projects');
-
-    // Create a separate worksheet for detailed budget splits if we have data
-    if (budgetSplits && budgetSplits.length > 0) {
-      // Format budget splits for Excel
-      const formattedSplits = budgetSplits.map(split => ({
-        'MIS': split.mis || 'N/A',
-        'Year': split.year || 'N/A',
-        'Amount': split.amount || 0,
-        'Category': split.category || 'N/A',
-        'Date Created': split.created_at ? new Date(split.created_at).toLocaleString() : 'N/A',
-        'Date Updated': split.updated_at ? new Date(split.updated_at).toLocaleString() : 'N/A'
-      }));
-
-      const splitWs = XLSX.utils.json_to_sheet(formattedSplits);
-      
-      // Set column widths for the splits worksheet
-      const splitColWidths = Object.keys(formattedSplits[0]).map(() => ({ wch: 20 }));
-      splitWs['!cols'] = splitColWidths;
-      
-      XLSX.utils.book_append_sheet(wb, splitWs, 'Budget Splits');
-    }
+    // Add the Budget Splits Only worksheet
+    const wsBudgets = XLSX.utils.json_to_sheet(budgetSplitsOnly);
+    const colWidthsBudgets = Object.keys(budgetSplitsOnly[0] || {}).map(() => ({ wch: 18 }));
+    wsBudgets['!cols'] = colWidthsBudgets;
+    XLSX.utils.book_append_sheet(wb, wsBudgets, 'Budget Splits Only');
 
     // Generate buffer and send the response
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=projects-with-budgets-${new Date().toISOString().split('T')[0]}.xlsx`);
+    res.setHeader('Content-Disposition', `attachment; filename=integrated-projects-budgets-${new Date().toISOString().split('T')[0]}.xlsx`);
     res.send(buffer);
 
   } catch (error) {
