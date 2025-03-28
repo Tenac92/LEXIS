@@ -190,7 +190,7 @@ router.patch('/:mis', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get budget history
+// Get budget history for specific MIS
 router.get('/:mis/history', async (req: AuthRequest, res: Response) => {
   try {
     const { mis } = req.params;
@@ -213,6 +213,73 @@ router.get('/:mis/history', async (req: AuthRequest, res: Response) => {
       status: 'error',
       message: 'Failed to fetch budget history',
       error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get all budget history with pagination
+router.get('/history', async (req: AuthRequest, res: Response) => {
+  try {
+    console.log('[Budget] Fetching budget history');
+    
+    // Check authentication
+    if (!req.user?.id) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required',
+        data: [],
+        pagination: { total: 0, page: 1, limit: 10, pages: 0 }
+      });
+    }
+    
+    // Only admin and manager roles can access budget history
+    if (req.user.role !== 'admin' && req.user.role !== 'manager') {
+      console.log(`[Budget] Unauthorized access attempt by user ${req.user.id} with role ${req.user.role}`);
+      return res.status(403).json({
+        status: 'error',
+        message: 'Insufficient permissions to access budget history',
+        data: [],
+        pagination: { total: 0, page: 1, limit: 10, pages: 0 }
+      });
+    }
+
+    // Parse query parameters
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const mis = req.query.mis as string | undefined;
+    const changeType = req.query.change_type as string | undefined;
+
+    console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}`);
+
+    try {
+      // Use the enhanced storage method with pagination
+      const result = await storage.getBudgetHistory(mis, page, limit, changeType);
+      
+      console.log(`[Budget] Successfully fetched ${result.data.length} of ${result.pagination.total} history records`);
+
+      return res.json({
+        status: 'success',
+        data: result.data,
+        pagination: result.pagination
+      });
+    } catch (storageError) {
+      console.error('[Budget] Error from storage.getBudgetHistory:', storageError);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch budget history',
+        details: storageError instanceof Error ? storageError.message : 'Storage error',
+        data: [],
+        pagination: { total: 0, page, limit, pages: 0 }
+      });
+    }
+  } catch (error) {
+    console.error('[Budget] History fetch error:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch budget history',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      data: [],
+      pagination: { total: 0, page: 1, limit: 10, pages: 0 }
     });
   }
 });
