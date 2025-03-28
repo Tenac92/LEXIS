@@ -842,64 +842,27 @@ export class DocumentFormatter {
     });
   }
 
-  private static async getUnitDetails(
+  public static async getUnitDetails(
     unitCode: string,
   ): Promise<UnitDetails | null> {
     try {
       console.log("Fetching unit details for:", unitCode);
-      // Try exact match first
       const { data: unitData, error: unitError } = await supabase
         .from("Monada")
         .select("*")
         .eq("unit", unitCode)
-        .maybeSingle();
+        .single();
 
-      if (unitData) {
-        console.log("Unit details fetched:", unitData);
-        return unitData;
+      if (unitError) {
+        console.error("Error fetching unit details:", unitError);
+        return null;
       }
 
-      // If no exact match, try matching by unit_name.name
-      const { data: nameMatchData, error: nameMatchError } = await supabase
-        .from("Monada")
-        .select("*")
-        .eq("unit_name->>name", unitCode)
-        .maybeSingle();
-
-      if (nameMatchData) {
-        console.log("Unit details fetched by name:", nameMatchData);
-        return nameMatchData;
-      }
-
-      console.error("No unit details found for:", unitCode);
-      console.error("Errors:", { unitError, nameMatchError });
-
-      // Return default values if no match found
-      return {
-        unit_name: {
-          name: unitCode,
-          prop: ""
-        },
-        address: {
-          address: "Κηφισίας 124 & Ιατρίδου 2",
-          tk: "11526",
-          region: "Αθήνα"
-        }
-      };
+      console.log("Unit details fetched:", unitData);
+      return unitData;
     } catch (error) {
       console.error("Error in getUnitDetails:", error);
-      // Return default values on error
-      return {
-        unit_name: {
-          name: unitCode,
-          prop: ""
-        },
-        address: {
-          address: "Κηφισίας 124 & Ιατρίδου 2",
-          tk: "11526",
-          region: "Αθήνα"
-        }
-      };
+      return null;
     }
   }
 
