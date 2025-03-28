@@ -22,12 +22,12 @@ if (!supabaseUrl || !supabaseKey) {
 // User details to update
 const config = {
   // Current email to identify the user
-  currentEmail: 'test@test.gr',
+  currentEmail: 'kkiriakou92@gmail.com',
   
   // New details to set (comment out any fields you don't want to change)
   updates: {
     // newEmail: 'new-email@example.com',
-    password: 'test123',
+    password: 'Admin123!',
     // name: 'New Name',
     // role: 'admin', // or 'user', 'manager'
   }

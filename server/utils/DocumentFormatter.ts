@@ -21,26 +21,6 @@ import * as path from "path";
 import { format } from "date-fns";
 import { after } from "node:test";
 
-interface UnitDetails {
-  unit: string;
-  unit_name?: {
-    name: string;
-    prop: string;
-  }
-  manager?: {
-    name: string;
-    order: string;
-    title: string;
-    degree: string;
-    prepose: string;
-  };
-  email?: string;
-  address?: {
-    tk: string;
-    region: string;
-    address: string;
-  };
-}
 
 interface UserDetails {
   name: string;
@@ -49,8 +29,29 @@ interface UserDetails {
   department?: string;
 }
 
+interface UnitDetails {
+  unit: string;
+  unit_name?: {
+    name: string;
+    prop: string;
+  };
+  manager?: {
+    name: string;
+    order: string;
+    title: string;
+    degree: string;
+    prepose?: string; // Set as optional if needed
+  };
+  email?: string;
+  address?: {
+    address: string;
+    tk: string;
+    region: string;
+  };
+}
+
 interface DocumentData {
-  id: number;
+  id: number; // Ensure all properties are present and consistent
   unit: string;
   project_id?: string;
   project_na853?: string;
@@ -64,7 +65,7 @@ interface DocumentData {
   attachments?: string[];
   contact_number?: string;
   department?: string;
-  generated_by?: UserDetails;
+  generated_by?: UserDetails; // Consistent use of UserDetails
   recipients?: Array<{
     firstname: string;
     lastname: string;
@@ -73,50 +74,6 @@ interface DocumentData {
     amount: number;
     installment: number;
   }>;
-}
-
-interface UnitDetails {
-  unit: string;
-  unit_name?: {
-    name: string;
-    prop: string;
-  };
-  address?: {
-    address: string;
-    tk: string;
-    region: string;
-  };
-  email?: string;
-  manager?: {
-    order: string;
-    title: string;
-    name: string;
-    degree: string;
-  };
-}
-
-interface DocumentData {
-  unit: string;
-  protocol_date?: string;
-  protocol_number?: string;
-  protocol_number_input?: string;
-  generated_by?: {
-    name: string;
-    department: string;
-    contact_number: string;
-  };
-  user_name?: string;
-  department?: string;
-  contact_number?: string;
-  recipients?: Array<{
-    firstname: string;
-    lastname: string;
-    fathername: string;
-    afm: string;
-    amount: number;
-    installment: number;
-  }>;
-  attachments?: string[];
 }
 
 export class DocumentFormatter {
@@ -389,10 +346,7 @@ export class DocumentFormatter {
             },
           },
           children: [
-            await this.createDocumentHeader(
-              documentData,
-              unitDetails || undefined,
-            ),
+            await this.createDocumentHeader(documentData,unitDetails),
             ...this.createDocumentSubject(documentData, unitDetails || {}),
             ...this.createMainContent(documentData, unitDetails || {}),
             this.createPaymentTable(documentData.recipients || []),
@@ -436,7 +390,7 @@ export class DocumentFormatter {
   }
 
   private static createDocumentSubject(
-    documentData: DocumentData, unitDetails: UnitDetails,
+    documentData: DocumentData, unitDetails: UnitDetails | undefined,
   ): (Table | Paragraph)[] {
     const subjectText = [
       {
@@ -445,7 +399,7 @@ export class DocumentFormatter {
         italics: true,
       },
       {
-        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${unitDetails.unit}`,
+        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${unitDetails?.unit || 'Μονάδα'}`,
         italics: true,
       },
     ];
@@ -499,7 +453,7 @@ export class DocumentFormatter {
 
   private static createMainContent(
     documentData: DocumentData,
-    unitDetails: UnitDetails,
+    unitDetails: UnitDetails | undefined,
   ): (Paragraph | Table)[] {
     const unitName = unitDetails?.unit_name?.name || documentData.unit;
     const unitProp = unitDetails?.unit_name?.prop || 'τη';
@@ -517,7 +471,7 @@ export class DocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: `Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${unitDetails.unit}, σύμφωνα με τα παρακάτω στοιχεία.`,
+            text: `Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${unitDetails?.unit || 'Μονάδα'}, σύμφωνα με τα παρακάτω στοιχεία.`,
           }),
         ],
       }),
@@ -942,7 +896,15 @@ export class DocumentFormatter {
             address: "Κηφισίας 124 & Ιατρίδου 2",
             tk: "11526",
             region: "Αθήνα"
-          }
+          },
+          manager: {
+            name: "Σ. Παπαδόπουλος",
+            order: "Με εντολή Υπουργού",
+            title: "Ο Διευθυντής",
+            degree: "Δρ. Πολ. Μηχανικός",
+            prepose: "του"
+          },
+          email: "daefk@civilprotection.gr"
         };
       }
 
@@ -961,7 +923,15 @@ export class DocumentFormatter {
           address: "Κηφισίας 124 & Ιατρίδου 2",
           tk: "11526",
           region: "Αθήνα"
-        }
+        },
+        manager: {
+          name: "Σ. Παπαδόπουλος",
+          order: "Με εντολή Υπουργού",
+          title: "Ο Διευθυντής",
+          degree: "Δρ. Πολ. Μηχανικός",
+          prepose: "του"
+        },
+        email: "daefk@civilprotection.gr"
       };
     }
   }
@@ -1024,12 +994,12 @@ export class DocumentFormatter {
             },
           },
           children: [
-            await DocumentFormatter.createDocumentHeader(documentData, unitDetails),
-            ...DocumentFormatter.createDocumentSubject(documentData, unitDetails || {}),
-            ...DocumentFormatter.createMainContent(documentData, unitDetails || {}),
+            await DocumentFormatter.createDocumentHeader(documentData, unitDetails || undefined),
+            ...DocumentFormatter.createDocumentSubject(documentData, unitDetails || undefined),
+            ...DocumentFormatter.createMainContent(documentData, unitDetails || undefined),
             DocumentFormatter.createPaymentTable(documentData.recipients || []),
             DocumentFormatter.createNote(),
-            DocumentFormatter.createFooter(documentData, unitDetails),
+            DocumentFormatter.createFooter(documentData, unitDetails || undefined),
           ],
         },
       ];
