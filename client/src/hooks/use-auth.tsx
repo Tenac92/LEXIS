@@ -147,8 +147,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error('Failed to fetch user data');
         }
         
-        const userData = await response.json();
-        console.log('ME endpoint response:', userData);
+        const responseData = await response.json();
+        console.log('ME endpoint response:', responseData);
+        
+        // Check if response is wrapped in an object with 'user' property (new format)
+        // or if it's the direct user object (old format)
+        const userData = responseData.user || responseData;
         
         // Ensure consistent format for user data
         const user: User = {

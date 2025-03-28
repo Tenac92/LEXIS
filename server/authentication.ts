@@ -570,7 +570,20 @@ export async function setupAuth(app: Express) {
         sessionID: req.sessionID,
         ip: req.ip
       });
-      res.json(req.user);
+      
+      // Create a clean user object with all the expected fields
+      const userResponse = {
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+        units: req.user.units || [],
+        department: req.user.department || null,
+        telephone: req.user.telephone || null
+      };
+      
+      // Send as a direct user object for consistency with the login endpoint
+      res.json(userResponse);
     } catch (error) {
       next(error); // Pass errors to the error middleware
     }
