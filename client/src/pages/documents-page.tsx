@@ -474,7 +474,7 @@ export default function DocumentsPage() {
         }}
       />
 
-      {user?.role === 'user' && <FAB />}
+      {user && <FAB />}
     </div>
   );
 }
