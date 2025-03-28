@@ -863,15 +863,42 @@ export class DocumentFormatter {
 
       console.log("Fetching unit details for:", unitCode);
 
-      // Try exact match first
+      // Try exact match on unit field first
       let { data: unitData, error: unitError } = await supabase
         .from("Monada")
         .select("*")
         .eq("unit", unitCode)
-        .maybeSingle(); // Use maybeSingle instead of single to avoid error
+        .maybeSingle();
 
+      // If not found, try with unit_name.name using containsJson query
       if (!unitData && !unitError) {
-        // Try case-insensitive search if exact match fails
+        console.log("Unit not found by exact match on unit field, trying unit_name.name");
+        
+        // Get all units and filter manually for unit_name.name match
+        const { data: allUnits, error: fetchError } = await supabase
+          .from("Monada")
+          .select("*");
+          
+        if (!fetchError && allUnits) {
+          // Find the first unit that matches by unit_name.name
+          unitData = allUnits.find(unit => 
+            unit.unit_name && 
+            typeof unit.unit_name === 'object' && 
+            unit.unit_name.name && 
+            unit.unit_name.name === unitCode
+          ) || null;
+          
+          if (unitData) {
+            console.log("Found unit by unit_name.name match:", unitData.unit);
+          }
+        } else if (fetchError) {
+          console.error("Error fetching all units:", fetchError);
+        }
+      }
+
+      // If still not found, try case-insensitive search on unit field
+      if (!unitData && !unitError) {
+        console.log("Unit not found by exact match, trying case-insensitive search on unit field");
         ({ data: unitData, error: unitError } = await supabase
           .from("Monada")
           .select("*")
@@ -885,6 +912,7 @@ export class DocumentFormatter {
       }
 
       if (!unitData) {
+        console.log("No unit found in database, returning default values");
         // Return default unit details instead of null
         return {
           unit: unitCode,
