@@ -1,18 +1,12 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
 import * as schema from "../shared/schema";
+import { pool } from "./config/db"; // Use the robust pool from config/db.ts
 
-// TODO: Refactor - There are multiple database connection mechanisms:
-// - Direct PostgreSQL connection here using pg Pool
-// - Supabase client in db.ts and config/db.ts
-// Consider consolidating database access through a single interface
+// Consolidated database access using enhanced pool from config/db
+// with error recovery and connection management
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is required");
-}
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+export const db = drizzle(pool, { 
+  schema,
+  // Add logger in development mode for easier debugging
+  logger: process.env.NODE_ENV === 'development'
 });
-
-export const db = drizzle(pool, { schema });
