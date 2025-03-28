@@ -889,8 +889,6 @@ export class DocumentFormatter {
 
       // Get unit details
       const unitDetails = await DocumentFormatter.getUnitDetails(data.unit);
-      
-      // Create default unit details if none found
 
       const sections = [
         {
@@ -902,7 +900,7 @@ export class DocumentFormatter {
             },
           },
           children: [
-            await DocumentFormatter.createDocumentHeader(data, effectiveUnitDetails),
+            await DocumentFormatter.createDocumentHeader(data, unitDetails || undefined),
             new Paragraph({
               children: [
                 new TextRun({
@@ -926,11 +924,11 @@ export class DocumentFormatter {
               ],
               spacing: { before: 240, after: 480 },
             }),
-            ...DocumentFormatter.createDocumentSubject(data, effectiveUnitDetails),
-            ...DocumentFormatter.createMainContent(data, effectiveUnitDetails),
+            ...DocumentFormatter.createDocumentSubject(data, unitDetails || {}),
+            ...DocumentFormatter.createMainContent(data, unitDetails || {}),
             DocumentFormatter.createPaymentTable(data.recipients),
             DocumentFormatter.createNote(),
-            DocumentFormatter.createFooter(data, effectiveUnitDetails),
+            DocumentFormatter.createFooter(data, unitDetails),
           ],
         },
       ];

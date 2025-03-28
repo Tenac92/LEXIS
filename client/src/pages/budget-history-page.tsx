@@ -356,13 +356,7 @@ export default function BudgetHistoryPage() {
                                 </TableCell>
                                 <TableCell>
                                   {entry.created_at 
-                                    ? (
-                                        typeof entry.created_at === 'string' 
-                                        ? format(new Date(entry.created_at), 'dd/MM/yyyy HH:mm')
-                                        : entry.created_at instanceof Date 
-                                          ? format(entry.created_at, 'dd/MM/yyyy HH:mm')
-                                          : 'Invalid date'
-                                      )
+                                    ? format(new Date(entry.created_at), 'dd/MM/yyyy HH:mm')
                                     : 'N/A'}
                                 </TableCell>
                                 <TableCell>{entry.mis}</TableCell>
