@@ -241,8 +241,11 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     const today = new Date();
     const formattedDate = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getFullYear()}`;
 
+    // Use ASCII characters for the filename to avoid encoding issues
+    const encodedFilename = `Projects-and-Budgets-${formattedDate}.xlsx`;
+    
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=Έργα-και-Κατανομές-${formattedDate}.xlsx`);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodedFilename}"`);
     res.send(buffer);
 
   } catch (error) {
