@@ -110,11 +110,32 @@ export default function BudgetHistoryPage() {
       
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch budget history');
-      return res.json();
+      const jsonData = await res.json();
+      
+      // Log the response to see its structure
+      console.log('Budget history API response:', jsonData);
+      
+      return jsonData;
     }
   });
 
-  const history: BudgetHistoryEntry[] = data?.data || [];
+  // Ensure proper data structure and validation
+  const history: BudgetHistoryEntry[] = data?.data && Array.isArray(data.data) 
+    ? data.data.map((entry: any) => ({
+        id: entry.id,
+        mis: entry.mis || 'Unknown',
+        previous_amount: entry.previous_amount || '0',
+        new_amount: entry.new_amount || '0',
+        change_type: entry.change_type || '',
+        change_reason: entry.change_reason || '',
+        document_id: entry.document_id,
+        document_status: entry.document_status,
+        created_by: entry.created_by || 'System',
+        created_at: entry.created_at || new Date().toISOString(),
+        metadata: entry.metadata || {}
+      }))
+    : [];
+    
   const pagination: PaginationData = data?.pagination || { total: 0, page: 1, limit: 10, pages: 1 };
 
   const handlePageChange = (newPage: number) => {
@@ -122,8 +143,22 @@ export default function BudgetHistoryPage() {
   };
 
   // Function to format monetary values
-  const formatCurrency = (amount: string | number) => {
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const formatCurrency = (amount: string | number | undefined | null) => {
+    if (amount === undefined || amount === null) {
+      return '€0.00';
+    }
+    
+    // Convert to number safely
+    const numAmount = typeof amount === 'string' 
+      ? parseFloat(amount || '0') 
+      : typeof amount === 'number' ? amount : 0;
+    
+    // Handle NaN case
+    if (isNaN(numAmount)) {
+      console.warn('Invalid amount value detected:', amount);
+      return '€0.00';
+    }
+    
     return `€${numAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
