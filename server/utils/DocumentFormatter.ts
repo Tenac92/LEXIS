@@ -116,7 +116,10 @@ export class DocumentFormatter {
       name: documentData.generated_by?.name || documentData.user_name || "",
       department:
         documentData.generated_by?.department || documentData.department || "",
-      contact_number: documentData.generated_by?.telephone || documentData.generated_by?.contact_number || documentData.contact_number || "",
+      // Handle telephone as number by converting to string
+      contact_number: (documentData.generated_by?.telephone !== undefined ? String(documentData.generated_by?.telephone) : null) || 
+                     documentData.generated_by?.contact_number || 
+                     (documentData.contact_number !== undefined ? String(documentData.contact_number) : ""),
     };
 
     // Use unitDetails.address if available
