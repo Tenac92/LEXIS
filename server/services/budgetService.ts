@@ -392,9 +392,9 @@ export class BudgetService {
       
       // Prepare update payload based on available columns
       const updatePayload: any = {
+        // Only update user_view field and quarterly values as per requirement
+        // Do not update katanomes_etous or ethsia_pistosi fields
         user_view: newUserView.toString(),
-        ethsia_pistosi: newEthsiaPistosi.toString(),
-        katanomes_etous: newKatanomesEtous.toString(),
         [quarterKey]: newQuarterValue.toString(),
         updated_at: new Date().toISOString()
       };
