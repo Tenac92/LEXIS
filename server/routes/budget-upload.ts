@@ -1,15 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateToken, AuthenticatedRequest } from '../authentication';
 import { User } from '@shared/schema';
 import { supabase } from '../config/db';
 import { storage } from '../storage';
 import multer from 'multer';
 import * as xlsx from 'xlsx';
-
-// Extend Request type to include user property
-interface AuthenticatedRequest extends Request {
-  user?: User;
-}
 
 const router = Router();
 
