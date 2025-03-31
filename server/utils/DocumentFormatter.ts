@@ -16,6 +16,7 @@ import {
   ITableBordersOptions,
   ImageRun,
   PageOrientation,
+  TableLayoutType,
 } from "docx";
 import { supabase } from "../config/db";
 import * as fs from "fs";
@@ -646,21 +647,21 @@ export class DocumentFormatter {
   private static createFooter(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Paragraph[] {
+  ): Table {
     const attachments = (documentData.attachments || [])
       .map((item) => item.replace(/^\d+\-/, ""))
       .filter(Boolean);
 
-    // Create two column layout using tabs
-    const result: Paragraph[] = [];
+    // Create a two-column table with proper layout
+    // Create the left column content (attachments, notifications, etc.)
+    const leftColumnParagraphs: Paragraph[] = [];
     
-    // Add attachments section (left column)
-    result.push(
+    leftColumnParagraphs.push(
       this.createBoldUnderlinedParagraph("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)")
     );
     
     for (let i = 0; i < attachments.length; i++) {
-      result.push(
+      leftColumnParagraphs.push(
         new Paragraph({
           text: `${i + 1}. ${attachments[i]}`,
           keepLines: false,
@@ -670,7 +671,7 @@ export class DocumentFormatter {
       );
     }
     
-    result.push(this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"));
+    leftColumnParagraphs.push(this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"));
     
     const notifications = [
       "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
@@ -679,7 +680,7 @@ export class DocumentFormatter {
     ];
     
     for (let i = 0; i < notifications.length; i++) {
-      result.push(
+      leftColumnParagraphs.push(
         new Paragraph({
           text: `${i + 1}. ${notifications[i]}`,
           keepLines: false,
@@ -689,9 +690,9 @@ export class DocumentFormatter {
       );
     }
     
-    result.push(this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"));
+    leftColumnParagraphs.push(this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"));
     
-    result.push(
+    leftColumnParagraphs.push(
       new Paragraph({
         text: "1. Χρονολογικό Αρχείο",
         keepLines: false,
@@ -700,43 +701,77 @@ export class DocumentFormatter {
       })
     );
     
-    // Add several blank lines to create space
-    for (let i = 0; i < 5; i++) {
-      result.push(this.createBlankLine());
-    }
+    // Create the right column with signature
+    const signatureParagraph = new Paragraph({
+      keepLines: true, // Keep manager signature together
+      alignment: AlignmentType.LEFT, // Align to the center
+      spacing: { before: 480 }, // Add some space before the signature
+      children: [
+        new TextRun({
+          text: unitDetails?.manager?.order || "",
+          bold: true,
+        }),
+        new TextRun({
+          text: unitDetails?.manager?.title || "",
+          break: 1,
+          bold: true,
+        }),
+        new TextRun({
+          text: unitDetails?.manager?.name || "",
+          break: 3,
+          bold: true,
+        }),
+        new TextRun({
+          text: unitDetails?.manager?.degree || "",
+          break: 1,
+        }),
+      ],
+    });
     
-    // Add manager signature (right column)
-    // This is a separate paragraph positioned at the bottom right with text alignment
-    result.push(
-      new Paragraph({
-        keepLines: true, // Keep manager signature together
-        keepNext: false, // Don't require this to be with any other paragraph
-        spacing: { before: 360 },
-        alignment: AlignmentType.RIGHT, // Align to the right
-        children: [
-          new TextRun({
-            text: unitDetails?.manager?.order || "",
-            bold: true,
-          }),
-          new TextRun({
-            text: unitDetails?.manager?.title || "",
-            break: 1,
-            bold: true,
-          }),
-          new TextRun({
-            text: unitDetails?.manager?.name || "",
-            break: 3,
-            bold: true,
-          }),
-          new TextRun({
-            text: unitDetails?.manager?.degree || "",
-            break: 1,
-          }),
-        ],
-      })
-    );
-    
-    return result;
+    // Create a floating table that keeps the correct layout
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [7000, 4000], // Set fixed column widths
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        new TableRow({
+          cantSplit: false, // Allow the row to split across pages - important!
+          children: [
+            // Left column - allows flow across pages
+            new TableCell({
+              children: leftColumnParagraphs,
+              verticalAlign: VerticalAlign.TOP,
+              margins: { right: 300 }, // Add some margin for separation
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+            }),
+            
+            // Right column - signature stays together
+            new TableCell({
+              children: [signatureParagraph],
+              verticalAlign: VerticalAlign.TOP, 
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+            }),
+          ],
+        }),
+      ],
+    });
   }
 
   private static createBoldParagraph(text: string): Paragraph {
@@ -1006,11 +1041,11 @@ export class DocumentFormatter {
         documentData,
         unitDetails,
       );
-      docSubject.forEach(p => children.push(p));
+      docSubject.forEach((element: Paragraph | Table) => children.push(element));
       
       // Add main content
       const mainContent = DocumentFormatter.createMainContent(documentData, unitDetails);
-      mainContent.forEach(p => children.push(p));
+      mainContent.forEach((element: Paragraph | Table) => children.push(element));
       
       // Add payment table
       children.push(DocumentFormatter.createPaymentTable(documentData.recipients || []));
@@ -1020,7 +1055,7 @@ export class DocumentFormatter {
       
       // Add footer
       const footer = DocumentFormatter.createFooter(documentData, unitDetails);
-      footer.forEach(p => children.push(p));
+      children.push(footer);
       
       // Create section with all elements
       // Cast the children array to any to avoid TypeScript errors with Document sections
