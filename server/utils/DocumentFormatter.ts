@@ -719,7 +719,7 @@ export class DocumentFormatter {
               },
               children: [
                 new Paragraph({
-                  keepLines: false, // Allow content to break across pages
+                  keepLines: true, // Keep the original setting to prevent content from breaking across pages
                   spacing: { before: 100 },
                   children: [
                     new TextRun({
