@@ -373,29 +373,31 @@ export class BudgetService {
       const currentQ4 = parseFloat(budgetData.q4?.toString() || '0');
       const currentQuarterValue = parseFloat(budgetData[quarterKey]?.toString() || '0');
       
-      // Check for quarter transitions by looking at the last_quarter_check field
-      const lastQuarterCheck = budgetData.last_quarter_check?.toString() || '';
-      const lastQuarterChecked = lastQuarterCheck ? parseInt(lastQuarterCheck.charAt(1)) : 0;
+      // Since there is no last_quarter_check column, we won't implement quarter transitions for now
+      // We can implement this in the future by adding the column to the database
       const currentQuarterNumber = Math.ceil(currentMonth / 3);
-      const isQuarterTransition = lastQuarterChecked > 0 && lastQuarterChecked < currentQuarterNumber;
+      const isQuarterTransition = false; // Disabled until we have a column to track quarter transitions
       
-      console.log(`[BudgetService] Quarter check - Last: ${lastQuarterChecked}, Current: ${currentQuarterNumber}, Transition: ${isQuarterTransition}`);
+      console.log(`[BudgetService] Quarter check - Current quarter: ${currentQuarterNumber}, Quarter transitions disabled`);
       
-      // If quarter has changed, calculate remaining budgets from previous quarters
+      // Quarter transition logic is disabled until we add the last_quarter_check column
       let remainingBudget = 0;
+      // This code is preserved for future implementation when the database schema is updated
+      /*
       if (isQuarterTransition) {
         // Calculate the remaining budget from previous quarters to add to current quarter
-        if (lastQuarterChecked === 1 && currentQuarterNumber === 2) {
+        if (previousQuarter === 1 && currentQuarterNumber === 2) {
           remainingBudget = Math.max(0, currentQ1); // Remaining from Q1
           console.log(`[BudgetService] Quarter transition from Q1 to Q2 - Remaining budget: ${remainingBudget}`);
-        } else if (lastQuarterChecked === 2 && currentQuarterNumber === 3) {
+        } else if (previousQuarter === 2 && currentQuarterNumber === 3) {
           remainingBudget = Math.max(0, currentQ2); // Remaining from Q2
           console.log(`[BudgetService] Quarter transition from Q2 to Q3 - Remaining budget: ${remainingBudget}`);
-        } else if (lastQuarterChecked === 3 && currentQuarterNumber === 4) {
+        } else if (previousQuarter === 3 && currentQuarterNumber === 4) {
           remainingBudget = Math.max(0, currentQ3); // Remaining from Q3
           console.log(`[BudgetService] Quarter transition from Q3 to Q4 - Remaining budget: ${remainingBudget}`);
         }
       }
+      */
       
       // Calculate new amounts
       const newUserView = Math.max(0, currentUserView - amount);
@@ -422,7 +424,6 @@ export class BudgetService {
         // Do not update the katanomes_etous or ethsia_pistosi fields (they are reference values)
         user_view: newUserView.toString(),
         [quarterKey]: newQuarterValue.toString(),
-        last_quarter_check: quarterKey, // Update the last quarter check to track transitions
         updated_at: new Date().toISOString()
       };
       
@@ -458,8 +459,8 @@ export class BudgetService {
         new_amount: newUserView.toString(),
         change_type: documentId ? 'document_creation' : 'manual_adjustment',
         change_reason: changeReason || (documentId ? 
-          `Document creation [ID:${documentId}] reduced available budget by ${amount}. Current quarter: ${quarterKey}${isQuarterTransition ? `. Quarter transition detected from q${lastQuarterChecked} to q${currentQuarterNumber}, ${remainingBudget} budget transferred.` : ''}` : 
-          `Manual budget adjustment reduced available budget by ${amount}. Current quarter: ${quarterKey}${isQuarterTransition ? `. Quarter transition detected from q${lastQuarterChecked} to q${currentQuarterNumber}, ${remainingBudget} budget transferred.` : ''}`),
+          `Document creation [ID:${documentId}] reduced available budget by ${amount}. Current quarter: ${quarterKey}` : 
+          `Manual budget adjustment reduced available budget by ${amount}. Current quarter: ${quarterKey}`),
         document_id: documentId || null,
         created_by: userId.toString()
       };
