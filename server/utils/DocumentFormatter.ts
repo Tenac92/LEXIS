@@ -646,121 +646,97 @@ export class DocumentFormatter {
   private static createFooter(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Table {
+  ): Paragraph[] {
     const attachments = (documentData.attachments || [])
       .map((item) => item.replace(/^\d+\-/, ""))
       .filter(Boolean);
 
-    // Create a table that has the same visual format while allowing content to flow across pages
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
-      rows: [
-        new TableRow({
-          // Allow the row to split across pages
-          cantSplit: false,
-          children: [
-            // Left cell - can split across pages
-            new TableCell({
-              width: { size: 65, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              // Important: Set verticalMerge to RESTART to make this cell independent
-              verticalMerge: VerticalMergeType.RESTART,
-              children: [
-                this.createBoldUnderlinedParagraph(
-                  "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
-                ),
-                ...attachments.map(
-                  (item, index) =>
-                    new Paragraph({
-                      text: `${index + 1}. ${item}`,
-                      keepLines: false,
-                      indent: { left: 426 },
-                      style: "a6",
-                    }),
-                ),
-                this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"),
-                ...[
-                  "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
-                  "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
-                  "Γ.Δ.Α.Ε.Φ.Κ.",
-                ].map(
-                  (item, index) =>
-                    new Paragraph({
-                      text: `${index + 1}. ${item}`,
-                      keepLines: false,
-                      indent: { left: 426 },
-                      style: "a6",
-                    }),
-                ),
-                this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
-                ...["Χρονολογικό Αρχείο"].map(
-                  (item, index) =>
-                    new Paragraph({
-                      text: `${index + 1}. ${item}`,
-                      keepLines: false, 
-                      indent: { left: 426 },
-                      style: "a6",
-                    }),
-                ),
-              ],
-            }),
-            
-            // Right cell - manager signature that stays together
-            new TableCell({
-              width: { size: 35, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              // Important: Set verticalMerge to RESTART to make this cell independent
-              verticalMerge: VerticalMergeType.RESTART,
-              children: [
-                new Paragraph({
-                  keepLines: true, // Keep manager signature together
-                  spacing: { before: 100 },
-                  children: [
-                    new TextRun({
-                      text: unitDetails?.manager?.order || "",
-                      bold: true,
-                    }),
-                    new TextRun({
-                      text: unitDetails?.manager?.title || "",
-                      break: 1, 
-                      bold: true,
-                    }),
-                    new TextRun({
-                      text: unitDetails?.manager?.name || "",
-                      break: 3,
-                      bold: true,
-                    }),
-                    new TextRun({
-                      text: unitDetails?.manager?.degree || "",
-                      break: 1,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
-    });
+    // Create two column layout using tabs
+    const result: Paragraph[] = [];
+    
+    // Add attachments section (left column)
+    result.push(
+      this.createBoldUnderlinedParagraph("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)")
+    );
+    
+    for (let i = 0; i < attachments.length; i++) {
+      result.push(
+        new Paragraph({
+          text: `${i + 1}. ${attachments[i]}`,
+          keepLines: false,
+          indent: { left: 426 },
+          style: "a6",
+        })
+      );
+    }
+    
+    result.push(this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"));
+    
+    const notifications = [
+      "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+      "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+      "Γ.Δ.Α.Ε.Φ.Κ.",
+    ];
+    
+    for (let i = 0; i < notifications.length; i++) {
+      result.push(
+        new Paragraph({
+          text: `${i + 1}. ${notifications[i]}`,
+          keepLines: false,
+          indent: { left: 426 },
+          style: "a6",
+        })
+      );
+    }
+    
+    result.push(this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"));
+    
+    result.push(
+      new Paragraph({
+        text: "1. Χρονολογικό Αρχείο",
+        keepLines: false,
+        indent: { left: 426 },
+        style: "a6",
+      })
+    );
+    
+    // Add several blank lines to create space
+    for (let i = 0; i < 5; i++) {
+      result.push(this.createBlankLine());
+    }
+    
+    // Add manager signature (right column)
+    // This is a separate paragraph positioned at the bottom right with text alignment
+    result.push(
+      new Paragraph({
+        keepLines: true, // Keep manager signature together
+        keepNext: false, // Don't require this to be with any other paragraph
+        spacing: { before: 360 },
+        alignment: AlignmentType.RIGHT, // Align to the right
+        children: [
+          new TextRun({
+            text: unitDetails?.manager?.order || "",
+            bold: true,
+          }),
+          new TextRun({
+            text: unitDetails?.manager?.title || "",
+            break: 1,
+            bold: true,
+          }),
+          new TextRun({
+            text: unitDetails?.manager?.name || "",
+            break: 3,
+            bold: true,
+          }),
+          new TextRun({
+            text: unitDetails?.manager?.degree || "",
+            break: 1,
+          }),
+        ],
+      })
+    );
+    
+    return result;
   }
 
   private static createBoldParagraph(text: string): Paragraph {
@@ -1016,8 +992,8 @@ export class DocumentFormatter {
         total_amount: data.total_amount,
       };
 
-      // Collect all children elements
-      const children: (Paragraph | Table | Paragraph[])[] = [];
+      // Collect all children elements as proper document elements
+      const children: (Paragraph | Table)[] = [];
       
       // Add header
       children.push(await DocumentFormatter.createDocumentHeader(
@@ -1026,13 +1002,15 @@ export class DocumentFormatter {
       ));
       
       // Add document subject
-      children.push(...DocumentFormatter.createDocumentSubject(
+      const docSubject = DocumentFormatter.createDocumentSubject(
         documentData,
         unitDetails,
-      ));
+      );
+      docSubject.forEach(p => children.push(p));
       
       // Add main content
-      children.push(...DocumentFormatter.createMainContent(documentData, unitDetails));
+      const mainContent = DocumentFormatter.createMainContent(documentData, unitDetails);
+      mainContent.forEach(p => children.push(p));
       
       // Add payment table
       children.push(DocumentFormatter.createPaymentTable(documentData.recipients || []));
@@ -1041,9 +1019,13 @@ export class DocumentFormatter {
       children.push(DocumentFormatter.createNote());
       
       // Add footer
-      children.push(DocumentFormatter.createFooter(documentData, unitDetails));
+      const footer = DocumentFormatter.createFooter(documentData, unitDetails);
+      footer.forEach(p => children.push(p));
       
       // Create section with all elements
+      // Cast the children array to any to avoid TypeScript errors with Document sections
+      const sectionElements: any[] = children;
+      
       const sections = [
         {
           properties: {
@@ -1053,7 +1035,7 @@ export class DocumentFormatter {
               orientation: PageOrientation.PORTRAIT,
             },
           },
-          children,
+          children: sectionElements,
         },
       ];
 
