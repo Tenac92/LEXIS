@@ -268,7 +268,7 @@ export class DatabaseStorage implements IStorage {
       
       const offset = (page - 1) * limit;
       
-      // Build the base query
+      // Build the base query with only required columns to avoid metadata error
       let query = supabase
         .from('budget_history')
         .select(`
@@ -280,8 +280,7 @@ export class DatabaseStorage implements IStorage {
           change_reason,
           document_id,
           created_by,
-          created_at,
-          metadata
+          created_at
         `, { count: 'exact' });
       
       // Apply filters
@@ -329,7 +328,7 @@ export class DatabaseStorage implements IStorage {
           document_status: null, // We don't have document status in this version
           created_by: entry.created_by || 'System',
           created_at: entry.created_at,
-          metadata: entry.metadata || {}
+          metadata: {} // Provide an empty object since we're not querying metadata
         };
       }) || [];
       
