@@ -379,15 +379,14 @@ export default function BudgetHistoryPage() {
                           const change = newAmount - previousAmount;
                           const isExpanded = expandedRows[entry.id] || false;
                           
+                          // Use two separate table rows instead of nesting the Collapsible in wrong DOM structure
                           return (
-                            <Collapsible key={entry.id} open={isExpanded} onOpenChange={() => toggleRowExpanded(entry.id)}>
-                              <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => toggleRowExpanded(entry.id)}>
+                            <>
+                              <TableRow key={`row-${entry.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => toggleRowExpanded(entry.id)}>
                                 <TableCell>
-                                  <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                                    </Button>
-                                  </CollapsibleTrigger>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                  </Button>
                                 </TableCell>
                                 <TableCell>
                                   {entry.created_at 
@@ -434,18 +433,18 @@ export default function BudgetHistoryPage() {
                                   )}
                                 </TableCell>
                               </TableRow>
-                              <CollapsibleContent>
-                                <tr className="bg-muted/30">
-                                  <td colSpan={10} className="p-4">
+                              {isExpanded && (
+                                <TableRow key={`details-${entry.id}`} className="bg-muted/30">
+                                  <TableCell colSpan={10} className="p-4">
                                     {entry.metadata ? renderMetadata(entry.metadata) : (
                                       <div className="text-muted-foreground text-sm italic">
                                         No additional metadata available
                                       </div>
                                     )}
-                                  </td>
-                                </tr>
-                              </CollapsibleContent>
-                            </Collapsible>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </>
                           );
                         })}
                       </TableBody>
