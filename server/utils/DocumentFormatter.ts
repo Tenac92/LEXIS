@@ -647,31 +647,56 @@ export class DocumentFormatter {
   private static createFooter(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Table {
+  ): Paragraph[] {
     const attachments = (documentData.attachments || [])
       .map((item) => item.replace(/^\d+\-/, ""))
       .filter(Boolean);
 
-    // Create a two-column table with proper layout
-    // Create the left column content (attachments, notifications, etc.)
-    const leftColumnParagraphs: Paragraph[] = [];
+    // Instead of using a table, we'll create separate paragraphs for the footer
+    // with proper positioning and alignment to allow independent flow
+    const footerParagraphs: Paragraph[] = [];
     
-    leftColumnParagraphs.push(
-      this.createBoldUnderlinedParagraph("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)")
+    // Left side content - first section (attachments)
+    footerParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
+            bold: true,
+            underline: { type: "single" },
+          }),
+        ],
+        spacing: { before: 240, after: 120 },
+        alignment: AlignmentType.LEFT,
+      })
     );
     
     for (let i = 0; i < attachments.length; i++) {
-      leftColumnParagraphs.push(
+      footerParagraphs.push(
         new Paragraph({
           text: `${i + 1}. ${attachments[i]}`,
           keepLines: false,
+          alignment: AlignmentType.LEFT,
           indent: { left: 426 },
           style: "a6",
         })
       );
     }
     
-    leftColumnParagraphs.push(this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"));
+    // Left side content - second section (notifications)
+    footerParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΚΟΙΝΟΠΟΙΗΣΗ",
+            bold: true,
+            underline: { type: "single" },
+          }),
+        ],
+        spacing: { before: 240, after: 120 },
+        alignment: AlignmentType.LEFT,
+      })
+    );
     
     const notifications = [
       "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
@@ -680,98 +705,80 @@ export class DocumentFormatter {
     ];
     
     for (let i = 0; i < notifications.length; i++) {
-      leftColumnParagraphs.push(
+      footerParagraphs.push(
         new Paragraph({
           text: `${i + 1}. ${notifications[i]}`,
           keepLines: false,
+          alignment: AlignmentType.LEFT,
           indent: { left: 426 },
           style: "a6",
         })
       );
     }
     
-    leftColumnParagraphs.push(this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"));
+    // Left side content - third section (internal distribution)
+    footerParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
+            bold: true,
+            underline: { type: "single" },
+          }),
+        ],
+        spacing: { before: 240, after: 120 },
+        alignment: AlignmentType.LEFT,
+      })
+    );
     
-    leftColumnParagraphs.push(
+    footerParagraphs.push(
       new Paragraph({
         text: "1. Χρονολογικό Αρχείο",
         keepLines: false,
+        alignment: AlignmentType.LEFT,
         indent: { left: 426 },
         style: "a6",
       })
     );
     
-    // Create the right column with signature
+    // Insert a section break paragraph to help with spacing
+    footerParagraphs.push(
+      new Paragraph({ text: "", spacing: { before: 240, after: 240 } })
+    );
+    
+    // Right side content - manager signature as an absolutely positioned element
+    // This will make it behave independently from the left column content
     const signatureParagraph = new Paragraph({
       keepLines: true, // Keep manager signature together
-      alignment: AlignmentType.LEFT, // Align to the center
-      spacing: { before: 480 }, // Add some space before the signature
+      keepNext: false, // Don't keep with next paragraph to allow proper flow
+      pageBreakBefore: false, // Do not force page break
+      bidirectional: false, // Disable bidirectional text
+      alignment: AlignmentType.RIGHT, // Align to the right side of the page
+      spacing: { before: 0, after: 0 }, // No additional spacing
+      thematicBreak: false, // No break
       children: [
         new TextRun({
           text: unitDetails?.manager?.order || "",
           bold: true,
         }),
         new TextRun({
-          text: unitDetails?.manager?.title || "",
-          break: 1,
+          text: "\n" + (unitDetails?.manager?.title || ""),
           bold: true,
         }),
         new TextRun({
-          text: unitDetails?.manager?.name || "",
-          break: 3,
+          text: "\n\n\n" + (unitDetails?.manager?.name || ""),
           bold: true,
         }),
         new TextRun({
-          text: unitDetails?.manager?.degree || "",
-          break: 1,
+          text: "\n" + (unitDetails?.manager?.degree || ""),
         }),
       ],
     });
     
-    // Create a floating table that keeps the correct layout
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      columnWidths: [7000, 4000], // Set fixed column widths
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
-      rows: [
-        new TableRow({
-          cantSplit: false, // Allow the row to split across pages - important!
-          children: [
-            // Left column - allows flow across pages
-            new TableCell({
-              children: leftColumnParagraphs,
-              verticalAlign: VerticalAlign.TOP,
-              margins: { right: 300 }, // Add some margin for separation
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-            }),
-            
-            // Right column - signature stays together
-            new TableCell({
-              children: [signatureParagraph],
-              verticalAlign: VerticalAlign.TOP, 
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-            }),
-          ],
-        }),
-      ],
-    });
+    // Add the signature paragraph at the end, but should be positioned at the right top
+    footerParagraphs.push(signatureParagraph);
+    
+    return footerParagraphs;
   }
 
   private static createBoldParagraph(text: string): Paragraph {
@@ -1029,38 +1036,49 @@ export class DocumentFormatter {
 
       // Collect all children elements as proper document elements
       const children: (Paragraph | Table)[] = [];
-      
+
       // Add header
-      children.push(await DocumentFormatter.createDocumentHeader(
-        documentData,
-        unitDetails,
-      ));
-      
+      children.push(
+        await DocumentFormatter.createDocumentHeader(documentData, unitDetails),
+      );
+
       // Add document subject
       const docSubject = DocumentFormatter.createDocumentSubject(
         documentData,
         unitDetails,
       );
-      docSubject.forEach((element: Paragraph | Table) => children.push(element));
-      
+      docSubject.forEach((element: Paragraph | Table) =>
+        children.push(element),
+      );
+
       // Add main content
-      const mainContent = DocumentFormatter.createMainContent(documentData, unitDetails);
-      mainContent.forEach((element: Paragraph | Table) => children.push(element));
-      
+      const mainContent = DocumentFormatter.createMainContent(
+        documentData,
+        unitDetails,
+      );
+      mainContent.forEach((element: Paragraph | Table) =>
+        children.push(element),
+      );
+
       // Add payment table
-      children.push(DocumentFormatter.createPaymentTable(documentData.recipients || []));
-      
+      children.push(
+        DocumentFormatter.createPaymentTable(documentData.recipients || []),
+      );
+
       // Add note
       children.push(DocumentFormatter.createNote());
-      
-      // Add footer
-      const footer = DocumentFormatter.createFooter(documentData, unitDetails);
-      children.push(footer);
-      
+
+      // Add footer paragraphs
+      const footerParagraphs = DocumentFormatter.createFooter(documentData, unitDetails);
+      // Add each paragraph individually to avoid type issues
+      for (const paragraph of footerParagraphs) {
+        children.push(paragraph);
+      }
+
       // Create section with all elements
       // Cast the children array to any to avoid TypeScript errors with Document sections
       const sectionElements: any[] = children;
-      
+
       const sections = [
         {
           properties: {
