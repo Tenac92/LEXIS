@@ -707,7 +707,6 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              // Add property to prevent cell from breaking across pages
               cantSplit: true,
               width: { size: 35, type: WidthType.PERCENTAGE },
               borders: {
@@ -725,33 +724,20 @@ export class DocumentFormatter {
                       text: unitDetails?.manager?.order || "",
                       bold: true,
                     }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-                new Paragraph({
-                  keepLines: true, // Ensure the cell content doesn't break across pages
-                  children: [
-                    new TextRun({
-                      text: unitDetails?.manager?.title || "",
-                      bold: true,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-                new Paragraph({
-                  keepLines: true, // Ensure the cell content doesn't break across pages
-                  spacing: { before: 400 },
-                  children: [
+
                     new TextRun({
                       text: unitDetails?.manager?.name || "",
                       bold: true,
                     }),
+
+                    new TextRun({
+                      text: unitDetails?.manager?.title || "",
+                      bold: true,
+                    }),
+                    new TextRun({
+                      text: unitDetails?.manager?.degree || "",
+                    }),
                   ],
-                  alignment: AlignmentType.CENTER,
-                }),
-                new Paragraph({
-                  keepLines: true, // Ensure the cell content doesn't break across pages
-                  text: unitDetails?.manager?.degree || "",
                   alignment: AlignmentType.CENTER,
                 }),
               ],
