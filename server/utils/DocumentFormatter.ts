@@ -25,6 +25,7 @@ interface UserDetails {
   name: string;
   email?: string;
   contact_number?: string;
+  telephone?: string;  // Added telephone field from Supabase user table
   department?: string;
 }
 
@@ -115,7 +116,7 @@ export class DocumentFormatter {
       name: documentData.generated_by?.name || documentData.user_name || "",
       department:
         documentData.generated_by?.department || documentData.department || "",
-      contact_number: documentData.generated_by?.contact_number || "",
+      contact_number: documentData.generated_by?.telephone || documentData.generated_by?.contact_number || documentData.contact_number || "",
     };
 
     // Use unitDetails.address if available
