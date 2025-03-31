@@ -79,9 +79,9 @@ export class BudgetService {
         ? budgetData.quarter_view?.toString() 
         : budgetData?.[quarterKey]?.toString() || '0';
         
-      // Determine last quarter check - either from the column or current quarter
+      // Determine last quarter check value - either from the column or current quarter
       const lastQuarterCheck = hasLastQuarterCheck 
-        ? budgetData.last_quarter_check?.toString() 
+        ? budgetData.last_quarter_check?.toString() || `q${currentQuarterNumber}`
         : `q${currentQuarterNumber}`;
       
       return {
@@ -404,7 +404,10 @@ export class BudgetService {
       
       // Check for quarter transitions using the last_quarter_check column
       const lastQuarterCheck = budgetData.last_quarter_check?.toString() || '';
-      const lastQuarterChecked = lastQuarterCheck ? parseInt(lastQuarterCheck.charAt(1)) : 0;
+      // Extract the quarter number from the text (e.g., extract '1' from 'q1')
+      const lastQuarterChecked = lastQuarterCheck && lastQuarterCheck.startsWith('q') 
+        ? parseInt(lastQuarterCheck.substring(1)) 
+        : 0;
       const currentQuarterNumber = Math.ceil(currentMonth / 3);
       const isQuarterTransition = lastQuarterChecked > 0 && lastQuarterChecked < currentQuarterNumber;
       
@@ -458,7 +461,7 @@ export class BudgetService {
         user_view: newUserView.toString(),
         [quarterKey]: newQuarterValue.toString(),
         updated_at: new Date().toISOString(),
-        // Update the last_quarter_check to current quarter
+        // Update the last_quarter_check to current quarter (text format)
         last_quarter_check: `q${currentQuarterNumber}`,
         // Update quarter_view with the same value as the quarter field
         quarter_view: newQuarterValue.toString()
