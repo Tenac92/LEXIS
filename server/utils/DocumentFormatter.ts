@@ -704,7 +704,7 @@ export class DocumentFormatter {
     // Create the right column with signature
     const signatureParagraph = new Paragraph({
       keepLines: true, // Keep manager signature together
-      alignment: AlignmentType.LEFT, // Align to the center
+      alignment: AlignmentType.CENTER, // Align to the center
       spacing: { before: 480 }, // Add some space before the signature
       children: [
         new TextRun({
