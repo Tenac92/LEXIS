@@ -734,11 +734,9 @@ export class DocumentFormatter {
                       text: unitDetails?.manager?.title || "",
                       bold: true,
                     }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-                new Paragraph({
-                  children: [
+                    new TextRun({
+                      break: 1,
+                    }),
                     new TextRun({
                       text: unitDetails?.manager?.degree || "",
                     }),
