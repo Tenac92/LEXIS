@@ -1149,50 +1149,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         });
       }
 
-      // Update budget using project MIS with our own fetch to prevent auth redirects
-      try {
-        // Making manual budget update request
-        const budgetUpdateResp = await fetch(`/api/budget/${encodeURIComponent(projectForSubmission.mis)}`, {
-          method: 'PATCH',
-          headers: { 
-            'Content-Type': 'application/json',
-            'X-Request-ID': `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            amount: totalAmount.toString()
-          })
-        });
-        
-        // Handle authorization issues gracefully
-        if (budgetUpdateResp.status === 401) {
-          console.warn('Auth warning for budget update');
-          toast({
-            title: "Προειδοποίηση",
-            description: "Απαιτείται επαναλογίνση για ενημέρωση προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
-            variant: "destructive"
-          });
-        } 
-        // Handle other errors gracefully
-        else if (!budgetUpdateResp.ok) {
-          console.error('Budget update failed:', budgetUpdateResp.status);
-          toast({
-            title: "Προειδοποίηση",
-            description: "Αδυναμία ενημέρωσης προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
-            variant: "destructive"
-          });
-        }
-        else {
-          console.log('Budget updated successfully');
-        }
-      } catch (updateError) {
-        console.error('Budget update error:', updateError);
-        toast({
-          title: "Προειδοποίηση",
-          description: "Σφάλμα κατά την ενημέρωση προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
-          variant: "destructive"
-        });
-      }
+      // Note: We've removed the manual budget update section because the document creation endpoint will handle budget updates
+      // This prevents duplicate budget history entries
 
       // Prepare payload with project MIS
       const payload = {
