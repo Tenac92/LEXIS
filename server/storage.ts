@@ -281,13 +281,11 @@ export class DatabaseStorage implements IStorage {
           document_id,
           created_by,
           created_at,
-          metadata,
-          users(id, name, email),
-          generated_documents(id, status)
+          metadata
         `, { count: 'exact' });
       
       // Apply filters
-      if (mis) {
+      if (mis && mis !== 'all') {
         query = query.eq('mis', mis);
       }
       
@@ -296,7 +294,9 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Get total count first
-      const { count, error: countError } = await query.select('id', { count: 'exact', head: true });
+      const { count, error: countError } = await supabase
+        .from('budget_history')
+        .select('id', { count: 'exact', head: true });
       
       if (countError) {
         console.error('[Storage] Error getting count of budget history records:', countError);
@@ -313,7 +313,7 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      // Format the response data with user information and provide default values for missing fields
+      // Format the response data with default values for missing fields
       const formattedData = data?.map(entry => {
         // Log the raw entry to debug missing fields
         console.log('[Storage] Raw budget history entry:', JSON.stringify(entry));
@@ -326,8 +326,8 @@ export class DatabaseStorage implements IStorage {
           change_type: entry.change_type || '',
           change_reason: entry.change_reason || '',
           document_id: entry.document_id,
-          document_status: entry.generated_documents?.[0]?.status,
-          created_by: entry.users?.name || 'System',
+          document_status: null, // We don't have document status in this version
+          created_by: entry.created_by || 'System',
           created_at: entry.created_at,
           metadata: entry.metadata || {}
         };

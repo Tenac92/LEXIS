@@ -1,3 +1,4 @@
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Table,
@@ -381,8 +382,8 @@ export default function BudgetHistoryPage() {
                           
                           // Use two separate table rows instead of nesting the Collapsible in wrong DOM structure
                           return (
-                            <>
-                              <TableRow key={`row-${entry.id}`} className="cursor-pointer hover:bg-muted/50" onClick={() => toggleRowExpanded(entry.id)}>
+                            <React.Fragment key={entry.id}>
+                              <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => toggleRowExpanded(entry.id)}>
                                 <TableCell>
                                   <Button variant="ghost" size="icon" className="h-8 w-8">
                                     <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -434,7 +435,7 @@ export default function BudgetHistoryPage() {
                                 </TableCell>
                               </TableRow>
                               {isExpanded && (
-                                <TableRow key={`details-${entry.id}`} className="bg-muted/30">
+                                <TableRow className="bg-muted/30">
                                   <TableCell colSpan={10} className="p-4">
                                     {entry.metadata ? renderMetadata(entry.metadata) : (
                                       <div className="text-muted-foreground text-sm italic">
@@ -444,7 +445,7 @@ export default function BudgetHistoryPage() {
                                   </TableCell>
                                 </TableRow>
                               )}
-                            </>
+                            </React.Fragment>
                           );
                         })}
                       </TableBody>
