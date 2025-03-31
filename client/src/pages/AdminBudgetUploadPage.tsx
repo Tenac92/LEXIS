@@ -40,6 +40,12 @@ export default function AdminBudgetUploadPage() {
       success: number;
       failures: number;
       errors: string[];
+      failedRecords?: {
+        row: number | any;
+        mis?: string;
+        na853?: string;
+        error: string;
+      }[];
     }
   } | null>(null);
 
@@ -85,6 +91,12 @@ export default function AdminBudgetUploadPage() {
           success: number;
           failures: number;
           errors: string[];
+          failedRecords?: {
+            row: number | any;
+            mis?: string;
+            na853?: string;
+            error: string;
+          }[];
         }
       };
 
@@ -250,10 +262,11 @@ export default function AdminBudgetUploadPage() {
                         </div>
                       </div>
 
+                      {/* General Error Information */}
                       {uploadResult.stats.errors.length > 0 && (
                         <div>
-                          <h3 className="text-sm font-medium mb-2">Error Details:</h3>
-                          <div className="max-h-60 overflow-y-auto rounded-md border bg-muted/50">
+                          <h3 className="text-sm font-medium mb-2">Error Messages:</h3>
+                          <div className="max-h-60 overflow-y-auto rounded-md border bg-muted/50 mb-4">
                             <Table>
                               <TableHeader>
                                 <TableRow>
@@ -266,6 +279,35 @@ export default function AdminBudgetUploadPage() {
                                   <TableRow key={index}>
                                     <TableCell>{index + 1}</TableCell>
                                     <TableCell className="font-mono text-xs">{error}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Detailed Failed Records Table */}
+                      {uploadResult.stats.failedRecords && uploadResult.stats.failedRecords.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-medium mb-2">Failed Records Details:</h3>
+                          <div className="max-h-60 overflow-y-auto rounded-md border bg-muted/50">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-[50px]">Record</TableHead>
+                                  <TableHead className="w-[120px]">MIS</TableHead>
+                                  <TableHead className="w-[120px]">NA853</TableHead>
+                                  <TableHead>Error</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {uploadResult.stats.failedRecords.map((record, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell className="font-mono text-xs">{record.mis || 'N/A'}</TableCell>
+                                    <TableCell className="font-mono text-xs">{record.na853 || 'N/A'}</TableCell>
+                                    <TableCell className="text-xs text-red-500">{record.error}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>

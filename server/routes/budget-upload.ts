@@ -201,11 +201,44 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
 
     console.log(`[BudgetUpload] Prepared ${updates.length} updates, encountered ${failures.length} failures`);
 
-    // Process each update sequentially
-    const results = {
+    // Process each update sequentially with detailed error tracking
+    const results: {
+      success: number;
+      failures: number;
+      errors: string[];
+      failedRecords: {
+        row: number | any;
+        mis?: string;
+        na853?: string;
+        error: string;
+      }[];
+    } = {
       success: 0,
       failures: failures.length,
-      errors: failures.map(f => f.error).concat([])
+      errors: failures.map(f => f.error).concat([]),
+      failedRecords: failures.map(f => {
+        let misValue = 'unknown';
+        let rowData: any = {};
+        
+        if (f.row && typeof f.row === 'object') {
+          rowData = { ...f.row };
+          
+          // Try to extract MIS value using different possible keys
+          const possibleMisKeys = ['MIS', 'mis', 'Mis', 'κωδικός', 'id', 'ID'];
+          for (const key of possibleMisKeys) {
+            if (key in f.row && f.row[key]) {
+              misValue = String(f.row[key]);
+              break;
+            }
+          }
+        }
+        
+        return {
+          row: rowData,
+          mis: misValue,
+          error: f.error
+        };
+      })
     };
 
     // Process updates
@@ -296,7 +329,20 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
         results.success++;
       } catch (error) {
         results.failures++;
-        results.errors.push(error instanceof Error ? error.message : 'Unknown error');
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        results.errors.push(errorMessage);
+        
+        // Add detailed error information
+        results.failedRecords = results.failedRecords || [];
+        results.failedRecords.push({
+          row: results.success + results.failures, // Row number in processing sequence
+          mis: update?.mis || 'unknown',
+          na853: update?.na853 || 'unknown',
+          error: errorMessage
+        });
+        
+        // Log the failure for easier debugging
+        console.error(`[BudgetUpload] Failed to process MIS ${update?.mis}, NA853 ${update?.na853}: ${errorMessage}`);
       }
     }
 
