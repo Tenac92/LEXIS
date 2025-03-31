@@ -644,114 +644,94 @@ export class DocumentFormatter {
   private static createFooter(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Table {
+  ): Paragraph[] {
     const attachments = (documentData.attachments || [])
       .map((item) => item.replace(/^\d+\-/, ""))
       .filter(Boolean);
 
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
-      rows: [
-        new TableRow({
-          cantSplit: false, // Allow row to split across pages
-          children: [
-            new TableCell({
-              width: { size: 65, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              children: [
-                this.createBoldUnderlinedParagraph(
-                  "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
-                ),
-                ...attachments.map(
-                  (item, index) =>
-                    new Paragraph({
-                      text: `${index + 1}. ${item}`,
-                      keepLines: false,
-                      indent: { left: 426 },
-                      style: "a6",
-                    }),
-                ),
-                this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"),
-                ...[
-                  "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
-                  "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
-                  "Γ.Δ.Α.Ε.Φ.Κ.",
-                ].map(
-                  (item, index) =>
-                    new Paragraph({
-                      text: `${index + 1}. ${item}`,
-                      keepLines: false,
-                      indent: { left: 426 },
-                      style: "a6",
-                    }),
-                ),
-                this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
-                ...["Χρονολογικό Αρχείο"].map(
-                  (item, index) =>
-                    new Paragraph({
-                      text: `${index + 1}. ${item}`,
-                      keepLines: false,
-                      indent: { left: 426 },
-                      style: "a6",
-                    }),
-                ),
-              ],
-            }),
-            new TableCell({
-              width: { size: 35, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              children: [
-                new Paragraph({
-                  keepLines: true, // Keep the original setting to prevent content from breaking across pages
-                  spacing: { before: 100 },
-                  children: [
-                    new TextRun({
-                      text: unitDetails?.manager?.order || "",
-                      bold: true,
-                    }),
+    // Create an array of paragraphs for the document footer
+    const result: Paragraph[] = [];
 
-                    new TextRun({
-                      text: unitDetails?.manager?.title || "",
-                      break: 1,
-                      bold: true,
-                    }),
+    // Create left content in a floating text box
+    const leftContent = [
+      this.createBoldUnderlinedParagraph(
+        "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
+      ),
+      ...attachments.map(
+        (item, index) =>
+          new Paragraph({
+            text: `${index + 1}. ${item}`,
+            keepLines: false,
+            indent: { left: 426 },
+            style: "a6",
+          }),
+      ),
+      this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"),
+      ...[
+        "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+        "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+        "Γ.Δ.Α.Ε.Φ.Κ.",
+      ].map(
+        (item, index) =>
+          new Paragraph({
+            text: `${index + 1}. ${item}`,
+            keepLines: false,
+            indent: { left: 426 },
+            style: "a6",
+          }),
+      ),
+      this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
+      ...["Χρονολογικό Αρχείο"].map(
+        (item, index) =>
+          new Paragraph({
+            text: `${index + 1}. ${item}`,
+            keepLines: false,
+            indent: { left: 426 },
+            style: "a6",
+          }),
+      ),
+    ];
 
-                    new TextRun({
-                      text: unitDetails?.manager?.name || "",
-                      break: 3,
-                      bold: true,
-                    }),
-                    new TextRun({
-                      text: unitDetails?.manager?.degree || "",
-                      break: 1,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-              ],
-            }),
-          ],
+    // Add left content
+    result.push(
+      ...leftContent,
+
+      // Add a spacer paragraph
+      new Paragraph({ text: "" }),
+    );
+
+    // Create right content (manager signature) as a separate paragraph
+    // This will be independent from the left content
+    const managerSignature = new Paragraph({
+      keepLines: true, // Keep the signature lines together
+      spacing: { before: 100 },
+      children: [
+        new TextRun({
+          text: unitDetails?.manager?.order || "",
+          bold: true,
+        }),
+        new TextRun({
+          text: unitDetails?.manager?.title || "",
+          break: 1,
+          bold: true,
+        }),
+        new TextRun({
+          text: unitDetails?.manager?.name || "",
+          break: 3,
+          bold: true,
+        }),
+        new TextRun({
+          text: unitDetails?.manager?.degree || "",
+          break: 1,
         }),
       ],
+      alignment: AlignmentType.RIGHT, // Right-align the signature
     });
+
+    // Add the signature paragraph
+    result.push(managerSignature);
+
+    return result;
   }
 
   private static createBoldParagraph(text: string): Paragraph {
@@ -1007,6 +987,34 @@ export class DocumentFormatter {
         total_amount: data.total_amount,
       };
 
+      // Collect all children elements
+      const children: (Paragraph | Table)[] = [];
+      
+      // Add header
+      children.push(await DocumentFormatter.createDocumentHeader(
+        documentData,
+        unitDetails,
+      ));
+      
+      // Add document subject
+      children.push(...DocumentFormatter.createDocumentSubject(
+        documentData,
+        unitDetails,
+      ));
+      
+      // Add main content
+      children.push(...DocumentFormatter.createMainContent(documentData, unitDetails));
+      
+      // Add payment table
+      children.push(DocumentFormatter.createPaymentTable(documentData.recipients || []));
+      
+      // Add note
+      children.push(DocumentFormatter.createNote());
+      
+      // Add footer
+      children.push(...DocumentFormatter.createFooter(documentData, unitDetails));
+      
+      // Create section with all elements
       const sections = [
         {
           properties: {
@@ -1016,20 +1024,7 @@ export class DocumentFormatter {
               orientation: PageOrientation.PORTRAIT,
             },
           },
-          children: [
-            await DocumentFormatter.createDocumentHeader(
-              documentData,
-              unitDetails,
-            ),
-            ...DocumentFormatter.createDocumentSubject(
-              documentData,
-              unitDetails,
-            ),
-            ...DocumentFormatter.createMainContent(documentData, unitDetails),
-            DocumentFormatter.createPaymentTable(documentData.recipients || []),
-            DocumentFormatter.createNote(),
-            DocumentFormatter.createFooter(documentData, unitDetails),
-          ],
+          children,
         },
       ];
 
