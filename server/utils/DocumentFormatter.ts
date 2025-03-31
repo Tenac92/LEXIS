@@ -661,7 +661,7 @@ export class DocumentFormatter {
       },
       rows: [
         new TableRow({
-          cantSplit: true, // Prevent the entire row from splitting across pages
+          cantSplit: false, // Allow row to split across pages
           children: [
             new TableCell({
               width: { size: 65, type: WidthType.PERCENTAGE },
