@@ -256,6 +256,16 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
 
         // If record doesn't exist, create it
         if (fetchError || !existingRecord) {
+          // For new records, ensure user_view is at least equal to katanomes_etous if both are provided
+          let initialUserView = data.user_view || 0;
+          const initialKatanomesEtous = data.katanomes_etous || 0;
+          
+          // If user_view is not explicitly set but katanomes_etous is, use katanomes_etous as the user_view
+          if (data.user_view === undefined && data.katanomes_etous !== undefined) {
+            initialUserView = initialKatanomesEtous;
+            console.log(`[BudgetUpload] Setting initial user_view for MIS ${mis} (NA853: ${na853}) to match katanomes_etous: ${initialKatanomesEtous}`);
+          }
+          
           const { error: insertError } = await supabase
             .from('budget_na853_split')
             .insert({
@@ -266,8 +276,8 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
               q2: data.q2 || 0,
               q3: data.q3 || 0,
               q4: data.q4 || 0,
-              katanomes_etous: data.katanomes_etous || 0,
-              user_view: data.user_view || 0,
+              katanomes_etous: initialKatanomesEtous,
+              user_view: initialUserView,
               created_at: new Date().toISOString()
             });
 
@@ -279,24 +289,53 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
           await storage.createBudgetHistoryEntry({
             mis,
             previous_amount: "0",
-            new_amount: data.user_view !== undefined ? data.user_view.toString() : "0",
+            new_amount: initialUserView.toString(),
             change_type: 'import',
-            change_reason: `Initial import from Excel for MIS ${mis} (NA853: ${na853}) - NA853 code: ${na853}`,
+            change_reason: `Initial import from Excel for MIS ${mis} (NA853: ${na853}) - Values: ${
+              JSON.stringify({
+                ethsia_pistosi: data.ethsia_pistosi || 0,
+                q1: data.q1 || 0,
+                q2: data.q2 || 0,
+                q3: data.q3 || 0,
+                q4: data.q4 || 0,
+                katanomes_etous: initialKatanomesEtous,
+                user_view: initialUserView
+              })
+            }`,
             created_by: req.user?.id?.toString() || undefined
             // Removed metadata field since it's causing schema issues
           });
         } else {
           // Record exists, update it
+          // Calculate new values
+          const newEthsiaPistosi = data.ethsia_pistosi !== undefined ? data.ethsia_pistosi : existingRecord.ethsia_pistosi;
+          const newQ1 = data.q1 !== undefined ? data.q1 : existingRecord.q1;
+          const newQ2 = data.q2 !== undefined ? data.q2 : existingRecord.q2;
+          const newQ3 = data.q3 !== undefined ? data.q3 : existingRecord.q3;
+          const newQ4 = data.q4 !== undefined ? data.q4 : existingRecord.q4;
+          const newKatanomesEtous = data.katanomes_etous !== undefined ? data.katanomes_etous : existingRecord.katanomes_etous;
+          
+          // Special handling for user_view: if katanomes_etous changed, adjust user_view accordingly
+          let newUserView = data.user_view !== undefined ? data.user_view : existingRecord.user_view;
+          
+          // If katanomes_etous has changed, add the difference to user_view
+          if (data.katanomes_etous !== undefined && existingRecord.katanomes_etous !== data.katanomes_etous) {
+            const katanomesDifference = data.katanomes_etous - existingRecord.katanomes_etous;
+            // Add the difference to the current user_view
+            newUserView = (existingRecord.user_view || 0) + katanomesDifference;
+            console.log(`[BudgetUpload] Adjusting user_view for MIS ${mis} (NA853: ${na853}): katanomes_etous changed by ${katanomesDifference}, new user_view: ${newUserView}`);
+          }
+          
           const { error: updateError } = await supabase
             .from('budget_na853_split')
             .update({
-              ethsia_pistosi: data.ethsia_pistosi !== undefined ? data.ethsia_pistosi : existingRecord.ethsia_pistosi,
-              q1: data.q1 !== undefined ? data.q1 : existingRecord.q1,
-              q2: data.q2 !== undefined ? data.q2 : existingRecord.q2,
-              q3: data.q3 !== undefined ? data.q3 : existingRecord.q3,
-              q4: data.q4 !== undefined ? data.q4 : existingRecord.q4,
-              katanomes_etous: data.katanomes_etous !== undefined ? data.katanomes_etous : existingRecord.katanomes_etous,
-              user_view: data.user_view !== undefined ? data.user_view : existingRecord.user_view,
+              ethsia_pistosi: newEthsiaPistosi,
+              q1: newQ1,
+              q2: newQ2,
+              q3: newQ3,
+              q4: newQ4,
+              katanomes_etous: newKatanomesEtous,
+              user_view: newUserView,
               updated_at: new Date().toISOString()
             })
             .eq('mis', mis)
@@ -310,15 +349,19 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
           await storage.createBudgetHistoryEntry({
             mis,
             previous_amount: existingRecord.user_view?.toString() || '0',
-            new_amount: (data.user_view !== undefined ? data.user_view : existingRecord.user_view).toString(),
+            new_amount: newUserView.toString(),
             change_type: 'import',
             change_reason: `Updated from Excel import for MIS ${mis} (NA853: ${na853}) - Updated values: ${
               JSON.stringify({
-                ethsia_pistosi: data.ethsia_pistosi !== undefined ? data.ethsia_pistosi : existingRecord.ethsia_pistosi,
-                q1: data.q1 !== undefined ? data.q1 : existingRecord.q1,
-                q2: data.q2 !== undefined ? data.q2 : existingRecord.q2,
-                q3: data.q3 !== undefined ? data.q3 : existingRecord.q3,
-                q4: data.q4 !== undefined ? data.q4 : existingRecord.q4
+                ethsia_pistosi: newEthsiaPistosi,
+                q1: newQ1,
+                q2: newQ2,
+                q3: newQ3,
+                q4: newQ4,
+                katanomes_etous: newKatanomesEtous,
+                user_view: newUserView,
+                katanomes_adjustment: data.katanomes_etous !== undefined && existingRecord.katanomes_etous !== data.katanomes_etous ? 
+                  `Changed by ${data.katanomes_etous - existingRecord.katanomes_etous}` : 'No change'
               })
             }`,
             created_by: req.user?.id?.toString() || undefined
