@@ -105,6 +105,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         console.log('[DIRECT_ROUTE] Document created successfully:', data.id);
+        
+        // Update the budget to reflect the document creation
+        try {
+          console.log('[DIRECT_ROUTE] Updating budget for project:', project_id, 'with amount:', documentPayload.total_amount);
+          const budgetResult = await BudgetService.updateBudget(
+            project_id,                      // MIS
+            documentPayload.total_amount,    // Amount
+            req.user.id,                     // User ID
+            data.id,                         // Document ID
+            `Δημιουργία εγγράφου ID:${data.id} για το έργο με MIS:${project_id}`  // Change reason
+          );
+          
+          console.log('[DIRECT_ROUTE] Budget update result:', budgetResult.status);
+        } catch (budgetError) {
+          console.error('[DIRECT_ROUTE] Error updating budget (document still created):', budgetError);
+          // Continue without failing - document is created but budget may not be updated
+        }
+        
         res.status(201).json({ id: data.id });
       } catch (error) {
         console.error('[DIRECT_ROUTE] Error creating document:', error);
@@ -272,6 +290,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         console.log('[DIRECT_ROUTE_V2] Document created successfully with ID:', data.id);
+        
+        // Update the budget to reflect the document creation
+        try {
+          // Convert project_id to MIS if needed (project_id or project_mis)
+          const projectMIS = req.body.project_mis || project_id;
+          console.log('[DIRECT_ROUTE_V2] Updating budget for project:', projectMIS, 'with amount:', documentPayload.total_amount);
+          
+          const budgetResult = await BudgetService.updateBudget(
+            projectMIS,                         // MIS
+            documentPayload.total_amount,       // Amount
+            (req as any).session?.user?.id || 'guest',  // User ID
+            data.id,                            // Document ID
+            `Δημιουργία εγγράφου ID:${data.id} για το έργο με MIS:${projectMIS}`  // Change reason
+          );
+          
+          console.log('[DIRECT_ROUTE_V2] Budget update result:', budgetResult.status);
+        } catch (budgetError) {
+          console.error('[DIRECT_ROUTE_V2] Error updating budget (document still created):', budgetError);
+          // Continue without failing - document is created but budget may not be updated
+        }
+        
         res.status(201).json({ 
           id: data.id,
           message: 'Document created and stored in database'
