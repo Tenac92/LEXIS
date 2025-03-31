@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,7 +13,7 @@ import {
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { useToast } from "@/hooks/use-toast";
 import { type Project } from "@shared/schema";
-import { Plus, FileUp, Download, LayoutGrid, LayoutList } from "lucide-react";
+import { Plus, FileUp, Download, LayoutGrid, LayoutList, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRef } from "react";
@@ -135,6 +135,16 @@ export default function ProjectsPage() {
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
                   New Project
+                </Button>
+              </Link>
+            )}
+            
+            {/* Only admin can upload budget data */}
+            {isAdmin && (
+              <Link href="/admin/budget-upload">
+                <Button variant="outline">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Budget Data
                 </Button>
               </Link>
             )}
