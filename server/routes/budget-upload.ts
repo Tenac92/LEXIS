@@ -248,13 +248,9 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
             previous_amount: "0",
             new_amount: data.user_view !== undefined ? data.user_view.toString() : "0",
             change_type: 'import',
-            change_reason: `Initial import from Excel for MIS ${mis} (NA853: ${na853})`,
-            created_by: req.user?.id?.toString() || undefined,
-            metadata: {
-              operation_type: 'excel_import',
-              na853,
-              import_date: new Date().toISOString()
-            }
+            change_reason: `Initial import from Excel for MIS ${mis} (NA853: ${na853}) - NA853 code: ${na853}`,
+            created_by: req.user?.id?.toString() || undefined
+            // Removed metadata field since it's causing schema issues
           });
         } else {
           // Record exists, update it
@@ -283,31 +279,17 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
             previous_amount: existingRecord.user_view?.toString() || '0',
             new_amount: (data.user_view !== undefined ? data.user_view : existingRecord.user_view).toString(),
             change_type: 'import',
-            change_reason: `Updated from Excel import for MIS ${mis} (NA853: ${na853})`,
-            created_by: req.user?.id?.toString() || undefined,
-            metadata: {
-              operation_type: 'excel_import',
-              na853,
-              previous: {
-                ethsia_pistosi: existingRecord.ethsia_pistosi,
-                q1: existingRecord.q1,
-                q2: existingRecord.q2,
-                q3: existingRecord.q3,
-                q4: existingRecord.q4,
-                katanomes_etous: existingRecord.katanomes_etous,
-                user_view: existingRecord.user_view
-              },
-              new: {
+            change_reason: `Updated from Excel import for MIS ${mis} (NA853: ${na853}) - Updated values: ${
+              JSON.stringify({
                 ethsia_pistosi: data.ethsia_pistosi !== undefined ? data.ethsia_pistosi : existingRecord.ethsia_pistosi,
                 q1: data.q1 !== undefined ? data.q1 : existingRecord.q1,
                 q2: data.q2 !== undefined ? data.q2 : existingRecord.q2,
                 q3: data.q3 !== undefined ? data.q3 : existingRecord.q3,
-                q4: data.q4 !== undefined ? data.q4 : existingRecord.q4,
-                katanomes_etous: data.katanomes_etous !== undefined ? data.katanomes_etous : existingRecord.katanomes_etous,
-                user_view: data.user_view !== undefined ? data.user_view : existingRecord.user_view
-              },
-              import_date: new Date().toISOString()
-            }
+                q4: data.q4 !== undefined ? data.q4 : existingRecord.q4
+              })
+            }`,
+            created_by: req.user?.id?.toString() || undefined
+            // Removed metadata field since it's causing schema issues
           });
         }
 
