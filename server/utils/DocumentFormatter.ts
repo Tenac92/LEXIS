@@ -25,7 +25,7 @@ interface UserDetails {
   name: string;
   email?: string;
   contact_number?: string;
-  telephone?: string;  // Added telephone field from Supabase user table
+  telephone?: string; // Added telephone field from Supabase user table
   department?: string;
 }
 
@@ -117,9 +117,14 @@ export class DocumentFormatter {
       department:
         documentData.generated_by?.department || documentData.department || "",
       // Handle telephone as number by converting to string
-      contact_number: (documentData.generated_by?.telephone !== undefined ? String(documentData.generated_by?.telephone) : null) || 
-                     documentData.generated_by?.contact_number || 
-                     (documentData.contact_number !== undefined ? String(documentData.contact_number) : ""),
+      contact_number:
+        (documentData.generated_by?.telephone !== undefined
+          ? String(documentData.generated_by?.telephone)
+          : null) ||
+        documentData.generated_by?.contact_number ||
+        (documentData.contact_number !== undefined
+          ? String(documentData.contact_number)
+          : ""),
     };
 
     // Use unitDetails.address if available
@@ -702,6 +707,8 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
+              // Add property to prevent cell from breaking across pages
+              cantSplit: true,
               width: { size: 35, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
@@ -775,7 +782,7 @@ export class DocumentFormatter {
           underline: { type: "single" },
         }),
       ],
-      spacing: { before: 240, after: 240 },
+      spacing: { before: 240, after: 10 },
     });
   }
 
@@ -862,22 +869,26 @@ export class DocumentFormatter {
 
       // If not found, try with unit_name.name using containsJson query
       if (!unitData && !unitError) {
-        console.log("Unit not found by exact match on unit field, trying unit_name.name");
-   
+        console.log(
+          "Unit not found by exact match on unit field, trying unit_name.name",
+        );
+
         // Get all units and filter manually for unit_name.name match
         const { data: allUnits, error: fetchError } = await supabase
           .from("Monada")
           .select("*");
-          
+
         if (!fetchError && allUnits) {
           // Find the first unit that matches by unit_name.name
-          unitData = allUnits.find(unit => 
-            unit.unit_name && 
-            typeof unit.unit_name === 'object' && 
-            unit.unit_name.name && 
-            unit.unit_name.name === unitCode
-          ) || null;
-          
+          unitData =
+            allUnits.find(
+              (unit) =>
+                unit.unit_name &&
+                typeof unit.unit_name === "object" &&
+                unit.unit_name.name &&
+                unit.unit_name.name === unitCode,
+            ) || null;
+
           if (unitData) {
             console.log("Found unit by unit_name.name match:", unitData.unit);
           }
@@ -888,7 +899,9 @@ export class DocumentFormatter {
 
       // If still not found, try case-insensitive search on unit field
       if (!unitData && !unitError) {
-        console.log("Unit not found by exact match, trying case-insensitive search on unit field");
+        console.log(
+          "Unit not found by exact match, trying case-insensitive search on unit field",
+        );
         ({ data: unitData, error: unitError } = await supabase
           .from("Monada")
           .select("*")
@@ -908,21 +921,21 @@ export class DocumentFormatter {
           unit: unitCode,
           unit_name: {
             name: unitCode,
-            prop: "τη"
+            prop: "τη",
           },
           address: {
             address: "Κηφισίας 124 & Ιατρίδου 2",
             tk: "11526",
-            region: "Αθήνα"
+            region: "Αθήνα",
           },
           manager: {
             name: "Σ. Παπαδόπουλος",
             order: "Με εντολή Υπουργού",
             title: "Ο Διευθυντής",
             degree: "Δρ. Πολ. Μηχανικός",
-            prepose: "του"
+            prepose: "του",
           },
-          email: "daefk@civilprotection.gr"
+          email: "daefk@civilprotection.gr",
         };
       }
 
@@ -1020,16 +1033,10 @@ export class DocumentFormatter {
               documentData,
               unitDetails,
             ),
-            ...DocumentFormatter.createMainContent(
-              documentData,
-              unitDetails,
-            ),
+            ...DocumentFormatter.createMainContent(documentData, unitDetails),
             DocumentFormatter.createPaymentTable(documentData.recipients || []),
             DocumentFormatter.createNote(),
-            DocumentFormatter.createFooter(
-              documentData,
-              unitDetails,
-            ),
+            DocumentFormatter.createFooter(documentData, unitDetails),
           ],
         },
       ];
