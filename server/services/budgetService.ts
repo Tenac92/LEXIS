@@ -52,6 +52,12 @@ export class BudgetService {
       // Use user_view as current_budget if current_budget is not set or zero
       const userView = budgetData?.user_view?.toString() || '0';
       
+      // Check if the total_spent column exists
+      const hasTotalSpent = budgetData && 'total_spent' in budgetData && budgetData.total_spent !== null;
+      const totalSpent = hasTotalSpent ? budgetData.total_spent.toString() : '0';
+      
+      console.log(`[BudgetService] Budget data retrieved for MIS ${mis}, total_spent column exists: ${hasTotalSpent}`);
+      
       return {
         status: 'success',
         data: {
@@ -61,7 +67,7 @@ export class BudgetService {
           q2: budgetData?.q2?.toString() || '0',
           q3: budgetData?.q3?.toString() || '0',
           q4: budgetData?.q4?.toString() || '0',
-          total_spent: budgetData?.total_spent?.toString() || '0',
+          total_spent: totalSpent, // Handle missing total_spent column
           current_budget: userView // Set current_budget to match user_view
         }
       };
@@ -374,17 +380,35 @@ export class BudgetService {
       const newKatanomesEtous = Math.max(0, currentKatanomesEtous - amount);
       const newTotalSpent = total_spent + amount;
 
+      // Check if the total_spent column exists by querying the first row
+      console.log(`[BudgetService] Checking if total_spent column exists in budget_na853_split`);
+      const { data: columnCheckData, error: columnCheckError } = await supabase
+        .from('budget_na853_split')
+        .select('total_spent')
+        .limit(1);
+        
+      const hasTotalSpentColumn = !columnCheckError && columnCheckData !== null;
+      console.log(`[BudgetService] total_spent column exists: ${hasTotalSpentColumn}`);
+      
+      // Prepare update payload based on available columns
+      const updatePayload: any = {
+        user_view: newUserView.toString(),
+        ethsia_pistosi: newEthsiaPistosi.toString(),
+        katanomes_etous: newKatanomesEtous.toString(),
+        [quarterKey]: newQuarterValue.toString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Only include total_spent if the column exists
+      if (hasTotalSpentColumn) {
+        updatePayload.total_spent = newTotalSpent.toString();
+      }
+      
       // Update budget amounts
+      console.log(`[BudgetService] Updating budget_na853_split with payload:`, JSON.stringify(updatePayload, null, 2));
       const { error: updateError } = await supabase
         .from('budget_na853_split')
-        .update({
-          user_view: newUserView.toString(),
-          ethsia_pistosi: newEthsiaPistosi.toString(),
-          katanomes_etous: newKatanomesEtous.toString(),
-          [quarterKey]: newQuarterValue.toString(),
-          total_spent: newTotalSpent.toString(),
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('mis', mis);
 
       if (updateError) {

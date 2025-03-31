@@ -424,6 +424,18 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const dialogCloseRef = React.useRef<HTMLButtonElement>(null);
   
+  // Get query client
+  const queryClient = useQueryClient();
+  
+  // Refresh units data when dialog opens
+  useEffect(() => {
+    if (open) {
+      console.log('[CreateDocument] Dialog opened, refreshing units data');
+      // Invalidate the units query to force a fresh fetch
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+    }
+  }, [open, queryClient]);
+
   // Function to handle dialog closing with multiple fallback mechanisms
   const closeDialogCompletely = useCallback(() => {
     // Direct click approach using ref
@@ -450,7 +462,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const [direction, setDirection] = useState(0);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const { user } = useAuth();
 
 
@@ -509,6 +520,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     queryKey: ["units"],
     queryFn: async () => {
       try {
+        console.log('[CreateDocument] Fetching units...');
         const response = await apiRequest('/api/users/units');
         
         if (!response || !Array.isArray(response)) {
@@ -521,6 +533,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           return [];
         }
         
+        console.log('[CreateDocument] Units fetched successfully:', response.length);
         return response.map((item: any) => ({
           id: item.unit || item.id,
           name: item.unit_name || item.name
