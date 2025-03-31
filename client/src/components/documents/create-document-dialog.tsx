@@ -420,21 +420,70 @@ type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
 // Main component
 export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocumentDialogProps) {
-  // Reference to programmatically close the dialog
+  // Basic state
+  const [currentStep, setCurrentStep] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [formReset, setFormReset] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // References
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const dialogCloseRef = React.useRef<HTMLButtonElement>(null);
   
-  // Get query client
-  const queryClient = useQueryClient();
+  // Initialize form with default values
+  const form = useForm<CreateDocumentForm>({
+    resolver: zodResolver(createDocumentSchema),
+    defaultValues: {
+      unit: "",
+      project_id: "",
+      region: "",
+      expenditure_type: "",
+      recipients: [],
+      status: "draft",
+      selectedAttachments: []
+    }
+  });
   
-  // Refresh units data when dialog opens
+  // First effect: When dialog opens, invalidate queries and reset form
   useEffect(() => {
     if (open) {
-      console.log('[CreateDocument] Dialog opened, refreshing units data');
-      // Invalidate the units query to force a fresh fetch
+      console.log('[CreateDocument] Dialog opened, refreshing form and units data');
+      
+      // Reset the form to default values
+      form.reset({
+        unit: "",
+        project_id: "",
+        region: "",
+        expenditure_type: "",
+        recipients: [],
+        status: "draft",
+        selectedAttachments: []
+      });
+      
+      // Invalidate all relevant queries to force a fresh fetch
       queryClient.invalidateQueries({ queryKey: ['units'] });
+      
+      // Set a flag that form has been reset
+      setFormReset(true);
     }
-  }, [open, queryClient]);
+  }, [open, queryClient, form]);
+  
+  // Second effect: After form is reset and we have user data, set the unit
+  useEffect(() => {
+    if (formReset && user?.units && user.units.length > 0) {
+      // Small delay to ensure units query has completed
+      const timer = setTimeout(() => {
+        console.log('[CreateDocument] Setting default unit:', user.units[0]);
+        form.setValue('unit', user.units[0]);
+        setFormReset(false); // Reset the flag
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [formReset, user, form]);
 
   // Function to handle dialog closing with multiple fallback mechanisms
   const closeDialogCompletely = useCallback(() => {
@@ -458,25 +507,6 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       }
     }, 100);
   }, [onOpenChange, onClose, open]);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [direction, setDirection] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-  const { user } = useAuth();
-
-
-  const form = useForm<CreateDocumentForm>({
-    resolver: zodResolver(createDocumentSchema),
-    defaultValues: {
-      unit: "",
-      project_id: "",
-      region: "",
-      expenditure_type: "",
-      recipients: [],
-      status: "draft",
-      selectedAttachments: []
-    }
-  });
 
   const selectedUnit = form.watch("unit");
   const selectedProjectId = form.watch("project_id");
