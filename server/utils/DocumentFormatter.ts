@@ -10,6 +10,8 @@ import {
   WidthType,
   BorderStyle,
   VerticalAlign,
+  VerticalMerge,
+  VerticalMergeType,
   HeightRule,
   ITableBordersOptions,
   ImageRun,
@@ -644,94 +646,121 @@ export class DocumentFormatter {
   private static createFooter(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Paragraph[] {
+  ): Table {
     const attachments = (documentData.attachments || [])
       .map((item) => item.replace(/^\d+\-/, ""))
       .filter(Boolean);
 
-    // Create an array of paragraphs for the document footer
-    const result: Paragraph[] = [];
-
-    // Create left content in a floating text box
-    const leftContent = [
-      this.createBoldUnderlinedParagraph(
-        "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
-      ),
-      ...attachments.map(
-        (item, index) =>
-          new Paragraph({
-            text: `${index + 1}. ${item}`,
-            keepLines: false,
-            indent: { left: 426 },
-            style: "a6",
-          }),
-      ),
-      this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"),
-      ...[
-        "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
-        "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
-        "Γ.Δ.Α.Ε.Φ.Κ.",
-      ].map(
-        (item, index) =>
-          new Paragraph({
-            text: `${index + 1}. ${item}`,
-            keepLines: false,
-            indent: { left: 426 },
-            style: "a6",
-          }),
-      ),
-      this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
-      ...["Χρονολογικό Αρχείο"].map(
-        (item, index) =>
-          new Paragraph({
-            text: `${index + 1}. ${item}`,
-            keepLines: false,
-            indent: { left: 426 },
-            style: "a6",
-          }),
-      ),
-    ];
-
-    // Add left content
-    result.push(
-      ...leftContent,
-
-      // Add a spacer paragraph
-      new Paragraph({ text: "" }),
-    );
-
-    // Create right content (manager signature) as a separate paragraph
-    // This will be independent from the left content
-    const managerSignature = new Paragraph({
-      keepLines: true, // Keep the signature lines together
-      spacing: { before: 100 },
-      children: [
-        new TextRun({
-          text: unitDetails?.manager?.order || "",
-          bold: true,
-        }),
-        new TextRun({
-          text: unitDetails?.manager?.title || "",
-          break: 1,
-          bold: true,
-        }),
-        new TextRun({
-          text: unitDetails?.manager?.name || "",
-          break: 3,
-          bold: true,
-        }),
-        new TextRun({
-          text: unitDetails?.manager?.degree || "",
-          break: 1,
+    // Create a table that has the same visual format while allowing content to flow across pages
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        new TableRow({
+          // Allow the row to split across pages
+          cantSplit: false,
+          children: [
+            // Left cell - can split across pages
+            new TableCell({
+              width: { size: 65, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              // Important: Set verticalMerge to RESTART to make this cell independent
+              verticalMerge: VerticalMergeType.RESTART,
+              children: [
+                this.createBoldUnderlinedParagraph(
+                  "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
+                ),
+                ...attachments.map(
+                  (item, index) =>
+                    new Paragraph({
+                      text: `${index + 1}. ${item}`,
+                      keepLines: false,
+                      indent: { left: 426 },
+                      style: "a6",
+                    }),
+                ),
+                this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"),
+                ...[
+                  "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+                  "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+                  "Γ.Δ.Α.Ε.Φ.Κ.",
+                ].map(
+                  (item, index) =>
+                    new Paragraph({
+                      text: `${index + 1}. ${item}`,
+                      keepLines: false,
+                      indent: { left: 426 },
+                      style: "a6",
+                    }),
+                ),
+                this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
+                ...["Χρονολογικό Αρχείο"].map(
+                  (item, index) =>
+                    new Paragraph({
+                      text: `${index + 1}. ${item}`,
+                      keepLines: false, 
+                      indent: { left: 426 },
+                      style: "a6",
+                    }),
+                ),
+              ],
+            }),
+            
+            // Right cell - manager signature that stays together
+            new TableCell({
+              width: { size: 35, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              // Important: Set verticalMerge to RESTART to make this cell independent
+              verticalMerge: VerticalMergeType.RESTART,
+              children: [
+                new Paragraph({
+                  keepLines: true, // Keep manager signature together
+                  spacing: { before: 100 },
+                  children: [
+                    new TextRun({
+                      text: unitDetails?.manager?.order || "",
+                      bold: true,
+                    }),
+                    new TextRun({
+                      text: unitDetails?.manager?.title || "",
+                      break: 1, 
+                      bold: true,
+                    }),
+                    new TextRun({
+                      text: unitDetails?.manager?.name || "",
+                      break: 3,
+                      bold: true,
+                    }),
+                    new TextRun({
+                      text: unitDetails?.manager?.degree || "",
+                      break: 1,
+                    }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                }),
+              ],
+            }),
+          ],
         }),
       ],
-      alignment: AlignmentType.RIGHT, // Right-align the signature
     });
-
-    // Add the signature paragraph
-    result.push(managerSignature);
-
-    return result;
   }
 
   private static createBoldParagraph(text: string): Paragraph {
@@ -988,7 +1017,7 @@ export class DocumentFormatter {
       };
 
       // Collect all children elements
-      const children: (Paragraph | Table)[] = [];
+      const children: (Paragraph | Table | Paragraph[])[] = [];
       
       // Add header
       children.push(await DocumentFormatter.createDocumentHeader(
@@ -1012,7 +1041,7 @@ export class DocumentFormatter {
       children.push(DocumentFormatter.createNote());
       
       // Add footer
-      children.push(...DocumentFormatter.createFooter(documentData, unitDetails));
+      children.push(DocumentFormatter.createFooter(documentData, unitDetails));
       
       // Create section with all elements
       const sections = [
