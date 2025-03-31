@@ -734,10 +734,11 @@ export class DocumentFormatter {
                       text: unitDetails?.manager?.title || "",
                       bold: true,
                     }),
-                    new TextRun({
-                      text: "\n", // Adding line break between title and degree
-                      break: 1,
-                    }),
+                  ],
+                  alignment: AlignmentType.CENTER,
+                }),
+                new Paragraph({
+                  children: [
                     new TextRun({
                       text: unitDetails?.manager?.degree || "",
                     }),
