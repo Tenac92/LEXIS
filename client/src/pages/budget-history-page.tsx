@@ -434,16 +434,16 @@ export default function BudgetHistoryPage() {
                                   )}
                                 </TableCell>
                               </TableRow>
-                              <CollapsibleContent asChild>
-                                <TableRow className="bg-muted/30">
-                                  <TableCell colSpan={10} className="p-4">
+                              <CollapsibleContent>
+                                <tr className="bg-muted/30">
+                                  <td colSpan={10} className="p-4">
                                     {entry.metadata ? renderMetadata(entry.metadata) : (
                                       <div className="text-muted-foreground text-sm italic">
                                         No additional metadata available
                                       </div>
                                     )}
-                                  </TableCell>
-                                </TableRow>
+                                  </td>
+                                </tr>
                               </CollapsibleContent>
                             </Collapsible>
                           );

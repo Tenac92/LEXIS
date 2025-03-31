@@ -313,20 +313,25 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      // Format the response data with user information
-      const formattedData = data?.map(entry => ({
-        id: entry.id,
-        mis: entry.mis,
-        previous_amount: entry.previous_amount || '0',
-        new_amount: entry.new_amount || '0',
-        change_type: entry.change_type,
-        change_reason: entry.change_reason || '',
-        document_id: entry.document_id,
-        document_status: entry.generated_documents?.[0]?.status,
-        created_by: entry.users?.name || 'System',
-        created_at: entry.created_at,
-        metadata: entry.metadata || {}
-      })) || [];
+      // Format the response data with user information and provide default values for missing fields
+      const formattedData = data?.map(entry => {
+        // Log the raw entry to debug missing fields
+        console.log('[Storage] Raw budget history entry:', JSON.stringify(entry));
+        
+        return {
+          id: entry.id,
+          mis: entry.mis || 'Unknown',  // Provide a default value for mis
+          previous_amount: entry.previous_amount || '0',
+          new_amount: entry.new_amount || '0',
+          change_type: entry.change_type || '',
+          change_reason: entry.change_reason || '',
+          document_id: entry.document_id,
+          document_status: entry.generated_documents?.[0]?.status,
+          created_by: entry.users?.name || 'System',
+          created_at: entry.created_at,
+          metadata: entry.metadata || {}
+        };
+      }) || [];
       
       // Calculate pagination data
       const totalPages = Math.ceil((count || 0) / limit);
