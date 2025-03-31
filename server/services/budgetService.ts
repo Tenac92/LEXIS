@@ -425,18 +425,22 @@ export class BudgetService {
         }
       };
 
-      console.log(`[BudgetService] Creating detailed budget history entry for MIS ${mis}`);
+      console.log(`[BudgetService] Creating detailed budget history entry for MIS ${mis} with change_type: ${historyEntry.change_type}, document_id: ${historyEntry.document_id}, created_by: ${historyEntry.created_by}`);
+      console.log(`[BudgetService] History entry metadata:`, JSON.stringify(historyEntry.metadata, null, 2));
 
-      // Insert the history entry
-      const { error: historyError } = await supabase
+      // Insert the history entry and log the exact payload
+      console.log(`[BudgetService] Sending budget history entry to database:`, JSON.stringify(historyEntry, null, 2));
+      const { error: historyError, data: historyData } = await supabase
         .from('budget_history')
-        .insert(historyEntry);
+        .insert(historyEntry)
+        .select();
 
       if (historyError) {
         console.error('[BudgetService] Failed to create budget history entry:', historyError);
+        console.error('[BudgetService] Error details:', historyError.message, historyError.details);
         // Continue execution even if history logging fails
       } else {
-        console.log('[BudgetService] Budget history entry created successfully');
+        console.log('[BudgetService] Budget history entry created successfully with ID:', historyData?.[0]?.id);
       }
 
       return {

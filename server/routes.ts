@@ -109,6 +109,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update the budget to reflect the document creation
         try {
           console.log('[DIRECT_ROUTE] Updating budget for project:', project_id, 'with amount:', documentPayload.total_amount);
+          console.log('[DIRECT_ROUTE] Budget update parameters: ', {
+            mis: project_id, 
+            amount: documentPayload.total_amount,
+            userId: req.user.id,
+            documentId: data.id,
+            changeReason: `Δημιουργία εγγράφου ID:${data.id} για το έργο με MIS:${project_id}`
+          });
+          
           const budgetResult = await BudgetService.updateBudget(
             project_id,                      // MIS
             documentPayload.total_amount,    // Amount
@@ -118,8 +126,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
           
           console.log('[DIRECT_ROUTE] Budget update result:', budgetResult.status);
+          console.log('[DIRECT_ROUTE] Full budget update response:', JSON.stringify(budgetResult, null, 2));
         } catch (budgetError) {
           console.error('[DIRECT_ROUTE] Error updating budget (document still created):', budgetError);
+          console.error('[DIRECT_ROUTE] Budget update error details:', budgetError instanceof Error ? budgetError.message : 'Unknown error');
           // Continue without failing - document is created but budget may not be updated
         }
         
@@ -296,6 +306,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Convert project_id to MIS if needed (project_id or project_mis)
           const projectMIS = req.body.project_mis || project_id;
           console.log('[DIRECT_ROUTE_V2] Updating budget for project:', projectMIS, 'with amount:', documentPayload.total_amount);
+          console.log('[DIRECT_ROUTE_V2] Budget update parameters: ', {
+            mis: projectMIS, 
+            amount: documentPayload.total_amount,
+            userId: (req as any).session?.user?.id || 'guest',
+            documentId: data.id,
+            changeReason: `Δημιουργία εγγράφου ID:${data.id} για το έργο με MIS:${projectMIS}`
+          });
           
           const budgetResult = await BudgetService.updateBudget(
             projectMIS,                         // MIS
@@ -306,8 +323,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
           
           console.log('[DIRECT_ROUTE_V2] Budget update result:', budgetResult.status);
+          console.log('[DIRECT_ROUTE_V2] Full budget update response:', JSON.stringify(budgetResult, null, 2));
         } catch (budgetError) {
           console.error('[DIRECT_ROUTE_V2] Error updating budget (document still created):', budgetError);
+          console.error('[DIRECT_ROUTE_V2] Budget update error details:', budgetError instanceof Error ? budgetError.message : 'Unknown error');
           // Continue without failing - document is created but budget may not be updated
         }
         
