@@ -167,13 +167,15 @@ export default function BudgetHistoryPage() {
   const getChangeTypeBadge = (type: string) => {
     switch (type) {
       case 'document_creation':
-        return <Badge variant="destructive">{type.replace(/_/g, ' ')}</Badge>;
+        return <Badge variant="destructive">Δημιουργία Εγγράφου</Badge>;
       case 'manual_adjustment':
-        return <Badge variant="outline">{type.replace(/_/g, ' ')}</Badge>;
+        return <Badge variant="outline">Χειροκίνητη Προσαρμογή</Badge>;
       case 'notification_created':
-        return <Badge variant="secondary">{type.replace(/_/g, ' ')}</Badge>;
+        return <Badge variant="secondary">Δημιουργία Ειδοποίησης</Badge>;
       case 'error':
-        return <Badge variant="destructive">{type.replace(/_/g, ' ')}</Badge>;
+        return <Badge variant="destructive">Σφάλμα</Badge>;
+      case 'import':
+        return <Badge>Εισαγωγή</Badge>;
       default:
         return <Badge>{type.replace(/_/g, ' ')}</Badge>;
     }
@@ -185,19 +187,19 @@ export default function BudgetHistoryPage() {
 
     const quarterChanges = metadata.quarters ? (
       <div className="mt-2">
-        <h4 className="text-sm font-medium mb-1">Quarter Changes</h4>
+        <h4 className="text-sm font-medium mb-1">Αλλαγές Τριμήνου</h4>
         <div className="grid grid-cols-4 gap-2 text-xs">
           {Object.entries(metadata.quarters || {}).map(([quarter, values]: [string, any]) => (
             <div key={quarter} className="p-2 border rounded">
               <div className="font-medium uppercase">{quarter}</div>
               <div className="text-muted-foreground">
-                Previous: {formatCurrency(values.previous || 0)}
+                Προηγούμενο: {formatCurrency(values.previous || 0)}
               </div>
               <div className="text-muted-foreground">
-                New: {formatCurrency(values.new || 0)}
+                Νέο: {formatCurrency(values.new || 0)}
               </div>
               <div className={values.new < values.previous ? "text-red-500" : "text-green-500"}>
-                Diff: {formatCurrency((values.new || 0) - (values.previous || 0))}
+                Διαφορά: {formatCurrency((values.new || 0) - (values.previous || 0))}
               </div>
             </div>
           ))}
@@ -207,7 +209,7 @@ export default function BudgetHistoryPage() {
 
     const previousValues = metadata.previous ? (
       <div className="mt-3">
-        <h4 className="text-sm font-medium mb-1">Previous Budget Values</h4>
+        <h4 className="text-sm font-medium mb-1">Προηγούμενες Τιμές Προϋπολογισμού</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           {Object.entries(metadata.previous || {}).map(([key, value]) => (
             <div key={key} className="p-2 border rounded">
@@ -221,7 +223,7 @@ export default function BudgetHistoryPage() {
 
     const newValues = metadata.new ? (
       <div className="mt-3">
-        <h4 className="text-sm font-medium mb-1">New Budget Values</h4>
+        <h4 className="text-sm font-medium mb-1">Νέες Τιμές Προϋπολογισμού</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           {Object.entries(metadata.new || {}).map(([key, value]) => (
             <div key={key} className="p-2 border rounded">
@@ -238,30 +240,30 @@ export default function BudgetHistoryPage() {
       <div className="mt-3 text-xs">
         {metadata.na853 && (
           <div className="mb-1">
-            <span className="font-medium">NA853 Code:</span> {metadata.na853}
+            <span className="font-medium">Κωδικός NA853:</span> {metadata.na853}
           </div>
         )}
         {metadata.operation_type && (
           <div className="mb-1">
-            <span className="font-medium">Operation Type:</span> {metadata.operation_type.replace(/_/g, ' ')}
+            <span className="font-medium">Τύπος Λειτουργίας:</span> {metadata.operation_type.replace(/_/g, ' ')}
           </div>
         )}
         {metadata.active_quarter && (
           <div className="mb-1">
-            <span className="font-medium">Active Quarter:</span> {metadata.active_quarter.toUpperCase()}
+            <span className="font-medium">Ενεργό Τρίμηνο:</span> {metadata.active_quarter.toUpperCase()}
           </div>
         )}
         {metadata.amount_deducted !== undefined && (
           <div className="mb-1">
-            <span className="font-medium">Amount Deducted:</span> {formatCurrency(metadata.amount_deducted)}
+            <span className="font-medium">Ποσό που Αφαιρέθηκε:</span> {formatCurrency(metadata.amount_deducted)}
           </div>
         )}
         {metadata.timestamp && (
           <div className="mb-1">
-            <span className="font-medium">Timestamp:</span> {
+            <span className="font-medium">Χρονική Σήμανση:</span> {
               typeof metadata.timestamp === 'string' 
                 ? format(new Date(metadata.timestamp), 'dd/MM/yyyy HH:mm:ss')
-                : 'Invalid date'
+                : 'Μη έγκυρη ημερομηνία'
             }
           </div>
         )}
@@ -289,13 +291,13 @@ export default function BudgetHistoryPage() {
           <div className="p-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <div>
-                <h1 className="text-2xl font-bold">Budget History</h1>
-                <p className="text-muted-foreground">Track all budget changes with detailed information</p>
+                <h1 className="text-2xl font-bold">Ιστορικό Προϋπολογισμού</h1>
+                <p className="text-muted-foreground">Παρακολούθηση όλων των αλλαγών προϋπολογισμού με λεπτομερείς πληροφορίες</p>
               </div>
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Filter by MIS..."
+                    placeholder="Φίλτρο με MIS..."
                     value={misFilter}
                     onChange={(e) => setMisFilter(e.target.value)}
                     className="w-[180px]"
@@ -309,14 +311,15 @@ export default function BudgetHistoryPage() {
                   onValueChange={handleChangeTypeChange}
                 >
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by type" />
+                    <SelectValue placeholder="Φίλτρο ανά τύπο" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Changes</SelectItem>
-                    <SelectItem value="document_creation">Document Creation</SelectItem>
-                    <SelectItem value="manual_adjustment">Manual Adjustment</SelectItem>
-                    <SelectItem value="notification_created">Notification Created</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
+                    <SelectItem value="all">Όλες οι αλλαγές</SelectItem>
+                    <SelectItem value="document_creation">Δημιουργία Εγγράφου</SelectItem>
+                    <SelectItem value="manual_adjustment">Χειροκίνητη Προσαρμογή</SelectItem>
+                    <SelectItem value="notification_created">Δημιουργία Ειδοποίησης</SelectItem>
+                    <SelectItem value="import">Εισαγωγή</SelectItem>
+                    <SelectItem value="error">Σφάλμα</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select
@@ -327,16 +330,16 @@ export default function BudgetHistoryPage() {
                   }}
                 >
                   <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Entries per page" />
+                    <SelectValue placeholder="Εγγραφές ανά σελίδα" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="5">5 per page</SelectItem>
-                    <SelectItem value="10">10 per page</SelectItem>
-                    <SelectItem value="20">20 per page</SelectItem>
-                    <SelectItem value="50">50 per page</SelectItem>
+                    <SelectItem value="5">5 ανά σελίδα</SelectItem>
+                    <SelectItem value="10">10 ανά σελίδα</SelectItem>
+                    <SelectItem value="20">20 ανά σελίδα</SelectItem>
+                    <SelectItem value="50">50 ανά σελίδα</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" onClick={() => refetch()} size="icon">
+                <Button variant="outline" onClick={() => refetch()} size="icon" title="Ανανέωση">
                   <RefreshCw className="h-4 w-4" />
                 </Button>
               </div>
@@ -349,11 +352,11 @@ export default function BudgetHistoryPage() {
                 </div>
               ) : error ? (
                 <div className="flex items-center justify-center h-48 text-destructive">
-                  {error instanceof Error ? error.message : 'An error occurred'}
+                  {error instanceof Error ? error.message : 'Προέκυψε σφάλμα'}
                 </div>
               ) : history.length === 0 ? (
                 <div className="flex items-center justify-center h-48 text-muted-foreground">
-                  No budget history entries found
+                  Δεν βρέθηκαν εγγραφές ιστορικού προϋπολογισμού
                 </div>
               ) : (
                 <>
@@ -362,15 +365,15 @@ export default function BudgetHistoryPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-[50px]"></TableHead>
-                          <TableHead>Date</TableHead>
+                          <TableHead>Ημερομηνία</TableHead>
                           <TableHead>MIS</TableHead>
-                          <TableHead>Previous</TableHead>
-                          <TableHead>New</TableHead>
-                          <TableHead>Change</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Reason</TableHead>
-                          <TableHead>Created By</TableHead>
-                          <TableHead>Document</TableHead>
+                          <TableHead>Προηγούμενο</TableHead>
+                          <TableHead>Νέο</TableHead>
+                          <TableHead>Αλλαγή</TableHead>
+                          <TableHead>Τύπος</TableHead>
+                          <TableHead>Αιτιολογία</TableHead>
+                          <TableHead>Δημιουργήθηκε από</TableHead>
+                          <TableHead>Έγγραφο</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -413,7 +416,7 @@ export default function BudgetHistoryPage() {
                                     <span className="text-muted-foreground text-sm">-</span>
                                   )}
                                 </TableCell>
-                                <TableCell>{entry.created_by || 'System'}</TableCell>
+                                <TableCell>{entry.created_by || 'Σύστημα'}</TableCell>
                                 <TableCell>
                                   {entry.document_id ? (
                                     <TooltipProvider>
@@ -421,16 +424,18 @@ export default function BudgetHistoryPage() {
                                         <TooltipTrigger asChild>
                                           <Badge variant={entry.document_status === 'completed' ? "default" : "outline"}>
                                             <FileText className="h-3 w-3 mr-1" />
-                                            {entry.document_status || 'Pending'}
+                                            {entry.document_status === 'completed' ? 'Ολοκληρωμένο' : 
+                                             entry.document_status === 'pending' ? 'Σε εκκρεμότητα' : 
+                                             entry.document_status || 'Σε εκκρεμότητα'}
                                           </Badge>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                          Document ID: {entry.document_id}
+                                          ID Εγγράφου: {entry.document_id}
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
                                   ) : (
-                                    <span className="text-muted-foreground text-sm">None</span>
+                                    <span className="text-muted-foreground text-sm">Κανένα</span>
                                   )}
                                 </TableCell>
                               </TableRow>
@@ -439,7 +444,7 @@ export default function BudgetHistoryPage() {
                                   <TableCell colSpan={10} className="p-4">
                                     {entry.metadata ? renderMetadata(entry.metadata) : (
                                       <div className="text-muted-foreground text-sm italic">
-                                        No additional metadata available
+                                        Δεν υπάρχουν διαθέσιμα επιπρόσθετα μεταδεδομένα
                                       </div>
                                     )}
                                   </TableCell>
@@ -454,7 +459,7 @@ export default function BudgetHistoryPage() {
 
                   <div className="flex items-center justify-between mt-4">
                     <div className="text-sm text-muted-foreground">
-                      Showing {((page - 1) * limit) + 1} to {Math.min(page * limit, pagination.total)} of {pagination.total} entries
+                      Εμφάνιση {((page - 1) * limit) + 1} έως {Math.min(page * limit, pagination.total)} από {pagination.total} εγγραφές
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
