@@ -61,11 +61,16 @@ export default function AdminBudgetUploadPage() {
       const formData = new FormData();
       formData.append('file', data.file[0]);
 
-      // Upload file
-      const response = await apiRequest('/api/budget/upload', {
+      // Upload file - use direct fetch for multipart/form-data instead of apiRequest
+      const response = await fetch('/api/budget/upload', {
         method: 'POST',
         body: formData,
         // Don't set Content-Type, let the browser set it with boundary for FormData
+      }).then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
       });
 
       if (!response) {
