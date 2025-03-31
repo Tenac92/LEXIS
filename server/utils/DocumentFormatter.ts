@@ -735,6 +735,10 @@ export class DocumentFormatter {
                       bold: true,
                     }),
                     new TextRun({
+                      text: "\n", // Adding line break between title and degree
+                      break: 1,
+                    }),
+                    new TextRun({
                       text: unitDetails?.manager?.degree || "",
                     }),
                   ],
