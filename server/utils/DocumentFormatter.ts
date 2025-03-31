@@ -21,7 +21,6 @@ import * as path from "path";
 import { format } from "date-fns";
 import { after } from "node:test";
 
-
 interface UserDetails {
   name: string;
   email?: string;
@@ -81,7 +80,7 @@ export class DocumentFormatter {
   private static readonly DEFAULT_ADDRESS = {
     address: "Κηφισίας 124 & Ιατρίδου 2",
     tk: "11526",
-    region: "Αθήνα"
+    region: "Αθήνα",
   };
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
@@ -104,10 +103,10 @@ export class DocumentFormatter {
 
   private static async createDocumentHeader(
     documentData: DocumentData,
-    unitDetails: UnitDetails | null,
+    unitDetails: UnitDetails | null | undefined,
   ): Promise<Table> {
     if (!documentData) {
-      throw new Error('Document data is required');
+      throw new Error("Document data is required");
     }
     const logoBuffer = await this.getLogoImageData();
 
@@ -116,17 +115,14 @@ export class DocumentFormatter {
       name: documentData.generated_by?.name || documentData.user_name || "",
       department:
         documentData.generated_by?.department || documentData.department || "",
-      contact_number:
-        documentData.generated_by?.contact_number ||
-        documentData.contact_number ||
-        "",
+      contact_number: documentData.generated_by?.contact_number || "",
     };
 
     // Use unitDetails.address if available
     const address = unitDetails?.address || {
       address: "Κηφισίας 124 & Ιατρίδου 2",
       tk: "11526",
-      region: "Αθήνα"
+      region: "Αθήνα",
     };
 
     return new Table({
@@ -185,28 +181,17 @@ export class DocumentFormatter {
                   "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
                 ),
                 this.createBoldParagraph("ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ."),
-                this.createBoldParagraph(
-                  unitDetails?.unit_name?.name || documentData.unit,
-                ),
+                this.createBoldParagraph(documentData.unit),
                 this.createBoldParagraph(userInfo.department),
                 this.createBlankLine(10),
+                this.createContactDetail("Ταχ. Δ/νση", address.address),
                 this.createContactDetail(
-                  "Ταχ. Δ/νση",
-                  address.address,
+                  "Ταχ. Κώδικας",
+                  `${address.tk}, ${address.region}`,
                 ),
-                this.createContactDetail("Ταχ. Κώδικας", `${address.tk}, ${address.region}`),
-                this.createContactDetail(
-                  "Πληροφορίες",
-                  userInfo.name,
-                ),
-                this.createContactDetail(
-                  "Τηλέφωνο",
-                  userInfo.contact_number,
-                ),
-                this.createContactDetail(
-                  "Email",
-                  unitDetails?.email || "",
-                ),
+                this.createContactDetail("Πληροφορίες", userInfo.name),
+                this.createContactDetail("Τηλέφωνο", userInfo.contact_number),
+                this.createContactDetail("Email", unitDetails?.email || ""),
                 this.createBlankLine(10),
               ],
             }),
@@ -346,12 +331,12 @@ export class DocumentFormatter {
             },
           },
           children: [
-            await this.createDocumentHeader(documentData,unitDetails),
-            ...this.createDocumentSubject(documentData, unitDetails || {}),
-            ...this.createMainContent(documentData, unitDetails || {}),
+            await this.createDocumentHeader(documentData, unitDetails),
+            ...this.createDocumentSubject(documentData, unitDetails),
+            ...this.createMainContent(documentData, unitDetails),
             this.createPaymentTable(documentData.recipients || []),
             this.createNote(),
-            this.createFooter(documentData, unitDetails || undefined),
+            this.createFooter(documentData, unitDetails),
           ],
         },
       ];
@@ -390,7 +375,8 @@ export class DocumentFormatter {
   }
 
   private static createDocumentSubject(
-    documentData: DocumentData, unitDetails: UnitDetails | undefined,
+    documentData: DocumentData,
+    unitDetails: UnitDetails | null | undefined,
   ): (Table | Paragraph)[] {
     const subjectText = [
       {
@@ -399,7 +385,7 @@ export class DocumentFormatter {
         italics: true,
       },
       {
-        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${unitDetails?.unit || 'Μονάδα'}`,
+        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "Μονάδα"}`,
         italics: true,
       },
     ];
@@ -453,10 +439,10 @@ export class DocumentFormatter {
 
   private static createMainContent(
     documentData: DocumentData,
-    unitDetails: UnitDetails | undefined,
+    unitDetails: UnitDetails | null | undefined,
   ): (Paragraph | Table)[] {
     const unitName = unitDetails?.unit_name?.name || documentData.unit;
-    const unitProp = unitDetails?.unit_name?.prop || 'τη';
+    const unitProp = unitDetails?.unit_name?.prop || "τη";
     return [
       this.createBlankLine(8),
       new Paragraph({
@@ -471,7 +457,7 @@ export class DocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: `Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || 'τη'} ${unitDetails?.unit || 'Μονάδα'}, σύμφωνα με τα παρακάτω στοιχεία.`,
+            text: `Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "Μονάδα"}, σύμφωνα με τα παρακάτω στοιχεία.`,
           }),
         ],
       }),
@@ -595,7 +581,7 @@ export class DocumentFormatter {
             children: [
               this.createTableCell((index + 1).toString() + ".", "center"),
               this.createTableCell(
-                `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim(), 
+                `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim(),
                 "center",
               ),
               this.createTableCell(
@@ -648,7 +634,7 @@ export class DocumentFormatter {
 
   private static createFooter(
     documentData: DocumentData,
-    unitDetails?: UnitDetails,
+    unitDetails: UnitDetails | null | undefined,
   ): Table {
     const attachments = (documentData.attachments || [])
       .map((item) => item.replace(/^\d+\-/, ""))
@@ -721,40 +707,40 @@ export class DocumentFormatter {
               },
               children: [
                 new Paragraph({
-                  keepLines: true,  // Ensure the cell content doesn't break across pages
+                  keepLines: true, // Ensure the cell content doesn't break across pages
                   spacing: { before: 100 },
                   children: [
                     new TextRun({
-                      text: unitDetails?.manager?.order || '',
+                      text: unitDetails?.manager?.order || "",
                       bold: true,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
                 }),
                 new Paragraph({
-                  keepLines: true,  // Ensure the cell content doesn't break across pages
+                  keepLines: true, // Ensure the cell content doesn't break across pages
                   children: [
                     new TextRun({
-                      text: unitDetails?.manager?.title || '',
+                      text: unitDetails?.manager?.title || "",
                       bold: true,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
                 }),
                 new Paragraph({
-                  keepLines: true,  // Ensure the cell content doesn't break across pages
-                  spacing: { before: 400},
+                  keepLines: true, // Ensure the cell content doesn't break across pages
+                  spacing: { before: 400 },
                   children: [
                     new TextRun({
-                      text: unitDetails?.manager?.name || '',
+                      text: unitDetails?.manager?.name || "",
                       bold: true,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
                 }),
                 new Paragraph({
-                  keepLines: true,  // Ensure the cell content doesn't break across pages
-                  text: unitDetails?.manager?.degree || '',
+                  keepLines: true, // Ensure the cell content doesn't break across pages
+                  text: unitDetails?.manager?.degree || "",
                   alignment: AlignmentType.CENTER,
                 }),
               ],
@@ -873,7 +859,7 @@ export class DocumentFormatter {
       // If not found, try with unit_name.name using containsJson query
       if (!unitData && !unitError) {
         console.log("Unit not found by exact match on unit field, trying unit_name.name");
-        
+   
         // Get all units and filter manually for unit_name.name match
         const { data: allUnits, error: fetchError } = await supabase
           .from("Monada")
@@ -945,21 +931,21 @@ export class DocumentFormatter {
         unit: unitCode,
         unit_name: {
           name: unitCode,
-          prop: "τη"
+          prop: "τη",
         },
         address: {
           address: "Κηφισίας 124 & Ιατρίδου 2",
           tk: "11526",
-          region: "Αθήνα"
+          region: "Αθήνα",
         },
         manager: {
           name: "Σ. Παπαδόπουλος",
           order: "Με εντολή Υπουργού",
           title: "Ο Διευθυντής",
           degree: "Δρ. Πολ. Μηχανικός",
-          prepose: "του"
+          prepose: "του",
         },
-        email: "daefk@civilprotection.gr"
+        email: "daefk@civilprotection.gr",
       };
     }
   }
@@ -1005,11 +991,11 @@ export class DocumentFormatter {
         contact_number: data.originalDocument.contact_number,
         generated_by: data.originalDocument.generated_by,
         attachments: data.originalDocument.attachments,
-        recipients: data.recipients.map(r => ({
+        recipients: data.recipients.map((r) => ({
           ...r,
-          fathername: r.fathername || "" // Ensure fathername exists
+          fathername: r.fathername || "", // Ensure fathername exists
         })),
-        total_amount: data.total_amount
+        total_amount: data.total_amount,
       };
 
       const sections = [
@@ -1022,12 +1008,24 @@ export class DocumentFormatter {
             },
           },
           children: [
-            await DocumentFormatter.createDocumentHeader(documentData, unitDetails || undefined),
-            ...DocumentFormatter.createDocumentSubject(documentData, unitDetails || undefined),
-            ...DocumentFormatter.createMainContent(documentData, unitDetails || undefined),
+            await DocumentFormatter.createDocumentHeader(
+              documentData,
+              unitDetails,
+            ),
+            ...DocumentFormatter.createDocumentSubject(
+              documentData,
+              unitDetails,
+            ),
+            ...DocumentFormatter.createMainContent(
+              documentData,
+              unitDetails,
+            ),
             DocumentFormatter.createPaymentTable(documentData.recipients || []),
             DocumentFormatter.createNote(),
-            DocumentFormatter.createFooter(documentData, unitDetails || undefined),
+            DocumentFormatter.createFooter(
+              documentData,
+              unitDetails,
+            ),
           ],
         },
       ];
