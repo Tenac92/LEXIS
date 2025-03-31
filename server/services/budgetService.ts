@@ -415,43 +415,30 @@ export class BudgetService {
         throw updateError;
       }
 
-      // Create a detailed budget history entry
+      // Create a budget history entry without the metadata field
+      // Extract important details separately
+      const quarterChanges = {
+        q1: { previous: currentQ1, new: quarterKey === 'q1' ? newQuarterValue : currentQ1 },
+        q2: { previous: currentQ2, new: quarterKey === 'q2' ? newQuarterValue : currentQ2 },
+        q3: { previous: currentQ3, new: quarterKey === 'q3' ? newQuarterValue : currentQ3 },
+        q4: { previous: currentQ4, new: quarterKey === 'q4' ? newQuarterValue : currentQ4 }
+      };
+      
+      // Create history entry with only the fields that exist in the table
       const historyEntry = {
         mis,
         previous_amount: currentUserView.toString(),
         new_amount: newUserView.toString(),
         change_type: documentId ? 'document_creation' : 'manual_adjustment',
-        change_reason: changeReason || (documentId ? 'Document creation reduced available budget' : 'Manual budget adjustment'),
+        change_reason: changeReason || (documentId ? 
+          `Document creation [ID:${documentId}] reduced available budget by ${amount}. Current quarter: ${quarterKey}` : 
+          `Manual budget adjustment reduced available budget by ${amount}. Current quarter: ${quarterKey}`),
         document_id: documentId || null,
-        created_by: userId,
-        metadata: {
-          quarters: {
-            q1: { previous: currentQ1, new: quarterKey === 'q1' ? newQuarterValue : currentQ1 },
-            q2: { previous: currentQ2, new: quarterKey === 'q2' ? newQuarterValue : currentQ2 },
-            q3: { previous: currentQ3, new: quarterKey === 'q3' ? newQuarterValue : currentQ3 },
-            q4: { previous: currentQ4, new: quarterKey === 'q4' ? newQuarterValue : currentQ4 }
-          },
-          active_quarter: quarterKey,
-          previous: {
-            ethsia_pistosi: currentEthsiaPistosi,
-            katanomes_etous: currentKatanomesEtous,
-            user_view: currentUserView,
-            total_spent: total_spent
-          },
-          new: {
-            ethsia_pistosi: newEthsiaPistosi,
-            katanomes_etous: newKatanomesEtous,
-            user_view: newUserView,
-            total_spent: newTotalSpent
-          },
-          amount_deducted: amount,
-          timestamp: new Date().toISOString()
-        }
+        created_by: userId.toString()
       };
 
-      console.log(`[BudgetService] Creating detailed budget history entry for MIS ${mis} with change_type: ${historyEntry.change_type}, document_id: ${historyEntry.document_id}, created_by: ${historyEntry.created_by}`);
-      console.log(`[BudgetService] History entry metadata:`, JSON.stringify(historyEntry.metadata, null, 2));
-
+      console.log(`[BudgetService] Creating budget history entry for MIS ${mis} with change_type: ${historyEntry.change_type}, document_id: ${historyEntry.document_id}, created_by: ${historyEntry.created_by}`);
+      
       // Insert the history entry and log the exact payload
       console.log(`[BudgetService] Sending budget history entry to database:`, JSON.stringify(historyEntry, null, 2));
       const { error: historyError, data: historyData } = await supabase
@@ -492,13 +479,9 @@ export class BudgetService {
             previous_amount: '0',
             new_amount: '0',
             change_type: 'error',
-            change_reason: 'Budget update failed due to error',
+            change_reason: `Budget update failed: ${error instanceof Error ? error.message : 'Unknown error'}. Attempted deduction: ${amount}`,
             document_id: documentId || null,
-            created_by: userId,
-            metadata: {
-              error: error instanceof Error ? error.message : 'Unknown error',
-              attempted_deduction: amount
-            }
+            created_by: userId.toString()
           });
       } catch (historyError) {
         console.error('[BudgetService] Failed to create error history entry:', historyError);
