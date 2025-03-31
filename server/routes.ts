@@ -106,32 +106,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         console.log('[DIRECT_ROUTE] Document created successfully:', data.id);
         
-        // Update the budget to reflect the document creation
-        try {
-          console.log('[DIRECT_ROUTE] Updating budget for project:', project_id, 'with amount:', documentPayload.total_amount);
-          console.log('[DIRECT_ROUTE] Budget update parameters: ', {
-            mis: project_id, 
-            amount: documentPayload.total_amount,
-            userId: req.user.id,
-            documentId: data.id,
-            changeReason: `Δημιουργία εγγράφου ID:${data.id} για το έργο με MIS:${project_id}`
-          });
-          
-          const budgetResult = await BudgetService.updateBudget(
-            project_id,                      // MIS
-            documentPayload.total_amount,    // Amount
-            req.user.id,                     // User ID
-            data.id,                         // Document ID
-            `Δημιουργία εγγράφου ID:${data.id} για το έργο με MIS:${project_id}`  // Change reason
-          );
-          
-          console.log('[DIRECT_ROUTE] Budget update result:', budgetResult.status);
-          console.log('[DIRECT_ROUTE] Full budget update response:', JSON.stringify(budgetResult, null, 2));
-        } catch (budgetError) {
-          console.error('[DIRECT_ROUTE] Error updating budget (document still created):', budgetError);
-          console.error('[DIRECT_ROUTE] Budget update error details:', budgetError instanceof Error ? budgetError.message : 'Unknown error');
-          // Continue without failing - document is created but budget may not be updated
-        }
+        // NOTE: Budget update has been removed from this endpoint to prevent duplicate updates.
+        // The budget is now updated only in the V2 document creation endpoint.
+        // This prevents duplicate budget history entries.
         
         res.status(201).json({ id: data.id });
       } catch (error) {
