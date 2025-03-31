@@ -678,6 +678,7 @@ export class DocumentFormatter {
                   (item, index) =>
                     new Paragraph({
                       text: `${index + 1}. ${item}`,
+                      keepLines: false,
                       indent: { left: 426 },
                       style: "a6",
                     }),
@@ -691,6 +692,7 @@ export class DocumentFormatter {
                   (item, index) =>
                     new Paragraph({
                       text: `${index + 1}. ${item}`,
+                      keepLines: false,
                       indent: { left: 426 },
                       style: "a6",
                     }),
@@ -700,6 +702,7 @@ export class DocumentFormatter {
                   (item, index) =>
                     new Paragraph({
                       text: `${index + 1}. ${item}`,
+                      keepLines: false,
                       indent: { left: 426 },
                       style: "a6",
                     }),
@@ -707,7 +710,6 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              cantSplit: true,
               width: { size: 35, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
@@ -717,7 +719,7 @@ export class DocumentFormatter {
               },
               children: [
                 new Paragraph({
-                  keepLines: true, // Ensure the cell content doesn't break across pages
+                  keepLines: false, // Allow content to break across pages
                   spacing: { before: 100 },
                   children: [
                     new TextRun({
@@ -726,19 +728,19 @@ export class DocumentFormatter {
                     }),
 
                     new TextRun({
-                      text: unitDetails?.manager?.name || "",
+                      text: unitDetails?.manager?.title || "",
+                      break: 1,
                       bold: true,
                     }),
 
                     new TextRun({
-                      text: unitDetails?.manager?.title || "",
+                      text: unitDetails?.manager?.name || "",
+                      break: 3,
                       bold: true,
                     }),
                     new TextRun({
-                      break: 1,
-                    }),
-                    new TextRun({
                       text: unitDetails?.manager?.degree || "",
+                      break: 1,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
