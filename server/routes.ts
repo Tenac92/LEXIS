@@ -12,6 +12,7 @@ import { router as projectRouter } from "./controllers/projectController";
 import { router as documentsRouter } from "./controllers/documentsController";
 import templatePreviewRouter from "./routes/template-preview";
 import authRouter from "./routes/auth";
+import budgetUploadRouter from "./routes/budget-upload"; // Import the budget upload router
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
 import healthcheckRouter from "./routes/healthcheck"; // Import the original healthcheck router
 import healthRouter from "./routes/health"; // Import our new enhanced health check router
@@ -478,6 +479,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Use authentication for all other budget routes
     app.use('/api/budget', authenticateSession, budgetRouter);
+    
+    // Budget upload routes for Excel file imports
+    log('[Routes] Setting up budget upload routes...');
+    app.use('/api/budget', authenticateSession, budgetUploadRouter);
+    log('[Routes] Budget upload routes setup complete');
 
     // Documents routes
     log('[Routes] Setting up document routes...');
