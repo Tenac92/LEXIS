@@ -12,8 +12,11 @@ export interface BudgetResponse {
     q4: string;
     total_spent: string;
     current_budget: string;
-    // New fields for quarter transition support
-    quarter_view?: string;
+    // New budget indicators
+    available_budget?: string;
+    quarter_available?: string;
+    yearly_available?: string;
+    // Quarter tracking
     last_quarter_check?: string;
     current_quarter?: string;
   };
@@ -55,6 +58,8 @@ export class BudgetService {
 
       // Use user_view as current_budget if current_budget is not set or zero
       const userView = budgetData?.user_view?.toString() || '0';
+      const ethsiaPistosi = budgetData?.ethsia_pistosi?.toString() || '0';
+      const katanomesEtous = budgetData?.katanomes_etous?.toString() || '0';
       
       // Check if the total_spent column exists
       const hasTotalSpent = budgetData && 'total_spent' in budgetData && budgetData.total_spent !== null;
@@ -70,20 +75,16 @@ export class BudgetService {
       const quarterKey = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
 
       // Check for quarter-related fields
-      const hasQuarterView = budgetData && 'quarter_view' in budgetData && budgetData.quarter_view !== null;
       const hasLastQuarterCheck = budgetData && 'last_quarter_check' in budgetData && budgetData.last_quarter_check !== null;
       
-      console.log(`[BudgetService] Budget data fields: total_spent=${hasTotalSpent}, quarter_view=${hasQuarterView}, last_quarter_check=${hasLastQuarterCheck}`);
-
       // Parse current quarter values
       const currentQ1 = parseFloat(budgetData?.q1?.toString() || '0');
       const currentQ2 = parseFloat(budgetData?.q2?.toString() || '0');
       const currentQ3 = parseFloat(budgetData?.q3?.toString() || '0');
       const currentQ4 = parseFloat(budgetData?.q4?.toString() || '0');
-      let currentQuarterView = parseFloat(budgetData?.quarter_view?.toString() || '0');
       
       // Get current trimester value
-      const currentTrimesterValue = parseFloat(budgetData?.[quarterKey]?.toString() || '0');
+      const currentQuarterValue = parseFloat(budgetData?.[quarterKey]?.toString() || '0');
       
       // Extract the quarter number from the last_quarter_check (e.g., extract '1' from 'q1')
       const lastQuarterCheck = hasLastQuarterCheck 
@@ -94,20 +95,10 @@ export class BudgetService {
         ? parseInt(lastQuarterCheck.substring(1)) 
         : 0;
       
-      // Check if we need to reset quarter_view for the new year
-      const lastUpdatedTime = budgetData?.updated_at ? new Date(budgetData.updated_at) : null;
-      const lastUpdatedYear = lastUpdatedTime ? lastUpdatedTime.getFullYear() : currentYear;
-      
-      // Check if we need to reset quarter_view (new year)
-      let isNewYear = lastUpdatedYear < currentYear;
-      if (isNewYear) {
-        console.log(`[BudgetService] Detected new year (${lastUpdatedYear} -> ${currentYear}), resetting quarter_view`);
-      }
-      
       // Check for quarter transition (e.g., Q1->Q2)
       const isQuarterTransition = lastQuarterChecked > 0 && lastQuarterChecked < currentQuarterNumber;
       
-      console.log(`[BudgetService] Quarter check - Last checked: ${lastQuarterChecked}, Current: ${currentQuarterNumber}, Transition: ${isQuarterTransition}, New Year: ${isNewYear}`);
+      console.log(`[BudgetService] Quarter check - Last checked: ${lastQuarterChecked}, Current: ${currentQuarterNumber}, Transition: ${isQuarterTransition}`);
       
       let needsUpdate = false;
       let updatedUserView = parseFloat(userView);
@@ -115,14 +106,6 @@ export class BudgetService {
       let updatedQ2 = currentQ2;
       let updatedQ3 = currentQ3;
       let updatedQ4 = currentQ4;
-      let updatedQuarterView = currentQuarterView;
-      
-      // Handle new year reset
-      if (isNewYear) {
-        needsUpdate = true;
-        updatedQuarterView = 0; // Reset quarter_view to 0 for the new year
-        console.log(`[BudgetService] Resetting quarter_view to 0 for new year ${currentYear}`);
-      }
       
       // Handle quarter transitions
       if (isQuarterTransition) {
@@ -133,42 +116,39 @@ export class BudgetService {
           // Q1->Q2 transition
           console.log(`[BudgetService] Quarter transition from Q1 to Q2 - q1 value: ${currentQ1}, adding to q2: ${currentQ2}`);
           
-          // Apply the new quarter transition logic: q2=q2+q1
+          // Apply the quarter transition logic: q2=q2+q1
           updatedQ2 = currentQ2 + currentQ1;
           updatedQ1 = 0; // Reset q1 as it has ended
           
           console.log(`[BudgetService] Updated quarterly values after Q1->Q2 transition:`, {
             q1: `${currentQ1} -> ${updatedQ1}`,
-            q2: `${currentQ2} -> ${updatedQ2}`,
-            quarter_view: `${currentQuarterView} -> ${updatedQuarterView}`
+            q2: `${currentQ2} -> ${updatedQ2}`
           });
           
         } else if (lastQuarterChecked === 2 && currentQuarterNumber === 3) {
           // Q2->Q3 transition
           console.log(`[BudgetService] Quarter transition from Q2 to Q3 - q2 value: ${currentQ2}, adding to q3: ${currentQ3}`);
           
-          // Apply the new quarter transition logic: q3=q3+q2
+          // Apply the quarter transition logic: q3=q3+q2
           updatedQ3 = currentQ3 + currentQ2;
           updatedQ2 = 0; // Reset q2 as it has ended
           
           console.log(`[BudgetService] Updated quarterly values after Q2->Q3 transition:`, {
             q2: `${currentQ2} -> ${updatedQ2}`,
-            q3: `${currentQ3} -> ${updatedQ3}`,
-            quarter_view: `${currentQuarterView} -> ${updatedQuarterView}`
+            q3: `${currentQ3} -> ${updatedQ3}`
           });
           
         } else if (lastQuarterChecked === 3 && currentQuarterNumber === 4) {
           // Q3->Q4 transition
           console.log(`[BudgetService] Quarter transition from Q3 to Q4 - q3 value: ${currentQ3}, adding to q4: ${currentQ4}`);
           
-          // Apply the new quarter transition logic: q4=q4+q3
+          // Apply the quarter transition logic: q4=q4+q3
           updatedQ4 = currentQ4 + currentQ3;
           updatedQ3 = 0; // Reset q3 as it has ended
           
           console.log(`[BudgetService] Updated quarterly values after Q3->Q4 transition:`, {
             q3: `${currentQ3} -> ${updatedQ3}`,
-            q4: `${currentQ4} -> ${updatedQ4}`,
-            quarter_view: `${currentQuarterView} -> ${updatedQuarterView}`
+            q4: `${currentQ4} -> ${updatedQ4}`
           });
         }
       }
@@ -180,12 +160,11 @@ export class BudgetService {
           q2: updatedQ2.toString(),
           q3: updatedQ3.toString(),
           q4: updatedQ4.toString(),
-          quarter_view: updatedQuarterView.toString(),
           last_quarter_check: `q${currentQuarterNumber}`,
           updated_at: new Date().toISOString()
         };
         
-        console.log(`[BudgetService] Automatically updating budget data due to quarter transition or empty quarter_view:`, updatePayload);
+        console.log(`[BudgetService] Automatically updating budget data due to quarter transition:`, updatePayload);
         
         const { error: updateError } = await supabase
           .from('budget_na853_split')
@@ -197,41 +176,59 @@ export class BudgetService {
         } else {
           console.log(`[BudgetService] Successfully updated budget data with quarter transition values`);
           
-          // After updating, return the updated values
-          return {
-            status: 'success',
-            data: {
-              user_view: updatedUserView.toString(),
-              ethsia_pistosi: budgetData?.ethsia_pistosi?.toString() || '0',
-              q1: updatedQ1.toString(),
-              q2: updatedQ2.toString(),
-              q3: updatedQ3.toString(),
-              q4: updatedQ4.toString(),
-              total_spent: totalSpent,
-              current_budget: updatedUserView.toString(),
-              quarter_view: updatedQuarterView.toString(),
-              last_quarter_check: `q${currentQuarterNumber}`,
-              current_quarter: quarterKey
-            }
-          };
+          // Update our local copy of the data
+          budgetData.q1 = updatedQ1.toString();
+          budgetData.q2 = updatedQ2.toString();
+          budgetData.q3 = updatedQ3.toString();
+          budgetData.q4 = updatedQ4.toString();
+          // Remove quarter_view from the database record
+          if ('quarter_view' in budgetData) {
+            delete budgetData.quarter_view;
+          }
         }
       }
       
-      // If no update was needed or if the update failed, return the original values
+      // Calculate budget indicators
+      // Get the values of the current trimester
+      let currentTrimesterValue = 0;
+      switch (quarterKey) {
+        case 'q1': currentTrimesterValue = needsUpdate ? updatedQ1 : currentQ1; break;
+        case 'q2': currentTrimesterValue = needsUpdate ? updatedQ2 : currentQ2; break;
+        case 'q3': currentTrimesterValue = needsUpdate ? updatedQ3 : currentQ3; break;
+        case 'q4': currentTrimesterValue = needsUpdate ? updatedQ4 : currentQ4; break;
+      }
+      
+      // Convert string values to numbers for calculations
+      const userViewNum = parseFloat(userView);
+      const ethsiaPistosiNum = parseFloat(ethsiaPistosi);
+      const katanomesEtousNum = parseFloat(katanomesEtous);
+      
+      // Calculate budget indicators:
+      // Διαθέσιμος = katanomes_etous - user_view
+      // Τρίμηνο = current_q - user_view
+      // Ετήσιος = ethsia_pistosi - user-view
+      const availableBudget = Math.max(0, katanomesEtousNum - userViewNum);
+      const currentQuarterAvailable = Math.max(0, currentTrimesterValue - userViewNum);
+      const yearlyAvailable = Math.max(0, ethsiaPistosiNum - userViewNum);
+      
+      // Return with budget indicators
       return {
         status: 'success',
         data: {
           user_view: userView,
-          ethsia_pistosi: budgetData?.ethsia_pistosi?.toString() || '0',
-          q1: budgetData?.q1?.toString() || '0',
-          q2: budgetData?.q2?.toString() || '0',
-          q3: budgetData?.q3?.toString() || '0',
-          q4: budgetData?.q4?.toString() || '0',
-          total_spent: totalSpent, // Handle missing total_spent column
+          ethsia_pistosi: ethsiaPistosi,
+          q1: needsUpdate ? updatedQ1.toString() : budgetData.q1?.toString() || '0',
+          q2: needsUpdate ? updatedQ2.toString() : budgetData.q2?.toString() || '0',
+          q3: needsUpdate ? updatedQ3.toString() : budgetData.q3?.toString() || '0',
+          q4: needsUpdate ? updatedQ4.toString() : budgetData.q4?.toString() || '0',
+          total_spent: totalSpent,
           current_budget: userView, // Set current_budget to match user_view
-          quarter_view: hasQuarterView ? budgetData.quarter_view?.toString() : budgetData?.[quarterKey]?.toString() || '0',
-          last_quarter_check: lastQuarterCheck, // Add last_quarter_check
-          current_quarter: quarterKey // Add current_quarter information
+          last_quarter_check: needsUpdate ? `q${currentQuarterNumber}` : lastQuarterCheck,
+          current_quarter: quarterKey,
+          // Add new budget indicators
+          available_budget: availableBudget.toString(),
+          quarter_available: currentQuarterAvailable.toString(), 
+          yearly_available: yearlyAvailable.toString()
         }
       };
     } catch (error) {
@@ -348,19 +345,45 @@ export class BudgetService {
         };
       }
 
-      // Calculate remaining budget after the operation
-      const remainingAfterOperation = userView - amount;
+      // Get current quarter
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1;
+      const currentQuarterNumber = Math.ceil(currentMonth / 3);
+      const quarterKey = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
       
-      // If remaining amount is negative, return an error
-      if (remainingAfterOperation < 0) {
+      // Get current quarter value
+      let currentQuarterValue = 0;
+      switch (quarterKey) {
+        case 'q1': currentQuarterValue = q1; break;
+        case 'q2': currentQuarterValue = q2; break;
+        case 'q3': currentQuarterValue = q3; break;
+        case 'q4': currentQuarterValue = q4; break;
+      }
+      
+      // Calculate budget indicators based on the new design
+      // Διαθέσιμος = katanomes_etous - user_view
+      // Τρίμηνο = current_q - user_view
+      // Ετήσιος = ethsia_pistosi - user_view
+      const availableBeforeOperation = Math.max(0, katanomesEtous - userView);
+      const quarterAvailableBeforeOperation = Math.max(0, currentQuarterValue - userView);
+      const yearlyAvailableBeforeOperation = Math.max(0, ethsiaPistosi - userView);
+      
+      // Calculate indicators after operation
+      const newUserView = userView + amount;
+      const availableAfterOperation = Math.max(0, katanomesEtous - newUserView);
+      const quarterAvailableAfterOperation = Math.max(0, currentQuarterValue - newUserView);
+      const yearlyAvailableAfterOperation = Math.max(0, ethsiaPistosi - newUserView);
+      
+      // If available would go negative, return an error
+      if (katanomesEtous > 0 && newUserView > katanomesEtous) {
         return {
           status: 'error',
           canCreate: false,
-          message: `Ανεπαρκές διαθέσιμο υπόλοιπο προϋπολογισμού. Διαθέσιμο: ${userView}, Απαιτούμενο: ${amount}`,
+          message: `Ανεπαρκής διαθέσιμος προϋπολογισμός (Διαθέσιμος: ${availableBeforeOperation}, Έγγραφο: ${amount})`,
           metadata: {
-            available: userView,
+            available: availableBeforeOperation,
             requested: amount,
-            shortfall: Math.abs(remainingAfterOperation)
+            shortfall: Math.abs(katanomesEtous - newUserView)
           }
         };
       }
@@ -369,38 +392,40 @@ export class BudgetService {
       const baseValue = katanomesEtous > 0 ? katanomesEtous : ethsiaPistosi;
       const threshold = baseValue * 0.2;
       
-      // Check if remaining budget falls below 20% threshold
-      if (remainingAfterOperation <= threshold && baseValue > 0) {
+      // Check if available budget would fall below 20% threshold
+      if (availableAfterOperation <= threshold && baseValue > 0) {
         return {
           status: 'warning',
           canCreate: true,
-          message: 'Ο προϋπολογισμός θα πέσει κάτω από το 20% της ετήσιας κατανομής. Απαιτείται ειδοποίηση διαχειριστή.',
+          message: 'Ο διαθέσιμος προϋπολογισμός θα πέσει κάτω από το 20% της ετήσιας κατανομής. Απαιτείται ειδοποίηση διαχειριστή.',
           requiresNotification: true,
           notificationType: 'low_budget',
           priority: 'high',
           allowDocx: true,
           metadata: {
-            remainingBudget: remainingAfterOperation,
+            availableBeforeOperation,
+            availableAfterOperation,
             threshold: threshold,
             baseValue: baseValue,
-            percentageRemaining: (remainingAfterOperation / baseValue) * 100
+            percentageRemaining: (availableAfterOperation / baseValue) * 100
           }
         };
       }
       
       // Check if budget is getting low (below 30%)
-      if (remainingAfterOperation <= baseValue * 0.3 && baseValue > 0) {
+      if (availableAfterOperation <= baseValue * 0.3 && baseValue > 0) {
         return {
           status: 'warning',
           canCreate: true,
-          message: 'Ο προϋπολογισμός είναι χαμηλός (κάτω από 30% της ετήσιας κατανομής).',
+          message: 'Ο διαθέσιμος προϋπολογισμός είναι χαμηλός (κάτω από 30% της ετήσιας κατανομής).',
           requiresNotification: false,
           allowDocx: true,
           metadata: {
-            remainingBudget: remainingAfterOperation,
+            availableBeforeOperation,
+            availableAfterOperation,
             threshold: baseValue * 0.3,
             baseValue: baseValue,
-            percentageRemaining: (remainingAfterOperation / baseValue) * 100
+            percentageRemaining: (availableAfterOperation / baseValue) * 100
           }
         };
       }
@@ -412,10 +437,17 @@ export class BudgetService {
         allowDocx: true,
         message: 'Επαρκής προϋπολογισμός για τη δημιουργία του εγγράφου.',
         metadata: {
-          remainingBudget: remainingAfterOperation,
-          previousBudget: userView,
+          availableBeforeOperation,
+          availableAfterOperation,
+          userView,
+          newUserView,
           baseValue: baseValue,
-          percentageRemaining: baseValue > 0 ? (remainingAfterOperation / baseValue) * 100 : 100
+          percentageAvailable: baseValue > 0 ? (availableAfterOperation / baseValue) * 100 : 100,
+          budget_indicators: {
+            available_budget: availableAfterOperation,
+            quarter_available: quarterAvailableAfterOperation,
+            yearly_available: yearlyAvailableAfterOperation
+          }
         }
       };
     } catch (error) {
@@ -547,97 +579,77 @@ export class BudgetService {
       
       console.log(`[BudgetService] Quarter check - Last checked: ${lastQuarterChecked}, Current: ${currentQuarterNumber}, Transition: ${isQuarterTransition}`);
       
-      // Calculate remaining budget from previous quarters if a transition occurred
-      let remainingBudget = 0;
       // Define new quarter values with defaults from current values
       let newQ1 = currentQ1;
       let newQ2 = currentQ2;
       let newQ3 = currentQ3;
       let newQ4 = currentQ4;
-      let newQuarterView = parseFloat(budgetData.quarter_view?.toString() || '0');
       
       if (isQuarterTransition) {
-        // Calculate the remaining budget from previous quarters to add to current quarter
+        // Calculate the quarter transition (add previous quarter value to current quarter)
         if (lastQuarterChecked === 1 && currentQuarterNumber === 2) {
-          // Use quarter_view instead of q1 directly to get app-specific usage
-          const quarterView = parseFloat(budgetData.quarter_view?.toString() || budgetData.q1?.toString() || '0');
-          remainingBudget = Math.max(0, quarterView); // Remaining from Q1
-          console.log(`[BudgetService] Quarter transition from Q1 to Q2 - Remaining budget: ${remainingBudget}`);
+          // Q1->Q2 transition
+          console.log(`[BudgetService] Quarter transition from Q1 to Q2 - q1 value: ${currentQ1}, adding to q2: ${currentQ2}`);
           
-          // Apply the quarter transition logic: q2=q2+quarter_view, quarter_view=quarter_view+q2, q1=0
-          newQ2 = currentQ2 + remainingBudget;
-          newQuarterView = newQ2; // Reset quarter_view to match the new quarter
+          // Apply the quarter transition logic: q2=q2+q1
+          newQ2 = currentQ2 + currentQ1;
           newQ1 = 0; // Reset q1 as it has ended
           
           console.log(`[BudgetService] Updated quarterly values after Q1->Q2 transition:`, {
             q1: `${currentQ1} -> ${newQ1}`,
-            q2: `${currentQ2} -> ${newQ2}`,
-            quarter_view: `${quarterView} -> ${newQuarterView}`
+            q2: `${currentQ2} -> ${newQ2}`
           });
           
         } else if (lastQuarterChecked === 2 && currentQuarterNumber === 3) {
-          // Use quarter_view instead of q2 directly
-          const quarterView = parseFloat(budgetData.quarter_view?.toString() || budgetData.q2?.toString() || '0');
-          remainingBudget = Math.max(0, quarterView); // Remaining from Q2
-          console.log(`[BudgetService] Quarter transition from Q2 to Q3 - Remaining budget: ${remainingBudget}`);
+          // Q2->Q3 transition
+          console.log(`[BudgetService] Quarter transition from Q2 to Q3 - q2 value: ${currentQ2}, adding to q3: ${currentQ3}`);
           
-          // Apply the quarter transition logic: q3=q3+quarter_view, quarter_view=quarter_view+q3, q2=0
-          newQ3 = currentQ3 + remainingBudget;
-          newQuarterView = newQ3; // Reset quarter_view to match the new quarter
+          // Apply the quarter transition logic: q3=q3+q2
+          newQ3 = currentQ3 + currentQ2;
           newQ2 = 0; // Reset q2 as it has ended
           
           console.log(`[BudgetService] Updated quarterly values after Q2->Q3 transition:`, {
             q2: `${currentQ2} -> ${newQ2}`,
-            q3: `${currentQ3} -> ${newQ3}`,
-            quarter_view: `${quarterView} -> ${newQuarterView}`
+            q3: `${currentQ3} -> ${newQ3}`
           });
           
         } else if (lastQuarterChecked === 3 && currentQuarterNumber === 4) {
-          // Use quarter_view instead of q3 directly
-          const quarterView = parseFloat(budgetData.quarter_view?.toString() || budgetData.q3?.toString() || '0');
-          remainingBudget = Math.max(0, quarterView); // Remaining from Q3
-          console.log(`[BudgetService] Quarter transition from Q3 to Q4 - Remaining budget: ${remainingBudget}`);
+          // Q3->Q4 transition
+          console.log(`[BudgetService] Quarter transition from Q3 to Q4 - q3 value: ${currentQ3}, adding to q4: ${currentQ4}`);
           
-          // Apply the quarter transition logic: q4=q4+quarter_view, quarter_view=quarter_view+q4, q3=0
-          newQ4 = currentQ4 + remainingBudget;
-          newQuarterView = newQ4; // Reset quarter_view to match the new quarter
+          // Apply the quarter transition logic: q4=q4+q3
+          newQ4 = currentQ4 + currentQ3;
           newQ3 = 0; // Reset q3 as it has ended
           
           console.log(`[BudgetService] Updated quarterly values after Q3->Q4 transition:`, {
             q3: `${currentQ3} -> ${newQ3}`,
-            q4: `${currentQ4} -> ${newQ4}`,
-            quarter_view: `${quarterView} -> ${newQuarterView}`
+            q4: `${currentQ4} -> ${newQ4}`
           });
         }
       }
       
-      // Calculate new amounts - we need to update the user view with deduction but maintain quarter handling
-      const newUserView = Math.max(0, currentUserView - amount);
-      
-      // Calculate the new quarter value for the current quarter
-      // For the current quarter, apply the deduction
-      let newQuarterValue;
-      if (quarterKey === 'q1') {
-        newQuarterValue = Math.max(0, newQ1 - amount);
-        newQ1 = newQuarterValue;
-      } else if (quarterKey === 'q2') {
-        newQuarterValue = Math.max(0, newQ2 - amount);
-        newQ2 = newQuarterValue;
-      } else if (quarterKey === 'q3') {
-        newQuarterValue = Math.max(0, newQ3 - amount);
-        newQ3 = newQuarterValue;
-      } else { // q4
-        newQuarterValue = Math.max(0, newQ4 - amount);
-        newQ4 = newQuarterValue;
-      }
-      
-      // After deduction, update the quarter_view
-      newQuarterView = Math.max(0, newQuarterView - amount);
+      // Calculate new user view by adding the amount (user_view is counter of all spending)
+      const newUserView = currentUserView + amount;
+      const newTotalSpent = total_spent + amount;
       
       // These values should not be updated by document creation operations
       const newEthsiaPistosi = currentEthsiaPistosi; // Do not change ethsia_pistosi
       const newKatanomesEtous = currentKatanomesEtous; // Do not change katanomes_etous
-      const newTotalSpent = total_spent + amount;
+      
+      // Calculate budget indicators
+      const availableBudget = Math.max(0, newKatanomesEtous - newUserView);
+      
+      // Get current trimester value for budget indicators
+      let currentTrimesterValue = 0;
+      switch (quarterKey) {
+        case 'q1': currentTrimesterValue = isQuarterTransition ? newQ1 : currentQ1; break;
+        case 'q2': currentTrimesterValue = isQuarterTransition ? newQ2 : currentQ2; break;
+        case 'q3': currentTrimesterValue = isQuarterTransition ? newQ3 : currentQ3; break;
+        case 'q4': currentTrimesterValue = isQuarterTransition ? newQ4 : currentQ4; break;
+      }
+      
+      const currentQuarterAvailable = Math.max(0, currentTrimesterValue - newUserView);
+      const yearlyAvailable = Math.max(0, newEthsiaPistosi - newUserView);
 
       // Check if the total_spent column exists by querying the first row
       console.log(`[BudgetService] Checking if total_spent column exists in budget_na853_split`);
@@ -660,14 +672,17 @@ export class BudgetService {
         q4: newQ4.toString(),
         updated_at: new Date().toISOString(),
         // Update the last_quarter_check to current quarter (text format)
-        last_quarter_check: `q${currentQuarterNumber}`,
-        // Update quarter_view with the newly calculated value based on quarter transitions
-        quarter_view: newQuarterView.toString()
+        last_quarter_check: `q${currentQuarterNumber}`
       };
       
       // Only include total_spent if the column exists
       if (hasTotalSpentColumn) {
         updatePayload.total_spent = newTotalSpent.toString();
+      }
+      
+      // If quarter_view exists in the database, set it to null to remove it
+      if ('quarter_view' in budgetData) {
+        updatePayload.quarter_view = null;
       }
       
       // Update budget amounts
@@ -681,26 +696,34 @@ export class BudgetService {
         throw updateError;
       }
 
-      // Create a budget history entry without the metadata field
-      // Extract important details separately
+      // Create a budget history entry with metadata
       const quarterChanges = {
-        q1: { previous: currentQ1, new: quarterKey === 'q1' ? newQuarterValue : currentQ1 },
-        q2: { previous: currentQ2, new: quarterKey === 'q2' ? newQuarterValue : currentQ2 },
-        q3: { previous: currentQ3, new: quarterKey === 'q3' ? newQuarterValue : currentQ3 },
-        q4: { previous: currentQ4, new: quarterKey === 'q4' ? newQuarterValue : currentQ4 }
+        q1: { previous: currentQ1, new: newQ1 },
+        q2: { previous: currentQ2, new: newQ2 },
+        q3: { previous: currentQ3, new: newQ3 },
+        q4: { previous: currentQ4, new: newQ4 }
       };
       
-      // Create history entry with only the fields that exist in the table
+      // Update history message to show budget is being used, not reduced (since we're adding to user_view)
       const historyEntry = {
         mis,
         previous_amount: currentUserView.toString(),
         new_amount: newUserView.toString(),
         change_type: documentId ? 'document_creation' : 'manual_adjustment',
         change_reason: changeReason || (documentId ? 
-          `Document creation [ID:${documentId}] reduced available budget by ${amount}. Current quarter: ${quarterKey}` : 
-          `Manual budget adjustment reduced available budget by ${amount}. Current quarter: ${quarterKey}`),
+          `Document creation [ID:${documentId}] added ${amount} to budget usage. Current quarter: ${quarterKey}` : 
+          `Manual budget adjustment added ${amount} to budget usage. Current quarter: ${quarterKey}`),
         document_id: documentId || null,
-        created_by: userId.toString()
+        created_by: userId.toString(),
+        metadata: {
+          quarterly_changes: quarterChanges,
+          budget_indicators: {
+            available_budget: availableBudget,
+            quarter_available: currentQuarterAvailable,
+            yearly_available: yearlyAvailable
+          },
+          amount_used: amount
+        }
       };
 
       console.log(`[BudgetService] Creating budget history entry for MIS ${mis} with change_type: ${historyEntry.change_type}, document_id: ${historyEntry.document_id}, created_by: ${historyEntry.created_by}`);
@@ -731,8 +754,12 @@ export class BudgetService {
           q4: newQ4.toString(),
           total_spent: newTotalSpent.toString(),
           current_budget: newUserView.toString(),
-          quarter_view: newQuarterView.toString(),
-          last_quarter_check: `q${currentQuarterNumber}`
+          last_quarter_check: `q${currentQuarterNumber}`,
+          current_quarter: quarterKey,
+          // Add new budget indicators
+          available_budget: availableBudget.toString(),
+          quarter_available: currentQuarterAvailable.toString(), 
+          yearly_available: yearlyAvailable.toString()
         }
       };
     } catch (error) {
