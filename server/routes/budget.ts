@@ -362,4 +362,38 @@ router.put('/bulk-update', authenticateToken, async (req: AuthenticatedRequest, 
   }
 });
 
+// Route to analyze changes between budget updates (for admins only)
+router.get('/:mis/analyze-changes', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Check if user has admin role
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Access denied. This operation requires admin privileges.'
+      });
+    }
+
+    const { mis } = req.params;
+    if (!mis) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'MIS parameter is required'
+      });
+    }
+
+    console.log('[Budget] Analyzing changes between updates for MIS:', mis);
+    
+    const analysis = await BudgetService.analyzeChangesBetweenUpdates(mis);
+    
+    return res.json(analysis);
+  } catch (error) {
+    console.error('[Budget] Error analyzing budget changes:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to analyze budget changes',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

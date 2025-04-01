@@ -232,6 +232,9 @@ export class BudgetService {
         // Reallocation (anakatanomh)
         changeType = 'reallocation';
         isReallocation = true;
+        
+        // If this is a reallocation, try to resolve any pending reallocation notifications
+        await this.resolveReallocationNotifications(mis, katanomesEtousDiff);
       }
 
       return {
@@ -1045,6 +1048,70 @@ export class BudgetService {
         status: 'error',
         message: error instanceof Error ? error.message : 'Failed to update budget'
       };
+    }
+  }
+
+  /**
+   * Resolves reallocation notifications that match a budget change detection.
+   * Used when admin uploads change katanomes_etous and a notification exists.
+   * 
+   * @param mis Project MIS number
+   * @param katanomesEtousDiff The change in katanomes_etous value
+   * @returns Result of the operation
+   */
+  static async resolveReallocationNotifications(mis: string, katanomesEtousDiff: number): Promise<boolean> {
+    try {
+      if (!mis || Math.abs(katanomesEtousDiff) < 0.01) {
+        console.log('[BudgetService] No significant budget change to process');
+        return false;
+      }
+
+      console.log(`[BudgetService] Attempting to resolve reallocation notifications for MIS: ${mis}`);
+      
+      // Find pending reallocation notifications for this MIS
+      const { data: notifications, error } = await supabase
+        .from('budget_notifications')
+        .select('*')
+        .eq('mis', mis)
+        .eq('type', 'reallocation')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('[BudgetService] Error fetching reallocation notifications:', error);
+        return false;
+      }
+      
+      if (!notifications || notifications.length === 0) {
+        console.log(`[BudgetService] No pending reallocation notifications found for MIS: ${mis}`);
+        return false;
+      }
+      
+      console.log(`[BudgetService] Found ${notifications.length} pending reallocation notification(s) for MIS: ${mis}`);
+      
+      // Mark the most recent notification as completed
+      // Note: We could check if the amount matches exactly, but a more lenient approach is to
+      // just mark any pending reallocation notification as completed after an admin update
+      const latestNotification = notifications[0];
+      
+      const { error: updateError } = await supabase
+        .from('budget_notifications')
+        .update({
+          status: 'completed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', latestNotification.id);
+      
+      if (updateError) {
+        console.error('[BudgetService] Error updating notification status:', updateError);
+        return false;
+      }
+      
+      console.log(`[BudgetService] Successfully resolved reallocation notification ID: ${latestNotification.id} for MIS: ${mis}`);
+      return true;
+    } catch (error) {
+      console.error('[BudgetService] Error resolving reallocation notifications:', error);
+      return false;
     }
   }
 

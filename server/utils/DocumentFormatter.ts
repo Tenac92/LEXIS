@@ -655,11 +655,11 @@ export class DocumentFormatter {
     // Create a two-column table with proper layout
     // Create the left column content (attachments, notifications, etc.)
     const leftColumnParagraphs: Paragraph[] = [];
-    
+
     leftColumnParagraphs.push(
-      this.createBoldUnderlinedParagraph("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)")
+      this.createBoldUnderlinedParagraph("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)"),
     );
-    
+
     for (let i = 0; i < attachments.length; i++) {
       leftColumnParagraphs.push(
         new Paragraph({
@@ -667,18 +667,20 @@ export class DocumentFormatter {
           keepLines: false,
           indent: { left: 426 },
           style: "a6",
-        })
+        }),
       );
     }
-    
-    leftColumnParagraphs.push(this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"));
-    
+
+    leftColumnParagraphs.push(
+      this.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"),
+    );
+
     const notifications = [
       "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
       "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
       "Γ.Δ.Α.Ε.Φ.Κ.",
     ];
-    
+
     for (let i = 0; i < notifications.length; i++) {
       leftColumnParagraphs.push(
         new Paragraph({
@@ -686,24 +688,26 @@ export class DocumentFormatter {
           keepLines: false,
           indent: { left: 426 },
           style: "a6",
-        })
+        }),
       );
     }
-    
-    leftColumnParagraphs.push(this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"));
-    
+
+    leftColumnParagraphs.push(
+      this.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
+    );
+
     leftColumnParagraphs.push(
       new Paragraph({
         text: "1. Χρονολογικό Αρχείο",
         keepLines: false,
         indent: { left: 426 },
         style: "a6",
-      })
+      }),
     );
-    
+
     // Create the right column with signature
     const signatureParagraph = new Paragraph({
-      keepLines: true, // Keep manager signature together
+      // keepLines: true, // Keep manager signature together
       alignment: AlignmentType.CENTER, // Align to the center
       spacing: { before: 480 }, // Add some space before the signature
       children: [
@@ -727,7 +731,7 @@ export class DocumentFormatter {
         }),
       ],
     });
-    
+
     // Create a floating table that keeps the correct layout
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -756,11 +760,11 @@ export class DocumentFormatter {
                 right: { style: BorderStyle.NONE },
               },
             }),
-            
+
             // Right column - signature stays together
             new TableCell({
               children: [signatureParagraph],
-              verticalAlign: VerticalAlign.TOP, 
+              verticalAlign: VerticalAlign.TOP,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -1029,38 +1033,46 @@ export class DocumentFormatter {
 
       // Collect all children elements as proper document elements
       const children: (Paragraph | Table)[] = [];
-      
+
       // Add header
-      children.push(await DocumentFormatter.createDocumentHeader(
-        documentData,
-        unitDetails,
-      ));
-      
+      children.push(
+        await DocumentFormatter.createDocumentHeader(documentData, unitDetails),
+      );
+
       // Add document subject
       const docSubject = DocumentFormatter.createDocumentSubject(
         documentData,
         unitDetails,
       );
-      docSubject.forEach((element: Paragraph | Table) => children.push(element));
-      
+      docSubject.forEach((element: Paragraph | Table) =>
+        children.push(element),
+      );
+
       // Add main content
-      const mainContent = DocumentFormatter.createMainContent(documentData, unitDetails);
-      mainContent.forEach((element: Paragraph | Table) => children.push(element));
-      
+      const mainContent = DocumentFormatter.createMainContent(
+        documentData,
+        unitDetails,
+      );
+      mainContent.forEach((element: Paragraph | Table) =>
+        children.push(element),
+      );
+
       // Add payment table
-      children.push(DocumentFormatter.createPaymentTable(documentData.recipients || []));
-      
+      children.push(
+        DocumentFormatter.createPaymentTable(documentData.recipients || []),
+      );
+
       // Add note
       children.push(DocumentFormatter.createNote());
-      
+
       // Add footer
       const footer = DocumentFormatter.createFooter(documentData, unitDetails);
       children.push(footer);
-      
+
       // Create section with all elements
       // Cast the children array to any to avoid TypeScript errors with Document sections
       const sectionElements: any[] = children;
-      
+
       const sections = [
         {
           properties: {

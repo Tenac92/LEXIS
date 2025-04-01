@@ -1,11 +1,81 @@
 import { type BudgetData } from "@/lib/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { BadgeInfo, Calculator, CalendarFold, PiggyBank } from "lucide-react";
 
 interface BudgetIndicatorProps {
   budgetData: BudgetData;
   currentAmount?: number;
   onValidationWarning?: (type: 'funding' | 'reallocation') => void;
+  compact?: boolean;
+}
+
+// Compact version of the budget indicator for project cards
+export function CompactBudgetIndicator({ 
+  budgetData,
+  mis
+}: { 
+  budgetData: BudgetData | null;
+  mis: string;
+}) {
+  // If no budget data, show a message
+  if (!budgetData) {
+    return (
+      <div className="mt-2 text-sm text-muted-foreground flex items-center">
+        <BadgeInfo className="mr-2 h-4 w-4 text-blue-500" />
+        <span>Δεν υπάρχουν δεδομένα προϋπολογισμού</span>
+      </div>
+    );
+  }
+
+  // Parse values ensuring they are numbers
+  const userView = parseFloat(budgetData.user_view?.toString() || '0');
+  const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+  const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+  
+  // Parse new budget indicators
+  const availableBudget = parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString());
+  const quarterAvailable = parseFloat(budgetData.quarter_available?.toString() || '0');
+  const yearlyAvailable = parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString());
+  
+  // Calculate percentage for progress bar
+  const percentageUsed = katanomesEtous > 0 ? ((userView / katanomesEtous) * 100) : 0;
+  
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center">
+          <PiggyBank className="mr-1 h-4 w-4 text-blue-500" />
+          <span className="text-muted-foreground">Διαθέσιμος:</span>
+        </div>
+        <span className="font-medium">{availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
+      </div>
+      
+      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+        <div 
+          className={`h-full ${percentageUsed > 80 ? 'bg-orange-500' : percentageUsed > 100 ? 'bg-red-500' : 'bg-blue-500'} transition-all duration-300`}
+          style={{ width: `${Math.min(percentageUsed, 100)}%` }}
+        />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="flex flex-col">
+          <span className="text-muted-foreground flex items-center">
+            <CalendarFold className="mr-1 h-3 w-3" />
+            Τρίμηνο:
+          </span>
+          <span className="font-medium">{quarterAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-muted-foreground flex items-center">
+            <Calculator className="mr-1 h-3 w-3" />
+            Ετήσιος:
+          </span>
+          <span className="font-medium">{yearlyAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function BudgetIndicator({ 

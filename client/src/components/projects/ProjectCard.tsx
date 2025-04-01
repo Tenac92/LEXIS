@@ -17,9 +17,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { ProjectDetailsDialog } from "./ProjectDetailsDialog";
+import { CompactBudgetIndicator } from "@/components/ui/budget-indicator";
+import { type BudgetData } from "@/lib/types";
 
 interface ProjectCardProps {
   project: Project;
@@ -32,6 +34,55 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+
+  // Fetch budget data for this project
+  const { data: budgetData } = useQuery<BudgetData | null>({
+    queryKey: ["budget", project.mis],
+    queryFn: async () => {
+      if (!project.mis) return null;
+      
+      try {
+        const response = await apiRequest(`/api/budget/${encodeURIComponent(project.mis)}`);
+        if (!response || (typeof response === 'object' && 'status' in response && response.status === 'error')) {
+          console.log('[Budget] No valid budget data for MIS:', project.mis);
+          return null;
+        }
+        
+        // Handle response format - could be either direct or in a data property
+        let budgetData: Record<string, any> = {}; 
+        if (typeof response === 'object' && 'data' in response && response.data) {
+          budgetData = response.data;
+        } else if (typeof response === 'object' && !('data' in response)) {
+          budgetData = response;
+        }
+        
+        // Map budget data to the expected interface
+        return {
+          user_view: parseFloat(budgetData.user_view?.toString() || '0'),
+          total_budget: parseFloat(budgetData.total_budget?.toString() || '0'),
+          katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0'),
+          ethsia_pistosi: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
+          current_budget: parseFloat(budgetData.current_budget?.toString() || '0'),
+          annual_budget: parseFloat(budgetData.annual_budget?.toString() || '0'),
+          quarter_view: parseFloat(budgetData.quarter_view?.toString() || '0'),
+          current_quarter: budgetData.current_quarter?.toString() || 'q1',
+          last_quarter_check: budgetData.last_quarter_check?.toString() || 'q1',
+          q1: parseFloat(budgetData.q1?.toString() || '0'),
+          q2: parseFloat(budgetData.q2?.toString() || '0'),
+          q3: parseFloat(budgetData.q3?.toString() || '0'),
+          q4: parseFloat(budgetData.q4?.toString() || '0'),
+          available_budget: budgetData.available_budget?.toString() || '',
+          quarter_available: budgetData.quarter_available?.toString() || '',
+          yearly_available: budgetData.yearly_available?.toString() || ''
+        };
+      } catch (error) {
+        console.error('[Budget] Error fetching budget data:', error);
+        return null;
+      }
+    },
+    enabled: Boolean(project.mis),
+    staleTime: 60 * 1000 // Cache for 1 minute
+  });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -165,6 +216,14 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                 <div className="text-xs text-gray-500">Κωδικός ΣΑ853</div>
                 <div className="font-medium">{project.na853 || "Δ/Υ"}</div>
               </div>
+            </div>
+            
+            {/* Budget indicators */}
+            <div className="mt-4 border-t pt-4">
+              <CompactBudgetIndicator 
+                budgetData={budgetData} 
+                mis={project.mis || ''}
+              />
             </div>
           </div>
         </CardContent>

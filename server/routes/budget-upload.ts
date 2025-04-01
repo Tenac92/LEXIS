@@ -5,6 +5,7 @@ import { supabase } from '../config/db';
 import { storage } from '../storage';
 import multer from 'multer';
 import * as xlsx from 'xlsx';
+import { BudgetService } from '../services/budgetService';
 
 const router = Router();
 
@@ -358,16 +359,15 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
           const newQ4 = data.q4 !== undefined ? data.q4 : existingRecord.q4;
           const newKatanomesEtous = data.katanomes_etous !== undefined ? data.katanomes_etous : existingRecord.katanomes_etous;
           
-          // Special handling for user_view: if katanomes_etous changed, adjust user_view accordingly
-          let newUserView = data.user_view !== undefined ? data.user_view : existingRecord.user_view;
+          // Special handling for user_view: DO NOT change user_view from admin uploads
+          // user_view is only increased by document creation, not by admin uploads
+          let newUserView = existingRecord.user_view;
           
-          // If katanomes_etous has changed, add the difference to user_view
+          // Calculate katanomes_etous difference for notification resolution, but DON'T change user_view
           let katanomesDifference = 0;
           if (data.katanomes_etous !== undefined && existingRecord.katanomes_etous !== data.katanomes_etous) {
             katanomesDifference = data.katanomes_etous - existingRecord.katanomes_etous;
-            // Add the difference to the current user_view
-            newUserView = (existingRecord.user_view || 0) + katanomesDifference;
-            console.log(`[BudgetUpload] Adjusting user_view for MIS ${mis} (NA853: ${na853}): katanomes_etous changed by ${katanomesDifference}, new user_view: ${newUserView}`);
+            console.log(`[BudgetUpload] katanomes_etous changed by ${katanomesDifference} for MIS ${mis} (NA853: ${na853}), user_view remains unchanged at: ${newUserView}`);
           }
           
           // Prepare the update with the sum field to store budget indicators
@@ -413,6 +413,20 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
             created_by: req.user?.id?.toString() || undefined
             // Removed metadata field since it's causing schema issues
           });
+          
+          // If katanomes_etous has changed, check for and resolve any pending reallocation notifications
+          if (katanomesDifference !== 0) {
+            try {
+              console.log(`[BudgetUpload] Checking for reallocation notifications for MIS: ${mis}`);
+              const resolved = await BudgetService.resolveReallocationNotifications(mis, katanomesDifference);
+              if (resolved) {
+                console.log(`[BudgetUpload] Successfully resolved reallocation notification for MIS: ${mis}`);
+              }
+            } catch (notificationError) {
+              console.error(`[BudgetUpload] Error resolving reallocation notifications for MIS ${mis}:`, notificationError);
+              // Don't fail the whole update if notification resolution fails
+            }
+          }
         }
 
         results.success++;
