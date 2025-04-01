@@ -268,6 +268,7 @@ interface BudgetData {
   total_budget: number;
   annual_budget: number;
   katanomes_etous: number;
+  ethsia_pistosi: number;
   user_view: number;
   quarter_view?: number;
   current_quarter?: string;
@@ -276,6 +277,10 @@ interface BudgetData {
   q2: number;
   q3: number;
   q4: number;
+  // New budget indicators
+  available_budget?: string;  // Διαθέσιμος = katanomes_etous - user_view
+  quarter_available?: string; // Τρίμηνο = current_q - user_view
+  yearly_available?: string;  // Ετήσιος = ethsia_pistosi - user_view
 }
 
 interface BudgetIndicatorProps {
@@ -349,37 +354,43 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
 const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
   // Parse values ensuring they are numbers
   const userView = parseFloat(budgetData.user_view?.toString() || '0');
-  const currentBudget = parseFloat(budgetData.current_budget?.toString() || '0');
-  const totalBudget = parseFloat(budgetData.total_budget?.toString() || '0');
+  const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+  const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
   const amount = parseFloat(currentAmount?.toString() || '0');
   
   // Parse quarter-related values
-  const quarterView = parseFloat(budgetData.quarter_view?.toString() || '0');
   const currentQuarter = budgetData.current_quarter || '';
   const q1 = parseFloat(budgetData.q1?.toString() || '0');
   const q2 = parseFloat(budgetData.q2?.toString() || '0');
   const q3 = parseFloat(budgetData.q3?.toString() || '0');
   const q4 = parseFloat(budgetData.q4?.toString() || '0');
   
-  // Calculate the annual budget as the sum of all quarters (including current one)
-  let annualBudget = 0;
+  // Parse new budget indicators
+  const availableBudget = parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString());
+  const quarterAvailable = parseFloat(budgetData.quarter_available?.toString() || '0');
+  const yearlyAvailable = parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString());
   
-  // Add up all quarters
+  // Get the current quarter value based on quarter indicator
+  let currentQuarterValue = 0;
   if (currentQuarter === 'q1') {
-    annualBudget = quarterView + q2 + q3 + q4;
+    currentQuarterValue = q1;
   } else if (currentQuarter === 'q2') {
-    annualBudget = q1 + quarterView + q3 + q4;
+    currentQuarterValue = q2;
   } else if (currentQuarter === 'q3') {
-    annualBudget = q1 + q2 + quarterView + q4;
+    currentQuarterValue = q3;
   } else if (currentQuarter === 'q4') {
-    annualBudget = q1 + q2 + q3 + quarterView;
-  } else {
-    annualBudget = q1 + q2 + q3 + q4;
+    currentQuarterValue = q4;
   }
+  
+  // If quarter_available isn't provided, calculate it
+  const quarterAvailableValue = quarterAvailable || (currentQuarterValue - userView);
 
-  const availableBudget = userView - amount;
-  const percentageUsed = (amount / userView) * 100 || 0;
-
+  // Calculate remaining budget after potential deduction
+  const remainingAvailable = availableBudget - amount;
+  
+  // Calculate percentage for progress bar
+  const percentageUsed = (amount / availableBudget) * 100 || 0;
+  
   const getBadgeVariant = (percentage: number): BadgeVariant => {
     if (percentage > 90) return "destructive";
     if (percentage > 70) return "secondary";
@@ -400,19 +411,19 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
           <div>
             <p className="text-muted-foreground">Διαθέσιμος</p>
             <p className="font-medium text-primary">
-              {userView.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground">Τρίμηνο {currentQuarter?.substring(1) || ''}</p>
             <p className="font-medium">
-              {quarterView.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {quarterAvailableValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground">Ετήσιος</p>
             <p className="font-medium">
-              {annualBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {yearlyAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
         </div>
@@ -724,6 +735,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           user_view: 0,
           total_budget: 0,
           katanomes_etous: 0,
+          ethsia_pistosi: 0,
           current_budget: 0,
           annual_budget: 0,
           quarter_view: 0,
@@ -732,7 +744,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           q1: 0,
           q2: 0,
           q3: 0,
-          q4: 0
+          q4: 0,
+          available_budget: '0',
+          quarter_available: '0',
+          yearly_available: '0'
         };
       }
 
@@ -758,6 +773,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           user_view: 0,
           total_budget: 0,
           katanomes_etous: 0,
+          ethsia_pistosi: 0,
           current_budget: 0,
           annual_budget: 0,
           quarter_view: 0,
@@ -766,7 +782,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           q1: 0,
           q2: 0,
           q3: 0,
-          q4: 0
+          q4: 0,
+          available_budget: '0',
+          quarter_available: '0',
+          yearly_available: '0'
         };
 
         // Handle different response formats
@@ -799,6 +818,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           user_view: parseFloat(budgetData.user_view?.toString() || '0'),
           total_budget: parseFloat(budgetData.total_budget?.toString() || '0'),
           katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0'),
+          ethsia_pistosi: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
           current_budget: parseFloat(budgetData.current_budget?.toString() || '0'),
           annual_budget: parseFloat(budgetData.annual_budget?.toString() || '0'),
           quarter_view: parseFloat(budgetData.quarter_view?.toString() || '0'),
@@ -807,7 +827,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           q1: parseFloat(budgetData.q1?.toString() || '0'),
           q2: parseFloat(budgetData.q2?.toString() || '0'),
           q3: parseFloat(budgetData.q3?.toString() || '0'),
-          q4: parseFloat(budgetData.q4?.toString() || '0')
+          q4: parseFloat(budgetData.q4?.toString() || '0'),
+          available_budget: budgetData.available_budget?.toString() || '',
+          quarter_available: budgetData.quarter_available?.toString() || '',
+          yearly_available: budgetData.yearly_available?.toString() || ''
         };
       } catch (error) {
         console.error('[Budget] Error fetching budget data:', error);
@@ -822,6 +845,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           user_view: 0,
           total_budget: 0,
           katanomes_etous: 0,
+          ethsia_pistosi: 0,
           current_budget: 0,
           annual_budget: 0,
           quarter_view: 0,
@@ -830,7 +854,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           q1: 0,
           q2: 0,
           q3: 0,
-          q4: 0
+          q4: 0,
+          available_budget: '0',
+          quarter_available: '0',
+          yearly_available: '0'
         };
       }
     },

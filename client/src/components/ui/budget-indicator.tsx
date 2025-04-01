@@ -24,29 +24,39 @@ export function BudgetIndicator({
   const amount = parseFloat(currentAmount?.toString() || '0');
   
   // Parse quarter-related values
-  const quarterView = parseFloat(budgetData.quarter_view?.toString() || '0');
   const currentQuarter = budgetData.current_quarter || '';
   const q1 = parseFloat(budgetData.q1?.toString() || '0');
   const q2 = parseFloat(budgetData.q2?.toString() || '0');
   const q3 = parseFloat(budgetData.q3?.toString() || '0');
   const q4 = parseFloat(budgetData.q4?.toString() || '0');
   
-  // Calculate annual budget (sum of all quarters except current one)
-  let annualBudget = 0;
+  // Parse new budget indicators
+  const availableBudget = parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString());
+  const quarterAvailable = parseFloat(budgetData.quarter_available?.toString() || '0');
+  const yearlyAvailable = parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString());
+  
+  // Get the current quarter value based on quarter indicator
+  let currentQuarterValue = 0;
   if (currentQuarter === 'q1') {
-    annualBudget = q2 + q3 + q4;
+    currentQuarterValue = q1;
   } else if (currentQuarter === 'q2') {
-    annualBudget = q1 + q3 + q4;
+    currentQuarterValue = q2;
   } else if (currentQuarter === 'q3') {
-    annualBudget = q1 + q2 + q4;
+    currentQuarterValue = q3;
   } else if (currentQuarter === 'q4') {
-    annualBudget = q1 + q2 + q3;
-  } else {
-    annualBudget = q1 + q2 + q3 + q4;
+    currentQuarterValue = q4;
   }
+  
+  // If quarter_available isn't provided, calculate it
+  const quarterAvailableValue = quarterAvailable || (currentQuarterValue - userView);
 
-  const availableBudget = userView - amount;
-  const percentageUsed = (amount / userView) * 100;
+  // Calculate remaining budget after potential deduction
+  const remainingAvailable = availableBudget - amount;
+  
+  // Calculate percentage for progress bar
+  const percentageUsed = availableBudget > 0 ? ((amount / availableBudget) * 100) : 0;
+  
+  // Check budget thresholds for warnings
   const isExceeding20Percent = amount > (katanomesEtous * 0.2);
   const isExceedingEthsiaPistosi = amount > ethsiaPistosi;
 
@@ -63,7 +73,7 @@ export function BudgetIndicator({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
             <h3 className="text-sm font-medium text-gray-600">Διαθέσιμος</h3>
-            <p className={`text-2xl font-bold ${availableBudget < 0 ? 'text-red-600' : 'text-blue-600'}`}>
+            <p className={`text-2xl font-bold ${remainingAvailable < 0 ? 'text-red-600' : 'text-blue-600'}`}>
               {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <div className="mt-2">
@@ -81,24 +91,19 @@ export function BudgetIndicator({
           <div>
             <h3 className="text-sm font-medium text-gray-600">Τρίμηνο {currentQuarter?.substring(1) || ''}</h3>
             <p className="text-2xl font-bold text-gray-700">
-              {quarterView.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {quarterAvailableValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Προϋπολογισμός τρέχοντος τριμήνου
+              Διαθέσιμο τριμήνου
             </p>
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-600">Ετήσιος</h3>
             <p className="text-2xl font-bold text-gray-700">
-              {annualBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {yearlyAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Υπόλοιπα τρίμηνα: {currentQuarter ? 
-                ['q1', 'q2', 'q3', 'q4']
-                  .filter(q => q !== currentQuarter)
-                  .map(q => q.substring(1))
-                  .join(', ') : 
-                '1, 2, 3, 4'}
+              Διαθέσιμος ετήσιος προϋπολογισμός
             </p>
           </div>
         </div>

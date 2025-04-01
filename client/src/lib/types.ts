@@ -27,6 +27,10 @@ export interface BudgetData {
   q2: number;
   q3: number;
   q4: number;
+  // New budget indicators
+  available_budget?: string;  // Διαθέσιμος = katanomes_etous - user_view
+  quarter_available?: string; // Τρίμηνο = current_q - user_view
+  yearly_available?: string;  // Ετήσιος = ethsia_pistosi - user_view
 }
 
 export interface BudgetNotification {
