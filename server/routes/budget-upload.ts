@@ -175,8 +175,8 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
                 updateData.data.q4
               );
               
-              // Same as katanomes_etous for user_view
-              updateData.data.user_view = updateData.data.katanomes_etous;
+              // DO NOT SET user_view during admin uploads - it should only be changed by document creation
+              // updateData.data.user_view = updateData.data.katanomes_etous; -- REMOVED
             } else if (numericValues.length > 0) {
               // If we only have one value, use it for everything
               updateData.data.q1 = updateData.data.ethsia_pistosi / 4;
@@ -184,7 +184,8 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
               updateData.data.q3 = updateData.data.ethsia_pistosi / 4;
               updateData.data.q4 = updateData.data.ethsia_pistosi / 4;
               updateData.data.katanomes_etous = updateData.data.ethsia_pistosi;
-              updateData.data.user_view = updateData.data.ethsia_pistosi;
+              // DO NOT SET user_view during admin uploads - it should only be changed by document creation
+              // updateData.data.user_view = updateData.data.ethsia_pistosi; -- REMOVED
             }
           } else {
             throw new Error(`No budget data found for MIS ${mis}`);
@@ -257,15 +258,14 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
 
         // If record doesn't exist, create it
         if (fetchError || !existingRecord) {
-          // For new records, ensure user_view is at least equal to katanomes_etous if both are provided
-          let initialUserView = data.user_view || 0;
+          // For new records, initialize user_view to 0 (not to katanomes_etous as before)
+          // user_view should start at 0 and only be increased by document creation
+          let initialUserView = 0;
           const initialKatanomesEtous = data.katanomes_etous || 0;
           
-          // If user_view is not explicitly set but katanomes_etous is, use katanomes_etous as the user_view
-          if (data.user_view === undefined && data.katanomes_etous !== undefined) {
-            initialUserView = initialKatanomesEtous;
-            console.log(`[BudgetUpload] Setting initial user_view for MIS ${mis} (NA853: ${na853}) to match katanomes_etous: ${initialKatanomesEtous}`);
-          }
+          // DO NOT set user_view to match katanomes_etous - this was the previous incorrect behavior
+          console.log(`[BudgetUpload] Setting initial user_view for new MIS ${mis} (NA853: ${na853}) to 0 (not matching katanomes_etous)`);
+          
           
           const { error: insertError } = await supabase
             .from('budget_na853_split')
