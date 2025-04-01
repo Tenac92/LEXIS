@@ -307,7 +307,50 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
           });
         } else {
           // Record exists, update it
-          // Calculate new values
+          
+          // First, calculate budget indicators before update to save in sum JSONB field
+          // Formula: available_budget = katanomes_etous - user_view
+          // Formula: quarter_available = current_q - user_view
+          // Formula: yearly_available = ethsia_pistosi - user_view
+          
+          // Get current quarter
+          const currentDate = new Date();
+          const currentMonth = currentDate.getMonth() + 1;
+          const currentQuarterNumber = Math.ceil(currentMonth / 3);
+          const quarterKey = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
+          
+          // Get current quarter value
+          let currentQuarterValue;
+          switch(quarterKey) {
+            case 'q1': currentQuarterValue = existingRecord.q1 || 0; break;
+            case 'q2': currentQuarterValue = existingRecord.q2 || 0; break;
+            case 'q3': currentQuarterValue = existingRecord.q3 || 0; break;
+            case 'q4': currentQuarterValue = existingRecord.q4 || 0; break;
+            default: currentQuarterValue = 0;
+          }
+          
+          // Calculate budget indicators before update
+          const userViewBeforeUpdate = existingRecord.user_view || 0;
+          const katanomesEtousBeforeUpdate = existingRecord.katanomes_etous || 0;
+          const ethsiaPistosiBeforeUpdate = existingRecord.ethsia_pistosi || 0;
+          
+          const availableBudgetBeforeUpdate = Math.max(0, katanomesEtousBeforeUpdate - userViewBeforeUpdate);
+          const quarterAvailableBeforeUpdate = Math.max(0, currentQuarterValue - userViewBeforeUpdate);
+          const yearlyAvailableBeforeUpdate = Math.max(0, ethsiaPistosiBeforeUpdate - userViewBeforeUpdate);
+          
+          // Prepare sum JSONB to store pre-update values
+          const budgetSumBeforeUpdate = {
+            available_budget: availableBudgetBeforeUpdate,
+            quarter_available: quarterAvailableBeforeUpdate,
+            yearly_available: yearlyAvailableBeforeUpdate,
+            katanomes_etous: katanomesEtousBeforeUpdate,
+            ethsia_pistosi: ethsiaPistosiBeforeUpdate,
+            user_view: userViewBeforeUpdate,
+            current_quarter: currentQuarterNumber,
+            updated_at: new Date().toISOString()
+          };
+          
+          // Now calculate new values for the update
           const newEthsiaPistosi = data.ethsia_pistosi !== undefined ? data.ethsia_pistosi : existingRecord.ethsia_pistosi;
           const newQ1 = data.q1 !== undefined ? data.q1 : existingRecord.q1;
           const newQ2 = data.q2 !== undefined ? data.q2 : existingRecord.q2;
@@ -319,13 +362,15 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
           let newUserView = data.user_view !== undefined ? data.user_view : existingRecord.user_view;
           
           // If katanomes_etous has changed, add the difference to user_view
+          let katanomesDifference = 0;
           if (data.katanomes_etous !== undefined && existingRecord.katanomes_etous !== data.katanomes_etous) {
-            const katanomesDifference = data.katanomes_etous - existingRecord.katanomes_etous;
+            katanomesDifference = data.katanomes_etous - existingRecord.katanomes_etous;
             // Add the difference to the current user_view
             newUserView = (existingRecord.user_view || 0) + katanomesDifference;
             console.log(`[BudgetUpload] Adjusting user_view for MIS ${mis} (NA853: ${na853}): katanomes_etous changed by ${katanomesDifference}, new user_view: ${newUserView}`);
           }
           
+          // Prepare the update with the sum field to store budget indicators
           const { error: updateError } = await supabase
             .from('budget_na853_split')
             .update({
@@ -336,6 +381,7 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
               q4: newQ4,
               katanomes_etous: newKatanomesEtous,
               user_view: newUserView,
+              sum: budgetSumBeforeUpdate, // Store the pre-update state
               updated_at: new Date().toISOString()
             })
             .eq('mis', mis)

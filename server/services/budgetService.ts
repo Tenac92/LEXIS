@@ -35,7 +35,266 @@ export interface BudgetValidationResult {
   metadata?: Record<string, unknown>;
 }
 
+// Interface for budget change analysis returned by analyzeChangesBetweenUpdates
+export interface BudgetChangeAnalysis {
+  status: 'success' | 'error';
+  mis: string;
+  isReallocation: boolean;
+  changeType: 'funding_increase' | 'funding_decrease' | 'reallocation' | 'no_change';
+  beforeUpdate: {
+    available_budget: number;
+    quarter_available: number;
+    yearly_available: number;
+    katanomes_etous: number;
+    ethsia_pistosi: number;
+    user_view: number;
+    current_quarter: number;
+  } | null;
+  afterUpdate: {
+    available_budget: number;
+    quarter_available: number;
+    yearly_available: number;
+    katanomes_etous: number;
+    ethsia_pistosi: number;
+    user_view: number;
+    current_quarter: number;
+  };
+  changes: {
+    available_budget_diff: number;
+    quarter_available_diff: number;
+    yearly_available_diff: number;
+    katanomes_etous_diff: number;
+    ethsia_pistosi_diff: number;
+  };
+  message?: string;
+  error?: string;
+}
+
 export class BudgetService {
+  /**
+   * Analyzes changes between admin budget updates by comparing the sum JSON column
+   * with current budget values. This is used to handle anakatanomh (reallocation) requests.
+   * 
+   * @param mis The MIS project code
+   * @returns Analysis of changes between updates
+   */
+  static async analyzeChangesBetweenUpdates(mis: string): Promise<BudgetChangeAnalysis> {
+    try {
+      if (!mis) {
+        return {
+          status: 'error',
+          mis: '',
+          isReallocation: false,
+          changeType: 'no_change',
+          beforeUpdate: null,
+          afterUpdate: {
+            available_budget: 0,
+            quarter_available: 0,
+            yearly_available: 0,
+            katanomes_etous: 0,
+            ethsia_pistosi: 0,
+            user_view: 0,
+            current_quarter: 0
+          },
+          changes: {
+            available_budget_diff: 0,
+            quarter_available_diff: 0,
+            yearly_available_diff: 0,
+            katanomes_etous_diff: 0,
+            ethsia_pistosi_diff: 0,
+          },
+          error: 'MIS parameter is required'
+        };
+      }
+
+      // Get current budget data with sum column
+      const { data: budgetData, error: budgetError } = await supabase
+        .from('budget_na853_split')
+        .select('*, sum')
+        .eq('mis', mis)
+        .single();
+
+      if (budgetError || !budgetData) {
+        return {
+          status: 'error',
+          mis,
+          isReallocation: false,
+          changeType: 'no_change',
+          beforeUpdate: null,
+          afterUpdate: {
+            available_budget: 0,
+            quarter_available: 0,
+            yearly_available: 0,
+            katanomes_etous: 0,
+            ethsia_pistosi: 0,
+            user_view: 0,
+            current_quarter: 0
+          },
+          changes: {
+            available_budget_diff: 0,
+            quarter_available_diff: 0,
+            yearly_available_diff: 0,
+            katanomes_etous_diff: 0,
+            ethsia_pistosi_diff: 0,
+          },
+          error: budgetError ? budgetError.message : 'Budget data not found'
+        };
+      }
+
+      // Get current quarter
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1;
+      const currentQuarterNumber = Math.ceil(currentMonth / 3);
+      const quarterKey = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
+      
+      // Get current quarter value
+      let currentQuarterValue;
+      switch(quarterKey) {
+        case 'q1': currentQuarterValue = budgetData.q1 || 0; break;
+        case 'q2': currentQuarterValue = budgetData.q2 || 0; break;
+        case 'q3': currentQuarterValue = budgetData.q3 || 0; break;
+        case 'q4': currentQuarterValue = budgetData.q4 || 0; break;
+        default: currentQuarterValue = 0;
+      }
+
+      // Current values
+      const userView = parseFloat(budgetData.user_view?.toString() || '0');
+      const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+      const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+      
+      // Calculate current budget indicators
+      const availableBudget = Math.max(0, katanomesEtous - userView);
+      const quarterAvailable = Math.max(0, currentQuarterValue - userView);
+      const yearlyAvailable = Math.max(0, ethsiaPistosi - userView);
+
+      // Check if we have stored values in sum
+      const hasSumData = budgetData.sum && typeof budgetData.sum === 'object';
+      
+      // If no sum data, we can't do analysis
+      if (!hasSumData) {
+        return {
+          status: 'error',
+          mis,
+          isReallocation: false,
+          changeType: 'no_change',
+          beforeUpdate: null,
+          afterUpdate: {
+            available_budget: availableBudget,
+            quarter_available: quarterAvailable,
+            yearly_available: yearlyAvailable,
+            katanomes_etous: katanomesEtous,
+            ethsia_pistosi: ethsiaPistosi,
+            user_view: userView,
+            current_quarter: currentQuarterNumber
+          },
+          changes: {
+            available_budget_diff: 0,
+            quarter_available_diff: 0,
+            yearly_available_diff: 0,
+            katanomes_etous_diff: 0,
+            ethsia_pistosi_diff: 0,
+          },
+          message: 'No previous budget data available for comparison'
+        };
+      }
+
+      // Previous values from sum
+      const prevSum = budgetData.sum as any;
+      const prevAvailableBudget = parseFloat(prevSum.available_budget?.toString() || '0');
+      const prevQuarterAvailable = parseFloat(prevSum.quarter_available?.toString() || '0');
+      const prevYearlyAvailable = parseFloat(prevSum.yearly_available?.toString() || '0');
+      const prevKatanomesEtous = parseFloat(prevSum.katanomes_etous?.toString() || '0');
+      const prevEthsiaPistosi = parseFloat(prevSum.ethsia_pistosi?.toString() || '0');
+      const prevUserView = parseFloat(prevSum.user_view?.toString() || '0');
+      const prevQuarter = parseInt(prevSum.current_quarter?.toString() || '0');
+
+      // Calculate differences
+      const availableBudgetDiff = availableBudget - prevAvailableBudget;
+      const quarterAvailableDiff = quarterAvailable - prevQuarterAvailable;
+      const yearlyAvailableDiff = yearlyAvailable - prevYearlyAvailable;
+      const katanomesEtousDiff = katanomesEtous - prevKatanomesEtous;
+      const ethsiaPistosiDiff = ethsiaPistosi - prevEthsiaPistosi;
+
+      // Determine change type
+      let changeType: 'funding_increase' | 'funding_decrease' | 'reallocation' | 'no_change' = 'no_change';
+      let isReallocation = false;
+
+      if (Math.abs(katanomesEtousDiff) < 0.01 && Math.abs(ethsiaPistosiDiff) < 0.01) {
+        // No significant change in overall funding
+        changeType = 'no_change';
+      } else if (katanomesEtousDiff > 0 && ethsiaPistosiDiff >= 0) {
+        // Funding increase
+        changeType = 'funding_increase';
+      } else if (katanomesEtousDiff < 0 && ethsiaPistosiDiff <= 0) {
+        // Funding decrease
+        changeType = 'funding_decrease';
+      } else {
+        // Reallocation (anakatanomh)
+        changeType = 'reallocation';
+        isReallocation = true;
+      }
+
+      return {
+        status: 'success',
+        mis,
+        isReallocation,
+        changeType,
+        beforeUpdate: {
+          available_budget: prevAvailableBudget,
+          quarter_available: prevQuarterAvailable,
+          yearly_available: prevYearlyAvailable,
+          katanomes_etous: prevKatanomesEtous,
+          ethsia_pistosi: prevEthsiaPistosi,
+          user_view: prevUserView,
+          current_quarter: prevQuarter
+        },
+        afterUpdate: {
+          available_budget: availableBudget,
+          quarter_available: quarterAvailable,
+          yearly_available: yearlyAvailable,
+          katanomes_etous: katanomesEtous,
+          ethsia_pistosi: ethsiaPistosi,
+          user_view: userView,
+          current_quarter: currentQuarterNumber
+        },
+        changes: {
+          available_budget_diff: availableBudgetDiff,
+          quarter_available_diff: quarterAvailableDiff,
+          yearly_available_diff: yearlyAvailableDiff,
+          katanomes_etous_diff: katanomesEtousDiff,
+          ethsia_pistosi_diff: ethsiaPistosiDiff
+        },
+        message: `Analysis completed for MIS ${mis}. Change type: ${changeType}.`
+      };
+    } catch (error) {
+      console.error('[BudgetService] Error analyzing budget changes:', error);
+      return {
+        status: 'error',
+        mis,
+        isReallocation: false,
+        changeType: 'no_change',
+        beforeUpdate: null,
+        afterUpdate: {
+          available_budget: 0,
+          quarter_available: 0,
+          yearly_available: 0,
+          katanomes_etous: 0,
+          ethsia_pistosi: 0,
+          user_view: 0,
+          current_quarter: 0
+        },
+        changes: {
+          available_budget_diff: 0,
+          quarter_available_diff: 0,
+          yearly_available_diff: 0,
+          katanomes_etous_diff: 0,
+          ethsia_pistosi_diff: 0,
+        },
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
   static async getBudget(mis: string): Promise<BudgetResponse> {
     try {
       if (!mis) {
@@ -465,7 +724,7 @@ export class BudgetService {
     }
   }
 
-  static async updateBudget(mis: string, amount: number, userId: number, documentId?: number, changeReason?: string): Promise<BudgetResponse> {
+  static async updateBudget(mis: string, amount: number, userId: string | number, documentId?: number, changeReason?: string): Promise<BudgetResponse> {
     try {
       if (!mis || isNaN(amount) || amount <= 0 || !userId) {
         return {

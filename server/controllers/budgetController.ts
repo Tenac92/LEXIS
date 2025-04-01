@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
 import { storage } from "../storage";
 import type { User, BudgetValidation } from "@shared/schema";
-import { BudgetService } from "../services/budgetService";
+import { BudgetService, BudgetChangeAnalysis } from "../services/budgetService";
 
 interface AuthRequest extends Request {
   user?: User;
@@ -145,9 +145,13 @@ router.post('/validate', async (req: AuthRequest, res: Response) => {
     try {
       // Check if amount exists and convert it to a number
       if (amount !== undefined && amount !== null) {
-        requestedAmount = typeof amount === 'number' 
-          ? amount 
-          : parseFloat(amount.toString());
+        if (typeof amount === 'number') {
+          requestedAmount = amount;
+        } else {
+          // Handle string or other types
+          const amountStr = String(amount);
+          requestedAmount = parseFloat(amountStr);
+        }
       } else {
         requestedAmount = 0;
       }
@@ -234,12 +238,12 @@ router.patch('/:mis', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Ensure amount is properly converted to number and userId to string
-    const result = await BudgetService.updateBudget(
-      mis,
-      parseFloat(typeof amount === 'number' ? amount.toString() : amount || '0'),
-      userId.toString()
-    );
+    // Convert all values to the correct types
+    const numericAmount = parseFloat(typeof amount === 'number' ? amount.toString() : amount?.toString() || '0');
+    const userIdStr = userId.toString();
+    
+    // Call the budget service
+    const result = await BudgetService.updateBudget(mis, numericAmount, userIdStr);
     return res.json(result);
   } catch (error) {
     console.error('Budget update error:', error);
@@ -273,6 +277,43 @@ router.get('/:mis/history', async (req: AuthRequest, res: Response) => {
       status: 'error',
       message: 'Failed to fetch budget history',
       error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Analyze changes between budget updates (for anakatanomh/reallocation)
+router.get('/:mis/analyze-changes', async (req: AuthRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+
+    if (!req.user?.id) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required',
+        mis
+      });
+    }
+
+    // Only allow admins to analyze budget changes
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Access denied. This operation requires admin privileges.',
+        mis
+      });
+    }
+
+    console.log(`[BudgetController] Analyzing budget changes for MIS: ${mis}`);
+    const analysis = await BudgetService.analyzeChangesBetweenUpdates(mis);
+    
+    return res.json(analysis);
+  } catch (error) {
+    console.error('[Budget] Error analyzing budget changes:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to analyze budget changes',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      mis: req.params.mis
     });
   }
 });
