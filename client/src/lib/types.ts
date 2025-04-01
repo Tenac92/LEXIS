@@ -20,6 +20,9 @@ export interface BudgetData {
   annual_budget?: number;   // Annual budget allocation
   total_spent?: number;     // Total amount spent so far
   remaining_budget?: number; // Current remaining budget after spending
+  quarter_view?: number;    // Current quarter budget view
+  last_quarter_check?: string; // Last checked quarter (q1, q2, q3, q4)
+  current_quarter?: string;   // Current quarter (q1, q2, q3, q4)
   q1: number;
   q2: number;
   q3: number;
