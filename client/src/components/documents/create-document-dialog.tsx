@@ -268,6 +268,14 @@ interface BudgetData {
   total_budget: number;
   annual_budget: number;
   katanomes_etous: number;
+  user_view: number;
+  quarter_view?: number;
+  current_quarter?: string;
+  last_quarter_check?: string;
+  q1: number;
+  q2: number;
+  q3: number;
+  q4: number;
 }
 
 interface BudgetIndicatorProps {
@@ -339,8 +347,36 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
 
 // Budget Indicator Component
 const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
-  const availableBudget = budgetData.current_budget - currentAmount;
-  const percentageUsed = (currentAmount / budgetData.current_budget) * 100;
+  // Parse values ensuring they are numbers
+  const userView = parseFloat(budgetData.user_view?.toString() || '0');
+  const currentBudget = parseFloat(budgetData.current_budget?.toString() || '0');
+  const totalBudget = parseFloat(budgetData.total_budget?.toString() || '0');
+  const amount = parseFloat(currentAmount?.toString() || '0');
+  
+  // Parse quarter-related values
+  const quarterView = parseFloat(budgetData.quarter_view?.toString() || '0');
+  const currentQuarter = budgetData.current_quarter || '';
+  const q1 = parseFloat(budgetData.q1?.toString() || '0');
+  const q2 = parseFloat(budgetData.q2?.toString() || '0');
+  const q3 = parseFloat(budgetData.q3?.toString() || '0');
+  const q4 = parseFloat(budgetData.q4?.toString() || '0');
+  
+  // Calculate annual budget (sum of all quarters except current one)
+  let annualBudget = 0;
+  if (currentQuarter === 'q1') {
+    annualBudget = q2 + q3 + q4;
+  } else if (currentQuarter === 'q2') {
+    annualBudget = q1 + q3 + q4;
+  } else if (currentQuarter === 'q3') {
+    annualBudget = q1 + q2 + q4;
+  } else if (currentQuarter === 'q4') {
+    annualBudget = q1 + q2 + q3;
+  } else {
+    annualBudget = q1 + q2 + q3 + q4;
+  }
+
+  const availableBudget = userView - amount;
+  const percentageUsed = (amount / userView) * 100 || 0;
 
   const getBadgeVariant = (percentage: number): BadgeVariant => {
     if (percentage > 90) return "destructive";
@@ -362,19 +398,19 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
           <div>
             <p className="text-muted-foreground">Διαθέσιμος</p>
             <p className="font-medium text-primary">
-              {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {userView.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Συνολικός</p>
+            <p className="text-muted-foreground">Τρίμηνο {currentQuarter?.substring(1) || ''}</p>
             <p className="font-medium">
-              {budgetData.total_budget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {quarterView.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
           <div>
             <p className="text-muted-foreground">Ετήσιος</p>
             <p className="font-medium">
-              {budgetData.katanomes_etous.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {annualBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
         </div>
@@ -387,7 +423,7 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
             />
           </div>
           <p className="text-sm text-muted-foreground text-right mt-1">
-            Τρέχον: {currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            Τρέχον: {amount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
           </p>
         </div>
       </div>
@@ -685,11 +721,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return {
           user_view: 0,
           total_budget: 0,
-          ethsia_pistosi: 0,
           katanomes_etous: 0,
-          proip: 0,
           current_budget: 0,
           annual_budget: 0,
+          quarter_view: 0,
+          current_quarter: 'q1',
+          last_quarter_check: 'q1',
           q1: 0,
           q2: 0,
           q3: 0,
@@ -718,13 +755,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         const emptyBudget: BudgetData = {
           user_view: 0,
           total_budget: 0,
-          ethsia_pistosi: 0,
           katanomes_etous: 0,
-          proip: 0,
           current_budget: 0,
           annual_budget: 0,
-          total_spent: 0,
-          remaining_budget: 0,
           quarter_view: 0,
           current_quarter: 'q1',
           last_quarter_check: 'q1',
@@ -762,15 +795,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         // Map the response to match the BudgetData interface completely
         return {
           user_view: parseFloat(budgetData.user_view?.toString() || '0'),
-          total_budget: parseFloat(budgetData.current_budget?.toString() || '0'), 
-          ethsia_pistosi: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
+          total_budget: parseFloat(budgetData.total_budget?.toString() || '0'),
           katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0'),
-          proip: parseFloat(budgetData.current_budget?.toString() || '0'),
           current_budget: parseFloat(budgetData.current_budget?.toString() || '0'),
-          annual_budget: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
-          total_spent: parseFloat(budgetData.total_spent?.toString() || '0'),
-          remaining_budget: parseFloat(budgetData.remaining_budget?.toString() || 
-                           (budgetData.current_budget ? budgetData.current_budget : '0')),
+          annual_budget: parseFloat(budgetData.annual_budget?.toString() || '0'),
           quarter_view: parseFloat(budgetData.quarter_view?.toString() || '0'),
           current_quarter: budgetData.current_quarter?.toString() || 'q1',
           last_quarter_check: budgetData.last_quarter_check?.toString() || 'q1',
@@ -791,13 +819,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return {
           user_view: 0,
           total_budget: 0,
-          ethsia_pistosi: 0,
           katanomes_etous: 0,
-          proip: 0,
           current_budget: 0,
           annual_budget: 0,
-          total_spent: 0,
-          remaining_budget: 0,
           quarter_view: 0,
           current_quarter: 'q1',
           last_quarter_check: 'q1',
