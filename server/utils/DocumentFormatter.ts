@@ -705,31 +705,75 @@ export class DocumentFormatter {
       }),
     );
 
-    // Create the right column with signature
-    const signatureParagraph = new Paragraph({
-      // keepLines: true, // Keep manager signature together
-      alignment: AlignmentType.CENTER, // Align to the center
-      spacing: { before: 480 }, // Add some space before the signature
-      children: [
-        new TextRun({
-          text: unitDetails?.manager?.order || "",
-          bold: true,
-        }),
-        new TextRun({
-          text: unitDetails?.manager?.title || "",
-          break: 1,
-          bold: true,
-        }),
-        new TextRun({
-          text: unitDetails?.manager?.name || "",
-          break: 3,
-          bold: true,
-        }),
-        new TextRun({
-          text: unitDetails?.manager?.degree || "",
-          break: 1,
+    // Create the right column with signature as a textbox
+    // Using an inner table to create a bordered textbox effect
+    const signatureTextbox = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 1 },
+        bottom: { style: BorderStyle.SINGLE, size: 1 },
+        left: { style: BorderStyle.SINGLE, size: 1 },
+        right: { style: BorderStyle.SINGLE, size: 1 },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              margins: {
+                marginUnitType: WidthType.DXA,
+                top: 100,
+                bottom: 100,
+                left: 100,
+                right: 100,
+              },
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new TextRun({
+                      text: unitDetails?.manager?.order || "",
+                      bold: true,
+                    }),
+                  ],
+                }),
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new TextRun({
+                      text: unitDetails?.manager?.title || "",
+                      bold: true,
+                    }),
+                  ],
+                }),
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { before: 240 }, // Space for signature
+                  children: [
+                    new TextRun({
+                      text: unitDetails?.manager?.name || "",
+                      bold: true,
+                    }),
+                  ],
+                }),
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [
+                    new TextRun({
+                      text: unitDetails?.manager?.degree || "",
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
         }),
       ],
+    });
+
+    // For compatibility, create a container paragraph to hold the textbox
+    const signatureParagraph = new Paragraph({
+      spacing: { before: 480 }, // Add some space before the signature
+      children: [new TextRun({ text: "" })],
     });
 
     // Create a floating table that keeps the correct layout
@@ -752,7 +796,10 @@ export class DocumentFormatter {
             new TableCell({
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
-              margins: { right: 300 }, // Add some margin for separation
+              margins: { 
+                marginUnitType: WidthType.DXA,
+                right: 300 
+              }, // Add some margin for separation
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -761,9 +808,9 @@ export class DocumentFormatter {
               },
             }),
 
-            // Right column - signature stays together
+            // Right column - signature stays together in a textbox
             new TableCell({
-              children: [signatureParagraph],
+              children: [signatureTextbox],
               verticalAlign: VerticalAlign.TOP,
               borders: {
                 top: { style: BorderStyle.NONE },
