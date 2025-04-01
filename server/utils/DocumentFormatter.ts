@@ -24,54 +24,6 @@ import * as path from "path";
 import { format } from "date-fns";
 import { after } from "node:test";
 
-/**
- * Creates a bordered text box for displaying numeric values
- * @param value The numeric value to display in the box
- * @param alignment The text alignment (default: center)
- * @returns A Table object that represents a bordered text box
- */
-function createBorderedTextBox(value: string | number, alignment = AlignmentType.CENTER): Table {
-  return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: {
-      top: { style: BorderStyle.SINGLE, size: 1 },
-      bottom: { style: BorderStyle.SINGLE, size: 1 },
-      left: { style: BorderStyle.SINGLE, size: 1 },
-      right: { style: BorderStyle.SINGLE, size: 1 },
-    },
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.SINGLE, size: 1 },
-              right: { style: BorderStyle.SINGLE, size: 1 },
-            },
-            margins: {
-              top: 50,
-              bottom: 50,
-              left: 100,
-              right: 100,
-            },
-            children: [
-              new Paragraph({
-                alignment,
-                children: [
-                  new TextRun({
-                    text: value.toString(),
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
-    ],
-  });
-}
-
 interface UserDetails {
   name: string;
   email?: string;
@@ -907,47 +859,6 @@ export class DocumentFormatter {
         new Paragraph({
           children: [new TextRun({ text, size: this.DEFAULT_FONT_SIZE })],
           alignment: alignmentMap[alignment],
-        }),
-      ],
-      verticalAlign: VerticalAlign.CENTER,
-    });
-  }
-
-  /**
-   * Creates a table cell with a bordered text box for monetary values
-   * @param value The monetary value to display in a bordered box
-   * @param alignment The alignment of the text
-   * @param colSpan Optional column span
-   * @returns A TableCell containing a bordered text box
-   */
-  private static createMoneyBoxCell(
-    value: string | number,
-    alignment: "left" | "center" | "right",
-    colSpan?: number,
-  ): TableCell {
-    const alignmentMap = {
-      left: AlignmentType.LEFT,
-      center: AlignmentType.CENTER,
-      right: AlignmentType.RIGHT,
-    };
-
-    return new TableCell({
-      columnSpan: colSpan,
-      children: [
-        new Paragraph({
-          alignment: alignmentMap[alignment],
-          children: [
-            new TextRun({ 
-              text: value.toString(),
-              size: this.DEFAULT_FONT_SIZE,
-              border: {
-                top: { style: BorderStyle.SINGLE, size: 1 },
-                bottom: { style: BorderStyle.SINGLE, size: 1 },
-                left: { style: BorderStyle.SINGLE, size: 1 },
-                right: { style: BorderStyle.SINGLE, size: 1 },
-              }
-            }),
-          ],
         }),
       ],
       verticalAlign: VerticalAlign.CENTER,
