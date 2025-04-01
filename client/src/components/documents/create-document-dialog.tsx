@@ -361,19 +361,8 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
   const q3 = parseFloat(budgetData.q3?.toString() || '0');
   const q4 = parseFloat(budgetData.q4?.toString() || '0');
   
-  // Calculate annual budget (sum of all quarters except current one)
-  let annualBudget = 0;
-  if (currentQuarter === 'q1') {
-    annualBudget = q2 + q3 + q4;
-  } else if (currentQuarter === 'q2') {
-    annualBudget = q1 + q3 + q4;
-  } else if (currentQuarter === 'q3') {
-    annualBudget = q1 + q2 + q4;
-  } else if (currentQuarter === 'q4') {
-    annualBudget = q1 + q2 + q3;
-  } else {
-    annualBudget = q1 + q2 + q3 + q4;
-  }
+  // Use quarter_view directly for annual budget as specified
+  const annualBudget = quarterView;
 
   const availableBudget = userView - amount;
   const percentageUsed = (amount / userView) * 100 || 0;
