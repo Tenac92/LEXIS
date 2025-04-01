@@ -1,6 +1,45 @@
 import { supabase } from '../config/db';
 import type { Database } from '@shared/schema';
 
+/**
+ * Helper function to parse numerical values with European number formatting
+ * Example: "22.000,00" -> 22000.00
+ * Also handles US format: "22,000.50" -> 22000.50
+ */
+function parseEuropeanNumber(value: any): number {
+  if (!value) return 0;
+  
+  // Convert to string if it's not already
+  const strValue = value.toString().trim();
+  
+  // Return 0 for empty strings
+  if (!strValue) return 0;
+  
+  // Check if the string has both periods and commas
+  if (strValue.includes('.') && strValue.includes(',')) {
+    // Check if it's European format with comma as decimal separator (e.g., "22.000,00")
+    if (strValue.lastIndexOf(',') > strValue.lastIndexOf('.')) {
+      // European format: replace dots with nothing (remove thousands separators) and commas with dots (decimal separator)
+      const normalizedStr = strValue.replace(/\./g, '').replace(',', '.');
+      return parseFloat(normalizedStr);
+    }
+    // Otherwise it's likely US format with comma as thousands separator (e.g., "22,000.50")
+    else {
+      // US format: remove all commas
+      const normalizedStr = strValue.replace(/,/g, '');
+      return parseFloat(normalizedStr);
+    }
+  }
+  
+  // If it's just a comma as decimal separator (e.g., "22,50")
+  if (strValue.includes(',') && !strValue.includes('.')) {
+    return parseFloat(strValue.replace(',', '.'));
+  }
+  
+  // Default case: try regular parseFloat
+  return parseFloat(strValue);
+}
+
 export interface BudgetResponse {
   status: 'success' | 'error' | 'warning';
   data?: {
@@ -157,10 +196,10 @@ export class BudgetService {
         default: currentQuarterValue = 0;
       }
 
-      // Current values
-      const userView = parseFloat(budgetData.user_view?.toString() || '0');
-      const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
-      const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+      // Current values - use parseEuropeanNumber to handle European number format (e.g., "22.000,00")
+      const userView = parseEuropeanNumber(budgetData.user_view);
+      const katanomesEtous = parseEuropeanNumber(budgetData.katanomes_etous);
+      const ethsiaPistosi = parseEuropeanNumber(budgetData.ethsia_pistosi);
       
       // Calculate current budget indicators
       const availableBudget = Math.max(0, katanomesEtous - userView);
@@ -198,14 +237,14 @@ export class BudgetService {
         };
       }
 
-      // Previous values from sum
+      // Previous values from sum - use parseEuropeanNumber to handle European number format
       const prevSum = budgetData.sum as any;
-      const prevAvailableBudget = parseFloat(prevSum.available_budget?.toString() || '0');
-      const prevQuarterAvailable = parseFloat(prevSum.quarter_available?.toString() || '0');
-      const prevYearlyAvailable = parseFloat(prevSum.yearly_available?.toString() || '0');
-      const prevKatanomesEtous = parseFloat(prevSum.katanomes_etous?.toString() || '0');
-      const prevEthsiaPistosi = parseFloat(prevSum.ethsia_pistosi?.toString() || '0');
-      const prevUserView = parseFloat(prevSum.user_view?.toString() || '0');
+      const prevAvailableBudget = parseEuropeanNumber(prevSum.available_budget);
+      const prevQuarterAvailable = parseEuropeanNumber(prevSum.quarter_available);
+      const prevYearlyAvailable = parseEuropeanNumber(prevSum.yearly_available);
+      const prevKatanomesEtous = parseEuropeanNumber(prevSum.katanomes_etous);
+      const prevEthsiaPistosi = parseEuropeanNumber(prevSum.ethsia_pistosi);
+      const prevUserView = parseEuropeanNumber(prevSum.user_view);
       const prevQuarter = parseInt(prevSum.current_quarter?.toString() || '0');
 
       // Calculate differences
@@ -339,14 +378,14 @@ export class BudgetService {
       // Check for quarter-related fields
       const hasLastQuarterCheck = budgetData && 'last_quarter_check' in budgetData && budgetData.last_quarter_check !== null;
       
-      // Parse current quarter values
-      const currentQ1 = parseFloat(budgetData?.q1?.toString() || '0');
-      const currentQ2 = parseFloat(budgetData?.q2?.toString() || '0');
-      const currentQ3 = parseFloat(budgetData?.q3?.toString() || '0');
-      const currentQ4 = parseFloat(budgetData?.q4?.toString() || '0');
+      // Parse current quarter values - use parseEuropeanNumber to handle European number format (e.g., "22.000,00")
+      const currentQ1 = parseEuropeanNumber(budgetData?.q1);
+      const currentQ2 = parseEuropeanNumber(budgetData?.q2);
+      const currentQ3 = parseEuropeanNumber(budgetData?.q3);
+      const currentQ4 = parseEuropeanNumber(budgetData?.q4);
       
       // Get current trimester value
-      const currentQuarterValue = parseFloat(budgetData?.[quarterKey]?.toString() || '0');
+      const currentQuarterValue = parseEuropeanNumber(budgetData?.[quarterKey]);
       
       // Extract the quarter number from the last_quarter_check (e.g., extract '1' from 'q1')
       const lastQuarterCheck = hasLastQuarterCheck 
@@ -363,7 +402,7 @@ export class BudgetService {
       console.log(`[BudgetService] Quarter check - Last checked: ${lastQuarterChecked}, Current: ${currentQuarterNumber}, Transition: ${isQuarterTransition}`);
       
       let needsUpdate = false;
-      let updatedUserView = parseFloat(userView);
+      let updatedUserView = parseEuropeanNumber(userView);
       let updatedQ1 = currentQ1;
       let updatedQ2 = currentQ2;
       let updatedQ3 = currentQ3;
@@ -460,10 +499,10 @@ export class BudgetService {
         case 'q4': currentTrimesterValue = needsUpdate ? updatedQ4 : currentQ4; break;
       }
       
-      // Convert string values to numbers for calculations
-      const userViewNum = parseFloat(userView);
-      const ethsiaPistosiNum = parseFloat(ethsiaPistosi);
-      const katanomesEtousNum = parseFloat(katanomesEtous);
+      // Convert string values to numbers for calculations using European number format
+      const userViewNum = parseEuropeanNumber(userView);
+      const ethsiaPistosiNum = parseEuropeanNumber(ethsiaPistosi);
+      const katanomesEtousNum = parseEuropeanNumber(katanomesEtous);
       
       // Calculate budget indicators:
       // Διαθέσιμος = katanomes_etous - user_view
@@ -583,16 +622,16 @@ export class BudgetService {
         };
       }
 
-      // Parse budget values and handle potential null/undefined values
-      const userView = parseFloat(budgetData.user_view?.toString() || '0');
-      const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-      const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+      // Parse budget values and handle potential null/undefined values - use parseEuropeanNumber for proper format handling
+      const userView = parseEuropeanNumber(budgetData.user_view);
+      const ethsiaPistosi = parseEuropeanNumber(budgetData.ethsia_pistosi);
+      const katanomesEtous = parseEuropeanNumber(budgetData.katanomes_etous);
       
-      // Get quarterly data 
-      const q1 = parseFloat(budgetData.q1?.toString() || '0');
-      const q2 = parseFloat(budgetData.q2?.toString() || '0');
-      const q3 = parseFloat(budgetData.q3?.toString() || '0');
-      const q4 = parseFloat(budgetData.q4?.toString() || '0');
+      // Get quarterly data using parseEuropeanNumber
+      const q1 = parseEuropeanNumber(budgetData.q1);
+      const q2 = parseEuropeanNumber(budgetData.q2);
+      const q3 = parseEuropeanNumber(budgetData.q3);
+      const q4 = parseEuropeanNumber(budgetData.q4);
       
       // Ensure we have at least some budget data
       if (userView === 0 && katanomesEtous === 0 && ethsiaPistosi === 0) {
@@ -812,23 +851,23 @@ export class BudgetService {
         };
       }
 
-      // Parse current values
-      const currentUserView = parseFloat(budgetData.user_view?.toString() || '0');
-      const currentEthsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-      const currentKatanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
-      const total_spent = parseFloat(budgetData.total_spent?.toString() || '0');
+      // Parse current values - use parseEuropeanNumber to handle European number format
+      const currentUserView = parseEuropeanNumber(budgetData.user_view);
+      const currentEthsiaPistosi = parseEuropeanNumber(budgetData.ethsia_pistosi);
+      const currentKatanomesEtous = parseEuropeanNumber(budgetData.katanomes_etous);
+      const total_spent = parseEuropeanNumber(budgetData.total_spent);
 
       // Get current quarter
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth() + 1;
       const quarterKey = `q${Math.ceil(currentMonth / 3)}` as 'q1' | 'q2' | 'q3' | 'q4';
 
-      // Parse current quarter values
-      const currentQ1 = parseFloat(budgetData.q1?.toString() || '0');
-      const currentQ2 = parseFloat(budgetData.q2?.toString() || '0');
-      const currentQ3 = parseFloat(budgetData.q3?.toString() || '0');
-      const currentQ4 = parseFloat(budgetData.q4?.toString() || '0');
-      const currentQuarterValue = parseFloat(budgetData[quarterKey]?.toString() || '0');
+      // Parse current quarter values - use parseEuropeanNumber to handle European number format
+      const currentQ1 = parseEuropeanNumber(budgetData.q1);
+      const currentQ2 = parseEuropeanNumber(budgetData.q2);
+      const currentQ3 = parseEuropeanNumber(budgetData.q3);
+      const currentQ4 = parseEuropeanNumber(budgetData.q4);
+      const currentQuarterValue = parseEuropeanNumber(budgetData[quarterKey]);
       
       // Check for quarter transitions using the last_quarter_check column
       const lastQuarterCheck = budgetData.last_quarter_check?.toString() || '';

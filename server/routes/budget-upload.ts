@@ -7,6 +7,51 @@ import multer from 'multer';
 import * as xlsx from 'xlsx';
 import { BudgetService } from '../services/budgetService';
 
+// Helper function to parse numerical values with European number formatting (e.g., 22.000,00 -> 22000.00)
+function parseEuropeanNumber(value: any): number {
+  if (value === null || value === undefined) return 0;
+  
+  // Convert to string if it's not already
+  let strValue = value.toString().trim();
+  
+  // Return 0 for empty strings
+  if (!strValue) return 0;
+  
+  // Log the original value for debugging
+  console.log(`[parseEuropeanNumber] Original value: "${strValue}"`);
+  
+  // Check if the string has European number formatting (period as thousands separator, comma as decimal separator)
+  // Example: "22.000,00" should be converted to 22000.00
+  if (strValue.includes('.') && strValue.includes(',')) {
+    // Remove all dots (thousands separators) and replace comma with decimal point
+    strValue = strValue.replace(/\./g, '').replace(',', '.');
+    const result = parseFloat(strValue);
+    console.log(`[parseEuropeanNumber] Parsed European format (dots and commas): "${strValue}" -> ${result}`);
+    return result;
+  }
+  
+  // If it's just a comma as decimal separator (e.g., "22,50")
+  if (strValue.includes(',') && !strValue.includes('.')) {
+    strValue = strValue.replace(',', '.');
+    const result = parseFloat(strValue);
+    console.log(`[parseEuropeanNumber] Parsed European format (comma only): "${strValue}" -> ${result}`);
+    return result;
+  }
+  
+  // For values that might have thousand separators but no decimal part (e.g., "22.000")
+  if (strValue.includes('.') && !/\d+\.\d+/.test(strValue)) {
+    strValue = strValue.replace(/\./g, '');
+    const result = parseFloat(strValue);
+    console.log(`[parseEuropeanNumber] Parsed European format (dots only): "${strValue}" -> ${result}`);
+    return result;
+  }
+  
+  // Default case: try regular parseFloat
+  const result = parseFloat(strValue);
+  console.log(`[parseEuropeanNumber] Parsed standard format: "${strValue}" -> ${result}`);
+  return result;
+}
+
 const router = Router();
 
 // Route path will be /api/budget/upload
@@ -134,28 +179,31 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
           mis,
           na853,
           data: {
-            ethsia_pistosi: ethsiaPistosiKey ? parseFloat(row[ethsiaPistosiKey]?.toString() || '0') : undefined,
-            q1: q1Key ? parseFloat(row[q1Key]?.toString() || '0') : undefined,
-            q2: q2Key ? parseFloat(row[q2Key]?.toString() || '0') : undefined,
-            q3: q3Key ? parseFloat(row[q3Key]?.toString() || '0') : undefined,
-            q4: q4Key ? parseFloat(row[q4Key]?.toString() || '0') : undefined,
-            katanomes_etous: katanomesEtousKey ? parseFloat(row[katanomesEtousKey]?.toString() || '0') : undefined,
-            user_view: userViewKey ? parseFloat(row[userViewKey]?.toString() || '0') : undefined
+            ethsia_pistosi: ethsiaPistosiKey ? parseEuropeanNumber(row[ethsiaPistosiKey]) : undefined,
+            q1: q1Key ? parseEuropeanNumber(row[q1Key]) : undefined,
+            q2: q2Key ? parseEuropeanNumber(row[q2Key]) : undefined,
+            q3: q3Key ? parseEuropeanNumber(row[q3Key]) : undefined,
+            q4: q4Key ? parseEuropeanNumber(row[q4Key]) : undefined,
+            katanomes_etous: katanomesEtousKey ? parseEuropeanNumber(row[katanomesEtousKey]) : undefined,
+            user_view: userViewKey ? parseEuropeanNumber(row[userViewKey]) : undefined
           }
         };
 
         // If no budget data was found, use reasonable defaults based on the data available
         if (Object.values(updateData.data).every(val => val === undefined)) {
           // Find any numerical values in the row that might be budget-related
-          const numericKeys = Object.keys(row).filter(key => 
-            !isNaN(parseFloat(row[key]?.toString() || 'NaN')) && 
-            key !== misKey && 
-            key !== na853Key
-          );
+          // Use parseEuropeanNumber to properly handle EU number format (e.g., "22.000,00")
+          const numericKeys = Object.keys(row).filter(key => {
+            // Attempt to parse the value as a European number format
+            const value = parseEuropeanNumber(row[key]);
+            // Check if the parsing resulted in a valid number
+            return !isNaN(value) && key !== misKey && key !== na853Key;
+          });
 
           if (numericKeys.length > 0) {
             // Assign values based on column order (making assumptions)
-            const numericValues = numericKeys.map(key => parseFloat(row[key]?.toString() || '0'));
+            // Use parseEuropeanNumber to properly handle EU number format (e.g., "22.000,00")
+            const numericValues = numericKeys.map(key => parseEuropeanNumber(row[key]));
             
             // Assuming the first numeric value might be ethsia_pistosi
             updateData.data.ethsia_pistosi = numericValues[0] || 0;
