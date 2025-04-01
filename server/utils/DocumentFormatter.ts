@@ -705,26 +705,27 @@ export class DocumentFormatter {
       }),
     );
 
-    // Create the right column with signature as a textbox
-    // Using an inner table to create a bordered textbox effect
+    // Create a signature table that visually appears as a textbox
+    // This is a single-cell table with thick borders to create a box appearance
     const signatureTextbox = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
+        top: { style: BorderStyle.SINGLE, size: 50, color: "000000" },
+        bottom: { style: BorderStyle.SINGLE, size: 50, color: "000000" },
+        left: { style: BorderStyle.SINGLE, size: 50, color: "000000" },
+        right: { style: BorderStyle.SINGLE, size: 50, color: "000000" },
       },
+      layout: TableLayoutType.FIXED,
       rows: [
         new TableRow({
           children: [
             new TableCell({
               margins: {
                 marginUnitType: WidthType.DXA,
-                top: 100,
-                bottom: 100,
-                left: 100,
-                right: 100,
+                top: 600,
+                bottom: 600,
+                left: 600,
+                right: 600,
               },
               children: [
                 new Paragraph({
@@ -747,7 +748,7 @@ export class DocumentFormatter {
                 }),
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
-                  spacing: { before: 240 }, // Space for signature
+                  spacing: { before: 480 }, // Increased space for signature
                   children: [
                     new TextRun({
                       text: unitDetails?.manager?.name || "",
@@ -796,9 +797,9 @@ export class DocumentFormatter {
             new TableCell({
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
-              margins: { 
+              margins: {
                 marginUnitType: WidthType.DXA,
-                right: 300 
+                right: 300,
               }, // Add some margin for separation
               borders: {
                 top: { style: BorderStyle.NONE },
