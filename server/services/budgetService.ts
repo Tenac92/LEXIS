@@ -415,6 +415,13 @@ export class BudgetService {
       
       // Calculate remaining budget from previous quarters if a transition occurred
       let remainingBudget = 0;
+      // Define new quarter values with defaults from current values
+      let newQ1 = currentQ1;
+      let newQ2 = currentQ2;
+      let newQ3 = currentQ3;
+      let newQ4 = currentQ4;
+      let newQuarterView = parseFloat(budgetData.quarter_view?.toString() || '0');
+      
       if (isQuarterTransition) {
         // Calculate the remaining budget from previous quarters to add to current quarter
         if (lastQuarterChecked === 1 && currentQuarterNumber === 2) {
@@ -422,22 +429,76 @@ export class BudgetService {
           const quarterView = parseFloat(budgetData.quarter_view?.toString() || budgetData.q1?.toString() || '0');
           remainingBudget = Math.max(0, quarterView); // Remaining from Q1
           console.log(`[BudgetService] Quarter transition from Q1 to Q2 - Remaining budget: ${remainingBudget}`);
+          
+          // Apply the quarter transition logic: q2=q2+quarter_view, quarter_view=quarter_view+q2, q1=0
+          newQ2 = currentQ2 + remainingBudget;
+          newQuarterView = newQ2; // Reset quarter_view to match the new quarter
+          newQ1 = 0; // Reset q1 as it has ended
+          
+          console.log(`[BudgetService] Updated quarterly values after Q1->Q2 transition:`, {
+            q1: `${currentQ1} -> ${newQ1}`,
+            q2: `${currentQ2} -> ${newQ2}`,
+            quarter_view: `${quarterView} -> ${newQuarterView}`
+          });
+          
         } else if (lastQuarterChecked === 2 && currentQuarterNumber === 3) {
           // Use quarter_view instead of q2 directly
           const quarterView = parseFloat(budgetData.quarter_view?.toString() || budgetData.q2?.toString() || '0');
           remainingBudget = Math.max(0, quarterView); // Remaining from Q2
           console.log(`[BudgetService] Quarter transition from Q2 to Q3 - Remaining budget: ${remainingBudget}`);
+          
+          // Apply the quarter transition logic: q3=q3+quarter_view, quarter_view=quarter_view+q3, q2=0
+          newQ3 = currentQ3 + remainingBudget;
+          newQuarterView = newQ3; // Reset quarter_view to match the new quarter
+          newQ2 = 0; // Reset q2 as it has ended
+          
+          console.log(`[BudgetService] Updated quarterly values after Q2->Q3 transition:`, {
+            q2: `${currentQ2} -> ${newQ2}`,
+            q3: `${currentQ3} -> ${newQ3}`,
+            quarter_view: `${quarterView} -> ${newQuarterView}`
+          });
+          
         } else if (lastQuarterChecked === 3 && currentQuarterNumber === 4) {
           // Use quarter_view instead of q3 directly
           const quarterView = parseFloat(budgetData.quarter_view?.toString() || budgetData.q3?.toString() || '0');
           remainingBudget = Math.max(0, quarterView); // Remaining from Q3
           console.log(`[BudgetService] Quarter transition from Q3 to Q4 - Remaining budget: ${remainingBudget}`);
+          
+          // Apply the quarter transition logic: q4=q4+quarter_view, quarter_view=quarter_view+q4, q3=0
+          newQ4 = currentQ4 + remainingBudget;
+          newQuarterView = newQ4; // Reset quarter_view to match the new quarter
+          newQ3 = 0; // Reset q3 as it has ended
+          
+          console.log(`[BudgetService] Updated quarterly values after Q3->Q4 transition:`, {
+            q3: `${currentQ3} -> ${newQ3}`,
+            q4: `${currentQ4} -> ${newQ4}`,
+            quarter_view: `${quarterView} -> ${newQuarterView}`
+          });
         }
       }
       
-      // Calculate new amounts
+      // Calculate new amounts - we need to update the user view with deduction but maintain quarter handling
       const newUserView = Math.max(0, currentUserView - amount);
-      const newQuarterValue = Math.max(0, currentQuarterValue + remainingBudget - amount); // Add remaining budget from previous quarter if applicable
+      
+      // Calculate the new quarter value for the current quarter
+      // For the current quarter, apply the deduction
+      let newQuarterValue;
+      if (quarterKey === 'q1') {
+        newQuarterValue = Math.max(0, newQ1 - amount);
+        newQ1 = newQuarterValue;
+      } else if (quarterKey === 'q2') {
+        newQuarterValue = Math.max(0, newQ2 - amount);
+        newQ2 = newQuarterValue;
+      } else if (quarterKey === 'q3') {
+        newQuarterValue = Math.max(0, newQ3 - amount);
+        newQ3 = newQuarterValue;
+      } else { // q4
+        newQuarterValue = Math.max(0, newQ4 - amount);
+        newQ4 = newQuarterValue;
+      }
+      
+      // After deduction, update the quarter_view
+      newQuarterView = Math.max(0, newQuarterView - amount);
       
       // These values should not be updated by document creation operations
       const newEthsiaPistosi = currentEthsiaPistosi; // Do not change ethsia_pistosi
@@ -459,12 +520,15 @@ export class BudgetService {
         // Update user_view field and quarterly values as per requirement
         // Do not update the katanomes_etous or ethsia_pistosi fields (they are reference values)
         user_view: newUserView.toString(),
-        [quarterKey]: newQuarterValue.toString(),
+        q1: newQ1.toString(),
+        q2: newQ2.toString(),
+        q3: newQ3.toString(),
+        q4: newQ4.toString(),
         updated_at: new Date().toISOString(),
         // Update the last_quarter_check to current quarter (text format)
         last_quarter_check: `q${currentQuarterNumber}`,
-        // Update quarter_view with the same value as the quarter field
-        quarter_view: newQuarterValue.toString()
+        // Update quarter_view with the newly calculated value based on quarter transitions
+        quarter_view: newQuarterView.toString()
       };
       
       // Only include total_spent if the column exists
@@ -527,12 +591,14 @@ export class BudgetService {
         data: {
           user_view: newUserView.toString(),
           ethsia_pistosi: newEthsiaPistosi.toString(),
-          q1: quarterKey === 'q1' ? newQuarterValue.toString() : budgetData.q1?.toString() || '0',
-          q2: quarterKey === 'q2' ? newQuarterValue.toString() : budgetData.q2?.toString() || '0',
-          q3: quarterKey === 'q3' ? newQuarterValue.toString() : budgetData.q3?.toString() || '0',
-          q4: quarterKey === 'q4' ? newQuarterValue.toString() : budgetData.q4?.toString() || '0',
+          q1: newQ1.toString(),
+          q2: newQ2.toString(),
+          q3: newQ3.toString(),
+          q4: newQ4.toString(),
           total_spent: newTotalSpent.toString(),
-          current_budget: newUserView.toString()
+          current_budget: newUserView.toString(),
+          quarter_view: newQuarterView.toString(),
+          last_quarter_check: `q${currentQuarterNumber}`
         }
       };
     } catch (error) {
