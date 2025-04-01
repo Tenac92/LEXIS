@@ -94,21 +94,20 @@ export class BudgetService {
         ? parseInt(lastQuarterCheck.substring(1)) 
         : 0;
       
-      // Since we're in April 2025 (Q2) and the data might be from a previous year,
-      // we need to force the transition logic to apply
-      // Special case for Q2 in April 2025 - set to true explicitly
-      let isQuarterTransition = false;
+      // Check if we need to reset quarter_view for the new year
+      const lastUpdatedTime = budgetData?.updated_at ? new Date(budgetData.updated_at) : null;
+      const lastUpdatedYear = lastUpdatedTime ? lastUpdatedTime.getFullYear() : currentYear;
       
-      if (currentYear === 2025 && currentMonth === 4 && lastQuarterChecked === 2) {
-        // It's April 2025 and we're in Q2, but we need to apply the transition logic
-        isQuarterTransition = true;
-        console.log(`[BudgetService] Forcing Q1->Q2 transition for April 2025`);
-      } else {
-        // Normal quarter transition logic
-        isQuarterTransition = lastQuarterChecked > 0 && lastQuarterChecked < currentQuarterNumber;
+      // Check if we need to reset quarter_view (new year)
+      let isNewYear = lastUpdatedYear < currentYear;
+      if (isNewYear) {
+        console.log(`[BudgetService] Detected new year (${lastUpdatedYear} -> ${currentYear}), resetting quarter_view`);
       }
       
-      console.log(`[BudgetService] Quarter check - Last checked: ${lastQuarterChecked}, Current: ${currentQuarterNumber}, Transition: ${isQuarterTransition}`);
+      // Check for quarter transition (e.g., Q1->Q2)
+      const isQuarterTransition = lastQuarterChecked > 0 && lastQuarterChecked < currentQuarterNumber;
+      
+      console.log(`[BudgetService] Quarter check - Last checked: ${lastQuarterChecked}, Current: ${currentQuarterNumber}, Transition: ${isQuarterTransition}, New Year: ${isNewYear}`);
       
       let needsUpdate = false;
       let updatedUserView = parseFloat(userView);
@@ -118,69 +117,58 @@ export class BudgetService {
       let updatedQ4 = currentQ4;
       let updatedQuarterView = currentQuarterView;
       
-      // If quarter_view is 0 or null and current trimester value > 0, 
-      // set quarter_view = current trimester value
-      if ((currentQuarterView === 0 || isNaN(currentQuarterView)) && currentTrimesterValue > 0) {
-        updatedQuarterView = currentTrimesterValue;
+      // Handle new year reset
+      if (isNewYear) {
         needsUpdate = true;
-        console.log(`[BudgetService] Setting quarter_view to current trimester value: ${currentTrimesterValue}`);
+        updatedQuarterView = 0; // Reset quarter_view to 0 for the new year
+        console.log(`[BudgetService] Resetting quarter_view to 0 for new year ${currentYear}`);
       }
       
       // Handle quarter transitions
       if (isQuarterTransition) {
         needsUpdate = true;
         
-        // Calculate the remaining budget from previous quarters to add to current quarter
-        if ((lastQuarterChecked === 1 && currentQuarterNumber === 2) || 
-            (currentYear === 2025 && currentMonth === 4 && lastQuarterChecked === 2)) {
-          // Use quarter_view instead of q1 directly to get app-specific usage
-          const quarterView = parseFloat(budgetData.quarter_view?.toString() || budgetData.q1?.toString() || '0');
-          const remainingBudget = Math.max(0, quarterView); // Remaining from Q1
-          console.log(`[BudgetService] Quarter transition from Q1 to Q2 - Remaining budget: ${remainingBudget}`);
+        // Calculate the quarter transition (add previous quarter value to current quarter)
+        if (lastQuarterChecked === 1 && currentQuarterNumber === 2) {
+          // Q1->Q2 transition
+          console.log(`[BudgetService] Quarter transition from Q1 to Q2 - q1 value: ${currentQ1}, adding to q2: ${currentQ2}`);
           
-          // Apply the quarter transition logic: q2=q2+quarter_view, quarter_view=quarter_view+q2, q1=0
-          updatedQ2 = currentQ2 + remainingBudget;
-          updatedQuarterView = updatedQ2; // Reset quarter_view to match the new quarter
+          // Apply the new quarter transition logic: q2=q2+q1
+          updatedQ2 = currentQ2 + currentQ1;
           updatedQ1 = 0; // Reset q1 as it has ended
           
           console.log(`[BudgetService] Updated quarterly values after Q1->Q2 transition:`, {
             q1: `${currentQ1} -> ${updatedQ1}`,
             q2: `${currentQ2} -> ${updatedQ2}`,
-            quarter_view: `${quarterView} -> ${updatedQuarterView}`
+            quarter_view: `${currentQuarterView} -> ${updatedQuarterView}`
           });
           
         } else if (lastQuarterChecked === 2 && currentQuarterNumber === 3) {
-          // Use quarter_view instead of q2 directly
-          const quarterView = parseFloat(budgetData.quarter_view?.toString() || budgetData.q2?.toString() || '0');
-          const remainingBudget = Math.max(0, quarterView); // Remaining from Q2
-          console.log(`[BudgetService] Quarter transition from Q2 to Q3 - Remaining budget: ${remainingBudget}`);
+          // Q2->Q3 transition
+          console.log(`[BudgetService] Quarter transition from Q2 to Q3 - q2 value: ${currentQ2}, adding to q3: ${currentQ3}`);
           
-          // Apply the quarter transition logic: q3=q3+quarter_view, quarter_view=quarter_view+q3, q2=0
-          updatedQ3 = currentQ3 + remainingBudget;
-          updatedQuarterView = updatedQ3; // Reset quarter_view to match the new quarter
+          // Apply the new quarter transition logic: q3=q3+q2
+          updatedQ3 = currentQ3 + currentQ2;
           updatedQ2 = 0; // Reset q2 as it has ended
           
           console.log(`[BudgetService] Updated quarterly values after Q2->Q3 transition:`, {
             q2: `${currentQ2} -> ${updatedQ2}`,
             q3: `${currentQ3} -> ${updatedQ3}`,
-            quarter_view: `${quarterView} -> ${updatedQuarterView}`
+            quarter_view: `${currentQuarterView} -> ${updatedQuarterView}`
           });
           
         } else if (lastQuarterChecked === 3 && currentQuarterNumber === 4) {
-          // Use quarter_view instead of q3 directly
-          const quarterView = parseFloat(budgetData.quarter_view?.toString() || budgetData.q3?.toString() || '0');
-          const remainingBudget = Math.max(0, quarterView); // Remaining from Q3
-          console.log(`[BudgetService] Quarter transition from Q3 to Q4 - Remaining budget: ${remainingBudget}`);
+          // Q3->Q4 transition
+          console.log(`[BudgetService] Quarter transition from Q3 to Q4 - q3 value: ${currentQ3}, adding to q4: ${currentQ4}`);
           
-          // Apply the quarter transition logic: q4=q4+quarter_view, quarter_view=quarter_view+q4, q3=0
-          updatedQ4 = currentQ4 + remainingBudget;
-          updatedQuarterView = updatedQ4; // Reset quarter_view to match the new quarter
+          // Apply the new quarter transition logic: q4=q4+q3
+          updatedQ4 = currentQ4 + currentQ3;
           updatedQ3 = 0; // Reset q3 as it has ended
           
           console.log(`[BudgetService] Updated quarterly values after Q3->Q4 transition:`, {
             q3: `${currentQ3} -> ${updatedQ3}`,
             q4: `${currentQ4} -> ${updatedQ4}`,
-            quarter_view: `${quarterView} -> ${updatedQuarterView}`
+            quarter_view: `${currentQuarterView} -> ${updatedQuarterView}`
           });
         }
       }
