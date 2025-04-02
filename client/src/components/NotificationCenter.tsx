@@ -1,5 +1,5 @@
-import { FC } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { FC, useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -47,12 +47,26 @@ interface NotificationCenterProps {
 export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotificationClick }) => {
   const { toast } = useToast();
   const { isConnected, reconnect } = useWebSocketUpdates();
-
-  // Enhanced query with fallback to alternate endpoint if primary fails
-  const { data: notifications = [], error, isError, isLoading, refetch } = useQuery({
+  const queryClient = useQueryClient();
+  
+  // Local state management for manual handling
+  const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
+  const [localNotifications, setLocalNotifications] = useState<BudgetNotification[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Enhanced query with local state management
+  const { 
+    data: notifications = [], 
+    error, 
+    isError, 
+    isLoading, 
+    refetch 
+  } = useQuery<BudgetNotification[]>({
     queryKey: ['/api/budget-notifications/admin'],
     queryFn: async () => {
       console.log('[NotificationCenter] Fetching notifications...');
+      setLoadingState('loading');
+      setErrorMessage(null);
       
       // Try the primary endpoint first
       try {
@@ -77,9 +91,13 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
           // Ensure we always return an array
           if (!Array.isArray(data)) {
             console.warn('[NotificationCenter] Expected array but got:', typeof data);
+            setLoadingState('error');
+            setErrorMessage('Invalid data format returned from server');
             return [];
           }
 
+          setLoadingState('success');
+          setLocalNotifications(data);
           return data;
         }
         
@@ -105,6 +123,8 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
         if (!fallbackResponse.ok) {
           console.error('[NotificationCenter] Alternate endpoint failed:', fallbackResponse.status);
+          setLoadingState('error');
+          setErrorMessage('Failed to fetch notifications from both endpoints');
           return [];
         }
 
@@ -118,12 +138,18 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
         // Ensure we always return an array
         if (!Array.isArray(fallbackData)) {
           console.warn('[NotificationCenter] Expected array from alternate endpoint but got:', typeof fallbackData);
+          setLoadingState('error');
+          setErrorMessage('Invalid data format returned from fallback server');
           return [];
         }
 
+        setLoadingState('success');
+        setLocalNotifications(fallbackData);
         return fallbackData;
       } catch (fallbackErr) {
         console.error('[NotificationCenter] Both endpoints failed:', fallbackErr);
+        setLoadingState('error');
+        setErrorMessage('Failed to fetch notifications: Network error');
         return [];
       }
     },
@@ -132,8 +158,70 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     refetchInterval: 30000, // Refetch every 30 seconds
     refetchOnWindowFocus: true // Refresh when window gets focus
   });
+  
+  // Set up callbacks for query state changes
+  useEffect(() => {
+    if (isError && error) {
+      console.error('[NotificationCenter] Query error:', error);
+      setLoadingState('error');
+      setErrorMessage(error instanceof Error ? error.message : 'An unknown error occurred');
+    }
+  }, [isError, error]);
+  
+  // Update local state when query data changes
+  useEffect(() => {
+    if (notifications && notifications.length > 0) {
+      setLoadingState('success');
+      setLocalNotifications(notifications);
+    }
+  }, [notifications]);
+  
+  // Effect to check if we need to manually fetch if query fails
+  useEffect(() => {
+    // If we've previously failed and need to retry manually
+    if (isError && loadingState === 'error' && localNotifications.length === 0) {
+      const manualFetch = async () => {
+        try {
+          console.log('[NotificationCenter] Attempting manual fetch after error...');
+          
+          // Try the standard endpoint with a direct fetch
+          const response = await fetch('/api/budget/notifications', {
+            credentials: 'include',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (Array.isArray(data)) {
+              console.log('[NotificationCenter] Manual fetch succeeded:', data.length);
+              setLocalNotifications(data);
+              setLoadingState('success');
+              setErrorMessage(null);
+              
+              // Update the query cache
+              queryClient.setQueryData(['/api/budget-notifications/admin'], data);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('[NotificationCenter] Manual fetch failed:', err);
+        }
+      };
+      
+      // Wait a bit before trying manual fetch
+      const timer = setTimeout(() => {
+        manualFetch();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isError, loadingState, localNotifications.length, queryClient]);
 
-  if (isLoading) {
+  // Show loading state if we're loading and don't have any data yet
+  if ((isLoading || loadingState === 'loading') && localNotifications.length === 0) {
     return (
       <Card className="w-full animate-pulse">
         <CardContent className="pt-6">
@@ -147,7 +235,8 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     );
   }
 
-  if (isError) {
+  // Show error state if we have an error and no backup data
+  if ((isError || loadingState === 'error') && localNotifications.length === 0) {
     return (
       <Card className="w-full border-destructive">
         <CardContent className="pt-6">
@@ -155,12 +244,21 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
             <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
             <p className="font-semibold">Αποτυχία φόρτωσης ειδοποιήσεων</p>
             <p className="text-sm text-muted-foreground mt-2">
-              {error instanceof Error ? error.message : 'Προέκυψε ένα μη αναμενόμενο σφάλμα'}
+              {errorMessage || (error instanceof Error ? error.message : 'Προέκυψε ένα μη αναμενόμενο σφάλμα')}
             </p>
             <Button
               variant="outline"
               className="mt-4"
-              onClick={() => refetch()}
+              onClick={() => {
+                // Try both the refetch and a manual fetch
+                refetch();
+                setLoadingState('loading');
+                
+                toast({
+                  title: "Ανανέωση",
+                  description: "Επαναφόρτωση ειδοποιήσεων...",
+                });
+              }}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Δοκιμάστε ξανά
@@ -171,7 +269,11 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     );
   }
 
-  if (!notifications.length) {
+  // Decide which data source to use - prefer query data but fall back to local state
+  const displayNotifications = notifications.length > 0 ? notifications : localNotifications;
+
+  // Show empty state if no notifications are present
+  if (!displayNotifications.length) {
     return (
       <Card className="w-full">
         <CardContent className="pt-6">
@@ -189,6 +291,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     );
   }
 
+  // Show notifications with warning if WebSocket is disconnected
   return (
     <div className="space-y-4">
       {!isConnected && (
@@ -200,6 +303,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
             onClick={() => {
               reconnect();
               refetch();
+              setLoadingState('loading');
               toast({
                 title: "Επανασύνδεση",
                 description: "Επαναφορά σύνδεσης ενημερώσεων πραγματικού χρόνου...",
@@ -210,10 +314,29 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
           </Button>
         </div>
       )}
-      {notifications.map((notification) => {
+      
+      {/* Show a loading indicator if refreshing in the background */}
+      {loadingState === 'loading' && displayNotifications.length > 0 && (
+        <div className="flex items-center justify-center py-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+          <span className="ml-2 text-xs text-muted-foreground">Ανανέωση...</span>
+        </div>
+      )}
+      
+      {displayNotifications.map((notification) => {
         const style = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
         const Icon = style.icon;
-        const createdAt = parseISO(notification.created_at);
+        
+        // Handle potential date parsing errors
+        let formattedDate = "Unknown date";
+        try {
+          const createdAt = parseISO(notification.created_at);
+          if (!isNaN(createdAt.getTime())) {
+            formattedDate = formatDistanceToNow(createdAt, { addSuffix: true });
+          }
+        } catch (err) {
+          console.error("[NotificationCenter] Date parsing error:", err);
+        }
 
         return (
           <Card
@@ -231,20 +354,22 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
               <Icon className="h-5 w-5" />
               <div className="flex-1">
                 <CardTitle className="text-sm font-medium">
-                  {notification.type.replace('_', ' ').toUpperCase()}
+                  {notification.type?.replace('_', ' ').toUpperCase() || 'NOTIFICATION'}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {formatDistanceToNow(createdAt, { addSuffix: true })}
+                  {formattedDate}
                 </CardDescription>
               </div>
               <Badge variant="outline" className={cn(style.badge)}>
-                {notification.status}
+                {notification.status || 'New'}
               </Badge>
             </CardHeader>
             <CardContent>
-              <p className="text-sm">{notification.reason}</p>
+              <p className="text-sm">{notification.reason || 'No details provided'}</p>
               <div className="mt-2 text-xs text-muted-foreground">
-                MIS: {notification.mis} • Budget: €{Number(notification.current_budget).toLocaleString()} • Amount: €{Number(notification.amount).toLocaleString()}
+                MIS: {notification.mis || 'N/A'} • 
+                Budget: €{Number(notification.current_budget || 0).toLocaleString()} • 
+                Amount: €{Number(notification.amount || 0).toLocaleString()}
               </div>
             </CardContent>
           </Card>
