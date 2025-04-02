@@ -1,0 +1,41 @@
+[WebSocket] Connection closed: 1006 
+[WebSocket] Abnormal closure - connection dropped
+[WebSocket] Attempting reconnect in 1419ms (attempt 1/10)
+[NotificationCenter] Primary endpoint success: 
+Object {type: "object", isArray: true, count: 11}
+[WebSocket] Connection closed: 1005 
+[WebSocket] No status code in close frame
+[WebSocket] Attempting reconnect in 1180ms (attempt 1/10)
+[NotificationsPage] Refreshed user data: 
+Object {authenticated: true, user: {…}}
+[NotificationsPage] Admin status confirmed after final refresh
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1743572887955
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1743572888198
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1743572888389
+[WebSocket] Connected successfully
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "sxe96fm8zia0wo", timestamp: "2025-04-02T05:48:05.784Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "sxe96fm8zia0wo", timestamp: "2025-04-02T05:48:05.784Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:48:05.933Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:48:05.933Z"}
+[WebSocket] Connected successfully
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "ybbizjm8zia1e0", timestamp: "2025-04-02T05:48:06.408Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "ybbizjm8zia1e0", timestamp: "2025-04-02T05:48:06.408Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:48:06.554Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:48:06.554Z"}
+[WebSocket] Connected successfully
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "e23u0pm8zia1v5", timestamp: "2025-04-02T05:48:07.025Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "e23u0pm8zia1v5", timestamp: "2025-04-02T05:48:07.025Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:48:07.169Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:48:07.169Z"}
