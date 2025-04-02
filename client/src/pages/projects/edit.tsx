@@ -43,6 +43,10 @@ export default function EditProjectPage() {
   // Fetch the project data
   const { data: project, isLoading, error } = useQuery<Project>({
     queryKey: [`/api/projects/${mis}`],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/projects/${mis}`);
+      return response;
+    },
   });
 
   // Initialize the form
@@ -254,6 +258,7 @@ export default function EditProjectPage() {
                           <FormControl>
                             <Input
                               {...field}
+                              value={field.value || ""}
                               placeholder="Budget NA853"
                             />
                           </FormControl>
@@ -271,6 +276,7 @@ export default function EditProjectPage() {
                           <FormControl>
                             <Input
                               {...field}
+                              value={field.value || ""}
                               placeholder="Budget NA271"
                             />
                           </FormControl>
@@ -288,6 +294,7 @@ export default function EditProjectPage() {
                           <FormControl>
                             <Input
                               {...field}
+                              value={field.value || ""}
                               placeholder="Budget E069"
                             />
                           </FormControl>

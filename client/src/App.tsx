@@ -29,10 +29,10 @@ function Router() {
         <ProtectedRoute path="/" component={HomePage} />
         <ProtectedRoute path="/documents" component={DocumentsPage} />
         <ProtectedRoute path="/templates" component={TemplatesPage} />
-        <ProtectedRoute path="/projects" component={ProjectsPage} />
+        <ProtectedRoute path="/projects/bulk-update" component={BulkUpdatePage} />
         <ProtectedRoute path="/projects/:mis/edit" component={EditProjectPage} />
         <ProtectedRoute path="/projects/:mis" component={ProjectDetailsPage} />
-        <ProtectedRoute path="/projects/bulk-update" component={BulkUpdatePage} />
+        <ProtectedRoute path="/projects" component={ProjectsPage} />
         <ProtectedRoute path="/users" component={UsersPage} />
         <ProtectedRoute path="/budget-history" component={BudgetHistoryPage} />
         <ProtectedRoute path="/notifications" component={NotificationsPage} />
