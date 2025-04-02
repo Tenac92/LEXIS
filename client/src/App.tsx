@@ -9,6 +9,7 @@ import AuthPage from "@/pages/auth-page";
 import DocumentsPage from "@/pages/documents-page";
 import ProjectsPage from "@/pages/projects";
 import ProjectDetailsPage from "@/pages/projects/[mis]";
+import EditProjectPage from "@/pages/projects/edit";
 import UsersPage from "@/pages/users";
 import BudgetHistoryPage from "@/pages/budget-history-page";
 import NotificationsPage from "@/pages/NotificationsPage";
@@ -29,6 +30,7 @@ function Router() {
         <ProtectedRoute path="/documents" component={DocumentsPage} />
         <ProtectedRoute path="/templates" component={TemplatesPage} />
         <ProtectedRoute path="/projects" component={ProjectsPage} />
+        <ProtectedRoute path="/projects/:mis/edit" component={EditProjectPage} />
         <ProtectedRoute path="/projects/:mis" component={ProjectDetailsPage} />
         <ProtectedRoute path="/projects/bulk-update" component={BulkUpdatePage} />
         <ProtectedRoute path="/users" component={UsersPage} />
