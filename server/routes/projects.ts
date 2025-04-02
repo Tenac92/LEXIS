@@ -1,16 +1,17 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { supabase } from '../config/db';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { Project } from '@shared/schema';
 import * as xlsx from 'xlsx';
 import multer from 'multer';
 import { parse } from 'csv-parse';
+import { AuthenticatedRequest } from '../authentication';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Get all projects with improved error handling and logging
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   const requestId = Math.random().toString(36).substring(7);
   console.log(`[Projects ${requestId}] Starting request to fetch all projects`);
 
@@ -141,7 +142,7 @@ router.get('/:mis/expenditure-types', authenticateToken, async (req, res) => {
 });
 
 // Get single project by MIS
-router.get('/:mis', authenticateToken, async (req, res) => {
+router.get('/:mis', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis } = req.params;
     console.log(`[Projects] Fetching project with MIS: ${mis}`);
@@ -179,6 +180,71 @@ router.get('/:mis', authenticateToken, async (req, res) => {
     console.error('[Projects] Error fetching project:', error);
     return res.status(500).json({
       message: 'Failed to fetch project',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Update project by MIS
+router.patch('/:mis', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    const updates = req.body;
+    
+    console.log(`[Projects] Updating project with MIS: ${mis}`, updates);
+
+    // Check user authentication and admin permission
+    if (!req.user) {
+      console.error(`[Projects] No authenticated user found when updating MIS: ${mis}`);
+      return res.status(401).json({ 
+        message: "Authentication required"
+      });
+    }
+
+    if (req.user.role !== 'admin') {
+      console.error(`[Projects] Non-admin user (${req.user.id}) attempted to update project ${mis}`);
+      return res.status(403).json({ 
+        message: "Admin access required to update projects"
+      });
+    }
+
+    // First check if project exists
+    const { data: existingProject, error: checkError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (checkError || !existingProject) {
+      console.error(`[Projects] Project with MIS ${mis} not found for update`);
+      return res.status(404).json({ 
+        message: `Project with MIS ${mis} not found`
+      });
+    }
+
+    // Update the project
+    const { data: updatedProject, error: updateError } = await supabase
+      .from('Projects')
+      .update(updates)
+      .eq('mis', mis)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error(`[Projects] Error updating project ${mis}:`, updateError);
+      return res.status(500).json({ 
+        message: "Failed to update project",
+        error: updateError.message
+      });
+    }
+
+    console.log(`[Projects] Successfully updated project: ${mis}`);
+    return res.json(updatedProject);
+
+  } catch (error) {
+    console.error('[Projects] Error updating project:', error);
+    return res.status(500).json({
+      message: 'Failed to update project',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

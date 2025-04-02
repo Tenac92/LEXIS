@@ -34,19 +34,23 @@ const updateProjectSchema = insertProjectSchema.partial();
 type UpdateFormData = z.infer<typeof updateProjectSchema>;
 
 export default function EditProjectPage() {
-  const { mis } = useParams();
+  const params = useParams<{ mis: string }>();
+  const mis = params.mis;
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+  
+  console.log("Edit Project Page - MIS Parameter:", mis);
 
   // Fetch the project data
   const { data: project, isLoading, error } = useQuery<Project>({
     queryKey: [`/api/projects/${mis}`],
-    queryFn: async () => {
+    queryFn: async (): Promise<Project> => {
       const response = await apiRequest(`/api/projects/${mis}`);
-      return response;
+      return response as Project;
     },
+    enabled: !!mis // Only run query if mis is available
   });
 
   // Initialize the form
@@ -81,6 +85,7 @@ export default function EditProjectPage() {
     mutationFn: async (data: UpdateFormData) => {
       setLoading(true);
       try {
+        console.log(`Updating project ${mis} with data:`, data);
         const response = await apiRequest(`/api/projects/${mis}`, {
           method: "PATCH",
           body: JSON.stringify(data),
