@@ -5,7 +5,7 @@ import { useLocation } from 'wouter';
 import type { User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { RotateCw, Bell } from 'lucide-react';
+import { RotateCw, Bell, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Header } from '@/components/header';
 
@@ -228,22 +228,48 @@ export const NotificationsPage = () => {
     );
   }
   
-  // Only render the page content if user is admin
-  // This check should never happen if our useEffect above works correctly
-  // But we'll keep it for extra safety - give it one more chance with a direct refresh
-  if (user?.role !== 'admin' && roleCheckAttempts < 3) {
-    console.log('[NotificationsPage] Secondary role check failed, attempting final refresh:', user?.role);
-    
-    // Trigger another refresh after a short delay
-    setTimeout(() => {
+  // We need to use a separate useEffect for the final refresh to avoid React warnings
+  // about setState during render
+  const [needsFinalCheck, setNeedsFinalCheck] = useState(false);
+  
+  useEffect(() => {
+    // Only run this effect when needsFinalCheck is true
+    if (needsFinalCheck && user?.role !== 'admin' && roleCheckAttempts < 3) {
+      console.log('[NotificationsPage] Secondary role check failed, attempting final refresh:', user?.role);
+      
+      // Increment the attempt counter
+      setRoleCheckAttempts(prev => prev + 1);
+      
+      // Reset the flag
+      setNeedsFinalCheck(false);
+      
+      // Perform the refresh
       refreshUserData().then(isAdmin => {
         if (!isAdmin) {
           console.log('[NotificationsPage] Final refresh confirms non-admin status');
           setLocation('/');
+        } else {
+          console.log('[NotificationsPage] Admin status confirmed after final refresh');
+          // Force a re-render
+          queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
         }
       });
-    }, 500);
-    
+    }
+  }, [needsFinalCheck, user, roleCheckAttempts, refreshUserData, setLocation, queryClient]);
+  
+  // Add another useEffect to trigger the final check when needed
+  useEffect(() => {
+    // If user exists but is not admin, and we haven't tried too many times yet
+    if (user && user.role !== 'admin' && roleCheckAttempts < 3 && !needsFinalCheck && !isConfirmingRole) {
+      console.log('[NotificationsPage] Setting up final admin check via effect');
+      setNeedsFinalCheck(true);
+    }
+  }, [user, roleCheckAttempts, needsFinalCheck, isConfirmingRole]);
+  
+  // Only render the page content if user is admin
+  // This check should never happen if our useEffect above works correctly
+  // But we'll keep it for extra safety
+  if (user?.role !== 'admin' && roleCheckAttempts < 3) {
     // Show loading while we do this final check
     return (
       <div className="min-h-screen bg-background">
@@ -264,9 +290,38 @@ export const NotificationsPage = () => {
     );
   } else if (user?.role !== 'admin') {
     console.log('[NotificationsPage] Final role check failed after multiple attempts:', user?.role);
-    // After multiple attempts, if still not admin, redirect
-    setLocation('/');
-    return null;
+    
+    // Use a final useEffect to handle the redirect
+    useEffect(() => {
+      if (user?.role !== 'admin' && roleCheckAttempts >= 3) {
+        console.log('[NotificationsPage] Redirecting to home after exhausting all checks');
+        setLocation('/');
+      }
+    }, [user?.role, roleCheckAttempts, setLocation]);
+    
+    // Render a loading state instead of immediately redirecting
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto py-8">
+          <Card className="w-full bg-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center min-h-[40vh]">
+                <div className="text-center">
+                  <div className="text-destructive mb-4">
+                    <AlertTriangle className="h-8 w-8 mx-auto" />
+                  </div>
+                  <p className="font-medium text-destructive">Access Denied</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Redirecting to dashboard...
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   }
   
   console.log('[NotificationsPage] Rendering notifications page for admin');
