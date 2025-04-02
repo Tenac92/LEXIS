@@ -48,46 +48,89 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
   const { toast } = useToast();
   const { isConnected, reconnect } = useWebSocketUpdates();
 
+  // Enhanced query with fallback to alternate endpoint if primary fails
   const { data: notifications = [], error, isError, isLoading, refetch } = useQuery({
     queryKey: ['/api/budget-notifications/admin'],
     queryFn: async () => {
       console.log('[NotificationCenter] Fetching notifications...');
+      
+      // Try the primary endpoint first
       try {
         const response = await fetch('/api/budget-notifications/admin', {
           credentials: 'include',
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
           }
         });
 
-        if (!response.ok) {
-          console.error('[NotificationCenter] Response not OK:', response.status);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[NotificationCenter] Primary endpoint success:', {
+            type: typeof data,
+            isArray: Array.isArray(data),
+            count: Array.isArray(data) ? data.length : 0
+          });
+
+          // Ensure we always return an array
+          if (!Array.isArray(data)) {
+            console.warn('[NotificationCenter] Expected array but got:', typeof data);
+            return [];
+          }
+
+          return data;
+        }
+        
+        console.warn('[NotificationCenter] Primary endpoint failed with status:', response.status);
+        // Fall through to try backup endpoint
+      } catch (err) {
+        console.error('[NotificationCenter] Primary endpoint error:', err);
+        // Fall through to try backup endpoint
+      }
+      
+      // If primary endpoint fails, try the alternate endpoint
+      try {
+        console.log('[NotificationCenter] Trying alternate endpoint...');
+        const fallbackResponse = await fetch('/api/budget/notifications', {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+
+        if (!fallbackResponse.ok) {
+          console.error('[NotificationCenter] Alternate endpoint failed:', fallbackResponse.status);
           return [];
         }
 
-        const data = await response.json();
-        console.log('[NotificationCenter] Raw API Response:', {
-          type: typeof data,
-          isArray: Array.isArray(data),
-          sample: Array.isArray(data) && data.length > 0 ? data[0] : null,
-          fields: Array.isArray(data) && data.length > 0 ? Object.keys(data[0]) : []
+        const fallbackData = await fallbackResponse.json();
+        console.log('[NotificationCenter] Alternate endpoint success:', {
+          type: typeof fallbackData,
+          isArray: Array.isArray(fallbackData),
+          count: Array.isArray(fallbackData) ? fallbackData.length : 0
         });
 
         // Ensure we always return an array
-        if (!Array.isArray(data)) {
-          console.warn('[NotificationCenter] Expected array but got:', typeof data);
+        if (!Array.isArray(fallbackData)) {
+          console.warn('[NotificationCenter] Expected array from alternate endpoint but got:', typeof fallbackData);
           return [];
         }
 
-        return data;
-      } catch (err) {
-        console.error('[NotificationCenter] Fetch error:', err);
+        return fallbackData;
+      } catch (fallbackErr) {
+        console.error('[NotificationCenter] Both endpoints failed:', fallbackErr);
         return [];
       }
     },
-    retry: 1,
-    refetchInterval: 30000 // Refetch every 30 seconds
+    retry: 2, // Increase retry attempts
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
+    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchOnWindowFocus: true // Refresh when window gets focus
   });
 
   if (isLoading) {

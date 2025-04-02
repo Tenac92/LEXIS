@@ -207,11 +207,65 @@ export const NotificationsPage = () => {
     );
   }
 
+  // Check if we're still in the process of refreshing/confirming the user role
+  if (isConfirmingRole) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto py-8">
+          <Card className="w-full bg-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center min-h-[40vh]">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="mt-4 text-muted-foreground">Verifying access privileges...</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+  
   // Only render the page content if user is admin
   // This check should never happen if our useEffect above works correctly
-  // But we'll keep it for extra safety
-  if (user?.role !== 'admin') {
-    console.log('[NotificationsPage] Secondary role check failed:', user?.role);
+  // But we'll keep it for extra safety - give it one more chance with a direct refresh
+  if (user?.role !== 'admin' && roleCheckAttempts < 3) {
+    console.log('[NotificationsPage] Secondary role check failed, attempting final refresh:', user?.role);
+    
+    // Trigger another refresh after a short delay
+    setTimeout(() => {
+      refreshUserData().then(isAdmin => {
+        if (!isAdmin) {
+          console.log('[NotificationsPage] Final refresh confirms non-admin status');
+          setLocation('/');
+        }
+      });
+    }, 500);
+    
+    // Show loading while we do this final check
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto py-8">
+          <Card className="w-full bg-card">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center min-h-[40vh]">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="mt-4 text-muted-foreground">Verifying access privileges...</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  } else if (user?.role !== 'admin') {
+    console.log('[NotificationsPage] Final role check failed after multiple attempts:', user?.role);
+    // After multiple attempts, if still not admin, redirect
+    setLocation('/');
     return null;
   }
   
