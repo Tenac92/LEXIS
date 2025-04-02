@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
@@ -13,6 +13,8 @@ export const NotificationsPage = () => {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [roleCheckAttempts, setRoleCheckAttempts] = useState(0);
+  const [isConfirmingRole, setIsConfirmingRole] = useState(false);
 
   // Check if user is authenticated and is admin
   const { data: user, isLoading: userLoading, error: userError } = useQuery<User>({
@@ -47,18 +49,105 @@ export const NotificationsPage = () => {
     staleTime: 30000 // Cache for 30 seconds
   });
 
-  useEffect(() => {
-    if (!userLoading && !user) {
-      setLocation('/auth');
-    } else if (!userLoading && user && user.role !== 'admin') {
-      toast({
-        title: "Access Denied",
-        description: "You need administrator privileges to access this page.",
-        variant: "destructive"
+  // Add a function to manually refetch the user data
+  const refreshUserData = async () => {
+    setIsConfirmingRole(true);
+    console.log('[NotificationsPage] Manually refreshing user data, attempt:', roleCheckAttempts + 1);
+    
+    try {
+      // Force fresh data with a direct fetch bypassing the cache
+      const response = await fetch('/api/auth/me', {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
-      setLocation('/');
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.log('[NotificationsPage] Auth refresh returned 401, redirecting to login');
+          setLocation('/auth');
+          return false;
+        }
+        console.error('[NotificationsPage] Failed to refresh user data:', response.status);
+        return false;
+      }
+      
+      const data = await response.json();
+      console.log('[NotificationsPage] Refreshed user data:', data);
+      
+      // Manually update the React Query cache with the fresh data
+      queryClient.setQueryData(['/api/auth/me'], data.user || data);
+      
+      // Return true if user is admin, false otherwise
+      return data.user?.role === 'admin' || data.role === 'admin';
+    } catch (error) {
+      console.error('[NotificationsPage] Error refreshing user:', error);
+      return false;
+    } finally {
+      setIsConfirmingRole(false);
     }
-  }, [user, userLoading, setLocation, toast]);
+  };
+  
+  useEffect(() => {
+    console.log('[NotificationsPage] User state:', {
+      user,
+      userLoading,
+      role: user?.role,
+      isAdmin: user?.role === 'admin',
+      attempts: roleCheckAttempts
+    });
+    
+    if (!userLoading) {
+      if (!user) {
+        console.log('[NotificationsPage] No user found, redirecting to auth');
+        setLocation('/auth');
+      } else if (user.role !== 'admin') {
+        // If not admin and we haven't tried too many times, try refreshing user data
+        if (roleCheckAttempts < 3 && !isConfirmingRole) {
+          console.log('[NotificationsPage] Non-admin detected, attempting refresh:', user.role);
+          
+          // Increment the attempt counter
+          setRoleCheckAttempts(prev => prev + 1);
+          
+          // Set a timeout to refresh the user data (to avoid infinite loops in useEffect)
+          const timeoutId = setTimeout(async () => {
+            const isAdmin = await refreshUserData();
+            
+            if (!isAdmin) {
+              console.log('[NotificationsPage] Confirmed non-admin after refresh');
+              toast({
+                title: "Access Denied",
+                description: "You need administrator privileges to access this page.",
+                variant: "destructive"
+              });
+              setLocation('/');
+            } else {
+              console.log('[NotificationsPage] Admin access confirmed after refresh');
+              // Force a re-render
+              queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+            }
+          }, 500);
+          
+          return () => clearTimeout(timeoutId);
+        } else if (roleCheckAttempts >= 3) {
+          // After multiple attempts, if still not admin, redirect
+          console.log('[NotificationsPage] Multiple refresh attempts failed, redirecting');
+          toast({
+            title: "Access Denied",
+            description: "You need administrator privileges to access this page.",
+            variant: "destructive"
+          });
+          setLocation('/');
+        }
+      } else if (user.role === 'admin') {
+        console.log('[NotificationsPage] Admin access confirmed directly');
+      }
+    }
+  }, [user, userLoading, roleCheckAttempts, isConfirmingRole, setLocation, toast, queryClient]);
 
   const handleRefresh = () => {
     // Invalidate both notification endpoints to ensure consistency
@@ -119,9 +208,14 @@ export const NotificationsPage = () => {
   }
 
   // Only render the page content if user is admin
-  if (user.role !== 'admin') {
+  // This check should never happen if our useEffect above works correctly
+  // But we'll keep it for extra safety
+  if (user?.role !== 'admin') {
+    console.log('[NotificationsPage] Secondary role check failed:', user?.role);
     return null;
   }
+  
+  console.log('[NotificationsPage] Rendering notifications page for admin');
 
   return (
     <div className="min-h-screen bg-background">
