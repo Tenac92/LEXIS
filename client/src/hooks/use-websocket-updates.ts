@@ -20,7 +20,7 @@ export function useWebSocketUpdates() {
     }
   }, []);
 
-  // Connect to WebSocket
+  // Connect to WebSocket with improved error handling
   const connect = useCallback(() => {
     if (!user) {
       console.log('[WebSocket] Not connecting, no authenticated user');
@@ -33,19 +33,25 @@ export function useWebSocketUpdates() {
       return;
     }
 
-    const MAX_RETRIES = 5;
-    
-    try {
-      // Clean up any existing connection
-      if (wsRef.current) {
-        try {
+    // Careful shutdown of any existing connection
+    if (wsRef.current) {
+      try {
+        // Only close if not already closed or closing
+        if (wsRef.current.readyState !== WebSocket.CLOSED && 
+            wsRef.current.readyState !== WebSocket.CLOSING) {
           wsRef.current.close();
-        } catch (error) {
-          console.error('[WebSocket] Error closing existing connection:', error);
         }
+      } catch (error) {
+        console.error('[WebSocket] Error closing existing connection:', error);
+      } finally {
+        // Always null out the reference to prevent memory leaks
         wsRef.current = null;
       }
+    }
 
+    const MAX_RETRIES = 10; // Increase max retries for better resilience
+    
+    try {
       // Get the correct websocket URL based on current location
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host || document.location.host;
@@ -55,26 +61,46 @@ export function useWebSocketUpdates() {
         return;
       }
       
-      const wsUrl = `${protocol}//${host}/ws`;
+      // Add timestamp to URL to prevent caching issues
+      const wsUrl = `${protocol}//${host}/ws?t=${Date.now()}`;
       console.log('[WebSocket] Attempting to connect:', wsUrl);
 
       // Create new WebSocket connection
       try {
         const ws = new WebSocket(wsUrl, ['notifications']);
+        
+        // Set a connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (ws.readyState !== WebSocket.OPEN) {
+            console.warn('[WebSocket] Connection timeout, closing socket');
+            try {
+              ws.close();
+            } catch (e) {
+              console.error('[WebSocket] Error closing timed-out socket:', e);
+            }
+          }
+        }, 10000); // 10 second timeout
+        
         wsRef.current = ws;
 
         // Set up event handlers
         ws.onopen = () => {
           console.log('[WebSocket] Connected successfully');
+          clearTimeout(connectionTimeout); // Clear the timeout on successful connection
           setIsConnected(true);
           retryCountRef.current = 0;
 
           // Send initial connection message
           try {
-            ws.send(JSON.stringify({ 
+            const message = JSON.stringify({ 
               type: 'connect',
               timestamp: new Date().toISOString()
-            }));
+            });
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(message);
+            } else {
+              console.warn('[WebSocket] Cannot send initial message, socket not open');
+            }
           } catch (error) {
             console.error('[WebSocket] Failed to send initial message:', error);
           }
@@ -148,17 +174,83 @@ export function useWebSocketUpdates() {
         };
 
         ws.onclose = (event) => {
-          console.log('[WebSocket] Connection closed. Code:', event.code);
+          console.log('[WebSocket] Connection closed:', event.code, event.reason);
           setIsConnected(false);
+          
+          // Clear connection timeout if it exists
+          clearTimeout(connectionTimeout);
+          
+          // Properly clean up the WebSocket reference
           wsRef.current = null;
 
-          // Check if our session is still valid
+          // Check our session status on any connection close
           checkSession();
 
-          // Only attempt reconnection if we haven't exceeded max retries
-          if (retryCountRef.current < MAX_RETRIES) {
-            // Exponential backoff for reconnection attempts
-            const backoff = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000);
+          // Specific error handling for common close codes
+          const shouldAttemptReconnect = () => {
+            switch (event.code) {
+              // Normal closure (usually server-initiated)
+              case 1000:
+                console.log('[WebSocket] Clean closure, will reconnect');
+                return true;
+                
+              // Going away (browser navigating away)
+              case 1001:
+                console.log('[WebSocket] Browser navigating away');
+                return document.visibilityState === 'visible'; // Only reconnect if page is visible
+                
+              // Protocol error
+              case 1002:
+                console.warn('[WebSocket] Protocol error');
+                return true;
+                
+              // Unsupported data
+              case 1003:
+                console.warn('[WebSocket] Unsupported data received');
+                return true;
+                
+              // No status (abnormal closure - common)
+              case 1005:
+                console.warn('[WebSocket] No status code in close frame');
+                return true;
+                
+              // Abnormal closure (connection dropped)
+              case 1006:
+                console.warn('[WebSocket] Abnormal closure - connection dropped');
+                return true;
+                
+              // Authentication issues
+              case 4000:
+              case 4001:
+              case 4003:
+                console.error('[WebSocket] Authentication error:', event.code);
+                // Force a session refresh since we might need to re-authenticate
+                queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+                return false; // Don't retry - we need to fix auth first
+                
+              // Server errors
+              case 1011:
+                console.error('[WebSocket] Server error');
+                // Use a longer backoff for server errors
+                return true;
+                
+              // Default - attempt reconnect for any other codes
+              default:
+                console.warn(`[WebSocket] Unhandled close code: ${event.code}`);
+                return true;
+            }
+          };
+
+          const shouldReconnect = shouldAttemptReconnect();
+
+          // Only attempt reconnection if allowed and we haven't exceeded max retries
+          if (shouldReconnect && retryCountRef.current < MAX_RETRIES) {
+            // Exponential backoff with jitter for reconnection attempts
+            const baseBackoff = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000);
+            // Add randomness to prevent all clients hitting server at the same time
+            const jitter = Math.floor(Math.random() * 1000);
+            const backoff = baseBackoff + jitter;
+            
             console.log(`[WebSocket] Attempting reconnect in ${backoff}ms (attempt ${retryCountRef.current + 1}/${MAX_RETRIES})`);
 
             if (reconnectTimeoutRef.current) {
@@ -169,8 +261,18 @@ export function useWebSocketUpdates() {
               retryCountRef.current += 1;
               connect();
             }, backoff);
+          } else if (!shouldReconnect) {
+            console.log('[WebSocket] Not attempting reconnect due to close code');
+            // Still make sure the session is valid
+            queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
           } else {
             console.warn('[WebSocket] Maximum reconnection attempts reached');
+            
+            // Reset retry count after a longer timeout to allow future reconnects
+            setTimeout(() => {
+              console.log('[WebSocket] Resetting retry count after cooldown');
+              retryCountRef.current = 0;
+            }, 60000); // 1 minute cooldown
             
             // Final check to see if our session is still valid
             queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
