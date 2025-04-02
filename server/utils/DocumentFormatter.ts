@@ -705,64 +705,99 @@ export class DocumentFormatter {
       }),
     );
 
-    // Create the right column with signature as a textbox
-    // Using an inner table to create a bordered textbox effect
+    // Create the right column with signature as an image
+    // Using a signature image instead of a bordered textbox
+    
+    // Get the path to the signature placeholder image
+    const signatureImagePath = path.join(
+      process.cwd(),
+      "server",
+      "utils",
+      "assets",
+      "signature-box.png"
+    );
+    
+    // First, create paragraphs for the title and role
+    const titleParagraph = new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: unitDetails?.manager?.order || "",
+          bold: true,
+        }),
+      ],
+    });
+    
+    const roleParagraph = new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: unitDetails?.manager?.title || "",
+          bold: true,
+        }),
+      ],
+    });
+    
+    // Create the image paragraph with the signature box
+    const signatureImageParagraph = new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 120, after: 120 },
+      children: [
+        new ImageRun({
+          data: fs.readFileSync(signatureImagePath),
+          transformation: {
+            width: 200,
+            height: 100,
+          },
+        }),
+      ],
+    });
+    
+    // Create paragraphs for the name and degree
+    const nameParagraph = new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: unitDetails?.manager?.name || "",
+          bold: true,
+        }),
+      ],
+    });
+    
+    const degreeParagraph = new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [
+        new TextRun({
+          text: unitDetails?.manager?.degree || "",
+        }),
+      ],
+    });
+    
+    // Combine all paragraphs into a table for proper layout
     const signatureTextbox = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
       },
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              margins: {
-                marginUnitType: WidthType.DXA,
-                top: 100,
-                bottom: 100,
-                left: 100,
-                right: 100,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
               },
               children: [
-                new Paragraph({
-                  alignment: AlignmentType.CENTER,
-                  children: [
-                    new TextRun({
-                      text: unitDetails?.manager?.order || "",
-                      bold: true,
-                    }),
-                  ],
-                }),
-                new Paragraph({
-                  alignment: AlignmentType.CENTER,
-                  children: [
-                    new TextRun({
-                      text: unitDetails?.manager?.title || "",
-                      bold: true,
-                    }),
-                  ],
-                }),
-                new Paragraph({
-                  alignment: AlignmentType.CENTER,
-                  spacing: { before: 240 }, // Space for signature
-                  children: [
-                    new TextRun({
-                      text: unitDetails?.manager?.name || "",
-                      bold: true,
-                    }),
-                  ],
-                }),
-                new Paragraph({
-                  alignment: AlignmentType.CENTER,
-                  children: [
-                    new TextRun({
-                      text: unitDetails?.manager?.degree || "",
-                    }),
-                  ],
-                }),
+                titleParagraph,
+                roleParagraph,
+                signatureImageParagraph,
+                nameParagraph,
+                degreeParagraph,
               ],
             }),
           ],
@@ -772,6 +807,7 @@ export class DocumentFormatter {
 
     // For compatibility, create a container paragraph to hold the textbox
     const signatureParagraph = new Paragraph({
+      keepLines: true,
       spacing: { before: 480 }, // Add some space before the signature
       children: [new TextRun({ text: "" })],
     });
@@ -796,9 +832,9 @@ export class DocumentFormatter {
             new TableCell({
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
-              margins: { 
+              margins: {
                 marginUnitType: WidthType.DXA,
-                right: 300 
+                right: 300,
               }, // Add some margin for separation
               borders: {
                 top: { style: BorderStyle.NONE },
