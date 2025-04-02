@@ -90,8 +90,9 @@ export function useWebSocketUpdates() {
 
             switch (data.type) {
               case 'notification':
-                // Handle new notification
+                // Handle new notification - invalidate all notification endpoints
                 queryClient.invalidateQueries({ queryKey: ['/api/budget/notifications'] });
+                queryClient.invalidateQueries({ queryKey: ['/api/budget-notifications/admin'] });
                 
                 // Display toast notification
                 toast({

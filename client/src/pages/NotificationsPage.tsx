@@ -61,7 +61,9 @@ export const NotificationsPage = () => {
   }, [user, userLoading, setLocation, toast]);
 
   const handleRefresh = () => {
+    // Invalidate both notification endpoints to ensure consistency
     queryClient.invalidateQueries({ queryKey: ['/api/budget/notifications'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/budget-notifications/admin'] });
     toast({
       title: "Refreshing",
       description: "Updating notifications...",

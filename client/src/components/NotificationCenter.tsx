@@ -46,7 +46,7 @@ interface NotificationCenterProps {
 
 export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotificationClick }) => {
   const { toast } = useToast();
-  const { isConnected } = useWebSocketUpdates();
+  const { isConnected, reconnect } = useWebSocketUpdates();
 
   const { data: notifications = [], error, isError, isLoading, refetch } = useQuery({
     queryKey: ['/api/budget-notifications/admin'],
@@ -154,7 +154,14 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
           <Button
             variant="link"
             className="text-yellow-700 p-0 h-auto ml-2"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              reconnect();
+              refetch();
+              toast({
+                title: "Επανασύνδεση",
+                description: "Επαναφορά σύνδεσης ενημερώσεων πραγματικού χρόνου...",
+              });
+            }}
           >
             Επανασύνδεση
           </Button>
