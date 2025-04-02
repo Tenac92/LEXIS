@@ -47,11 +47,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <SessionKeeper>
-          <Router />
-          <SessionWarning />
-          <Toaster />
-        </SessionKeeper>
+        <Router />
+        <SessionKeeper />
+        <Toaster />
       </AuthProvider>
     </QueryClientProvider>
   );

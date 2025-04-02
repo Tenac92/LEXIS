@@ -1,63 +1,178 @@
-import { useLocation } from 'wouter';
+import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useSessionKeepalive } from '@/hooks/use-session-keepalive';
-import { ReactNode, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
+import { queryClient } from '@/lib/queryClient';
+import { SessionWarning } from './SessionWarning';
+import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
 
-interface SessionKeeperProps {
-  children: ReactNode;
-  /**
-   * What to do when a session expires - by default shows a toast and redirects to login
-   */
-  onSessionExpired?: () => void;
-}
+// Interval settings for various checks
+const REFRESH_INTERVAL = 5 * 60 * 1000; // Refresh session every 5 minutes
+const ACTIVITY_TIMEOUT = 60 * 1000; // Check for user activity every minute
+const EXPIRATION_WARNING_TIME = 10 * 60 * 1000; // Show warning 10 minutes before session expires
 
-/**
- * Component that provides active session management, checks auth status periodically and
- * handles session expiration gracefully.
- */
-export function SessionKeeper({ children, onSessionExpired }: SessionKeeperProps) {
-  const [, setLocation] = useLocation();
+export function SessionKeeper() {
+  const auth = useAuth();
   const { toast } = useToast();
-  const { user } = useAuth();
-
-  // Default handler for session expiration
-  const handleSessionExpired = () => {
-    toast({
-      title: "Session Expired",
-      description: "Your session has expired. Please log in again.",
-      variant: "destructive",
-    });
-    setLocation('/auth');
-  };
-
-  // Use the session keepalive hook
-  useSessionKeepalive({
-    onSessionExpired: onSessionExpired || handleSessionExpired,
-  });
-
-  // Add an additional listener for visibility changes (tab focus)
+  const [showWarning, setShowWarning] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const lastActivityRef = useRef(Date.now());
+  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const activityCheckRef = useRef<NodeJS.Timeout | null>(null);
+  const { reconnect } = useWebSocketUpdates();
+  
+  // Set up session refresh on regular intervals
   useEffect(() => {
-    const handleVisibilityChange = () => {
+    if (!auth.user) return;
+    
+    // Clear any existing intervals
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+    }
+    
+    // Setup regular session refresh
+    refreshIntervalRef.current = setInterval(async () => {
+      console.log('[SessionKeeper] Refreshing session at regular interval');
+      try {
+        await auth.refreshUser();
+        // Also reconnect WebSocket if it's disconnected
+        reconnect();
+      } catch (error) {
+        console.error('[SessionKeeper] Failed to refresh session', error);
+      }
+    }, REFRESH_INTERVAL);
+    
+    // Cleanup on unmount
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [auth.user, auth.refreshUser, reconnect]);
+  
+  // Track user activity
+  useEffect(() => {
+    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    
+    const handleActivity = () => {
+      // Update the last activity timestamp
+      lastActivityRef.current = Date.now();
+      
+      // If there's a warning showing, refresh user to check if session is still valid
+      if (showWarning) {
+        auth.refreshUser().then((refreshedUser) => {
+          if (refreshedUser) {
+            setShowWarning(false);
+          }
+        });
+      }
+    };
+    
+    // Add activity listeners
+    activityEvents.forEach(event => {
+      window.addEventListener(event, handleActivity);
+    });
+    
+    // Set up activity-based session refresh
+    if (activityCheckRef.current) {
+      clearInterval(activityCheckRef.current);
+    }
+    
+    // Check for user activity and refresh session if active
+    activityCheckRef.current = setInterval(() => {
+      const now = Date.now();
+      const timeSinceLastActivity = now - lastActivityRef.current;
+      
+      if (auth.user && timeSinceLastActivity < ACTIVITY_TIMEOUT) {
+        // User has been active recently, refresh session
+        console.log('[SessionKeeper] User active, refreshing session');
+        auth.refreshUser().catch((err) => {
+          console.error('[SessionKeeper] Error refreshing session after activity', err);
+        });
+      }
+    }, ACTIVITY_TIMEOUT);
+    
+    // Cleanup
+    return () => {
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, handleActivity);
+      });
+      
+      if (activityCheckRef.current) {
+        clearInterval(activityCheckRef.current);
+      }
+    };
+  }, [auth.user, auth.refreshUser, showWarning]);
+  
+  // Effect for tab visibility changes
+  useEffect(() => {
+    if (!auth.user) return;
+    
+    const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
-        // Refresh auth status when the tab becomes visible again
-        if (user) {
-          // Only attempt to refresh if we currently have a user
-          // to avoid unnecessary redirects when already logged out
-          setTimeout(() => {
-            // This small delay prevents race conditions with other visibility handlers
-            // that might be checking auth status simultaneously
-            window.dispatchEvent(new Event('focus'));
-          }, 100);
+        console.log('[SessionKeeper] Tab now visible, checking session');
+        try {
+          // Force a fresh check of the user when tab becomes visible
+          await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+          auth.refreshUser();
+        } catch (error) {
+          console.error('[SessionKeeper] Failed to check session on visibility change', error);
         }
       }
     };
-
+    
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user]);
-
-  return <>{children}</>;
+  }, [auth.user, auth.refreshUser]);
+  
+  // Handle extend session action
+  const handleExtendSession = async () => {
+    console.log('[SessionKeeper] Manually extending session');
+    try {
+      await auth.refreshUser();
+      setShowWarning(false);
+      
+      toast({
+        title: 'Session Extended',
+        description: 'Your session has been refreshed successfully.',
+      });
+      
+      // Reset warning timeout
+      if (warningTimeoutRef.current) {
+        clearTimeout(warningTimeoutRef.current);
+        warningTimeoutRef.current = null;
+      }
+    } catch (error) {
+      console.error('[SessionKeeper] Failed to extend session', error);
+      
+      toast({
+        title: 'Session Expired',
+        description: 'Your session has expired. Please log in again.',
+        variant: 'destructive',
+      });
+      
+      auth.logout();
+    }
+  };
+  
+  // Handle logout action from session warning
+  const handleLogout = () => {
+    auth.logout();
+    setShowWarning(false);
+  };
+  
+  return (
+    <>
+      {showWarning && (
+        <SessionWarning 
+          timeRemaining={timeRemaining} 
+          onExtend={handleExtendSession} 
+          onLogout={handleLogout} 
+        />
+      )}
+    </>
+  );
 }

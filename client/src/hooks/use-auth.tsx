@@ -15,6 +15,8 @@ type AuthContextType = {
   error: Error | null;
   loginMutation: ReturnType<typeof useLoginMutation>;
   logoutMutation: ReturnType<typeof useLogoutMutation>;
+  refreshUser: () => Promise<User | null>;
+  logout: () => void;
 };
 
 function useLoginMutation() {
@@ -228,6 +230,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
+  
+  // Function to manually refresh the user session
+  const refreshUser = async (): Promise<User | null> => {
+    try {
+      console.log('[Auth] Manually refreshing user session');
+      const result = await refetch();
+      return result.data ?? null;
+    } catch (error) {
+      console.error('[Auth] Error refreshing user session:', error);
+      return null;
+    }
+  };
+  
+  // Shorthand for logout functionality
+  const logout = () => {
+    console.log('[Auth] Initiating logout');
+    logoutMutation.mutate();
+  };
 
   return (
     <AuthContext.Provider
@@ -237,6 +257,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: error instanceof Error ? error : null,
         loginMutation,
         logoutMutation,
+        refreshUser,
+        logout,
       }}
     >
       {children}
