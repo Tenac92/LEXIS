@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
@@ -135,7 +135,7 @@ function useLogoutMutation() {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { data: user, error, isLoading } = useQuery<User | null>({
+  const { data: user, error, isLoading, refetch } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
       try {
@@ -150,30 +150,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const responseData = await response.json();
         console.log('ME endpoint response:', responseData);
         
+        // If not authenticated according to the response
+        if (responseData && responseData.authenticated === false) {
+          return null;
+        }
+        
         // Check if response is wrapped in an object with 'user' property (new format)
         // or if it's the direct user object (old format)
         const userData = responseData.user || responseData;
         
-        // Ensure consistent format for user data
-        const user: User = {
-          id: userData.id,
-          name: userData.name || "Guest User",
-          email: userData.email,
-          role: userData.role as 'admin' | 'user',
-          units: userData.units || [],
-          department: userData.department || undefined,
-          telephone: userData.telephone || undefined
-        };
+        // If we have a valid user object with required fields
+        if (userData && userData.id) {
+          // Ensure consistent format for user data
+          const user: User = {
+            id: userData.id,
+            name: userData.name || "Guest User",
+            email: userData.email,
+            role: userData.role as 'admin' | 'user',
+            units: userData.units || [],
+            department: userData.department || undefined,
+            telephone: userData.telephone || undefined
+          };
+          
+          return user;
+        }
         
-        return user;
+        return null;
       } catch (error) {
         console.error('Error fetching user:', error);
         return null;
       }
     },
     retry: false,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true, // Now will refresh when window gets focus
+    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes (300,000ms)
+    staleTime: 60 * 1000, // Consider data stale after 1 minute
   });
+
+  // Effect to refresh session when user interacts with the page
+  useEffect(() => {
+    let inactivityTimer: number | undefined;
+    let lastActivity = Date.now();
+    
+    const resetTimer = () => {
+      lastActivity = Date.now();
+      clearTimeout(inactivityTimer);
+      
+      // If it's been more than 1 minute since last session check
+      if (Date.now() - lastActivity > 60000) {
+        refetch();
+      }
+      
+      // Set a new timer for 5 minutes
+      inactivityTimer = window.setTimeout(() => {
+        // After 5 minutes of inactivity, check session
+        refetch();
+      }, 5 * 60 * 1000);
+    };
+    
+    // Add event listeners for user activity
+    const activityEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetTimer);
+    });
+    
+    // Set initial timer
+    resetTimer();
+    
+    // Cleanup
+    return () => {
+      clearTimeout(inactivityTimer);
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [refetch]);
 
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();

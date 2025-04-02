@@ -18,6 +18,8 @@ import BulkUpdatePage from "@/pages/projects/bulk-update";
 import TemplatesPage from "@/pages/templates";
 import { ProtectedRoute } from "./lib/protected-route";
 import { PageTransition } from "@/components/ui/page-transition";
+import { SessionKeeper } from "@/components/auth/SessionKeeper";
+import { SessionWarning } from "@/components/auth/SessionWarning";
 
 function Router() {
   return (
@@ -45,8 +47,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router />
-        <Toaster />
+        <SessionKeeper>
+          <Router />
+          <SessionWarning />
+          <Toaster />
+        </SessionKeeper>
       </AuthProvider>
     </QueryClientProvider>
   );
