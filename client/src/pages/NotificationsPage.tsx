@@ -104,20 +104,41 @@ export const NotificationsPage = () => {
     });
   };
 
-  // Effect for final redirect after exceeding max attempts
+  // Double-check that the user is actually not an admin to avoid false redirects
+  const isUserAdmin = user?.role?.toLowerCase() === 'admin';
+  
+  // Effect for final redirect after exceeding max attempts - with additional safety checks
   useEffect(() => {
-    if (user?.role !== 'admin' && roleCheckAttempts >= 3) {
+    // Logging for extra visibility during debugging
+    console.log('[NotificationsPage] Role check advanced state:', {
+      userRole: user?.role,
+      lowercaseRole: user?.role?.toLowerCase(),
+      isAdmin: isUserAdmin,
+      attempts: roleCheckAttempts,
+      hasUser: !!user,
+      showingAccessDenied: showAccessDenied
+    });
+    
+    // Only redirect if it's absolutely certain the user is not an admin
+    if (!isUserAdmin && roleCheckAttempts >= 3 && !showAccessDenied) {
       console.log('[NotificationsPage] Redirecting to home after exhausting all checks');
       setShowAccessDenied(true);
       
       // Delay the redirect slightly to show the access denied message
       const timeoutId = setTimeout(() => {
-        setLocation('/');
+        // Final safety check before redirect
+        if (!isUserAdmin) {
+          console.log('[NotificationsPage] Confirmed non-admin status, redirecting...');
+          setLocation('/');
+        } else {
+          console.log('[NotificationsPage] Found admin status, canceling redirect');
+          setShowAccessDenied(false);
+        }
       }, 2000);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [user?.role, roleCheckAttempts, setLocation]);
+  }, [user?.role, isUserAdmin, roleCheckAttempts, showAccessDenied, setLocation]);
   
   // Main effect to check user role and authentication
   useEffect(() => {
@@ -125,7 +146,7 @@ export const NotificationsPage = () => {
       user,
       userLoading,
       role: user?.role,
-      isAdmin: user?.role === 'admin',
+      isAdmin: isUserAdmin,
       attempts: roleCheckAttempts
     });
     
@@ -133,7 +154,7 @@ export const NotificationsPage = () => {
       if (!user) {
         console.log('[NotificationsPage] No user found, redirecting to auth');
         setLocation('/auth');
-      } else if (user.role !== 'admin') {
+      } else if (!isUserAdmin) {
         // If not admin and we haven't tried too many times, try refreshing user data
         if (roleCheckAttempts < 3 && !isConfirmingRole) {
           console.log('[NotificationsPage] Non-admin detected, attempting refresh:', user.role);
@@ -155,7 +176,20 @@ export const NotificationsPage = () => {
               
               if (roleCheckAttempts >= 2) {
                 setShowAccessDenied(true);
-                setTimeout(() => { setLocation('/'); }, 2000);
+                
+                // Final safety check before setting up the redirect
+                setTimeout(() => {
+                  // Get the latest user data directly from the query cache
+                  const cachedUser = queryClient.getQueryData<User>(['/api/auth/me']);
+                  const isCachedUserAdmin = cachedUser?.role?.toLowerCase() === 'admin';
+                  
+                  if (!isCachedUserAdmin) {
+                    setLocation('/');
+                  } else {
+                    console.log('[NotificationsPage] Found admin in cache, canceling redirect');
+                    setShowAccessDenied(false);
+                  }
+                }, 2000);
               }
             } else {
               console.log('[NotificationsPage] Admin access confirmed after refresh');
@@ -166,16 +200,16 @@ export const NotificationsPage = () => {
           
           return () => clearTimeout(timeoutId);
         }
-      } else if (user.role === 'admin') {
+      } else if (isUserAdmin) {
         console.log('[NotificationsPage] Admin access confirmed directly');
       }
     }
-  }, [user, userLoading, roleCheckAttempts, isConfirmingRole, setLocation, toast, queryClient]);
+  }, [user, userLoading, isUserAdmin, roleCheckAttempts, isConfirmingRole, setLocation, toast, queryClient]);
 
   // Effect for handling the final check of admin status
   useEffect(() => {
     // Only run this effect when needsFinalCheck is true
-    if (needsFinalCheck && user?.role !== 'admin' && roleCheckAttempts < 3) {
+    if (needsFinalCheck && !isUserAdmin && roleCheckAttempts < 3) {
       console.log('[NotificationsPage] Secondary role check failed, attempting final refresh:', user?.role);
       
       // Increment the attempt counter
@@ -191,7 +225,20 @@ export const NotificationsPage = () => {
           
           if (roleCheckAttempts >= 2) {
             setShowAccessDenied(true);
-            setTimeout(() => { setLocation('/'); }, 2000);
+            
+            // Final safety check before setting up the redirect
+            setTimeout(() => {
+              // Get the latest user data directly from the query cache
+              const cachedUser = queryClient.getQueryData<User>(['/api/auth/me']);
+              const isCachedUserAdmin = cachedUser?.role?.toLowerCase() === 'admin';
+              
+              if (!isCachedUserAdmin) {
+                setLocation('/');
+              } else {
+                console.log('[NotificationsPage] Found admin in cache, canceling redirect');
+                setShowAccessDenied(false);
+              }
+            }, 2000);
           }
         } else {
           console.log('[NotificationsPage] Admin status confirmed after final refresh');
@@ -200,16 +247,16 @@ export const NotificationsPage = () => {
         }
       });
     }
-  }, [needsFinalCheck, user, roleCheckAttempts, refreshUserData, setLocation, queryClient]);
+  }, [needsFinalCheck, isUserAdmin, roleCheckAttempts, refreshUserData, setLocation, queryClient]);
   
   // Effect to trigger final check when needed
   useEffect(() => {
     // If user exists but is not admin, and we haven't tried too many times yet
-    if (user && user.role !== 'admin' && roleCheckAttempts < 3 && !needsFinalCheck && !isConfirmingRole) {
+    if (user && !isUserAdmin && roleCheckAttempts < 3 && !needsFinalCheck && !isConfirmingRole) {
       console.log('[NotificationsPage] Setting up final admin check via effect');
       setNeedsFinalCheck(true);
     }
-  }, [user, roleCheckAttempts, needsFinalCheck, isConfirmingRole]);
+  }, [user, isUserAdmin, roleCheckAttempts, needsFinalCheck, isConfirmingRole]);
 
   // Loading state
   if (userLoading) {
@@ -283,7 +330,7 @@ export const NotificationsPage = () => {
   }
   
   // Verifying admin role state
-  if (user?.role !== 'admin' && roleCheckAttempts < 3) {
+  if (!isUserAdmin && roleCheckAttempts < 3) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
