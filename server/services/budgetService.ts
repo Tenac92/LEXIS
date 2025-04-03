@@ -58,6 +58,8 @@ export interface BudgetResponse {
     // Quarter tracking
     last_quarter_check?: string;
     current_quarter?: string;
+    // JSON sum field for metadata
+    sum?: any;
   };
   message?: string;
   error?: string;
@@ -574,6 +576,10 @@ export class BudgetService {
       const yearlyAvailable = Math.max(0, ethsiaPistosiNum - userViewNum);
       
       // Return with budget indicators
+      // Check if the sum column exists and handle it
+      const hasSum = budgetData && 'sum' in budgetData && budgetData.sum !== null;
+      const sumData = hasSum ? budgetData.sum : null;
+      
       return {
         status: 'success',
         data: {
@@ -590,7 +596,9 @@ export class BudgetService {
           // Add new budget indicators
           available_budget: availableBudget.toString(),
           quarter_available: currentQuarterAvailable.toString(), 
-          yearly_available: yearlyAvailable.toString()
+          yearly_available: yearlyAvailable.toString(),
+          // Include sum data if available
+          sum: sumData
         }
       };
     } catch (error) {
@@ -1101,6 +1109,27 @@ export class BudgetService {
         updatePayload.quarter_view = null;
       }
       
+      // Check for 'sum' column and update it if it exists
+      const hasSum = budgetData && 'sum' in budgetData;
+      if (hasSum) {
+        // Create a new sum object or update the existing one
+        const currentSum = budgetData.sum || {};
+        const updatedSum = {
+          ...currentSum,
+          user_view: newUserView,
+          updated_at: new Date().toISOString(),
+          ethsia_pistosi: newEthsiaPistosi,
+          current_quarter: quarterKey,
+          available_budget: availableBudget,
+          quarter_available: currentQuarterAvailable,
+          yearly_available: yearlyAvailable
+        };
+        
+        // Add sum to update payload
+        updatePayload.sum = updatedSum;
+        console.log(`[BudgetService] Including sum data in update:`, JSON.stringify(updatedSum, null, 2));
+      }
+      
       // Update budget amounts
       console.log(`[BudgetService] Updating budget_na853_split with payload:`, JSON.stringify(updatePayload, null, 2));
       const { error: updateError } = await supabase
@@ -1159,24 +1188,32 @@ export class BudgetService {
         console.log('[BudgetService] Budget history entry created successfully with ID:', historyData?.[0]?.id);
       }
 
+      // Build response object
+      const responseData: any = {
+        user_view: newUserView.toString(),
+        ethsia_pistosi: newEthsiaPistosi.toString(),
+        q1: newQ1.toString(),
+        q2: newQ2.toString(),
+        q3: newQ3.toString(),
+        q4: newQ4.toString(),
+        total_spent: newTotalSpent.toString(),
+        current_budget: newUserView.toString(),
+        last_quarter_check: `q${currentQuarterNumber}`,
+        current_quarter: quarterKey,
+        // Add new budget indicators
+        available_budget: availableBudget.toString(),
+        quarter_available: currentQuarterAvailable.toString(), 
+        yearly_available: yearlyAvailable.toString()
+      };
+      
+      // Include sum if it exists in the database record
+      if (hasSum) {
+        responseData.sum = updatePayload.sum;
+      }
+      
       return {
         status: 'success',
-        data: {
-          user_view: newUserView.toString(),
-          ethsia_pistosi: newEthsiaPistosi.toString(),
-          q1: newQ1.toString(),
-          q2: newQ2.toString(),
-          q3: newQ3.toString(),
-          q4: newQ4.toString(),
-          total_spent: newTotalSpent.toString(),
-          current_budget: newUserView.toString(),
-          last_quarter_check: `q${currentQuarterNumber}`,
-          current_quarter: quarterKey,
-          // Add new budget indicators
-          available_budget: availableBudget.toString(),
-          quarter_available: currentQuarterAvailable.toString(), 
-          yearly_available: yearlyAvailable.toString()
-        }
+        data: responseData
       };
     } catch (error) {
       console.error('[BudgetService] Budget update error:', error);
