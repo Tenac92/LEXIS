@@ -65,7 +65,7 @@ export const projectCatalog = pgTable("project_catalog", {
  */
 export const projects = pgTable("Projects", {
   id: serial("id").primaryKey(),
-  mis: text("mis").notNull().unique(),
+  mis: integer("mis").notNull().unique(),
   title: text("title").notNull(),
   budget_na853: text("budget_na853"),
   budget_na271: text("budget_na271"),
@@ -96,6 +96,8 @@ export const budgetNA853Split = pgTable("budget_na853_split", {
   proip: decimal("proip", { precision: 12, scale: 2 }).default("0"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at"),
+  sum: jsonb("sum"),
+  last_quarter_check: text("last_quarter_check"),
 });
 
 /**
@@ -267,7 +269,7 @@ export const insertBudgetNotificationSchema = createInsertSchema(budgetNotificat
 
 // Budget validation schema for validating budget changes
 export const budgetValidationSchema = z.object({
-  mis: z.string().min(1, 'Κωδικός MIS απαιτείται'),
+  mis: z.union([z.string().min(1, 'Κωδικός MIS απαιτείται'), z.number().int()]),
   amount: z.number().positive('Το ποσό πρέπει να είναι θετικός αριθμός'),
   note: z.string().optional(),
 });
