@@ -209,7 +209,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fathername: String(r.fathername || '').trim(),
           afm: String(r.afm).trim(),
           amount: parseFloat(String(r.amount)),
-          installment: String(r.installment).trim()
+          installments: Array.isArray(r.installments) ? r.installments : [String(r.installment || 'ΕΦΑΠΑΞ').trim()],
+          installmentAmounts: r.installmentAmounts || {}
         }));
         
         const now = new Date().toISOString();

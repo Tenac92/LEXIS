@@ -75,7 +75,9 @@ interface DocumentData {
     fathername: string;
     afm: string;
     amount: number;
-    installment: number;
+    installment: number | string;
+    installments?: string[];
+    installmentAmounts?: Record<string, number>;
   }>;
 }
 
@@ -603,7 +605,13 @@ export class DocumentFormatter {
                 }),
                 "center",
               ),
-              this.createTableCell(recipient.installment.toString(), "center"),
+              this.createTableCell(
+                // Support both old and new format for backward compatibility
+                Array.isArray(recipient.installments) 
+                  ? recipient.installments.join(', ')
+                  : recipient.installment?.toString() || "ΕΦΑΠΑΞ", 
+                "center"
+              ),
               this.createTableCell(recipient.afm, "center"),
             ],
           }),
@@ -1081,7 +1089,9 @@ export class DocumentFormatter {
       fathername?: string;
       afm: string;
       amount: number;
-      installment: number;
+      installment: number | string;
+      installments?: string[];
+      installmentAmounts?: Record<string, number>;
     }>;
     total_amount: number;
     id?: number; // Optional ID that might be passed

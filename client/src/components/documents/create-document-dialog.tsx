@@ -24,8 +24,8 @@ import { useAuth } from "@/hooks/use-auth";
 
 // Constants
 const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
-const DKA_INSTALLMENTS = ['ΕΦΑΠΑΞ', 'Α', 'Β', 'Γ', 'Δ'];
-const ALL_INSTALLMENTS = ['ΕΦΑΠΑΞ', 'Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
+const DKA_INSTALLMENTS = ['ΕΦΑΠΑΞ', 'Α', 'Β', 'Γ'];
+const ALL_INSTALLMENTS = ['ΕΦΑΠΑΞ', 'Α', 'Β', 'Γ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
 
 // Project selection component
 interface Project {
@@ -686,10 +686,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     };
     
     return (
-      <div className="space-y-4 w-full">
-        <div>
-          <label className="block text-sm font-medium mb-2">Δόσεις</label>
-          <div className="flex flex-wrap gap-2">
+      <div className="w-full">
+        <div className="mb-2">
+          <label className="inline-block text-sm font-medium mr-2">Δόσεις:</label>
+          <div className="inline-flex flex-wrap gap-1">
             {availableInstallments.map((installment) => (
               <Button
                 key={installment}
@@ -697,7 +697,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                 variant={selectedInstallments.includes(installment) ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleInstallmentToggle(installment)}
-                className="min-w-[40px]"
+                className="h-7 px-2 min-w-[32px]"
               >
                 {installment}
               </Button>
@@ -706,11 +706,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         </div>
         
         {selectedInstallments.length > 0 && (
-          <div className="space-y-3 pt-3 border-t">
-            <div className="space-y-3">
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-1.5">
               {selectedInstallments.map(installment => (
-                <div key={installment} className="flex items-center gap-3">
-                  <div className="font-medium text-sm bg-muted px-2 py-1 rounded min-w-[80px] text-center">
+                <div key={installment} className="flex items-center gap-1.5">
+                  <div className="font-medium text-xs bg-muted px-2 py-1 rounded min-w-[60px] text-center">
                     {installment}
                   </div>
                   <div className="relative flex-1">
@@ -720,15 +720,15 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                       min="0"
                       value={installmentAmounts[installment] || 0}
                       onChange={(e) => handleInstallmentAmountChange(installment, parseFloat(e.target.value) || 0)}
-                      className="pr-6 w-full"
-                      placeholder="Ποσό δόσης"
+                      className="pr-5 h-8 text-sm"
+                      placeholder="Ποσό"
                     />
-                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">€</span>
+                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">€</span>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="text-sm font-medium flex justify-between pt-2 border-t">
+            <div className="text-xs font-medium flex justify-between pt-1.5 border-t">
               <span>Συνολικό ποσό:</span>
               <span className="text-primary">{Object.values(installmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
             </div>
@@ -1301,6 +1301,19 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (hasInvalidSequence) {
         throw new Error("Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)");
       }
+      
+      // Validate that all installments have amounts entered
+      const missingInstallmentAmounts = data.recipients.some(recipient => {
+        return recipient.installments.some(installment => {
+          return !recipient.installmentAmounts || 
+                 typeof recipient.installmentAmounts[installment] !== 'number' || 
+                 recipient.installmentAmounts[installment] <= 0;
+        });
+      });
+      
+      if (missingInstallmentAmounts) {
+        throw new Error("Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο από 0");
+      }
 
       setLoading(true);
 
@@ -1708,7 +1721,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             return r.installments.some(installment => {
               return !r.installmentAmounts || 
                      !(installment in r.installmentAmounts) || 
-                     typeof r.installmentAmounts[installment] !== 'number';
+                     typeof r.installmentAmounts[installment] !== 'number' ||
+                     r.installmentAmounts[installment] <= 0;
             });
           });
           
