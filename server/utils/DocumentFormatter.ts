@@ -609,50 +609,129 @@ export class DocumentFormatter {
       // Get installment amounts if available
       const installmentAmounts = recipient.installmentAmounts || {};
       
-      // For first row, add recipient with first installment
-      const firstInstallment = installments[0];
-      const firstInstallmentAmount = installmentAmounts[firstInstallment] || recipient.amount;
-      
-      rows.push(
-        new TableRow({
-          height: { value: 360, rule: HeightRule.EXACT },
+      // If there's only one installment, create a simple row
+      if (installments.length === 1) {
+        const installment = installments[0];
+        const amount = installmentAmounts[installment] || recipient.amount;
+        
+        rows.push(
+          new TableRow({
+            height: { value: 360, rule: HeightRule.EXACT },
+            children: [
+              this.createTableCell(rowNumber, "center"),
+              this.createTableCell(fullName, "center"),
+              this.createTableCell(
+                amount.toLocaleString("el-GR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }),
+                "center"
+              ),
+              this.createTableCell(installment, "center"),
+              this.createTableCell(afm, "center"),
+            ],
+          })
+        );
+      } 
+      // If there are multiple installments, create a row with rowSpan for name/AFM
+      // and separate rows for each installment
+      else if (installments.length > 1) {
+        const rowSpan = installments.length;
+        const rowHeight = 360; // Base height for one row
+        
+        // Calculate heights to vertically center the name and AFM
+        const totalHeight = rowHeight * rowSpan;
+        
+        // Create cells for the first row with rowSpan
+        const nameCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
           children: [
-            this.createTableCell(rowNumber, "center"),
-            this.createTableCell(fullName, "center"),
-            this.createTableCell(
-              firstInstallmentAmount.toLocaleString("el-GR", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              }),
-              "center"
-            ),
-            this.createTableCell(firstInstallment, "center"),
-            this.createTableCell(afm, "center"),
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({ 
+                  text: fullName,
+                  size: this.DEFAULT_FONT_SIZE
+                }),
+              ],
+            }),
           ],
-        })
-      );
-      
-      // For additional installments, create rows with empty cells for name, index and afm
-      if (installments.length > 1) {
+        });
+        
+        const indexCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({ 
+                  text: rowNumber,
+                  size: this.DEFAULT_FONT_SIZE
+                }),
+              ],
+            }),
+          ],
+        });
+        
+        const afmCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({ 
+                  text: afm,
+                  size: this.DEFAULT_FONT_SIZE
+                }),
+              ],
+            }),
+          ],
+        });
+        
+        // Add the first row with installment details
+        const firstInstallment = installments[0];
+        const firstAmount = installmentAmounts[firstInstallment] || 0;
+        
+        rows.push(
+          new TableRow({
+            height: { value: rowHeight, rule: HeightRule.EXACT },
+            children: [
+              indexCell,
+              nameCell,
+              this.createTableCell(
+                firstAmount.toLocaleString("el-GR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }),
+                "center"
+              ),
+              this.createTableCell(firstInstallment, "center"),
+              afmCell,
+            ],
+          })
+        );
+        
+        // Add subsequent rows for remaining installments
         for (let i = 1; i < installments.length; i++) {
           const installment = installments[i];
-          const installmentAmount = installmentAmounts[installment] || 0;
+          const amount = installmentAmounts[installment] || 0;
           
           rows.push(
             new TableRow({
-              height: { value: 360, rule: HeightRule.EXACT },
+              height: { value: rowHeight, rule: HeightRule.EXACT },
               children: [
-                this.createTableCell("", "center"), // Empty cell for index
-                this.createTableCell("", "center"), // Empty cell for name
+                // These cells will be empty due to rowSpan in the first row
                 this.createTableCell(
-                  installmentAmount.toLocaleString("el-GR", {
+                  amount.toLocaleString("el-GR", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   }),
                   "center"
                 ),
                 this.createTableCell(installment, "center"),
-                this.createTableCell("", "center"), // Empty cell for AFM
               ],
             })
           );
