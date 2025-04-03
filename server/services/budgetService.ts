@@ -146,11 +146,71 @@ export class BudgetService {
         };
       }
 
+      // Ensure MIS is a number (handle potential issues with string representation)
+      let misNumber: number;
+      try {
+        misNumber = parseInt(mis);
+        if (isNaN(misNumber)) {
+          return {
+            status: 'error',
+            mis,
+            isReallocation: false,
+            changeType: 'no_change',
+            beforeUpdate: null,
+            afterUpdate: {
+              available_budget: 0,
+              quarter_available: 0,
+              yearly_available: 0,
+              katanomes_etous: 0,
+              ethsia_pistosi: 0,
+              user_view: 0,
+              current_quarter: 0
+            },
+            changes: {
+              available_budget_diff: 0,
+              quarter_available_diff: 0,
+              yearly_available_diff: 0,
+              katanomes_etous_diff: 0,
+              ethsia_pistosi_diff: 0,
+            },
+            error: 'Invalid MIS format: must be a numeric value'
+          };
+        }
+      } catch (parseError) {
+        console.error(`[BudgetService] Error parsing MIS number ${mis}:`, parseError);
+        return {
+          status: 'error',
+          mis,
+          isReallocation: false,
+          changeType: 'no_change',
+          beforeUpdate: null,
+          afterUpdate: {
+            available_budget: 0,
+            quarter_available: 0,
+            yearly_available: 0,
+            katanomes_etous: 0,
+            ethsia_pistosi: 0,
+            user_view: 0,
+            current_quarter: 0
+          },
+          changes: {
+            available_budget_diff: 0,
+            quarter_available_diff: 0,
+            yearly_available_diff: 0,
+            katanomes_etous_diff: 0,
+            ethsia_pistosi_diff: 0,
+          },
+          error: 'Invalid MIS format: must be a numeric value'
+        };
+      }
+
+      console.log(`[BudgetService] Analyzing changes for MIS ${misNumber}`);
+
       // Get current budget data with sum column
       const { data: budgetData, error: budgetError } = await supabase
         .from('budget_na853_split')
         .select('*, sum')
-        .eq('mis', mis)
+        .eq('mis', misNumber.toString())
         .single();
 
       if (budgetError || !budgetData) {
@@ -273,7 +333,7 @@ export class BudgetService {
         isReallocation = true;
         
         // If this is a reallocation, try to resolve any pending reallocation notifications
-        await this.resolveReallocationNotifications(mis, katanomesEtousDiff);
+        await this.resolveReallocationNotifications(misNumber.toString(), katanomesEtousDiff);
       }
 
       return {
@@ -346,11 +406,31 @@ export class BudgetService {
         };
       }
 
+      // Ensure MIS is a number (handle potential issues with string representation)
+      let misNumber: number;
+      try {
+        misNumber = parseInt(mis);
+        if (isNaN(misNumber)) {
+          return {
+            status: 'error',
+            message: 'Invalid MIS format: must be a numeric value'
+          };
+        }
+      } catch (parseError) {
+        console.error(`[BudgetService] Error parsing MIS number ${mis}:`, parseError);
+        return {
+          status: 'error',
+          message: 'Invalid MIS format: must be a numeric value'
+        };
+      }
+
+      console.log(`[BudgetService] Fetching budget data for MIS ${misNumber}`);
+
       // Get budget data directly using MIS
       const { data: budgetData, error: budgetError } = await supabase
         .from('budget_na853_split')
         .select('*')
-        .eq('mis', mis)
+        .eq('mis', misNumber.toString())
         .single();
 
       if (budgetError) {
@@ -470,7 +550,7 @@ export class BudgetService {
         const { error: updateError } = await supabase
           .from('budget_na853_split')
           .update(updatePayload)
-          .eq('mis', mis);
+          .eq('mis', misNumber.toString());
           
         if (updateError) {
           console.error(`[BudgetService] Error updating budget data:`, updateError);
@@ -573,13 +653,34 @@ export class BudgetService {
         };
       }
 
-      console.log(`[BudgetService] Validating budget for MIS: ${mis}, amount: ${amount}`);
+      // Ensure MIS is a number (handle potential issues with string representation)
+      let misNumber: number;
+      try {
+        misNumber = parseInt(mis);
+        if (isNaN(misNumber)) {
+          console.log(`[BudgetService] Invalid MIS format: ${mis}`);
+          return {
+            status: 'error',
+            canCreate: false,
+            message: 'Μη έγκυρη μορφή MIS: πρέπει να είναι αριθμητική τιμή'
+          };
+        }
+      } catch (parseError) {
+        console.error(`[BudgetService] Error parsing MIS number ${mis}:`, parseError);
+        return {
+          status: 'error',
+          canCreate: false,
+          message: 'Μη έγκυρη μορφή MIS: πρέπει να είναι αριθμητική τιμή'
+        };
+      }
+
+      console.log(`[BudgetService] Validating budget for MIS: ${misNumber}, amount: ${amount}`);
 
       // Try to get current budget data
       let { data: budgetData, error } = await supabase
         .from('budget_na853_split')
         .select('user_view, ethsia_pistosi, katanomes_etous, q1, q2, q3, q4')
-        .eq('mis', mis)
+        .eq('mis', misNumber.toString())
         .single();
 
       // If not found directly, try to get project data to find the correct MIS
@@ -775,13 +876,31 @@ export class BudgetService {
         };
       }
 
-      console.log(`[BudgetService] Updating budget for MIS: ${mis}, amount: ${amount}, userId: ${userId}, documentId: ${documentId || 'none'}`);
+      // Ensure MIS is a number (handle potential issues with string representation)
+      let misNumber: number;
+      try {
+        misNumber = parseInt(mis);
+        if (isNaN(misNumber)) {
+          return {
+            status: 'error',
+            message: 'Invalid MIS format: must be a numeric value'
+          };
+        }
+      } catch (parseError) {
+        console.error(`[BudgetService] Error parsing MIS number ${mis}:`, parseError);
+        return {
+          status: 'error',
+          message: 'Invalid MIS format: must be a numeric value'
+        };
+      }
+
+      console.log(`[BudgetService] Updating budget for MIS: ${misNumber}, amount: ${amount}, userId: ${userId}, documentId: ${documentId || 'none'}`);
 
       // Try to get current budget data
       let { data: budgetData, error: fetchError } = await supabase
         .from('budget_na853_split')
         .select('*')
-        .eq('mis', mis)
+        .eq('mis', misNumber.toString())
         .single();
 
       // If not found, try to get project data to find the correct MIS
@@ -991,7 +1110,7 @@ export class BudgetService {
       const { error: updateError } = await supabase
         .from('budget_na853_split')
         .update(updatePayload)
-        .eq('mis', mis);
+        .eq('mis', misNumber.toString());
 
       if (updateError) {
         throw updateError;
@@ -1007,7 +1126,7 @@ export class BudgetService {
       
       // Update history message to show budget is being used, not reduced (since we're adding to user_view)
       const historyEntry = {
-        mis,
+        mis: misNumber.toString(),
         previous_amount: currentUserView.toString(),
         new_amount: newUserView.toString(),
         change_type: documentId ? 'document_creation' : 'manual_adjustment',
@@ -1068,10 +1187,21 @@ export class BudgetService {
       
       // Even on error, try to log the attempted operation
       try {
+        // Make a safe version of MIS number
+        let safeNumber: number;
+        try {
+          safeNumber = parseInt(mis);
+          if (isNaN(safeNumber)) {
+            safeNumber = 0;
+          }
+        } catch {
+          safeNumber = 0;
+        }
+        
         await supabase
           .from('budget_history')
           .insert({
-            mis,
+            mis: safeNumber.toString(),
             previous_amount: '0',
             new_amount: '0',
             change_type: 'error',
@@ -1105,13 +1235,26 @@ export class BudgetService {
         return false;
       }
 
-      console.log(`[BudgetService] Attempting to resolve reallocation notifications for MIS: ${mis}`);
+      // Ensure MIS is a number (handle potential issues with string representation)
+      let misNumber: number;
+      try {
+        misNumber = parseInt(mis);
+        if (isNaN(misNumber)) {
+          console.error(`[BudgetService] Invalid MIS format in resolveReallocationNotifications: ${mis}`);
+          return false;
+        }
+      } catch (parseError) {
+        console.error(`[BudgetService] Error parsing MIS number ${mis}:`, parseError);
+        return false;
+      }
+
+      console.log(`[BudgetService] Attempting to resolve reallocation notifications for MIS: ${misNumber}`);
       
       // Find pending reallocation notifications for this MIS
       const { data: notifications, error } = await supabase
         .from('budget_notifications')
         .select('*')
-        .eq('mis', mis)
+        .eq('mis', misNumber.toString())
         .eq('type', 'reallocation')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -1122,11 +1265,11 @@ export class BudgetService {
       }
       
       if (!notifications || notifications.length === 0) {
-        console.log(`[BudgetService] No pending reallocation notifications found for MIS: ${mis}`);
+        console.log(`[BudgetService] No pending reallocation notifications found for MIS: ${misNumber}`);
         return false;
       }
       
-      console.log(`[BudgetService] Found ${notifications.length} pending reallocation notification(s) for MIS: ${mis}`);
+      console.log(`[BudgetService] Found ${notifications.length} pending reallocation notification(s) for MIS: ${misNumber}`);
       
       // Mark the most recent notification as completed
       // Note: We could check if the amount matches exactly, but a more lenient approach is to
@@ -1146,7 +1289,7 @@ export class BudgetService {
         return false;
       }
       
-      console.log(`[BudgetService] Successfully resolved reallocation notification ID: ${latestNotification.id} for MIS: ${mis}`);
+      console.log(`[BudgetService] Successfully resolved reallocation notification ID: ${latestNotification.id} for MIS: ${misNumber}`);
       return true;
     } catch (error) {
       console.error('[BudgetService] Error resolving reallocation notifications:', error);

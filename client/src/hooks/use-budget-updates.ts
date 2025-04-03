@@ -54,24 +54,37 @@ export function useBudgetUpdates(
         console.log('[Budget] Fetching budget data for project:', { id: projectId });
         
         // Find the project to get its MIS
-        const project = await queryClient.fetchQuery({
+        const projectData = await queryClient.fetchQuery({
           queryKey: ["project", projectId]
         });
         
-        if (!project?.mis) {
+        // Type checking
+        const project = projectData as { mis?: string } | null | undefined;
+        
+        if (!project || !project.mis) {
+          console.error(`[Budget] Project or MIS not found for ID: ${projectId}`, project);
           throw new Error(`[Budget] Project MIS not found for ID: ${projectId}`);
         }
 
-        // Fetch budget data from API
-        const response = await fetch(`/api/budget/data/${project.mis}`);
+        // Fetch budget data from API - we need to use the numeric MIS number
+        const misNumber = parseInt(project.mis);
+        
+        if (isNaN(misNumber)) {
+          console.error('[Budget] Invalid MIS format. Expected numeric MIS:', project.mis);
+          throw new Error(`[Budget] Invalid MIS format: ${project.mis}`);
+        }
+
+        console.log(`[Budget] Fetching budget data for MIS number: ${misNumber}`);
+        const response = await fetch(`/api/budget/data/${misNumber}`);
         
         if (!response.ok) {
-          console.error('[Budget] Budget API error:', response.statusText);
-          throw new Error(`[Budget] Budget API error: ${response.statusText}`);
+          console.error('[Budget] Budget API error:', response.status, response.statusText);
+          throw new Error(`[Budget] Budget API error: ${response.status} ${response.statusText}`);
         }
         
         // Parse the response data
         const responseData = await response.json();
+        console.log('[Budget] Raw budget response:', responseData);
         
         // Extract data based on response structure
         let budgetData: Record<string, any> = {}; 
@@ -126,11 +139,14 @@ export function useBudgetUpdates(
 
       try {
         // Get the project MIS from the selected project
-        const project = await queryClient.fetchQuery({
+        const projectData = await queryClient.fetchQuery({
           queryKey: ["project", projectId]
         });
         
-        if (!project?.mis) {
+        // Type checking
+        const project = projectData as { mis?: string } | null | undefined;
+        
+        if (!project || !project.mis) {
           console.error('[Budget] Project or MIS not found', { projectId });
           return { 
             status: 'error', 
@@ -140,8 +156,19 @@ export function useBudgetUpdates(
           };
         }
 
-        // Use the project's MIS for validation
-        console.log(`[Budget] Validating budget for MIS: ${project.mis}, amount: ${currentAmount}`);
+        // Get the numeric MIS for validation
+        const misNumber = parseInt(project.mis);
+        if (isNaN(misNumber)) {
+          console.error('[Budget] Invalid MIS format for validation. Expected numeric MIS:', project.mis);
+          return { 
+            status: 'error', 
+            canCreate: false,
+            allowDocx: false,
+            message: 'Μη έγκυρη μορφή MIS για επικύρωση προϋπολογισμού.'
+          };
+        }
+        
+        console.log(`[Budget] Validating budget for MIS: ${misNumber}, amount: ${currentAmount}`);
         
         // Using fetch directly instead of apiRequest to avoid auto-redirect on 401
         const response = await fetch('/api/budget/validate', {
@@ -152,7 +179,7 @@ export function useBudgetUpdates(
           },
           credentials: 'include',
           body: JSON.stringify({
-            mis: project.mis, // Use the actual MIS, not the projectId
+            mis: misNumber.toString(), // Send the MIS as a string
             amount: currentAmount,
             sessionId: sessionId
           })
