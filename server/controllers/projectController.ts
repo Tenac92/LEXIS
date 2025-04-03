@@ -501,6 +501,100 @@ router.get('/', listProjects);
 router.get('/export', exportProjectsXLSX);
 router.get('/export/xlsx', exportProjectsXLSX);
 
+// Update a project by MIS
+router.patch('/:mis', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    const updateData = req.body;
+    
+    console.log(`[Projects] Updating project with MIS: ${mis}`, updateData);
+
+    if (!req.user) {
+      console.error(`[Projects] No authenticated user found when updating MIS: ${mis}`);
+      return res.status(401).json({ 
+        message: "Authentication required"
+      });
+    }
+
+    // First check if the project exists
+    const { data: existingProject, error: findError } = await supabase
+      .from('Projects')
+      .select('*')
+      .eq('mis', mis)
+      .single();
+
+    if (findError || !existingProject) {
+      console.error(`[Projects] Project not found for MIS ${mis}`);
+      return res.status(404).json({ 
+        message: "Project not found",
+        error: findError?.message || "Not found"
+      });
+    }
+
+    // Map fields from the SQL export to actual database fields
+    const fieldsToUpdate = {
+      // Core fields
+      title: updateData.title || existingProject.title,
+      e069: updateData.e069 || existingProject.e069,
+      na271: updateData.na271 || existingProject.na271,
+      na853: updateData.na853 || existingProject.na853,
+      event_description: updateData.event_description || existingProject.event_description,
+      project_title: updateData.project_title || existingProject.project_title,
+      event_type: updateData.event_type || existingProject.event_type,
+      event_year: updateData.event_year || existingProject.event_year,
+      region: updateData.region || existingProject.region,
+      implementing_agency: updateData.implementing_agency || existingProject.implementing_agency,
+      expenditure_type: updateData.expenditure_type || existingProject.expenditure_type,
+      
+      // Budget fields
+      budget_e069: updateData.budget_e069 || existingProject.budget_e069,
+      budget_na271: updateData.budget_na271 || existingProject.budget_na271,
+      budget_na853: updateData.budget_na853 || existingProject.budget_na853,
+      
+      // Document fields
+      kya: updateData.kya || existingProject.kya,
+      fek: updateData.fek || existingProject.fek,
+      ada: updateData.ada || existingProject.ada,
+      ada_import_sana271: updateData.ada_import_sana271 || existingProject.ada_import_sana271,
+      ada_import_sana853: updateData.ada_import_sana853 || existingProject.ada_import_sana853,
+      budget_decision: updateData.budget_decision || existingProject.budget_decision,
+      funding_decision: updateData.funding_decision || existingProject.funding_decision,
+      allocation_decision: updateData.allocation_decision || existingProject.allocation_decision,
+      
+      // Status field
+      status: updateData.status || existingProject.status,
+      
+      // Update the updated_at timestamp
+      updated_at: new Date().toISOString()
+    };
+
+    // Perform the update
+    const { data: updatedProject, error: updateError } = await supabase
+      .from('Projects')
+      .update(fieldsToUpdate)
+      .eq('mis', mis)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error(`[Projects] Error updating project for MIS ${mis}:`, updateError);
+      return res.status(500).json({ 
+        message: "Failed to update project",
+        error: updateError.message
+      });
+    }
+
+    console.log(`[Projects] Successfully updated project with MIS: ${mis}`);
+    res.json(updatedProject);
+  } catch (error) {
+    console.error(`[Projects] Error updating project:`, error);
+    return res.status(500).json({
+      message: "Failed to update project due to server error",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get a project by MIS - placed last to avoid route conflicts
 router.get('/:mis', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {

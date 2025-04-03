@@ -76,25 +76,43 @@ export default function EditProjectPage() {
 
   const isLoading = isProjectLoading || isBudgetLoading;
 
-  // Initialize the form with all possible fields
+  // Initialize the form with all possible fields from the SQL export
   const form = useForm<any>({
     resolver: zodResolver(updateProjectSchema),
     defaultValues: {
-      // Project fields
+      // Project core fields
       title: "",
       mis: "",
-      budget_na853: "",
-      budget_e069: "",
-      budget_na271: "",
-      na853: "",
-      na271: "",
       e069: "",
-      status: "active",
-      implementing_agency: [],
+      na271: "",
+      na853: "",
+      event_description: "",
+      project_title: "",
+      event_type: [],
+      event_year: [],
       region: {},
+      implementing_agency: [],
       expenditure_type: [],
       
-      // Budget fields
+      // Budget fields in Projects table
+      budget_e069: "",
+      budget_na271: "",
+      budget_na853: "",
+      
+      // Document fields
+      kya: [],
+      fek: [],
+      ada: [],
+      ada_import_sana271: [],
+      ada_import_sana853: [],
+      budget_decision: [],
+      funding_decision: [],
+      allocation_decision: [],
+      
+      // Status field
+      status: "active",
+      
+      // Budget NA853 Split fields
       ethsia_pistosi: "",
       q1: "",
       q2: "",
@@ -111,19 +129,37 @@ export default function EditProjectPage() {
     if (project) {
       // First update with project data
       form.reset({
-        // Project fields
+        // Project core fields
         title: project.title || "",
         mis: project.mis || "",
-        budget_na853: project.budget_na853 || "",
+        e069: project.e069 || "",
+        na271: project.na271 || "",
+        na853: project.na853 || "",
+        event_description: project.event_description || "",
+        project_title: project.project_title || "",
+        event_type: project.event_type || [],
+        event_year: project.event_year || [],
+        region: project.region || {},
+        implementing_agency: project.implementing_agency || [],
+        expenditure_type: project.expenditure_type || [],
+        
+        // Budget fields in Projects table
         budget_e069: project.budget_e069 || "",
         budget_na271: project.budget_na271 || "",
-        na853: project.na853 || "",
-        na271: project.na271 || "",
-        e069: project.e069 || "",
+        budget_na853: project.budget_na853 || "",
+        
+        // Document fields
+        kya: project.kya || [],
+        fek: project.fek || [],
+        ada: project.ada || [],
+        ada_import_sana271: project.ada_import_sana271 || [],
+        ada_import_sana853: project.ada_import_sana853 || [],
+        budget_decision: project.budget_decision || [],
+        funding_decision: project.funding_decision || [],
+        allocation_decision: project.allocation_decision || [],
+        
+        // Status field
         status: project.status || "active",
-        implementing_agency: project.implementing_agency || [],
-        region: project.region || {},
-        expenditure_type: project.expenditure_type || [],
         
         // Initialize budget fields (will be overwritten if budget data is available)
         ethsia_pistosi: "",
@@ -135,6 +171,8 @@ export default function EditProjectPage() {
         user_view: "",
         proip: "",
       });
+      
+      console.log("Loaded project data:", project);
     }
   }, [project, form]);
 
@@ -256,20 +294,40 @@ export default function EditProjectPage() {
   const onSubmit = (data: any) => {
     // Determine which data to update based on active tab
     if (activeTab === "project-info") {
-      // Extract project-related fields
+      // Extract project-related fields from the SQL export
       const projectData = {
+        // Core fields
         title: data.title,
-        status: data.status,
-        na853: data.na853,
-        na271: data.na271,
         e069: data.e069,
-        budget_na853: data.budget_na853,
-        budget_na271: data.budget_na271,
-        budget_e069: data.budget_e069,
-        implementing_agency: data.implementing_agency,
+        na271: data.na271,
+        na853: data.na853,
+        event_description: data.event_description,
+        project_title: data.project_title,
+        event_type: data.event_type,
+        event_year: data.event_year,
         region: data.region,
+        implementing_agency: data.implementing_agency,
         expenditure_type: data.expenditure_type,
+        
+        // Budget fields in Projects table
+        budget_e069: data.budget_e069,
+        budget_na271: data.budget_na271,
+        budget_na853: data.budget_na853,
+        
+        // Document fields
+        kya: data.kya,
+        fek: data.fek,
+        ada: data.ada,
+        ada_import_sana271: data.ada_import_sana271,
+        ada_import_sana853: data.ada_import_sana853,
+        budget_decision: data.budget_decision,
+        funding_decision: data.funding_decision,
+        allocation_decision: data.allocation_decision,
+        
+        // Status field
+        status: data.status,
       };
+      console.log('Submitting project data:', projectData);
       updateMutation.mutate(projectData);
     } else if (activeTab === "budget-info") {
       // Extract budget-related fields, excluding user_view which is read-only
@@ -283,6 +341,7 @@ export default function EditProjectPage() {
         // user_view is excluded as it's read-only
         proip: data.proip,
       };
+      console.log('Submitting budget data:', budgetData);
       updateBudgetMutation.mutate(budgetData);
     }
   };
