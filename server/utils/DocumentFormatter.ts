@@ -756,17 +756,7 @@ export class DocumentFormatter {
       }),
     );
 
-    // Create the right column with signature as an image
-    // Using a signature image instead of a bordered textbox
-    
-    // Get the path to the signature placeholder image
-    const signatureImagePath = path.join(
-      process.cwd(),
-      "server",
-      "utils",
-      "assets",
-      "signature-box.png"
-    );
+    // Create the right column with signature (text only)
     
     // First, create paragraphs for the title and role
     const titleParagraph = new Paragraph({
@@ -789,17 +779,13 @@ export class DocumentFormatter {
       ],
     });
     
-    // Create the image paragraph with the signature box
-    const signatureImageParagraph = new Paragraph({
+    // Create an empty space where signature would be
+    const signatureSpaceParagraph = new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 120, after: 120 },
+      spacing: { before: 160, after: 160 },
       children: [
-        new ImageRun({
-          data: fs.readFileSync(signatureImagePath),
-          transformation: {
-            width: 200,
-            height: 100,
-          },
+        new TextRun({
+          text: "",
         }),
       ],
     });
@@ -846,7 +832,7 @@ export class DocumentFormatter {
               children: [
                 titleParagraph,
                 roleParagraph,
-                signatureImageParagraph,
+                signatureSpaceParagraph,
                 nameParagraph,
                 degreeParagraph,
               ],
