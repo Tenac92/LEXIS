@@ -587,37 +587,80 @@ export class DocumentFormatter {
           this.createHeaderCell("ΔΟΣΗ", "auto"),
           this.createHeaderCell("ΑΦΜ", "auto"),
         ],
-      }),
-      ...recipients.map(
-        (recipient, index) =>
-          new TableRow({
-            height: { value: 360, rule: HeightRule.EXACT },
-            children: [
-              this.createTableCell((index + 1).toString() + ".", "center"),
-              this.createTableCell(
-                `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim(),
-                "center",
-              ),
-              this.createTableCell(
-                recipient.amount.toLocaleString("el-GR", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }),
-                "center",
-              ),
-              this.createTableCell(
-                // Support both old and new format for backward compatibility
-                Array.isArray(recipient.installments) 
-                  ? recipient.installments.join(', ')
-                  : recipient.installment?.toString() || "ΕΦΑΠΑΞ", 
-                "center"
-              ),
-              this.createTableCell(recipient.afm, "center"),
-            ],
-          }),
-      ),
+      })
     ];
 
+    // Process each recipient
+    recipients.forEach((recipient, index) => {
+      const fullName = `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
+      const afm = recipient.afm;
+      const rowNumber = (index + 1).toString() + ".";
+      
+      // Determine installments
+      let installments: string[] = [];
+      if (Array.isArray(recipient.installments) && recipient.installments.length > 0) {
+        installments = recipient.installments;
+      } else if (recipient.installment) {
+        installments = [recipient.installment.toString()];
+      } else {
+        installments = ["ΕΦΑΠΑΞ"];
+      }
+      
+      // Get installment amounts if available
+      const installmentAmounts = recipient.installmentAmounts || {};
+      
+      // For first row, add recipient with first installment
+      const firstInstallment = installments[0];
+      const firstInstallmentAmount = installmentAmounts[firstInstallment] || recipient.amount;
+      
+      rows.push(
+        new TableRow({
+          height: { value: 360, rule: HeightRule.EXACT },
+          children: [
+            this.createTableCell(rowNumber, "center"),
+            this.createTableCell(fullName, "center"),
+            this.createTableCell(
+              firstInstallmentAmount.toLocaleString("el-GR", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }),
+              "center"
+            ),
+            this.createTableCell(firstInstallment, "center"),
+            this.createTableCell(afm, "center"),
+          ],
+        })
+      );
+      
+      // For additional installments, create rows with empty cells for name, index and afm
+      if (installments.length > 1) {
+        for (let i = 1; i < installments.length; i++) {
+          const installment = installments[i];
+          const installmentAmount = installmentAmounts[installment] || 0;
+          
+          rows.push(
+            new TableRow({
+              height: { value: 360, rule: HeightRule.EXACT },
+              children: [
+                this.createTableCell("", "center"), // Empty cell for index
+                this.createTableCell("", "center"), // Empty cell for name
+                this.createTableCell(
+                  installmentAmount.toLocaleString("el-GR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }),
+                  "center"
+                ),
+                this.createTableCell(installment, "center"),
+                this.createTableCell("", "center"), // Empty cell for AFM
+              ],
+            })
+          );
+        }
+      }
+    });
+
+    // Calculate total amount
     const totalAmount = recipients.reduce(
       (sum, recipient) => sum + recipient.amount,
       0,
