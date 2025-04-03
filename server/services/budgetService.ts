@@ -377,30 +377,32 @@ export class BudgetService {
         };
       }
 
-      // Check if the MIS is purely numeric or has a project code format
-      let misToSearch = mis;
-      let tryNumericMis = false;
+      let misToSearch: string | number = mis;
+      let numericalMis: number | null = null;
 
       console.log(`[BudgetService] Handling MIS: ${mis}, type: ${typeof mis}, length: ${mis.length}`);
       
       // Check if the MIS might be a project ID with a code pattern (e.g., "2024ΝΑ85300001")
-      // Improved regex to handle Greek characters and more varied patterns
       const projectCodeRegex = /^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/;
       const isProjectCodeFormat = projectCodeRegex.test(mis);
       
-      console.log(`[BudgetService] MIS matches project code format: ${isProjectCodeFormat}`);
+      // Determine if it's a numeric string that can be parsed to an integer
+      const isNumericString = !isNaN(parseInt(mis)) && !isProjectCodeFormat;
       
+      console.log(`[BudgetService] MIS analysis: isProjectCode=${isProjectCodeFormat}, isNumeric=${isNumericString}`);
+      
+      // CASE 1: Project code format like "2024ΝΑ85300001"
       if (isProjectCodeFormat) {
-        console.log(`[BudgetService] MIS appears to be a project code pattern: ${mis}`);
+        console.log(`[BudgetService] MIS is a project code/ID pattern: ${mis}`);
         
-        // If it matches a project code pattern, try to get its numeric MIS from Projects table
+        // Try to find the project by its ID field (which may be the na853 code)
         try {
-          console.log(`[BudgetService] Looking up project by ID in Supabase: ${mis}`);
+          console.log(`[BudgetService] Looking up project by ID/code in Supabase: ${mis}`);
           
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
-            .select('mis')
-            .eq('id', mis)
+            .select('id, mis, na853')
+            .or(`id.eq.${mis},na853.eq.${mis}`)
             .single();
             
           if (projectError) {
@@ -408,22 +410,29 @@ export class BudgetService {
           }
             
           if (projectData?.mis) {
-            console.log(`[BudgetService] Found numeric MIS ${projectData.mis} for project code ${mis}`);
-            misToSearch = projectData.mis;
-            tryNumericMis = true;
+            console.log(`[BudgetService] Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
+            // Convert to number since MIS is now int4 in the database
+            numericalMis = parseInt(projectData.mis.toString());
+            misToSearch = numericalMis;
           } else {
-            console.log(`[BudgetService] No project found with ID: ${mis}, will use original MIS value`);
+            console.log(`[BudgetService] No project found with ID/code: ${mis}, will try to find by direct match`);
           }
         } catch (projectLookupError) {
-          console.log(`[BudgetService] Error looking up project by ID ${mis}:`, projectLookupError);
-          // Continue with original MIS if lookup fails
+          console.log(`[BudgetService] Error looking up project by ID/code ${mis}:`, projectLookupError);
+          // Continue with other strategies if lookup fails
         }
-      } else if (!isNaN(parseInt(mis))) {
-        // If MIS is numeric, proceed as normal
-        console.log(`[BudgetService] MIS is numeric: ${mis}`);
-        tryNumericMis = true;
+      }
+      
+      // CASE 2: Numeric MIS (either direct input or found from case 1)
+      if (isNumericString || numericalMis !== null) {
+        // If we don't already have a numerical MIS from case 1, parse it now
+        if (numericalMis === null) {
+          numericalMis = parseInt(mis);
+          misToSearch = numericalMis;
+        }
+        console.log(`[BudgetService] Using numerical MIS: ${misToSearch}`);
       } else {
-        console.log(`[BudgetService] MIS is neither a project code nor numeric: ${mis}, will use as-is`);
+        console.log(`[BudgetService] Using original MIS string: ${misToSearch}`);
       }
 
       console.log(`[BudgetService] Fetching budget data for MIS ${misToSearch}`);
@@ -670,36 +679,66 @@ export class BudgetService {
         };
       }
 
-      // Check if the MIS is purely numeric or has a project code format
-      let misToSearch = mis;
-      let isProjectCode = false;
+      // Use similar conversion logic as getBudget method
+      let misToSearch: string | number = mis;
+      let numericalMis: number | null = null;
 
-      // Check if MIS might be a project ID with a code pattern (e.g., "2024ΝΑ85300001")
-      if (mis.match(/^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/)) {
-        console.log(`[BudgetService] MIS appears to be a project code pattern: ${mis}`);
-        isProjectCode = true;
+      console.log(`[BudgetService] Validating budget for MIS: ${mis}, amount: ${amount}`);
+      
+      // Check if the MIS might be a project ID with a code pattern (e.g., "2024ΝΑ85300001")
+      const projectCodeRegex = /^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/;
+      const isProjectCodeFormat = projectCodeRegex.test(mis);
+      
+      // Determine if it's a numeric string that can be parsed to an integer
+      const isNumericString = !isNaN(parseInt(mis)) && !isProjectCodeFormat;
+      
+      console.log(`[BudgetService] MIS validation analysis: isProjectCode=${isProjectCodeFormat}, isNumeric=${isNumericString}`);
+      
+      // CASE 1: Project code format like "2024ΝΑ85300001"
+      if (isProjectCodeFormat) {
+        console.log(`[BudgetService] Validation - MIS is a project code/ID pattern: ${mis}`);
         
-        // If it matches a project code pattern, try to get its numeric MIS from Projects table
+        // Try to find the project by its ID field (which may be the na853 code)
         try {
-          const { data: projectData } = await supabase
+          console.log(`[BudgetService] Validation - Looking up project by ID/code in Supabase: ${mis}`);
+          
+          const { data: projectData, error: projectError } = await supabase
             .from('Projects')
-            .select('mis')
-            .eq('id', mis)
+            .select('id, mis, na853')
+            .or(`id.eq.${mis},na853.eq.${mis}`)
             .single();
             
+          if (projectError) {
+            console.log(`[BudgetService] Validation - Supabase error looking up project: ${projectError.message}`);
+          }
+            
           if (projectData?.mis) {
-            console.log(`[BudgetService] Found numeric MIS ${projectData.mis} for project code ${mis}`);
-            misToSearch = projectData.mis;
+            console.log(`[BudgetService] Validation - Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
+            // Convert to number since MIS is now int4 in the database
+            numericalMis = parseInt(projectData.mis.toString());
+            misToSearch = numericalMis;
+          } else {
+            console.log(`[BudgetService] Validation - No project found with ID/code: ${mis}, will try to find by direct match`);
           }
         } catch (projectLookupError) {
-          console.log(`[BudgetService] Error looking up project by ID ${mis}:`, projectLookupError);
-          // Continue with original MIS if lookup fails
+          console.log(`[BudgetService] Validation - Error looking up project by ID/code ${mis}:`, projectLookupError);
+          // Continue with other strategies if lookup fails
         }
       }
       
-      console.log(`[BudgetService] Validating budget for MIS: ${misToSearch}, amount: ${amount}`);
-
-      // Try to get current budget data
+      // CASE 2: Numeric MIS (either direct input or found from case 1)
+      if (isNumericString || numericalMis !== null) {
+        // If we don't already have a numerical MIS from case 1, parse it now
+        if (numericalMis === null) {
+          numericalMis = parseInt(mis);
+          misToSearch = numericalMis;
+        }
+        console.log(`[BudgetService] Validation - Using numerical MIS: ${misToSearch}`);
+      } else {
+        console.log(`[BudgetService] Validation - Using original MIS string: ${misToSearch}`);
+      }
+      
+      // Try to get current budget data with the determined MIS value
       let { data: budgetData, error } = await supabase
         .from('budget_na853_split')
         .select('user_view, ethsia_pistosi, katanomes_etous, q1, q2, q3, q4')
@@ -899,31 +938,61 @@ export class BudgetService {
         };
       }
 
-      // Check if the MIS is purely numeric or has a project code format
-      let misToSearch = mis;
-      let isProjectCode = false;
+      // Use same approach as other methods to handle MIS conversion
+      let misToSearch: string | number = mis;
+      let numericalMis: number | null = null;
 
+      console.log(`[BudgetService] updateBudget: Processing MIS: ${mis}, type: ${typeof mis}, amount: ${amount}`);
+      
       // Check if MIS might be a project ID with a code pattern (e.g., "2024ΝΑ85300001")
-      if (mis.match(/^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/)) {
-        console.log(`[BudgetService] updateBudget: MIS appears to be a project code pattern: ${mis}`);
-        isProjectCode = true;
+      const projectCodeRegex = /^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/;
+      const isProjectCodeFormat = projectCodeRegex.test(mis);
+      
+      // Determine if it's a numeric string that can be parsed to an integer
+      const isNumericString = !isNaN(parseInt(mis)) && !isProjectCodeFormat;
+      
+      // CASE 1: Project code format like "2024ΝΑ85300001"
+      if (isProjectCodeFormat) {
+        console.log(`[BudgetService] updateBudget: MIS is a project code/ID pattern: ${mis}`);
         
-        // If it matches a project code pattern, try to get its numeric MIS from Projects table
+        // Try to find the project by its ID field (which may be the na853 code)
         try {
-          const { data: projectData } = await supabase
+          console.log(`[BudgetService] updateBudget: Looking up project by ID/code in Supabase: ${mis}`);
+          
+          const { data: projectData, error: projectError } = await supabase
             .from('Projects')
-            .select('mis')
-            .eq('id', mis)
+            .select('id, mis, na853')
+            .or(`id.eq.${mis},na853.eq.${mis}`)
             .single();
             
+          if (projectError) {
+            console.log(`[BudgetService] updateBudget: Supabase error looking up project: ${projectError.message}`);
+          }
+            
           if (projectData?.mis) {
-            console.log(`[BudgetService] updateBudget: Found numeric MIS ${projectData.mis} for project code ${mis}`);
-            misToSearch = projectData.mis;
+            console.log(`[BudgetService] updateBudget: Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
+            // Convert to number since MIS is now int4 in the database
+            numericalMis = parseInt(projectData.mis.toString());
+            misToSearch = numericalMis;
+          } else {
+            console.log(`[BudgetService] updateBudget: No project found with ID/code: ${mis}, will try to find by direct match`);
           }
         } catch (projectLookupError) {
-          console.log(`[BudgetService] updateBudget: Error looking up project by ID ${mis}:`, projectLookupError);
-          // Continue with original MIS if lookup fails
+          console.log(`[BudgetService] updateBudget: Error looking up project by ID/code ${mis}:`, projectLookupError);
+          // Continue with other strategies if lookup fails
         }
+      }
+      
+      // CASE 2: Numeric MIS (either direct input or found from case 1)
+      if (isNumericString || numericalMis !== null) {
+        // If we don't already have a numerical MIS from case 1, parse it now
+        if (numericalMis === null) {
+          numericalMis = parseInt(mis);
+          misToSearch = numericalMis;
+        }
+        console.log(`[BudgetService] updateBudget: Using numerical MIS: ${misToSearch}`);
+      } else {
+        console.log(`[BudgetService] updateBudget: Using original MIS string: ${misToSearch}`);
       }
 
       console.log(`[BudgetService] Updating budget for MIS: ${misToSearch}, amount: ${amount}, userId: ${userId}, documentId: ${documentId || 'none'}`);
