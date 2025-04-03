@@ -1646,8 +1646,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
             {currentStep === 1 && (
               <div className="space-y-4">
-                {/* Debug log to check budgetData availability */}
-                {console.log("[Budget Debug] budgetData available:", !!budgetData, budgetData)}
+                {/* Logs moved to useEffect for proper debugging */}
                 {budgetData && (
                   <BudgetIndicator
                     budgetData={budgetData}
@@ -1741,8 +1740,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
             {currentStep === 2 && (
               <div className="space-y-4">
-                {/* Debug log to check budgetData availability in Step 2 */}
-                {console.log("[Budget Debug Step 2] budgetData available:", !!budgetData, budgetData)}
+                {/* Logs moved to useEffect for proper debugging */}
                 {budgetData && (
                   <BudgetIndicator
                     budgetData={budgetData}
@@ -1832,7 +1830,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     </div>
                   ) : attachments.length > 0 ? (
                     <div className="space-y-2">
-                      {attachments.map((attachment) => (
+                      {attachments.map((attachment: { 
+                        id: string; 
+                        file_type: string; 
+                        title: string; 
+                        description?: string 
+                      }) => (
                         attachment.file_type === 'none' ? (
                           // Display message for no attachments found
                           <div key={attachment.id} className="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -1938,6 +1941,21 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       form.setValue("region", regions[0].id);
     }
   }, [regions, form]);
+  
+  // Add budget debugging effect
+  useEffect(() => {
+    // This is a safe place to log budget data (won't cause React rendering issues)
+    console.log("[Budget Debug] budgetData state:", {
+      available: !!budgetData,
+      currentStep,
+      projectId: selectedProjectId,
+      currentAmount
+    });
+
+    if (budgetData) {
+      console.log("[Budget Debug] Budget data details:", budgetData);
+    }
+  }, [budgetData, currentStep, selectedProjectId, currentAmount]);
   
   // Add an effect for enhanced dialog close handling
   useEffect(() => {

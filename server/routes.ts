@@ -501,9 +501,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const decodedMis = decodeURIComponent(mis);
         console.log('[Budget] Decoded MIS if needed:', decodedMis);
         
-        // Use the BudgetService directly without require, passing the decoded MIS
-        const result = await BudgetService.getBudget(decodedMis);
-        return res.json(result);
+        // Detailed debug info
+        console.log(`[Budget] MIS details - Original: "${mis}", Decoded: "${decodedMis}", Type: ${typeof decodedMis}`);
+                  
+        try {
+            // Use the BudgetService directly without require, passing the decoded MIS
+            const budgetResult = await BudgetService.getBudget(decodedMis);
+            
+            // Verify that the result is successful before logging success
+            if (budgetResult.status === 'success') {
+                console.log(`[Budget] Successfully fetched budget data for ${decodedMis}`);
+            } else {
+                console.log(`[Budget] Got response with status: ${budgetResult.status} for ${decodedMis}`);
+            }
+            
+            return res.json(budgetResult);
+        } catch (budgetError) {
+            console.error(`[Budget] Error fetching budget data for ${decodedMis}:`, budgetError);
+            return res.status(500).json({
+                status: 'error',
+                message: 'Failed to fetch budget data',
+                details: budgetError instanceof Error ? budgetError.message : 'Unknown error'
+            });
+        }
       } catch (error) {
         console.error('[Budget] Error in public budget access:', error);
         return res.status(500).json({

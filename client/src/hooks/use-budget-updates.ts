@@ -63,7 +63,22 @@ export function useBudgetUpdates(
         
         if (!project || !project.mis) {
           console.error(`[Budget] Project or MIS not found for ID: ${projectId}`, project);
-          throw new Error(`[Budget] Project MIS not found for ID: ${projectId}`);
+          // Return empty budget instead of throwing - allow UI to still function
+          return {
+            user_view: 0,
+            total_budget: 0,
+            annual_budget: 0,
+            katanomes_etous: 0,
+            ethsia_pistosi: 0,
+            current_budget: 0,
+            q1: 0,
+            q2: 0,
+            q3: 0,
+            q4: 0,
+            available_budget: '0',
+            quarter_available: '0',
+            yearly_available: '0'
+          };
         }
 
         // Fetch budget data from API - no need to convert to numeric MIS anymore
@@ -79,20 +94,33 @@ export function useBudgetUpdates(
         // Use the correct endpoint path - this public endpoint doesn't require authentication
         const response = await fetch(`/api/budget/${encodedMisValue}`);
         
-        if (!response.ok) {
-          console.error('[Budget] Budget API error:', response.status, response.statusText);
-          throw new Error(`[Budget] Budget API error: ${response.status} ${response.statusText}`);
-        }
-        
-        // Parse the response data
+        // Parse the response data, even if not 200 OK (we'll handle error status below)
         const responseData = await response.json();
         console.log('[Budget] Raw budget response:', responseData);
         
         // Extract data based on response structure
         let budgetData: Record<string, any> = {}; 
         
-        if (responseData?.status === 'success') {
+        if (responseData?.status === 'success' && responseData.data) {
           budgetData = responseData.data;
+        } else if (responseData?.status === 'error') {
+          console.error('[Budget] Budget API returned error:', responseData.message || 'Unknown error');
+          // Return empty budget on API error - allow UI to still function
+          return {
+            user_view: 0,
+            total_budget: 0,
+            annual_budget: 0,
+            katanomes_etous: 0,
+            ethsia_pistosi: 0,
+            current_budget: 0,
+            q1: 0,
+            q2: 0,
+            q3: 0,
+            q4: 0,
+            available_budget: '0',
+            quarter_available: '0',
+            yearly_available: '0'
+          };
         } else {
           budgetData = responseData;
         }
@@ -120,7 +148,22 @@ export function useBudgetUpdates(
         };
       } catch (error) {
         console.error('[Budget] Budget data fetch error:', error);
-        throw error;
+        // Instead of throwing, return empty but valid budget data
+        return {
+          user_view: 0,
+          total_budget: 0,
+          annual_budget: 0,
+          katanomes_etous: 0,
+          ethsia_pistosi: 0,
+          current_budget: 0,
+          q1: 0,
+          q2: 0,
+          q3: 0,
+          q4: 0,
+          available_budget: '0',
+          quarter_available: '0',
+          yearly_available: '0'
+        };
       }
     },
     enabled: Boolean(projectId)
