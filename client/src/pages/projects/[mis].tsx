@@ -12,6 +12,8 @@ export default function ProjectDetailsPage() {
   const { mis } = useParams<{ mis: string }>();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  
+  console.log("Project Details Page - MIS Parameter:", mis);
 
   const { data: project, isLoading, error } = useQuery<Project>({
     queryKey: [`/api/projects/${mis}`], // Direct API route matching
