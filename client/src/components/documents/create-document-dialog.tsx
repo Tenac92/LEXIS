@@ -452,6 +452,8 @@ const recipientSchema = z.object({
   afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
   installments: z.array(z.string()).min(1, "Πρέπει να επιλέξετε τουλάχιστον μία δόση"),
+  // Installment amounts map - keys are installment names (e.g., "Α", "Β", "ΕΦΑΠΑΞ"), values are amounts
+  installmentAmounts: z.record(z.string(), z.number()).optional().default({}),
 });
 
 const createDocumentSchema = z.object({
@@ -603,20 +605,42 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     const availableInstallments = getAvailableInstallments(expenditureType);
     const currentRecipient = form.watch(`recipients.${index}`);
     const selectedInstallments = currentRecipient?.installments || [];
+    const installmentAmounts = currentRecipient?.installmentAmounts || {};
     
     // Control function to toggle an installment selection
     const handleInstallmentToggle = (installment: string) => {
       const currentInstallments = [...selectedInstallments];
+      const currentInstallmentAmounts = { ...installmentAmounts };
       
       // If clicking ΕΦΑΠΑΞ, clear other selections
       if (installment === "ΕΦΑΠΑΞ") {
+        // If ΕΦΑΠΑΞ was already selected, just return
+        if (currentInstallments.includes("ΕΦΑΠΑΞ")) return;
+        
+        // Set ΕΦΑΠΑΞ as the only installment
         form.setValue(`recipients.${index}.installments`, ["ΕΦΑΠΑΞ"]);
+        
+        // Initialize the ΕΦΑΠΑΞ amount with the total amount if available
+        if (currentRecipient && typeof currentRecipient.amount === 'number') {
+          currentInstallmentAmounts["ΕΦΑΠΑΞ"] = currentRecipient.amount;
+        } else {
+          currentInstallmentAmounts["ΕΦΑΠΑΞ"] = 0;
+        }
+        
+        // Clear other installment amounts
+        Object.keys(currentInstallmentAmounts).forEach(key => {
+          if (key !== "ΕΦΑΠΑΞ") delete currentInstallmentAmounts[key];
+        });
+        
+        form.setValue(`recipients.${index}.installmentAmounts`, currentInstallmentAmounts);
         return;
       }
       
       // If there's ΕΦΑΠΑΞ selected and clicking another option, remove ΕΦΑΠΑΞ
       if (currentInstallments.includes("ΕΦΑΠΑΞ")) {
         currentInstallments.splice(currentInstallments.indexOf("ΕΦΑΠΑΞ"), 1);
+        // Remove ΕΦΑΠΑΞ amount
+        delete currentInstallmentAmounts["ΕΦΑΠΑΞ"];
       }
       
       // Toggle the selected installment
@@ -624,9 +648,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (installmentIndex > -1) {
         // Remove the installment if already selected
         currentInstallments.splice(installmentIndex, 1);
+        // Remove corresponding amount
+        delete currentInstallmentAmounts[installment];
       } else {
         // Add the installment
         currentInstallments.push(installment);
+        // Initialize with zero amount
+        currentInstallmentAmounts[installment] = 0;
       }
       
       // Check if new selection is in sequence
@@ -639,31 +667,68 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         return;
       }
       
-      // Update the form with the new selection
+      // Update the form with the new selection and amounts
       form.setValue(`recipients.${index}.installments`, currentInstallments);
+      form.setValue(`recipients.${index}.installmentAmounts`, currentInstallmentAmounts);
+    };
+    
+    // Handle changing the amount for an installment
+    const handleInstallmentAmountChange = (installment: string, amount: number) => {
+      const currentInstallmentAmounts = { ...installmentAmounts };
+      currentInstallmentAmounts[installment] = amount;
+      
+      // Update total amount based on installment amounts
+      const totalAmount = Object.values(currentInstallmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0);
+      form.setValue(`recipients.${index}.amount`, totalAmount);
+      
+      // Update installment amounts
+      form.setValue(`recipients.${index}.installmentAmounts`, currentInstallmentAmounts);
     };
     
     return (
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">Δόσεις</label>
-        <div className="flex flex-wrap gap-2">
-          {availableInstallments.map((installment) => (
-            <Button
-              key={installment}
-              type="button"
-              variant={selectedInstallments.includes(installment) ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleInstallmentToggle(installment)}
-              className="min-w-[40px]"
-            >
-              {installment}
-            </Button>
-          ))}
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Δόσεις</label>
+          <div className="flex flex-wrap gap-2">
+            {availableInstallments.map((installment) => (
+              <Button
+                key={installment}
+                type="button"
+                variant={selectedInstallments.includes(installment) ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleInstallmentToggle(installment)}
+                className="min-w-[40px]"
+              >
+                {installment}
+              </Button>
+            ))}
+          </div>
         </div>
+        
         {selectedInstallments.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Επιλεγμένες: {selectedInstallments.join(", ")}
-          </p>
+          <div className="space-y-3 pt-2 border-t">
+            <p className="text-sm font-medium">Ποσά ανά δόση</p>
+            <div className="space-y-2">
+              {selectedInstallments.map(installment => (
+                <div key={installment} className="flex items-center gap-3">
+                  <div className="font-medium w-20">{installment}:</div>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={installmentAmounts[installment] || 0}
+                    onChange={(e) => handleInstallmentAmountChange(installment, parseFloat(e.target.value) || 0)}
+                    className="w-32"
+                    placeholder="Ποσό δόσης"
+                  />
+                  <div className="text-xs text-muted-foreground">€</div>
+                </div>
+              ))}
+            </div>
+            <div className="text-sm text-muted-foreground pt-1">
+              Σύνολο: {Object.values(installmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            </div>
+          </div>
         )}
       </div>
     );
@@ -1315,7 +1380,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           fathername: r.fathername.trim(),
           afm: r.afm.trim(),
           amount: parseFloat(r.amount.toString()),
-          installments: r.installments
+          installments: r.installments,
+          installmentAmounts: r.installmentAmounts || {}
         })),
         total_amount: totalAmount,
         status: "draft",
@@ -1414,7 +1480,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         fathername: "",
         afm: "",
         amount: 0,
-        installments: ["ΕΦΑΠΑΞ"] // Default to ΕΦΑΠΑΞ for new recipients
+        installments: ["ΕΦΑΠΑΞ"], // Default to ΕΦΑΠΑΞ for new recipients
+        installmentAmounts: { "ΕΦΑΠΑΞ": 0 } // Initialize installment amount
       }
     ]);
   };
@@ -1624,6 +1691,47 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             toast({
               title: "Σφάλμα Επικύρωσης",
               description: "Παρακαλώ συμπληρώστε όλα τα πεδία για κάθε δικαιούχο",
+              variant: "destructive"
+            });
+            return;
+          }
+          
+          // Check that all installments have corresponding amount values
+          const recipientWithoutInstallmentAmounts = recipients.find(r => {
+            if (!r.installmentAmounts) return true;
+            
+            // For each installment, make sure there's a corresponding amount value
+            return r.installments.some(installment => {
+              return !r.installmentAmounts || 
+                     !(installment in r.installmentAmounts) || 
+                     typeof r.installmentAmounts[installment] !== 'number';
+            });
+          });
+          
+          if (recipientWithoutInstallmentAmounts) {
+            toast({
+              title: "Σφάλμα Επικύρωσης",
+              description: "Παρακαλώ συμπληρώστε ποσό για κάθε επιλεγμένη δόση",
+              variant: "destructive"
+            });
+            return;
+          }
+          
+          // For recipients with multiple installments, validate that each installment has a non-zero amount
+          const recipientWithZeroInstallmentAmount = recipients.find(r => {
+            if (r.installments.length <= 1) return false;
+            
+            return r.installments.some(installment => {
+              return !r.installmentAmounts || 
+                     !(installment in r.installmentAmounts) || 
+                     r.installmentAmounts[installment] <= 0;
+            });
+          });
+          
+          if (recipientWithZeroInstallmentAmount) {
+            toast({
+              title: "Σφάλμα Επικύρωσης",
+              description: "Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο του μηδενός",
               variant: "destructive"
             });
             return;
