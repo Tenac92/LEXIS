@@ -483,7 +483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Setting up budget routes...');
     // TODO: Refactor - Move this public budget endpoint to budgetController
     // Allow public access to budget data by MIS for document creation
-    // Updated to support both numeric and alphanumeric MIS values
+    // Updated to support both numeric and alphanumeric MIS values including special characters
     app.get('/api/budget/:mis', async (req, res) => {
       try {
         const { mis } = req.params;
@@ -496,8 +496,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         console.log('[Budget] Public access to budget data for MIS:', mis);
-        // Use the BudgetService directly without require
-        const result = await BudgetService.getBudget(mis);
+        
+        // Handle potential URI-encoded values from client by decoding
+        const decodedMis = decodeURIComponent(mis);
+        console.log('[Budget] Decoded MIS if needed:', decodedMis);
+        
+        // Use the BudgetService directly without require, passing the decoded MIS
+        const result = await BudgetService.getBudget(decodedMis);
         return res.json(result);
       } catch (error) {
         console.error('[Budget] Error in public budget access:', error);

@@ -71,8 +71,13 @@ export function useBudgetUpdates(
         const misValue = project.mis;
         
         console.log(`[Budget] Fetching budget data for MIS: ${misValue}`);
+        
+        // For MIS values with special characters or Greek letters, encode the URI component
+        const encodedMisValue = encodeURIComponent(misValue);
+        console.log(`[Budget] Encoded MIS value: ${encodedMisValue}`);
+        
         // Use the correct endpoint path - this public endpoint doesn't require authentication
-        const response = await fetch(`/api/budget/${misValue}`);
+        const response = await fetch(`/api/budget/${encodedMisValue}`);
         
         if (!response.ok) {
           console.error('[Budget] Budget API error:', response.status, response.statusText);
@@ -157,6 +162,10 @@ export function useBudgetUpdates(
         const misValue = project.mis;
         
         console.log(`[Budget] Validating budget for MIS: ${misValue}, amount: ${currentAmount}`);
+        
+        // For MIS values with special characters or Greek letters, encode for transport in JSON
+        // Note: JSON.stringify handles this for us, but we should be consistent with our debug logs
+        console.log(`[Budget] Encoded MIS for validation: ${encodeURIComponent(misValue)}`);
         
         // Using fetch directly instead of apiRequest to avoid auto-redirect on 401
         const response = await fetch('/api/budget/validate', {
