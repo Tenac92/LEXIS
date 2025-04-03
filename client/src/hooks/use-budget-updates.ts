@@ -66,16 +66,12 @@ export function useBudgetUpdates(
           throw new Error(`[Budget] Project MIS not found for ID: ${projectId}`);
         }
 
-        // Fetch budget data from API - we need to use the numeric MIS number
-        const misNumber = parseInt(project.mis);
+        // Fetch budget data from API - no need to convert to numeric MIS anymore
+        // The server-side has been updated to handle both numeric and alphanumeric MIS values
+        const misValue = project.mis;
         
-        if (isNaN(misNumber)) {
-          console.error('[Budget] Invalid MIS format. Expected numeric MIS:', project.mis);
-          throw new Error(`[Budget] Invalid MIS format: ${project.mis}`);
-        }
-
-        console.log(`[Budget] Fetching budget data for MIS number: ${misNumber}`);
-        const response = await fetch(`/api/budget/data/${misNumber}`);
+        console.log(`[Budget] Fetching budget data for MIS: ${misValue}`);
+        const response = await fetch(`/api/budget/data/${misValue}`);
         
         if (!response.ok) {
           console.error('[Budget] Budget API error:', response.status, response.statusText);
@@ -156,19 +152,10 @@ export function useBudgetUpdates(
           };
         }
 
-        // Get the numeric MIS for validation
-        const misNumber = parseInt(project.mis);
-        if (isNaN(misNumber)) {
-          console.error('[Budget] Invalid MIS format for validation. Expected numeric MIS:', project.mis);
-          return { 
-            status: 'error', 
-            canCreate: false,
-            allowDocx: false,
-            message: 'Μη έγκυρη μορφή MIS για επικύρωση προϋπολογισμού.'
-          };
-        }
+        // Use the MIS directly for validation (can be numeric or alphanumeric)
+        const misValue = project.mis;
         
-        console.log(`[Budget] Validating budget for MIS: ${misNumber}, amount: ${currentAmount}`);
+        console.log(`[Budget] Validating budget for MIS: ${misValue}, amount: ${currentAmount}`);
         
         // Using fetch directly instead of apiRequest to avoid auto-redirect on 401
         const response = await fetch('/api/budget/validate', {
@@ -179,7 +166,7 @@ export function useBudgetUpdates(
           },
           credentials: 'include',
           body: JSON.stringify({
-            mis: misNumber.toString(), // Send the MIS as a string
+            mis: misValue, // Send the MIS as-is (can be numeric or alphanumeric)
             amount: currentAmount,
             sessionId: sessionId
           })
