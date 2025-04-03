@@ -208,7 +208,7 @@ export default function EditProjectPage() {
       setLoading(true);
       try {
         console.log(`Updating budget for MIS ${mis} with data:`, data);
-        // Extract only budget fields
+        // Extract only budget fields, excluding user_view which shouldn't be modified directly
         const budgetData = {
           ethsia_pistosi: data.ethsia_pistosi,
           q1: data.q1,
@@ -216,7 +216,7 @@ export default function EditProjectPage() {
           q3: data.q3,
           q4: data.q4,
           katanomes_etous: data.katanomes_etous,
-          user_view: data.user_view,
+          // user_view is excluded as it's read-only
           proip: data.proip,
         };
         
@@ -272,7 +272,7 @@ export default function EditProjectPage() {
       };
       updateMutation.mutate(projectData);
     } else if (activeTab === "budget-info") {
-      // Extract budget-related fields
+      // Extract budget-related fields, excluding user_view which is read-only
       const budgetData = {
         ethsia_pistosi: data.ethsia_pistosi,
         q1: data.q1,
@@ -280,7 +280,7 @@ export default function EditProjectPage() {
         q3: data.q3,
         q4: data.q4,
         katanomes_etous: data.katanomes_etous,
-        user_view: data.user_view,
+        // user_view is excluded as it's read-only
         proip: data.proip,
       };
       updateBudgetMutation.mutate(budgetData);
@@ -566,8 +566,13 @@ export default function EditProjectPage() {
                                   {...field}
                                   value={field.value || ""}
                                   placeholder="User View"
+                                  readOnly
+                                  className="bg-gray-100"
                                 />
                               </FormControl>
+                              <FormDescription>
+                                The User View field cannot be edited directly
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
