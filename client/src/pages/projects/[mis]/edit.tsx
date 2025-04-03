@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Header } from "@/components/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -433,6 +434,40 @@ export default function EditProjectPage() {
                             </FormItem>
                           )}
                         />
+                          
+                        {/* Project Title (additional field) */}
+                        <FormField
+                          control={form.control}
+                          name="project_title"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Full Project Title</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="Full project title" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        {/* Event Description */}
+                        <FormField
+                          control={form.control}
+                          name="event_description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Event Description</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder="Event description" 
+                                  className="min-h-[100px]"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
                         <FormField
                           control={form.control}
@@ -479,56 +514,19 @@ export default function EditProjectPage() {
                             </FormItem>
                           )}
                         />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                        
+                        {/* Event Type */}
                         <FormField
                           control={form.control}
-                          name="na853"
+                          name="event_type"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>ΝΑ853</FormLabel>
+                              <FormLabel>Event Type</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   value={field.value || ""}
-                                  placeholder="NA853 Code"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="na271"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>ΝΑ271</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  value={field.value || ""}
-                                  placeholder="NA271 Code"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="e069"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Ε069</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  value={field.value || ""}
-                                  placeholder="E069 Code"
+                                  placeholder="Event Type"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -536,61 +534,359 @@ export default function EditProjectPage() {
                           )}
                         />
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                      
+                      {/* Fiscal Year and Region */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                         <FormField
                           control={form.control}
-                          name="budget_na853"
+                          name="event_year"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Budget NA853</FormLabel>
+                              <FormLabel>Fiscal Year</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   value={field.value || ""}
-                                  placeholder="Budget NA853"
+                                  placeholder="Fiscal Year"
                                 />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-
+                        
                         <FormField
                           control={form.control}
-                          name="budget_na271"
+                          name="region"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Budget NA271</FormLabel>
+                              <FormLabel>Region</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   value={field.value || ""}
-                                  placeholder="Budget NA271"
+                                  placeholder="Region"
                                 />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-
+                      </div>
+                      
+                      {/* Agency and Expenditure Type */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                         <FormField
                           control={form.control}
-                          name="budget_e069"
+                          name="implementing_agency"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Budget E069</FormLabel>
+                              <FormLabel>Implementing Agency</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   value={field.value || ""}
-                                  placeholder="Budget E069"
+                                  placeholder="Implementing Agency"
                                 />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
+                        
+                        <FormField
+                          control={form.control}
+                          name="expenditure_type"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Expenditure Type</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  value={field.value || ""}
+                                  placeholder="Expenditure Type"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Primary Codes Section */}
+                      <div className="mt-8">
+                        <h3 className="text-lg font-medium mb-4">Primary Codes</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <FormField
+                            control={form.control}
+                            name="na853"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ΝΑ853</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="NA853 Code"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="na271"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ΝΑ271</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="NA271 Code"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="e069"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Ε069</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="E069 Code"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Budget Allocation Section */}
+                      <div className="mt-8">
+                        <h3 className="text-lg font-medium mb-4">Budget Allocation</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <FormField
+                            control={form.control}
+                            name="budget_na853"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Budget NA853</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="Budget NA853"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="budget_na271"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Budget NA271</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="Budget NA271"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="budget_e069"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Budget E069</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="Budget E069"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Document Fields Section */}
+                      <div className="mt-8">
+                        <h3 className="text-lg font-medium mb-4">Document References</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <FormField
+                            control={form.control}
+                            name="kya"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ΚΥΑ</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="ΚΥΑ"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="fek"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ΦΕΚ</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="ΦΕΚ"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                          <FormField
+                            control={form.control}
+                            name="ada"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ΑΔΑ</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="ΑΔΑ"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="ada_import_sana271"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ΑΔΑ Εισαγωγής ΣΑΝ271</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="ΑΔΑ Εισαγωγής ΣΑΝ271"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                          <FormField
+                            control={form.control}
+                            name="ada_import_sana853"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ΑΔΑ Εισαγωγής ΣΑΝ853</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="ΑΔΑ Εισαγωγής ΣΑΝ853"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="budget_decision"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Απόφαση Προϋπολογισμού</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="Απόφαση Προϋπολογισμού"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                          <FormField
+                            control={form.control}
+                            name="funding_decision"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Απόφαση Χρηματοδότησης</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="Απόφαση Χρηματοδότησης"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <FormField
+                            control={form.control}
+                            name="allocation_decision"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Απόφαση Κατανομής</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    value={field.value || ""}
+                                    placeholder="Απόφαση Κατανομής"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
                     </TabsContent>
                     
