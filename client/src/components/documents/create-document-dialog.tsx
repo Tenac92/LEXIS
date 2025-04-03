@@ -24,8 +24,8 @@ import { useAuth } from "@/hooks/use-auth";
 
 // Constants
 const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
-const DKA_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ'];
-const ALL_INSTALLMENTS = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
+const DKA_INSTALLMENTS = ['ΕΦΑΠΑΞ', 'Α', 'Β', 'Γ', 'Δ'];
+const ALL_INSTALLMENTS = ['ΕΦΑΠΑΞ', 'Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
 
 // Project selection component
 interface Project {
@@ -451,7 +451,7 @@ const recipientSchema = z.object({
   fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
   afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
-  installment: z.string().optional(),
+  installments: z.array(z.string()).min(1, "Πρέπει να επιλέξετε τουλάχιστον μία δόση"),
 });
 
 const createDocumentSchema = z.object({
@@ -570,27 +570,102 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     return DKA_TYPES.includes(expenditureType) ? DKA_INSTALLMENTS : ALL_INSTALLMENTS;
   };
 
+  // Helper function to check if installments are in sequence
+  const areInstallmentsInSequence = (installments: string[]) => {
+    if (installments.length <= 1) return true;
+    if (installments.includes("ΕΦΑΠΑΞ") && installments.length > 1) return false;
+    
+    // Filter out ΕΦΑΠΑΞ and get only the Greek letter installments
+    const letters = installments.filter(i => i !== "ΕΦΑΠΑΞ");
+    
+    // Create a map of letter to index
+    const letterOrder = ALL_INSTALLMENTS.reduce((acc, letter, idx) => {
+      acc[letter] = idx;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    // Sort by the order of letters in ALL_INSTALLMENTS
+    const sortedLetters = [...letters].sort((a, b) => letterOrder[a] - letterOrder[b]);
+    
+    // Check if the letters are consecutive in ALL_INSTALLMENTS
+    for (let i = 1; i < sortedLetters.length; i++) {
+      const prevIdx = letterOrder[sortedLetters[i-1]];
+      const currIdx = letterOrder[sortedLetters[i]];
+      if (currIdx - prevIdx !== 1) return false;
+    }
+    
+    return true;
+  };
+
   // Update the recipients section rendering
   const renderRecipientInstallments = (index: number) => {
     const expenditureType = form.watch('expenditure_type');
     const availableInstallments = getAvailableInstallments(expenditureType);
-
+    const currentRecipient = form.watch(`recipients.${index}`);
+    const selectedInstallments = currentRecipient?.installments || [];
+    
+    // Control function to toggle an installment selection
+    const handleInstallmentToggle = (installment: string) => {
+      const currentInstallments = [...selectedInstallments];
+      
+      // If clicking ΕΦΑΠΑΞ, clear other selections
+      if (installment === "ΕΦΑΠΑΞ") {
+        form.setValue(`recipients.${index}.installments`, ["ΕΦΑΠΑΞ"]);
+        return;
+      }
+      
+      // If there's ΕΦΑΠΑΞ selected and clicking another option, remove ΕΦΑΠΑΞ
+      if (currentInstallments.includes("ΕΦΑΠΑΞ")) {
+        currentInstallments.splice(currentInstallments.indexOf("ΕΦΑΠΑΞ"), 1);
+      }
+      
+      // Toggle the selected installment
+      const installmentIndex = currentInstallments.indexOf(installment);
+      if (installmentIndex > -1) {
+        // Remove the installment if already selected
+        currentInstallments.splice(installmentIndex, 1);
+      } else {
+        // Add the installment
+        currentInstallments.push(installment);
+      }
+      
+      // Check if new selection is in sequence
+      if (!areInstallmentsInSequence(currentInstallments) && currentInstallments.length > 1) {
+        toast({
+          title: "Μη έγκυρες δόσεις",
+          description: "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Update the form with the new selection
+      form.setValue(`recipients.${index}.installments`, currentInstallments);
+    };
+    
     return (
-      <Select
-        value={form.watch(`recipients.${index}.installment`)}
-        onValueChange={(value) => form.setValue(`recipients.${index}.installment`, value)}
-      >
-        <SelectTrigger className="flex-1">
-          <SelectValue placeholder="Δόση" className="placeholder:text-muted-foreground" />
-        </SelectTrigger>
-        <SelectContent>
-          {availableInstallments.map((value) => (
-            <SelectItem key={value} value={value}>
-              {value}
-            </SelectItem>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium">Δόσεις</label>
+        <div className="flex flex-wrap gap-2">
+          {availableInstallments.map((installment) => (
+            <Button
+              key={installment}
+              type="button"
+              variant={selectedInstallments.includes(installment) ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleInstallmentToggle(installment)}
+              className="min-w-[40px]"
+            >
+              {installment}
+            </Button>
           ))}
-        </SelectContent>
-      </Select>
+        </div>
+        {selectedInstallments.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Επιλεγμένες: {selectedInstallments.join(", ")}
+          </p>
+        )}
+      </div>
     );
   };
 
@@ -865,18 +940,20 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   });
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
-    queryKey: ['attachments', form.watch('expenditure_type'), form.watch('recipients.0.installment')],
+    queryKey: ['attachments', form.watch('expenditure_type'), form.watch('recipients.0.installments')],
     queryFn: async () => {
       try {
         const expenditureType = form.watch('expenditure_type');
-        const installment = form.watch('recipients.0.installment') || 1;
+        const recipient = form.watch('recipients.0');
+        const installments = recipient?.installments || ["ΕΦΑΠΑΞ"];
+        const primaryInstallment = installments[0] || "ΕΦΑΠΑΞ";
 
         if (!expenditureType) {
           return [];
         }
 
         // Use direct fetch instead of apiRequest to prevent authentication issues
-        const response = await fetch(`/api/attachments/${encodeURIComponent(expenditureType)}/${encodeURIComponent(installment)}`, {
+        const response = await fetch(`/api/attachments/${encodeURIComponent(expenditureType)}/${encodeURIComponent(primaryInstallment)}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -1138,11 +1215,22 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       }
 
       const invalidRecipients = data.recipients.some(r =>
-        !r.firstname || !r.lastname || !r.afm || typeof r.amount !== 'number' || !r.installment
+        !r.firstname || !r.lastname || !r.afm || typeof r.amount !== 'number' || 
+        !r.installments || r.installments.length === 0
       );
 
       if (invalidRecipients) {
         throw new Error("Όλα τα πεδία δικαιούχου πρέπει να συμπληρωθούν");
+      }
+      
+      // Validate that all installments are in sequence
+      const hasInvalidSequence = data.recipients.some(r => {
+        if (r.installments.length <= 1) return false;
+        return !areInstallmentsInSequence(r.installments);
+      });
+      
+      if (hasInvalidSequence) {
+        throw new Error("Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)");
       }
 
       setLoading(true);
@@ -1227,7 +1315,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           fathername: r.fathername.trim(),
           afm: r.afm.trim(),
           amount: parseFloat(r.amount.toString()),
-          installment: r.installment
+          installments: r.installments
         })),
         total_amount: totalAmount,
         status: "draft",
@@ -1326,7 +1414,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         fathername: "",
         afm: "",
         amount: 0,
-        installment: ""
+        installments: ["ΕΦΑΠΑΞ"] // Default to ΕΦΑΠΑΞ for new recipients
       }
     ]);
   };
@@ -1528,7 +1616,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             !r.afm?.trim() ||
             typeof r.amount !== 'number' ||
             !r.amount ||
-            !r.installment
+            !r.installments || 
+            r.installments.length === 0
           );
 
           if (invalidRecipient) {
