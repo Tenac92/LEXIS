@@ -686,7 +686,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     };
     
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 w-full">
         <div>
           <label className="block text-sm font-medium mb-2">Δόσεις</label>
           <div className="flex flex-wrap gap-2">
@@ -706,27 +706,31 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         </div>
         
         {selectedInstallments.length > 0 && (
-          <div className="space-y-3 pt-2 border-t">
-            <p className="text-sm font-medium">Ποσά ανά δόση</p>
-            <div className="space-y-2">
+          <div className="space-y-3 pt-3 border-t">
+            <div className="space-y-3">
               {selectedInstallments.map(installment => (
                 <div key={installment} className="flex items-center gap-3">
-                  <div className="font-medium w-20">{installment}:</div>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={installmentAmounts[installment] || 0}
-                    onChange={(e) => handleInstallmentAmountChange(installment, parseFloat(e.target.value) || 0)}
-                    className="w-32"
-                    placeholder="Ποσό δόσης"
-                  />
-                  <div className="text-xs text-muted-foreground">€</div>
+                  <div className="font-medium text-sm bg-muted px-2 py-1 rounded min-w-[80px] text-center">
+                    {installment}
+                  </div>
+                  <div className="relative flex-1">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={installmentAmounts[installment] || 0}
+                      onChange={(e) => handleInstallmentAmountChange(installment, parseFloat(e.target.value) || 0)}
+                      className="pr-6 w-full"
+                      placeholder="Ποσό δόσης"
+                    />
+                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">€</span>
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="text-sm text-muted-foreground pt-1">
-              Σύνολο: {Object.values(installmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            <div className="text-sm font-medium flex justify-between pt-2 border-t">
+              <span>Συνολικό ποσό:</span>
+              <span className="text-primary">{Object.values(installmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
             </div>
           </div>
         )}
@@ -1997,20 +2001,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                               className="md:col-span-1"
                               autoComplete="off"
                             />
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...form.register(`recipients.${index}.amount`, {
-                                valueAsNumber: true,
-                                min: 0.01
-                              })}
-                              placeholder="Ποσό"
-                              className="md:col-span-1"
-                              autoComplete="off"
-                              defaultValue=""
-                            />
-                            <div className="md:col-span-1 flex items-center gap-2">
-                              {renderRecipientInstallments(index)}
+                            <div className="md:col-span-2 flex items-center gap-2">
+                              <div className="flex-1">
+                                {renderRecipientInstallments(index)}
+                              </div>
                               <Button
                                 type="button"
                                 variant="ghost"
