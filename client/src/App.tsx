@@ -21,7 +21,7 @@ import { ProtectedRoute } from "./lib/protected-route";
 import { PageTransition } from "@/components/ui/page-transition";
 import { SessionKeeper } from "@/components/auth/SessionKeeper";
 import { SessionWarning } from "@/components/auth/SessionWarning";
-import { SessionInit } from "@/components/auth/SessionInit";
+import SessionInit from "@/components/auth/SessionInit";
 
 function Router() {
   return (

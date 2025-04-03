@@ -1,71 +1,99 @@
-export interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: 'admin' | 'user' | 'manager';
-  units?: string[];
-  department?: string;
-  telephone?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
 export interface BudgetData {
-  user_view: number;
+  current_budget: number;
   total_budget: number;
+  annual_budget: number;
   katanomes_etous: number;
   ethsia_pistosi: number;
-  proip?: number;
-  current_budget?: number;  // Current budget remaining
-  annual_budget?: number;   // Annual budget allocation
-  total_spent?: number;     // Total amount spent so far
-  remaining_budget?: number; // Current remaining budget after spending
-  quarter_view?: number;    // Current quarter budget view
-  last_quarter_check?: string; // Last checked quarter (q1, q2, q3, q4)
-  current_quarter?: string;   // Current quarter (q1, q2, q3, q4)
+  user_view: number; // Σύνολο Διαβίβασης
+  quarter_view?: number;
+  current_quarter?: string;
+  last_quarter_check?: string;
   q1: number;
   q2: number;
   q3: number;
   q4: number;
-  // New budget indicators
-  available_budget?: string;  // Διαθέσιμος = katanomes_etous - user_view
-  quarter_available?: string; // Τρίμηνο = current_q - user_view
-  yearly_available?: string;  // Ετήσιος = ethsia_pistosi - user_view
-}
-
-export interface BudgetNotification {
-  id: number;
-  mis: string;
-  type: 'funding' | 'reallocation' | 'low_budget';
-  amount: number;
-  current_budget: number;
-  ethsia_pistosi: number;
-  reason: string;
-  status: 'pending' | 'approved' | 'rejected';
-  user_id: number;
-  created_at: string;
-  updated_at: string;
+  // Budget indicators
+  available_budget?: string;  // Διαθέσιμη Κατανομή = katanomes_etous - user_view
+  quarter_available?: string; // Υπόλοιπο Τριμήνου = current_q - user_view
+  yearly_available?: string;  // Υπόλοιπο προς Πίστωση = ethsia_pistosi - user_view
 }
 
 export interface BudgetValidationResponse {
   status: 'success' | 'warning' | 'error';
-  message?: string;
   canCreate: boolean;
-  requiresNotification?: boolean;
-  notificationType?: 'funding' | 'reallocation' | 'exceeded_proip' | 'low_budget' | 'threshold_warning';
+  message: string;
   allowDocx?: boolean;
-  priority?: 'high' | 'medium' | 'low';
+  requiresNotification?: boolean;
+  notificationType?: string;
+  priority?: string;
   metadata?: {
-    remainingBudget?: number;
-    threshold?: number;
+    availableBeforeOperation?: number;
+    availableAfterOperation?: number;
+    userView?: number;
+    newUserView?: number;
     baseValue?: number;
+    percentageAvailable?: number;
+    threshold?: number;
     percentageRemaining?: number;
-    available?: number;
-    requested?: number;
-    shortfall?: number;
+    remainingBudget?: number;
     previousBudget?: number;
-    budgetValues?: Record<string, number>;
-    error?: string;
-    [key: string]: any;
+    percentAfterOperation?: number;
+    amountUsed?: number;
+    budget_indicators?: {
+      available_budget?: string;
+      quarter_available?: string;
+      yearly_available?: string;
+    }
   };
+}
+
+export interface Project {
+  id: string;
+  mis?: string;
+  name: string;
+  expenditure_types: string[];
+}
+
+export interface Recipient {
+  firstname: string;
+  lastname: string;
+  fathername: string;
+  afm: string;
+  amount: number;
+  installments: string[];
+  installmentAmounts?: Record<string, number>;
+}
+
+export interface DocumentData {
+  id: string;
+  unit: string;
+  project_id: string;
+  project_mis?: string;
+  region?: string;
+  expenditure_type?: string;
+  recipients: Recipient[];
+  total_amount: number;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+  attachments?: string[];
+}
+
+export interface Unit {
+  id: string;
+  name: string;
+}
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  units?: string[];
+}
+
+export interface ApiResponse<T> {
+  status: 'success' | 'error';
+  data?: T;
+  message?: string;
 }

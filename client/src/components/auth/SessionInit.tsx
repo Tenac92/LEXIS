@@ -2,27 +2,31 @@ import { useEffect } from 'react';
 
 /**
  * SessionInit Component
- * Responsible for initializing and managing client-side session identifiers 
- * that are used for real-time synchronization between multiple clients
+ * 
+ * This component ensures that a unique session ID is generated and stored
+ * in sessionStorage. The session ID is used to track the client and avoid
+ * self-updates in real-time features.
  */
-export const SessionInit = () => {
+export default function SessionInit() {
+  // Initialize client session ID on mount
   useEffect(() => {
-    // Generate and store a unique session ID if one doesn't exist
-    if (!sessionStorage.getItem('clientSessionId')) {
-      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-      sessionStorage.setItem('clientSessionId', newSessionId);
-      console.log(`[Session] Generated new client session ID: ${newSessionId}`);
+    // Check if we already have a client session ID
+    const existingSessionId = sessionStorage.getItem('clientSessionId');
+    
+    if (!existingSessionId) {
+      // Generate a unique ID combining timestamp and random string
+      const timestamp = Date.now();
+      const randomPart = Math.random().toString(36).substring(2, 10);
+      const sessionId = `session_${timestamp}_${randomPart}`;
+      
+      // Store the session ID
+      sessionStorage.setItem('clientSessionId', sessionId);
+      console.log('[SessionInit] Generated new client session ID:', sessionId);
     } else {
-      console.log('[Session] Using existing client session ID');
+      console.log('[SessionInit] Using existing client session ID:', existingSessionId);
     }
-
-    return () => {
-      // We don't clear the session ID on unmount, as it should persist for the browser session
-    };
   }, []);
 
-  // This is a utility component with no UI rendering
+  // This component doesn't render anything
   return null;
-};
-
-export default SessionInit;
+}

@@ -11,7 +11,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
-import type { BudgetValidationResponse } from "@shared/schema";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Check, ChevronDown, FileText, FileX, Plus, Search, Trash2, User } from "lucide-react";
@@ -21,6 +20,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { useAuth } from "@/hooks/use-auth";
+import { useBudgetUpdates } from "@/hooks/use-budget-updates";
+import type { BudgetValidationResponse, Project as ProjectType, Unit, Recipient, ApiResponse } from "@/lib/types";
 
 // Constants
 const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
@@ -870,143 +871,16 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   });
 
 
-  const { data: budgetData, error: budgetError } = useQuery<BudgetData>({
-    queryKey: ["budget", selectedProjectId],
-    queryFn: async () => {
-      if (!selectedProjectId) {
-        // Return empty but valid budget data structure
-        return {
-          user_view: 0,
-          total_budget: 0,
-          katanomes_etous: 0,
-          ethsia_pistosi: 0,
-          current_budget: 0,
-          annual_budget: 0,
-          quarter_view: 0,
-          current_quarter: 'q1',
-          last_quarter_check: 'q1',
-          q1: 0,
-          q2: 0,
-          q3: 0,
-          q4: 0,
-          available_budget: '0',
-          quarter_available: '0',
-          yearly_available: '0'
-        };
-      }
-
-      try {
-        // Find the project to get its MIS
-        const project = projects.find(p => p.id === selectedProjectId);
-        if (!project || !project.mis) {
-          console.error('[Budget] Project or MIS not found:', selectedProjectId);
-          throw new Error('Project MIS not found');
-        }
-
-        console.log('[Budget] Fetching budget data for project:', {
-          id: selectedProjectId,
-          mis: project.mis
-        });
-
-        const response = await apiRequest(`/api/budget/${encodeURIComponent(project.mis)}`);
-        
-        console.log('[Budget] Budget API response:', response);
-        
-        // Define a complete empty budget data structure
-        const emptyBudget: BudgetData = {
-          user_view: 0,
-          total_budget: 0,
-          katanomes_etous: 0,
-          ethsia_pistosi: 0,
-          current_budget: 0,
-          annual_budget: 0,
-          quarter_view: 0,
-          current_quarter: 'q1',
-          last_quarter_check: 'q1',
-          q1: 0,
-          q2: 0,
-          q3: 0,
-          q4: 0,
-          available_budget: '0',
-          quarter_available: '0',
-          yearly_available: '0'
-        };
-
-        // Handle different response formats
-        if (!response) {
-          console.log('[Budget] No response received for project MIS:', project.mis);
-          return emptyBudget;
-        }
-        
-        // Handle error response
-        if (typeof response === 'object' && 'status' in response && response.status === 'error') {
-          console.log('[Budget] Error response for project MIS:', project.mis);
-          return emptyBudget;
-        }
-        
-        // Extract budget data from response
-        let budgetData: Record<string, any> = {}; 
-        
-        if (typeof response === 'object' && 'data' in response && response.data) {
-          // Response has a data property
-          budgetData = response.data;
-        } else if (typeof response === 'object' && !('data' in response)) {
-          // Response is directly the budget data
-          budgetData = response;
-        }
-        
-        console.log('[Budget] Extracted budget data:', budgetData);
-        
-        // Map the response to match the BudgetData interface completely
-        return {
-          user_view: parseFloat(budgetData.user_view?.toString() || '0'),
-          total_budget: parseFloat(budgetData.total_budget?.toString() || '0'),
-          katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0'),
-          ethsia_pistosi: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
-          current_budget: parseFloat(budgetData.current_budget?.toString() || '0'),
-          annual_budget: parseFloat(budgetData.annual_budget?.toString() || '0'),
-          quarter_view: parseFloat(budgetData.quarter_view?.toString() || '0'),
-          current_quarter: budgetData.current_quarter?.toString() || 'q1',
-          last_quarter_check: budgetData.last_quarter_check?.toString() || 'q1',
-          q1: parseFloat(budgetData.q1?.toString() || '0'),
-          q2: parseFloat(budgetData.q2?.toString() || '0'),
-          q3: parseFloat(budgetData.q3?.toString() || '0'),
-          q4: parseFloat(budgetData.q4?.toString() || '0'),
-          available_budget: budgetData.available_budget?.toString() || '',
-          quarter_available: budgetData.quarter_available?.toString() || '',
-          yearly_available: budgetData.yearly_available?.toString() || ''
-        };
-      } catch (error) {
-        console.error('[Budget] Error fetching budget data:', error);
-        toast({
-          title: "Σφάλμα",
-          description: "Αποτυχία φόρτωσης δεδομένων προϋπολογισμού",
-          variant: "destructive"
-        });
-        
-        // Always return a valid budget data structure
-        return {
-          user_view: 0,
-          total_budget: 0,
-          katanomes_etous: 0,
-          ethsia_pistosi: 0,
-          current_budget: 0,
-          annual_budget: 0,
-          quarter_view: 0,
-          current_quarter: 'q1',
-          last_quarter_check: 'q1',
-          q1: 0,
-          q2: 0,
-          q3: 0,
-          q4: 0,
-          available_budget: '0',
-          quarter_available: '0',
-          yearly_available: '0'
-        };
-      }
-    },
-    enabled: Boolean(selectedProjectId)
-  });
+  // Use our custom budget updates hook that handles both API and WebSocket updates
+  const { 
+    budgetData, 
+    validationResult, 
+    isBudgetLoading, 
+    isValidationLoading, 
+    budgetError,
+    validationError,
+    websocketConnected
+  } = useBudgetUpdates(selectedProjectId, currentAmount);
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
     queryKey: ['attachments', form.watch('expenditure_type'), form.watch('recipients.0.installments')],
@@ -1138,134 +1012,30 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     enabled: Boolean(form.watch('expenditure_type'))
   });
 
-  const { data: validationResult, isLoading: validationLoading } = useQuery<BudgetValidationResponse>({
-    queryKey: ["budget-validation", selectedProjectId, currentAmount],
-    queryFn: async () => {
-      if (!selectedProjectId || currentAmount <= 0) {
-        return { 
-          status: 'warning',
-          canCreate: false,
-          allowDocx: true,
-          message: 'Συμπληρώστε έργο και δικαιούχους για έλεγχο προϋπολογισμού'
-        };
-      }
-
-      try {
-        // Get the project MIS from the selected project
-        const project = projects.find(p => p.id === selectedProjectId);
-        if (!project?.mis) {
-          console.error('[Budget] Project or MIS not found', { selectedProjectId });
-          return { 
-            status: 'error', 
-            canCreate: false,
-            allowDocx: false,
-            message: 'Δεν βρέθηκε το MIS του έργου. Επιλέξτε έγκυρο έργο.'
-          };
-        }
-
-        // Use the project's MIS for validation
-        console.log(`[Budget] Validating budget for MIS: ${project.mis}, amount: ${currentAmount}`);
-        
-        // Using fetch directly instead of apiRequest to avoid auto-redirect on 401
-        const response = await fetch('/api/budget/validate', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'X-Request-ID': `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            mis: project.mis, // Use the actual MIS, not the selectedProjectId
-            amount: currentAmount,
-            sessionId: sessionStorage.getItem('clientSessionId') || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
-          })
-        });
-        
-        if (response.status === 401) {
-          console.warn('[Budget] Authentication required for budget validation');
-          // Return authentication error response
-          return { 
-            status: 'warning', 
-            canCreate: false,
-            allowDocx: false,
-            message: 'Απαιτείται σύνδεση για έλεγχο προϋπολογισμού. Παρακαλώ συνδεθείτε ξανά.'
-          };
-        }
-        
-        if (!response.ok) {
-          console.error('[Budget] Validation request failed:', response.status);
-          return { 
-            status: 'error', 
-            canCreate: false,
-            allowDocx: false,
-            message: 'Σφάλμα επικοινωνίας κατά τον έλεγχο προϋπολογισμού. Δοκιμάστε ξανά.'
-          };
-        }
-        
-        // Process successful response
-        const data = await response.json();
-        console.log('[Budget] Validation response:', data);
-        
-        // Show toast notifications for different validation statuses
-        if (data.status === 'warning' && data.message) {
-          toast({
-            title: "Προειδοποίηση προϋπολογισμού",
-            description: data.message,
-            variant: "warning"
-          });
-        } else if (data.status === 'error' && data.message) {
-          toast({
-            title: "Σφάλμα προϋπολογισμού",
-            description: data.message,
-            variant: "destructive"
-          });
-        } else if (data.status === 'success' && data.message) {
-          toast({
-            title: "Επιτυχής έλεγχος προϋπολογισμού",
-            description: data.message,
-            variant: "default"
-          });
-        }
-
-        // Enhance response with metadata information for UI display
-        if (data.metadata?.remainingBudget !== undefined && data.metadata?.previousBudget !== undefined) {
-          const remainingBudget = Number(data.metadata.remainingBudget);
-          const previousBudget = Number(data.metadata.previousBudget);
-          const requestedAmount = Number(currentAmount);
-          
-          // Add percentage calculation for UI
-          if (!data.metadata.percentAfterOperation && previousBudget > 0) {
-            data.metadata.percentAfterOperation = (remainingBudget / previousBudget) * 100;
-          }
-          
-          // Add amount used for UI
-          if (!data.metadata.amountUsed) {
-            data.metadata.amountUsed = requestedAmount;
-          }
-        }
-
-        return data;
-      } catch (error) {
-        console.error('[Budget] Budget validation error:', error);
+  // Show toast notifications for validation status
+  useEffect(() => {
+    if (validationResult) {
+      if (validationResult.status === 'warning' && validationResult.message) {
         toast({
-          title: "Σφάλμα ελέγχου προϋπολογισμού",
-          description: error instanceof Error ? error.message : 'Αποτυχία επικύρωσης προϋπολογισμού',
+          title: "Προειδοποίηση προϋπολογισμού",
+          description: validationResult.message,
+          variant: "warning"
+        });
+      } else if (validationResult.status === 'error' && validationResult.message) {
+        toast({
+          title: "Σφάλμα προϋπολογισμού",
+          description: validationResult.message,
           variant: "destructive"
         });
-        
-        return {
-          status: 'error',
-          canCreate: false,
-          allowDocx: false,
-          message: 'Αποτυχία επικύρωσης προϋπολογισμού. Δοκιμάστε ξανά αργότερα.',
-          metadata: {
-            error: error instanceof Error ? error.message : 'Unknown error'
-          }
-        };
+      } else if (validationResult.status === 'success' && validationResult.message) {
+        toast({
+          title: "Επιτυχής έλεγχος προϋπολογισμού",
+          description: validationResult.message,
+          variant: "default"
+        });
       }
-    },
-    enabled: Boolean(selectedProjectId) && currentAmount > 0
-  });
+    }
+  }, [validationResult, toast]);
 
   const isSubmitDisabled = validationResult?.status === 'error' || !validationResult?.canCreate;
 
