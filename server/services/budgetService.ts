@@ -406,31 +406,43 @@ export class BudgetService {
         };
       }
 
-      // Ensure MIS is a number (handle potential issues with string representation)
-      let misNumber: number;
-      try {
-        misNumber = parseInt(mis);
-        if (isNaN(misNumber)) {
-          return {
-            status: 'error',
-            message: 'Invalid MIS format: must be a numeric value'
-          };
+      // Check if the MIS is purely numeric or has a project code format
+      let misToSearch = mis;
+      let tryNumericMis = false;
+
+      // Check if the MIS might be a project ID with a code pattern (e.g., "2024ΝΑ85300001")
+      if (mis.match(/^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/)) {
+        console.log(`[BudgetService] MIS appears to be a project code pattern: ${mis}`);
+        
+        // If it matches a project code pattern, try to get its numeric MIS from Projects table
+        try {
+          const { data: projectData } = await supabase
+            .from('Projects')
+            .select('mis')
+            .eq('id', mis)
+            .single();
+            
+          if (projectData?.mis) {
+            console.log(`[BudgetService] Found numeric MIS ${projectData.mis} for project code ${mis}`);
+            misToSearch = projectData.mis;
+            tryNumericMis = true;
+          }
+        } catch (projectLookupError) {
+          console.log(`[BudgetService] Error looking up project by ID ${mis}:`, projectLookupError);
+          // Continue with original MIS if lookup fails
         }
-      } catch (parseError) {
-        console.error(`[BudgetService] Error parsing MIS number ${mis}:`, parseError);
-        return {
-          status: 'error',
-          message: 'Invalid MIS format: must be a numeric value'
-        };
+      } else if (!isNaN(parseInt(mis))) {
+        // If MIS is numeric, proceed as normal
+        tryNumericMis = true;
       }
 
-      console.log(`[BudgetService] Fetching budget data for MIS ${misNumber}`);
+      console.log(`[BudgetService] Fetching budget data for MIS ${misToSearch}`);
 
       // Get budget data directly using MIS
       const { data: budgetData, error: budgetError } = await supabase
         .from('budget_na853_split')
         .select('*')
-        .eq('mis', misNumber.toString())
+        .eq('mis', misToSearch)
         .single();
 
       if (budgetError) {
@@ -550,7 +562,7 @@ export class BudgetService {
         const { error: updateError } = await supabase
           .from('budget_na853_split')
           .update(updatePayload)
-          .eq('mis', misNumber.toString());
+          .eq('mis', misToSearch);
           
         if (updateError) {
           console.error(`[BudgetService] Error updating budget data:`, updateError);

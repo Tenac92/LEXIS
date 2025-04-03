@@ -39,7 +39,7 @@ router.get('/notifications', authenticateToken, async (req: AuthenticatedRequest
 });
 
 // Budget data routes - with explicit paths
-router.get('/data/:mis([0-9]+)', async (req: Request, res: Response) => {
+router.get('/data/:mis', async (req: Request, res: Response) => {
   try {
     const { mis } = req.params;
     if (!mis) {
