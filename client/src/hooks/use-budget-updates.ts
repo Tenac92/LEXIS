@@ -44,9 +44,10 @@ export function useBudgetUpdates(
           q2: 0,
           q3: 0,
           q4: 0,
-          available_budget: '0',
-          quarter_available: '0',
-          yearly_available: '0'
+          total_spent: 0,
+          available_budget: 0,
+          quarter_available: 0,
+          yearly_available: 0
         };
       }
 
@@ -75,9 +76,10 @@ export function useBudgetUpdates(
             q2: 0,
             q3: 0,
             q4: 0,
-            available_budget: '0',
-            quarter_available: '0',
-            yearly_available: '0'
+            total_spent: 0,
+            available_budget: 0,
+            quarter_available: 0,
+            yearly_available: 0
           };
         }
 
@@ -117,9 +119,10 @@ export function useBudgetUpdates(
             q2: 0,
             q3: 0,
             q4: 0,
-            available_budget: '0',
-            quarter_available: '0',
-            yearly_available: '0'
+            total_spent: 0,
+            available_budget: 0,
+            quarter_available: 0,
+            yearly_available: 0
           };
         } else {
           budgetData = responseData;
@@ -127,24 +130,27 @@ export function useBudgetUpdates(
         
         console.log('[Budget] Extracted budget data:', budgetData);
         
-        // Return normalized budget data
+        // Return normalized budget data with original string/number values
         return {
-          user_view: parseFloat(budgetData.user_view?.toString() || '0'),
-          total_budget: parseFloat(budgetData.total_budget?.toString() || '0'),
-          katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0'),
-          ethsia_pistosi: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
-          current_budget: parseFloat(budgetData.current_budget?.toString() || '0'),
-          annual_budget: parseFloat(budgetData.annual_budget?.toString() || '0'),
-          quarter_view: parseFloat(budgetData.quarter_view?.toString() || '0'),
+          user_view: budgetData.user_view || 0,
+          total_budget: budgetData.total_budget || 0,
+          katanomes_etous: budgetData.katanomes_etous || 0,
+          ethsia_pistosi: budgetData.ethsia_pistosi || 0,
+          current_budget: budgetData.current_budget || 0,
+          annual_budget: budgetData.annual_budget || 0,
+          quarter_view: budgetData.quarter_view || 0,
           current_quarter: budgetData.current_quarter?.toString() || 'q1',
           last_quarter_check: budgetData.last_quarter_check?.toString() || 'q1',
-          q1: parseFloat(budgetData.q1?.toString() || '0'),
-          q2: parseFloat(budgetData.q2?.toString() || '0'),
-          q3: parseFloat(budgetData.q3?.toString() || '0'),
-          q4: parseFloat(budgetData.q4?.toString() || '0'),
-          available_budget: budgetData.available_budget?.toString() || '',
-          quarter_available: budgetData.quarter_available?.toString() || '',
-          yearly_available: budgetData.yearly_available?.toString() || ''
+          q1: budgetData.q1 || 0,
+          q2: budgetData.q2 || 0,
+          q3: budgetData.q3 || 0,
+          q4: budgetData.q4 || 0,
+          total_spent: budgetData.total_spent || 0,
+          available_budget: budgetData.available_budget || 0,
+          quarter_available: budgetData.quarter_available || 0,
+          yearly_available: budgetData.yearly_available || 0,
+          // Include the sum field if available
+          sum: budgetData.sum || undefined
         };
       } catch (error) {
         console.error('[Budget] Budget data fetch error:', error);
@@ -160,9 +166,10 @@ export function useBudgetUpdates(
           q2: 0,
           q3: 0,
           q4: 0,
-          available_budget: '0',
-          quarter_available: '0',
-          yearly_available: '0'
+          total_spent: 0,
+          available_budget: 0,
+          quarter_available: 0,
+          yearly_available: 0
         };
       }
     },

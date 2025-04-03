@@ -18,6 +18,8 @@ export function CompactBudgetIndicator({
   budgetData: BudgetData | null;
   mis: string;
 }) {
+  // Debug output
+  console.log("[CompactBudgetIndicator] Rendering with data:", budgetData);
   // If no budget data, show a message
   if (!budgetData) {
     return (
@@ -28,15 +30,34 @@ export function CompactBudgetIndicator({
     );
   }
 
-  // Parse values ensuring they are numbers
-  const userView = parseFloat(budgetData.user_view?.toString() || '0');
-  const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-  const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
+  // Parse values ensuring they are numbers (handling both string and number inputs)
+  const userView = typeof budgetData.user_view === 'number' 
+    ? budgetData.user_view
+    : parseFloat(budgetData.user_view?.toString() || '0');
+
+  // The API response doesn't include katanomes_etous directly, but it's in the sum field
+  const katanomesEtous = budgetData.katanomes_etous 
+    ? (typeof budgetData.katanomes_etous === 'number' 
+      ? budgetData.katanomes_etous 
+      : parseFloat(budgetData.katanomes_etous.toString()))
+    : (budgetData.sum?.katanomes_etous || 0);
+
+  const ethsiaPistosi = typeof budgetData.ethsia_pistosi === 'number'
+    ? budgetData.ethsia_pistosi
+    : parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
   
   // Parse new budget indicators
-  const availableBudget = parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString());
-  const quarterAvailable = parseFloat(budgetData.quarter_available?.toString() || '0');
-  const yearlyAvailable = parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString());
+  const availableBudget = typeof budgetData.available_budget === 'number'
+    ? budgetData.available_budget
+    : parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString());
+  
+  const quarterAvailable = typeof budgetData.quarter_available === 'number'
+    ? budgetData.quarter_available
+    : parseFloat(budgetData.quarter_available?.toString() || '0');
+  
+  const yearlyAvailable = typeof budgetData.yearly_available === 'number'
+    ? budgetData.yearly_available
+    : parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString());
   
   // Calculate percentage for progress bar
   const percentageUsed = katanomesEtous > 0 ? ((userView / katanomesEtous) * 100) : 0;
@@ -84,26 +105,63 @@ export function BudgetIndicator({
   onValidationWarning 
 }: BudgetIndicatorProps) {
   const { toast } = useToast();
+  
+  // Debug output for main budget indicator
+  console.log("[BudgetIndicator] Rendering with data:", budgetData, "current amount:", currentAmount);
 
   if (!budgetData) return null;
 
-  // Parse values ensuring they are numbers
-  const userView = parseFloat(budgetData.user_view?.toString() || '0');
-  const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-  const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
-  const amount = parseFloat(currentAmount?.toString() || '0');
+  // Parse values ensuring they are numbers (handling both string and number inputs)
+  const userView = typeof budgetData.user_view === 'number' 
+    ? budgetData.user_view
+    : parseFloat(budgetData.user_view?.toString() || '0');
+
+  // The API response doesn't include katanomes_etous directly, but it's in the sum field
+  const katanomesEtous = budgetData.katanomes_etous 
+    ? (typeof budgetData.katanomes_etous === 'number' 
+      ? budgetData.katanomes_etous 
+      : parseFloat(budgetData.katanomes_etous.toString()))
+    : (budgetData.sum?.katanomes_etous || 0);
+
+  const ethsiaPistosi = typeof budgetData.ethsia_pistosi === 'number'
+    ? budgetData.ethsia_pistosi
+    : parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
+
+  // Handle currentAmount which could be number, string or null
+  const amount = typeof currentAmount === 'number'
+    ? currentAmount 
+    : currentAmount ? parseFloat(String(currentAmount)) : 0;
   
   // Parse quarter-related values
   const currentQuarter = budgetData.current_quarter || '';
-  const q1 = parseFloat(budgetData.q1?.toString() || '0');
-  const q2 = parseFloat(budgetData.q2?.toString() || '0');
-  const q3 = parseFloat(budgetData.q3?.toString() || '0');
-  const q4 = parseFloat(budgetData.q4?.toString() || '0');
+  const q1 = typeof budgetData.q1 === 'number'
+    ? budgetData.q1
+    : parseFloat(budgetData.q1?.toString() || '0');
+  
+  const q2 = typeof budgetData.q2 === 'number'
+    ? budgetData.q2
+    : parseFloat(budgetData.q2?.toString() || '0');
+  
+  const q3 = typeof budgetData.q3 === 'number'
+    ? budgetData.q3
+    : parseFloat(budgetData.q3?.toString() || '0');
+  
+  const q4 = typeof budgetData.q4 === 'number'
+    ? budgetData.q4
+    : parseFloat(budgetData.q4?.toString() || '0');
   
   // Parse new budget indicators
-  const availableBudget = parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString());
-  const quarterAvailable = parseFloat(budgetData.quarter_available?.toString() || '0');
-  const yearlyAvailable = parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString());
+  const availableBudget = typeof budgetData.available_budget === 'number'
+    ? budgetData.available_budget
+    : parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString());
+  
+  const quarterAvailable = typeof budgetData.quarter_available === 'number'
+    ? budgetData.quarter_available
+    : parseFloat(budgetData.quarter_available?.toString() || '0');
+  
+  const yearlyAvailable = typeof budgetData.yearly_available === 'number'
+    ? budgetData.yearly_available
+    : parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString());
   
   // Get the current quarter value based on quarter indicator
   let currentQuarterValue = 0;

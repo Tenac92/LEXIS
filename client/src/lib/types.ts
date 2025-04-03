@@ -1,21 +1,34 @@
 export interface BudgetData {
-  current_budget: number;
-  total_budget: number;
-  annual_budget: number;
-  katanomes_etous: number;
-  ethsia_pistosi: number;
-  user_view: number; // Σύνολο Διαβίβασης
-  quarter_view?: number;
+  current_budget: string | number;
+  total_budget?: string | number;
+  annual_budget?: string | number;
+  katanomes_etous?: string | number;
+  ethsia_pistosi: string | number;
+  user_view: string | number; // Σύνολο Διαβίβασης
+  quarter_view?: string | number;
   current_quarter?: string;
   last_quarter_check?: string;
-  q1: number;
-  q2: number;
-  q3: number;
-  q4: number;
+  q1: string | number;
+  q2: string | number;
+  q3: string | number;
+  q4: string | number;
+  total_spent?: string | number;
   // Budget indicators
-  available_budget?: string;  // Διαθέσιμη Κατανομή = katanomes_etous - user_view
-  quarter_available?: string; // Υπόλοιπο Τριμήνου = current_q - user_view
-  yearly_available?: string;  // Υπόλοιπο προς Πίστωση = ethsia_pistosi - user_view
+  available_budget?: string | number;  // Διαθέσιμη Κατανομή = katanomes_etous - user_view
+  quarter_available?: string | number; // Υπόλοιπο Τριμήνου = current_q - user_view
+  yearly_available?: string | number;  // Υπόλοιπο προς Πίστωση = ethsia_pistosi - user_view
+  // Sum field from the API response
+  sum?: {
+    user_view: number;
+    updated_at: string;
+    ethsia_pistosi: number;
+    current_quarter: number;
+    katanomes_etous: number;
+    available_budget: number;
+    yearly_available: number;
+    quarter_available: number;
+    [key: string]: any;
+  };
 }
 
 export interface BudgetValidationResponse {
