@@ -29,5 +29,10 @@ export function ProtectedRoute({
     );
   }
 
-  return <Component />
+  // Route parameters will be passed to Component when rendered through Route
+  return (
+    <Route path={path}>
+      <Component />
+    </Route>
+  );
 }

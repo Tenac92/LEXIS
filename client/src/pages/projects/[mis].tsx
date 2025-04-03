@@ -126,7 +126,9 @@ export default function ProjectDetailsPage() {
             </div>
             {isAdmin && (
               <Button variant="outline" asChild>
-                <Link href={`/projects/${mis}/edit`}>Edit Project</Link>
+                <Link href={`/projects/${mis}/edit`}>
+                  Edit Project
+                </Link>
               </Button>
             )}
           </div>

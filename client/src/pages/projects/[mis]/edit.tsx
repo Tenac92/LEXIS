@@ -34,8 +34,7 @@ const updateProjectSchema = insertProjectSchema.partial();
 type UpdateFormData = z.infer<typeof updateProjectSchema>;
 
 export default function EditProjectPage() {
-  const params = useParams<{ mis: string }>();
-  const mis = params.mis;
+  const { mis } = useParams<{ mis: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();

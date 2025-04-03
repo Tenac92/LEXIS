@@ -30,6 +30,7 @@ function Router() {
         <ProtectedRoute path="/documents" component={DocumentsPage} />
         <ProtectedRoute path="/templates" component={TemplatesPage} />
         <ProtectedRoute path="/projects/bulk-update" component={BulkUpdatePage} />
+        {/* Order matters: more specific routes should come first */}
         <ProtectedRoute path="/projects/:mis/edit" component={EditProjectPage} />
         <ProtectedRoute path="/projects/:mis" component={ProjectDetailsPage} />
         <ProtectedRoute path="/projects" component={ProjectsPage} />
