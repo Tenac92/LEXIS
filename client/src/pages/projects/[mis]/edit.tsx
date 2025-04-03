@@ -560,18 +560,18 @@ export default function EditProjectPage() {
                           name="user_view"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>User View</FormLabel>
+                              <FormLabel>Σύνολο Διαβίβασης</FormLabel>
                               <FormControl>
                                 <Input
                                   {...field}
                                   value={field.value || ""}
-                                  placeholder="User View"
+                                  placeholder="Σύνολο Διαβίβασης"
                                   readOnly
                                   className="bg-gray-100"
                                 />
                               </FormControl>
                               <FormDescription>
-                                The User View field cannot be edited directly
+                                Το πεδίο Σύνολο Διαβίβασης δεν μπορεί να τροποποιηθεί άμεσα
                               </FormDescription>
                               <FormMessage />
                             </FormItem>

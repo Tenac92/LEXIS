@@ -269,7 +269,7 @@ interface BudgetData {
   annual_budget: number;
   katanomes_etous: number;
   ethsia_pistosi: number;
-  user_view: number;
+  user_view: number; // Σύνολο Διαβίβασης
   quarter_view?: number;
   current_quarter?: string;
   last_quarter_check?: string;
