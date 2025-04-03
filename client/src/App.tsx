@@ -9,7 +9,7 @@ import AuthPage from "@/pages/auth-page";
 import DocumentsPage from "@/pages/documents-page";
 import ProjectsPage from "@/pages/projects";
 import ProjectDetailsPage from "@/pages/projects/[mis]";
-import EditProjectPage from "@/pages/projects/edit";
+import EditProjectPage from "@/pages/projects/edit/[mis]";
 import UsersPage from "@/pages/users";
 import BudgetHistoryPage from "@/pages/budget-history-page";
 import NotificationsPage from "@/pages/NotificationsPage";
