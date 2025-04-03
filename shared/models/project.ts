@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Base schema for Projects
 export const projectSchema = z.object({
-  mis: z.string(),
+  mis: z.union([z.string(), z.number().int()]),
   e069: z.string().nullable(),
   na271: z.string().nullable(),
   na853: z.string().nullable(),
