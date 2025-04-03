@@ -567,6 +567,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const currentAmount = recipients.reduce((sum, r) => {
     return sum + (typeof r.amount === 'number' ? r.amount : 0);
   }, 0);
+  
+  // Debug log for key values
+  console.log("[Budget Form Debug] Key values:", {
+    selectedProjectId,
+    currentAmount,
+    hasRecipients: recipients.length > 0,
+    recipients
+  });
 
   // Add this function to get available installments based on expenditure type
   const getAvailableInstallments = (expenditureType: string) => {
@@ -1638,6 +1646,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
             {currentStep === 1 && (
               <div className="space-y-4">
+                {/* Debug log to check budgetData availability */}
+                {console.log("[Budget Debug] budgetData available:", !!budgetData, budgetData)}
                 {budgetData && (
                   <BudgetIndicator
                     budgetData={budgetData}
@@ -1731,6 +1741,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
             {currentStep === 2 && (
               <div className="space-y-4">
+                {/* Debug log to check budgetData availability in Step 2 */}
+                {console.log("[Budget Debug Step 2] budgetData available:", !!budgetData, budgetData)}
                 {budgetData && (
                   <BudgetIndicator
                     budgetData={budgetData}

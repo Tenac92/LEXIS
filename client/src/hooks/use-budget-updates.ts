@@ -234,6 +234,18 @@ export function useBudgetUpdates(
     enabled: Boolean(projectId) && currentAmount > 0
   });
 
+  // Add debug logging for the hook's return values
+  console.log('[Budget Hook Debug] Returning state:', {
+    hasBudgetData: !!budgetQuery.data,
+    hasValidationResult: !!validationQuery.data,
+    isBudgetLoading: budgetQuery.isLoading,
+    isValidationLoading: validationQuery.isLoading,
+    hasBudgetError: !!budgetQuery.error,
+    hasValidationError: !!validationQuery.error,
+    isWebsocketConnected: isConnected,
+    projectId
+  });
+
   return {
     budgetData: budgetQuery.data,
     validationResult: validationQuery.data,
