@@ -5,6 +5,7 @@ import { Project, projectHelpers } from "@shared/models/project";
 import { Router } from 'express';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { storage } from '../storage';
+import { AuthenticatedRequest } from '../authentication';
 
 export const router = Router();
 
@@ -44,6 +45,8 @@ export async function listProjects(req: Request, res: Response) {
     res.status(500).json({ message: "Failed to fetch projects" });
   }
 }
+
+
 
 router.get('/expenditure-types/:projectId', async (req: Request, res: Response) => {
   const { projectId } = req.params;
@@ -497,3 +500,46 @@ router.get('/:mis/regions', async (req: Request, res: Response) => {
 router.get('/', listProjects);
 router.get('/export', exportProjectsXLSX);
 router.get('/export/xlsx', exportProjectsXLSX);
+
+// Get a project by MIS - placed last to avoid route conflicts
+router.get('/:mis', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    console.log(`[Projects] Fetching project with MIS: ${mis}`);
+
+    if (!req.user) {
+      console.error(`[Projects] No authenticated user found when fetching MIS: ${mis}`);
+      return res.status(401).json({ 
+        message: "Authentication required"
+      });
+    }
+
+    const { data: project, error } = await supabase
+      .from('Projects') // Note the capital P to match the table name
+      .select('*')
+      .eq('mis', mis)
+      .single();
+
+    if (error) {
+      console.error(`[Projects] Database error for MIS ${mis}:`, error);
+      return res.status(500).json({ 
+        message: "Failed to fetch project",
+        error: error.message
+      });
+    }
+
+    if (!project) {
+      console.log(`[Projects] No project found with MIS: ${mis}`);
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    console.log(`[Projects] Successfully fetched project with MIS: ${mis}`);
+    res.json(project);
+  } catch (error) {
+    console.error(`[Projects] Error fetching project:`, error);
+    return res.status(500).json({
+      message: "Failed to fetch project due to server error",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
