@@ -483,8 +483,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Setting up budget routes...');
     // TODO: Refactor - Move this public budget endpoint to budgetController
     // Allow public access to budget data by MIS for document creation
-    // Use regex pattern to only match numeric MIS values
-    app.get('/api/budget/:mis([0-9]+)', async (req, res) => {
+    // Updated to support both numeric and alphanumeric MIS values
+    app.get('/api/budget/:mis', async (req, res) => {
       try {
         const { mis } = req.params;
         
