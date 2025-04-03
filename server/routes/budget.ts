@@ -4,6 +4,7 @@ import { BudgetService } from '../services/budgetService';
 import { storage } from '../storage';
 import { supabase } from '../config/db';
 import { User } from '@shared/schema';
+import { broadcastBudgetUpdate } from '../websocket';
 
 // Extend Request type to include user property
 interface AuthenticatedRequest extends Request {
@@ -63,7 +64,7 @@ router.get('/data/:mis([0-9]+)', async (req: Request, res: Response) => {
 // Validate budget for document
 router.post('/validate', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { mis, amount } = req.body;
+    const { mis, amount, sessionId } = req.body;
     const requestedAmount = parseFloat(amount.toString());
 
     const result = await BudgetService.validateBudget(mis, requestedAmount);
@@ -89,6 +90,28 @@ router.post('/validate', authenticateToken, async (req: AuthenticatedRequest, re
       } catch (notifError) {
         console.error('Failed to create budget notification:', notifError);
         // Continue with validation response even if notification creation fails
+      }
+    }
+
+    // Get the application-wide WebSocket server
+    const wss = req.app.get('wss');
+    
+    // If we have a WebSocket server, broadcast the budget update
+    if (wss) {
+      try {
+        // Broadcast the budget update to all connected clients
+        // They will update their UI in real-time to show the current requested amount
+        broadcastBudgetUpdate(wss, {
+          mis,
+          amount: requestedAmount,
+          timestamp: new Date().toISOString(),
+          userId: req.user?.id?.toString(),
+          sessionId // Client session ID to filter out self-updates
+        });
+        console.log(`[Budget] Broadcast budget update for MIS ${mis} with amount ${requestedAmount}`);
+      } catch (broadcastError) {
+        console.error('[Budget] Failed to broadcast budget update:', broadcastError);
+        // Continue with validation response even if broadcast fails
       }
     }
 

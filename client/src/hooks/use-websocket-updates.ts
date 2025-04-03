@@ -3,6 +3,15 @@ import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 
+// Define the budget update message type
+export interface BudgetUpdateMessage {
+  mis: string;  // The project MIS (identifier)
+  amount: number;  // Current requested amount
+  timestamp: string;  // When the update happened
+  userId?: string;  // Which user initiated the update
+  sessionId?: string;  // Session ID to filter out self-updates
+}
+
 export function useWebSocketUpdates() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | undefined>(undefined);
@@ -130,10 +139,51 @@ export function useWebSocketUpdates() {
                 // Verify our session is still valid
                 checkSession();
                 break;
+                
+              case 'budget_update':
+                // Handle real-time budget update
+                const budgetUpdate = data.data as BudgetUpdateMessage;
+                
+                // Store unique client session ID in the sessionStorage to identify our own updates
+                const clientSessionId = sessionStorage.getItem('clientSessionId');
+                
+                // If this update wasn't from our current session (to avoid self-updates)
+                if (budgetUpdate.sessionId !== clientSessionId) {
+                  console.log(`[WebSocket] Received budget update for MIS ${budgetUpdate.mis}: €${budgetUpdate.amount.toLocaleString('el-GR')}`);
+                  
+                  // Force refetch of the budget validation to update all components showing this budget
+                  // This will update the budget indicator component with new values
+                  queryClient.invalidateQueries({ 
+                    queryKey: ["budget-validation", budgetUpdate.mis]
+                  });
+                  
+                  // Also invalidate the budget data
+                  queryClient.invalidateQueries({ 
+                    queryKey: ["budget", budgetUpdate.mis]
+                  });
+                  
+                  // Display a subtle toast to inform the user about real-time updates
+                  toast({
+                    title: 'Συγχρονισμός κατανομών',
+                    description: `Η κατανομή για το έργο MIS ${budgetUpdate.mis} ενημερώθηκε από άλλο χρήστη`,
+                    variant: 'default'
+                  });
+                } else {
+                  // Just log if it's our own update
+                  console.log('[WebSocket] Ignoring self-generated budget update');
+                }
+                break;
 
               case 'connection':
               case 'acknowledgment':
                 console.log(`[WebSocket] ${data.type} received:`, data);
+                
+                // When we connect, generate and store a unique session ID if we don't have one
+                if (data.type === 'connection' && !sessionStorage.getItem('clientSessionId')) {
+                  const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+                  sessionStorage.setItem('clientSessionId', newSessionId);
+                  console.log(`[WebSocket] Generated new client session ID: ${newSessionId}`);
+                }
                 break;
 
               case 'auth_required':

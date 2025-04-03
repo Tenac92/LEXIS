@@ -1176,7 +1176,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           credentials: 'include',
           body: JSON.stringify({
             mis: project.mis, // Use the actual MIS, not the selectedProjectId
-            amount: currentAmount
+            amount: currentAmount,
+            sessionId: sessionStorage.getItem('clientSessionId') || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
           })
         });
         
@@ -1342,7 +1343,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           credentials: 'include',
           body: JSON.stringify({
             mis: projectForSubmission.mis,
-            amount: totalAmount.toString()
+            amount: totalAmount.toString(),
+            sessionId: sessionStorage.getItem('clientSessionId') || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
           })
         });
         

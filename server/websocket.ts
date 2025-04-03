@@ -9,6 +9,14 @@ interface ExtendedWebSocket extends WebSocket {
   clientId?: string;
 }
 
+export interface BudgetUpdate {
+  mis: string;  // The project MIS (identifier)
+  amount: number;  // Current requested amount
+  timestamp: string;  // When the update happened
+  userId?: string;  // Which user initiated the update
+  sessionId?: string;  // Session ID to filter out self-updates
+}
+
 export function createWebSocketServer(server: Server) {
   try {
     const wss = new WebSocketServer({ 
@@ -234,6 +242,64 @@ export const broadcastNotification = (wss: WebSocketServer, notification: Budget
   });
 
   console.log(`[WebSocket] Broadcast notification results: ${sentCount} successful, ${errorCount} failed`);
+  
+  return {
+    success: sentCount > 0,
+    sentCount,
+    errorCount
+  };
+};
+
+/**
+ * Broadcast a budget update to all connected clients
+ * This allows real-time syncing of budget amounts between users
+ * 
+ * @param wss WebSocketServer instance
+ * @param update Budget update information
+ * @returns Status of the broadcast
+ */
+export const broadcastBudgetUpdate = (wss: WebSocketServer, update: BudgetUpdate) => {
+  if (!wss) {
+    console.error('[WebSocket] Budget update broadcast failed: Server not initialized');
+    return;
+  }
+
+  // Early return if no clients connected
+  if (wss.clients.size === 0) {
+    console.log('[WebSocket] No clients connected, skipping budget update broadcast');
+    return;
+  }
+
+  // Create budget update message
+  const message = JSON.stringify({
+    type: 'budget_update',
+    data: update,
+    timestamp: new Date().toISOString()
+  });
+
+  // Keep track of successful sends and errors
+  let sentCount = 0;
+  let errorCount = 0;
+  const clientList = Array.from(wss.clients) as ExtendedWebSocket[];
+  
+  // Only send to OPEN clients
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN);
+  
+  // Only send to OPEN clients
+  openClients.forEach((client) => {
+    try {
+      client.send(message);
+      sentCount++;
+    } catch (error) {
+      errorCount++;
+      console.error(`[WebSocket] Failed to send budget update to client ${client.clientId}:`, error);
+      
+      // Mark client as not alive so it will be cleaned up in next heartbeat
+      client.isAlive = false;
+    }
+  });
+
+  console.log(`[WebSocket] Budget update broadcast results: ${sentCount} successful, ${errorCount} failed`);
   
   return {
     success: sentCount > 0,
