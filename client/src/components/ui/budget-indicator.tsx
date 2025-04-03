@@ -23,7 +23,7 @@ export function CompactBudgetIndicator({
     return (
       <div className="mt-2 text-sm text-muted-foreground flex items-center">
         <BadgeInfo className="mr-2 h-4 w-4 text-blue-500" />
-        <span>Δεν υπάρχουν δεδομένα προϋπολογισμού</span>
+        <span>Δεν υπάρχουν δεδομένα κατανομών</span>
       </div>
     );
   }
@@ -46,7 +46,7 @@ export function CompactBudgetIndicator({
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center">
           <PiggyBank className="mr-1 h-4 w-4 text-blue-500" />
-          <span className="text-muted-foreground">Διαθέσιμος:</span>
+          <span className="text-muted-foreground">Διαθέσιμη Κατανομή:</span>
         </div>
         <span className="font-medium">{availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
       </div>
@@ -62,14 +62,14 @@ export function CompactBudgetIndicator({
         <div className="flex flex-col">
           <span className="text-muted-foreground flex items-center">
             <CalendarFold className="mr-1 h-3 w-3" />
-            Τρίμηνο:
+            Υπόλοιπο Τριμήνου:
           </span>
           <span className="font-medium">{quarterAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
         </div>
         <div className="flex flex-col">
           <span className="text-muted-foreground flex items-center">
             <Calculator className="mr-1 h-3 w-3" />
-            Ετήσιος:
+            Υπόλοιπο προς Πίστωση:
           </span>
           <span className="font-medium">{yearlyAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
         </div>
@@ -142,7 +142,7 @@ export function BudgetIndicator({
       <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Διαθέσιμος</h3>
+            <h3 className="text-sm font-medium text-gray-600">Διαθέσιμη Κατανομή</h3>
             <p className={`text-2xl font-bold ${remainingAvailable < 0 ? 'text-red-600' : 'text-blue-600'}`}>
               {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
@@ -159,21 +159,21 @@ export function BudgetIndicator({
             </div>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Τρίμηνο {currentQuarter?.substring(1) || ''}</h3>
+            <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο Τριμήνου {currentQuarter?.substring(1) || ''}</h3>
             <p className="text-2xl font-bold text-gray-700">
               {quarterAvailableValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Διαθέσιμο τριμήνου
+              Υπόλοιπο τρέχοντος τριμήνου
             </p>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Ετήσιος</h3>
+            <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο προς Πίστωση</h3>
             <p className="text-2xl font-bold text-gray-700">
               {yearlyAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Διαθέσιμος ετήσιος προϋπολογισμός
+              Υπόλοιπο προς πίστωση για το έτος
             </p>
           </div>
         </div>

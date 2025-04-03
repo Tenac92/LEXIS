@@ -278,9 +278,9 @@ interface BudgetData {
   q3: number;
   q4: number;
   // New budget indicators
-  available_budget?: string;  // Διαθέσιμος = katanomes_etous - user_view
-  quarter_available?: string; // Τρίμηνο = current_q - user_view
-  yearly_available?: string;  // Ετήσιος = ethsia_pistosi - user_view
+  available_budget?: string;  // Διαθέσιμη Κατανομή = katanomes_etous - user_view
+  quarter_available?: string; // Υπόλοιπο Τριμήνου = current_q - user_view
+  yearly_available?: string;  // Υπόλοιπο προς Πίστωση = ethsia_pistosi - user_view
 }
 
 interface BudgetIndicatorProps {
@@ -401,7 +401,7 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
     <Card className="p-3 bg-gradient-to-br from-background/50 to-background border-primary/20">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-medium">Προϋπολογισμός</h3>
+          <h3 className="text-base font-medium">Πληροφορίες Κατανομών</h3>
           <Badge variant={getBadgeVariant(percentageUsed)} className="text-sm">
             {percentageUsed.toFixed(1)}% Χρήση
           </Badge>
@@ -409,19 +409,19 @@ const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAm
 
         <div className="grid grid-cols-3 gap-3 text-sm">
           <div>
-            <p className="text-muted-foreground">Διαθέσιμος</p>
+            <p className="text-muted-foreground">Διαθέσιμη Κατανομή</p>
             <p className="font-medium text-primary">
               {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Τρίμηνο {currentQuarter?.substring(1) || ''}</p>
+            <p className="text-muted-foreground">Υπόλοιπο Τριμήνου {currentQuarter?.substring(1) || ''}</p>
             <p className="font-medium">
               {quarterAvailableValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Ετήσιος</p>
+            <p className="text-muted-foreground">Υπόλοιπο προς Πίστωση</p>
             <p className="font-medium">
               {yearlyAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
