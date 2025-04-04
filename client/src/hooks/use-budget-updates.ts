@@ -105,26 +105,36 @@ export function useBudgetUpdates(
         
         if (responseData?.status === 'success' && responseData.data) {
           budgetData = responseData.data;
+          console.log('[Budget] Successfully extracted budget data from success response', budgetData);
         } else if (responseData?.status === 'error') {
           console.error('[Budget] Budget API returned error:', responseData.message || 'Unknown error');
-          // Return empty budget on API error - allow UI to still function
-          return {
-            user_view: 0,
-            total_budget: 0,
-            annual_budget: 0,
-            katanomes_etous: 0,
-            ethsia_pistosi: 0,
-            current_budget: 0,
-            q1: 0,
-            q2: 0,
-            q3: 0,
-            q4: 0,
-            total_spent: 0,
-            available_budget: 0,
-            quarter_available: 0,
-            yearly_available: 0
-          };
+          // Check if the error response includes fallback data (server might return zeros to prevent UI breaking)
+          if (responseData.data && typeof responseData.data === 'object') {
+            console.log('[Budget] Using fallback data from error response', responseData.data);
+            budgetData = responseData.data;
+          } else {
+            // Return empty budget on API error - allow UI to still function
+            console.log('[Budget] No fallback data in error response, using zeros');
+            return {
+              user_view: 0,
+              total_budget: 0,
+              annual_budget: 0,
+              katanomes_etous: 0,
+              ethsia_pistosi: 0,
+              current_budget: 0,
+              q1: 0,
+              q2: 0,
+              q3: 0,
+              q4: 0,
+              total_spent: 0,
+              available_budget: 0,
+              quarter_available: 0,
+              yearly_available: 0
+            };
+          }
         } else {
+          // Direct response data (not wrapped in status/data structure)
+          console.log('[Budget] Direct response data:', responseData);
           budgetData = responseData;
         }
         
