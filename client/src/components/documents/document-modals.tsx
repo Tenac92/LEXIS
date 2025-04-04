@@ -617,14 +617,37 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
 
       console.log('Επικύρωση εγγράφου επιτυχής:', testResult);
 
-      // Create and trigger download using window.document - format=both to get both files in a ZIP
+      // Create and trigger download using fetch and blob approach for better handling
       const downloadUrl = `/api/documents/generated/${document.id}/export?format=both`;
+      console.log('Fetching document data from URL:', downloadUrl);
+      
+      // Use fetch with blob response type for binary data
+      const response = await fetch(downloadUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Download failed with status: ${response.status}`);
+      }
+      
+      // Log content-type and other important headers to help debug
+      console.log('Response content-type:', response.headers.get('content-type'));
+      console.log('Response content-disposition:', response.headers.get('content-disposition'));
+      console.log('Response content-length:', response.headers.get('content-length'));
+      
+      // Get the response as blob (binary data)
+      const blob = await response.blob();
+      console.log('Downloaded blob size:', blob.size, 'bytes, type:', blob.type);
+      
+      // Create object URL from blob and trigger download
+      const objectUrl = URL.createObjectURL(blob);
       const link = window.document.createElement('a');
-      link.href = downloadUrl;
+      link.href = objectUrl;
       link.setAttribute('download', `documents-${document.id}.zip`);
       window.document.body.appendChild(link);
       link.click();
+      
+      // Clean up
       window.document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
 
       toast({
         title: "Επιτυχία",
@@ -651,7 +674,7 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
         <DialogHeader>
           <DialogTitle>Εξαγωγή Εγγράφων</DialogTitle>
           <DialogDescription>
-            Πατήστε το κουμπί παρακάτω για να κατεβάσετε τα έγγραφα (κύριο έγγραφο και Πλανησκέιπ) σε μορφή ZIP.
+            Πατήστε το κουμπί παρακάτω για να κατεβάσετε τα έγγραφα (κύριο έγγραφο και ΠΡΟΣΑΝΑΤΟΛΙΣΜΟΣ ΟΡΙΖΟΝΤΙΟΣ) σε μορφή ZIP.
           </DialogDescription>
         </DialogHeader>
 

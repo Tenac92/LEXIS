@@ -91,10 +91,11 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   const handleExport = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/documents/generated/${doc.id}/export`, {
+      // Use the both format parameter to generate both documents in a ZIP file
+      const response = await fetch(`/api/documents/generated/${doc.id}/export?format=both`, {
         method: 'GET',
         headers: {
-          'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+          'Accept': 'application/zip, application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         },
       });
 
@@ -104,26 +105,36 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
         throw new Error('Failed to export document');
       }
 
+      // Get the content type to determine if it's a ZIP or single document
+      const contentType = response.headers.get('Content-Type');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `document-${doc.id}.docx`;
+      
+      // Set appropriate filename based on content type
+      if (contentType && contentType.includes('application/zip')) {
+        link.download = `documents-${doc.id}.zip`;
+      } else {
+        link.download = `document-${doc.id}.docx`;
+      }
+      
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
       toast({
-        description: "Το έγγραφο εξήχθη επιτυχώς",
+        description: "Τα έγγραφα εξήχθησαν επιτυχώς",
         variant: "default"
       });
     } catch (error) {
       toast({
         title: "Σφάλμα",
-        description: "Αποτυχία εξαγωγής εγγράφου",
+        description: "Αποτυχία εξαγωγής εγγράφων",
         variant: "destructive"
       });
+      console.error('Export error:', error);
     } finally {
       setIsLoading(false);
     }
@@ -238,7 +249,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                 disabled={isLoading}
               >
                 <Download className="h-4 w-4 mr-2" />
-                Εξαγωγή
+                Εξαγωγή (ZIP)
               </Button>
             </div>
             {!doc.is_correction && doc.protocol_number_input ? (

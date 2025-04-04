@@ -395,7 +395,7 @@ export class DocumentFormatter {
   
   /**
    * Generate the second document containing:
-   * - Project title at the top (planescape)
+   * - Document title at the top
    * - Recipients table with an extra ΠΡΑΞΗ column that shows the expenditure type
    * - Standard text about documentation retention
    * - Two signature fields with user name and department on the left
@@ -414,6 +414,15 @@ export class DocumentFormatter {
         name: documentData.generated_by?.name || documentData.user_name || "",
         department: documentData.generated_by?.department || documentData.department || "",
       };
+      
+      // Calculate total amount from recipients
+      const totalAmount = (documentData.recipients || []).reduce((sum, r) => {
+        const amount = typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount) || '0');
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0);
+      
+      // Format total amount with 2 decimal places
+      const formattedTotal = this.formatCurrency(totalAmount);
 
       const sections = [
         {
@@ -425,12 +434,17 @@ export class DocumentFormatter {
             },
           },
           children: [
-            // Project title (horizontal orientation)
+            // Main document title
             new Paragraph({
-              text: "ΠΡΟΣΑΝΑΤΟΛΙΣΜΟΣ ΟΡΙΖΟΝΤΙΟΣ",
+              children: [
+                new TextRun({
+                  text: "ΔΩΡΕΑΝ ΚΡΑΤΙΚΗ ΑΡΩΓΗ ΓΙΑ ΤΗΝ ΕΠΙΣΚΕΥΉ Ή ΑΝΑΚΑΤΑΣΚΕΥΗ ΣΕΙΣΜΟΠΛΗΚΤΩΝ ΚΤΙΡΙΩΝ ΠΟΥ ΥΠΕΣΤΗΣΑΝ ΒΛΑΒΕΣ",
+                  bold: true,
+                  size: 32
+                })
+              ],
               alignment: AlignmentType.CENTER,
               spacing: { before: 400, after: 200 },
-              style: "Heading1",
             }),
             
             // Project title
@@ -448,11 +462,93 @@ export class DocumentFormatter {
             // Recipients table with ΠΡΑΞΗ column
             this.createRecipientsTableWithAction(documentData.recipients || [], documentData.expenditure_type),
             
+            // Total row
+            new Paragraph({
+              text: "",
+              spacing: { before: 200, after: 200 },
+            }),
+            
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: {
+                        top: { style: BorderStyle.NONE },
+                        bottom: { style: BorderStyle.NONE },
+                        left: { style: BorderStyle.NONE },
+                        right: { style: BorderStyle.NONE },
+                      },
+                      children: [
+                        new Paragraph({
+                          alignment: AlignmentType.RIGHT,
+                          children: [
+                            new TextRun({
+                              text: "ΣΥΝΟΛΟ",
+                              bold: true,
+                            }),
+                          ],
+                        }),
+                      ],
+                    }),
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: {
+                        top: { style: BorderStyle.NONE },
+                        bottom: { style: BorderStyle.NONE },
+                        left: { style: BorderStyle.NONE },
+                        right: { style: BorderStyle.NONE },
+                      },
+                      children: [
+                        new Paragraph({
+                          alignment: AlignmentType.LEFT,
+                          children: [
+                            new TextRun({
+                              text: formattedTotal + " €",
+                              bold: true,
+                            }),
+                          ],
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            
+            // Empty space
+            new Paragraph({
+              children: [
+                new TextRun({ text: "" })
+              ],
+              spacing: { before: 200, after: 200 },
+            }),
+            
             // Standard text about documentation retention
             new Paragraph({
-              text: "ΤΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ ΒΑΣΕΙ ΤΩΝ ΟΠΟΙΩΝ ΕΚΔΟΘΗΚΑΝ ΟΙ ΔΙΟΙΚΗΤΙΚΕΣ ΠΡΑΞΕΙΣ ΑΝΑΓΝΩΡΙΣΗΣ ΔΙΚΑΙΟΥΧΩΝ ΔΩΡΕΑΝ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ ΤΗΡΟΥΝΤΑΙ ΣΤΟ ΑΡΧΕΙΟ ΤΗΣ ΥΠΗΡΕΣΙΑΣ ΜΑΣ.",
+              children: [
+                new TextRun({ 
+                  text: "ΤΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ ΒΑΣΕΙ ΤΩΝ ΟΠΟΙΩΝ ΕΚΔΟΘΗΚΑΝ ΟΙ ΔΙΟΙΚΗΤΙΚΕΣ ΠΡΑΞΕΙΣ ΑΝΑΓΝΩΡΙΣΗΣ ΔΙΚΑΙΟΥΧΩΝ ΔΩΡΕΑΝ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ ΤΗΡΟΥΝΤΑΙ ΣΤΟ ΑΡΧΕΙΟ ΤΗΣ ΥΠΗΡΕΣΙΑΣ ΜΑΣ."
+                })
+              ],
               alignment: AlignmentType.CENTER,
               spacing: { before: 400, after: 400 },
+            }),
+            
+            // Empty space before signatures
+            new Paragraph({
+              children: [
+                new TextRun({ text: "" })
+              ],
+              spacing: { before: 600, after: 600 },
             }),
             
             // Signature fields with compiler on the left
@@ -480,22 +576,34 @@ export class DocumentFormatter {
                       },
                       children: [
                         new Paragraph({
-                          text: "Ο ΣΥΝΤΑΞΑΣ",
+                          children: [
+                            new TextRun({ text: "Ο ΣΥΝΤΑΞΑΣ" })
+                          ],
                           alignment: AlignmentType.CENTER,
                           spacing: { before: 400, after: 600 },
                         }),
                         new Paragraph({
-                          text: userInfo.name,
+                          children: [
+                            new TextRun({ text: "" })
+                          ],
+                          spacing: { before: 360, after: 360 },
+                        }),
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: userInfo.name })
+                          ],
                           alignment: AlignmentType.CENTER,
                           spacing: { after: 200 },
                         }),
                         new Paragraph({
-                          text: userInfo.department,
+                          children: [
+                            new TextRun({ text: userInfo.department })
+                          ],
                           alignment: AlignmentType.CENTER,
                         }),
                       ],
                     }),
-                    // Right side - signature field (empty like in the original doc)
+                    // Right side - signature field (Ministry representative)
                     new TableCell({
                       width: { size: 50, type: WidthType.PERCENTAGE },
                       borders: {
@@ -506,17 +614,29 @@ export class DocumentFormatter {
                       },
                       children: [
                         new Paragraph({
-                          text: "",
+                          children: [
+                            new TextRun({ text: "με εντολή Υπουργού                                      Ο ΑΝΑΠΛ.ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε." })
+                          ],
                           alignment: AlignmentType.CENTER,
                           spacing: { before: 400, after: 600 },
                         }),
                         new Paragraph({
-                          text: "",
+                          children: [
+                            new TextRun({ text: "" })
+                          ],
+                          spacing: { before: 360, after: 360 },
+                        }),
+                        new Paragraph({
+                          children: [
+                            new TextRun({ text: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ" })
+                          ],
                           alignment: AlignmentType.CENTER,
                           spacing: { after: 200 },
                         }),
                         new Paragraph({
-                          text: "",
+                          children: [
+                            new TextRun({ text: "ΠΟΛ. ΜΗΧ με Α'β" })
+                          ],
                           alignment: AlignmentType.CENTER,
                         }),
                       ],
@@ -738,7 +858,9 @@ export class DocumentFormatter {
         ],
       }),
       new Paragraph({
-        text: "",
+        children: [
+          new TextRun({ text: "" })
+        ],
       }),
     ];
   }

@@ -614,6 +614,11 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
 // Export document
 router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Response) => {
   const { id } = req.params;
+  // Check format parameter to see if user wants both documents in a ZIP
+  const format = req.query.format as string;
+  const generateBoth = format === 'both' || format === 'zip';
+
+  console.log('[DocumentsController] Export request for document ID:', id, 'Format:', format, 'Generate both:', generateBoth);
 
   try {
     // Get document with user details
@@ -632,18 +637,14 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
       .single();
 
     if (error) {
-      console.error('Database query error:', error);
+      console.error('[DocumentsController] Database query error:', error);
       throw error;
     }
 
     if (!document) {
+      console.error('[DocumentsController] Document not found:', id);
       return res.status(404).json({ error: 'Document not found' });
     }
-
-    // Check access rights
-    //if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
-    //  return res.status(403).json({ error: 'Access denied to this document' });
-    //}
 
     // Prepare document data with user name and contact information
     const documentData = {
@@ -653,34 +654,50 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
       contact_number: document.generated_by?.telephone || ''
     };
 
-    // Get unit details
-    const unitDetails = await DocumentFormatter.getUnitDetails(document.unit);
-    if (!unitDetails) {
-      throw new Error('Unit details not found');
+    console.log('[DocumentsController] Document data prepared for export:', documentData.id);
+
+    // If generating a single document (old behavior)
+    if (!generateBoth) {
+      console.log('[DocumentsController] Generating single document for export');
+      
+      // For regular documents, use the standard document generation
+      const primaryBuffer = await DocumentFormatter.generateDocument(documentData);
+      
+      // Set response headers for DOCX file
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
+      res.send(primaryBuffer);
+      return;
     }
-
-    // Create and send document
-    const documentFormatter = new DocumentFormatter();
-    const buffer = await documentFormatter.formatOrthiEpanalipsi({
-      originalDocument: documentData,
-      comments: 'Διόρθωση στοιχείων',
-      project_id: document.project_id || '',
-      project_na853: document.project_na853 || '',
-      protocol_number_input: document.protocol_number_input || '',
-      protocol_date: document.protocol_date || '',
-      unit: document.unit || '',
-      expenditure_type: document.expenditure_type || '',
-      recipients: document.recipients || [],
-      total_amount: document.total_amount || 0
-    });
-
-    // Set response headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
-    res.send(buffer);
+    
+    // If we're here, the user wants both documents in a ZIP file
+    console.log('[DocumentsController] Generating both documents for ZIP export');
+    
+    // Generate primary document
+    const primaryBuffer = await DocumentFormatter.generateDocument(documentData);
+    
+    // Generate secondary document
+    const secondaryBuffer = await DocumentFormatter.generateSecondDocument(documentData);
+    
+    // Create a ZIP file containing both documents
+    const JSZip = require('jszip');
+    const zip = new JSZip();
+    
+    // Add both documents to the ZIP
+    zip.file(`document-primary-${document.id.toString().padStart(6, '0')}.docx`, primaryBuffer);
+    zip.file(`document-supplementary-${document.id.toString().padStart(6, '0')}.docx`, secondaryBuffer);
+    
+    // Generate the ZIP file
+    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+    
+    // Set response headers for ZIP file
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename=documents-${id}.zip`);
+    res.send(zipBuffer);
+    console.log('[DocumentsController] ZIP file with both documents sent successfully');
 
   } catch (error) {
-    console.error('Export error:', error);
+    console.error('[DocumentsController] Export error:', error);
     res.status(500).json({
       error: 'Failed to export document',
       details: error instanceof Error ? error.message : 'Unknown error'
