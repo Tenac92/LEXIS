@@ -58,7 +58,7 @@ export function useBudgetUpdates(
         let projectData;
         try {
           projectData = await queryClient.fetchQuery({
-            queryKey: ["project", projectId]
+            queryKey: ["/api/projects", projectId]
           });
           
           console.log('[Budget] Project data fetched:', projectData);
@@ -279,7 +279,7 @@ export function useBudgetUpdates(
       try {
         // Get the project MIS from the selected project
         const projectData = await queryClient.fetchQuery({
-          queryKey: ["project", projectId]
+          queryKey: ["/api/projects", projectId]
         });
         
         // Type checking

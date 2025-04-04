@@ -1,9 +1,9 @@
 /**
  * Unified Database Schema Definition
- * 
+ *
  * This file contains all database schema definitions, relationships, and type exports
  * in a consistent, well-organized structure.
- * 
+ *
  * Organization:
  * 1. Imports
  * 2. Table Definitions
@@ -14,10 +14,23 @@
  * 7. Validation Schemas
  */
 
-import { pgTable, serial, text, timestamp, boolean, varchar, integer, decimal, date, customType, foreignKey, jsonb } from 'drizzle-orm/pg-core';
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
-import { z } from 'zod';
-import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
+import {
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  boolean,
+  varchar,
+  integer,
+  decimal,
+  date,
+  customType,
+  foreignKey,
+  jsonb,
+} from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { number, z } from "zod";
+import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 
 // ==============================================================
 // 1. Imports above, Table Definitions below
@@ -37,7 +50,7 @@ export const users = pgTable("users", {
   department: text("department"),
   telephone: text("telephone"),
   created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at")
+  updated_at: timestamp("updated_at"),
 });
 
 /**
@@ -56,7 +69,7 @@ export const projectCatalog = pgTable("project_catalog", {
   implementing_agency: text("implementing_agency").array().default([]),
   region: jsonb("region").default({}),
   created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at")
+  updated_at: timestamp("updated_at"),
 });
 
 /**
@@ -75,7 +88,7 @@ export const projects = pgTable("Projects", {
   implementing_agency: text("implementing_agency").array().default([]),
   region: jsonb("region").default({}),
   created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at")
+  updated_at: timestamp("updated_at"),
 });
 
 /**
@@ -86,12 +99,18 @@ export const budgetNA853Split = pgTable("budget_na853_split", {
   id: serial("id").primaryKey(),
   mis: text("mis").notNull(),
   na853: text("na853").notNull(),
-  ethsia_pistosi: decimal("ethsia_pistosi", { precision: 12, scale: 2 }).default("0"),
+  ethsia_pistosi: decimal("ethsia_pistosi", {
+    precision: 12,
+    scale: 2,
+  }).default("0"),
   q1: decimal("q1", { precision: 12, scale: 2 }).default("0"),
   q2: decimal("q2", { precision: 12, scale: 2 }).default("0"),
   q3: decimal("q3", { precision: 12, scale: 2 }).default("0"),
   q4: decimal("q4", { precision: 12, scale: 2 }).default("0"),
-  katanomes_etous: decimal("katanomes_etous", { precision: 12, scale: 2 }).default("0"),
+  katanomes_etous: decimal("katanomes_etous", {
+    precision: 12,
+    scale: 2,
+  }).default("0"),
   user_view: decimal("user_view", { precision: 12, scale: 2 }).default("0"),
   proip: decimal("proip", { precision: 12, scale: 2 }).default("0"),
   created_at: timestamp("created_at").defaultNow(),
@@ -106,7 +125,7 @@ export const budgetNA853Split = pgTable("budget_na853_split", {
  */
 export const budgetHistory = pgTable("budget_history", {
   id: serial("id").primaryKey(),
-  mis: text("mis").notNull(),
+  mis: integer("mis").notNull(),
   previous_amount: text("previous_amount").notNull(),
   new_amount: text("new_amount").notNull(),
   change_type: text("change_type").notNull(),
@@ -115,7 +134,7 @@ export const budgetHistory = pgTable("budget_history", {
   document_status: text("document_status"),
   created_by: text("created_by"),
   created_at: timestamp("created_at").defaultNow(),
-  metadata: jsonb("metadata").default({})
+  metadata: jsonb("metadata").default({}),
 });
 
 /**
@@ -124,7 +143,7 @@ export const budgetHistory = pgTable("budget_history", {
  */
 export const budgetNotifications = pgTable("budget_notifications", {
   id: serial("id").primaryKey(),
-  mis: text("mis").notNull(),
+  mis: integer("mis").notNull(),
   type: text("type").notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   current_budget: decimal("current_budget", { precision: 12, scale: 2 }),
@@ -133,7 +152,7 @@ export const budgetNotifications = pgTable("budget_notifications", {
   status: text("status").default("pending"),
   user_id: integer("user_id").notNull(),
   created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at")
+  updated_at: timestamp("updated_at"),
 });
 
 /**
@@ -144,7 +163,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
   status: text("status").notNull().default("draft"),
   unit: text("unit").notNull(),
-  project_id: text("project_id").notNull(),
+  project_id: integer("mis").notNull(),
   project_na853: text("project_na853"),
   expenditure_type: text("expenditure_type").notNull(),
   total_amount: decimal("total_amount", { precision: 12, scale: 2 }),
@@ -160,7 +179,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   template_id: integer("template_id"),
   comments: text("comments"),
   created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at")
+  updated_at: timestamp("updated_at"),
 });
 
 /**
@@ -176,7 +195,7 @@ export const attachmentsRows = pgTable("attachments", {
   file_size: integer("file_size"),
   content_type: text("content_type"),
   uploaded_by: integer("uploaded_by"),
-  created_at: timestamp("created_at").defaultNow()
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 /**
@@ -190,7 +209,7 @@ export const documentVersions = pgTable("document_versions", {
   document_data: jsonb("document_data").notNull(),
   metadata: jsonb("metadata").default({}),
   created_by: integer("created_by"),
-  created_at: timestamp("created_at").defaultNow()
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 /**
@@ -208,7 +227,7 @@ export const documentTemplates = pgTable("document_templates", {
   is_active: boolean("is_active").default(true),
   created_by: integer("created_by"),
   created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at")
+  updated_at: timestamp("updated_at"),
 });
 
 /**
@@ -222,7 +241,7 @@ export const monada = pgTable("Monada", {
   parts: jsonb("parts"),
   email: text("email"),
   manager: jsonb("manager"),
-  address: jsonb("address")
+  address: jsonb("address"),
 });
 
 // ==============================================================
@@ -234,12 +253,14 @@ export const insertUserSchema = createInsertSchema(users);
 
 // Extended schemas with additional validation
 export const extendedUserSchema = insertUserSchema.extend({
-  email: z.string().email('Παρακαλώ εισάγετε ένα έγκυρο email'),
-  password: z.string().min(6, 'Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες'),
-  name: z.string().min(2, 'Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες'),
-  role: z.string().refine((val) => ['admin', 'user'].includes(val), {
-    message: 'Ο ρόλος πρέπει να είναι admin ή user'
-  })
+  email: z.string().email("Παρακαλώ εισάγετε ένα έγκυρο email"),
+  password: z
+    .string()
+    .min(6, "Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες"),
+  name: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  role: z.string().refine((val) => ["admin", "user"].includes(val), {
+    message: "Ο ρόλος πρέπει να είναι admin ή user",
+  }),
 });
 
 export const insertProjectSchema = createInsertSchema(projects);
@@ -248,29 +269,41 @@ export const insertProjectCatalogSchema = createInsertSchema(projectCatalog);
 
 // Schema for document recipients
 export const recipientSchema = z.object({
-  firstname: z.string().min(1, 'Το όνομα του παραλήπτη είναι υποχρεωτικό'),
-  lastname: z.string().min(1, 'Το επώνυμο του παραλήπτη είναι υποχρεωτικό'),
-  fathername: z.string().min(1, 'Το πατρώνυμο του παραλήπτη είναι υποχρεωτικό'),
-  afm: z.string().min(9, 'Το ΑΦΜ πρέπει να έχει 9 ψηφία').max(9, 'Το ΑΦΜ πρέπει να έχει 9 ψηφία'),
-  amount: z.number().min(0.01, 'Το ποσό πρέπει να είναι μεγαλύτερο από 0'),
-  installment: z.number().int().min(1, 'Η δόση πρέπει να είναι τουλάχιστον 1').optional()
+  firstname: z.string().min(1, "Το όνομα του παραλήπτη είναι υποχρεωτικό"),
+  lastname: z.string().min(1, "Το επώνυμο του παραλήπτη είναι υποχρεωτικό"),
+  fathername: z.string().min(1, "Το πατρώνυμο του παραλήπτη είναι υποχρεωτικό"),
+  afm: z
+    .string()
+    .min(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία")
+    .max(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
+  amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
+  installment: z
+    .number()
+    .int()
+    .min(1, "Η δόση πρέπει να είναι τουλάχιστον 1")
+    .optional(),
 });
 
-export const insertGeneratedDocumentSchema = createInsertSchema(generatedDocuments);
+export const insertGeneratedDocumentSchema =
+  createInsertSchema(generatedDocuments);
 
 // Extended schema with validation for recipients
-export const extendedGeneratedDocumentSchema = insertGeneratedDocumentSchema.extend({
-  recipients: z.array(recipientSchema).min(1, 'Πρέπει να υπάρχει τουλάχιστον ένας παραλήπτης')
-});
+export const extendedGeneratedDocumentSchema =
+  insertGeneratedDocumentSchema.extend({
+    recipients: z
+      .array(recipientSchema)
+      .min(1, "Πρέπει να υπάρχει τουλάχιστον ένας παραλήπτης"),
+  });
 
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory);
 
-export const insertBudgetNotificationSchema = createInsertSchema(budgetNotifications);
+export const insertBudgetNotificationSchema =
+  createInsertSchema(budgetNotifications);
 
 // Budget validation schema for validating budget changes
 export const budgetValidationSchema = z.object({
-  mis: z.union([z.string().min(1, 'Κωδικός MIS απαιτείται'), z.number().int()]),
-  amount: z.number().positive('Το ποσό πρέπει να είναι θετικός αριθμός'),
+  mis: z.union([z.string().min(1, "Κωδικός MIS απαιτείται"), z.number().int()]),
+  amount: z.number().positive("Το ποσό πρέπει να είναι θετικός αριθμός"),
   note: z.string().optional(),
 });
 
@@ -281,7 +314,6 @@ export const budgetValidationSchema = z.object({
 // Base entity types inferred from table definitions
 export type User = typeof users.$inferSelect;
 export type Project = typeof projects.$inferSelect;
-export type ProjectCatalog = typeof projectCatalog.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
 export type BudgetHistory = typeof budgetHistory.$inferSelect;
@@ -298,9 +330,13 @@ export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type InsertProjectCatalog = z.infer<typeof insertProjectCatalogSchema>;
-export type InsertGeneratedDocument = z.infer<typeof insertGeneratedDocumentSchema>;
+export type InsertGeneratedDocument = z.infer<
+  typeof insertGeneratedDocumentSchema
+>;
 export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
-export type InsertBudgetNotification = z.infer<typeof insertBudgetNotificationSchema>;
+export type InsertBudgetNotification = z.infer<
+  typeof insertBudgetNotificationSchema
+>;
 export type Recipient = z.infer<typeof recipientSchema>;
 
 // ==============================================================
@@ -362,8 +398,10 @@ export const budgetValidationResponseSchema = z.object({
   message: z.string().optional(),
   canCreate: z.boolean(),
   requiresNotification: z.boolean().optional(),
-  notificationType: z.enum(["funding", "reallocation", "exceeded_proip"]).optional(),
-  allowDocx: z.boolean().optional()
+  notificationType: z
+    .enum(["funding", "reallocation", "exceeded_proip"])
+    .optional(),
+  allowDocx: z.boolean().optional(),
 });
 
 // Budget validation type
@@ -374,7 +412,7 @@ export const versionMetadataSchema = z.object({
   reason: z.string().optional(),
   changes: z.record(z.string(), z.any()).optional(),
   user_id: z.number().optional(),
-  automated: z.boolean().optional()
+  automated: z.boolean().optional(),
 });
 
 // ==============================================================
@@ -383,7 +421,6 @@ export const versionMetadataSchema = z.object({
 
 export type Database = {
   users: typeof users.$inferSelect;
-  projectCatalog: typeof projectCatalog.$inferSelect;
   generatedDocuments: typeof generatedDocuments.$inferSelect;
   budgetNA853Split: typeof budgetNA853Split.$inferSelect;
   budgetHistory: typeof budgetHistory.$inferSelect;
