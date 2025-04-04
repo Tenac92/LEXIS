@@ -4,8 +4,10 @@ import { createServer, type Server } from "http";
 import { authenticateSession, User, AuthenticatedRequest } from "./middleware/auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
-import { router as budgetRouter } from "./controllers/budgetController";
+// Import the budgetController for the getBudgetByMis function
 import { getBudgetByMis } from './controllers/budgetController';
+// Import the budget router with validation endpoints from routes/budget.ts
+import budgetRouter from './routes/budget';
 import { router as budgetNotificationsRouter } from "./controllers/budgetNotificationsController";
 import { router as unitsRouter } from "./controllers/unitsController";
 import { router as usersRouter } from "./controllers/usersController";
