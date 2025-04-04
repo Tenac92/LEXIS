@@ -4,8 +4,7 @@ import { createServer, type Server } from "http";
 import { authenticateSession, User, AuthenticatedRequest } from "./middleware/auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
-import { router as budgetRouter } from "./controllers/budgetController";
-import { getBudgetByMis } from './controllers/budgetController';
+import { router as budgetRouter, getBudgetByMis } from "./controllers/budgetController";
 import { router as budgetNotificationsRouter } from "./controllers/budgetNotificationsController";
 import { router as unitsRouter } from "./controllers/unitsController";
 import { router as usersRouter } from "./controllers/usersController";
@@ -336,367 +335,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // which includes all auth functionality:
     // - Login
     // - Logout
+    // - Register
+    // - Password reset
     // - Session management
-    // - Password management
     
-    // Legacy auth route
-    app.use('/auth', authRouter);
+    // Add fallback route for browser /auth path to redirect properly
+    app.get('/auth/*', authBrowserHandler);
+    app.get('/auth', authBrowserHandler);
     
-    // Mock login route for testing
-    if (process.env.NODE_ENV !== 'production') {
-      log('[Routes] Setting up mock authentication routes (non-production only)...');
-      app.use('/api/mock', async (req: Request, res: Response) => {
-        const userId = req.query.userId as string;
-        if (!userId) {
-          return res.status(400).json({ message: 'userId query parameter is required' });
-        }
-        
-        try {
-          // Look up the user by ID
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', userId)
-            .single();
-          
-          if (userError || !userData) {
-            return res.status(404).json({ message: 'User not found' });
-          }
-          
-          // Set the user in the session
-          (req as any).session.user = userData;
-          await new Promise<void>((resolve, reject) => {
-            (req as any).session.save((err: Error) => {
-              if (err) reject(err);
-              else resolve();
-            });
-          });
-          
-          res.json({ message: 'Mock login successful', user: userData });
-        } catch (error) {
-          console.error('Error in mock login:', error);
-          res.status(500).json({ message: 'Error in mock login' });
-        }
-      });
-    }
+    // Document routes - use the controller and maintain backward compatibility
+    log('[Routes] Setting up documents routes with controller...');
     
-    // Browser document handler middleware for sdegdaefk.gr integration
-    app.use('/documents', documentsBrowserHandler);
+    // Set up document browser route first to handle special cases
+    app.get('/documents*', documentsBrowserHandler);
+    app.get('/documents', documentsBrowserHandler);
     
-    // Browser auth handler middleware for sdegdaefk.gr integration
-    app.use('/auth/login', authBrowserHandler);
+    // Set up the full documents controller for API routes
+    app.use('/api/documents', documentsRouter);
     
-    // Dashboard routes
-    log('[Routes] Setting up dashboard routes...');
+    // Set up project controller
+    log('[Routes] Setting up project routes with controller...');
+    app.use('/api/projects', projectRouter);
     
-    // GET Dashboard stats endpoint
-    app.get('/api/dashboard/stats', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-      try {
-        const stats = await getDashboardStats(req.user);
-        res.json({ status: 'success', data: stats });
-      } catch (error) {
-        console.error('Error getting dashboard stats:', error);
-        res.status(500).json({ 
-          status: 'error', 
-          message: 'Failed to get dashboard stats',
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
-    });
+    // Set up template preview routes
+    log('[Routes] Setting up template preview routes...');
+    app.use('/api/template-preview', templatePreviewRouter);
     
-    // User routes
-    log('[Routes] Setting up user routes...');
+    // Set up units routes
+    log('[Routes] Setting up units routes...');
+    app.use('/api/units', authenticateSession, unitsRouter);
     
+    // Set up users routes
+    log('[Routes] Setting up users routes...');
     app.use('/api/users', authenticateSession, usersRouter);
     
-    // Project routes
-    log('[Routes] Setting up project routes...');
-    
-    // Allow public access to projects for public document creation
-    app.get('/api/projects/search', async (req: Request, res: Response) => {
-      try {
-        let query = req.query.q as string;
-        console.log(`[Projects] Search query: "${query}"`);
-        
-        if (!query) {
-          return res.json({ data: [] });
-        }
-        
-        // Replace Ν with N in the query if present (common issue with Greek/Latin characters)
-        const cleanedQuery = query
-          .replace(/Ν/g, 'N')  // Greek Ν to Latin N
-          .replace(/\s+/g, ''); // Remove whitespace
-        
-        console.log(`[Projects] Cleaned search query: "${cleanedQuery}"`);
-        
-        // Search by various project identifiers
-        const { data, error } = await supabase
-          .from('Projects')
-          .select('*')
-          .or(`na853.ilike.%${cleanedQuery}%,project_title.ilike.%${query}%,mis.ilike.%${query}%,expenditure.ilike.%${query}%`)
-          .limit(20);
-        
-        if (error) {
-          console.error('[Projects] Search error:', error);
-          return res.status(500).json({ 
-            message: 'Error searching projects', 
-            error: error.message 
-          });
-        }
-        
-        console.log(`[Projects] Found ${data?.length || 0} results`);
-        res.json({ data: data || [] });
-      } catch (error) {
-        console.error('[Projects] Search error:', error);
-        res.status(500).json({ 
-          message: 'Error searching projects', 
-          error: error instanceof Error ? error.message : 'Unknown error' 
-        });
-      }
-    });
-    
-    // Use authentication for all other project routes
-    app.use('/api/projects', authenticateSession, projectRouter);
-    app.use('/api/catalog', authenticateSession, projectRouter);
-
-    // Budget routes
-    log('[Routes] Setting up budget routes...');
+    // Set up dashboard routes
+    log('[Routes] Setting up dashboard routes...');
+    app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
     
     // Allow public access to budget data by MIS for document creation
     // Using our specialized controller function for MIS lookups
     app.get('/api/budget/:mis', getBudgetByMis);
-
-    // Budget notifications routes - must be registered BEFORE the main budget routes
-    log('[Routes] Setting up budget notifications routes...');
-    app.use('/api/budget-notifications', authenticateSession, budgetNotificationsRouter);
-    log('[Routes] Budget notifications routes setup complete');
     
-    // Use authentication for all other budget routes
-    log('[Routes] Setting up authenticated budget routes...');
+    // Set up budget routes with controllers
+    log('[Routes] Setting up budget routes with controllers...');
+    
+    // Main budget routes
     app.use('/api/budget', authenticateSession, budgetRouter);
-    log('[Routes] Budget routes setup complete');
     
-    // Budget upload routes - must be registered after budget routes to prevent conflicts
-    log('[Routes] Setting up budget upload routes...');
-    app.use('/api/budget', authenticateSession, budgetUploadRouter);
-    log('[Routes] Budget upload routes setup complete');
+    // Budget history notifications
+    app.use('/api/budget-notifications', authenticateSession, budgetNotificationsRouter);
     
-    // Documents routes
-    log('[Routes] Setting up document routes...');
+    // Budget upload router
+    app.use('/api/budget-upload', authenticateSession, budgetUploadRouter);
     
-    // Public document access by ID - no authentication required
-    app.get('/api/documents/public/:id', async (req, res) => {
-      try {
-        const { id } = req.params;
-        
-        if (!id) {
-          return res.status(400).json({ message: 'Document ID is required' });
-        }
-        
-        console.log('[Documents] Public access to document ID:', id);
-        
-        // Get document by ID
-        const { data, error } = await supabase
-          .from('generated_documents')
-          .select('*')
-          .eq('id', id)
-          .single();
-        
-        if (error) {
-          console.error('[Documents] Error fetching document:', error);
-          return res.status(404).json({ message: 'Document not found' });
-        }
-        
-        if (!data) {
-          return res.status(404).json({ message: 'Document not found' });
-        }
-        
-        // Redact sensitive information for public access
-        const publicDocument = {
-          ...data,
-          // Redact sensitive recipient info but keep payment details
-          recipients: data.recipients.map((recipient: any) => ({
-            ...recipient,
-            // Keep just the last 4 digits of AFM
-            afm: recipient.afm ? `***${recipient.afm.slice(-4)}` : '********',
-            // Only include the first letter of names
-            firstname: recipient.firstname ? `${recipient.firstname.charAt(0)}...` : '',
-            lastname: recipient.lastname ? `${recipient.lastname.charAt(0)}...` : '',
-            fathername: recipient.fathername ? `${recipient.fathername.charAt(0)}...` : ''
-          }))
-        };
-        
-        res.json({ status: 'success', data: publicDocument });
-      } catch (error) {
-        console.error('[Documents] Error in public document access:', error);
-        res.status(500).json({ 
-          message: 'Error accessing document', 
-          error: error instanceof Error ? error.message : 'Unknown error' 
-        });
-      }
-    });
-    
-    // Authenticated document routes
-    app.use('/api/documents', authenticateSession, documentsRouter);
-    
-    // Template preview routes
-    app.use('/api/templates', authenticateSession, templatePreviewRouter);
-    
-    // Units handling
-    log('[Routes] Setting up unit routes...');
-    
-    // Public units endpoint for document creation
-    app.get('/api/users/units', async (req, res) => {
-      try {
-        console.log('[Units] Public access to units list');
-        
-        // Get units list - read from environment if available, otherwise from database
-        let units: any[] = [];
-        
-        if (process.env.UNITS_JSON) {
-          try {
-            units = JSON.parse(process.env.UNITS_JSON);
-            console.log(`[Units] Loaded ${units.length} units from environment variable`);
-          } catch (err) {
-            console.error('[Units] Error parsing UNITS_JSON environment variable:', err);
-          }
-        }
-        
-        // If units not available from environment, try database
-        if (!units.length) {
-          const { data, error } = await supabase
-            .from('units')
-            .select('*')
-            .order('title', { ascending: true });
-          
-          if (error) {
-            console.error('[Units] Error fetching units from database:', error);
-          } else if (data) {
-            units = data;
-            console.log(`[Units] Loaded ${units.length} units from database`);
-          }
-        }
-        
-        // Return the units list
-        res.json({ data: units });
-      } catch (error) {
-        console.error('[Units] Error in public units access:', error);
-        res.status(500).json({ 
-          message: 'Error accessing units', 
-          error: error instanceof Error ? error.message : 'Unknown error'  
-        });
-      }
-    });
-    
-    // Units routes
-    app.use('/api/units', authenticateSession, unitsRouter);
-    
-    // Other routes
-    log('[Routes] Setting up additional routes...');
-    
-    // Attachments router
+    // Set up document attachments
     app.use('/api/attachments', attachmentsRouter);
     
-    // API router (for middleware and utility endpoints)
-    app.use('/api', apiRouter);
-    
-    // Health check routes
+    // Set up diagnostic routes
+    log('[Routes] Setting up diagnostic routes...');
     app.use('/api/healthcheck', healthcheckRouter);
     app.use('/api/health', healthRouter);
-    
-    // System diagnostic routes
     app.use('/api/diagnostic', sdegdaefkDiagnosticRouter);
     
-    // API Documentation - Swagger/OpenAPI
-    app.get('/api-docs', (req, res) => {
-      res.send(`
-        <html>
-        <head>
-          <title>API Documentation</title>
-          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3.25.0/swagger-ui.css">
-          <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3.25.0/swagger-ui-bundle.js"></script>
-        </head>
-        <body>
-          <div id="swagger-ui"></div>
-          <script>
-            window.onload = function() {
-              SwaggerUIBundle({
-                url: "/api-docs/openapi.json",
-                dom_id: '#swagger-ui',
-                presets: [
-                  SwaggerUIBundle.presets.apis,
-                  SwaggerUIBundle.SwaggerUIStandalonePreset
-                ],
-                layout: "BaseLayout"
-              })
-            }
-          </script>
-        </body>
-        </html>
-      `);
-    });
-    
-    // OpenAPI schema
-    app.get('/api-docs/openapi.json', (req, res) => {
-      res.json({
-        openapi: '3.0.0',
-        info: {
-          title: 'Budget Management API',
-          version: '2.0.0',
-          description: 'API documentation for the Budget Management System'
-        },
-        servers: [
-          {
-            url: 'https://sdegdaefk.gr/api',
-            description: 'Production server'
-          },
-          {
-            url: '/api',
-            description: 'Development server'
-          }
-        ],
-        paths: {
-          // TODO: Autogenerate from routes
-        }
-      });
-    });
-    
-    // Log the registered routes in development mode
-    if (process.env.NODE_ENV !== 'production') {
-      // Helper function to extract routes
-      function extractRoutes(stack: any[], basePath = '') {
-        const routes: string[] = [];
-        
-        for (const layer of stack) {
-          if (layer.route) {
-            // Routes registered directly on the app
-            const path = layer.route.path;
-            const methods = Object.keys(layer.route.methods).map(m => m.toUpperCase()).join(',');
-            routes.push(`${methods} ${basePath}${path}`);
-          } else if (layer.name === 'router' && layer.handle.stack) {
-            // Middleware registered with app.use
-            const path = layer.regexp.source.replace('^\\/(?=\\/|$)|\\/$', '').replace(/\\\//g, '/');
-            const subRoutes = extractRoutes(layer.handle.stack, basePath + path);
-            routes.push(...subRoutes);
-          }
-        }
-        
-        return routes;
-      }
-      
-      // Extract and log all routes
-      const routes = extractRoutes((app as any)._router.stack);
-      console.log('\n[Routes] Registered routes:');
-      routes.forEach(route => console.log(`- ${route}`));
+    // If we have an api router, set it up
+    // This was used for legacy routes and is kept for backward compatibility
+    if (apiRouter) {
+      log('[Routes] Setting up legacy API router...');
+      app.use('/api', apiRouter);
     }
     
-    // Create HTTP server
-    const server = createServer(app);
+    log('[Routes] Setting up static file serving...');
     
-    // Return the server instance
+    // Static server setup is now in server/vite.ts
+    // and will be called after this function
+    
+    // Extract routes for diagnostics
+    function extractRoutes(stack: any[], basePath = '') {
+      return stack
+        .filter((layer: any) => layer.route)
+        .map((layer: any) => {
+          const path = basePath + (layer.route?.path || '');
+          const methods = layer.route?.methods ? Object.keys(layer.route.methods) : [];
+          return { path, methods };
+        });
+    }
+    
+    // Log registered routes for debugging
+    const routes = extractRoutes(app._router.stack);
+    console.log(`[Routes] Registered ${routes.length} routes`);
+    
+    // Create server
+    const server = createServer(app);
+    console.log('[Server] HTTP server created');
+    
+    // Return the server
     return server;
   } catch (error) {
-    console.error('[Routes] Error setting up routes:', error);
-    throw error;
+    console.error('[Routes] Error registering routes:', error);
+    // Need to create and return a server even in error case
+    return createServer(app);
   }
 }

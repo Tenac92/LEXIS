@@ -66,7 +66,7 @@ const upload = multer({
 });
 
 // Route to upload Excel file and update budget data
-router.post('/upload', authenticateToken, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/', authenticateToken, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
   // Check if user is admin
   if (req.user?.role !== 'admin') {
     return res.status(403).json({
