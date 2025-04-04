@@ -326,11 +326,16 @@ export class DocumentFormatter {
     });
   }
 
-  private static async generateDocument(
+
+
+  /**
+   * Generate the first (primary) document
+   */
+  public static async generateDocument(
     documentData: DocumentData,
   ): Promise<Buffer> {
     try {
-      console.log("Generating document for:", documentData);
+      console.log("Generating primary document for:", documentData);
 
       const unitDetails = await this.getUnitDetails(documentData.unit);
       console.log("Unit details:", unitDetails);
@@ -383,7 +388,180 @@ export class DocumentFormatter {
 
       return await Packer.toBuffer(doc);
     } catch (error) {
-      console.error("Error generating document:", error);
+      console.error("Error generating primary document:", error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Generate the second document containing:
+   * - Project title at the top (planescape)
+   * - Recipients table with an extra ΠΡΑΞΗ column that shows the expenditure type
+   * - Standard text about documentation retention
+   * - Two signature fields with user name and department on the left
+   */
+  public static async generateSecondDocument(
+    documentData: DocumentData,
+  ): Promise<Buffer> {
+    try {
+      console.log("Generating secondary document for:", documentData);
+
+      const unitDetails = await this.getUnitDetails(documentData.unit);
+      console.log("Unit details:", unitDetails);
+      
+      // Get user information with fallbacks
+      const userInfo = {
+        name: documentData.generated_by?.name || documentData.user_name || "",
+        department: documentData.generated_by?.department || documentData.department || "",
+      };
+
+      const sections = [
+        {
+          properties: {
+            page: {
+              size: { width: 11906, height: 16838 },
+              margins: this.DOCUMENT_MARGINS,
+              orientation: PageOrientation.PORTRAIT,
+            },
+          },
+          children: [
+            // Project title (planescape)
+            new Paragraph({
+              text: documentData.project_id || "ΠΛΑΝΗΣΚΕΪΠ",
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 400, after: 200 },
+              style: "Heading1",
+            }),
+            
+            // Project title
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: documentData.project_na853 || "",
+                  bold: true,
+                })
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 200, after: 400 },
+            }),
+            
+            // Recipients table with ΠΡΑΞΗ column
+            this.createRecipientsTableWithAction(documentData.recipients || [], documentData.expenditure_type),
+            
+            // Standard text about documentation retention
+            new Paragraph({
+              text: "ΤΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ ΒΑΣΕΙ ΤΩΝ ΟΠΟΙΩΝ ΕΚΔΟΘΗΚΑΝ ΟΙ ΔΙΟΙΚΗΤΙΚΕΣ ΠΡΑΞΕΙΣ ΑΝΑΓΝΩΡΙΣΗΣ ΔΙΚΑΙΟΥΧΩΝ ΔΩΡΕΑΝ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ ΤΗΡΟΥΝΤΑΙ ΣΤΟ ΑΡΧΕΙΟ ΤΗΣ ΥΠΗΡΕΣΙΑΣ ΜΑΣ.",
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 400, after: 400 },
+            }),
+            
+            // Signature fields with compiler on the left
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+                insideHorizontal: { style: BorderStyle.NONE },
+                insideVertical: { style: BorderStyle.NONE },
+              },
+              rows: [
+                new TableRow({
+                  children: [
+                    // Left side - compiler details
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: {
+                        top: { style: BorderStyle.NONE },
+                        bottom: { style: BorderStyle.NONE },
+                        left: { style: BorderStyle.NONE },
+                        right: { style: BorderStyle.NONE },
+                      },
+                      children: [
+                        new Paragraph({
+                          text: "Ο ΣΥΝΤΑΞΑΣ",
+                          alignment: AlignmentType.CENTER,
+                          spacing: { before: 400, after: 600 },
+                        }),
+                        new Paragraph({
+                          text: userInfo.name,
+                          alignment: AlignmentType.CENTER,
+                          spacing: { after: 200 },
+                        }),
+                        new Paragraph({
+                          text: userInfo.department,
+                          alignment: AlignmentType.CENTER,
+                        }),
+                      ],
+                    }),
+                    // Right side - signature field (empty like in the original doc)
+                    new TableCell({
+                      width: { size: 50, type: WidthType.PERCENTAGE },
+                      borders: {
+                        top: { style: BorderStyle.NONE },
+                        bottom: { style: BorderStyle.NONE },
+                        left: { style: BorderStyle.NONE },
+                        right: { style: BorderStyle.NONE },
+                      },
+                      children: [
+                        new Paragraph({
+                          text: "",
+                          alignment: AlignmentType.CENTER,
+                          spacing: { before: 400, after: 600 },
+                        }),
+                        new Paragraph({
+                          text: "",
+                          alignment: AlignmentType.CENTER,
+                          spacing: { after: 200 },
+                        }),
+                        new Paragraph({
+                          text: "",
+                          alignment: AlignmentType.CENTER,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        },
+      ];
+
+      const doc = new Document({
+        sections,
+        styles: {
+          default: {
+            document: {
+              run: {
+                font: this.DEFAULT_FONT,
+                size: this.DEFAULT_FONT_SIZE,
+              },
+            },
+          },
+          paragraphStyles: [
+            {
+              id: "Heading1",
+              name: "Heading 1",
+              basedOn: "Normal",
+              next: "Normal",
+              quickFormat: true,
+              run: {
+                size: 32,
+                bold: true,
+              },
+              paragraph: {
+                spacing: { line: 340, lineRule: "atLeast" },
+              },
+            },
+          ],
+        },
+      });
+
+      return await Packer.toBuffer(doc);
+    } catch (error) {
+      console.error("Error generating secondary document:", error);
       throw error;
     }
   }
@@ -563,6 +741,121 @@ export class DocumentFormatter {
         text: "",
       }),
     ];
+  }
+
+  /**
+   * Creates a special recipients table with an extra ΠΡΑΞΗ column
+   * Used in the second document
+   */
+  private static createRecipientsTableWithAction(
+    recipients: NonNullable<DocumentData["recipients"]>,
+    expenditureType: string,
+  ): Table {
+    const tableBorders: ITableBordersOptions = {
+      top: { style: BorderStyle.SINGLE, size: 1 },
+      bottom: { style: BorderStyle.SINGLE, size: 1 },
+      left: { style: BorderStyle.SINGLE, size: 1 },
+      right: { style: BorderStyle.SINGLE, size: 1 },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+    };
+
+    const rows = [
+      new TableRow({
+        height: { value: 360, rule: HeightRule.EXACT },
+        children: [
+          this.createHeaderCell("Α.Α.", "auto"),
+          this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
+          this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
+          this.createHeaderCell("ΔΟΣΗ", "auto"),
+          this.createHeaderCell("ΑΦΜ", "auto"),
+          this.createHeaderCell("ΠΡΑΞΗ", "auto"), // Extra column for action/expenditure type
+        ],
+      })
+    ];
+
+    // Process each recipient
+    recipients.forEach((recipient, index) => {
+      const fullName = `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
+      const afm = recipient.afm;
+      const rowNumber = (index + 1).toString() + ".";
+      
+      // Determine installments
+      let installments: string[] = [];
+      if (Array.isArray(recipient.installments) && recipient.installments.length > 0) {
+        installments = recipient.installments;
+      } else if (recipient.installment) {
+        installments = [recipient.installment.toString()];
+      } else {
+        installments = ["ΕΦΑΠΑΞ"];
+      }
+      
+      // Get installment amounts if available
+      const installmentAmounts = recipient.installmentAmounts || {};
+      
+      // If there's only one installment, create a simple row
+      if (installments.length === 1) {
+        const installment = installments[0];
+        const amount = installmentAmounts[installment] || recipient.amount;
+        
+        rows.push(
+          new TableRow({
+            height: { value: 360, rule: HeightRule.EXACT },
+            children: [
+              this.createCell(rowNumber),
+              this.createCell(fullName),
+              this.createCell(this.formatCurrency(amount)),
+              this.createCell(installment),
+              this.createCell(afm),
+              this.createCell(expenditureType), // Add expenditure type in the extra column
+            ],
+          })
+        );
+      } else {
+        // For multiple installments, use row spanning
+        rows.push(
+          new TableRow({
+            height: { value: 360, rule: HeightRule.EXACT },
+            children: [
+              this.createCellWithRowSpan(rowNumber, installments.length),
+              this.createCellWithRowSpan(fullName, installments.length),
+              this.createCell(this.formatCurrency(
+                installmentAmounts[installments[0]] || recipient.amount
+              )),
+              this.createCell(installments[0]),
+              this.createCellWithRowSpan(afm, installments.length),
+              this.createCellWithRowSpan(expenditureType, installments.length), // Add expenditure type with row span
+            ],
+          })
+        );
+        
+        // Add rows for additional installments
+        for (let i = 1; i < installments.length; i++) {
+          const installment = installments[i];
+          const amount = installmentAmounts[installment] || recipient.amount;
+          
+          rows.push(
+            new TableRow({
+              height: { value: 360, rule: HeightRule.EXACT },
+              children: [
+                this.createCellWithRowSpan("", 0, "continue"),
+                this.createCellWithRowSpan("", 0, "continue"),
+                this.createCell(this.formatCurrency(amount)),
+                this.createCell(installment),
+                this.createCellWithRowSpan("", 0, "continue"),
+                this.createCellWithRowSpan("", 0, "continue") // Continue row span for expenditure type
+              ],
+            })
+          );
+        }
+      }
+    });
+
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: tableBorders,
+      rows,
+    });
   }
 
   private static createPaymentTable(
@@ -999,6 +1292,63 @@ export class DocumentFormatter {
       ],
       spacing: { before: 240, after: 10 },
     });
+  }
+  
+  /**
+   * Helper method for creating a regular cell for second document tables
+   */
+  private static createCell(text: string, alignment: "center" | "left" | "right" = AlignmentType.CENTER): TableCell {
+    return new TableCell({
+      verticalAlign: VerticalAlign.CENTER,
+      children: [
+        new Paragraph({
+          children: [
+            new TextRun({
+              text,
+              size: this.DEFAULT_FONT_SIZE,
+            }),
+          ],
+          alignment,
+        }),
+      ],
+    });
+  }
+  
+  /**
+   * Helper method for creating a cell with row spanning for second document tables
+   */
+  private static createCellWithRowSpan(
+    text: string, 
+    rowSpan: number, 
+    verticalMerge: "restart" | "continue" = VerticalMergeType.RESTART,
+    alignment: "center" | "left" | "right" = AlignmentType.CENTER
+  ): TableCell {
+    return new TableCell({
+      verticalAlign: VerticalAlign.CENTER,
+      verticalMerge,
+      rowSpan: rowSpan > 0 ? rowSpan : undefined,
+      children: [
+        new Paragraph({
+          children: [
+            new TextRun({
+              text,
+              size: this.DEFAULT_FONT_SIZE,
+            }),
+          ],
+          alignment,
+        }),
+      ],
+    });
+  }
+  
+  /**
+   * Helper method to format currency values consistently
+   */
+  private static formatCurrency(amount: number): string {
+    return amount.toLocaleString("el-GR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }) + " €";
   }
 
   private static createContactDetail(label: string, value: string): Paragraph {

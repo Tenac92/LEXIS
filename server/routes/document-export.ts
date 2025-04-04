@@ -1,6 +1,7 @@
 import { Request, Response, Router } from 'express';
 import { supabase } from '../config/db';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
+import JSZip from 'jszip';
 
 export const documentExportRouter = Router();
 
@@ -46,29 +47,66 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(400).json({ message: 'Invalid document data' });
     }
 
-    // Generate document buffer
-    console.log('Generating document...');
-    const buffer = await DocumentFormatter.generateDocument(document);
+    // Check format parameter if user wants a ZIP file with both documents
+    const format = req.query.format as string;
+    const generateBoth = format === 'both' || format === 'zip';
 
-    if (!buffer || buffer.length === 0) {
-      console.error('Generated empty buffer for document:', id);
-      return res.status(500).json({ message: 'Failed to generate document content' });
+    // Generate primary document buffer
+    console.log('Generating primary document...');
+    const primaryBuffer = await DocumentFormatter.generateDocument(document);
+
+    if (!primaryBuffer || primaryBuffer.length === 0) {
+      console.error('Generated empty buffer for primary document:', id);
+      return res.status(500).json({ message: 'Failed to generate primary document content' });
     }
 
-    // Set proper headers for Word document
-    const filename = `document-${document.id.toString().padStart(6, '0')}.docx`;
-    console.log('Sending document:', filename, 'Size:', buffer.length);
+    // If user wants only the primary document (default behavior)
+    if (!generateBoth) {
+      // Set proper headers for Word document
+      const filename = `document-${document.id.toString().padStart(6, '0')}.docx`;
+      console.log('Sending primary document:', filename, 'Size:', primaryBuffer.length);
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-    res.setHeader('Content-Length', buffer.length);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.setHeader('Content-Length', primaryBuffer.length);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
+      // Send primary buffer
+      res.end(primaryBuffer);
+      console.log('Primary document sent successfully');
+      return;
+    }
+
+    // If we're here, user wants both documents in a zip
+    console.log('Generating secondary document...');
+    const secondaryBuffer = await DocumentFormatter.generateSecondDocument(document);
+
+    // Create a new ZIP archive
+    const zip = new JSZip();
+    
+    // Add both documents to the zip file
+    zip.file(`document-primary-${document.id.toString().padStart(6, '0')}.docx`, primaryBuffer);
+    zip.file(`document-supplementary-${document.id.toString().padStart(6, '0')}.docx`, secondaryBuffer);
+    
+    // Generate zip file
+    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+    
+    // Set proper headers for ZIP file
+    const zipFilename = `documents-${document.id.toString().padStart(6, '0')}.zip`;
+    console.log('Sending ZIP archive with both documents:', zipFilename, 'Size:', zipBuffer.length);
+    
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(zipFilename)}"`);
+    res.setHeader('Content-Length', zipBuffer.length);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-
-    // Send buffer
-    res.end(buffer);
-    console.log('Document sent successfully');
+    
+    // Send zip buffer
+    res.end(zipBuffer);
+    console.log('ZIP file with both documents sent successfully');
 
   } catch (error) {
     console.error('Document export error:', error);

@@ -606,7 +606,7 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
   const handleExport = async () => {
     try {
       setLoading(true);
-      console.log('Έναρξη διαδικασίας εξαγωγής εγγράφου...');
+      console.log('Έναρξη διαδικασίας εξαγωγής εγγράφων...');
 
       const testResponse = await fetch(`/api/documents/generated/${document.id}/test`);
       const testResult = await testResponse.json();
@@ -621,14 +621,14 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
       const downloadUrl = `/api/documents/generated/${document.id}/export`;
       const link = window.document.createElement('a');
       link.href = downloadUrl;
-      link.setAttribute('download', `document-${document.id}.docx`);
+      link.setAttribute('download', `documents-${document.id}.zip`);
       window.document.body.appendChild(link);
       link.click();
       window.document.body.removeChild(link);
 
       toast({
         title: "Επιτυχία",
-        description: "Η λήψη του εγγράφου ξεκίνησε",
+        description: "Η λήψη των εγγράφων ξεκίνησε",
       });
 
       setTimeout(() => setLoading(false), 1000);
@@ -638,7 +638,7 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
       console.error('Σφάλμα εξαγωγής:', error);
       toast({
         title: "Σφάλμα",
-        description: error instanceof Error ? error.message : "Αποτυχία λήψης εγγράφου",
+        description: error instanceof Error ? error.message : "Αποτυχία λήψης εγγράφων",
         variant: "destructive",
       });
       setLoading(false);
@@ -649,11 +649,21 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Εξαγωγή Εγγράφου</DialogTitle>
+          <DialogTitle>Εξαγωγή Εγγράφων</DialogTitle>
           <DialogDescription>
-            Πατήστε το κουμπί παρακάτω για να κατεβάσετε το έγγραφο.
+            Πατήστε το κουμπί παρακάτω για να κατεβάσετε τα έγγραφα (κύριο έγγραφο και Πλανησκέιπ) σε μορφή ZIP.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="p-4 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-sm">
+          <div className="font-semibold mb-1">Πληροφορίες:</div>
+          <p>Το αρχείο ZIP περιέχει δύο έγγραφα DOCX:</p>
+          <ul className="list-disc pl-5 mt-1">
+            <li>Το κύριο έγγραφο με όλα τα στοιχεία</li>
+            <li>Το συμπληρωματικό έγγραφο "Πλανησκέιπ" με τα στοιχεία παραληπτών και τύπο Πράξης</li>
+          </ul>
+        </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Ακύρωση
