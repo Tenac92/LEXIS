@@ -258,7 +258,7 @@ export class DocumentManager {
   }
 
   async validateDocument(documentData: any) {
-    const requiredFields = ['unit', 'project_id', 'expenditure_type'];
+    const requiredFields = ['unit', 'mis', 'expenditure_type'];
     const missingFields = requiredFields.filter(field => !documentData[field]);
     
     if (missingFields.length) {
@@ -303,7 +303,7 @@ export class DocumentManager {
         is_correction: true,
         comments: documentData.correctionReason,
         // Ensure these fields are numbers/strings
-        project_id: String(documentData.project_id),
+        mis: String(documentData.project_id || documentData.mis),
         total_amount: parseFloat(String(documentData.total_amount || 0)),
         recipients: documentData.recipients.map((r: any) => ({
           ...r,
@@ -358,7 +358,7 @@ export class DocumentManager {
         .select(`
           *,
           recipients,
-          project:project_id (
+          project:mis (
             na853,
             title
           )

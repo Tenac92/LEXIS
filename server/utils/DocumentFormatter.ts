@@ -30,6 +30,7 @@ interface UserDetails {
   contact_number?: string;
   telephone?: string; // Added telephone field from Supabase user table
   department?: string;
+  descr?: string;
 }
 
 interface UnitDetails {
@@ -453,7 +454,7 @@ export class DocumentFormatter {
       // Get user information with fallbacks
       const userInfo = {
         name: documentData.generated_by?.name || documentData.user_name || "",
-        department: documentData.generated_by?.department || documentData.department || "",
+        department: documentData.generated_by?.descr || documentData.descr || "",
       };
       
       // Calculate total amount from recipients
