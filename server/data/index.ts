@@ -30,7 +30,8 @@ class DatabaseConfig {
  */
 class DatabaseAccess {
   private static instance: DatabaseAccess;
-  private supabaseClient!: ReturnType<typeof createClient<Database>>;
+  // Use any type to avoid type errors during initialization
+  private supabaseClient: any;
   private initialized = false;
 
   private constructor() {
@@ -55,14 +56,14 @@ class DatabaseAccess {
       // Validate configuration
       DatabaseConfig.validateConfig();
       
-      // Initialize Supabase with enhanced configuration
+      // Initialize Supabase with enhanced configuration and more resilient settings
       this.supabaseClient = createClient<Database>(
         DatabaseConfig.supabaseUrl!,
         DatabaseConfig.supabaseKey!,
         {
           auth: {
             persistSession: false,
-            autoRefreshToken: true,
+            autoRefreshToken: false, // Changed to false to avoid token refresh issues
           },
           global: {
             headers: {
@@ -77,17 +78,30 @@ class DatabaseAccess {
         }
       );
       
-      // Verify Supabase connection works
-      const { error } = await this.supabaseClient
+      // Verify Supabase connection works with a simpler query and longer timeout
+      const fetchPromise = this.supabaseClient
         .from('users')
-        .select('count(*)', { count: 'exact', head: true });
+        .select('id')
+        .limit(1);
+        
+      // Create a timeout promise to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Database connection timeout')), 10000);
+      });
       
-      if (error) {
-        throw error;
+      // Race the fetch against the timeout
+      const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      
+      if (result.error) {
+        throw result.error;
       }
       
       this.initialized = true;
       log('[Database] Successfully initialized Supabase client', 'info');
+      console.log('[Database] Connection verified with data:', result.data);
+      
+      // Reset connection attempts counter on success
+      this.connectionAttempts = 0;
     } catch (error: any) {
       log(`[Database] Failed to initialize (attempt ${this.connectionAttempts}/${this.MAX_CONNECTION_ATTEMPTS}): ${error.message}`, 'error');
       
@@ -105,7 +119,9 @@ class DatabaseAccess {
         await this.initializeWithRetry();
       } else {
         log('[Database] Maximum initialization attempts reached. Database access may be unavailable.', 'error');
-        throw new Error(`Failed to initialize database after ${this.MAX_CONNECTION_ATTEMPTS} attempts: ${error.message}`);
+        // Instead of throwing, just mark as uninitialized but continue
+        this.initialized = false;
+        console.error(`[Database] Failed to initialize after ${this.MAX_CONNECTION_ATTEMPTS} attempts:`, error);
       }
     }
   }
@@ -123,9 +139,15 @@ class DatabaseAccess {
   /**
    * Get Supabase client
    */
-  public get supabase(): ReturnType<typeof createClient<Database>> {
+  public get supabase(): any {
     if (!this.initialized) {
       log('[Database] Warning: Accessing Supabase client before initialization is complete', 'warn');
+      
+      // Try to reinitialize if we're not in the middle of retrying
+      if (this.connectionAttempts === 0) {
+        log('[Database] Attempting to reinitialize Supabase client', 'info');
+        this.initialize();
+      }
     }
     return this.supabaseClient;
   }

@@ -18,8 +18,22 @@ export function CompactBudgetIndicator({
   budgetData: BudgetData | null;
   mis: string;
 }) {
-  // Debug output
-  console.log("[CompactBudgetIndicator] Rendering with data:", budgetData);
+  // Enhanced debug output
+  console.log("[CompactBudgetIndicator] Rendering with data:", budgetData, "for MIS:", mis);
+  if (budgetData) {
+    console.log("[CompactBudgetIndicator] Debug - key values:", { 
+      user_view: budgetData.user_view,
+      katanomes_etous: budgetData.katanomes_etous,
+      available_budget: budgetData.available_budget,
+      // Show the data types to help debug type conversion issues
+      types: {
+        user_view: typeof budgetData.user_view,
+        katanomes_etous: typeof budgetData.katanomes_etous,
+        available_budget: typeof budgetData.available_budget,
+        mis: typeof mis
+      }
+    });
+  }
   // If no budget data, show a message
   if (!budgetData) {
     return (
@@ -106,8 +120,27 @@ export function BudgetIndicator({
 }: BudgetIndicatorProps) {
   const { toast } = useToast();
   
-  // Debug output for main budget indicator
+  // Enhanced debug output for main budget indicator 
   console.log("[BudgetIndicator] Rendering with data:", budgetData, "current amount:", currentAmount);
+  if (budgetData) {
+    console.log("[BudgetIndicator] Debug - data types:", {
+      user_view: typeof budgetData.user_view,
+      katanomes_etous: typeof budgetData.katanomes_etous,
+      ethsia_pistosi: typeof budgetData.ethsia_pistosi,
+      available_budget: typeof budgetData.available_budget,
+      // Additional conversion debug info
+      values: {
+        user_view: budgetData.user_view,
+        katanomes_etous: budgetData.katanomes_etous,
+        ethsia_pistosi: budgetData.ethsia_pistosi,
+        available_budget: budgetData.available_budget
+      },
+      amount: currentAmount,
+      amount_type: typeof currentAmount
+    });
+  } else {
+    console.warn("[BudgetIndicator] No budget data received!");
+  }
 
   if (!budgetData) return null;
 

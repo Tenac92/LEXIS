@@ -1,112 +1,82 @@
-import { supabase } from '../config/db';
-import type { Database } from '@shared/schema';
-
 /**
- * Helper function to parse numerical values with European number formatting
- * Example: "22.000,00" -> 22000.00
- * Also handles US format: "22,000.50" -> 22000.50
+ * Budget Service
+ * 
+ * Handles budget data retrieval, validation and change management
+ * Supports both alphanumeric MIS codes (like "2024ΝΑ85300001") and numeric MIS identifiers (5174692)
  */
-function parseEuropeanNumber(value: any): number {
-  if (!value) return 0;
-  
-  // Convert to string if it's not already
-  const strValue = value.toString().trim();
-  
-  // Return 0 for empty strings
-  if (!strValue) return 0;
-  
-  // Check if the string has both periods and commas
-  if (strValue.includes('.') && strValue.includes(',')) {
-    // Check if it's European format with comma as decimal separator (e.g., "22.000,00")
-    if (strValue.lastIndexOf(',') > strValue.lastIndexOf('.')) {
-      // European format: replace dots with nothing (remove thousands separators) and commas with dots (decimal separator)
-      const normalizedStr = strValue.replace(/\./g, '').replace(',', '.');
-      return parseFloat(normalizedStr);
-    }
-    // Otherwise it's likely US format with comma as thousands separator (e.g., "22,000.50")
-    else {
-      // US format: remove all commas
-      const normalizedStr = strValue.replace(/,/g, '');
-      return parseFloat(normalizedStr);
-    }
-  }
-  
-  // If it's just a comma as decimal separator (e.g., "22,50")
-  if (strValue.includes(',') && !strValue.includes('.')) {
-    return parseFloat(strValue.replace(',', '.'));
-  }
-  
-  // Default case: try regular parseFloat
-  return parseFloat(strValue);
+
+import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../data';
+
+// Configure types for budget data
+interface BudgetData {
+  user_view: number;
+  total_budget?: number;
+  annual_budget?: number;
+  ethsia_pistosi: number;
+  katanomes_etous: number;
+  current_budget?: number;
+  q1: number;
+  q2: number;
+  q3: number;
+  q4: number;
+  current_quarter?: string;
+  last_quarter_check?: string;
+  quarter_view?: number;
+  total_spent?: number;
+  available_budget?: number;
+  quarter_available?: number;
+  yearly_available?: number;
+  sum?: any; // JSON column containing previous budget state
 }
 
-export interface BudgetResponse {
-  status: 'success' | 'error' | 'warning';
-  data?: {
-    user_view: string;
-    ethsia_pistosi: string;
-    q1: string;
-    q2: string;
-    q3: string;
-    q4: string;
-    total_spent: string;
-    current_budget: string;
-    // New budget indicators
-    available_budget?: string;
-    quarter_available?: string;
-    yearly_available?: string;
-    // Quarter tracking
-    last_quarter_check?: string;
-    current_quarter?: string;
-    // JSON sum field for metadata
-    sum?: any;
-  };
-  message?: string;
-  error?: string;
+interface BudgetChanges {
+  available_budget_diff: number;
+  quarter_available_diff: number;
+  yearly_available_diff: number;
+  katanomes_etous_diff: number;
+  ethsia_pistosi_diff: number;
 }
 
-export interface BudgetValidationResult {
-  canCreate: boolean;
-  status: 'success' | 'error' | 'warning';
-  message?: string;
-  requiresNotification?: boolean;
-  notificationType?: 'funding' | 'reallocation' | 'low_budget' | 'threshold_warning';
-  allowDocx?: boolean;
-  priority?: 'high' | 'medium' | 'low';
-  metadata?: Record<string, unknown>;
+interface BudgetUpdateIndicators {
+  available_budget: number;
+  quarter_available: number;
+  yearly_available: number;
+  katanomes_etous: number;
+  ethsia_pistosi: number;
+  user_view: number;
+  current_quarter: number | string;
 }
 
-// Interface for budget change analysis returned by analyzeChangesBetweenUpdates
-export interface BudgetChangeAnalysis {
+interface BudgetChangeAnalysis {
   status: 'success' | 'error';
   mis: string;
   isReallocation: boolean;
-  changeType: 'funding_increase' | 'funding_decrease' | 'reallocation' | 'no_change';
-  beforeUpdate: {
-    available_budget: number;
-    quarter_available: number;
-    yearly_available: number;
-    katanomes_etous: number;
-    ethsia_pistosi: number;
-    user_view: number;
-    current_quarter: number;
-  } | null;
-  afterUpdate: {
-    available_budget: number;
-    quarter_available: number;
-    yearly_available: number;
-    katanomes_etous: number;
-    ethsia_pistosi: number;
-    user_view: number;
-    current_quarter: number;
+  changeType: 'increase' | 'decrease' | 'reallocation' | 'no_change';
+  beforeUpdate: BudgetUpdateIndicators | null;
+  afterUpdate: BudgetUpdateIndicators;
+  changes: BudgetChanges;
+  error?: string;
+}
+
+interface BudgetValidationResult {
+  status: 'success' | 'warning' | 'error';
+  canCreate: boolean;
+  allowDocx?: boolean;
+  message: string;
+  metadata?: {
+    budget_indicators?: {
+      available_budget: number;
+      quarter_available: number;
+      yearly_available: number;
+    };
+    [key: string]: any;
   };
-  changes: {
-    available_budget_diff: number;
-    quarter_available_diff: number;
-    yearly_available_diff: number;
-    katanomes_etous_diff: number;
-    ethsia_pistosi_diff: number;
-  };
+}
+
+interface BudgetResponse {
+  status: 'success' | 'error';
+  data?: BudgetData;
   message?: string;
   error?: string;
 }
@@ -151,43 +121,63 @@ export class BudgetService {
       // Check if the MIS is purely numeric or has a project code format
       let misToSearch = mis;
       let isProjectCode = false;
-
-      // Check if MIS might be a project ID with a code pattern (e.g., "2024ΝΑ85300001")
-      if (mis.match(/^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/)) {
-        console.log(`[BudgetService] analyzeChangesBetweenUpdates: MIS appears to be a project code pattern: ${mis}`);
+      
+      // Pattern to detect project codes like "2024ΝΑ85300001"
+      const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
+      const isNumericString = /^\d+$/.test(mis);
+      let numericalMis: number | null = null;
+      
+      console.log(`[BudgetService] Analyzing changes for MIS: ${mis}, isNumericString: ${isNumericString}`);
+      
+      // CASE 1: Project code format (like "2024ΝΑ85300001")
+      if (projectCodePattern.test(mis)) {
         isProjectCode = true;
+        console.log(`[BudgetService] Analyzing - MIS appears to be a project code: ${mis}`);
         
-        // If it matches a project code pattern, try to get its numeric MIS from Projects table
+        // Try to find the numerical MIS by looking up the project
         try {
-          const { data: projectData } = await supabase
+          const { data: projectData, error: projectError } = await supabase
             .from('Projects')
-            .select('mis')
-            .eq('id', mis)
+            .select('id, mis')
+            .eq('na853', mis) // Look up by NA853 field
             .single();
+          
+          if (projectError && projectError.code !== 'PGRST116') {
+            console.error(`[BudgetService] Analyzing - Supabase error looking up project: ${projectError.message}`);
+          }
             
           if (projectData?.mis) {
-            console.log(`[BudgetService] analyzeChangesBetweenUpdates: Found numeric MIS ${projectData.mis} for project code ${mis}`);
-            misToSearch = projectData.mis;
+            console.log(`[BudgetService] Analyzing - Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
+            // Convert to number since MIS is now int4 in the database
+            numericalMis = parseInt(projectData.mis.toString());
+            misToSearch = String(numericalMis); // Convert to string for consistency in search
+          } else {
+            console.log(`[BudgetService] Analyzing - No project found with project code: ${mis}, will try to find by direct match`);
           }
         } catch (projectLookupError) {
-          console.log(`[BudgetService] analyzeChangesBetweenUpdates: Error looking up project by ID ${mis}:`, projectLookupError);
-          // Continue with original MIS if lookup fails
+          console.log(`[BudgetService] Analyzing - Error looking up project by code ${mis}:`, projectLookupError);
+          // Continue with other strategies if lookup fails
         }
+      } 
+      // CASE 2: Numeric MIS
+      else if (isNumericString) {
+        numericalMis = parseInt(mis);
+        misToSearch = String(numericalMis); // Convert to string for consistency in search
+        console.log(`[BudgetService] Analyzing - Using numerical MIS: ${misToSearch}`);
       }
-
-      console.log(`[BudgetService] Analyzing changes for MIS ${misToSearch}`);
-
-      // Get current budget data with sum column
-      const { data: budgetData, error: budgetError } = await supabase
+      
+      // Try to get budget data with the determined MIS value
+      const { data: budgetData, error } = await supabase
         .from('budget_na853_split')
-        .select('*, sum')
+        .select('*')
         .eq('mis', misToSearch)
         .single();
-
-      if (budgetError || !budgetData) {
+        
+      if (error) {
+        console.error(`[BudgetService] Analyzing - Error fetching budget data: ${error.message}`);
         return {
           status: 'error',
-          mis,
+          mis: mis,
           isReallocation: false,
           changeType: 'no_change',
           beforeUpdate: null,
@@ -207,55 +197,26 @@ export class BudgetService {
             katanomes_etous_diff: 0,
             ethsia_pistosi_diff: 0,
           },
-          error: budgetError ? budgetError.message : 'Budget data not found'
+          error: `Error fetching budget data: ${error.message}`
         };
       }
-
-      // Get current quarter
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth() + 1;
-      const currentQuarterNumber = Math.ceil(currentMonth / 3);
-      const quarterKey = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
       
-      // Get current quarter value
-      let currentQuarterValue;
-      switch(quarterKey) {
-        case 'q1': currentQuarterValue = budgetData.q1 || 0; break;
-        case 'q2': currentQuarterValue = budgetData.q2 || 0; break;
-        case 'q3': currentQuarterValue = budgetData.q3 || 0; break;
-        case 'q4': currentQuarterValue = budgetData.q4 || 0; break;
-        default: currentQuarterValue = 0;
-      }
-
-      // Current values - use parseEuropeanNumber to handle European number format (e.g., "22.000,00")
-      const userView = parseEuropeanNumber(budgetData.user_view);
-      const katanomesEtous = parseEuropeanNumber(budgetData.katanomes_etous);
-      const ethsiaPistosi = parseEuropeanNumber(budgetData.ethsia_pistosi);
-      
-      // Calculate current budget indicators
-      const availableBudget = Math.max(0, katanomesEtous - userView);
-      const quarterAvailable = Math.max(0, currentQuarterValue - userView);
-      const yearlyAvailable = Math.max(0, ethsiaPistosi - userView);
-
-      // Check if we have stored values in sum
-      const hasSumData = budgetData.sum && typeof budgetData.sum === 'object';
-      
-      // If no sum data, we can't do analysis
-      if (!hasSumData) {
+      if (!budgetData) {
+        console.error(`[BudgetService] Analyzing - No budget data found for MIS: ${misToSearch}`);
         return {
           status: 'error',
-          mis,
+          mis: mis,
           isReallocation: false,
           changeType: 'no_change',
           beforeUpdate: null,
           afterUpdate: {
-            available_budget: availableBudget,
-            quarter_available: quarterAvailable,
-            yearly_available: yearlyAvailable,
-            katanomes_etous: katanomesEtous,
-            ethsia_pistosi: ethsiaPistosi,
-            user_view: userView,
-            current_quarter: currentQuarterNumber
+            available_budget: 0,
+            quarter_available: 0,
+            yearly_available: 0,
+            katanomes_etous: 0,
+            ethsia_pistosi: 0,
+            user_view: 0,
+            current_quarter: 0
           },
           changes: {
             available_budget_diff: 0,
@@ -264,86 +225,93 @@ export class BudgetService {
             katanomes_etous_diff: 0,
             ethsia_pistosi_diff: 0,
           },
-          message: 'No previous budget data available for comparison'
+          error: `No budget data found for MIS: ${misToSearch}`
         };
       }
-
-      // Previous values from sum - use parseEuropeanNumber to handle European number format
-      const prevSum = budgetData.sum as any;
-      const prevAvailableBudget = parseEuropeanNumber(prevSum.available_budget);
-      const prevQuarterAvailable = parseEuropeanNumber(prevSum.quarter_available);
-      const prevYearlyAvailable = parseEuropeanNumber(prevSum.yearly_available);
-      const prevKatanomesEtous = parseEuropeanNumber(prevSum.katanomes_etous);
-      const prevEthsiaPistosi = parseEuropeanNumber(prevSum.ethsia_pistosi);
-      const prevUserView = parseEuropeanNumber(prevSum.user_view);
-      const prevQuarter = parseInt(prevSum.current_quarter?.toString() || '0');
-
-      // Calculate differences
-      const availableBudgetDiff = availableBudget - prevAvailableBudget;
-      const quarterAvailableDiff = quarterAvailable - prevQuarterAvailable;
-      const yearlyAvailableDiff = yearlyAvailable - prevYearlyAvailable;
-      const katanomesEtousDiff = katanomesEtous - prevKatanomesEtous;
-      const ethsiaPistosiDiff = ethsiaPistosi - prevEthsiaPistosi;
-
-      // Determine change type
-      let changeType: 'funding_increase' | 'funding_decrease' | 'reallocation' | 'no_change' = 'no_change';
+      
+      // If we have data, analyze changes between current state and previous state (if available)
+      const currentState: BudgetUpdateIndicators = {
+        available_budget: (budgetData.katanomes_etous || 0) - (budgetData.user_view || 0),
+        quarter_available: 0, // Calculate based on quarter if needed
+        yearly_available: (budgetData.ethsia_pistosi || 0) - (budgetData.user_view || 0),
+        katanomes_etous: budgetData.katanomes_etous || 0,
+        ethsia_pistosi: budgetData.ethsia_pistosi || 0,
+        user_view: budgetData.user_view || 0,
+        current_quarter: budgetData.last_quarter_check || 'q1'
+      };
+      
+      // Get previous state from sum JSON column if available
+      let previousState: BudgetUpdateIndicators | null = null;
+      if (budgetData.sum && typeof budgetData.sum === 'object') {
+        previousState = {
+          available_budget: parseFloat(budgetData.sum.available_budget || 0),
+          quarter_available: parseFloat(budgetData.sum.quarter_available || 0),
+          yearly_available: parseFloat(budgetData.sum.yearly_available || 0),
+          katanomes_etous: parseFloat(budgetData.sum.katanomes_etous || 0),
+          ethsia_pistosi: parseFloat(budgetData.sum.ethsia_pistosi || 0),
+          user_view: parseFloat(budgetData.sum.user_view || 0),
+          current_quarter: budgetData.sum.current_quarter || 'q1'
+        };
+      }
+      
+      if (!previousState) {
+        console.log(`[BudgetService] Analyzing - No previous state found in sum column, cannot compare changes`);
+        return {
+          status: 'success',
+          mis: mis,
+          isReallocation: false,
+          changeType: 'no_change',
+          beforeUpdate: null,
+          afterUpdate: currentState,
+          changes: {
+            available_budget_diff: 0,
+            quarter_available_diff: 0,
+            yearly_available_diff: 0,
+            katanomes_etous_diff: 0,
+            ethsia_pistosi_diff: 0,
+          }
+        };
+      }
+      
+      // Calculate differences between current and previous state
+      const changes: BudgetChanges = {
+        available_budget_diff: currentState.available_budget - previousState.available_budget,
+        quarter_available_diff: currentState.quarter_available - previousState.quarter_available,
+        yearly_available_diff: currentState.yearly_available - previousState.yearly_available,
+        katanomes_etous_diff: currentState.katanomes_etous - previousState.katanomes_etous,
+        ethsia_pistosi_diff: currentState.ethsia_pistosi - previousState.ethsia_pistosi
+      };
+      
+      // Determine change type (increase, decrease, reallocation, no change)
+      let changeType: 'increase' | 'decrease' | 'reallocation' | 'no_change' = 'no_change';
       let isReallocation = false;
-
-      if (Math.abs(katanomesEtousDiff) < 0.01 && Math.abs(ethsiaPistosiDiff) < 0.01) {
-        // No significant change in overall funding
-        changeType = 'no_change';
-      } else if (katanomesEtousDiff > 0 && ethsiaPistosiDiff >= 0) {
-        // Funding increase
-        changeType = 'funding_increase';
-      } else if (katanomesEtousDiff < 0 && ethsiaPistosiDiff <= 0) {
-        // Funding decrease
-        changeType = 'funding_decrease';
-      } else {
-        // Reallocation (anakatanomh)
+      
+      // Check if ethsia_pistosi changed (this indicates funding increase/decrease)
+      if (changes.ethsia_pistosi_diff > 0) {
+        changeType = 'increase';
+      } else if (changes.ethsia_pistosi_diff < 0) {
+        changeType = 'decrease';
+      } 
+      // Check if katanomes_etous changed but ethsia_pistosi didn't (this indicates reallocation)
+      else if (changes.katanomes_etous_diff !== 0 && changes.ethsia_pistosi_diff === 0) {
         changeType = 'reallocation';
         isReallocation = true;
-        
-        // If this is a reallocation, try to resolve any pending reallocation notifications
-        await this.resolveReallocationNotifications(misToSearch, katanomesEtousDiff);
       }
-
+      
       return {
         status: 'success',
-        mis,
+        mis: mis,
         isReallocation,
         changeType,
-        beforeUpdate: {
-          available_budget: prevAvailableBudget,
-          quarter_available: prevQuarterAvailable,
-          yearly_available: prevYearlyAvailable,
-          katanomes_etous: prevKatanomesEtous,
-          ethsia_pistosi: prevEthsiaPistosi,
-          user_view: prevUserView,
-          current_quarter: prevQuarter
-        },
-        afterUpdate: {
-          available_budget: availableBudget,
-          quarter_available: quarterAvailable,
-          yearly_available: yearlyAvailable,
-          katanomes_etous: katanomesEtous,
-          ethsia_pistosi: ethsiaPistosi,
-          user_view: userView,
-          current_quarter: currentQuarterNumber
-        },
-        changes: {
-          available_budget_diff: availableBudgetDiff,
-          quarter_available_diff: quarterAvailableDiff,
-          yearly_available_diff: yearlyAvailableDiff,
-          katanomes_etous_diff: katanomesEtousDiff,
-          ethsia_pistosi_diff: ethsiaPistosiDiff
-        },
-        message: `Analysis completed for MIS ${mis}. Change type: ${changeType}.`
+        beforeUpdate: previousState,
+        afterUpdate: currentState,
+        changes
       };
-    } catch (error) {
-      console.error('[BudgetService] Error analyzing budget changes:', error);
+    } catch (error: any) {
+      console.error(`[BudgetService] Error analyzing budget changes:`, error);
       return {
         status: 'error',
-        mis,
+        mis: mis,
         isReallocation: false,
         changeType: 'no_change',
         beforeUpdate: null,
@@ -363,7 +331,211 @@ export class BudgetService {
           katanomes_etous_diff: 0,
           ethsia_pistosi_diff: 0,
         },
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error.message || 'Unknown error'
+      };
+    }
+  }
+
+  static async validateBudget(mis: string, amount: number): Promise<BudgetValidationResult> {
+    try {
+      // Input validation with improved error messages
+      if (!mis) {
+        console.log('[BudgetService] Validation - Missing MIS parameter');
+        return {
+          status: 'error',
+          canCreate: false,
+          message: 'Απαιτείται ο κωδικός MIS του έργου'
+        };
+      }
+      
+      // Check if amount is a valid number and greater than zero
+      if (isNaN(amount)) {
+        console.log('[BudgetService] Validation - Invalid amount parameter (not a number)');
+        return {
+          status: 'error',
+          canCreate: false,
+          message: 'Το ποσό πρέπει να είναι αριθμός'
+        };
+      }
+      
+      if (amount <= 0) {
+        console.log('[BudgetService] Validation - Invalid amount parameter (zero or negative)');
+        return {
+          status: 'warning',
+          canCreate: false,
+          allowDocx: true,
+          message: 'Το ποσό πρέπει να είναι μεγαλύτερο από 0 για οικονομικό έγγραφο'
+        };
+      }
+
+      // Parse MIS based on format
+      let misToSearch: string | number = mis;
+      let numericalMis: number | null = null;
+      
+      // Check if MIS is numeric or follows the pattern of project codes
+      const isNumericString = /^\d+$/.test(mis);
+      const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
+      
+      console.log(`[BudgetService] Validation - Parameters: mis=${mis}, amount=${amount}`);
+      console.log(`[BudgetService] Validation - Analysis: isNumericString=${isNumericString}, isProjectCode=${projectCodePattern.test(mis)}`);
+      
+      // CASE 1: Project code format (like "2024ΝΑ85300001")
+      if (projectCodePattern.test(mis)) {
+        console.log(`[BudgetService] Validation - MIS appears to be a project code: ${mis}`);
+        
+        // Try to find the project with matching NA853 field (project code)
+        try {
+          const { data: projectData, error: projectError } = await supabase
+            .from('Projects')
+            .select('id, mis')
+            .eq('na853', mis)
+            .single();
+          
+          if (projectError && projectError.code !== 'PGRST116') {
+            console.error(`[BudgetService] Validation - Supabase error looking up project: ${projectError.message}`);
+          }
+            
+          if (projectData?.mis) {
+            console.log(`[BudgetService] Validation - Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
+            // Convert to number since MIS is now int4 in the database
+            numericalMis = parseInt(projectData.mis.toString());
+            misToSearch = String(numericalMis); // Convert to string for consistency in search
+          } else {
+            console.log(`[BudgetService] Validation - No project found with ID/code: ${mis}, will try to find by direct match`);
+          }
+        } catch (projectLookupError) {
+          console.log(`[BudgetService] Validation - Error looking up project by ID/code ${mis}:`, projectLookupError);
+          // Continue with other strategies if lookup fails
+        }
+      }
+      
+      // CASE 2: Numeric MIS (either direct input or found from case 1)
+      if (isNumericString || numericalMis !== null) {
+        // If we don't already have a numerical MIS from case 1, parse it now
+        if (numericalMis === null) {
+          numericalMis = parseInt(mis);
+          misToSearch = String(numericalMis); // Convert to string for consistency in search
+        }
+        console.log(`[BudgetService] Validation - Using numerical MIS: ${misToSearch}`);
+      } else {
+        console.log(`[BudgetService] Validation - Using original MIS string: ${misToSearch}`);
+      }
+      
+      // Try to get current budget data with the determined MIS value
+      let { data: budgetData, error } = await supabase
+        .from('budget_na853_split')
+        .select('*')
+        .eq('mis', misToSearch)
+        .single();
+      
+      if (error) {
+        console.log(`[BudgetService] Validation - Error fetching budget data: ${error.message}`);
+        
+        // If it's just a "not found" error, try to use the original MIS value as fallback
+        if (error.code === 'PGRST116' && error.message.includes('no rows')) {
+          console.log(`[BudgetService] Validation - No budget found with converted MIS, trying original: ${mis}`);
+          
+          // Try original MIS as fallback
+          const fallbackResult = await supabase
+            .from('budget_na853_split')
+            .select('*')
+            .eq('mis', mis)
+            .single();
+            
+          if (!fallbackResult.error) {
+            console.log(`[BudgetService] Validation - Found budget with original MIS: ${mis}`);
+            budgetData = fallbackResult.data;
+            error = null;
+          } else {
+            console.log(`[BudgetService] Validation - No budget found with original MIS either: ${mis}`);
+          }
+        }
+      }
+      
+      // If budget data still not found after all attempts
+      if (!budgetData) {
+        console.log(`[BudgetService] Validation - Budget not found for MIS: ${misToSearch}`);
+        return {
+          status: 'error',
+          canCreate: false,
+          message: 'Δεν βρέθηκαν στοιχεία προϋπολογισμού για το έργο',
+          metadata: {
+            details: `No budget data found for MIS: ${misToSearch}`
+          }
+        };
+      }
+      
+      console.log(`[BudgetService] Validation - Budget data found:`, {
+        ethsia_pistosi: budgetData.ethsia_pistosi,
+        katanomes_etous: budgetData.katanomes_etous,
+        user_view: budgetData.user_view
+      });
+      
+      // Calculate available budget
+      const available_budget = (budgetData.katanomes_etous || 0) - (budgetData.user_view || 0);
+      const yearly_available = (budgetData.ethsia_pistosi || 0) - (budgetData.user_view || 0);
+      
+      console.log(`[BudgetService] Validation - Budget calculated:`, {
+        available_budget,
+        yearly_available,
+        requested_amount: amount
+      });
+      
+      // Budget validation logic - check if there's enough budget
+      if (available_budget <= 0) {
+        return {
+          status: 'error',
+          canCreate: false,
+          message: 'Δεν υπάρχει διαθέσιμος προϋπολογισμός στο έργο',
+          metadata: {
+            budget_indicators: {
+              available_budget,
+              quarter_available: 0,
+              yearly_available
+            }
+          }
+        };
+      }
+      
+      if (amount > available_budget) {
+        return {
+          status: 'warning',
+          canCreate: false,
+          allowDocx: true,
+          message: `Το αιτούμενο ποσό (${amount.toFixed(2)}€) υπερβαίνει τον διαθέσιμο προϋπολογισμό (${available_budget.toFixed(2)}€)`,
+          metadata: {
+            budget_indicators: {
+              available_budget,
+              quarter_available: 0,
+              yearly_available
+            }
+          }
+        };
+      }
+      
+      // Success - enough budget available
+      return {
+        status: 'success',
+        canCreate: true,
+        message: 'Επαρκής προϋπολογισμός για το αιτούμενο ποσό',
+        metadata: {
+          budget_indicators: {
+            available_budget,
+            quarter_available: 0,
+            yearly_available
+          }
+        }
+      };
+      
+    } catch (error: any) {
+      console.error('[BudgetService] Validation - Error validating budget:', error);
+      return {
+        status: 'error',
+        canCreate: false,
+        message: 'Σφάλμα κατά τον έλεγχο προϋπολογισμού',
+        metadata: {
+          error: error.message
+        }
       };
     }
   }
@@ -379,46 +551,40 @@ export class BudgetService {
 
       let misToSearch: string | number = mis;
       let numericalMis: number | null = null;
-
-      console.log(`[BudgetService] Handling MIS: ${mis}, type: ${typeof mis}, length: ${mis.length}`);
       
-      // Check if the MIS might be a project ID with a code pattern (e.g., "2024ΝΑ85300001")
-      const projectCodeRegex = /^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/;
-      const isProjectCodeFormat = projectCodeRegex.test(mis);
+      // Check if MIS is numeric or follows the pattern of project codes
+      const isNumericString = /^\d+$/.test(mis);
+      const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
       
-      // Determine if it's a numeric string that can be parsed to an integer
-      const isNumericString = !isNaN(parseInt(mis)) && !isProjectCodeFormat;
+      console.log(`[BudgetService] GetBudget - Parameters: mis=${mis}`);
+      console.log(`[BudgetService] GetBudget - Analysis: isNumericString=${isNumericString}, isProjectCode=${projectCodePattern.test(mis)}`);
       
-      console.log(`[BudgetService] MIS analysis: isProjectCode=${isProjectCodeFormat}, isNumeric=${isNumericString}`);
-      
-      // CASE 1: Project code format like "2024ΝΑ85300001"
-      if (isProjectCodeFormat) {
-        console.log(`[BudgetService] MIS is a project code/ID pattern: ${mis}`);
+      // CASE 1: Project code format (like "2024ΝΑ85300001")
+      if (projectCodePattern.test(mis)) {
+        console.log(`[BudgetService] GetBudget - MIS appears to be a project code: ${mis}`);
         
-        // Try to find the project by its ID field (which may be the na853 code)
+        // Try to find the project with matching NA853 field (project code)
         try {
-          console.log(`[BudgetService] Looking up project by ID/code in Supabase: ${mis}`);
-          
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
-            .select('id, mis, na853')
-            .or(`id.eq.${mis},na853.eq.${mis}`)
+            .select('id, mis')
+            .eq('na853', mis)
             .single();
-            
-          if (projectError) {
-            console.log(`[BudgetService] Supabase error looking up project: ${projectError.message}`);
+          
+          if (projectError && projectError.code !== 'PGRST116') {
+            console.error(`[BudgetService] GetBudget - Supabase error looking up project: ${projectError.message}`);
           }
             
           if (projectData?.mis) {
-            console.log(`[BudgetService] Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
+            console.log(`[BudgetService] GetBudget - Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
             // Convert to number since MIS is now int4 in the database
             numericalMis = parseInt(projectData.mis.toString());
-            misToSearch = numericalMis;
+            misToSearch = String(numericalMis); // Convert to string for consistency in search
           } else {
-            console.log(`[BudgetService] No project found with ID/code: ${mis}, will try to find by direct match`);
+            console.log(`[BudgetService] GetBudget - No project found with ID/code: ${mis}, will try to find by direct match`);
           }
         } catch (projectLookupError) {
-          console.log(`[BudgetService] Error looking up project by ID/code ${mis}:`, projectLookupError);
+          console.log(`[BudgetService] GetBudget - Error looking up project by ID/code ${mis}:`, projectLookupError);
           // Continue with other strategies if lookup fails
         }
       }
@@ -428,21 +594,83 @@ export class BudgetService {
         // If we don't already have a numerical MIS from case 1, parse it now
         if (numericalMis === null) {
           numericalMis = parseInt(mis);
-          misToSearch = numericalMis;
+          misToSearch = String(numericalMis); // Convert to string for consistency in search
         }
-        console.log(`[BudgetService] Using numerical MIS: ${misToSearch}`);
+        console.log(`[BudgetService] GetBudget - Using numerical MIS: ${misToSearch}`);
       } else {
-        console.log(`[BudgetService] Using original MIS string: ${misToSearch}`);
+        console.log(`[BudgetService] GetBudget - Using original MIS string: ${misToSearch}`);
       }
 
       console.log(`[BudgetService] Fetching budget data for MIS ${misToSearch}`);
 
       // Get budget data directly using MIS
-      const { data: budgetData, error: budgetError } = await supabase
-        .from('budget_na853_split')
-        .select('*')
-        .eq('mis', misToSearch)
-        .single();
+      // If we have a numeric MIS, we need to convert it to an integer for the query
+      // If we couldn't convert the MIS to a numeric value, we'll first try to find the project
+      let budgetData;
+      let budgetError;
+
+      try {
+        // For numeric MIS, query directly against the integer column
+        if (numericalMis !== null) {
+          console.log(`[BudgetService] Querying budget_na853_split with numeric MIS: ${numericalMis}`);
+          const result = await supabase
+            .from('budget_na853_split')
+            .select('*')
+            .eq('mis', numericalMis) // Use the number directly for integer column
+            .single();
+          
+          budgetData = result.data;
+          budgetError = result.error;
+        } else {
+          // For string/project code format, try to find the corresponding project first
+          console.log(`[BudgetService] Trying to find project with NA853 code: ${mis}`);
+          const { data: projectData, error: projectError } = await supabase
+            .from('Projects')
+            .select('id, mis')
+            .eq('na853', mis)
+            .single();
+          
+          if (!projectError && projectData?.mis) {
+            // Found the project, use its numeric MIS
+            console.log(`[BudgetService] Found project with MIS: ${projectData.mis}, using for budget query`);
+            const result = await supabase
+              .from('budget_na853_split')
+              .select('*')
+              .eq('mis', projectData.mis) // Use the MIS from the project
+              .single();
+            
+            budgetData = result.data;
+            budgetError = result.error;
+          } else {
+            // Last resort: try direct query with original value
+            console.log(`[BudgetService] No project found, trying direct budget query with: ${misToSearch}`);
+            const result = await supabase
+              .from('budget_na853_split')
+              .select('*')
+              .eq('mis', misToSearch)
+              .single();
+            
+            budgetData = result.data;
+            budgetError = result.error;
+          }
+        }
+      } catch (err) {
+        console.error(`[BudgetService] Exception in budget data query:`, err);
+        
+        // Safe error message extraction
+        let errorMessage = 'Unknown error';
+        if (err && typeof err === 'object') {
+          if ('message' in err && typeof err.message === 'string') {
+            errorMessage = err.message;
+          } else if (err.toString && typeof err.toString === 'function') {
+            errorMessage = err.toString();
+          }
+        }
+        
+        budgetError = {
+          message: `Exception querying budget: ${errorMessage}`
+        };
+      }
 
       if (budgetError) {
         console.error(`[BudgetService] Error fetching budget data for MIS ${misToSearch}:`, budgetError);
@@ -455,6 +683,15 @@ export class BudgetService {
           };
         }
         throw budgetError;
+      }
+
+      if (!budgetData) {
+        console.log(`[BudgetService] No budget data found for MIS: ${misToSearch}`);
+        return {
+          status: 'error',
+          message: 'Budget data not found',
+          error: 'No budget data returned from database'
+        };
       }
 
       // Use user_view as current_budget if current_budget is not set or zero
@@ -474,1037 +711,326 @@ export class BudgetService {
       const currentMonth = currentDate.getMonth() + 1;
       const currentQuarterNumber = Math.ceil(currentMonth / 3);
       const quarterKey = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
-
-      // Check for quarter-related fields
-      const hasLastQuarterCheck = budgetData && 'last_quarter_check' in budgetData && budgetData.last_quarter_check !== null;
       
-      // Parse current quarter values - use parseEuropeanNumber to handle European number format (e.g., "22.000,00")
-      const currentQ1 = parseEuropeanNumber(budgetData?.q1);
-      const currentQ2 = parseEuropeanNumber(budgetData?.q2);
-      const currentQ3 = parseEuropeanNumber(budgetData?.q3);
-      const currentQ4 = parseEuropeanNumber(budgetData?.q4);
+      // Calculate available budget
+      const available_budget = parseFloat(katanomesEtous) - parseFloat(userView);
+      const quarter_available = parseFloat(budgetData[quarterKey]?.toString() || '0') - parseFloat(userView);
+      const yearly_available = parseFloat(ethsiaPistosi) - parseFloat(userView);
       
-      // Get current trimester value
-      const currentQuarterValue = parseEuropeanNumber(budgetData?.[quarterKey]);
-      
-      // Extract the quarter number from the last_quarter_check (e.g., extract '1' from 'q1')
-      const lastQuarterCheck = hasLastQuarterCheck 
-        ? budgetData.last_quarter_check?.toString() || `q${currentQuarterNumber}`
-        : `q${currentQuarterNumber}`;
-      
-      const lastQuarterChecked = lastQuarterCheck && lastQuarterCheck.startsWith('q') 
-        ? parseInt(lastQuarterCheck.substring(1)) 
-        : 0;
-      
-      // Check for quarter transition (e.g., Q1->Q2)
-      const isQuarterTransition = lastQuarterChecked > 0 && lastQuarterChecked < currentQuarterNumber;
-      
-      console.log(`[BudgetService] Quarter check - Last checked: ${lastQuarterChecked}, Current: ${currentQuarterNumber}, Transition: ${isQuarterTransition}`);
-      
-      let needsUpdate = false;
-      let updatedUserView = parseEuropeanNumber(userView);
-      let updatedQ1 = currentQ1;
-      let updatedQ2 = currentQ2;
-      let updatedQ3 = currentQ3;
-      let updatedQ4 = currentQ4;
-      
-      // Handle quarter transitions
-      if (isQuarterTransition) {
-        needsUpdate = true;
-        
-        // Calculate the quarter transition (add previous quarter value to current quarter)
-        if (lastQuarterChecked === 1 && currentQuarterNumber === 2) {
-          // Q1->Q2 transition
-          console.log(`[BudgetService] Quarter transition from Q1 to Q2 - q1 value: ${currentQ1}, adding to q2: ${currentQ2}`);
-          
-          // Apply the quarter transition logic: q2=q2+q1
-          updatedQ2 = currentQ2 + currentQ1;
-          updatedQ1 = 0; // Reset q1 as it has ended
-          
-          console.log(`[BudgetService] Updated quarterly values after Q1->Q2 transition:`, {
-            q1: `${currentQ1} -> ${updatedQ1}`,
-            q2: `${currentQ2} -> ${updatedQ2}`
-          });
-          
-        } else if (lastQuarterChecked === 2 && currentQuarterNumber === 3) {
-          // Q2->Q3 transition
-          console.log(`[BudgetService] Quarter transition from Q2 to Q3 - q2 value: ${currentQ2}, adding to q3: ${currentQ3}`);
-          
-          // Apply the quarter transition logic: q3=q3+q2
-          updatedQ3 = currentQ3 + currentQ2;
-          updatedQ2 = 0; // Reset q2 as it has ended
-          
-          console.log(`[BudgetService] Updated quarterly values after Q2->Q3 transition:`, {
-            q2: `${currentQ2} -> ${updatedQ2}`,
-            q3: `${currentQ3} -> ${updatedQ3}`
-          });
-          
-        } else if (lastQuarterChecked === 3 && currentQuarterNumber === 4) {
-          // Q3->Q4 transition
-          console.log(`[BudgetService] Quarter transition from Q3 to Q4 - q3 value: ${currentQ3}, adding to q4: ${currentQ4}`);
-          
-          // Apply the quarter transition logic: q4=q4+q3
-          updatedQ4 = currentQ4 + currentQ3;
-          updatedQ3 = 0; // Reset q3 as it has ended
-          
-          console.log(`[BudgetService] Updated quarterly values after Q3->Q4 transition:`, {
-            q3: `${currentQ3} -> ${updatedQ3}`,
-            q4: `${currentQ4} -> ${updatedQ4}`
-          });
-        }
-      }
-      
-      // Update the budget data if needed
-      if (needsUpdate) {
-        const updatePayload: any = {
-          q1: updatedQ1.toString(),
-          q2: updatedQ2.toString(),
-          q3: updatedQ3.toString(),
-          q4: updatedQ4.toString(),
-          last_quarter_check: `q${currentQuarterNumber}`,
-          updated_at: new Date().toISOString()
-        };
-        
-        console.log(`[BudgetService] Automatically updating budget data due to quarter transition:`, updatePayload);
-        
-        const { error: updateError } = await supabase
-          .from('budget_na853_split')
-          .update(updatePayload)
-          .eq('mis', misToSearch);
-          
-        if (updateError) {
-          console.error(`[BudgetService] Error updating budget data:`, updateError);
-        } else {
-          console.log(`[BudgetService] Successfully updated budget data with quarter transition values`);
-          
-          // Update our local copy of the data
-          budgetData.q1 = updatedQ1.toString();
-          budgetData.q2 = updatedQ2.toString();
-          budgetData.q3 = updatedQ3.toString();
-          budgetData.q4 = updatedQ4.toString();
-          // Remove quarter_view from the database record
-          if ('quarter_view' in budgetData) {
-            delete budgetData.quarter_view;
-          }
-        }
-      }
-      
-      // Calculate budget indicators
-      // Get the values of the current trimester
-      let currentTrimesterValue = 0;
-      switch (quarterKey) {
-        case 'q1': currentTrimesterValue = needsUpdate ? updatedQ1 : currentQ1; break;
-        case 'q2': currentTrimesterValue = needsUpdate ? updatedQ2 : currentQ2; break;
-        case 'q3': currentTrimesterValue = needsUpdate ? updatedQ3 : currentQ3; break;
-        case 'q4': currentTrimesterValue = needsUpdate ? updatedQ4 : currentQ4; break;
-      }
-      
-      // Convert string values to numbers for calculations using European number format
-      const userViewNum = parseEuropeanNumber(userView);
-      const ethsiaPistosiNum = parseEuropeanNumber(ethsiaPistosi);
-      const katanomesEtousNum = parseEuropeanNumber(katanomesEtous);
-      
-      // Calculate budget indicators:
-      // Διαθέσιμος = katanomes_etous - user_view
-      // Τρίμηνο = current_q - user_view
-      // Ετήσιος = ethsia_pistosi - user-view
-      const availableBudget = Math.max(0, katanomesEtousNum - userViewNum);
-      const currentQuarterAvailable = Math.max(0, currentTrimesterValue - userViewNum);
-      const yearlyAvailable = Math.max(0, ethsiaPistosiNum - userViewNum);
-      
-      // Return with budget indicators
-      // Check if the sum column exists and handle it
-      const hasSum = budgetData && 'sum' in budgetData && budgetData.sum !== null;
-      const sumData = hasSum ? budgetData.sum : null;
-      
-      return {
+      // Return budget data with correct types
+      const response: BudgetResponse = {
         status: 'success',
         data: {
-          user_view: userView,
-          ethsia_pistosi: ethsiaPistosi,
-          q1: needsUpdate ? updatedQ1.toString() : budgetData.q1?.toString() || '0',
-          q2: needsUpdate ? updatedQ2.toString() : budgetData.q2?.toString() || '0',
-          q3: needsUpdate ? updatedQ3.toString() : budgetData.q3?.toString() || '0',
-          q4: needsUpdate ? updatedQ4.toString() : budgetData.q4?.toString() || '0',
-          total_spent: totalSpent,
-          current_budget: userView, // Set current_budget to match user_view
-          last_quarter_check: needsUpdate ? `q${currentQuarterNumber}` : lastQuarterCheck,
-          current_quarter: quarterKey,
-          // Add new budget indicators
-          available_budget: availableBudget.toString(),
-          quarter_available: currentQuarterAvailable.toString(), 
-          yearly_available: yearlyAvailable.toString(),
-          // Include sum data if available
-          sum: sumData
+          user_view: parseFloat(userView),
+          total_budget: parseFloat(ethsiaPistosi),
+          annual_budget: parseFloat(ethsiaPistosi),
+          ethsia_pistosi: parseFloat(ethsiaPistosi),
+          katanomes_etous: parseFloat(katanomesEtous),
+          current_budget: parseFloat(userView),
+          q1: parseFloat(budgetData.q1?.toString() || '0'),
+          q2: parseFloat(budgetData.q2?.toString() || '0'),
+          q3: parseFloat(budgetData.q3?.toString() || '0'),
+          q4: parseFloat(budgetData.q4?.toString() || '0'),
+          total_spent: parseFloat(totalSpent),
+          available_budget: available_budget,
+          quarter_available: quarter_available,
+          yearly_available: yearly_available,
+          current_quarter: quarterKey
         }
       };
-    } catch (error) {
-      console.error('[BudgetService] Error fetching budget:', error);
+      
+      console.log(`[BudgetService] Returning budget data for MIS ${mis}:`, {
+        ethsia_pistosi: response.data?.ethsia_pistosi,
+        katanomes_etous: response.data?.katanomes_etous,
+        user_view: response.data?.user_view,
+        available_budget: response.data?.available_budget
+      });
+      
+      return response;
+    } catch (error: any) {
+      console.error('[BudgetService] Error in getBudget:', error);
       return {
         status: 'error',
-        message: 'Failed to fetch budget data',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  }
-
-  static async validateBudget(mis: string, amount: number): Promise<BudgetValidationResult> {
-    try {
-      // Input validation with improved error messages
-      if (!mis) {
-        console.log('[BudgetService] Missing MIS parameter');
-        return {
-          status: 'error',
-          canCreate: false,
-          message: 'Απαιτείται ο κωδικός MIS του έργου'
-        };
-      }
-      
-      // Check if amount is a valid number and greater than zero
-      if (isNaN(amount)) {
-        console.log('[BudgetService] Invalid amount parameter (not a number)');
-        return {
-          status: 'error',
-          canCreate: false,
-          message: 'Το ποσό πρέπει να είναι αριθμός'
-        };
-      }
-      
-      if (amount <= 0) {
-        console.log('[BudgetService] Invalid amount parameter (zero or negative)');
-        return {
-          status: 'error',
-          canCreate: false,
-          message: 'Το ποσό πρέπει να είναι μεγαλύτερο από 0'
-        };
-      }
-
-      // Use similar conversion logic as getBudget method
-      let misToSearch: string | number = mis;
-      let numericalMis: number | null = null;
-
-      console.log(`[BudgetService] Validating budget for MIS: ${mis}, amount: ${amount}`);
-      
-      // Check if the MIS might be a project ID with a code pattern (e.g., "2024ΝΑ85300001")
-      const projectCodeRegex = /^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/;
-      const isProjectCodeFormat = projectCodeRegex.test(mis);
-      
-      // Determine if it's a numeric string that can be parsed to an integer
-      const isNumericString = !isNaN(parseInt(mis)) && !isProjectCodeFormat;
-      
-      console.log(`[BudgetService] MIS validation analysis: isProjectCode=${isProjectCodeFormat}, isNumeric=${isNumericString}`);
-      
-      // CASE 1: Project code format like "2024ΝΑ85300001"
-      if (isProjectCodeFormat) {
-        console.log(`[BudgetService] Validation - MIS is a project code/ID pattern: ${mis}`);
-        
-        // Try to find the project by its ID field (which may be the na853 code)
-        try {
-          console.log(`[BudgetService] Validation - Looking up project by ID/code in Supabase: ${mis}`);
-          
-          const { data: projectData, error: projectError } = await supabase
-            .from('Projects')
-            .select('id, mis, na853')
-            .or(`id.eq.${mis},na853.eq.${mis}`)
-            .single();
-            
-          if (projectError) {
-            console.log(`[BudgetService] Validation - Supabase error looking up project: ${projectError.message}`);
-          }
-            
-          if (projectData?.mis) {
-            console.log(`[BudgetService] Validation - Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
-            // Convert to number since MIS is now int4 in the database
-            numericalMis = parseInt(projectData.mis.toString());
-            misToSearch = numericalMis;
-          } else {
-            console.log(`[BudgetService] Validation - No project found with ID/code: ${mis}, will try to find by direct match`);
-          }
-        } catch (projectLookupError) {
-          console.log(`[BudgetService] Validation - Error looking up project by ID/code ${mis}:`, projectLookupError);
-          // Continue with other strategies if lookup fails
-        }
-      }
-      
-      // CASE 2: Numeric MIS (either direct input or found from case 1)
-      if (isNumericString || numericalMis !== null) {
-        // If we don't already have a numerical MIS from case 1, parse it now
-        if (numericalMis === null) {
-          numericalMis = parseInt(mis);
-          misToSearch = numericalMis;
-        }
-        console.log(`[BudgetService] Validation - Using numerical MIS: ${misToSearch}`);
-      } else {
-        console.log(`[BudgetService] Validation - Using original MIS string: ${misToSearch}`);
-      }
-      
-      // Try to get current budget data with the determined MIS value
-      let { data: budgetData, error } = await supabase
-        .from('budget_na853_split')
-        .select('user_view, ethsia_pistosi, katanomes_etous, q1, q2, q3, q4')
-        .eq('mis', misToSearch)
-        .single();
-
-      // If not found directly, try to get project data to find the correct MIS
-      if (error || !budgetData) {
-        console.log(`[BudgetService] Budget not found directly for MIS: ${mis}, trying project lookup`);
-        
-        // Try to find project by either its ID or MIS field
-        const { data: projectData, error: projectError } = await supabase
-          .from('Projects')
-          .select('id, mis')
-          .or(`id.eq.${mis},mis.eq.${mis}`)
-          .single();
-        
-        if (projectError) {
-          console.log(`[BudgetService] Project not found for MIS/ID: ${mis}`);
-        } else if (projectData?.mis) {
-          console.log(`[BudgetService] Found project with MIS: ${projectData.mis}`);
-          
-          // Try again with the project's MIS value
-          const retryResult = await supabase
-            .from('budget_na853_split')
-            .select('user_view, ethsia_pistosi, katanomes_etous, q1, q2, q3, q4')
-            .eq('mis', projectData.mis)
-            .single();
-            
-          budgetData = retryResult.data;
-          error = retryResult.error;
-        }
-      }
-
-      // If we still don't have budget data, return a warning but allow document creation
-      if (error || !budgetData) {
-        console.log(`[BudgetService] Budget not found for MIS: ${mis} after lookup attempts`);
-        
-        return {
-          status: 'warning',
-          canCreate: true, // Allow document creation even without budget data
-          message: 'Ο προϋπολογισμός δεν βρέθηκε για αυτό το MIS. Η δημιουργία εγγράφου επιτρέπεται χωρίς έλεγχο προϋπολογισμού.',
-          allowDocx: true
-        };
-      }
-
-      // Parse budget values and handle potential null/undefined values - use parseEuropeanNumber for proper format handling
-      const userView = parseEuropeanNumber(budgetData.user_view);
-      const ethsiaPistosi = parseEuropeanNumber(budgetData.ethsia_pistosi);
-      const katanomesEtous = parseEuropeanNumber(budgetData.katanomes_etous);
-      
-      // Get quarterly data using parseEuropeanNumber
-      const q1 = parseEuropeanNumber(budgetData.q1);
-      const q2 = parseEuropeanNumber(budgetData.q2);
-      const q3 = parseEuropeanNumber(budgetData.q3);
-      const q4 = parseEuropeanNumber(budgetData.q4);
-      
-      // Ensure we have at least some budget data
-      if (userView === 0 && katanomesEtous === 0 && ethsiaPistosi === 0) {
-        return {
-          status: 'warning',
-          canCreate: true,
-          message: 'Ο προϋπολογισμός του έργου έχει μηδενικές τιμές. Η δημιουργία εγγράφου επιτρέπεται με προσοχή.',
-          allowDocx: true,
-          metadata: {
-            budgetValues: { userView, ethsiaPistosi, katanomesEtous, q1, q2, q3, q4 }
-          }
-        };
-      }
-
-      // Get current quarter
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth() + 1;
-      const currentQuarterNumber = Math.ceil(currentMonth / 3);
-      const quarterKey = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
-      
-      // Get current quarter value
-      let currentQuarterValue = 0;
-      switch (quarterKey) {
-        case 'q1': currentQuarterValue = q1; break;
-        case 'q2': currentQuarterValue = q2; break;
-        case 'q3': currentQuarterValue = q3; break;
-        case 'q4': currentQuarterValue = q4; break;
-      }
-      
-      // Calculate budget indicators based on the new design
-      // Διαθέσιμος = katanomes_etous - user_view
-      // Τρίμηνο = current_q - user_view
-      // Ετήσιος = ethsia_pistosi - user_view
-      const availableBeforeOperation = Math.max(0, katanomesEtous - userView);
-      const quarterAvailableBeforeOperation = Math.max(0, currentQuarterValue - userView);
-      const yearlyAvailableBeforeOperation = Math.max(0, ethsiaPistosi - userView);
-      
-      // Calculate indicators after operation
-      const newUserView = userView + amount;
-      const availableAfterOperation = Math.max(0, katanomesEtous - newUserView);
-      const quarterAvailableAfterOperation = Math.max(0, currentQuarterValue - newUserView);
-      const yearlyAvailableAfterOperation = Math.max(0, ethsiaPistosi - newUserView);
-      
-      // If available would go negative, return an error
-      if (katanomesEtous > 0 && newUserView > katanomesEtous) {
-        return {
-          status: 'error',
-          canCreate: false,
-          message: `Ανεπαρκής διαθέσιμος προϋπολογισμός (Διαθέσιμος: ${availableBeforeOperation}, Έγγραφο: ${amount})`,
-          metadata: {
-            available: availableBeforeOperation,
-            requested: amount,
-            shortfall: Math.abs(katanomesEtous - newUserView)
-          }
-        };
-      }
-
-      // Calculate 20% threshold of katanomes_etous (or ethsia_pistosi if katanomes_etous is 0)
-      const baseValue = katanomesEtous > 0 ? katanomesEtous : ethsiaPistosi;
-      const threshold = baseValue * 0.2;
-      
-      // Check if available budget would fall below 20% threshold
-      if (availableAfterOperation <= threshold && baseValue > 0) {
-        return {
-          status: 'warning',
-          canCreate: true,
-          message: 'Ο διαθέσιμος προϋπολογισμός θα πέσει κάτω από το 20% της ετήσιας κατανομής. Απαιτείται ειδοποίηση διαχειριστή.',
-          requiresNotification: true,
-          notificationType: 'low_budget',
-          priority: 'high',
-          allowDocx: true,
-          metadata: {
-            availableBeforeOperation,
-            availableAfterOperation,
-            threshold: threshold,
-            baseValue: baseValue,
-            percentageRemaining: (availableAfterOperation / baseValue) * 100
-          }
-        };
-      }
-      
-      // Check if budget is getting low (below 30%)
-      if (availableAfterOperation <= baseValue * 0.3 && baseValue > 0) {
-        return {
-          status: 'warning',
-          canCreate: true,
-          message: 'Ο διαθέσιμος προϋπολογισμός είναι χαμηλός (κάτω από 30% της ετήσιας κατανομής).',
-          requiresNotification: false,
-          allowDocx: true,
-          metadata: {
-            availableBeforeOperation,
-            availableAfterOperation,
-            threshold: baseValue * 0.3,
-            baseValue: baseValue,
-            percentageRemaining: (availableAfterOperation / baseValue) * 100
-          }
-        };
-      }
-
-      // All checks passed, return success
-      return {
-        status: 'success',
-        canCreate: true,
-        allowDocx: true,
-        message: 'Επαρκής προϋπολογισμός για τη δημιουργία του εγγράφου.',
-        metadata: {
-          availableBeforeOperation,
-          availableAfterOperation,
-          userView,
-          newUserView,
-          baseValue: baseValue,
-          percentageAvailable: baseValue > 0 ? (availableAfterOperation / baseValue) * 100 : 100,
-          budget_indicators: {
-            available_budget: availableAfterOperation,
-            quarter_available: quarterAvailableAfterOperation,
-            yearly_available: yearlyAvailableAfterOperation
-          }
-        }
-      };
-    } catch (error) {
-      console.error('[BudgetService] Budget validation error:', error);
-      // In case of unexpected errors, still allow document creation but with a warning
-      return {
-        status: 'warning',
-        canCreate: true,
-        message: 'Σφάλμα κατά την επικύρωση του προϋπολογισμού. Η δημιουργία εγγράφου επιτρέπεται με προσοχή.',
-        allowDocx: true,
-        metadata: {
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      };
-    }
-  }
-
-  static async updateBudget(mis: string, amount: number, userId: string | number, documentId?: number, changeReason?: string): Promise<BudgetResponse> {
-    try {
-      if (!mis || isNaN(amount) || amount <= 0 || !userId) {
-        return {
-          status: 'error',
-          message: 'Missing required parameters'
-        };
-      }
-
-      // Use same approach as other methods to handle MIS conversion
-      let misToSearch: string | number = mis;
-      let numericalMis: number | null = null;
-
-      console.log(`[BudgetService] updateBudget: Processing MIS: ${mis}, type: ${typeof mis}, amount: ${amount}`);
-      
-      // Check if MIS might be a project ID with a code pattern (e.g., "2024ΝΑ85300001")
-      const projectCodeRegex = /^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/;
-      const isProjectCodeFormat = projectCodeRegex.test(mis);
-      
-      // Determine if it's a numeric string that can be parsed to an integer
-      const isNumericString = !isNaN(parseInt(mis)) && !isProjectCodeFormat;
-      
-      // CASE 1: Project code format like "2024ΝΑ85300001"
-      if (isProjectCodeFormat) {
-        console.log(`[BudgetService] updateBudget: MIS is a project code/ID pattern: ${mis}`);
-        
-        // Try to find the project by its ID field (which may be the na853 code)
-        try {
-          console.log(`[BudgetService] updateBudget: Looking up project by ID/code in Supabase: ${mis}`);
-          
-          const { data: projectData, error: projectError } = await supabase
-            .from('Projects')
-            .select('id, mis, na853')
-            .or(`id.eq.${mis},na853.eq.${mis}`)
-            .single();
-            
-          if (projectError) {
-            console.log(`[BudgetService] updateBudget: Supabase error looking up project: ${projectError.message}`);
-          }
-            
-          if (projectData?.mis) {
-            console.log(`[BudgetService] updateBudget: Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
-            // Convert to number since MIS is now int4 in the database
-            numericalMis = parseInt(projectData.mis.toString());
-            misToSearch = numericalMis;
-          } else {
-            console.log(`[BudgetService] updateBudget: No project found with ID/code: ${mis}, will try to find by direct match`);
-          }
-        } catch (projectLookupError) {
-          console.log(`[BudgetService] updateBudget: Error looking up project by ID/code ${mis}:`, projectLookupError);
-          // Continue with other strategies if lookup fails
-        }
-      }
-      
-      // CASE 2: Numeric MIS (either direct input or found from case 1)
-      if (isNumericString || numericalMis !== null) {
-        // If we don't already have a numerical MIS from case 1, parse it now
-        if (numericalMis === null) {
-          numericalMis = parseInt(mis);
-          misToSearch = numericalMis;
-        }
-        console.log(`[BudgetService] updateBudget: Using numerical MIS: ${misToSearch}`);
-      } else {
-        console.log(`[BudgetService] updateBudget: Using original MIS string: ${misToSearch}`);
-      }
-
-      console.log(`[BudgetService] Updating budget for MIS: ${misToSearch}, amount: ${amount}, userId: ${userId}, documentId: ${documentId || 'none'}`);
-
-      // Try to get current budget data
-      let { data: budgetData, error: fetchError } = await supabase
-        .from('budget_na853_split')
-        .select('*')
-        .eq('mis', misToSearch)
-        .single();
-
-      // If not found, try to get project data to find the correct MIS
-      if (fetchError || !budgetData) {
-        console.log(`[BudgetService] Budget not found directly for MIS: ${mis}, trying project lookup`);
-        
-        // Try to find project by either its ID or MIS field
-        const { data: projectData } = await supabase
-          .from('Projects')
-          .select('id, mis')
-          .or(`id.eq.${mis},mis.eq.${mis}`)
-          .single();
-        
-        if (projectData?.mis) {
-          console.log(`[BudgetService] Found project with MIS: ${projectData.mis}`);
-          
-          // Try again with the project's MIS value
-          const retryResult = await supabase
-            .from('budget_na853_split')
-            .select('*')
-            .eq('mis', projectData.mis)
-            .single();
-            
-          budgetData = retryResult.data;
-          fetchError = retryResult.error;
-        }
-      }
-
-      // If we still don't have budget data, return a default success response
-      if (fetchError || !budgetData) {
-        console.log(`[BudgetService] Budget not found for MIS: ${mis} after lookup attempts`);
-        
-        // Even though we couldn't find the budget, log the attempted operation in budget_history
-        try {
-          await supabase
-            .from('budget_history')
-            .insert({
-              mis,
-              previous_amount: '0',
-              new_amount: '0',
-              change_type: documentId ? 'document_creation' : 'manual_adjustment',
-              change_reason: changeReason || 'Budget update attempted but no budget record found',
-              document_id: documentId || null,
-              created_by: userId,
-              metadata: {
-                error: 'Budget record not found',
-                attempted_deduction: amount
-              }
-            });
-        } catch (historyError) {
-          console.error('[BudgetService] Failed to create history entry for missing budget:', historyError);
-        }
-        
-        return {
-          status: 'warning',
-          message: 'Budget not found, but update is allowed without budget tracking',
-          data: {
-            user_view: '0',
-            ethsia_pistosi: '0',
-            q1: '0',
-            q2: '0',
-            q3: '0',
-            q4: '0',
-            total_spent: amount.toString(),
-            current_budget: '0'
-          }
-        };
-      }
-
-      // Parse current values - use parseEuropeanNumber to handle European number format
-      const currentUserView = parseEuropeanNumber(budgetData.user_view);
-      const currentEthsiaPistosi = parseEuropeanNumber(budgetData.ethsia_pistosi);
-      const currentKatanomesEtous = parseEuropeanNumber(budgetData.katanomes_etous);
-      const total_spent = parseEuropeanNumber(budgetData.total_spent);
-
-      // Get current quarter
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth() + 1;
-      const quarterKey = `q${Math.ceil(currentMonth / 3)}` as 'q1' | 'q2' | 'q3' | 'q4';
-
-      // Parse current quarter values - use parseEuropeanNumber to handle European number format
-      const currentQ1 = parseEuropeanNumber(budgetData.q1);
-      const currentQ2 = parseEuropeanNumber(budgetData.q2);
-      const currentQ3 = parseEuropeanNumber(budgetData.q3);
-      const currentQ4 = parseEuropeanNumber(budgetData.q4);
-      const currentQuarterValue = parseEuropeanNumber(budgetData[quarterKey]);
-      
-      // Check for quarter transitions using the last_quarter_check column
-      const lastQuarterCheck = budgetData.last_quarter_check?.toString() || '';
-      // Extract the quarter number from the text (e.g., extract '1' from 'q1')
-      const lastQuarterChecked = lastQuarterCheck && lastQuarterCheck.startsWith('q') 
-        ? parseInt(lastQuarterCheck.substring(1)) 
-        : 0;
-      const currentQuarterNumber = Math.ceil(currentMonth / 3);
-      const isQuarterTransition = lastQuarterChecked > 0 && lastQuarterChecked < currentQuarterNumber;
-      
-      console.log(`[BudgetService] Quarter check - Last checked: ${lastQuarterChecked}, Current: ${currentQuarterNumber}, Transition: ${isQuarterTransition}`);
-      
-      // Define new quarter values with defaults from current values
-      let newQ1 = currentQ1;
-      let newQ2 = currentQ2;
-      let newQ3 = currentQ3;
-      let newQ4 = currentQ4;
-      
-      if (isQuarterTransition) {
-        // Calculate the quarter transition (add previous quarter value to current quarter)
-        if (lastQuarterChecked === 1 && currentQuarterNumber === 2) {
-          // Q1->Q2 transition
-          console.log(`[BudgetService] Quarter transition from Q1 to Q2 - q1 value: ${currentQ1}, adding to q2: ${currentQ2}`);
-          
-          // Apply the quarter transition logic: q2=q2+q1
-          newQ2 = currentQ2 + currentQ1;
-          newQ1 = 0; // Reset q1 as it has ended
-          
-          console.log(`[BudgetService] Updated quarterly values after Q1->Q2 transition:`, {
-            q1: `${currentQ1} -> ${newQ1}`,
-            q2: `${currentQ2} -> ${newQ2}`
-          });
-          
-        } else if (lastQuarterChecked === 2 && currentQuarterNumber === 3) {
-          // Q2->Q3 transition
-          console.log(`[BudgetService] Quarter transition from Q2 to Q3 - q2 value: ${currentQ2}, adding to q3: ${currentQ3}`);
-          
-          // Apply the quarter transition logic: q3=q3+q2
-          newQ3 = currentQ3 + currentQ2;
-          newQ2 = 0; // Reset q2 as it has ended
-          
-          console.log(`[BudgetService] Updated quarterly values after Q2->Q3 transition:`, {
-            q2: `${currentQ2} -> ${newQ2}`,
-            q3: `${currentQ3} -> ${newQ3}`
-          });
-          
-        } else if (lastQuarterChecked === 3 && currentQuarterNumber === 4) {
-          // Q3->Q4 transition
-          console.log(`[BudgetService] Quarter transition from Q3 to Q4 - q3 value: ${currentQ3}, adding to q4: ${currentQ4}`);
-          
-          // Apply the quarter transition logic: q4=q4+q3
-          newQ4 = currentQ4 + currentQ3;
-          newQ3 = 0; // Reset q3 as it has ended
-          
-          console.log(`[BudgetService] Updated quarterly values after Q3->Q4 transition:`, {
-            q3: `${currentQ3} -> ${newQ3}`,
-            q4: `${currentQ4} -> ${newQ4}`
-          });
-        }
-      }
-      
-      // Calculate new user view by adding the amount (user_view is counter of all spending)
-      const newUserView = currentUserView + amount;
-      const newTotalSpent = total_spent + amount;
-      
-      // These values should not be updated by document creation operations
-      const newEthsiaPistosi = currentEthsiaPistosi; // Do not change ethsia_pistosi
-      const newKatanomesEtous = currentKatanomesEtous; // Do not change katanomes_etous
-      
-      // Calculate budget indicators
-      const availableBudget = Math.max(0, newKatanomesEtous - newUserView);
-      
-      // Get current trimester value for budget indicators
-      let currentTrimesterValue = 0;
-      switch (quarterKey) {
-        case 'q1': currentTrimesterValue = isQuarterTransition ? newQ1 : currentQ1; break;
-        case 'q2': currentTrimesterValue = isQuarterTransition ? newQ2 : currentQ2; break;
-        case 'q3': currentTrimesterValue = isQuarterTransition ? newQ3 : currentQ3; break;
-        case 'q4': currentTrimesterValue = isQuarterTransition ? newQ4 : currentQ4; break;
-      }
-      
-      const currentQuarterAvailable = Math.max(0, currentTrimesterValue - newUserView);
-      const yearlyAvailable = Math.max(0, newEthsiaPistosi - newUserView);
-
-      // Check if the total_spent column exists by querying the first row
-      console.log(`[BudgetService] Checking if total_spent column exists in budget_na853_split`);
-      const { data: columnCheckData, error: columnCheckError } = await supabase
-        .from('budget_na853_split')
-        .select('total_spent')
-        .limit(1);
-        
-      const hasTotalSpentColumn = !columnCheckError && columnCheckData !== null;
-      console.log(`[BudgetService] total_spent column exists: ${hasTotalSpentColumn}`);
-      
-      // Prepare update payload based on available columns
-      const updatePayload: any = {
-        // Update user_view field and quarterly values as per requirement
-        // Do not update the katanomes_etous or ethsia_pistosi fields (they are reference values)
-        user_view: newUserView.toString(),
-        q1: newQ1.toString(),
-        q2: newQ2.toString(),
-        q3: newQ3.toString(),
-        q4: newQ4.toString(),
-        updated_at: new Date().toISOString(),
-        // Update the last_quarter_check to current quarter (text format)
-        last_quarter_check: `q${currentQuarterNumber}`
-      };
-      
-      // Only include total_spent if the column exists
-      if (hasTotalSpentColumn) {
-        updatePayload.total_spent = newTotalSpent.toString();
-      }
-      
-      // If quarter_view exists in the database, set it to null to remove it
-      if ('quarter_view' in budgetData) {
-        updatePayload.quarter_view = null;
-      }
-      
-      // Check for 'sum' column and update it if it exists
-      const hasSum = budgetData && 'sum' in budgetData;
-      if (hasSum) {
-        // Create a new sum object or update the existing one
-        const currentSum = budgetData.sum || {};
-        const updatedSum = {
-          ...currentSum,
-          user_view: newUserView,
-          updated_at: new Date().toISOString(),
-          ethsia_pistosi: newEthsiaPistosi,
-          current_quarter: quarterKey,
-          available_budget: availableBudget,
-          quarter_available: currentQuarterAvailable,
-          yearly_available: yearlyAvailable
-        };
-        
-        // Add sum to update payload
-        updatePayload.sum = updatedSum;
-        console.log(`[BudgetService] Including sum data in update:`, JSON.stringify(updatedSum, null, 2));
-      }
-      
-      // Update budget amounts
-      console.log(`[BudgetService] Updating budget_na853_split with payload:`, JSON.stringify(updatePayload, null, 2));
-      const { error: updateError } = await supabase
-        .from('budget_na853_split')
-        .update(updatePayload)
-        .eq('mis', misToSearch);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // Create a budget history entry with metadata
-      const quarterChanges = {
-        q1: { previous: currentQ1, new: newQ1 },
-        q2: { previous: currentQ2, new: newQ2 },
-        q3: { previous: currentQ3, new: newQ3 },
-        q4: { previous: currentQ4, new: newQ4 }
-      };
-      
-      // Update history message to show budget is being used, not reduced (since we're adding to user_view)
-      const historyEntry = {
-        mis: misToSearch,
-        previous_amount: currentUserView.toString(),
-        new_amount: newUserView.toString(),
-        change_type: documentId ? 'document_creation' : 'manual_adjustment',
-        change_reason: changeReason || (documentId ? 
-          `Document creation [ID:${documentId}] added ${amount} to budget usage. Current quarter: ${quarterKey}` : 
-          `Manual budget adjustment added ${amount} to budget usage. Current quarter: ${quarterKey}`),
-        document_id: documentId || null,
-        created_by: userId.toString(),
-        metadata: {
-          quarterly_changes: quarterChanges,
-          budget_indicators: {
-            available_budget: availableBudget,
-            quarter_available: currentQuarterAvailable,
-            yearly_available: yearlyAvailable
-          },
-          amount_used: amount
-        }
-      };
-
-      console.log(`[BudgetService] Creating budget history entry for MIS ${mis} with change_type: ${historyEntry.change_type}, document_id: ${historyEntry.document_id}, created_by: ${historyEntry.created_by}`);
-      
-      // Insert the history entry and log the exact payload
-      console.log(`[BudgetService] Sending budget history entry to database:`, JSON.stringify(historyEntry, null, 2));
-      const { error: historyError, data: historyData } = await supabase
-        .from('budget_history')
-        .insert(historyEntry)
-        .select();
-
-      if (historyError) {
-        console.error('[BudgetService] Failed to create budget history entry:', historyError);
-        console.error('[BudgetService] Error details:', historyError.message, historyError.details);
-        // Continue execution even if history logging fails
-      } else {
-        console.log('[BudgetService] Budget history entry created successfully with ID:', historyData?.[0]?.id);
-      }
-
-      // Build response object
-      const responseData: any = {
-        user_view: newUserView.toString(),
-        ethsia_pistosi: newEthsiaPistosi.toString(),
-        q1: newQ1.toString(),
-        q2: newQ2.toString(),
-        q3: newQ3.toString(),
-        q4: newQ4.toString(),
-        total_spent: newTotalSpent.toString(),
-        current_budget: newUserView.toString(),
-        last_quarter_check: `q${currentQuarterNumber}`,
-        current_quarter: quarterKey,
-        // Add new budget indicators
-        available_budget: availableBudget.toString(),
-        quarter_available: currentQuarterAvailable.toString(), 
-        yearly_available: yearlyAvailable.toString()
-      };
-      
-      // Include sum if it exists in the database record
-      if (hasSum) {
-        responseData.sum = updatePayload.sum;
-      }
-      
-      return {
-        status: 'success',
-        data: responseData
-      };
-    } catch (error) {
-      console.error('[BudgetService] Budget update error:', error);
-      
-      // Even on error, try to log the attempted operation
-      try {
-        // Make a safe version of MIS number
-        let safeNumber: number;
-        try {
-          safeNumber = parseInt(mis);
-          if (isNaN(safeNumber)) {
-            safeNumber = 0;
-          }
-        } catch {
-          safeNumber = 0;
-        }
-        
-        await supabase
-          .from('budget_history')
-          .insert({
-            mis: safeNumber.toString(),
-            previous_amount: '0',
-            new_amount: '0',
-            change_type: 'error',
-            change_reason: `Budget update failed: ${error instanceof Error ? error.message : 'Unknown error'}. Attempted deduction: ${amount}`,
-            document_id: documentId || null,
-            created_by: userId.toString()
-          });
-      } catch (historyError) {
-        console.error('[BudgetService] Failed to create error history entry:', historyError);
-      }
-      
-      return {
-        status: 'error',
-        message: error instanceof Error ? error.message : 'Failed to update budget'
+        message: 'Error fetching budget data',
+        error: error.message || 'Unknown error'
       };
     }
   }
 
   /**
-   * Resolves reallocation notifications that match a budget change detection.
-   * Used when admin uploads change katanomes_etous and a notification exists.
+   * Updates the budget for a project with expenditure
+   * This applies a transaction amount to the budget and updates usage statistics
    * 
-   * @param mis Project MIS number
-   * @param katanomesEtousDiff The change in katanomes_etous value
-   * @returns Result of the operation
+   * @param mis The MIS project code
+   * @param amount The transaction amount to apply
+   * @param userId The user ID making the transaction
+   * @param sessionId Optional session ID for tracking
+   * @param changeReason Optional reason for the budget change
+   * @returns Status of the update operation
    */
-  static async resolveReallocationNotifications(mis: string, katanomesEtousDiff: number): Promise<boolean> {
+  static async updateBudget(
+    mis: string, 
+    amount: number, 
+    userId: string = 'system', 
+    sessionId?: string,
+    changeReason?: string
+  ): Promise<{
+    status: 'success' | 'error' | 'warning';
+    message: string;
+    details?: any;
+  }> {
     try {
-      if (!mis || Math.abs(katanomesEtousDiff) < 0.01) {
-        console.log('[BudgetService] No significant budget change to process');
-        return false;
+      if (!mis) {
+        console.error('[BudgetService] MIS parameter is required for updateBudget');
+        return {
+          status: 'error',
+          message: 'MIS parameter is required'
+        };
       }
 
-      // Check if the MIS is purely numeric or has a project code format
-      let misToSearch = mis;
-      let isProjectCode = false;
-
-      // Check if MIS might be a project ID with a code pattern (e.g., "2024ΝΑ85300001")
-      if (mis.match(/^\d{4}[Α-Ωα-ωA-Za-z]+\d+$/)) {
-        console.log(`[BudgetService] resolveReallocation: MIS appears to be a project code pattern: ${mis}`);
-        isProjectCode = true;
+      // Parse MIS based on format 
+      let misToSearch: string | number = mis;
+      let numericalMis: number | null = null;
+      
+      // Check if MIS is numeric or follows the pattern of project codes
+      const isNumericString = /^\d+$/.test(mis);
+      const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
+      
+      console.log(`[BudgetService] Update - Parameters: mis=${mis}, amount=${amount}, userId=${userId}`);
+      
+      // CASE 1: Project code format (like "2024ΝΑ85300001")
+      if (projectCodePattern.test(mis)) {
+        console.log(`[BudgetService] Update - MIS appears to be a project code: ${mis}`);
         
-        // If it matches a project code pattern, try to get its numeric MIS from Projects table
+        // Try to find the project with matching NA853 field (project code)
         try {
-          const { data: projectData } = await supabase
+          const { data: projectData, error: projectError } = await supabase
             .from('Projects')
-            .select('mis')
-            .eq('id', mis)
+            .select('id, mis')
+            .eq('na853', mis)
             .single();
+          
+          if (projectError && projectError.code !== 'PGRST116') {
+            console.error(`[BudgetService] Update - Supabase error looking up project: ${projectError.message}`);
+          }
             
           if (projectData?.mis) {
-            console.log(`[BudgetService] resolveReallocation: Found numeric MIS ${projectData.mis} for project code ${mis}`);
-            misToSearch = projectData.mis;
+            console.log(`[BudgetService] Update - Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
+            // Convert to number since MIS is now int4 in the database
+            numericalMis = parseInt(projectData.mis.toString());
+            misToSearch = String(numericalMis); // Convert to string for consistency in search
+          } else {
+            console.log(`[BudgetService] Update - No project found with ID/code: ${mis}, will try to find by direct match`);
           }
         } catch (projectLookupError) {
-          console.log(`[BudgetService] resolveReallocation: Error looking up project by ID ${mis}:`, projectLookupError);
-          // Continue with original MIS if lookup fails
+          console.log(`[BudgetService] Update - Error looking up project by ID/code ${mis}:`, projectLookupError);
+          // Continue with other strategies if lookup fails
         }
       }
-
-      console.log(`[BudgetService] Attempting to resolve reallocation notifications for MIS: ${misToSearch}`);
       
-      // Find pending reallocation notifications for this MIS
-      const { data: notifications, error } = await supabase
-        .from('budget_notifications')
-        .select('*')
-        .eq('mis', misToSearch)
-        .eq('type', 'reallocation')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+      // CASE 2: Numeric MIS (either direct input or found from case 1)
+      if (isNumericString || numericalMis !== null) {
+        // If we don't already have a numerical MIS from case 1, parse it now
+        if (numericalMis === null) {
+          numericalMis = parseInt(mis);
+          misToSearch = String(numericalMis); // Convert to string for consistency in search
+        }
+        console.log(`[BudgetService] Update - Using numerical MIS: ${misToSearch}`);
+      } else {
+        console.log(`[BudgetService] Update - Using original MIS string: ${misToSearch}`);
+      }
+      
+      // First save the current state for history tracking
+      await this.updateBudgetSumField(mis);
+      
+      // Get current budget with numeric MIS
+      // Similar logic as in getBudget - handle integer column type
+      let budgetData;
+      let error;
+
+      try {
+        // For numeric MIS, query directly against the integer column
+        if (numericalMis !== null) {
+          console.log(`[BudgetService] Update - Querying budget with numeric MIS: ${numericalMis}`);
+          const result = await supabase
+            .from('budget_na853_split')
+            .select('*')
+            .eq('mis', numericalMis) // Use the number directly for integer column
+            .single();
+          
+          budgetData = result.data;
+          error = result.error;
+        } else {
+          // Try direct query with original value (last resort)
+          console.log(`[BudgetService] Update - Trying direct budget query with: ${misToSearch}`);
+          const result = await supabase
+            .from('budget_na853_split')
+            .select('*')
+            .eq('mis', misToSearch)
+            .single();
+          
+          budgetData = result.data;
+          error = result.error;
+        }
+      } catch (err) {
+        console.error(`[BudgetService] Update - Exception in budget data query:`, err);
+        
+        // Safe error message extraction
+        let errorMessage = 'Unknown error';
+        if (err && typeof err === 'object') {
+          if ('message' in err && typeof err.message === 'string') {
+            errorMessage = err.message;
+          } else if (err.toString && typeof err.toString === 'function') {
+            errorMessage = err.toString();
+          }
+        }
+        
+        error = {
+          message: `Exception querying budget: ${errorMessage}`
+        };
+      }
+        
+      if (error || !budgetData) {
+        console.error(`[BudgetService] Update - Error fetching budget data: ${error?.message || 'Not found'}`);
+        return {
+          status: 'error',
+          message: `Could not find budget for MIS: ${mis}`,
+          details: error?.message
+        };
+      }
+      
+      // Apply the transaction to user_view
+      const currentUserView = budgetData.user_view || 0;
+      const newUserView = currentUserView + amount;
+      
+      // Update the budget
+      const { error: updateError } = await supabase
+        .from('budget_na853_split')
+        .update({ 
+          user_view: newUserView,
+          last_quarter_check: `q${Math.ceil((new Date().getMonth() + 1) / 3)}`, // Update current quarter
+          updated_at: new Date().toISOString()
+        })
+        .eq('mis', misToSearch);
+        
+      if (updateError) {
+        console.error(`[BudgetService] Update - Error updating budget: ${updateError.message}`);
+        return {
+          status: 'error',
+          message: 'Failed to update budget',
+          details: updateError.message
+        };
+      }
+      
+      // Create a history entry
+      try {
+        const historyEntry = {
+          project_mis: mis,
+          amount: amount,
+          user_id: userId,
+          change_type: 'document_created',
+          before_amount: currentUserView,
+          after_amount: newUserView,
+          quarter: `q${Math.ceil((new Date().getMonth() + 1) / 3)}`,
+          details: {
+            timestamp: new Date().toISOString(),
+            sessionId: sessionId || null
+          }
+        };
+        
+        const { error: historyError } = await supabase
+          .from('budget_history')
+          .insert(historyEntry);
+          
+        if (historyError) {
+          console.warn(`[BudgetService] Update - Error creating history entry: ${historyError.message}`);
+          // Non-fatal, continue
+        } else {
+          console.log(`[BudgetService] Update - Created history entry for MIS: ${mis}`);
+        }
+      } catch (historyError) {
+        console.warn(`[BudgetService] Update - Exception in history creation: ${historyError}`);
+        // Non-fatal, continue
+      }
+      
+      console.log(`[BudgetService] Update - Successfully updated budget for MIS: ${mis}, new user_view: ${newUserView}`);
+      
+      // Perform a second update to the sum field to capture the new state
+      await this.updateBudgetSumField(mis);
+      
+      return {
+        status: 'success',
+        message: 'Budget updated successfully',
+        details: {
+          previous: currentUserView,
+          current: newUserView,
+          difference: amount
+        }
+      };
+    } catch (error: any) {
+      console.error('[BudgetService] Update - Error in updateBudget:', error);
+      return {
+        status: 'error',
+        message: 'Error updating budget',
+        details: error.message || 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Updates the budget sum field with current budget values
+   * This is used for tracking changes over time
+   * 
+   * @param mis The MIS project code
+   * @returns Success status
+   */
+  static async updateBudgetSumField(mis: string): Promise<boolean> {
+    try {
+      if (!mis) {
+        console.error('[BudgetService] MIS parameter is required for updateBudgetSumField');
+        return false;
+      }
+      
+      // First get current budget data
+      const budgetResult = await this.getBudget(mis);
+      
+      if (budgetResult.status !== 'success' || !budgetResult.data) {
+        console.error(`[BudgetService] Could not get budget data for MIS ${mis} to update sum field`);
+        return false;
+      }
+      
+      // Prepare the JSON sum field
+      const sumFieldData = {
+        updated_at: new Date().toISOString(),
+        user_view: budgetResult.data.user_view,
+        ethsia_pistosi: budgetResult.data.ethsia_pistosi,
+        current_quarter: budgetResult.data.current_quarter,
+        katanomes_etous: budgetResult.data.katanomes_etous,
+        available_budget: budgetResult.data.available_budget,
+        yearly_available: budgetResult.data.yearly_available,
+        quarter_available: budgetResult.data.quarter_available
+      };
+      
+      console.log(`[BudgetService] Updating sum field for MIS ${mis}:`, sumFieldData);
+      
+      // Update the sum field in the database
+      const { error } = await supabase
+        .from('budget_na853_split')
+        .update({ sum: sumFieldData })
+        .eq('mis', mis);
       
       if (error) {
-        console.error('[BudgetService] Error fetching reallocation notifications:', error);
+        console.error(`[BudgetService] Error updating sum field for MIS ${mis}:`, error);
         return false;
       }
       
-      if (!notifications || notifications.length === 0) {
-        console.log(`[BudgetService] No pending reallocation notifications found for MIS: ${misToSearch}`);
-        return false;
-      }
-      
-      console.log(`[BudgetService] Found ${notifications.length} pending reallocation notification(s) for MIS: ${misToSearch}`);
-      
-      // Mark the most recent notification as completed
-      // Note: We could check if the amount matches exactly, but a more lenient approach is to
-      // just mark any pending reallocation notification as completed after an admin update
-      const latestNotification = notifications[0];
-      
-      const { error: updateError } = await supabase
-        .from('budget_notifications')
-        .update({
-          status: 'completed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', latestNotification.id);
-      
-      if (updateError) {
-        console.error('[BudgetService] Error updating notification status:', updateError);
-        return false;
-      }
-      
-      console.log(`[BudgetService] Successfully resolved reallocation notification ID: ${latestNotification.id} for MIS: ${misToSearch}`);
+      console.log(`[BudgetService] Successfully updated sum field for MIS ${mis}`);
       return true;
     } catch (error) {
-      console.error('[BudgetService] Error resolving reallocation notifications:', error);
+      console.error('[BudgetService] Error in updateBudgetSumField:', error);
       return false;
     }
   }
-
-  static async getNotifications() {
-    try {
-      console.log('[BudgetService] Fetching notifications...');
-
-      // Use a more robust approach to fetch data from Supabase
-      try {
-        const { data, error } = await supabase
-          .from('budget_notifications')
-          .select(`
-            id,
-            mis,
-            type,
-            amount,
-            current_budget,
-            ethsia_pistosi,
-            reason,
-            status,
-            user_id,
-            created_at,
-            updated_at
-          `)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (error) {
-          console.error('[BudgetService] Error fetching notifications:', error);
-          // Return empty array instead of throwing error
-          return [];
-        }
-
-        // Ensure data is an array
-        const notificationArray = Array.isArray(data) ? data : [];
-
-        // Transform and validate the data
-        const transformedData = notificationArray.map(notification => ({
-          id: Number(notification.id),
-          mis: String(notification.mis),
-          type: notification.type,
-          amount: Number(notification.amount),
-          current_budget: Number(notification.current_budget),
-          ethsia_pistosi: Number(notification.ethsia_pistosi),
-          reason: String(notification.reason || ''),
-          status: notification.status,
-          user_id: Number(notification.user_id),
-          created_at: notification.created_at,
-          updated_at: notification.updated_at
-        }));
-
-        console.log('[BudgetService] Successfully fetched notifications:', {
-          count: transformedData.length,
-          isArray: Array.isArray(transformedData),
-          sample: transformedData.length > 0 ? 'sample exists' : 'no data'
-        });
-
-        return transformedData;
-      } catch (innerError) {
-        // If data from Supabase fails with an unexpected error, log and return empty array
-        console.error('[BudgetService] Unexpected error in supabase query:', innerError);
-        return [];
-      }
-    } catch (error) {
-      console.error('[BudgetService] Error in getNotifications:', error);
-      // Return empty array instead of throwing error
-      return [];
-    }
-  }
 }
+
+export default BudgetService;
