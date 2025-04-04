@@ -400,6 +400,42 @@ export class DocumentFormatter {
    * - Standard text about documentation retention
    * - Two signature fields with user name and department on the left
    */
+  /**
+   * Get project title from the Projects table using MIS
+   */
+  public static async getProjectTitle(mis: string): Promise<string | null> {
+    try {
+      if (!mis) {
+        console.error("No MIS provided for project title lookup");
+        return null;
+      }
+      
+      console.log(`Fetching project title for MIS: ${mis}`);
+      
+      const { data, error } = await supabase
+        .from('Projects')
+        .select('title')
+        .eq('mis', mis)
+        .maybeSingle();
+        
+      if (error) {
+        console.error("Error fetching project title:", error);
+        return null;
+      }
+      
+      if (!data || !data.title) {
+        console.log(`No project found with MIS: ${mis}`);
+        return null;
+      }
+      
+      console.log(`Found project title: ${data.title}`);
+      return data.title;
+    } catch (error) {
+      console.error("Error in getProjectTitle:", error);
+      return null;
+    }
+  }
+
   public static async generateSecondDocument(
     documentData: DocumentData,
   ): Promise<Buffer> {
@@ -408,6 +444,11 @@ export class DocumentFormatter {
 
       const unitDetails = await this.getUnitDetails(documentData.unit);
       console.log("Unit details:", unitDetails);
+      
+      // Get project title from database
+      const projectMis = documentData.project_na853 || documentData.mis?.toString() || "";
+      const projectTitle = await this.getProjectTitle(projectMis);
+      console.log(`Project title for MIS ${projectMis}:`, projectTitle);
       
       // Get user information with fallbacks
       const userInfo = {
@@ -438,7 +479,7 @@ export class DocumentFormatter {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "ΔΩΡΕΑΝ ΚΡΑΤΙΚΗ ΑΡΩΓΗ ΓΙΑ ΤΗΝ ΕΠΙΣΚΕΥΉ Ή ΑΝΑΚΑΤΑΣΚΕΥΗ ΣΕΙΣΜΟΠΛΗΚΤΩΝ ΚΤΙΡΙΩΝ ΠΟΥ ΥΠΕΣΤΗΣΑΝ ΒΛΑΒΕΣ",
+                  text: projectTitle || "ΔΩΡΕΑΝ ΚΡΑΤΙΚΗ ΑΡΩΓΗ ΓΙΑ ΤΗΝ ΕΠΙΣΚΕΥΉ Ή ΑΝΑΚΑΤΑΣΚΕΥΗ ΣΕΙΣΜΟΠΛΗΚΤΩΝ ΚΤΙΡΙΩΝ ΠΟΥ ΥΠΕΣΤΗΣΑΝ ΒΛΑΒΕΣ",
                   bold: true,
                   size: 32
                 })
@@ -447,11 +488,11 @@ export class DocumentFormatter {
               spacing: { before: 400, after: 200 },
             }),
             
-            // Project title
+            // Project number/code (NA853)
             new Paragraph({
               children: [
                 new TextRun({
-                  text: documentData.project_na853 || "",
+                  text: `ΕΡΓΟ: ${documentData.project_na853 || ""}`,
                   bold: true,
                 })
               ],
