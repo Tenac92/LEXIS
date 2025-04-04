@@ -5,6 +5,7 @@ import { authenticateSession, User, AuthenticatedRequest } from "./middleware/au
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
 import { router as budgetRouter } from "./controllers/budgetController";
+import { getBudgetByMis } from './controllers/budgetController';
 import { router as budgetNotificationsRouter } from "./controllers/budgetNotificationsController";
 import { router as unitsRouter } from "./controllers/unitsController";
 import { router as usersRouter } from "./controllers/usersController";
@@ -482,10 +483,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Budget routes
     log('[Routes] Setting up budget routes...');
-    // TODO: Refactor - Move this public budget endpoint to budgetController
+    
     // Allow public access to budget data by MIS for document creation
-    // Updated to support both numeric and alphanumeric MIS values including special characters
-    app.get('/api/budget/:mis', async (req, res) => {
+    // Using our specialized controller function for MIS lookups
+    app.get('/api/budget/:mis', getBudgetByMis);
       try {
         const { mis } = req.params;
         
@@ -505,201 +506,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Detailed debug info
         console.log(`[Budget] MIS details - Original: "${mis}", Decoded: "${decodedMis}", Type: ${typeof decodedMis}`);
         
-        // Direct query to Supabase for more reliable connection
+        // ===== APPROACH 1: Check if we have an alphanumeric code (NA853) =====
         try {
-            // First check if we can find the record directly in budget_na853_split using the MIS value
-            console.log(`[Budget] Querying budget_na853_split directly for MIS ${decodedMis}`);
-            const { data: budgetData, error: budgetError } = await supabase
-                .from('budget_na853_split')
-                .select('*')
-                .eq('mis', decodedMis)
-                .single();
-            
-            if (budgetError && budgetError.code !== 'PGRST116') {
-                // This is a real database error, not just "not found"
-                console.error(`[Budget] Database error querying budget:`, budgetError);
+            // ===== STEP 1: Check if we need special handling for alphanumeric codes =====
+            if (!/^\d+$/.test(decodedMis)) {
+                console.log(`[Budget] Detected non-numeric MIS '${decodedMis}'. Trying special handling.`);
                 
-                // Try to initialize database connection again
-                console.log('[Budget] Attempting to reinitialize database connection');
-                await verifyDatabaseConnections();
-                
-                throw budgetError;
-            }
-            
-            if (budgetData) {
-                // Found budget data directly - format it like BudgetService would
-                console.log(`[Budget] Found budget data directly for ${decodedMis}`);
-                
-                // Format the data similar to what BudgetService would return
-                const formattedData = {
-                    user_view: budgetData.user_view?.toString() || '0',
-                    total_budget: budgetData.katanomes_etous?.toString() || '0',
-                    annual_budget: budgetData.ethsia_pistosi?.toString() || '0',
-                    katanomes_etous: budgetData.katanomes_etous?.toString() || '0',
-                    ethsia_pistosi: budgetData.ethsia_pistosi?.toString() || '0',
-                    current_budget: budgetData.user_view?.toString() || '0',
-                    q1: budgetData.q1?.toString() || '0',
-                    q2: budgetData.q2?.toString() || '0',
-                    q3: budgetData.q3?.toString() || '0',
-                    q4: budgetData.q4?.toString() || '0',
-                    total_spent: '0', // Calculate if available
-                    available_budget: ((budgetData.katanomes_etous || 0) - (budgetData.user_view || 0)).toString(),
-                    quarter_available: '0', // Would need quarter calculation
-                    yearly_available: ((budgetData.ethsia_pistosi || 0) - (budgetData.user_view || 0)).toString()
-                };
-                
-                return res.json({
-                    status: 'success',
-                    data: formattedData
-                });
-            }
-            
-            // If direct lookup failed, try to find project by its ID
-            console.log(`[Budget] No direct budget data for ${decodedMis}, trying project lookup`);
-            
-            // Try to find project by ID or NA853 code - split into two queries for better error handling
-            console.log(`[Budget] Trying to find project with id or na853 matching: ${decodedMis}`);
-            
-            // First try to find by exact NA853 match
-            const { data: projectDataByNA853, error: projectErrorByNA853 } = await supabase
-                .from('Projects')
-                .select('id, mis, na853')
-                .eq('na853', decodedMis)
-                .single();
-                
-            // If NA853 match fails, try by ID match
-            if (!projectDataByNA853 && (!projectErrorByNA853 || projectErrorByNA853.code === 'PGRST116')) {
-                console.log(`[Budget] No match by NA853, trying id match for: ${decodedMis}`);
-                const { data: projectDataById, error: projectErrorById } = await supabase
-                    .from('Projects')
-                    .select('id, mis, na853')
-                    .eq('id', decodedMis)
-                    .single();
-                    
-                // Use the ID match results if successful
-                if (projectDataById) {
-                    console.log(`[Budget] Found project by ID match: ${projectDataById.id}, MIS: ${projectDataById.mis}`);
-                    var projectData = projectDataById;
-                    var projectError = null;
-                } else {
-                    // No matches found via ID either
-                    var projectData = null;
-                    var projectError = projectErrorById;
-                }
-            } else {
-                // Use the NA853 match results
-                console.log(`[Budget] Found project by NA853 match: ${projectDataByNA853?.id}, MIS: ${projectDataByNA853?.mis}`);
-                var projectData = projectDataByNA853;
-                var projectError = projectErrorByNA853;
-            }
-                
-            // If the first query fails, try looking up by MIS as a separate query
-            if (!projectData && (!projectError || projectError.code === 'PGRST116')) {
-                console.log(`[Budget] No exact match found for ${decodedMis}, trying numeric MIS match`);
+                // First, try to lookup the budget entry directly by NA853 code
+                console.log(`[Budget] Trying direct NA853 lookup for: ${decodedMis}`);
                 try {
-                    // Try parsing as a number if it looks like one
-                    if (/^\d+$/.test(decodedMis)) {
-                        const numericMis = parseInt(decodedMis);
-                        console.log(`[Budget] Trying numeric search with MIS=${numericMis}`);
+                    const { data: directNA853Data, error: directNA853Error } = await supabase
+                        .from('budget_na853_split')
+                        .select('*')
+                        .eq('na853', decodedMis)
+                        .single();
                         
-                        const { data: numericProjectData, error: numericProjectError } = await supabase
-                            .from('Projects')
-                            .select('id, mis, na853')
-                            .eq('mis', numericMis)
+                    if (directNA853Error && directNA853Error.code !== 'PGRST116') {
+                        console.error(`[Budget] Database error in direct NA853 lookup:`, directNA853Error);
+                    } else if (directNA853Data) {
+                        console.log(`[Budget] DIRECT HIT: Found budget for NA853=${decodedMis}, MIS=${directNA853Data.mis}`);
+                        
+                        // Use our formatter helper
+                        const formattedData = formatBudgetData(directNA853Data);
+                        
+                        return res.json({
+                            status: 'success',
+                            data: formattedData
+                        });
+                    } else {
+                        console.log(`[Budget] No direct NA853 match for ${decodedMis}, trying Projects table lookup.`);
+                    }
+                } catch (error) {
+                    console.error(`[Budget] Error in direct NA853 lookup:`, error);
+                }
+                
+                // If direct lookup didn't work, try finding the project in Projects table
+                try {
+                    console.log(`[Budget] Looking up project with NA853=${decodedMis} in Projects table`);
+                    const { data: projectData, error: projectError } = await supabase
+                        .from('Projects')
+                        .select('mis, na853')
+                        .eq('na853', decodedMis)
+                        .single();
+                    
+                    if (projectError && projectError.code !== 'PGRST116') {
+                        console.error(`[Budget] Database error querying Projects:`, projectError);
+                    } else if (projectData?.mis) {
+                        console.log(`[Budget] SUCCESS: Found project with NA853 '${decodedMis}' -> MIS=${projectData.mis}`);
+                        
+                        // Now query budget data with the numeric MIS
+                        const { data: budgetByProject, error: budgetByProjectError } = await supabase
+                            .from('budget_na853_split')
+                            .select('*')
+                            .eq('mis', projectData.mis)
                             .single();
                             
-                        if (numericProjectData) {
-                            console.log(`[Budget] Found project via numeric MIS lookup: ${numericMis}`);
-                            // We found a project by numeric MIS, continue processing with this data
-                            // Return to avoid needing to modify the constant
-                            const { data: projectBudgetData, error: projectBudgetError } = await supabase
-                                .from('budget_na853_split')
-                                .select('*')
-                                .eq('mis', numericProjectData.mis)
-                                .single();
-                                
-                            if (projectBudgetError && projectBudgetError.code !== 'PGRST116') {
-                                console.error(`[Budget] Database error querying budget with numeric MIS:`, projectBudgetError);
-                                throw projectBudgetError;
-                            }
+                        if (budgetByProjectError && budgetByProjectError.code !== 'PGRST116') {
+                            console.error(`[Budget] Error getting budget for project MIS:`, budgetByProjectError);
+                        } else if (budgetByProject) {
+                            console.log(`[Budget] Found budget for project with MIS=${projectData.mis}`);
                             
-                            if (projectBudgetData) {
-                                // Found budget data via numeric MIS lookup
-                                console.log(`[Budget] Found budget data via numeric MIS lookup for: ${numericProjectData.mis}`);
-                                
-                                // Format the data similar to what we return elsewhere
-                                const formattedData = {
-                                    user_view: projectBudgetData.user_view?.toString() || '0',
-                                    total_budget: projectBudgetData.katanomes_etous?.toString() || '0',
-                                    annual_budget: projectBudgetData.ethsia_pistosi?.toString() || '0',
-                                    katanomes_etous: projectBudgetData.katanomes_etous?.toString() || '0',
-                                    ethsia_pistosi: projectBudgetData.ethsia_pistosi?.toString() || '0',
-                                    current_budget: projectBudgetData.user_view?.toString() || '0',
-                                    q1: projectBudgetData.q1?.toString() || '0',
-                                    q2: projectBudgetData.q2?.toString() || '0',
-                                    q3: projectBudgetData.q3?.toString() || '0',
-                                    q4: projectBudgetData.q4?.toString() || '0',
-                                    total_spent: '0',
-                                    available_budget: ((projectBudgetData.katanomes_etous || 0) - (projectBudgetData.user_view || 0)).toString(),
-                                    quarter_available: '0',
-                                    yearly_available: ((projectBudgetData.ethsia_pistosi || 0) - (projectBudgetData.user_view || 0)).toString()
-                                };
-                                
-                                return res.json({
-                                    status: 'success',
-                                    data: formattedData
-                                });
-                            }
+                            // Use our formatter helper
+                            const formattedData = formatBudgetData(budgetByProject);
+                            
+                            return res.json({
+                                status: 'success',
+                                data: formattedData
+                            });
+                        } else {
+                            console.log(`[Budget] Found project with MIS=${projectData.mis}, but no budget data exists.`);
                         }
+                    } else {
+                        console.log(`[Budget] No project found with NA853=${decodedMis}`);
                     }
-                } catch (parseError) {
-                    console.log(`[Budget] Error parsing MIS as number:`, parseError);
-                    // Proceed with original result
+                } catch (error) {
+                    console.error(`[Budget] Error looking up project:`, error);
                 }
-            }
-                
-            if (projectError && projectError.code !== 'PGRST116') {
-                // Real database error in Projects lookup
-                console.error(`[Budget] Database error querying projects:`, projectError);
-                throw projectError;
             }
             
-            if (projectData?.mis) {
-                // Found project, try to get budget using its numeric MIS
-                console.log(`[Budget] Found project with numeric MIS ${projectData.mis} for ${decodedMis}`);
-                
-                const { data: projectBudgetData, error: projectBudgetError } = await supabase
-                    .from('budget_na853_split')
-                    .select('*')
-                    .eq('mis', projectData.mis)
-                    .single();
-                    
-                if (projectBudgetError && projectBudgetError.code !== 'PGRST116') {
-                    // Real error in budget lookup with project's MIS
-                    console.error(`[Budget] Database error querying budget with project MIS:`, projectBudgetError);
-                    throw projectBudgetError;
+            // ===== STEP 2: If above didn't work, try numeric MIS lookup directly =====
+            console.log(`[Budget] Trying direct numeric MIS lookup for: ${decodedMis}`);
+            let numericMis;
+            try {
+                if (/^\d+$/.test(decodedMis)) {
+                    numericMis = parseInt(decodedMis);
+                    console.log(`[Budget] Parsed as numeric MIS: ${numericMis}`);
+                } else {
+                    console.log(`[Budget] '${decodedMis}' is not a numeric value, skipping direct MIS lookup`);
+                    // Skip to error handling since this will fail with a database type error
+                    throw new Error('Not a numeric MIS value');
                 }
                 
-                if (projectBudgetData) {
-                    // Found budget data via project lookup
-                    console.log(`[Budget] Found budget data via project lookup for MIS ${projectData.mis}`);
+                const { data: budgetData, error: budgetError } = await supabase
+                    .from('budget_na853_split')
+                    .select('*')
+                    .eq('mis', numericMis)
+                    .single();
+                
+                if (budgetError && budgetError.code !== 'PGRST116') {
+                    // This is a real database error, not just "not found"
+                    console.error(`[Budget] Database error querying budget:`, budgetError);
                     
-                    // Format the data as above
+                    // Try to initialize database connection again
+                    console.log('[Budget] Attempting to reinitialize database connection');
+                    await verifyDatabaseConnections();
+                    
+                    throw budgetError;
+                }
+                
+                if (budgetData) {
+                    // Found budget data directly - format it like BudgetService would
+                    console.log(`[Budget] Found budget data directly for ${decodedMis}`);
+                    
+                    // Format the data similar to what BudgetService would return
                     const formattedData = {
-                        user_view: projectBudgetData.user_view?.toString() || '0',
-                        total_budget: projectBudgetData.katanomes_etous?.toString() || '0',
-                        annual_budget: projectBudgetData.ethsia_pistosi?.toString() || '0',
-                        katanomes_etous: projectBudgetData.katanomes_etous?.toString() || '0',
-                        ethsia_pistosi: projectBudgetData.ethsia_pistosi?.toString() || '0',
-                        current_budget: projectBudgetData.user_view?.toString() || '0',
-                        q1: projectBudgetData.q1?.toString() || '0',
-                        q2: projectBudgetData.q2?.toString() || '0',
-                        q3: projectBudgetData.q3?.toString() || '0',
-                        q4: projectBudgetData.q4?.toString() || '0',
-                        total_spent: '0',
-                        available_budget: ((projectBudgetData.katanomes_etous || 0) - (projectBudgetData.user_view || 0)).toString(),
-                        quarter_available: '0',
-                        yearly_available: ((projectBudgetData.ethsia_pistosi || 0) - (projectBudgetData.user_view || 0)).toString()
+                        user_view: budgetData.user_view?.toString() || '0',
+                        total_budget: budgetData.katanomes_etous?.toString() || '0',
+                        annual_budget: budgetData.ethsia_pistosi?.toString() || '0',
+                        katanomes_etous: budgetData.katanomes_etous?.toString() || '0',
+                        ethsia_pistosi: budgetData.ethsia_pistosi?.toString() || '0',
+                        current_budget: budgetData.user_view?.toString() || '0',
+                        q1: budgetData.q1?.toString() || '0',
+                        q2: budgetData.q2?.toString() || '0',
+                        q3: budgetData.q3?.toString() || '0',
+                        q4: budgetData.q4?.toString() || '0',
+                        total_spent: '0', // Calculate if available
+                        available_budget: ((budgetData.katanomes_etous || 0) - (budgetData.user_view || 0)).toString(),
+                        quarter_available: '0', // Would need quarter calculation
+                        yearly_available: ((budgetData.ethsia_pistosi || 0) - (budgetData.user_view || 0)).toString()
                     };
                     
                     return res.json({
@@ -707,15 +641,188 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         data: formattedData
                     });
                 }
+            } finally {
+            
+            // Try multiple methods to find the budget data
+            console.log(`[Budget] No direct budget data for ${decodedMis}, trying alternative lookup methods`);
+            
+            // Method 1: Try to find budget by NA853 code directly in budget_na853_split table
+            console.log(`[Budget] Method 1: Looking for budget with NA853 code = ${decodedMis}`);
+            
+            try {
+                // Query budget_na853_split table directly with the NA853 code
+                const { data: directBudgetData, error: directBudgetError } = await supabase
+                    .from('budget_na853_split')
+                    .select('*')
+                    .eq('na853', decodedMis)
+                    .single();
+                    
+                if (directBudgetError && directBudgetError.code !== 'PGRST116') {
+                    console.error(`[Budget] Database error in Method 1:`, directBudgetError);
+                } else if (directBudgetData) {
+                    console.log(`[Budget] Method 1 successful: Found budget data for NA853=${decodedMis}, MIS=${directBudgetData.mis}`);
+                    
+                    // Format the data for client consumption
+                    const formattedData = {
+                        user_view: directBudgetData.user_view?.toString() || '0',
+                        total_budget: directBudgetData.katanomes_etous?.toString() || '0',
+                        annual_budget: directBudgetData.ethsia_pistosi?.toString() || '0',
+                        katanomes_etous: directBudgetData.katanomes_etous?.toString() || '0',
+                        ethsia_pistosi: directBudgetData.ethsia_pistosi?.toString() || '0',
+                        current_budget: directBudgetData.user_view?.toString() || '0',
+                        q1: directBudgetData.q1?.toString() || '0',
+                        q2: directBudgetData.q2?.toString() || '0',
+                        q3: directBudgetData.q3?.toString() || '0',
+                        q4: directBudgetData.q4?.toString() || '0',
+                        total_spent: '0',
+                        available_budget: ((directBudgetData.katanomes_etous || 0) - (directBudgetData.user_view || 0)).toString(),
+                        quarter_available: '0',
+                        yearly_available: ((directBudgetData.ethsia_pistosi || 0) - (directBudgetData.user_view || 0)).toString()
+                    };
+                    
+                    return res.json({
+                        status: 'success',
+                        data: formattedData
+                    });
+                }
+            } catch (error) {
+                console.error(`[Budget] Error in Method 1:`, error);
             }
             
-            // If we reach this point, we couldn't find any budget data
-            console.log(`[Budget] Could not find any budget data for ${decodedMis}`);
+            // Method 2: Try to find project in Projects table by NA853 code
+            console.log(`[Budget] Method 2: Looking for project with NA853 = ${decodedMis}`);
             
-            // Try BudgetService as a fallback
-            console.log(`[Budget] Trying BudgetService as fallback for ${decodedMis}`);
-            const budgetResult = await BudgetService.getBudget(decodedMis);
-            return res.json(budgetResult);
+            try {
+                const { data: projectByNA853, error: projectByNA853Error } = await supabase
+                    .from('Projects')
+                    .select('mis, na853')
+                    .eq('na853', decodedMis)
+                    .single();
+                    
+                if (projectByNA853Error && projectByNA853Error.code !== 'PGRST116') {
+                    console.error(`[Budget] Database error in Method 2:`, projectByNA853Error);
+                } else if (projectByNA853?.mis) {
+                    console.log(`[Budget] Method 2 successful: Found project with NA853=${decodedMis}, MIS=${projectByNA853.mis}`);
+                    
+                    // Now get the budget data for this project's MIS
+                    const { data: budgetByProject, error: budgetByProjectError } = await supabase
+                        .from('budget_na853_split')
+                        .select('*')
+                        .eq('mis', projectByNA853.mis)
+                        .single();
+                        
+                    if (budgetByProjectError && budgetByProjectError.code !== 'PGRST116') {
+                        console.error(`[Budget] Error getting budget for project MIS:`, budgetByProjectError);
+                    } else if (budgetByProject) {
+                        console.log(`[Budget] Found budget for project with MIS=${projectByNA853.mis}`);
+                        
+                        // Format the data for client consumption
+                        const formattedData = {
+                            user_view: budgetByProject.user_view?.toString() || '0',
+                            total_budget: budgetByProject.katanomes_etous?.toString() || '0',
+                            annual_budget: budgetByProject.ethsia_pistosi?.toString() || '0',
+                            katanomes_etous: budgetByProject.katanomes_etous?.toString() || '0',
+                            ethsia_pistosi: budgetByProject.ethsia_pistosi?.toString() || '0',
+                            current_budget: budgetByProject.user_view?.toString() || '0',
+                            q1: budgetByProject.q1?.toString() || '0',
+                            q2: budgetByProject.q2?.toString() || '0',
+                            q3: budgetByProject.q3?.toString() || '0',
+                            q4: budgetByProject.q4?.toString() || '0',
+                            total_spent: '0',
+                            available_budget: ((budgetByProject.katanomes_etous || 0) - (budgetByProject.user_view || 0)).toString(),
+                            quarter_available: '0',
+                            yearly_available: ((budgetByProject.ethsia_pistosi || 0) - (budgetByProject.user_view || 0)).toString()
+                        };
+                        
+                        return res.json({
+                            status: 'success',
+                            data: formattedData
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error(`[Budget] Error in Method 2:`, error);
+            }
+            
+            // Method 3: If the input is a numeric MIS, try direct lookup by MIS
+            console.log(`[Budget] Method 3: Checking if ${decodedMis} is a numeric MIS`);
+            
+            try {
+                if (/^\d+$/.test(decodedMis)) {
+                    const numericMis = parseInt(decodedMis);
+                    console.log(`[Budget] Method 3: Looking for budget with MIS = ${numericMis}`);
+                    
+                    const { data: budgetByMis, error: budgetByMisError } = await supabase
+                        .from('budget_na853_split')
+                        .select('*')
+                        .eq('mis', numericMis)
+                        .single();
+                        
+                    if (budgetByMisError && budgetByMisError.code !== 'PGRST116') {
+                        console.error(`[Budget] Database error in Method 3:`, budgetByMisError);
+                    } else if (budgetByMis) {
+                        console.log(`[Budget] Method 3 successful: Found budget with MIS=${numericMis}`);
+                        
+                        // Format the data for client consumption
+                        const formattedData = {
+                            user_view: budgetByMis.user_view?.toString() || '0',
+                            total_budget: budgetByMis.katanomes_etous?.toString() || '0',
+                            annual_budget: budgetByMis.ethsia_pistosi?.toString() || '0',
+                            katanomes_etous: budgetByMis.katanomes_etous?.toString() || '0',
+                            ethsia_pistosi: budgetByMis.ethsia_pistosi?.toString() || '0',
+                            current_budget: budgetByMis.user_view?.toString() || '0',
+                            q1: budgetByMis.q1?.toString() || '0',
+                            q2: budgetByMis.q2?.toString() || '0',
+                            q3: budgetByMis.q3?.toString() || '0',
+                            q4: budgetByMis.q4?.toString() || '0',
+                            total_spent: '0',
+                            available_budget: ((budgetByMis.katanomes_etous || 0) - (budgetByMis.user_view || 0)).toString(),
+                            quarter_available: '0',
+                            yearly_available: ((budgetByMis.ethsia_pistosi || 0) - (budgetByMis.user_view || 0)).toString()
+                        };
+                        
+                        return res.json({
+                            status: 'success',
+                            data: formattedData
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error(`[Budget] Error in Method 3:`, error);
+            }
+            
+            // If all methods failed, try BudgetService as a last resort
+            console.log(`[Budget] All lookup methods failed for ${decodedMis}, trying BudgetService fallback`);
+            
+            try {
+                const budgetResult = await BudgetService.getBudget(decodedMis);
+                return res.json(budgetResult);
+            } catch (error) {
+                console.error(`[Budget] BudgetService fallback also failed:`, error);
+                
+                // Return a structured error response with empty budget data
+                return res.json({
+                    status: 'error',
+                    message: 'Could not retrieve budget data after trying all methods',
+                    details: error instanceof Error ? error.message : 'Multiple lookup failures',
+                    data: {
+                        user_view: '0',
+                        total_budget: '0',
+                        annual_budget: '0',
+                        katanomes_etous: '0',
+                        ethsia_pistosi: '0',
+                        current_budget: '0', 
+                        q1: '0',
+                        q2: '0',
+                        q3: '0',
+                        q4: '0',
+                        total_spent: '0',
+                        available_budget: '0',
+                        quarter_available: '0',
+                        yearly_available: '0'
+                    }
+                });
+            }
         } catch (error) {
             console.error(`[Budget] Final error fetching budget data for ${decodedMis}:`, error);
             

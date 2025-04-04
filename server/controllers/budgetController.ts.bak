@@ -2,11 +2,8 @@
  * Budget Controller
  * Handles budget-related routes and logic
  */
-import { Request, Response, Router } from 'express';
+import { Request, Response } from 'express';
 import { supabase } from '../config/db';
-
-// Create a router for budget routes
-export const router = Router();
 
 /**
  * Format budget data consistently across all response paths
