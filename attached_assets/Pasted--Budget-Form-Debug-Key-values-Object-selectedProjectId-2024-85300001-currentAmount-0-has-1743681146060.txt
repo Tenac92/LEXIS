@@ -1,0 +1,36 @@
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Debug] budgetData state: 
+Object {available: true, currentStep: 2, projectId: "2024ΝΑ85300001", currentAmount: 0}
+[Budget Debug] Budget data details: 
+Object {user_view: 0, total_budget: 0, annual_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}

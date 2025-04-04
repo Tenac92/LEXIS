@@ -1,0 +1,1 @@
+INSERT INTO "public"."budget_history" ("id", "mis", "previous_amount", "new_amount", "change_type", "change_reason", "document_id", "created_by", "created_at", "updated_at") VALUES ('1', '5168550', '200000', '19000', 'epda', null, null, null, '2025-03-26 08:05:23.577718+00', '2025-03-26 08:05:23.577718+00');

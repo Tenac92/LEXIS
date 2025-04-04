@@ -1,0 +1,67 @@
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+AlertDialogFooter is not defined
+The above error occurred in the <ProjectCard> component:
+
+    at ProjectCard (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/projects/ProjectCard.tsx:37:31)
+    at div
+    at div
+    at main
+    at div
+    at ProjectsPage (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/index.tsx:38:21)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=92e0d62f:247:17)
+    at div
+    at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=92e0d62f:6536:40)
+    at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=92e0d62f:7742:24)
+    at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=92e0d62f:7800:26)
+    at PageTransition (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/page-transition.tsx:42:34)
+    at Router
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:129:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=92e0d62f:2848:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+
+at ProjectCard (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/projects/ProjectCard.tsx:37:31)
+at div
+at div
+at main
+at div
+at ProjectsPage (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/index.tsx:38:21)
+at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=92e0d62f:247:17)
+at div
+at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=92e0d62f:6536:40)
+at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=92e0d62f:7742:24)
+at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=92e0d62f:7800:26)
+at PageTransition (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/page-transition.tsx:42:34)
+at Router
+at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:129:32)
+at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=92e0d62f:2848:3)
+at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+AlertDialogFooter is not defined

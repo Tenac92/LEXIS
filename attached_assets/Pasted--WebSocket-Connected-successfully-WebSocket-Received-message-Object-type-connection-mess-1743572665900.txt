@@ -1,0 +1,34 @@
+[WebSocket] Connected successfully
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "ogovqm8zi4yf9", timestamp: "2025-04-02T05:44:09.285Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "ogovqm8zi4yf9", timestamp: "2025-04-02T05:44:09.285Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:44:09.433Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:44:09.433Z"}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1743572652341
+[WebSocket] Connected successfully
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "bm947fm8zi4ywe", timestamp: "2025-04-02T05:44:09.902Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "bm947fm8zi4ywe", timestamp: "2025-04-02T05:44:09.902Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:44:10.051Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:44:10.051Z"}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[WebSocket] Connected successfully
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "qw6aiam8zi4zde", timestamp: "2025-04-02T05:44:10.514Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "qw6aiam8zi4zde", timestamp: "2025-04-02T05:44:10.514Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:44:10.662Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-02T05:44:10.662Z"}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}

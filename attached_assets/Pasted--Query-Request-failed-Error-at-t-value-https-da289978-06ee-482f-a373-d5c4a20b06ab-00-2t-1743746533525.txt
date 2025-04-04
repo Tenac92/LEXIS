@@ -1,0 +1,51 @@
+[Query] Request failed: 
+Error {}
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+[Budget] Budget data fetch error: 
+Error {}
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Debug] budgetData state: 
+Object {available: true, currentStep: 1, projectId: "2024ΝΑ85300001", currentAmount: 0}
+[Budget Debug] Budget data details: 
+Object {user_view: 0, total_budget: 0, annual_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, …}
+Search debug: 
+Object {searchTerm: "2024να85300001 - 2021 σεισμος φωκιδας", isNumericSearch: false, projectCount: 79}
+Search results: 
+Object {searchTerm: "2024να85300001 - 2021 σεισμος φωκιδας", resultCount: 1, results: Array(1)}
+Region API response: 
+Object {region: Array(1), municipality: Array(1), regional_unit: Array(1)}
+Processing region data with format: string
+Processed region data: 
+Array [{…}]
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}

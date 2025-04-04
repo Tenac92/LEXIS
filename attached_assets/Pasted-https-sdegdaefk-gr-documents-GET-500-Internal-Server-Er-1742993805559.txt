@@ -1,0 +1,87 @@
+https://sdegdaefk.gr/documents
+Μέθοδος αιτήματος:
+GET
+Κωδικός κατάστασης:
+500 Internal Server Error
+Απομακρυσμένη διεύθυνση:
+34.111.179.208:443
+Πολιτική συνδέσμων παραπομπής:
+strict-origin-when-cross-origin
+access-control-allow-credentials:
+true
+access-control-allow-methods:
+GET, POST, PUT, PATCH, DELETE, OPTIONS
+access-control-allow-origin:
+https://sdegdaefk.gr
+access-control-expose-headers:
+Content-Length, Content-Type, X-Requested-With, Set-Cookie
+alt-svc:
+h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+content-length:
+74
+content-security-policy:
+default-src 'self' https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr *;script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://ga.jspm.io https://esm.sh https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr *;style-src 'self' 'unsafe-inline' https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr *;img-src 'self' data: https: https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr *;connect-src 'self' https://ga.jspm.io https://esm.sh https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com https://*.supabase.co https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr *;font-src 'self' https: data: https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr *;object-src 'self' https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr;media-src 'self' https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr *;frame-src 'self' https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr *;form-action 'self' https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr *;frame-ancestors 'self' https://sdegdaefk.gr http://sdegdaefk.gr https://*.sdegdaefk.gr http://*.sdegdaefk.gr *;base-uri 'self';script-src-attr 'none'
+content-type:
+application/json; charset=utf-8
+date:
+Wed, 26 Mar 2025 12:56:16 GMT
+etag:
+W/"4a-h+9eIzWH/n0e2REvSg/ngi1bpNg"
+origin-agent-cluster:
+?1
+referrer-policy:
+no-referrer-when-downgrade
+server:
+Google Frontend
+strict-transport-security:
+max-age=63072000; includeSubDomains
+strict-transport-security:
+max-age=31536000; includeSubDomains; preload
+via:
+1.1 google
+x-cloud-trace-context:
+0f5810ced500e5910ac2bf0e2a3de53a;o=1
+x-content-type-options:
+nosniff
+x-download-options:
+noopen
+x-xss-protection:
+0
+:authority:
+sdegdaefk.gr
+:method:
+GET
+:path:
+/documents
+:scheme:
+https
+accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-encoding:
+gzip, deflate, br, zstd
+accept-language:
+el-GR,el;q=0.9
+cache-control:
+max-age=0
+cookie:
+sid=s%3AX9XWY6AOSP7iiZ57vkl1DMLDOeVVVzuv.14007AZABFL0YfniLUuFdgfZXmmEz6qryN1zezjDGm8
+priority:
+u=0, i
+sec-ch-ua:
+"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"
+sec-ch-ua-mobile:
+?0
+sec-ch-ua-platform:
+"Windows"
+sec-fetch-dest:
+document
+sec-fetch-mode:
+navigate
+sec-fetch-site:
+none
+sec-fetch-user:
+?1
+upgrade-insecure-requests:
+1
+user-agent:
+Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36
