@@ -327,8 +327,6 @@ export class DocumentFormatter {
     });
   }
 
-
-
   /**
    * Generate the first (primary) document
    */
@@ -340,6 +338,22 @@ export class DocumentFormatter {
 
       const unitDetails = await this.getUnitDetails(documentData.unit);
       console.log("Unit details:", unitDetails);
+      
+      // Get project title and NA853 code from database
+      const projectMis =
+        documentData.project_na853 ||
+        (documentData as any).mis?.toString() ||
+        "";
+      const projectTitle = await this.getProjectTitle(projectMis);
+      const projectNA853 = await this.getProjectNA853(projectMis);
+      console.log(`Project title for MIS ${projectMis}:`, projectTitle);
+      console.log(`Project NA853 for MIS ${projectMis}:`, projectNA853);
+      
+      // Create a modified document data with NA853 if available
+      const enrichedDocumentData = {
+        ...documentData,
+        project_na853: projectNA853 || documentData.project_na853
+      };
 
       const sections = [
         {
@@ -351,12 +365,12 @@ export class DocumentFormatter {
             },
           },
           children: [
-            await this.createDocumentHeader(documentData, unitDetails),
-            ...this.createDocumentSubject(documentData, unitDetails),
-            ...this.createMainContent(documentData, unitDetails),
+            await this.createDocumentHeader(enrichedDocumentData, unitDetails),
+            ...this.createDocumentSubject(enrichedDocumentData, unitDetails),
+            ...this.createMainContent(enrichedDocumentData, unitDetails),
             this.createPaymentTable(documentData.recipients || []),
             this.createNote(),
-            this.createFooter(documentData, unitDetails),
+            this.createFooter(enrichedDocumentData, unitDetails),
           ],
         },
       ];
@@ -393,7 +407,7 @@ export class DocumentFormatter {
       throw error;
     }
   }
-  
+
   /**
    * Generate the second document containing:
    * - Document title at the top
@@ -410,29 +424,65 @@ export class DocumentFormatter {
         console.error("No MIS provided for project title lookup");
         return null;
       }
-      
+
       console.log(`Fetching project title for MIS: ${mis}`);
-      
+
       const { data, error } = await supabase
-        .from('Projects')
-        .select('project_title')
-        .eq('mis', mis)
+        .from("Projects")
+        .select("project_title")
+        .eq("mis", mis)
         .maybeSingle();
-        
+
       if (error) {
         console.error("Error fetching project title:", error);
         return null;
       }
-      
+
       if (!data || !data.project_title) {
         console.log(`No project found with MIS: ${mis}`);
         return null;
       }
-      
+
       console.log(`Found project title: ${data.project_title}`);
       return data.project_title;
     } catch (error) {
       console.error("Error in getProjectTitle:", error);
+      return null;
+    }
+  }
+  
+  /**
+   * Get project NA853 code from the Projects table using MIS
+   */
+  public static async getProjectNA853(mis: string): Promise<string | null> {
+    try {
+      if (!mis) {
+        console.error("No MIS provided for project NA853 lookup");
+        return null;
+      }
+
+      console.log(`Fetching project NA853 for MIS: ${mis}`);
+
+      const { data, error } = await supabase
+        .from("Projects")
+        .select("na853")
+        .eq("mis", mis)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching project NA853:", error);
+        return null;
+      }
+
+      if (!data || !data.na853) {
+        console.log(`No project NA853 found with MIS: ${mis}`);
+        return null;
+      }
+
+      console.log(`Found project NA853: ${data.na853}`);
+      return data.na853;
+    } catch (error) {
+      console.error("Error in getProjectNA853:", error);
       return null;
     }
   }
@@ -445,24 +495,37 @@ export class DocumentFormatter {
 
       const unitDetails = await this.getUnitDetails(documentData.unit);
       console.log("Unit details:", unitDetails);
-      
-      // Get project title from database
-      const projectMis = documentData.project_na853 || (documentData as any).mis?.toString() || "";
+
+      // Get project title and NA853 code from database
+      const projectMis =
+        documentData.project_na853 ||
+        (documentData as any).mis?.toString() ||
+        "";
       const projectTitle = await this.getProjectTitle(projectMis);
+      const projectNA853 = await this.getProjectNA853(projectMis);
       console.log(`Project title for MIS ${projectMis}:`, projectTitle);
-      
+      console.log(`Project NA853 for MIS ${projectMis}:`, projectNA853);
+
       // Get user information with fallbacks
       const userInfo = {
         name: documentData.generated_by?.name || documentData.user_name || "",
-        department: documentData.generated_by?.department || (documentData as any).descr || "",
+        department:
+          documentData.generated_by?.department ||
+          (documentData as any).descr ||
+          "",
+        descr:
+          documentData.generated_by?.descr || (documentData as any).descr || "",
       };
-      
+
       // Calculate total amount from recipients
       const totalAmount = (documentData.recipients || []).reduce((sum, r) => {
-        const amount = typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount) || '0');
+        const amount =
+          typeof r.amount === "number"
+            ? r.amount
+            : parseFloat(String(r.amount) || "0");
         return sum + (isNaN(amount) ? 0 : amount);
       }, 0);
-      
+
       // Format total amount with 2 decimal places
       const formattedTotal = this.formatCurrency(totalAmount);
 
@@ -480,57 +543,58 @@ export class DocumentFormatter {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: projectTitle || "ΔΩΡΕΑΝ ΚΡΑΤΙΚΗ ΑΡΩΓΗ ΓΙΑ ΤΗΝ ΕΠΙΣΚΕΥΉ Ή ΑΝΑΚΑΤΑΣΚΕΥΗ ΣΕΙΣΜΟΠΛΗΚΤΩΝ ΚΤΙΡΙΩΝ ΠΟΥ ΥΠΕΣΤΗΣΑΝ ΒΛΑΒΕΣ",
+                  text:
+                    projectTitle ||
+                    "ΔΩΡΕΑΝ ΚΡΑΤΙΚΗ ΑΡΩΓΗ ΓΙΑ ΤΗΝ ΕΠΙΣΚΕΥΉ Ή ΑΝΑΚΑΤΑΣΚΕΥΗ ΣΕΙΣΜΟΠΛΗΚΤΩΝ ΚΤΙΡΙΩΝ ΠΟΥ ΥΠΕΣΤΗΣΑΝ ΒΛΑΒΕΣ",
                   bold: true,
-                  size: 24  // Reduced from 32 to 24
-                })
+                  size: 24, // Reduced from 32 to 24
+                }),
               ],
               alignment: AlignmentType.CENTER,
               spacing: { before: 400, after: 200 },
             }),
-            
+
             // Project number/code (NA853)
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `ΕΡΓΟ: ${documentData.project_na853 || ""}`,
+                  text: `ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || ""} της ΣΑΝΑ 853`,
                   bold: true,
-                })
+                }),
               ],
               alignment: AlignmentType.CENTER,
               spacing: { before: 200, after: 400 },
             }),
-            
+
             // Recipients table with ΠΡΑΞΗ column (includes total row)
-            this.createRecipientsTableWithAction(documentData.recipients || [], documentData.expenditure_type),
-            
+            this.createRecipientsTableWithAction(
+              documentData.recipients || [],
+              documentData.expenditure_type,
+            ),
+
             // Empty space
             new Paragraph({
-              children: [
-                new TextRun({ text: "" })
-              ],
+              children: [new TextRun({ text: "" })],
               spacing: { before: 200, after: 200 },
             }),
-            
+
             // Standard text about documentation retention
             new Paragraph({
               children: [
-                new TextRun({ 
-                  text: "ΤΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ ΒΑΣΕΙ ΤΩΝ ΟΠΟΙΩΝ ΕΚΔΟΘΗΚΑΝ ΟΙ ΔΙΟΙΚΗΤΙΚΕΣ ΠΡΑΞΕΙΣ ΑΝΑΓΝΩΡΙΣΗΣ ΔΙΚΑΙΟΥΧΩΝ ΔΩΡΕΑΝ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ ΤΗΡΟΥΝΤΑΙ ΣΤΟ ΑΡΧΕΙΟ ΤΗΣ ΥΠΗΡΕΣΙΑΣ ΜΑΣ."
-                })
+                new TextRun({
+                  text: "ΤΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ ΒΑΣΕΙ ΤΩΝ ΟΠΟΙΩΝ ΕΚΔΟΘΗΚΑΝ ΟΙ ΔΙΟΙΚΗΤΙΚΕΣ ΠΡΑΞΕΙΣ ΑΝΑΓΝΩΡΙΣΗΣ ΔΙΚΑΙΟΥΧΩΝ ΔΩΡΕΑΝ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ ΤΗΡΟΥΝΤΑΙ ΣΤΟ ΑΡΧΕΙΟ ΤΗΣ ΥΠΗΡΕΣΙΑΣ ΜΑΣ.",
+                }),
               ],
               alignment: AlignmentType.CENTER,
               spacing: { before: 400, after: 400 },
             }),
-            
+
             // Empty space before signatures
             new Paragraph({
-              children: [
-                new TextRun({ text: "" })
-              ],
+              children: [new TextRun({ text: "" })],
               spacing: { before: 600, after: 600 },
             }),
-            
+
             // Signature fields with compiler on the left
             new Table({
               width: { size: 100, type: WidthType.PERCENTAGE },
@@ -556,29 +620,17 @@ export class DocumentFormatter {
                       },
                       children: [
                         new Paragraph({
-                          children: [
-                            new TextRun({ text: "Ο ΣΥΝΤΑΞΑΣ" })
-                          ],
+                          children: [new TextRun({ text: "Ο ΣΥΝΤΑΞΑΣ" })],
                           alignment: AlignmentType.CENTER,
-                          spacing: { before: 400, after: 600 },
+                          spacing: { before: 400, after: 200 },
                         }),
                         new Paragraph({
-                          children: [
-                            new TextRun({ text: "" })
-                          ],
-                          spacing: { before: 360, after: 360 },
-                        }),
-                        new Paragraph({
-                          children: [
-                            new TextRun({ text: userInfo.name })
-                          ],
+                          children: [new TextRun({ text: userInfo.name })],
                           alignment: AlignmentType.CENTER,
                           spacing: { after: 200 },
                         }),
                         new Paragraph({
-                          children: [
-                            new TextRun({ text: userInfo.department })
-                          ],
+                          children: [new TextRun({ text: userInfo.descr })],
                           alignment: AlignmentType.CENTER,
                         }),
                       ],
@@ -595,28 +647,26 @@ export class DocumentFormatter {
                       children: [
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "με εντολή Υπουργού                                      Ο ΑΝΑΠΛ.ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε." })
+                            new TextRun({
+                              text: "με εντολή Υπουργού                                      Ο ΑΝΑΠΛ.ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+                            }),
                           ],
                           alignment: AlignmentType.CENTER,
                           spacing: { before: 400, after: 600 },
                         }),
                         new Paragraph({
-                          children: [
-                            new TextRun({ text: "" })
-                          ],
+                          children: [new TextRun({ text: "" })],
                           spacing: { before: 360, after: 360 },
                         }),
                         new Paragraph({
                           children: [
-                            new TextRun({ text: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ" })
+                            new TextRun({ text: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ" }),
                           ],
                           alignment: AlignmentType.CENTER,
                           spacing: { after: 200 },
                         }),
                         new Paragraph({
-                          children: [
-                            new TextRun({ text: "ΠΟΛ. ΜΗΧ με Α'β" })
-                          ],
+                          children: [new TextRun({ text: "ΠΟΛ. ΜΗΧ με Α'β" })],
                           alignment: AlignmentType.CENTER,
                         }),
                       ],
@@ -783,7 +833,7 @@ export class DocumentFormatter {
                   new Paragraph({
                     children: [
                       new TextRun({
-                        text: `${documentData.project_na853} της ΣΑΝΑ 853`,
+                        text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
                       }),
                     ],
                   }),
@@ -838,9 +888,7 @@ export class DocumentFormatter {
         ],
       }),
       new Paragraph({
-        children: [
-          new TextRun({ text: "" })
-        ],
+        children: [new TextRun({ text: "" })],
       }),
     ];
   }
@@ -873,33 +921,37 @@ export class DocumentFormatter {
           this.createHeaderCell("ΑΦΜ", "auto"),
           this.createHeaderCell("ΠΡΑΞΗ", "auto"), // Extra column for action/expenditure type
         ],
-      })
+      }),
     ];
 
     // Process each recipient
     recipients.forEach((recipient, index) => {
-      const fullName = `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
+      const fullName =
+        `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
       const afm = recipient.afm;
       const rowNumber = (index + 1).toString() + ".";
-      
+
       // Determine installments
       let installments: string[] = [];
-      if (Array.isArray(recipient.installments) && recipient.installments.length > 0) {
+      if (
+        Array.isArray(recipient.installments) &&
+        recipient.installments.length > 0
+      ) {
         installments = recipient.installments;
       } else if (recipient.installment) {
         installments = [recipient.installment.toString()];
       } else {
         installments = ["ΕΦΑΠΑΞ"];
       }
-      
+
       // Get installment amounts if available
       const installmentAmounts = recipient.installmentAmounts || {};
-      
+
       // If there's only one installment, create a simple row
       if (installments.length === 1) {
         const installment = installments[0];
         const amount = installmentAmounts[installment] || recipient.amount;
-        
+
         rows.push(
           new TableRow({
             height: { value: 360, rule: HeightRule.EXACT },
@@ -911,7 +963,7 @@ export class DocumentFormatter {
               this.createCell(afm),
               this.createCell(expenditureType), // Add expenditure type in the extra column
             ],
-          })
+          }),
         );
       } else {
         // For multiple installments, use row spanning
@@ -921,21 +973,23 @@ export class DocumentFormatter {
             children: [
               this.createCellWithRowSpan(rowNumber, installments.length),
               this.createCellWithRowSpan(fullName, installments.length),
-              this.createCell(this.formatCurrency(
-                installmentAmounts[installments[0]] || recipient.amount
-              )),
+              this.createCell(
+                this.formatCurrency(
+                  installmentAmounts[installments[0]] || recipient.amount,
+                ),
+              ),
               this.createCell(installments[0]),
               this.createCellWithRowSpan(afm, installments.length),
               this.createCellWithRowSpan(expenditureType, installments.length), // Add expenditure type with row span
             ],
-          })
+          }),
         );
-        
+
         // Add rows for additional installments
         for (let i = 1; i < installments.length; i++) {
           const installment = installments[i];
           const amount = installmentAmounts[installment] || recipient.amount;
-          
+
           rows.push(
             new TableRow({
               height: { value: 360, rule: HeightRule.EXACT },
@@ -945,9 +999,9 @@ export class DocumentFormatter {
                 this.createCell(this.formatCurrency(amount)),
                 this.createCell(installment),
                 this.createCellWithRowSpan("", 0, "continue"),
-                this.createCellWithRowSpan("", 0, "continue") // Continue row span for expenditure type
+                this.createCellWithRowSpan("", 0, "continue"), // Continue row span for expenditure type
               ],
-            })
+            }),
           );
         }
       }
@@ -955,10 +1009,13 @@ export class DocumentFormatter {
 
     // Calculate total amount
     const totalAmount = recipients.reduce((sum, r) => {
-      const amount = typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount) || '0');
+      const amount =
+        typeof r.amount === "number"
+          ? r.amount
+          : parseFloat(String(r.amount) || "0");
       return sum + (isNaN(amount) ? 0 : amount);
     }, 0);
-    
+
     // Add total row to the table
     rows.push(
       new TableRow({
@@ -1036,7 +1093,7 @@ export class DocumentFormatter {
             children: [new Paragraph("")],
           }),
         ],
-      })
+      }),
     );
 
     return new Table({
@@ -1068,33 +1125,37 @@ export class DocumentFormatter {
           this.createHeaderCell("ΔΟΣΗ", "auto"),
           this.createHeaderCell("ΑΦΜ", "auto"),
         ],
-      })
+      }),
     ];
 
     // Process each recipient
     recipients.forEach((recipient, index) => {
-      const fullName = `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
+      const fullName =
+        `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
       const afm = recipient.afm;
       const rowNumber = (index + 1).toString() + ".";
-      
+
       // Determine installments
       let installments: string[] = [];
-      if (Array.isArray(recipient.installments) && recipient.installments.length > 0) {
+      if (
+        Array.isArray(recipient.installments) &&
+        recipient.installments.length > 0
+      ) {
         installments = recipient.installments;
       } else if (recipient.installment) {
         installments = [recipient.installment.toString()];
       } else {
         installments = ["ΕΦΑΠΑΞ"];
       }
-      
+
       // Get installment amounts if available
       const installmentAmounts = recipient.installmentAmounts || {};
-      
+
       // If there's only one installment, create a simple row
       if (installments.length === 1) {
         const installment = installments[0];
         const amount = installmentAmounts[installment] || recipient.amount;
-        
+
         rows.push(
           new TableRow({
             height: { value: 360, rule: HeightRule.EXACT },
@@ -1106,23 +1167,23 @@ export class DocumentFormatter {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 }),
-                "center"
+                "center",
               ),
               this.createTableCell(installment, "center"),
               this.createTableCell(afm, "center"),
             ],
-          })
+          }),
         );
-      } 
+      }
       // If there are multiple installments, create a row with rowSpan for name/AFM
       // and separate rows for each installment
       else if (installments.length > 1) {
         const rowSpan = installments.length;
         const rowHeight = 360; // Base height for one row
-        
+
         // Calculate heights to vertically center the name and AFM
         const totalHeight = rowHeight * rowSpan;
-        
+
         // Create cells for the first row with rowSpan
         const nameCell = new TableCell({
           rowSpan: rowSpan,
@@ -1131,15 +1192,15 @@ export class DocumentFormatter {
             new Paragraph({
               alignment: AlignmentType.CENTER,
               children: [
-                new TextRun({ 
+                new TextRun({
                   text: fullName,
-                  size: this.DEFAULT_FONT_SIZE
+                  size: this.DEFAULT_FONT_SIZE,
                 }),
               ],
             }),
           ],
         });
-        
+
         const indexCell = new TableCell({
           rowSpan: rowSpan,
           verticalAlign: VerticalAlign.CENTER,
@@ -1147,15 +1208,15 @@ export class DocumentFormatter {
             new Paragraph({
               alignment: AlignmentType.CENTER,
               children: [
-                new TextRun({ 
+                new TextRun({
                   text: rowNumber,
-                  size: this.DEFAULT_FONT_SIZE
+                  size: this.DEFAULT_FONT_SIZE,
                 }),
               ],
             }),
           ],
         });
-        
+
         const afmCell = new TableCell({
           rowSpan: rowSpan,
           verticalAlign: VerticalAlign.CENTER,
@@ -1163,19 +1224,19 @@ export class DocumentFormatter {
             new Paragraph({
               alignment: AlignmentType.CENTER,
               children: [
-                new TextRun({ 
+                new TextRun({
                   text: afm,
-                  size: this.DEFAULT_FONT_SIZE
+                  size: this.DEFAULT_FONT_SIZE,
                 }),
               ],
             }),
           ],
         });
-        
+
         // Add the first row with installment details
         const firstInstallment = installments[0];
         const firstAmount = installmentAmounts[firstInstallment] || 0;
-        
+
         rows.push(
           new TableRow({
             height: { value: rowHeight, rule: HeightRule.EXACT },
@@ -1187,19 +1248,19 @@ export class DocumentFormatter {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 }),
-                "center"
+                "center",
               ),
               this.createTableCell(firstInstallment, "center"),
               afmCell,
             ],
-          })
+          }),
         );
-        
+
         // Add subsequent rows for remaining installments
         for (let i = 1; i < installments.length; i++) {
           const installment = installments[i];
           const amount = installmentAmounts[installment] || 0;
-          
+
           rows.push(
             new TableRow({
               height: { value: rowHeight, rule: HeightRule.EXACT },
@@ -1210,11 +1271,11 @@ export class DocumentFormatter {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   }),
-                  "center"
+                  "center",
                 ),
                 this.createTableCell(installment, "center"),
               ],
-            })
+            }),
           );
         }
       }
@@ -1317,7 +1378,7 @@ export class DocumentFormatter {
     );
 
     // Create the right column with signature (text only)
-    
+
     // First, create paragraphs for the title and role
     const titleParagraph = new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -1328,7 +1389,7 @@ export class DocumentFormatter {
         }),
       ],
     });
-    
+
     const roleParagraph = new Paragraph({
       alignment: AlignmentType.CENTER,
       children: [
@@ -1338,7 +1399,7 @@ export class DocumentFormatter {
         }),
       ],
     });
-    
+
     // Create an empty space where signature would be
     const signatureSpaceParagraph = new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -1349,7 +1410,7 @@ export class DocumentFormatter {
         }),
       ],
     });
-    
+
     // Create paragraphs for the name and degree
     const nameParagraph = new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -1360,7 +1421,7 @@ export class DocumentFormatter {
         }),
       ],
     });
-    
+
     const degreeParagraph = new Paragraph({
       alignment: AlignmentType.CENTER,
       children: [
@@ -1369,7 +1430,7 @@ export class DocumentFormatter {
         }),
       ],
     });
-    
+
     // Combine all paragraphs into a table for proper layout
     const signatureTextbox = new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -1481,11 +1542,14 @@ export class DocumentFormatter {
       spacing: { before: 240, after: 10 },
     });
   }
-  
+
   /**
    * Helper method for creating a regular cell for second document tables
    */
-  private static createCell(text: string, alignment: "center" | "left" | "right" = AlignmentType.CENTER): TableCell {
+  private static createCell(
+    text: string,
+    alignment: "center" | "left" | "right" = AlignmentType.CENTER,
+  ): TableCell {
     return new TableCell({
       verticalAlign: VerticalAlign.CENTER,
       children: [
@@ -1501,15 +1565,15 @@ export class DocumentFormatter {
       ],
     });
   }
-  
+
   /**
    * Helper method for creating a cell with row spanning for second document tables
    */
   private static createCellWithRowSpan(
-    text: string, 
-    rowSpan: number, 
+    text: string,
+    rowSpan: number,
     verticalMerge: "restart" | "continue" = VerticalMergeType.RESTART,
-    alignment: "center" | "left" | "right" = AlignmentType.CENTER
+    alignment: "center" | "left" | "right" = AlignmentType.CENTER,
   ): TableCell {
     return new TableCell({
       verticalAlign: VerticalAlign.CENTER,
@@ -1528,15 +1592,17 @@ export class DocumentFormatter {
       ],
     });
   }
-  
+
   /**
    * Helper method to format currency values consistently
    */
   private static formatCurrency(amount: number): string {
-    return amount.toLocaleString("el-GR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }) + " €";
+    return (
+      amount.toLocaleString("el-GR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }) + " €"
+    );
   }
 
   private static createContactDetail(label: string, value: string): Paragraph {
