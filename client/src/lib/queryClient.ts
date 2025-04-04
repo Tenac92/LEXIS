@@ -100,8 +100,31 @@ export async function apiRequest<T = unknown>(
       throw new Error("Λήφθηκε μη έγκυρο JSON από τον διακομιστή");
     }
   } catch (error) {
-    console.error("[API] Request failed:", error);
-    throw error;
+    // Create a more detailed error object with better debugging info
+    const enhancedError = new Error(
+      error instanceof Error ? error.message : 'Unknown error during API request'
+    );
+    
+    // Add extra properties to provide context about the error
+    // Use variables from closure that are guaranteed to be defined
+    Object.assign(enhancedError, {
+      requestInfo: {
+        url: url, // Use the original url
+        method: options.method || 'GET',
+        timestamp: new Date().toISOString()
+      },
+      originalError: error,
+      isApiError: true
+    });
+    
+    console.error("[API] Request failed:", enhancedError);
+    console.error("[API] Error details:", {
+      message: enhancedError.message,
+      requestInfo: (enhancedError as any).requestInfo,
+      stack: enhancedError.stack
+    });
+    
+    throw enhancedError; // Throw the enhanced error for better debugging
   }
 }
 
@@ -200,8 +223,30 @@ export const getQueryFn = (
         throw new Error("Λήφθηκε μη έγκυρο JSON από τον διακομιστή");
       }
     } catch (error) {
-      console.error("[Query] Request failed:", error);
-      throw error;
+      // Create a more detailed error object with better debugging info
+      const enhancedError = new Error(
+        error instanceof Error ? error.message : 'Unknown error during Query execution'
+      );
+      
+      // Add extra properties to provide context about the error
+      // Access only variables that we know are in scope
+      Object.assign(enhancedError, {
+        queryInfo: {
+          url: queryKey[0],
+          timestamp: new Date().toISOString()
+        },
+        originalError: error,
+        isQueryError: true
+      });
+      
+      console.error("[Query] Request failed:", enhancedError);
+      console.error("[Query] Error details:", {
+        message: enhancedError.message,
+        queryInfo: (enhancedError as any).queryInfo,
+        stack: enhancedError.stack
+      });
+      
+      throw enhancedError; // Throw the enhanced error for better debugging
     }
   };
 };

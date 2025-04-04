@@ -55,9 +55,40 @@ export function useBudgetUpdates(
         console.log('[Budget] Fetching budget data for project:', { id: projectId });
         
         // Find the project to get its MIS
-        const projectData = await queryClient.fetchQuery({
-          queryKey: ["project", projectId]
-        });
+        let projectData;
+        try {
+          projectData = await queryClient.fetchQuery({
+            queryKey: ["project", projectId]
+          });
+          
+          console.log('[Budget] Project data fetched:', projectData);
+        } catch (projectError) {
+          console.error(`[Budget] Error fetching project data for ID: ${projectId}`, projectError);
+          
+          // Store debug info about the error
+          const errorInfo = {
+            projectId: projectId,
+            error: projectError instanceof Error ? projectError.message : 'Unknown error',
+            timestamp: new Date().toISOString()
+          };
+          console.error('[Budget] Project fetch error info:', errorInfo);
+          
+          // Return empty budget data with error flag when we can't fetch project
+          return {
+            user_view: 0,
+            total_budget: 0,
+            annual_budget: 0,
+            katanomes_etous: 0,
+            ethsia_pistosi: 0,
+            current_budget: 0,
+            q1: 0, q2: 0, q3: 0, q4: 0,
+            total_spent: 0,
+            available_budget: 0,
+            quarter_available: 0,
+            yearly_available: 0,
+            _error: 'Σφάλμα κατά τη λήψη δεδομένων έργου. Δοκιμάστε ξανά αργότερα.'
+          };
+        }
         
         // Type checking
         const project = projectData as { mis?: string } | null | undefined;
@@ -72,14 +103,12 @@ export function useBudgetUpdates(
             katanomes_etous: 0,
             ethsia_pistosi: 0,
             current_budget: 0,
-            q1: 0,
-            q2: 0,
-            q3: 0,
-            q4: 0,
+            q1: 0, q2: 0, q3: 0, q4: 0,
             total_spent: 0,
             available_budget: 0,
             quarter_available: 0,
-            yearly_available: 0
+            yearly_available: 0,
+            _error: 'Δεν βρέθηκε το MIS του έργου. Επιλέξτε έγκυρο έργο.'
           };
         }
 
@@ -195,8 +224,23 @@ export function useBudgetUpdates(
           sum: budgetData.sum || undefined
         };
       } catch (error) {
+        // Extract the error message or add a detailed one for debugging
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : 'Unknown error fetching budget data';
+          
         console.error('[Budget] Budget data fetch error:', error);
-        // Instead of throwing, return empty but valid budget data
+        console.error('[Budget] Error message:', errorMessage);
+        
+        // Create a debug info object to help with troubleshooting
+        const debugInfo = {
+          projectId,
+          error: errorMessage,
+          timestamp: new Date().toISOString()
+        };
+        console.error('[Budget] Debug info:', debugInfo);
+        
+        // Instead of throwing, return empty but valid budget data with error flag
         return {
           user_view: 0,
           total_budget: 0,
@@ -211,7 +255,8 @@ export function useBudgetUpdates(
           total_spent: 0,
           available_budget: 0,
           quarter_available: 0,
-          yearly_available: 0
+          yearly_available: 0,
+          _error: errorMessage // Add an error flag that can be detected by UI
         };
       }
     },
@@ -359,14 +404,32 @@ export function useBudgetUpdates(
         
         return data;
       } catch (error) {
+        // Extract the error message or add a detailed one for debugging
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : 'Unknown error validating budget';
+          
         console.error('[Budget] Budget validation error:', error);
+        console.error('[Budget] Validation error message:', errorMessage);
+        
+        // Create a debug info object to help with troubleshooting
+        const debugInfo = {
+          projectId,
+          mis: projectId,
+          amount: currentAmount,
+          error: errorMessage,
+          timestamp: new Date().toISOString()
+        };
+        console.error('[Budget] Validation debug info:', debugInfo);
+        
         return {
           status: 'error',
           canCreate: false,
           allowDocx: false,
           message: 'Αποτυχία επικύρωσης προϋπολογισμού. Δοκιμάστε ξανά αργότερα.',
           metadata: {
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: errorMessage,
+            debugInfo: debugInfo
           }
         };
       }
