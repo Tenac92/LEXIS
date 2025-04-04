@@ -57,11 +57,24 @@ export function useBudgetUpdates(
         // Find the project to get its MIS
         let projectData;
         try {
-          projectData = await queryClient.fetchQuery({
-            queryKey: ["/api/projects", projectId]
+          // First, get all projects
+          const allProjects = await queryClient.fetchQuery({
+            queryKey: ["/api/projects"]
           });
           
-          console.log('[Budget] Project data fetched:', projectData);
+          console.log('[Budget] Project data fetched:', allProjects);
+          
+          // Find the specific project that matches either the ID or na853
+          if (Array.isArray(allProjects)) {
+            projectData = allProjects.find(
+              (p: any) => 
+                String(p?.na853).toLowerCase() === String(projectId).toLowerCase() ||
+                String(p?.mis) === String(projectId)
+            );
+            console.log('[Budget] Found matching project:', projectData);
+          } else {
+            projectData = allProjects;
+          }
         } catch (projectError) {
           console.error(`[Budget] Error fetching project data for ID: ${projectId}`, projectError);
           
@@ -279,10 +292,23 @@ export function useBudgetUpdates(
       }
 
       try {
-        // Get the project MIS from the selected project
-        const projectData = await queryClient.fetchQuery({
-          queryKey: ["/api/projects", projectId]
+        // Get all projects first
+        const allProjects = await queryClient.fetchQuery({
+          queryKey: ["/api/projects"]
         });
+        
+        // Find the specific project that matches either the ID or na853
+        let projectData;
+        if (Array.isArray(allProjects)) {
+          projectData = allProjects.find(
+            (p: any) => 
+              String(p?.na853).toLowerCase() === String(projectId).toLowerCase() ||
+              String(p?.mis) === String(projectId)
+          );
+          console.log('[Budget] Found matching project for validation:', projectData);
+        } else {
+          projectData = allProjects;
+        }
         
         // Type checking and field extraction
         const project = projectData as { mis?: string, na853?: string } | null | undefined;
