@@ -49,8 +49,7 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
 // Re-export for backwards compatibility
 export { 
   authenticateToken, 
-  requireAdmin,
-  authenticateSession
+  requireAdmin
 };
 
 export default {
