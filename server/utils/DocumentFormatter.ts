@@ -482,7 +482,7 @@ export class DocumentFormatter {
                 new TextRun({
                   text: projectTitle || "ΔΩΡΕΑΝ ΚΡΑΤΙΚΗ ΑΡΩΓΗ ΓΙΑ ΤΗΝ ΕΠΙΣΚΕΥΉ Ή ΑΝΑΚΑΤΑΣΚΕΥΗ ΣΕΙΣΜΟΠΛΗΚΤΩΝ ΚΤΙΡΙΩΝ ΠΟΥ ΥΠΕΣΤΗΣΑΝ ΒΛΑΒΕΣ",
                   bold: true,
-                  size: 32
+                  size: 24  // Reduced from 32 to 24
                 })
               ],
               alignment: AlignmentType.CENTER,
@@ -501,70 +501,8 @@ export class DocumentFormatter {
               spacing: { before: 200, after: 400 },
             }),
             
-            // Recipients table with ΠΡΑΞΗ column
+            // Recipients table with ΠΡΑΞΗ column (includes total row)
             this.createRecipientsTableWithAction(documentData.recipients || [], documentData.expenditure_type),
-            
-            // Total row
-            new Paragraph({
-              text: "",
-              spacing: { before: 200, after: 200 },
-            }),
-            
-            new Table({
-              width: { size: 100, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              rows: [
-                new TableRow({
-                  children: [
-                    new TableCell({
-                      width: { size: 50, type: WidthType.PERCENTAGE },
-                      borders: {
-                        top: { style: BorderStyle.NONE },
-                        bottom: { style: BorderStyle.NONE },
-                        left: { style: BorderStyle.NONE },
-                        right: { style: BorderStyle.NONE },
-                      },
-                      children: [
-                        new Paragraph({
-                          alignment: AlignmentType.RIGHT,
-                          children: [
-                            new TextRun({
-                              text: "ΣΥΝΟΛΟ",
-                              bold: true,
-                            }),
-                          ],
-                        }),
-                      ],
-                    }),
-                    new TableCell({
-                      width: { size: 50, type: WidthType.PERCENTAGE },
-                      borders: {
-                        top: { style: BorderStyle.NONE },
-                        bottom: { style: BorderStyle.NONE },
-                        left: { style: BorderStyle.NONE },
-                        right: { style: BorderStyle.NONE },
-                      },
-                      children: [
-                        new Paragraph({
-                          alignment: AlignmentType.LEFT,
-                          children: [
-                            new TextRun({
-                              text: formattedTotal + " €",
-                              bold: true,
-                            }),
-                          ],
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
             
             // Empty space
             new Paragraph({
@@ -1014,6 +952,92 @@ export class DocumentFormatter {
         }
       }
     });
+
+    // Calculate total amount
+    const totalAmount = recipients.reduce((sum, r) => {
+      const amount = typeof r.amount === 'number' ? r.amount : parseFloat(String(r.amount) || '0');
+      return sum + (isNaN(amount) ? 0 : amount);
+    }, 0);
+    
+    // Add total row to the table
+    rows.push(
+      new TableRow({
+        height: { value: 360, rule: HeightRule.EXACT },
+        children: [
+          // Empty cell for A/A
+          new TableCell({
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.SINGLE, size: 1 },
+              right: { style: BorderStyle.NONE, size: 0 },
+            },
+            children: [new Paragraph("")],
+          }),
+          // "ΣΥΝΟΛΟ" cell
+          new TableCell({
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.NONE, size: 0 },
+              right: { style: BorderStyle.NONE, size: 0 },
+            },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                children: [
+                  new TextRun({
+                    text: "ΣΥΝΟΛΟ",
+                    bold: true,
+                  }),
+                ],
+              }),
+            ],
+          }),
+          // Total amount
+          new TableCell({
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.NONE, size: 0 },
+              right: { style: BorderStyle.SINGLE, size: 1 },
+            },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.LEFT,
+                children: [
+                  new TextRun({
+                    text: this.formatCurrency(totalAmount) + " €",
+                    bold: true,
+                  }),
+                ],
+              }),
+            ],
+          }),
+          // Empty cells for ΔΟΣΗ and ΑΦΜ columns
+          new TableCell({
+            columnSpan: 2,
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.SINGLE, size: 1 },
+              right: { style: BorderStyle.NONE, size: 0 },
+            },
+            children: [new Paragraph("")],
+          }),
+          // Empty cell for ΠΡΑΞΗ column
+          new TableCell({
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.NONE, size: 0 },
+              right: { style: BorderStyle.SINGLE, size: 1 },
+            },
+            children: [new Paragraph("")],
+          }),
+        ],
+      })
+    );
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
