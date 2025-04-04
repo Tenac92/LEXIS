@@ -12,6 +12,27 @@ export const router = Router();
  * Format budget data consistently across all response paths
  */
 export function formatBudgetData(budgetData: any) {
+  // Calculate current quarter based on date
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-based
+  const currentQuarterNumber = Math.ceil(currentMonth / 3);
+  const defaultQuarterKey = `q${currentQuarterNumber}`;
+  
+  // Get quarter-specific available budget
+  let quarterAvailable = '0';
+  const currentQuarter = budgetData.current_quarter || defaultQuarterKey;
+  const userView = parseFloat(budgetData.user_view?.toString() || '0');
+  
+  // Determine which quarter value to use for quarter_available calculation
+  let currentQuarterValue = 0;
+  if (currentQuarter === 'q1') currentQuarterValue = parseFloat(budgetData.q1?.toString() || '0');
+  else if (currentQuarter === 'q2') currentQuarterValue = parseFloat(budgetData.q2?.toString() || '0');
+  else if (currentQuarter === 'q3') currentQuarterValue = parseFloat(budgetData.q3?.toString() || '0');
+  else if (currentQuarter === 'q4') currentQuarterValue = parseFloat(budgetData.q4?.toString() || '0');
+  
+  // Calculate quarter available amount
+  quarterAvailable = Math.max(0, currentQuarterValue - userView).toString();
+
   return {
     user_view: budgetData.user_view?.toString() || '0',
     total_budget: budgetData.katanomes_etous?.toString() || '0',
@@ -25,8 +46,11 @@ export function formatBudgetData(budgetData: any) {
     q4: budgetData.q4?.toString() || '0',
     total_spent: '0',
     available_budget: ((budgetData.katanomes_etous || 0) - (budgetData.user_view || 0)).toString(),
-    quarter_available: '0',
-    yearly_available: ((budgetData.ethsia_pistosi || 0) - (budgetData.user_view || 0)).toString()
+    quarter_available: quarterAvailable,
+    yearly_available: ((budgetData.ethsia_pistosi || 0) - (budgetData.user_view || 0)).toString(),
+    // Add missing quarter fields
+    current_quarter: budgetData.current_quarter || defaultQuarterKey,
+    last_quarter_check: budgetData.last_quarter_check || defaultQuarterKey
   };
 }
 
@@ -42,6 +66,12 @@ export async function getBudgetByMis(req: Request, res: Response) {
     const { mis } = req.params;
     
     if (!mis) {
+      // Calculate current quarter for default
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-based
+      const currentQuarterNumber = Math.ceil(currentMonth / 3);
+      const defaultQuarterKey = `q${currentQuarterNumber}`;
+      
       return res.status(400).json({
         status: 'error',
         message: 'MIS parameter is required',
@@ -56,7 +86,9 @@ export async function getBudgetByMis(req: Request, res: Response) {
           total_spent: '0',
           available_budget: '0',
           quarter_available: '0',
-          yearly_available: '0'
+          yearly_available: '0',
+          current_quarter: defaultQuarterKey,
+          last_quarter_check: defaultQuarterKey
         }
       });
     }
@@ -188,6 +220,13 @@ export async function getBudgetByMis(req: Request, res: Response) {
     
     // If we get here, we couldn't find the budget data
     console.log(`[Budget] No budget data found for ${decodedMis} after all attempts`);
+    
+    // Calculate current quarter for default
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-based
+    const currentQuarterNumber = Math.ceil(currentMonth / 3);
+    const defaultQuarterKey = `q${currentQuarterNumber}`;
+    
     return res.status(404).json({
       status: 'error',
       message: 'Budget data not found',
@@ -202,7 +241,9 @@ export async function getBudgetByMis(req: Request, res: Response) {
         total_spent: '0',
         available_budget: '0',
         quarter_available: '0',
-        yearly_available: '0'
+        yearly_available: '0',
+        current_quarter: defaultQuarterKey,
+        last_quarter_check: defaultQuarterKey
       }
     });
     
@@ -210,6 +251,13 @@ export async function getBudgetByMis(req: Request, res: Response) {
     console.error('[Budget] Error processing budget request:', error);
     // Make sure we always send a JSON response, never HTML
     res.setHeader('Content-Type', 'application/json');
+    
+    // Calculate current quarter for default
+    const errorDate = new Date();
+    const errorMonth = errorDate.getMonth() + 1; // JavaScript months are 0-based
+    const errorQuarterNumber = Math.ceil(errorMonth / 3);
+    const errorDefaultQuarterKey = `q${errorQuarterNumber}`;
+    
     return res.status(500).json({
       status: 'error',
       message: 'Failed to process budget request',
@@ -225,7 +273,9 @@ export async function getBudgetByMis(req: Request, res: Response) {
         total_spent: '0',
         available_budget: '0',
         quarter_available: '0',
-        yearly_available: '0'
+        yearly_available: '0',
+        current_quarter: errorDefaultQuarterKey,
+        last_quarter_check: errorDefaultQuarterKey
       }
     });
   }
