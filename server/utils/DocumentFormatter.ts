@@ -415,7 +415,7 @@ export class DocumentFormatter {
       
       const { data, error } = await supabase
         .from('Projects')
-        .select('title')
+        .select('project_title')
         .eq('mis', mis)
         .maybeSingle();
         
@@ -424,13 +424,13 @@ export class DocumentFormatter {
         return null;
       }
       
-      if (!data || !data.title) {
+      if (!data || !data.project_title) {
         console.log(`No project found with MIS: ${mis}`);
         return null;
       }
       
-      console.log(`Found project title: ${data.title}`);
-      return data.title;
+      console.log(`Found project title: ${data.project_title}`);
+      return data.project_title;
     } catch (error) {
       console.error("Error in getProjectTitle:", error);
       return null;
@@ -447,14 +447,14 @@ export class DocumentFormatter {
       console.log("Unit details:", unitDetails);
       
       // Get project title from database
-      const projectMis = documentData.project_na853 || documentData.mis?.toString() || "";
+      const projectMis = documentData.project_na853 || (documentData as any).mis?.toString() || "";
       const projectTitle = await this.getProjectTitle(projectMis);
       console.log(`Project title for MIS ${projectMis}:`, projectTitle);
       
       // Get user information with fallbacks
       const userInfo = {
         name: documentData.generated_by?.name || documentData.user_name || "",
-        department: documentData.generated_by?.descr || documentData.descr || "",
+        department: documentData.generated_by?.department || (documentData as any).descr || "",
       };
       
       // Calculate total amount from recipients
