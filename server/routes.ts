@@ -494,13 +494,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use('/api/budget-notifications', authenticateSession, budgetNotificationsRouter);
     log('[Routes] Budget notifications routes setup complete');
     
-    // Use authentication for all other budget routes
-    app.use('/api/budget', authenticateSession, budgetRouter);
-    
-    // Budget upload routes for Excel file imports
+    // Budget upload routes for Excel file imports - MUST come BEFORE the main budget routes
     log('[Routes] Setting up budget upload routes...');
     app.use('/api/budget/upload', authenticateSession, budgetUploadRouter);
     log('[Routes] Budget upload routes setup complete');
+    
+    // Use authentication for all other budget routes
+    // This MUST come after more specific /api/budget/* routes
+    app.use('/api/budget', authenticateSession, budgetRouter);
+    log('[Routes] Main budget routes registered');
 
     // Documents routes
     log('[Routes] Setting up document routes...');
