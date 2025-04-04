@@ -109,9 +109,28 @@ export function useBudgetUpdates(
           }
         }
         
+        // Check if the response is actually JSON before parsing
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error(`[Budget] Received non-JSON response: ${contentType}`, response);
+          try {
+            const text = await response.text();
+            console.error('[Budget] Non-JSON response body:', text.substring(0, 500) + (text.length > 500 ? '...' : ''));
+            throw new Error(`Expected JSON response but received ${contentType || 'unknown content-type'}`);
+          } catch (textError) {
+            throw new Error(`Expected JSON response but received ${contentType || 'unknown content-type'}`);
+          }
+        }
+        
         // Parse the response data
-        const responseData = await response.json();
-        console.log('[Budget] Raw budget response:', responseData);
+        let responseData;
+        try {
+          responseData = await response.json();
+          console.log('[Budget] Raw budget response:', responseData);
+        } catch (jsonError) {
+          console.error('[Budget] Failed to parse JSON response:', jsonError);
+          throw new Error('Invalid JSON response from server');
+        }
       
         // Extract data based on response structure
         let budgetData: Record<string, any> = {}; 
@@ -268,6 +287,14 @@ export function useBudgetUpdates(
         
         if (!response.ok) {
           console.error('[Budget] Validation request failed:', response.status);
+          // Try to get error details if possible
+          try {
+            const errorText = await response.text();
+            console.error('[Budget] Validation error response:', errorText);
+          } catch (textError) {
+            // Ignore text error, we already have the status code
+          }
+          
           return { 
             status: 'error', 
             canCreate: false,
@@ -276,9 +303,39 @@ export function useBudgetUpdates(
           };
         }
         
+        // Check if the response is actually JSON before parsing
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error(`[Budget] Validation received non-JSON response: ${contentType}`);
+          try {
+            const text = await response.text();
+            console.error('[Budget] Validation non-JSON response body:', text.substring(0, 500) + (text.length > 500 ? '...' : ''));
+          } catch (textError) {
+            // Ignore text error, we already identified the content type issue
+          }
+          
+          return { 
+            status: 'error', 
+            canCreate: false,
+            allowDocx: false,
+            message: `Μη αναμενόμενη απόκριση από τον διακομιστή (${contentType || 'άγνωστος τύπος περιεχομένου'})`
+          };
+        }
+        
         // Process successful response
-        const data = await response.json();
-        console.log('[Budget] Validation response:', data);
+        let data;
+        try {
+          data = await response.json();
+          console.log('[Budget] Validation response:', data);
+        } catch (jsonError) {
+          console.error('[Budget] Failed to parse validation JSON response:', jsonError);
+          return { 
+            status: 'error', 
+            canCreate: false,
+            allowDocx: false,
+            message: 'Μη έγκυρη απόκριση του διακομιστή. Δοκιμάστε ξανά αργότερα.'
+          };
+        }
         
         // If we have budget indicators in the validation response metadata,
         // update the budget data with these values to ensure real-time updates
