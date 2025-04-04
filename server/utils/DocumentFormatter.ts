@@ -956,50 +956,134 @@ export class DocumentFormatter {
           new TableRow({
             height: { value: 360, rule: HeightRule.EXACT },
             children: [
-              this.createCell(rowNumber),
-              this.createCell(fullName),
-              this.createCell(this.formatCurrency(amount)),
-              this.createCell(installment),
-              this.createCell(afm),
-              this.createCell(expenditureType), // Add expenditure type in the extra column
+              this.createTableCell(rowNumber, "center"),
+              this.createTableCell(fullName, "center"),
+              this.createTableCell(
+                amount.toLocaleString("el-GR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }),
+                "center",
+              ),
+              this.createTableCell(installment, "center"),
+              this.createTableCell(afm, "center"),
+              this.createTableCell(expenditureType, "center"), // Add expenditure type in the extra column
             ],
           }),
         );
       } else {
-        // For multiple installments, use row spanning
+        // For multiple installments, use row spanning (same as primary document)
+        const rowSpan = installments.length;
+        const rowHeight = 360; // Base height for one row
+
+        // Create cells for the first row with rowSpan
+        const nameCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: fullName,
+                  size: this.DEFAULT_FONT_SIZE,
+                }),
+              ],
+            }),
+          ],
+        });
+
+        const indexCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: rowNumber,
+                  size: this.DEFAULT_FONT_SIZE,
+                }),
+              ],
+            }),
+          ],
+        });
+
+        const afmCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: afm,
+                  size: this.DEFAULT_FONT_SIZE,
+                }),
+              ],
+            }),
+          ],
+        });
+
+        // Add expenditure type cell with rowSpan
+        const expenditureTypeCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: expenditureType,
+                  size: this.DEFAULT_FONT_SIZE,
+                }),
+              ],
+            }),
+          ],
+        });
+
+        // Add the first row with installment details
+        const firstInstallment = installments[0];
+        const firstAmount = installmentAmounts[firstInstallment] || 0;
+
         rows.push(
           new TableRow({
-            height: { value: 360, rule: HeightRule.EXACT },
+            height: { value: rowHeight, rule: HeightRule.EXACT },
             children: [
-              this.createCellWithRowSpan(rowNumber, installments.length),
-              this.createCellWithRowSpan(fullName, installments.length),
-              this.createCell(
-                this.formatCurrency(
-                  installmentAmounts[installments[0]] || recipient.amount,
-                ),
+              indexCell,
+              nameCell,
+              this.createTableCell(
+                firstAmount.toLocaleString("el-GR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }),
+                "center",
               ),
-              this.createCell(installments[0]),
-              this.createCellWithRowSpan(afm, installments.length),
-              this.createCellWithRowSpan(expenditureType, installments.length), // Add expenditure type with row span
+              this.createTableCell(firstInstallment, "center"),
+              afmCell,
+              expenditureTypeCell,
             ],
           }),
         );
 
-        // Add rows for additional installments
+        // Add subsequent rows for remaining installments
         for (let i = 1; i < installments.length; i++) {
           const installment = installments[i];
-          const amount = installmentAmounts[installment] || recipient.amount;
+          const amount = installmentAmounts[installment] || 0;
 
           rows.push(
             new TableRow({
-              height: { value: 360, rule: HeightRule.EXACT },
+              height: { value: rowHeight, rule: HeightRule.EXACT },
               children: [
-                this.createCellWithRowSpan("", 0, "continue"),
-                this.createCellWithRowSpan("", 0, "continue"),
-                this.createCell(this.formatCurrency(amount)),
-                this.createCell(installment),
-                this.createCellWithRowSpan("", 0, "continue"),
-                this.createCellWithRowSpan("", 0, "continue"), // Continue row span for expenditure type
+                // These cells will be empty due to rowSpan in the first row
+                this.createTableCell(
+                  amount.toLocaleString("el-GR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }),
+                  "center",
+                ),
+                this.createTableCell(installment, "center"),
               ],
             }),
           );
@@ -1016,82 +1100,25 @@ export class DocumentFormatter {
       return sum + (isNaN(amount) ? 0 : amount);
     }, 0);
 
-    // Add total row to the table
+    // Add total row to the table, formatting to match primary document
     rows.push(
       new TableRow({
         height: { value: 360, rule: HeightRule.EXACT },
         children: [
-          // Empty cell for A/A
-          new TableCell({
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.SINGLE, size: 1 },
-              right: { style: BorderStyle.NONE, size: 0 },
-            },
-            children: [new Paragraph("")],
-          }),
-          // "ΣΥΝΟΛΟ" cell
-          new TableCell({
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.NONE, size: 0 },
-              right: { style: BorderStyle.NONE, size: 0 },
-            },
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.RIGHT,
-                children: [
-                  new TextRun({
-                    text: "ΣΥΝΟΛΟ",
-                    bold: true,
-                  }),
-                ],
-              }),
-            ],
-          }),
-          // Total amount
-          new TableCell({
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.NONE, size: 0 },
-              right: { style: BorderStyle.SINGLE, size: 1 },
-            },
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.LEFT,
-                children: [
-                  new TextRun({
-                    text: this.formatCurrency(totalAmount) + " €",
-                    bold: true,
-                  }),
-                ],
-              }),
-            ],
-          }),
-          // Empty cells for ΔΟΣΗ and ΑΦΜ columns
-          new TableCell({
-            columnSpan: 2,
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.SINGLE, size: 1 },
-              right: { style: BorderStyle.NONE, size: 0 },
-            },
-            children: [new Paragraph("")],
-          }),
-          // Empty cell for ΠΡΑΞΗ column
-          new TableCell({
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.NONE, size: 0 },
-              right: { style: BorderStyle.SINGLE, size: 1 },
-            },
-            children: [new Paragraph("")],
-          }),
+          this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
+          this.createTableCell(
+            totalAmount.toLocaleString("el-GR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }) + " €",
+            "center"
+          ),
+          // Empty column for ΔΟΣΗ
+          this.createTableCell("", "center"),
+          // Empty column for ΑΦΜ  
+          this.createTableCell("", "center"),
+          // Empty column for ΠΡΑΞΗ
+          this.createTableCell("", "center"),
         ],
       }),
     );
