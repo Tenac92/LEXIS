@@ -8,6 +8,7 @@ import { authenticateToken } from '../middleware/auth';
 import { DocumentManager } from '../utils/DocumentManager';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
 import { broadcastDocumentUpdate } from '../services/websocketService';
+import JSZip from 'jszip';
 
 // Create the router
 export const router = Router();
@@ -680,7 +681,6 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     const secondaryBuffer = await DocumentFormatter.generateSecondDocument(documentData);
     
     // Create a ZIP file containing both documents
-    const JSZip = require('jszip');
     const zip = new JSZip();
     
     // Add both documents to the ZIP
