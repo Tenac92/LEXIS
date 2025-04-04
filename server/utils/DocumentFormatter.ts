@@ -428,9 +428,9 @@ export class DocumentFormatter {
         {
           properties: {
             page: {
-              size: { width: 11906, height: 16838 },
+              size: { width: 16838, height: 11906 }, // Swapped width and height for landscape
               margins: this.DOCUMENT_MARGINS,
-              orientation: PageOrientation.PORTRAIT,
+              orientation: PageOrientation.LANDSCAPE, // Changed to LANDSCAPE
             },
           },
           children: [
