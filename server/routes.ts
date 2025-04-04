@@ -557,13 +557,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // If direct lookup failed, try to find project by its ID
             console.log(`[Budget] No direct budget data for ${decodedMis}, trying project lookup`);
             
-            // Try to find project by ID (which could be the NA853 code) or directly by MIS
-            // Use parameter binding for safe string/number handling with Supabase
-            const { data: projectData, error: projectError } = await supabase
+            // Try to find project by ID or NA853 code - split into two queries for better error handling
+            console.log(`[Budget] Trying to find project with id or na853 matching: ${decodedMis}`);
+            
+            // First try to find by exact NA853 match
+            const { data: projectDataByNA853, error: projectErrorByNA853 } = await supabase
                 .from('Projects')
                 .select('id, mis, na853')
-                .or(`na853.eq."${decodedMis}",id.eq."${decodedMis}"`)
+                .eq('na853', decodedMis)
                 .single();
+                
+            // If NA853 match fails, try by ID match
+            if (!projectDataByNA853 && (!projectErrorByNA853 || projectErrorByNA853.code === 'PGRST116')) {
+                console.log(`[Budget] No match by NA853, trying id match for: ${decodedMis}`);
+                const { data: projectDataById, error: projectErrorById } = await supabase
+                    .from('Projects')
+                    .select('id, mis, na853')
+                    .eq('id', decodedMis)
+                    .single();
+                    
+                // Use the ID match results if successful
+                if (projectDataById) {
+                    console.log(`[Budget] Found project by ID match: ${projectDataById.id}, MIS: ${projectDataById.mis}`);
+                    var projectData = projectDataById;
+                    var projectError = null;
+                } else {
+                    // No matches found via ID either
+                    var projectData = null;
+                    var projectError = projectErrorById;
+                }
+            } else {
+                // Use the NA853 match results
+                console.log(`[Budget] Found project by NA853 match: ${projectDataByNA853?.id}, MIS: ${projectDataByNA853?.mis}`);
+                var projectData = projectDataByNA853;
+                var projectError = projectErrorByNA853;
+            }
                 
             // If the first query fails, try looking up by MIS as a separate query
             if (!projectData && (!projectError || projectError.code === 'PGRST116')) {
