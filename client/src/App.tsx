@@ -15,6 +15,7 @@ import BudgetHistoryPage from "@/pages/budget-history-page";
 import NotificationsPage from "@/pages/NotificationsPage";
 import AdminNotificationsPage from "@/pages/AdminNotificationsPage";
 import AdminBudgetUploadPage from "@/pages/AdminBudgetUploadPage";
+import QuarterManagementPage from "@/pages/admin/QuarterManagementPage";
 import BulkUpdatePage from "@/pages/projects/bulk-update";
 import TemplatesPage from "@/pages/templates";
 import { ProtectedRoute } from "./lib/protected-route";
@@ -40,6 +41,7 @@ function Router() {
         <ProtectedRoute path="/notifications" component={NotificationsPage} />
         <ProtectedRoute path="/admin/notifications" component={AdminNotificationsPage} />
         <ProtectedRoute path="/admin/budget-upload" component={AdminBudgetUploadPage} />
+        <ProtectedRoute path="/admin/quarter-management" component={QuarterManagementPage} />
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
       </Switch>

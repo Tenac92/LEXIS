@@ -18,6 +18,7 @@ import attachmentsRouter from "./controllers/attachments"; // Import for attachm
 import healthcheckRouter from "./routes/healthcheck"; // Import the original healthcheck router
 import healthRouter from "./routes/health"; // Import our new enhanced health check router
 import sdegdaefkDiagnosticRouter from "./routes/sdegdaefk-diagnostic"; // Import the sdegdaefk.gr diagnostic router
+import { registerAdminRoutes } from "./routes/admin"; // Import admin routes for quarter transitions
 import documentsBrowserHandler from "./middleware/sdegdaefk/documentsBrowserHandler"; // Import browser request handler for /documents
 import authBrowserHandler from "./middleware/sdegdaefk/authBrowserHandler"; // Import browser request handler for /auth
 // Note: We now use the consolidated documentsController instead of multiple document route files
@@ -1029,10 +1030,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
-    app.use('/api', apiRouter);
-
+    // Setup Main API Router
+    const mainApiRouter = express.Router();
+    app.use('/api', mainApiRouter);
+    
+    // Register Admin Routes with WebSocket server passed for real-time notifications
+    log('[Routes] Setting up admin routes...');
+    // Create a placeholder for WebSocket server to be used later
+    let wsPlaceholder: any = null;
+    const wsProxy = new Proxy({}, {
+      get: (_target, prop) => {
+        if (wsPlaceholder && typeof wsPlaceholder[prop] === 'function') {
+          return wsPlaceholder[prop].bind(wsPlaceholder);
+        }
+        return wsPlaceholder ? wsPlaceholder[prop] : null;
+      }
+    });
+    
+    // Register admin routes with the proxy (will be connected to real WebSocket later)
+    registerAdminRoutes(mainApiRouter, wsProxy);
+    log('[Routes] Admin routes registered successfully');
+    
+    // Mount the general API router
+    mainApiRouter.use('/', apiRouter);
+    
     // Create and return HTTP server
     const httpServer = createServer(app);
+    
+    // Create a method to set the real WebSocket server later from index.ts
+    (httpServer as any).setWebSocketServer = (wss: any) => {
+      wsPlaceholder = wss;
+      log('[Routes] WebSocket server connected to admin routes');
+    };
+    
     return httpServer;
   } catch (error) {
     log('[Routes] Error registering routes:', error instanceof Error ? error.message : 'Unknown error');

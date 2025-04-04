@@ -15,6 +15,7 @@ import documentsPreHandler from './middleware/sdegdaefk/documentsPreHandler';
 import { createWebSocketServer } from './websocket';
 import { supabase, testConnection, resetConnectionPoolIfNeeded } from './config/db';
 import { errorHandler } from './middleware/errorHandler';
+import { initializeScheduledTasks } from './services/schedulerService';
 
 // Enhanced error handlers
 process.on('uncaughtException', (error) => {
@@ -186,6 +187,18 @@ async function startServer() {
       try {
         const wss = createWebSocketServer(server);
         console.log('[Startup] WebSocket server initialized on /ws');
+        
+        // Connect WebSocket server to admin routes
+        if (typeof (server as any).setWebSocketServer === 'function') {
+          (server as any).setWebSocketServer(wss);
+          console.log('[Startup] WebSocket server connected to admin routes');
+        } else {
+          console.warn('[Startup] Unable to connect WebSocket server to admin routes: setWebSocketServer method not found');
+        }
+        
+        // Initialize scheduled tasks (including quarter transitions)
+        initializeScheduledTasks(wss);
+        console.log('[Startup] Scheduled tasks initialized including quarter transitions');
       } catch (wsError) {
         console.error('[Warning] WebSocket server initialization failed:', wsError);
         // Continue without WebSocket support
