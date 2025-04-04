@@ -93,88 +93,93 @@ export function useBudgetUpdates(
         const encodedMisValue = encodeURIComponent(misValue);
         console.log(`[Budget] Encoded MIS value: ${encodedMisValue}`);
         
-        // Use the correct endpoint path - this public endpoint doesn't require authentication
-        const response = await fetch(`/api/budget/${encodedMisValue}`);
-        
-        // Check if the response is ok before trying to parse JSON
-        if (!response.ok) {
-          console.error(`[Budget] API error: ${response.status} ${response.statusText}`);
-          // Try to get error details if possible
-          try {
-            const errorText = await response.text();
-            console.error('[Budget] Error response:', errorText);
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
-          } catch (textError) {
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        try {
+          // Use the correct endpoint path - this public endpoint doesn't require authentication
+          const response = await fetch(`/api/budget/${encodedMisValue}`);
+          
+          // Check if the response is ok before trying to parse JSON
+          if (!response.ok) {
+            console.error(`[Budget] API error: ${response.status} ${response.statusText}`);
+            // Try to get error details if possible
+            try {
+              const errorText = await response.text();
+              console.error('[Budget] Error response:', errorText);
+              throw new Error(`API error: ${response.status} ${response.statusText}`);
+            } catch (textError) {
+              throw new Error(`API error: ${response.status} ${response.statusText}`);
+            }
           }
-        }
+          
+          // Parse the response data
+          const responseData = await response.json();
+          console.log('[Budget] Raw budget response:', responseData);
         
-        // Parse the response data
-        const responseData = await response.json();
-        console.log('[Budget] Raw budget response:', responseData);
-      
-        // Extract data based on response structure
-        let budgetData: Record<string, any> = {}; 
-        
-        if (responseData?.status === 'success' && responseData.data) {
-          budgetData = responseData.data;
-          console.log('[Budget] Successfully extracted budget data from success response', budgetData);
-        } else if (responseData?.status === 'error') {
-          console.error('[Budget] Budget API returned error:', responseData.message || 'Unknown error');
-          // Check if the error response includes fallback data (server might return zeros to prevent UI breaking)
-          if (responseData.data && typeof responseData.data === 'object') {
-            console.log('[Budget] Using fallback data from error response', responseData.data);
+          // Extract data based on response structure
+          let budgetData: Record<string, any> = {}; 
+          
+          if (responseData?.status === 'success' && responseData.data) {
             budgetData = responseData.data;
+            console.log('[Budget] Successfully extracted budget data from success response', budgetData);
+          } else if (responseData?.status === 'error') {
+            console.error('[Budget] Budget API returned error:', responseData.message || 'Unknown error');
+            // Check if the error response includes fallback data (server might return zeros to prevent UI breaking)
+            if (responseData.data && typeof responseData.data === 'object') {
+              console.log('[Budget] Using fallback data from error response', responseData.data);
+              budgetData = responseData.data;
+            } else {
+              // Return empty budget on API error - allow UI to still function
+              console.log('[Budget] No fallback data in error response, using zeros');
+              return {
+                user_view: 0,
+                total_budget: 0,
+                annual_budget: 0,
+                katanomes_etous: 0,
+                ethsia_pistosi: 0,
+                current_budget: 0,
+                q1: 0,
+                q2: 0,
+                q3: 0,
+                q4: 0,
+                total_spent: 0,
+                available_budget: 0,
+                quarter_available: 0,
+                yearly_available: 0
+              };
+            }
           } else {
-            // Return empty budget on API error - allow UI to still function
-            console.log('[Budget] No fallback data in error response, using zeros');
-            return {
-              user_view: 0,
-              total_budget: 0,
-              annual_budget: 0,
-              katanomes_etous: 0,
-              ethsia_pistosi: 0,
-              current_budget: 0,
-              q1: 0,
-              q2: 0,
-              q3: 0,
-              q4: 0,
-              total_spent: 0,
-              available_budget: 0,
-              quarter_available: 0,
-              yearly_available: 0
-            };
+            // Direct response data (not wrapped in status/data structure)
+            console.log('[Budget] Direct response data:', responseData);
+            budgetData = responseData;
           }
-        } else {
-          // Direct response data (not wrapped in status/data structure)
-          console.log('[Budget] Direct response data:', responseData);
-          budgetData = responseData;
+          
+          console.log('[Budget] Extracted budget data:', budgetData);
+          
+          // Return normalized budget data with original string/number values
+          return {
+            user_view: budgetData.user_view || 0,
+            total_budget: budgetData.total_budget || 0,
+            katanomes_etous: budgetData.katanomes_etous || 0,
+            ethsia_pistosi: budgetData.ethsia_pistosi || 0,
+            current_budget: budgetData.current_budget || 0,
+            annual_budget: budgetData.annual_budget || 0,
+            quarter_view: budgetData.quarter_view || 0,
+            current_quarter: budgetData.current_quarter?.toString() || 'q1',
+            last_quarter_check: budgetData.last_quarter_check?.toString() || 'q1',
+            q1: budgetData.q1 || 0,
+            q2: budgetData.q2 || 0,
+            q3: budgetData.q3 || 0,
+            q4: budgetData.q4 || 0,
+            total_spent: budgetData.total_spent || 0,
+            available_budget: budgetData.available_budget || 0,
+            quarter_available: budgetData.quarter_available || 0,
+            yearly_available: budgetData.yearly_available || 0,
+            // Include the sum field if available
+            sum: budgetData.sum || undefined
+          };
+        } catch (fetchError) {
+          console.error('[Budget] Fetch error:', fetchError);
+          throw fetchError;
         }
-      
-        console.log('[Budget] Extracted budget data:', budgetData);
-        
-        // Return normalized budget data with original string/number values
-        return {
-          user_view: budgetData.user_view || 0,
-          total_budget: budgetData.total_budget || 0,
-          katanomes_etous: budgetData.katanomes_etous || 0,
-          ethsia_pistosi: budgetData.ethsia_pistosi || 0,
-          current_budget: budgetData.current_budget || 0,
-          annual_budget: budgetData.annual_budget || 0,
-          quarter_view: budgetData.quarter_view || 0,
-          current_quarter: budgetData.current_quarter?.toString() || 'q1',
-          last_quarter_check: budgetData.last_quarter_check?.toString() || 'q1',
-          q1: budgetData.q1 || 0,
-          q2: budgetData.q2 || 0,
-          q3: budgetData.q3 || 0,
-          q4: budgetData.q4 || 0,
-          total_spent: budgetData.total_spent || 0,
-          available_budget: budgetData.available_budget || 0,
-          quarter_available: budgetData.quarter_available || 0,
-          yearly_available: budgetData.yearly_available || 0,
-          // Include the sum field if available
-          sum: budgetData.sum || undefined
-        };
       } catch (error) {
         console.error('[Budget] Budget data fetch error:', error);
         // Instead of throwing, return empty but valid budget data
