@@ -1,0 +1,85 @@
+[Budget Form Debug] Key values: {selectedProjectId: '', currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+use-budget-updates.ts:308 [Budget Hook Debug] Returning state: {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+create-document-dialog.tsx:572 [Budget Form Debug] Key values: {selectedProjectId: '', currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+use-budget-updates.ts:308 [Budget Hook Debug] Returning state: {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+create-document-dialog.tsx:572 [Budget Form Debug] Key values: {selectedProjectId: '', currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+use-budget-updates.ts:308 [Budget Hook Debug] Returning state: {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+create-document-dialog.tsx:572 [Budget Form Debug] Key values: {selectedProjectId: '', currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+use-budget-updates.ts:308 [Budget Hook Debug] Returning state: {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+create-document-dialog.tsx:572 [Budget Form Debug] Key values: {selectedProjectId: '', currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+use-budget-updates.ts:308 [Budget Hook Debug] Returning state: {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+create-document-dialog.tsx:1948 [Budget Debug] budgetData state: {available: false, currentStep: 1, projectId: '', currentAmount: 0}
+create-document-dialog.tsx:572 [Budget Form Debug] Key values: {selectedProjectId: '2024ΝΑ85300001', currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+use-budget-updates.ts:308 [Budget Hook Debug] Returning state: {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: true, isValidationLoading: false, hasBudgetError: false, …}
+use-budget-updates.ts:55 [Budget] Fetching budget data for project: {id: '2024ΝΑ85300001'}
+create-document-dialog.tsx:1338 Fetching regions for project: {id: '2024ΝΑ85300001', mis: '5174692'}
+create-document-dialog.tsx:1948 [Budget Debug] budgetData state: {available: false, currentStep: 1, projectId: '2024ΝΑ85300001', currentAmount: 0}
+create-document-dialog.tsx:572 [Budget Form Debug] Key values: {selectedProjectId: '2024ΝΑ85300001', currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+use-budget-updates.ts:308 [Budget Hook Debug] Returning state: {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: true, isValidationLoading: false, hasBudgetError: false, …}
+queryClient.ts:130 [Query] Request failed: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+(ανώνυμες) @ queryClient.ts:130
+await in (ανώνυμες)
+fetchFn @ @tanstack_react-query.js?v=f523da36:842
+run @ @tanstack_react-query.js?v=f523da36:493
+start @ @tanstack_react-query.js?v=f523da36:535
+fetch @ @tanstack_react-query.js?v=f523da36:929
+fetchQuery @ @tanstack_react-query.js?v=f523da36:1779
+queryFn @ use-budget-updates.ts:58
+fetchFn @ @tanstack_react-query.js?v=f523da36:842
+run @ @tanstack_react-query.js?v=f523da36:493
+start @ @tanstack_react-query.js?v=f523da36:535
+fetch @ @tanstack_react-query.js?v=f523da36:929
+executeFetch_fn @ @tanstack_react-query.js?v=f523da36:2247
+setOptions @ @tanstack_react-query.js?v=f523da36:1991
+(ανώνυμες) @ @tanstack_react-query.js?v=f523da36:3085
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=f523da36:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=f523da36:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=f523da36:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=f523da36:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=f523da36:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=f523da36:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=f523da36:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=f523da36:19416
+commitRoot @ chunk-RPCDYKBN.js?v=f523da36:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=f523da36:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=f523da36:9119
+(ανώνυμες) @ chunk-RPCDYKBN.js?v=f523da36:18627
+Εμφάνιση 24 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+use-budget-updates.ts:166 [Budget] Budget data fetch error: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+queryFn @ use-budget-updates.ts:166
+await in queryFn
+fetchFn @ @tanstack_react-query.js?v=f523da36:842
+run @ @tanstack_react-query.js?v=f523da36:493
+start @ @tanstack_react-query.js?v=f523da36:535
+fetch @ @tanstack_react-query.js?v=f523da36:929
+executeFetch_fn @ @tanstack_react-query.js?v=f523da36:2247
+setOptions @ @tanstack_react-query.js?v=f523da36:1991
+(ανώνυμες) @ @tanstack_react-query.js?v=f523da36:3085
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=f523da36:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=f523da36:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=f523da36:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=f523da36:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=f523da36:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=f523da36:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=f523da36:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=f523da36:19416
+commitRoot @ chunk-RPCDYKBN.js?v=f523da36:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=f523da36:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=f523da36:9119
+(ανώνυμες) @ chunk-RPCDYKBN.js?v=f523da36:18627
+Εμφάνιση 19 ακόμη πλαισίων
+Εμφάνιση λιγότερων
+create-document-dialog.tsx:572 [Budget Form Debug] Key values: {selectedProjectId: '2024ΝΑ85300001', currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+use-budget-updates.ts:308 [Budget Hook Debug] Returning state: {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+create-document-dialog.tsx:1948 [Budget Debug] budgetData state: {available: true, currentStep: 1, projectId: '2024ΝΑ85300001', currentAmount: 0}
+create-document-dialog.tsx:1956 [Budget Debug] Budget data details: {user_view: 0, total_budget: 0, annual_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, …}
+create-document-dialog.tsx:103 Search debug: {searchTerm: '2024να85300001 - 2021 σεισμος φωκιδας', isNumericSearch: false, projectCount: 79}
+create-document-dialog.tsx:129 Search results: {searchTerm: '2024να85300001 - 2021 σεισμος φωκιδας', resultCount: 1, results: Array(1)}
+create-document-dialog.tsx:1345 Region API response: {region: Array(1), municipality: Array(1), regional_unit: Array(1)}
+create-document-dialog.tsx:1360 Processing region data with format: string
+create-document-dialog.tsx:1422 Processed region data: [{…}]
+create-document-dialog.tsx:572 [Budget Form Debug] Key values: {selectedProjectId: '2024ΝΑ85300001', currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+use-budget-updates.ts:308 [Budget Hook Debug] Returning state: {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+create-document-dialog.tsx:572 [Budget Form Debug] Key values: {selectedProjectId: '2024ΝΑ85300001', currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+use-budget-updates.ts:308 [Budget Hook Debug] Returning state: {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}

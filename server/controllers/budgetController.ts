@@ -79,7 +79,7 @@ export async function getBudgetByMis(req: Request, res: Response) {
             console.error(`[Budget] Error getting budget:`, budgetError);
           } else if (budgetData) {
             console.log(`[Budget] Found budget for MIS=${projectData.mis}`);
-            return res.json({
+            return res.status(200).json({
               status: 'success',
               data: formatBudgetData(budgetData)
             });
@@ -87,6 +87,7 @@ export async function getBudgetByMis(req: Request, res: Response) {
         }
       } catch (err) {
         console.error(`[Budget] Error in project lookup:`, err);
+        // Don't return here, let it fall through to try the numeric approach
       }
     }
     
@@ -106,19 +107,20 @@ export async function getBudgetByMis(req: Request, res: Response) {
           console.error(`[Budget] Error in direct budget lookup:`, budgetError);
         } else if (budgetData) {
           console.log(`[Budget] Found budget for numeric MIS=${numericMis}`);
-          return res.json({
+          return res.status(200).json({
             status: 'success',
             data: formatBudgetData(budgetData)
           });
         }
       } catch (err) {
         console.error(`[Budget] Error in numeric lookup:`, err);
+        // Continue to the fallback response
       }
     }
     
     // If we get here, we couldn't find the budget data
     console.log(`[Budget] No budget data found for ${decodedMis}`);
-    return res.json({
+    return res.status(404).json({
       status: 'error',
       message: 'Budget data not found',
       data: {
@@ -138,7 +140,9 @@ export async function getBudgetByMis(req: Request, res: Response) {
     
   } catch (error) {
     console.error('[Budget] Error processing budget request:', error);
-    return res.json({
+    // Make sure we always send a JSON response, never HTML
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(500).json({
       status: 'error',
       message: 'Failed to process budget request',
       data: {
