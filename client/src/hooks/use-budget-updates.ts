@@ -90,10 +90,13 @@ export function useBudgetUpdates(
           };
         }
         
-        // Type checking
-        const project = projectData as { mis?: string } | null | undefined;
+        // Type checking and field extraction
+        const project = projectData as { mis?: string, na853?: string } | null | undefined;
         
-        if (!project || !project.mis) {
+        // Get the MIS from either the mis field or na853 field (for backward compatibility)
+        const misValue = project?.mis || project?.na853;
+        
+        if (!project || !misValue) {
           console.error(`[Budget] Project or MIS not found for ID: ${projectId}`, project);
           // Return empty budget instead of throwing - allow UI to still function
           return {
@@ -114,7 +117,6 @@ export function useBudgetUpdates(
 
         // Fetch budget data from API - no need to convert to numeric MIS anymore
         // The server-side has been updated to handle both numeric and alphanumeric MIS values
-        const misValue = project.mis;
         
         console.log(`[Budget] Fetching budget data for MIS: ${misValue}`);
         
@@ -282,10 +284,13 @@ export function useBudgetUpdates(
           queryKey: ["/api/projects", projectId]
         });
         
-        // Type checking
-        const project = projectData as { mis?: string } | null | undefined;
+        // Type checking and field extraction
+        const project = projectData as { mis?: string, na853?: string } | null | undefined;
         
-        if (!project || !project.mis) {
+        // Get the MIS from either the mis field or na853 field (for backward compatibility)
+        const misValue = project?.mis || project?.na853;
+        
+        if (!project || !misValue) {
           console.error('[Budget] Project or MIS not found', { projectId });
           return { 
             status: 'error', 
@@ -296,7 +301,6 @@ export function useBudgetUpdates(
         }
 
         // Use the MIS directly for validation (can be numeric or alphanumeric)
-        const misValue = project.mis;
         
         console.log(`[Budget] Validating budget for MIS: ${misValue}, amount: ${currentAmount}`);
         
