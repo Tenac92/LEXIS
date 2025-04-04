@@ -425,9 +425,9 @@ export class DocumentFormatter {
             },
           },
           children: [
-            // Project title (planescape)
+            // Project title (horizontal orientation)
             new Paragraph({
-              text: documentData.project_id || "ΠΛΑΝΗΣΚΕΪΠ",
+              text: "ΠΡΟΣΑΝΑΤΟΛΙΣΜΟΣ ΟΡΙΖΟΝΤΙΟΣ",
               alignment: AlignmentType.CENTER,
               spacing: { before: 400, after: 200 },
               style: "Heading1",

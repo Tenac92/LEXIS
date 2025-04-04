@@ -617,8 +617,8 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
 
       console.log('Επικύρωση εγγράφου επιτυχής:', testResult);
 
-      // Create and trigger download using window.document
-      const downloadUrl = `/api/documents/generated/${document.id}/export`;
+      // Create and trigger download using window.document - format=both to get both files in a ZIP
+      const downloadUrl = `/api/documents/generated/${document.id}/export?format=both`;
       const link = window.document.createElement('a');
       link.href = downloadUrl;
       link.setAttribute('download', `documents-${document.id}.zip`);
@@ -660,7 +660,7 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
           <p>Το αρχείο ZIP περιέχει δύο έγγραφα DOCX:</p>
           <ul className="list-disc pl-5 mt-1">
             <li>Το κύριο έγγραφο με όλα τα στοιχεία</li>
-            <li>Το συμπληρωματικό έγγραφο "Πλανησκέιπ" με τα στοιχεία παραληπτών και τύπο Πράξης</li>
+            <li>Το συμπληρωματικό έγγραφο "ΠΡΟΣΑΝΑΤΟΛΙΣΜΟΣ ΟΡΙΖΟΝΤΙΟΣ" με τα στοιχεία παραληπτών και τύπο Πράξης</li>
           </ul>
         </div>
 
