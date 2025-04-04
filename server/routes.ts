@@ -4,7 +4,9 @@ import { createServer, type Server } from "http";
 import { authenticateSession, User, AuthenticatedRequest } from "./middleware/auth";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
-import { router as budgetRouter } from "./controllers/budgetController";
+// Import budget router from routes folder rather than from the controllers folder
+// The router is a default export in server/routes/budget.ts
+import budgetRouter from "./routes/budget";
 import { getBudgetByMis } from './controllers/budgetController';
 import { router as budgetNotificationsRouter } from "./controllers/budgetNotificationsController";
 import { router as unitsRouter } from "./controllers/unitsController";
