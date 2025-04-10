@@ -436,20 +436,20 @@ export class DocumentFormatter {
       
       let data, error;
       
-      // Strategy 1: Try first with NA853 if it looks like a project code
+      // Strategy 1: Try first with budget_na853 if it looks like a project code
       if (isProjectCode) {
-        console.log(`[DocumentFormatter] getProjectTitle - Input appears to be a project code: ${mis}, trying na853 lookup`);
+        console.log(`[DocumentFormatter] getProjectTitle - Input appears to be a project code: ${mis}, trying budget_na853 lookup`);
         const result = await supabase
           .from("Projects")
           .select("project_title")
-          .eq("na853", mis)
+          .eq("budget_na853", mis)
           .maybeSingle();
           
         data = result.data;
         error = result.error;
         
         if (!error && data?.project_title) {
-          console.log(`[DocumentFormatter] Found project title by NA853: ${data.project_title}`);
+          console.log(`[DocumentFormatter] Found project title by budget_na853: ${data.project_title}`);
           return data.project_title;
         }
       }
@@ -519,22 +519,19 @@ export class DocumentFormatter {
         // Strategy 2: Try to find if the MIS itself is an NA853 entry - use both fields
         const checkIfNA853 = await supabase
           .from("Projects")
-          .select("budget_na853, na853")
-          .or(`na853.eq.${mis},budget_na853.eq.${mis}`)
+          .select("budget_na853")
+          .eq("budget_na853", mis)
           .maybeSingle();
           
         if (!checkIfNA853.error) {
           if (checkIfNA853.data?.budget_na853) {
             console.log(`[DocumentFormatter] Found project budget_na853 by direct lookup: ${checkIfNA853.data.budget_na853}`);
             return checkIfNA853.data.budget_na853;
-          } else if (checkIfNA853.data?.na853) {
-            console.log(`[DocumentFormatter] Found project na853 by direct lookup: ${checkIfNA853.data.na853}`);
-            return checkIfNA853.data.na853;
           }
         }
         
         // Last resort: Use MIS as fallback
-        console.log(`[DocumentFormatter] No NA853 found, using MIS as fallback: ${mis}`);
+        console.log(`[DocumentFormatter] No budget_na853 found, using MIS as fallback: ${mis}`);
         return mis;
       }
 
