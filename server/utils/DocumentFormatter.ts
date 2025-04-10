@@ -631,29 +631,75 @@ export class DocumentFormatter {
                         right: { style: BorderStyle.NONE },
                       },
                       children: [
-                        new Paragraph({
-                          children: [
-                            new TextRun({
-                              text: "με εντολή Υπουργού                                      Ο ΑΝΑΠΛ.ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+                        // Create the same signature textbox as in createFooter method
+                        new Table({
+                          width: { size: 100, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          rows: [
+                            new TableRow({
+                              children: [
+                                new TableCell({
+                                  borders: {
+                                    top: { style: BorderStyle.NONE },
+                                    bottom: { style: BorderStyle.NONE },
+                                    left: { style: BorderStyle.NONE },
+                                    right: { style: BorderStyle.NONE },
+                                  },
+                                  children: [
+                                    new Paragraph({
+                                      alignment: AlignmentType.CENTER,
+                                      children: [
+                                        new TextRun({
+                                          text: unitDetails?.manager?.order || "με εντολή Υπουργού                                      Ο ΑΝΑΠΛ.ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+                                          bold: true,
+                                        }),
+                                      ],
+                                    }),
+                                    new Paragraph({
+                                      alignment: AlignmentType.CENTER,
+                                      children: [
+                                        new TextRun({
+                                          text: unitDetails?.manager?.title || "",
+                                          bold: true,
+                                        }),
+                                      ],
+                                    }),
+                                    new Paragraph({
+                                      alignment: AlignmentType.CENTER,
+                                      spacing: { before: 160, after: 160 },
+                                      children: [
+                                        new TextRun({
+                                          text: "",
+                                        }),
+                                      ],
+                                    }),
+                                    new Paragraph({
+                                      alignment: AlignmentType.CENTER,
+                                      children: [
+                                        new TextRun({
+                                          text: unitDetails?.manager?.name || "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
+                                          bold: true,
+                                        }),
+                                      ],
+                                    }),
+                                    new Paragraph({
+                                      alignment: AlignmentType.CENTER,
+                                      children: [
+                                        new TextRun({
+                                          text: unitDetails?.manager?.degree || "ΠΟΛ. ΜΗΧ με Α'β",
+                                        }),
+                                      ],
+                                    }),
+                                  ],
+                                }),
+                              ],
                             }),
                           ],
-                          alignment: AlignmentType.CENTER,
-                          spacing: { before: 400, after: 600 },
-                        }),
-                        new Paragraph({
-                          children: [new TextRun({ text: "" })],
-                          spacing: { before: 360, after: 360 },
-                        }),
-                        new Paragraph({
-                          children: [
-                            new TextRun({ text: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ" }),
-                          ],
-                          alignment: AlignmentType.CENTER,
-                          spacing: { after: 200 },
-                        }),
-                        new Paragraph({
-                          children: [new TextRun({ text: "ΠΟΛ. ΜΗΧ με Α'β" })],
-                          alignment: AlignmentType.CENTER,
                         }),
                       ],
                     }),
