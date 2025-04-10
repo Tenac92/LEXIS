@@ -197,11 +197,11 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
 
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="space-y-1">
-              <span className="text-sm text-muted-foreground">Κωδικός Έργου</span>
+              <span className="text-sm text-muted-foreground">Κωδικός MIS</span>
               <p className="font-medium">{doc.project_id || (doc as any).mis || ''}</p>
             </div>
             <div className="space-y-1">
-              <span className="text-sm text-muted-foreground">ΝΑ853</span>
+              <span className="text-sm text-muted-foreground">Κωδικός Έργου ΝΑ853</span>
               <p className="font-medium">{doc.project_na853 || ''}</p>
             </div>
             <div className="space-y-1">
