@@ -1277,6 +1277,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         fathername: "",
         afm: "",
         amount: 0,
+        installment: "ΕΦΑΠΑΞ", // Διατηρούμε το παλιό πεδίο για συμβατότητα
         installments: ["ΕΦΑΠΑΞ"], // Default to ΕΦΑΠΑΞ for new recipients
         installmentAmounts: { "ΕΦΑΠΑΞ": 0 } // Initialize installment amount
       }
