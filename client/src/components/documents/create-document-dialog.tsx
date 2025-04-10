@@ -264,25 +264,11 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
 ProjectSelect.displayName = "ProjectSelect";
 
 // Interfaces
-interface BudgetData {
-  current_budget: number;
-  total_budget: number;
-  annual_budget: number;
-  katanomes_etous: number;
-  ethsia_pistosi: number;
-  user_view: number; // Σύνολο Διαβίβασης
-  quarter_view?: number;
-  current_quarter?: string;
-  last_quarter_check?: string;
-  q1: number;
-  q2: number;
-  q3: number;
-  q4: number;
-  // New budget indicators
-  available_budget?: string;  // Διαθέσιμη Κατανομή = katanomes_etous - user_view
-  quarter_available?: string; // Υπόλοιπο Τριμήνου = current_q - user_view
-  yearly_available?: string;  // Υπόλοιπο προς Πίστωση = ethsia_pistosi - user_view
-}
+// Εισαγωγή του τύπου BudgetData από το lib/types
+import type { BudgetData as BaseBudgetData } from "@/lib/types";
+
+// Χρησιμοποιούμε τον ίδιο τύπο για συμβατότητα
+interface BudgetData extends BaseBudgetData {}
 
 interface BudgetIndicatorProps {
   budgetData: BudgetData;
@@ -528,11 +514,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   
   // Second effect: After form is reset and we have user data, set the unit
   useEffect(() => {
-    if (formReset && user?.units && user.units.length > 0) {
+    if (formReset && user?.units && user?.units.length > 0) {
       // Small delay to ensure units query has completed
       const timer = setTimeout(() => {
-        console.log('[CreateDocument] Setting default unit:', user.units[0]);
-        form.setValue('unit', user.units[0]);
+        const defaultUnit = user?.units?.[0] || '';
+        console.log('[CreateDocument] Setting default unit:', defaultUnit);
+        form.setValue('unit', defaultUnit);
         setFormReset(false); // Reset the flag
       }, 500);
       
@@ -838,9 +825,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         console.log(`[Projects] Found ${projectsArray.length} projects for unit: ${selectedUnit}`);
         
         // Map and transform the projects data
-        return projectsArray.map((item: any) => {
-          if (!item) return null;
-          
+        const validProjects = projectsArray.filter(item => item !== null && item !== undefined);
+        
+        return validProjects.map((item: any) => {
           // Process expenditure types
           let expenditureTypes: string[] = [];
           if (item.expenditure_type) {
@@ -867,7 +854,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             name,
             expenditure_types: expenditureTypes || []
           };
-        }).filter(Boolean); // Remove any null values
+        });
       } catch (error) {
         console.error('[Projects] Projects fetch error:', error);
         toast({
@@ -1202,9 +1189,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(enhancedPayload)
-        });
+        }) as { id?: number; message?: string };
         
-        if (!response || !response.id) {
+        if (!response || typeof response !== 'object' || !response.id) {
           throw new Error('Σφάλμα δημιουργίας εγγράφου: Μη έγκυρη απάντηση από τον διακομιστή');
         }
         
