@@ -88,64 +88,39 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   // Get the MIS code from the document
   const mis = doc.project_id || (doc as any).mis || '';
 
-  // Fetch project data to get NA853 from the budget data
-  const { data: projectData } = useQuery<any>({
-    queryKey: ['/api/budget', mis],
+  // Fetch project NA853 data from our special endpoint
+  const { data: na853Data } = useQuery<any>({
+    queryKey: ['/api/document-na853', mis],
     queryFn: async () => {
       if (!mis) return null;
       try {
-        return await apiRequest(`/api/budget/${mis}`);
+        console.log('Fetching NA853 for MIS:', mis);
+        return await apiRequest(`/api/document-na853/${mis}`);
       } catch (error) {
-        console.error('Failed to fetch project data:', error);
+        console.error('Failed to fetch NA853 data:', error);
         return null;
       }
     },
     enabled: !!mis,
   });
 
-  // Update NA853 when project data is fetched
+  // Update NA853 when data is fetched from our special endpoint
   useEffect(() => {
-    if (projectData) {
+    if (na853Data) {
       // Add debug log to see the structure of the response
-      console.log('Budget data received:', projectData);
-      
-      const data = projectData as any; // Type assertion to avoid TypeScript errors
+      console.log('NA853 data received:', na853Data);
       
       try {
-        // Check multiple possible structures based on the API response shape
-        
-        // Case 1: Direct na853 in the budget response
-        if (data && data.na853) {
-          console.log('Found NA853 directly in budget data:', data.na853);
-          setProjectNa853(data.na853);
-        } 
-        // Case 2: na853 nested in project field
-        else if (data && data.project && data.project.na853) {
-          console.log('Found NA853 in nested project data:', data.project.na853);
-          setProjectNa853(data.project.na853);
-        }
-        // Case 3: Look for budget_na853 field (alternative in some tables)
-        else if (data && data.budget_na853) {
-          console.log('Found budget_na853 in data:', data.budget_na853);
-          setProjectNa853(data.budget_na853);
-        }
-        // Case 4: Look in data array if this is an array response
-        else if (Array.isArray(data) && data.length > 0) {
-          // Try to find na853 in the first array element
-          const firstItem = data[0];
-          if (firstItem && firstItem.na853) {
-            console.log('Found NA853 in first array item:', firstItem.na853);
-            setProjectNa853(firstItem.na853);
-          } else if (firstItem && firstItem.budget_na853) {
-            console.log('Found budget_na853 in first array item:', firstItem.budget_na853);
-            setProjectNa853(firstItem.budget_na853);
-          }
+        // Our dedicated endpoint returns a simplified structure always containing na853
+        if (na853Data && na853Data.na853) {
+          console.log('Found NA853 from dedicated endpoint:', na853Data.na853);
+          setProjectNa853(na853Data.na853);
         }
       } catch (error) {
         console.error('Error extracting NA853 from data:', error);
       }
     }
-  }, [projectData]);
+  }, [na853Data]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     if (!(e.target as HTMLElement).closest('button')) {

@@ -519,6 +519,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
+    // Dedicated public API endpoint for document cards to get NA853 codes
+    app.get('/api/document-na853/:mis', async (req, res) => {
+      try {
+        const { mis } = req.params;
+        
+        if (!mis) {
+          return res.status(400).json({ message: 'MIS code is required' });
+        }
+        
+        console.log(`[Projects] Document-card special lookup for NA853 with MIS: ${mis}`);
+        
+        // First try to get from Projects table (most authoritative source)
+        const { data: projectData, error: projectError } = await supabase
+          .from('Projects')
+          .select('mis, na853, budget_na853')
+          .eq('mis', mis)
+          .maybeSingle();
+        
+        if (projectError) {
+          console.error(`[Projects] Error in Projects lookup: ${projectError.message}`);
+        } else if (projectData) {
+          // We found data in Projects table
+          const na853Value = projectData.na853 || projectData.budget_na853 || '';
+          console.log(`[Projects] Found NA853 in Projects table: ${na853Value}`);
+          
+          return res.status(200).json({
+            source: 'Projects',
+            mis: mis,
+            na853: na853Value
+          });
+        }
+        
+        // If not found in Projects, try budget_na853_split table
+        const { data: budgetData, error: budgetError } = await supabase
+          .from('budget_na853_split')
+          .select('mis, na853')
+          .eq('mis', mis)
+          .maybeSingle();
+        
+        if (budgetError) {
+          console.error(`[Projects] Error in budget_na853_split lookup: ${budgetError.message}`);
+        } else if (budgetData) {
+          // We found data in budget_na853_split table
+          console.log(`[Projects] Found NA853 in budget table: ${budgetData.na853}`);
+          
+          return res.status(200).json({
+            source: 'budget_na853_split',
+            mis: mis,
+            na853: budgetData.na853 || ''
+          });
+        }
+        
+        // Last resort: return empty but valid response
+        console.log(`[Projects] No NA853 found for MIS: ${mis}`);
+        return res.status(200).json({
+          source: 'not_found',
+          mis: mis,
+          na853: ''
+        });
+        
+      } catch (error: any) {
+        console.error(`[Projects] Error looking up NA853 for document: ${error.message}`);
+        return res.status(500).json({
+          message: 'Failed to lookup NA853',
+          error: error.message
+        });
+      }
+    });
+    
     // Use authentication for all other project routes
     app.use('/api/projects', authenticateSession, projectRouter);
     app.use('/api/catalog', authenticateSession, projectRouter);
