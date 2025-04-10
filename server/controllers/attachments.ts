@@ -5,7 +5,7 @@ import { supabase } from "../config/db";
 /**
  * Attachments Controller
  * Provides API endpoints for fetching document attachment requirements
- * based on expenditure type and installment number
+ * based on expenditure type only (installment is no longer required)
  */
 
 const router = Router();
@@ -14,78 +14,31 @@ const router = Router();
 const DEFAULT_ATTACHMENTS = ['Διαβιβαστικό', 'ΔΚΑ'];
 
 /**
- * Map various formats to Greek letter installments
- * The database stores installments as Greek letters ('Α', 'Β', 'Γ', 'Δ')
- */
-const INSTALLMENT_MAP: Record<string, string> = {
-  // Map numbers and various formats to Greek letters
-  '1': 'Α', 'a': 'Α', 'α': 'Α', 'first': 'Α', 'πρώτη': 'Α', 'α\'': 'Α', 'a\'': 'Α',
-  '2': 'Β', 'b': 'Β', 'β': 'Β', 'second': 'Β', 'δεύτερη': 'Β', 'β\'': 'Β', 'b\'': 'Β',
-  '3': 'Γ', 'c': 'Γ', 'γ': 'Γ', 'third': 'Γ', 'τρίτη': 'Γ', 'γ\'': 'Γ', 'c\'': 'Γ',
-  '4': 'Δ', 'd': 'Δ', 'δ': 'Δ', 'fourth': 'Δ', 'τέταρτη': 'Δ', 'δ\'': 'Δ', 'd\'': 'Δ',
-};
-
-/**
- * Parse installment parameter to the Greek letter format stored in the database
- * @param installment - The installment parameter (can be Greek letter, number, etc.)
- * @returns Parsed installment as Greek letter (defaults to 'Α')
- */
-function parseInstallment(installment: string | undefined): string {
-  if (!installment || installment === 'undefined' || installment === 'null') {
-    return 'Α'; // Default to first installment (Greek capital Alpha)
-  }
-  
-  // Already in correct format (Α, Β, Γ, Δ)
-  if (['Α', 'Β', 'Γ', 'Δ'].includes(installment)) {
-    return installment;
-  }
-  
-  // Try to match against known formats
-  const normalized = installment.toLowerCase();
-  if (INSTALLMENT_MAP[normalized]) {
-    return INSTALLMENT_MAP[normalized];
-  }
-  
-  // Try to match number to Greek letter
-  if (INSTALLMENT_MAP[installment]) {
-    return INSTALLMENT_MAP[installment];
-  }
-  
-  // Default fallback to first installment
-  console.log(`[Attachments] Unknown installment format: ${installment}, defaulting to 'Α'`);
-  return 'Α';
-}
-
-/**
- * Fetch attachments for a specific expenditure type and installment
+ * Fetch attachments for a specific expenditure type
  * @param expenditureType - The expenditure type
- * @param installment - The installment (Greek letter or other format)
  * @returns Attachments data
  */
-async function fetchAttachments(expenditureType: string, installment: string) {
-  // Convert to Greek letter format for database query
-  const greekInstallment = parseInstallment(installment);
-  console.log(`[Attachments] Fetching attachments for type: ${expenditureType}, installment: ${greekInstallment}`);
+async function fetchAttachments(expenditureType: string) {
+  console.log(`[Attachments] Fetching attachments for type: ${expenditureType}`);
   
   try {
-    // Try to fetch specific attachments for this expenditure type and installment
+    // Try to fetch specific attachments for this expenditure type
     const { data, error } = await supabase
       .from('attachments')
       .select('*')
       .eq('expediture_type', expenditureType)  // Note the column name: expediture_type (without 'n')
-      .eq('installment', greekInstallment)     // Using Greek letter format (Α, Β, Γ, Δ)
       .single();
     
     if (error) {
       if (error.code !== 'PGRST116') { // Not found error is expected
         console.error('[Attachments] Database error:', error);
       }
-      console.log(`[Attachments] No attachments found for ${expenditureType}, installment ${greekInstallment}`);
+      console.log(`[Attachments] No attachments found for ${expenditureType}`);
     }
     
     // Return specific attachments if found
-    if (data?.attachments?.length) {
-      console.log(`[Attachments] Found attachments for ${expenditureType}, installment ${greekInstallment}`);
+    if (data?.attachments) {
+      console.log(`[Attachments] Found attachments for ${expenditureType}`);
       return { 
         status: 'success',
         attachments: data.attachments 
@@ -98,7 +51,6 @@ async function fetchAttachments(expenditureType: string, installment: string) {
       .from('attachments')
       .select('*')
       .eq('expediture_type', 'default')
-      .eq('installment', 'Α')  // Default is first installment as Greek letter 'Α'
       .single();
     
     if (defaultError) {
@@ -106,7 +58,7 @@ async function fetchAttachments(expenditureType: string, installment: string) {
     }
     
     // Return default attachments if found
-    if (defaultData?.attachments?.length) {
+    if (defaultData?.attachments) {
       console.log('[Attachments] Using default attachments');
       return { 
         status: 'success',
@@ -138,8 +90,7 @@ async function fetchAttachments(expenditureType: string, installment: string) {
  */
 router.get('/', async (_req: Request, res: Response) => {
   try {
-    // Use 'Α' for default first installment (Greek letter Alpha)
-    const result = await fetchAttachments('default', 'Α');
+    const result = await fetchAttachments('default');
     res.json(result);
   } catch (error) {
     console.error('[Attachments] Error in default route:', error);
@@ -152,7 +103,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
 /**
  * GET /api/attachments/:type
- * Return attachments for a specific expenditure type (using default installment Α)
+ * Return attachments for a specific expenditure type
  */
 router.get('/:type', async (req: Request, res: Response) => {
   try {
@@ -166,8 +117,7 @@ router.get('/:type', async (req: Request, res: Response) => {
     }
     
     const decodedType = decodeURIComponent(type).trim();
-    // Use 'Α' for default first installment (Greek letter Alpha)
-    const result = await fetchAttachments(decodedType, 'Α');
+    const result = await fetchAttachments(decodedType);
     res.json(result);
     
   } catch (error) {
@@ -181,11 +131,12 @@ router.get('/:type', async (req: Request, res: Response) => {
 
 /**
  * GET /api/attachments/:type/:installment
- * Return attachments for a specific expenditure type and installment
+ * Return attachments for a specific expenditure type
+ * This endpoint now ignores the installment parameter for backward compatibility
  */
 router.get('/:type/:installment', async (req: Request, res: Response) => {
   try {
-    const { type, installment } = req.params;
+    const { type } = req.params;
     
     if (!type) {
       return res.status(400).json({ 
@@ -195,11 +146,9 @@ router.get('/:type/:installment', async (req: Request, res: Response) => {
     }
     
     const decodedType = decodeURIComponent(type).trim();
-    const parsedInstallment = parseInstallment(installment);
+    console.log(`[Attachments] Request received for type: ${decodedType}, installment parameter ignored`);
     
-    console.log(`[Attachments] Request received for type: ${decodedType}, parsed installment: ${parsedInstallment}`);
-    
-    const result = await fetchAttachments(decodedType, parsedInstallment);
+    const result = await fetchAttachments(decodedType);
     res.json(result);
     
   } catch (error) {
