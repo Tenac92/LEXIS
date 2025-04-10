@@ -141,19 +141,20 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   };
 
   const recipients = doc.recipients as Recipient[];
-  const statusDetails = getStatusDetails(doc.status, doc.is_correction, doc.protocol_number_input);
+  const docAny = doc as any; // Use type assertion to access potentially missing properties
+  const statusDetails = getStatusDetails(doc.status, docAny.is_correction, doc.protocol_number_input);
 
   // Debug log to check values
   console.log('Document data:', {
     id: doc.id,
-    is_correction: doc.is_correction,
-    original_protocol_number: doc.original_protocol_number,
-    original_protocol_date: doc.original_protocol_date,
+    is_correction: docAny.is_correction,
+    original_protocol_number: docAny.original_protocol_number,
+    original_protocol_date: docAny.original_protocol_date,
     comments: doc.comments
   });
 
   // Show orthi epanalipsi info when either condition is met
-  const showOrthiEpanalipsiInfo = Boolean(doc.is_correction) || Boolean(doc.original_protocol_number);
+  const showOrthiEpanalipsiInfo = Boolean(docAny.is_correction) || Boolean(docAny.original_protocol_number);
 
   return (
     <div className="flip-card" onClick={handleCardClick}>
@@ -183,8 +184,8 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
           {showOrthiEpanalipsiInfo && (
             <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
               <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                Ορθή Επανάληψη του εγγράφου με αρ. πρωτ. {doc.original_protocol_number}
-                {doc.original_protocol_date && ` (${new Date(doc.original_protocol_date).toLocaleDateString('el-GR')})`}
+                Ορθή Επανάληψη του εγγράφου με αρ. πρωτ. {docAny.original_protocol_number}
+                {docAny.original_protocol_date && ` (${new Date(docAny.original_protocol_date).toLocaleDateString('el-GR')})`}
               </p>
               {doc.comments && (
                 <p className="text-sm mt-1 text-red-700 dark:text-red-300">
@@ -197,11 +198,11 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Κωδικός Έργου</span>
-              <p className="font-medium">{doc.project_id || doc.mis || '5174692'}</p>
+              <p className="font-medium">{doc.project_id || (doc as any).mis || ''}</p>
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">ΝΑ853</span>
-              <p className="font-medium">{doc.project_na853 || doc.na853 || '2024ΝΑ85300045'}</p>
+              <p className="font-medium">{doc.project_na853 || (doc as any).na853 || ''}</p>
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Συνολικό Ποσό</span>
@@ -252,7 +253,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                 Εξαγωγή (ZIP)
               </Button>
             </div>
-            {!doc.is_correction && doc.protocol_number_input ? (
+            {!docAny.is_correction && doc.protocol_number_input ? (
               <Button
                 variant="default"
                 size="sm"
@@ -312,7 +313,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                       {`${recipient.firstname} του ${recipient.fathername} ${recipient.lastname}`}
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      {`Δόση ${recipient.installment || recipient.dose || '1'}`}
+                      {`Δόση ${recipient.installment || 'Α'}`}
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
