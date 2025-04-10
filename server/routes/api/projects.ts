@@ -95,6 +95,39 @@ router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
 });
 
 /**
+ * Lookup project data by MIS code
+ * GET /api/projects/lookup?mis=5168550
+ */
+router.get('/lookup', async (req: Request, res: Response) => {
+  try {
+    const { mis } = req.query;
+    
+    if (!mis) {
+      return res.status(400).json({ message: 'MIS code is required' });
+    }
+
+    // Query the project by MIS code
+    const { data, error } = await supabase
+      .from('Projects')
+      .select('mis,na853,budget_na853,title,status')
+      .eq('mis', mis);
+
+    if (error) {
+      throw error;
+    }
+
+    // Return the project data
+    res.status(200).json(data || []);
+  } catch (error) {
+    log(`[Projects] Error looking up project by MIS: ${error}`, 'error');
+    res.status(500).json({
+      message: 'Failed to lookup project by MIS',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * Get expenditure types for a project
  * GET /api/projects/expenditure-types/:projectId
  */
