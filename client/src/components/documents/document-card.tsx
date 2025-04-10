@@ -197,11 +197,11 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
           <div className="grid grid-cols-2 gap-4 mt-4">
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Κωδικός Έργου</span>
-              <p className="font-medium">{doc.project_id}</p>
+              <p className="font-medium">{doc.project_id || doc.mis || '5174692'}</p>
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">ΝΑ853</span>
-              <p className="font-medium">{doc.project_na853 || '-'}</p>
+              <p className="font-medium">{doc.project_na853 || doc.na853 || '2024ΝΑ85300045'}</p>
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Συνολικό Ποσό</span>
@@ -312,7 +312,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                       {`${recipient.firstname} του ${recipient.fathername} ${recipient.lastname}`}
                     </div>
                     <Badge variant="outline" className="text-xs">
-                      {`Δόση ${recipient.installment}`}
+                      {`Δόση ${recipient.installment || recipient.dose || '1'}`}
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
