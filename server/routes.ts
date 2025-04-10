@@ -147,48 +147,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Get project NA853 from Supabase if not provided
+        // Προτεραιότητα για ανάκτηση του NA853 - πρώτα από το αίτημα, μετά από την βάση
+        const mis_to_lookup = project_mis || project_id; // Χρησιμοποιούμε το project_mis αν υπάρχει
         let project_na853 = req.body.project_na853;
+        
         if (!project_na853) {
-          console.log('[DIRECT_ROUTE_V2] Fetching NA853 for project with MIS:', project_id);
+          console.log('[DIRECT_ROUTE_V2] Fetching NA853 for project with MIS:', mis_to_lookup);
           
           try {
-            // Look up in the Projects table - using the project_id as the MIS value
+            // Αναζήτηση στον πίνακα Projects χρησιμοποιώντας το MIS
             const { data: projectData, error: projectError } = await supabase
               .from('Projects')
-              .select('budget_na853')
-              .eq('mis', project_id)
+              .select('budget_na853, mis')
+              .eq('mis', mis_to_lookup)
               .single();
             
             if (!projectError && projectData && projectData.budget_na853) {
-              // Use the full NA853 value without stripping non-numeric characters
+              // Χρησιμοποιούμε την πλήρη τιμή NA853 χωρίς να αφαιρέσουμε μη-αριθμητικούς χαρακτήρες
               project_na853 = String(projectData.budget_na853);
               console.log('[DIRECT_ROUTE_V2] Retrieved NA853 from Projects table:', project_na853);
               
-              // If NA853 is empty for some reason, use project_mis as fallback
+              // Αν το NA853 είναι κενό, χρησιμοποιούμε το project_mis ως εναλλακτική λύση
               if (!project_na853) {
                 console.error('[DIRECT_ROUTE_V2] NA853 value is empty:', projectData.budget_na853);
-                // Try to use project_mis as fallback
-                if (req.body.project_mis) {
-                  project_na853 = req.body.project_mis;
-                  console.log('[DIRECT_ROUTE_V2] Using project_mis as fallback:', req.body.project_mis);
+                // Προσπαθούμε να χρησιμοποιήσουμε το project_mis
+                if (project_mis) {
+                  project_na853 = project_mis;
+                  console.log('[DIRECT_ROUTE_V2] Using project_mis as fallback:', project_mis);
                 } else {
-                  // Last resort - use project_id as fallback
+                  // Τελευταία λύση - χρήση του project_id
                   project_na853 = project_id;
                   console.log('[DIRECT_ROUTE_V2] Using project_id as fallback:', project_id);
                 }
               }
             } else {
-              // If no data found in Projects table, use project_mis as fallback
-              if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
-                console.log('[DIRECT_ROUTE_V2] Using project_mis directly as numeric fallback:', req.body.project_mis);
-                project_na853 = req.body.project_mis;
+              // Αν δεν βρέθηκαν δεδομένα στον πίνακα Projects, χρησιμοποιούμε το project_mis
+              if (project_mis && !isNaN(Number(project_mis))) {
+                console.log('[DIRECT_ROUTE_V2] Using project_mis directly as numeric fallback:', project_mis);
+                project_na853 = project_mis;
               } else {
-                console.error('[DIRECT_ROUTE_V2] Could not find project in Projects table:', projectError);
-                return res.status(400).json({ 
-                  message: 'Project not found in Projects table and no fallback available', 
-                  error: 'Project NA853 could not be determined'
-                });
+                // Τελευταία προσπάθεια - χρησιμοποιούμε το project_id αυτούσιο
+                project_na853 = project_id;
+                console.log('[DIRECT_ROUTE_V2] Using project_id as last resort:', project_id);
               }
             }
           } catch (error) {
