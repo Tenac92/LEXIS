@@ -77,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create document with exact schema match and set initial status to pending
         const documentPayload = {
           unit,
-          project_id,
+          mis: project_id, // Set the database field 'mis' to match project_id
           project_na853: projectData.budget_na853,
           expenditure_type,
           status: 'pending', // Always set initial status to pending
