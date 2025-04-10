@@ -499,7 +499,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
       // First attempt to get from project_catalog
       const result = await supabase
         .from('project_catalog')
-        .select('na853')
+        .select('budget_na853')
         .eq('mis', project_id)
         .single();
         
@@ -512,13 +512,13 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
         
         const projectResult = await supabase
           .from('Projects')
-          .select('na853')
+          .select('budget_na853')
           .eq('mis', project_id)
           .single();
           
-        if (projectResult.data && projectResult.data.na853) {
+        if (projectResult.data && projectResult.data.budget_na853) {
           // Found in Projects table
-          project_na853 = String(projectResult.data.na853);
+          project_na853 = String(projectResult.data.budget_na853);
           console.log('[DOCUMENT_CONTROLLER] Retrieved NA853 from Projects table:', project_na853);
         } else if (project_id && !isNaN(Number(project_id))) {
           // Use MIS as fallback if it's a number
@@ -529,7 +529,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
         }
       } else {
         // Found in project_catalog
-        project_na853 = projectData.na853;
+        project_na853 = projectData.budget_na853;
       }
     } catch (error) {
       console.error('[DOCUMENT_CONTROLLER] Error during project lookup:', error);
