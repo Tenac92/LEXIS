@@ -338,7 +338,7 @@ export class DocumentFormatter {
 
       const unitDetails = await this.getUnitDetails(documentData.unit);
       console.log("Unit details:", unitDetails);
-      
+
       // Get project title and NA853 code from database
       const projectMis =
         documentData.project_na853 ||
@@ -348,11 +348,11 @@ export class DocumentFormatter {
       const projectNA853 = await this.getProjectNA853(projectMis);
       console.log(`Project title for MIS ${projectMis}:`, projectTitle);
       console.log(`Project NA853 for MIS ${projectMis}:`, projectNA853);
-      
+
       // Create a modified document data with NA853 if available
       const enrichedDocumentData = {
         ...documentData,
-        project_na853: projectNA853 || documentData.project_na853
+        project_na853: projectNA853 || documentData.project_na853,
       };
 
       const sections = [
@@ -450,7 +450,7 @@ export class DocumentFormatter {
       return null;
     }
   }
-  
+
   /**
    * Get project NA853 code from the Projects table using MIS
    */
@@ -543,7 +543,7 @@ export class DocumentFormatter {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `${projectTitle || ''} ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || ""} της ΣΑΝΑ 853`,
+                  text: `${projectTitle || ""} ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || ""} της ΣΑΝΑ 853`,
                   bold: true,
                   size: 24, // Reduced from 32 to 24
                 }),
@@ -572,7 +572,7 @@ export class DocumentFormatter {
                 }),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { before: 400, after: 400 },
+              spacing: { after: 400 },
             }),
 
             // Empty space before signatures
@@ -655,7 +655,7 @@ export class DocumentFormatter {
                                       alignment: AlignmentType.CENTER,
                                       children: [
                                         new TextRun({
-                                          text: unitDetails?.manager?.order || "με εντολή Υπουργού                                      Ο ΑΝΑΠΛ.ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+                                          text: unitDetails?.manager?.order,
                                           bold: true,
                                         }),
                                       ],
@@ -664,7 +664,8 @@ export class DocumentFormatter {
                                       alignment: AlignmentType.CENTER,
                                       children: [
                                         new TextRun({
-                                          text: unitDetails?.manager?.title || "",
+                                          text:
+                                            unitDetails?.manager?.title || "",
                                           bold: true,
                                         }),
                                       ],
@@ -682,7 +683,7 @@ export class DocumentFormatter {
                                       alignment: AlignmentType.CENTER,
                                       children: [
                                         new TextRun({
-                                          text: unitDetails?.manager?.name || "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
+                                          text: unitDetails?.manager?.name,
                                           bold: true,
                                         }),
                                       ],
@@ -691,7 +692,7 @@ export class DocumentFormatter {
                                       alignment: AlignmentType.CENTER,
                                       children: [
                                         new TextRun({
-                                          text: unitDetails?.manager?.degree || "ΠΟΛ. ΜΗΧ με Α'β",
+                                          text: unitDetails?.manager?.degree,
                                         }),
                                       ],
                                     }),
@@ -909,7 +910,7 @@ export class DocumentFormatter {
                   new Paragraph({
                     children: [
                       new TextRun({
-                        text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+                        text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστρ �φών",
                       }),
                     ],
                   }),
@@ -1143,11 +1144,11 @@ export class DocumentFormatter {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             }) + " €",
-            "center"
+            "center",
           ),
           // Empty column for ΔΟΣΗ
           this.createTableCell("", "center"),
-          // Empty column for ΑΦΜ  
+          // Empty column for ΑΦΜ
           this.createTableCell("", "center"),
           // Empty column for ΠΡΑΞΗ
           this.createTableCell("", "center"),
