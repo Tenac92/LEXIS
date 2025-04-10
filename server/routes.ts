@@ -236,7 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create document payload
         const documentPayload = {
           unit,
-          mis: req.body.project_mis || project_id, // Use numeric project_mis if available
+          project_id: req.body.project_mis || project_id, // Use numeric project_mis if available
           project_na853,
           expenditure_type,
           status: 'pending', // Always set initial status to pending
