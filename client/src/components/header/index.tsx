@@ -259,10 +259,10 @@ export function Header() {
                     variant="ghost"
                     className="w-full justify-start"
                     onClick={() => {
-                      setIsMobileMenuOpen(false); // Close mobile menu first
-                      setTimeout(() => {
-                        setIsPasswordModalOpen(true); // Then open password modal
-                      }, 100);
+                      // First close mobile menu
+                      setIsMobileMenuOpen(false);
+                      // Then set password modal open (our new implementation handles timing)
+                      setIsPasswordModalOpen(true);
                     }}
                   >
                     <Key className="h-4 w-4 mr-2" />
@@ -283,14 +283,10 @@ export function Header() {
         </nav>
       </div>
 
+      {/* Use completely decoupled change password modal */}
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
-        onClose={() => {
-          // Add a small delay to prevent UI freeze
-          setTimeout(() => {
-            setIsPasswordModalOpen(false);
-          }, 0);
-        }}
+        onClose={() => setIsPasswordModalOpen(false)}
       />
     </header>
   );

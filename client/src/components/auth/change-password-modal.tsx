@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -20,8 +21,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
 
+/**
+ * Password change schema with validation
+ */
 const passwordChangeSchema = z.object({
   currentPassword: z.string().min(6, "Ο τρέχων κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες"),
   newPassword: z.string().min(6, "Ο νέος κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες"),
@@ -38,10 +41,22 @@ interface ChangePasswordModalProps {
   onClose: () => void;
 }
 
+/**
+ * Completely rewritten change password modal component to fix freezing issues
+ */
 export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Control the dialog state separately from props to avoid freezing
+  useEffect(() => {
+    if (isOpen && !dialogOpen) {
+      setDialogOpen(true);
+    }
+  }, [isOpen, dialogOpen]);
 
+  // Setup form
   const form = useForm<PasswordChangeFormData>({
     resolver: zodResolver(passwordChangeSchema),
     defaultValues: {
@@ -50,9 +65,39 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
       confirmPassword: "",
     },
   });
+  
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!dialogOpen) {
+      form.reset();
+    }
+  }, [dialogOpen, form]);
 
-  const changePasswordMutation = useMutation({
-    mutationFn: async (data: PasswordChangeFormData) => {
+  /**
+   * Safely handle dialog close by detaching it from the parent component state
+   */
+  const handleDialogClose = () => {
+    if (isSubmitting) {
+      // Don't close while submitting to prevent UI freeze
+      return;
+    }
+    
+    // First close our internal state
+    setDialogOpen(false);
+    
+    // Then notify parent with slight delay to prevent freezing
+    setTimeout(() => {
+      onClose();
+    }, 50);
+  };
+
+  /**
+   * Submit password change
+   */
+  const onSubmit = async (data: PasswordChangeFormData) => {
+    try {
+      setIsSubmitting(true);
+      
       const response = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: {
@@ -70,54 +115,30 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
         throw new Error(error.message || "Failed to change password");
       }
 
-      return response.json();
-    },
-    onSuccess: () => {
       toast({
         title: "Επιτυχής αλλαγή",
         description: "Ο κωδικός σας άλλαξε με επιτυχία",
       });
+      
+      // Close dialog first, then reset form (prevents freezing)
+      handleDialogClose();
       form.reset();
-      onClose();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Σφάλμα",
-        description: error.message || "Αποτυχία αλλαγής κωδικού",
-        variant: "destructive",
-      });
-    },
-    onSettled: () => {
-      setIsSubmitting(false);
-    },
-  });
-
-  const onSubmit = async (data: PasswordChangeFormData) => {
-    try {
-      setIsSubmitting(true);
-      changePasswordMutation.mutate(data);
     } catch (error) {
-      // Ensure we always reset submission state on error
-      setIsSubmitting(false);
       toast({
         title: "Σφάλμα",
         description: error instanceof Error ? error.message : "Αποτυχία αλλαγής κωδικού",
         variant: "destructive",
       });
-    }
-  };
-
-  // Handle dialog close safely
-  const handleDialogChange = (open: boolean) => {
-    if (!open && !isSubmitting) {
-      // Only close if not submitting to prevent UI freeze
-      form.reset(); // Reset form on close
-      onClose();
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleDialogChange}>
+    // Control dialog with our internal state instead of directly with props
+    <Dialog open={dialogOpen} onOpenChange={(open) => {
+      if (!open) handleDialogClose();
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Αλλαγή Κωδικού</DialogTitle>
@@ -125,8 +146,9 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
             Εισάγετε τον τρέχοντα κωδικό σας και τον νέο κωδικό που επιθυμείτε.
           </DialogDescription>
         </DialogHeader>
+        
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form id="password-change-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="currentPassword"
@@ -178,21 +200,26 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
                 </FormItem>
               )}
             />
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleDialogChange(false)}
-                disabled={isSubmitting}
-              >
-                Ακύρωση
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Αποθήκευση..." : "Αποθήκευση"}
-              </Button>
-            </div>
           </form>
         </Form>
+        
+        <DialogFooter className="mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleDialogClose}
+            disabled={isSubmitting}
+          >
+            Ακύρωση
+          </Button>
+          <Button 
+            type="submit"
+            form="password-change-form"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Αποθήκευση..." : "Αποθήκευση"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
