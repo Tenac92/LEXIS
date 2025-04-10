@@ -388,7 +388,7 @@ export class BudgetService {
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
             .select('id, mis')
-            .eq('na853', mis)
+            .eq('budget_na853', mis)
             .single();
           
           if (projectError && projectError.code !== 'PGRST116') {
@@ -572,7 +572,7 @@ export class BudgetService {
           const { data: directNa853Data, error: directNa853Error } = await supabase
             .from('budget_na853_split')
             .select('*')
-            .eq('na853', mis)
+            .eq('budget_na853', mis)
             .single();
             
           if (!directNa853Error && directNa853Data) {
@@ -648,7 +648,7 @@ export class BudgetService {
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
             .select('id, mis')
-            .eq('na853', mis)
+            .eq('budget_na853', mis)
             .single();
           
           if (projectError && projectError.code !== 'PGRST116') {
@@ -705,7 +705,7 @@ export class BudgetService {
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
             .select('id, mis')
-            .eq('na853', mis)
+            .eq('budget_na853', mis)
             .single();
           
           if (!projectError && projectData?.mis) {
@@ -885,7 +885,7 @@ export class BudgetService {
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
             .select('id, mis')
-            .eq('na853', mis)
+            .eq('budget_na853', mis)
             .single();
           
           if (projectError && projectError.code !== 'PGRST116') {

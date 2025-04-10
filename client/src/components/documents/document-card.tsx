@@ -202,7 +202,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">ΝΑ853</span>
-              <p className="font-medium">{doc.project_na853 || (doc as any).na853 || ''}</p>
+              <p className="font-medium">{doc.project_na853 || ''}</p>
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Συνολικό Ποσό</span>
