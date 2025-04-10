@@ -452,6 +452,9 @@ const recipientSchema = z.object({
   fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
   afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
+  // Για συμβατότητα με το API (παλιά μορφή)
+  installment: z.string().optional().default("Α"),
+  // Νέο schema για πολλαπλές δόσεις ανά παραλήπτη
   installments: z.array(z.string()).min(1, "Πρέπει να επιλέξετε τουλάχιστον μία δόση"),
   // Installment amounts map - keys are installment names (e.g., "Α", "Β", "ΕΦΑΠΑΞ"), values are amounts
   installmentAmounts: z.record(z.string(), z.number()).optional().default({}),
