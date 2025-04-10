@@ -41,13 +41,15 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     // Get project NA853
     const { data: projectData, error: projectError } = await supabase
       .from('Projects')
-      .select('na853')
+      .select('budget_na853')
       .eq('mis', project_id)
       .single();
 
     if (projectError || !projectData) {
       return res.status(404).json({ message: 'Project not found', error: projectError?.message });
     }
+    
+    console.log('[DocumentsController] Retrieved project data:', projectData);
 
     // Format recipients data
     const formattedRecipients = recipients.map((r: any) => ({
@@ -66,8 +68,8 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       unit,
       project_id, // This is used as 'mis' in the database table
       mis: project_id, // Explicitly adding this to ensure redundancy
-      project_na853: projectData.na853,
-      na853: projectData.na853, // Adding this for backup redundancy
+      project_na853: projectData.budget_na853,
+      na853: projectData.budget_na853, // Adding this for backup redundancy
       expenditure_type,
       status: 'pending', // Always set initial status to pending
       recipients: formattedRecipients,
@@ -139,18 +141,18 @@ router.post('/v2', async (req: Request, res: Response) => {
         // Look up in the Projects table - using the project_id as the MIS value
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
-          .select('na853')
+          .select('budget_na853')
           .eq('mis', project_id)
           .single();
         
-        if (!projectError && projectData && projectData.na853) {
+        if (!projectError && projectData && projectData.budget_na853) {
           // Extract only numeric parts for database compatibility
-          const numericNA853 = String(projectData.na853).replace(/\D/g, '');
+          const numericNA853 = String(projectData.budget_na853).replace(/\D/g, '');
           if (numericNA853) {
             project_na853 = numericNA853;
             console.log('[DocumentsController] V2 Retrieved and converted NA853 from Projects table:', project_na853);
           } else {
-            console.error('[DocumentsController] V2 Could not extract numeric value from NA853:', projectData.na853);
+            console.error('[DocumentsController] V2 Could not extract numeric value from NA853:', projectData.budget_na853);
             // Try to use project_mis as numeric fallback
             if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
               project_na853 = req.body.project_mis;
