@@ -1,0 +1,76 @@
+Document data: 
+Object {id: 3507, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 3407, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 3307, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 3207, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 3107, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 2907, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 2807, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 2707, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 2607, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 2507, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 2407, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 2307, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 2207, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 2107, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 2007, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1907, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1807, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1707, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1607, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1507, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1307, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1207, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1107, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1007, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 907, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 807, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 707, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 607, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 507, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 407, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+comments: null
+id: 407
+is_correction: false
+original_protocol_date: null
+original_protocol_number: null
+[[Prototype]]: Object
+Document data: 
+Object {id: 307, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 6, hasRecipients: true, recipients: Array(1)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: true, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "2024ΝΑ85300001", currentAmount: 6, hasRecipients: true, recipients: Array(1)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: true, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
