@@ -15,10 +15,12 @@ import {
   AlertCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { GeneratedDocument } from "@shared/schema";
 import { OrthiEpanalipsiModal } from "./orthi-epanalipsi-modal";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface DocumentCardProps {
   document: GeneratedDocument;
@@ -80,7 +82,33 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [projectNa853, setProjectNa853] = useState<string>(doc.project_na853 || '');
   const { toast } = useToast();
+
+  // Get the MIS code from the document
+  const mis = doc.project_id || (doc as any).mis || '';
+
+  // Fetch project data to get NA853 from the Projects table
+  const { data: projectData } = useQuery({
+    queryKey: ['/api/projects/lookup', mis],
+    queryFn: async () => {
+      if (!mis) return null;
+      try {
+        return await apiRequest(`/api/projects/lookup?mis=${mis}`);
+      } catch (error) {
+        console.error('Failed to fetch project data:', error);
+        return null;
+      }
+    },
+    enabled: !!mis,
+  });
+
+  // Update NA853 when project data is fetched
+  useEffect(() => {
+    if (projectData && Array.isArray(projectData) && projectData.length > 0 && projectData[0]?.na853) {
+      setProjectNa853(projectData[0].na853);
+    }
+  }, [projectData]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     if (!(e.target as HTMLElement).closest('button')) {
@@ -202,7 +230,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Κωδικός Έργου ΝΑ853</span>
-              <p className="font-medium">{doc.project_na853 || ''}</p>
+              <p className="font-medium">{projectNa853 || doc.project_na853 || ''}</p>
             </div>
             <div className="space-y-1">
               <span className="text-sm text-muted-foreground">Συνολικό Ποσό</span>
