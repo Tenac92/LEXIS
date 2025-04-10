@@ -487,6 +487,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
+    // Add public endpoint for project lookup by MIS
+    app.get('/api/projects/lookup', async (req, res) => {
+      try {
+        const { mis } = req.query;
+        
+        if (!mis) {
+          return res.status(400).json({ message: 'MIS code is required' });
+        }
+        
+        console.log(`[Projects] Public access to project data for MIS: ${mis}`);
+        
+        // Query the project by MIS code
+        const { data, error } = await supabase
+          .from('Projects')
+          .select('mis,na853,budget_na853,title,status')
+          .eq('mis', mis);
+        
+        if (error) {
+          throw error;
+        }
+        
+        // Return the project data
+        res.status(200).json(data || []);
+      } catch (error: any) {
+        console.error(`[Projects] Error looking up project by MIS: ${error.message}`);
+        res.status(500).json({
+          message: 'Failed to lookup project by MIS',
+          error: error.message
+        });
+      }
+    });
+    
     // Use authentication for all other project routes
     app.use('/api/projects', authenticateSession, projectRouter);
     app.use('/api/catalog', authenticateSession, projectRouter);

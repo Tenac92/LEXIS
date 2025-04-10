@@ -88,13 +88,13 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   // Get the MIS code from the document
   const mis = doc.project_id || (doc as any).mis || '';
 
-  // Fetch project data to get NA853 from the Projects table
-  const { data: projectData } = useQuery({
-    queryKey: ['/api/projects/lookup', mis],
+  // Fetch project data to get NA853 from the budget data
+  const { data: projectData } = useQuery<any>({
+    queryKey: ['/api/budget', mis],
     queryFn: async () => {
       if (!mis) return null;
       try {
-        return await apiRequest(`/api/projects/lookup?mis=${mis}`);
+        return await apiRequest(`/api/budget/${mis}`);
       } catch (error) {
         console.error('Failed to fetch project data:', error);
         return null;
@@ -105,8 +105,39 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
 
   // Update NA853 when project data is fetched
   useEffect(() => {
-    if (projectData && Array.isArray(projectData) && projectData.length > 0 && projectData[0]?.na853) {
-      setProjectNa853(projectData[0].na853);
+    if (projectData) {
+      // Add debug log to see the structure of the response
+      console.log('Budget data received:', projectData);
+      
+      // Check multiple possible structures based on the API response shape
+      
+      // Case 1: Direct na853 in the budget response
+      if (projectData.na853) {
+        console.log('Found NA853 directly in budget data:', projectData.na853);
+        setProjectNa853(projectData.na853);
+      } 
+      // Case 2: na853 nested in project field
+      else if (projectData.project && projectData.project.na853) {
+        console.log('Found NA853 in nested project data:', projectData.project.na853);
+        setProjectNa853(projectData.project.na853);
+      }
+      // Case 3: Look for budget_na853 field (alternative in some tables)
+      else if (projectData.budget_na853) {
+        console.log('Found budget_na853 in data:', projectData.budget_na853);
+        setProjectNa853(projectData.budget_na853);
+      }
+      // Case 4: Look in data array if this is an array response
+      else if (Array.isArray(projectData) && projectData.length > 0) {
+        // Try to find na853 in the first array element
+        const firstItem = projectData[0];
+        if (firstItem.na853) {
+          console.log('Found NA853 in first array item:', firstItem.na853);
+          setProjectNa853(firstItem.na853);
+        } else if (firstItem.budget_na853) {
+          console.log('Found budget_na853 in first array item:', firstItem.budget_na853);
+          setProjectNa853(firstItem.budget_na853);
+        }
+      }
     }
   }, [projectData]);
 
