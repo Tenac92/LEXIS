@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get project NA853
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
-          .select('na853')
+          .select('budget_na853')
           .eq('mis', project_id)
           .single();
 
@@ -67,7 +67,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fathername: String(r.fathername).trim(),
           afm: String(r.afm).trim(),
           amount: parseFloat(String(r.amount)),
-          installment: String(r.installment).trim()
+          installment: String(r.installment || 'Α').trim(),
+          installments: Array.isArray(r.installments) ? r.installments : [String(r.installment || 'Α').trim()],
+          installmentAmounts: r.installmentAmounts || {}
         }));
 
         const now = new Date().toISOString();
@@ -76,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const documentPayload = {
           unit,
           project_id,
-          project_na853: projectData.na853,
+          project_na853: projectData.budget_na853,
           expenditure_type,
           status: 'pending', // Always set initial status to pending
           recipients: formattedRecipients,
@@ -154,18 +156,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Look up in the Projects table - using the project_id as the MIS value
             const { data: projectData, error: projectError } = await supabase
               .from('Projects')
-              .select('na853')
+              .select('budget_na853')
               .eq('mis', project_id)
               .single();
             
-            if (!projectError && projectData && projectData.na853) {
+            if (!projectError && projectData && projectData.budget_na853) {
               // Use the full NA853 value without stripping non-numeric characters
-              project_na853 = String(projectData.na853);
+              project_na853 = String(projectData.budget_na853);
               console.log('[DIRECT_ROUTE_V2] Retrieved NA853 from Projects table:', project_na853);
               
               // If NA853 is empty for some reason, use project_mis as fallback
               if (!project_na853) {
-                console.error('[DIRECT_ROUTE_V2] NA853 value is empty:', projectData.na853);
+                console.error('[DIRECT_ROUTE_V2] NA853 value is empty:', projectData.budget_na853);
                 // Try to use project_mis as fallback
                 if (req.body.project_mis) {
                   project_na853 = req.body.project_mis;
@@ -214,6 +216,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fathername: String(r.fathername || '').trim(),
           afm: String(r.afm).trim(),
           amount: parseFloat(String(r.amount)),
+          // Για συμβατότητα με παλιό schema, κρατάμε το πεδίο installment (χρησιμοποιεί την πρώτη δόση αν υπάρχει)
+          installment: String(r.installment || (r.installments && r.installments.length > 0 ? r.installments[0] : 'ΕΦΑΠΑΞ')).trim(),
+          // Νέο schema για πολλαπλές δόσεις
           installments: Array.isArray(r.installments) ? r.installments : [String(r.installment || 'ΕΦΑΠΑΞ').trim()],
           installmentAmounts: r.installmentAmounts || {}
         }));
