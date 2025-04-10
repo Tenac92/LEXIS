@@ -176,6 +176,8 @@ export const generatedDocuments = pgTable("generated_documents", {
   region: text("region"),
   attachments: jsonb("attachments").default([]),
   recipients: jsonb("recipients").default([]),
+  installments: jsonb("installments").default([]),
+  installmentAmounts: jsonb("installmentAmounts").default({}),
   template_id: integer("template_id"),
   comments: text("comments"),
   created_at: timestamp("created_at").defaultNow(),
@@ -277,11 +279,9 @@ export const recipientSchema = z.object({
     .min(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία")
     .max(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
-  installment: z
-    .number()
-    .int()
-    .min(1, "Η δόση πρέπει να είναι τουλάχιστον 1")
-    .optional(),
+  installment: z.string().default("ΕΦΑΠΑΞ"), // Παλιό πεδίο για συμβατότητα
+  installments: z.array(z.string()).default(["ΕΦΑΠΑΞ"]), // Νέο πεδίο για πολλαπλές δόσεις
+  installmentAmounts: z.record(z.string(), z.number()).default({ΕΦΑΠΑΞ: 0}), // Πεδίο για ποσά ανά δόση
 });
 
 export const insertGeneratedDocumentSchema =
