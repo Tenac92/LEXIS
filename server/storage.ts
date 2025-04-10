@@ -192,7 +192,26 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Fetching budget data for MIS: ${mis}`);
       
-      // Try to get budget data directly using MIS
+      // Check if MIS is numeric or has a special format (like "2024ΝΑ85300001")
+      const isNumericMis = /^\d+$/.test(mis);
+      const isProjectCode = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/.test(mis); // Pattern for "2024ΝΑ85300001"
+      
+      // Case 1: If the MIS is a project code (NA853), try to find it in the budget_na853_split table by na853
+      if (isProjectCode) {
+        console.log(`[Storage] MIS appears to be a project code: ${mis}, searching by na853`);
+        const { data: naData, error: naError } = await supabase
+          .from('budget_na853_split')
+          .select('*')
+          .eq('na853', mis)
+          .single();
+          
+        if (!naError && naData) {
+          console.log(`[Storage] Found budget data by NA853 code: ${mis}`);
+          return naData as BudgetNA853Split;
+        }
+      }
+      
+      // Case 2: Try to get budget data directly using MIS as string (default approach)
       const { data, error } = await supabase
         .from('budget_na853_split')
         .select('*')
@@ -202,12 +221,12 @@ export class DatabaseStorage implements IStorage {
       if (error) {
         console.log(`[Storage] Budget not found directly for MIS: ${mis}, trying project lookup`);
         
-        // Try to find project by either its ID or MIS field
-        const { data: projectData } = await supabase
-          .from('Projects')
-          .select('id, mis')
-          .or(`id.eq.${mis},mis.eq.${mis}`)
-          .single();
+        // Case 3: Try to find project by either its ID or MIS field
+        const projectQuery = isNumericMis 
+          ? supabase.from('Projects').select('id, mis').or(`id.eq.${mis},mis.eq.${mis}`).single()
+          : supabase.from('Projects').select('id, mis').eq('na853', mis).single();
+          
+        const { data: projectData, error: projectError } = await projectQuery;
         
         if (projectData?.mis) {
           console.log(`[Storage] Found project with MIS: ${projectData.mis}`);
@@ -227,7 +246,7 @@ export class DatabaseStorage implements IStorage {
           return retryResult.data as BudgetNA853Split;
         }
         
-        console.log(`[Storage] Could not find project for MIS: ${mis}`);
+        console.log(`[Storage] Could not find project for MIS or NA853: ${mis}`);
         return null;
       }
       
