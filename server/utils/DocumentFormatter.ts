@@ -544,26 +544,13 @@ export class DocumentFormatter {
               children: [
                 new TextRun({
                   text:
-                    projectTitle ||
-                    "ΔΩΡΕΑΝ ΚΡΑΤΙΚΗ ΑΡΩΓΗ ΓΙΑ ΤΗΝ ΕΠΙΣΚΕΥΉ Ή ΑΝΑΚΑΤΑΣΚΕΥΗ ΣΕΙΣΜΟΠΛΗΚΤΩΝ ΚΤΙΡΙΩΝ ΠΟΥ ΥΠΕΣΤΗΣΑΝ ΒΛΑΒΕΣ",
+                    '${projectTitle} ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || ""} της ΣΑΝΑ 853',
                   bold: true,
                   size: 24, // Reduced from 32 to 24
                 }),
               ],
               alignment: AlignmentType.CENTER,
               spacing: { before: 400, after: 200 },
-            }),
-
-            // Project number/code (NA853)
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || ""} της ΣΑΝΑ 853`,
-                  bold: true,
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-              spacing: { before: 200, after: 400 },
             }),
 
             // Recipients table with ΠΡΑΞΗ column (includes total row)
