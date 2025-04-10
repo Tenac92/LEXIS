@@ -559,8 +559,84 @@ export class BudgetService {
       console.log(`[BudgetService] GetBudget - Parameters: mis=${mis}`);
       console.log(`[BudgetService] GetBudget - Analysis: isNumericString=${isNumericString}, isProjectCode=${projectCodePattern.test(mis)}`);
       
-      // CASE 1: Project code format (like "2024ΝΑ85300001")
+      // First try direct lookup by na853 if it's a project code
       if (projectCodePattern.test(mis)) {
+        console.log(`[BudgetService] GetBudget - First trying direct lookup with na853 project code: ${mis}`);
+        
+        try {
+          // Try to find budget directly using na853 field
+          const { data: directNa853Data, error: directNa853Error } = await supabase
+            .from('budget_na853_split')
+            .select('*')
+            .eq('na853', mis)
+            .single();
+            
+          if (!directNa853Error && directNa853Data) {
+            console.log(`[BudgetService] GetBudget - Successfully found budget with NA853 code: ${mis}`);
+            budgetData = directNa853Data;
+            budgetError = null;
+            
+            // Skip other lookups and proceed with success
+            console.log(`[BudgetService] Direct NA853 lookup successful, skipping other methods`);
+            
+            // Use this data directly
+            const userView = budgetData?.user_view?.toString() || '0';
+            const ethsiaPistosi = budgetData?.ethsia_pistosi?.toString() || '0';
+            const katanomesEtous = budgetData?.katanomes_etous?.toString() || '0';
+            
+            // Check if the total_spent column exists
+            const hasTotalSpent = budgetData && 'total_spent' in budgetData && budgetData.total_spent !== null;
+            const totalSpent = hasTotalSpent ? budgetData.total_spent.toString() : '0';
+            
+            // Get current quarter
+            const currentDate = new Date();
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth() + 1;
+            const currentQuarterNumber = Math.ceil(currentMonth / 3);
+            const quarterKey = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
+            
+            // Calculate available budget
+            const available_budget = parseFloat(katanomesEtous) - parseFloat(userView);
+            const quarter_available = parseFloat(budgetData[quarterKey]?.toString() || '0') - parseFloat(userView);
+            const yearly_available = parseFloat(ethsiaPistosi) - parseFloat(userView);
+            
+            // Return budget data with correct types
+            const response: BudgetResponse = {
+              status: 'success',
+              data: {
+                user_view: parseFloat(userView),
+                total_budget: parseFloat(ethsiaPistosi),
+                annual_budget: parseFloat(ethsiaPistosi),
+                ethsia_pistosi: parseFloat(ethsiaPistosi),
+                katanomes_etous: parseFloat(katanomesEtous),
+                current_budget: parseFloat(userView),
+                q1: parseFloat(budgetData.q1?.toString() || '0'),
+                q2: parseFloat(budgetData.q2?.toString() || '0'),
+                q3: parseFloat(budgetData.q3?.toString() || '0'),
+                q4: parseFloat(budgetData.q4?.toString() || '0'),
+                total_spent: parseFloat(totalSpent),
+                available_budget: available_budget,
+                quarter_available: quarter_available,
+                yearly_available: yearly_available,
+                current_quarter: quarterKey
+              }
+            };
+            
+            console.log(`[BudgetService] Returning budget data for NA853 ${mis}:`, {
+              ethsia_pistosi: response.data?.ethsia_pistosi,
+              katanomes_etous: response.data?.katanomes_etous,
+              user_view: response.data?.user_view,
+              available_budget: response.data?.available_budget
+            });
+            
+            return response;
+          }
+        } catch (directNa853Error) {
+          console.log(`[BudgetService] Direct NA853 lookup error (non-critical):`, directNa853Error);
+          // Continue with other lookup methods
+        }
+        
+        // CASE 1: Project code format (like "2024ΝΑ85300001")
         console.log(`[BudgetService] GetBudget - MIS appears to be a project code: ${mis}`);
         
         // Try to find the project with matching NA853 field (project code)
