@@ -93,12 +93,31 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
   });
 
   const onSubmit = async (data: PasswordChangeFormData) => {
-    setIsSubmitting(true);
-    changePasswordMutation.mutate(data);
+    try {
+      setIsSubmitting(true);
+      changePasswordMutation.mutate(data);
+    } catch (error) {
+      // Ensure we always reset submission state on error
+      setIsSubmitting(false);
+      toast({
+        title: "Σφάλμα",
+        description: error instanceof Error ? error.message : "Αποτυχία αλλαγής κωδικού",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle dialog close safely
+  const handleDialogChange = (open: boolean) => {
+    if (!open && !isSubmitting) {
+      // Only close if not submitting to prevent UI freeze
+      form.reset(); // Reset form on close
+      onClose();
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Αλλαγή Κωδικού</DialogTitle>
@@ -163,7 +182,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
               <Button
                 type="button"
                 variant="outline"
-                onClick={onClose}
+                onClick={() => handleDialogChange(false)}
                 disabled={isSubmitting}
               >
                 Ακύρωση

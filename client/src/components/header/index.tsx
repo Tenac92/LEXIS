@@ -258,7 +258,12 @@ export function Header() {
                   <Button
                     variant="ghost"
                     className="w-full justify-start"
-                    onClick={() => setIsPasswordModalOpen(true)}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false); // Close mobile menu first
+                      setTimeout(() => {
+                        setIsPasswordModalOpen(true); // Then open password modal
+                      }, 100);
+                    }}
                   >
                     <Key className="h-4 w-4 mr-2" />
                     Αλλαγή Κωδικού
@@ -280,7 +285,12 @@ export function Header() {
 
       <ChangePasswordModal
         isOpen={isPasswordModalOpen}
-        onClose={() => setIsPasswordModalOpen(false)}
+        onClose={() => {
+          // Add a small delay to prevent UI freeze
+          setTimeout(() => {
+            setIsPasswordModalOpen(false);
+          }, 0);
+        }}
       />
     </header>
   );
