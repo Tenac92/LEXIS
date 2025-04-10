@@ -877,19 +877,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             const { data: projectData, error: projectError } = await supabase
               .from('Projects')
-              .select('na853')
+              .select('budget_na853')
               .eq('mis', lookupID)
               .single();
             
-            if (!projectError && projectData && projectData.na853) {
+            if (!projectError && projectData && projectData.budget_na853) {
               // Convert to numeric value - extract only the numbers from the NA853 string
-              let numericNA853 = String(projectData.na853).replace(/\D/g, '');
+              let numericNA853 = String(projectData.budget_na853).replace(/\D/g, '');
               if (numericNA853) {
                 project_na853 = numericNA853;
                 console.log('[TEST] Retrieved and converted NA853 from Projects table:', project_na853);
               } else {
                 // If we can't get a numeric value, try something else
-                console.error('[TEST] Could not convert NA853 to numeric value:', projectData.na853);
+                console.error('[TEST] Could not convert NA853 to numeric value:', projectData.budget_na853);
                 if (project_mis && !isNaN(Number(project_mis))) {
                   project_na853 = project_mis;
                 } else {
