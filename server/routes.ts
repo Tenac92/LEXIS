@@ -247,11 +247,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           generated_by: (req as any).session?.user?.id || null, // Add user ID if available
           department: (req as any).session?.user?.department || null, // Add department if available
           created_at: now,
-          updated_at: now,
-          // Διασφαλίζουμε ότι το installments πεδίο περνάει στο payload
-          installments: req.body.installments || [],
-          // Διασφαλίζουμε ότι το installmentAmounts πεδίο περνάει στο payload
-          installmentAmounts: req.body.installmentAmounts || {}
+          updated_at: now
+          // Τα πεδία installments και installmentAmounts αφορούν τους παραλήπτες και όχι το έγγραφο,
+          // έχουν ήδη προστεθεί στο formattedRecipients παραπάνω
         };
         
         console.log('[DIRECT_ROUTE_V2] Inserting document with payload:', documentPayload);
