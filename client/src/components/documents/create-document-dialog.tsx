@@ -891,20 +891,17 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   } = useBudgetUpdates(selectedProjectId, currentAmount);
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
-    queryKey: ['attachments', form.watch('expenditure_type'), form.watch('recipients.0.installments')],
+    queryKey: ['attachments', form.watch('expenditure_type')],
     queryFn: async () => {
       try {
         const expenditureType = form.watch('expenditure_type');
-        const recipient = form.watch('recipients.0');
-        const installments = recipient?.installments || ["ΕΦΑΠΑΞ"];
-        const primaryInstallment = installments[0] || "ΕΦΑΠΑΞ";
 
         if (!expenditureType) {
           return [];
         }
 
         // Use direct fetch instead of apiRequest to prevent authentication issues
-        const response = await fetch(`/api/attachments/${encodeURIComponent(expenditureType)}/${encodeURIComponent(primaryInstallment)}`, {
+        const response = await fetch(`/api/attachments/${encodeURIComponent(expenditureType)}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
