@@ -36,6 +36,8 @@ interface Recipient {
   afm: string;
   amount: number;
   installment: string;
+  installments?: string[];
+  installmentAmounts?: Record<string, number>;
 }
 
 const getStatusDetails = (status: string, is_correction: boolean | null, protocol_number_input: string | null) => {
@@ -356,24 +358,49 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                 
                 // Render each recipient group
                 return Object.entries(recipientsByAfm).map(([afm, recs], groupIndex) => {
-                  // Sort by installment number/letter to ensure consistent order
-                  const sortedRecs = [...recs].sort((a, b) => {
-                    // Convert Α, Β, Γ to numbers if possible for sorting
-                    const getInstallmentValue = (inst: string) => {
-                      if (inst === 'Α') return 1;
-                      if (inst === 'Β') return 2;
-                      if (inst === 'Γ') return 3;
-                      return isNaN(parseInt(inst)) ? 0 : parseInt(inst);
-                    };
-                    
-                    return getInstallmentValue(a.installment || 'Α') - getInstallmentValue(b.installment || 'Α');
+                  // Use first recipient for common information (name, afm)
+                  const firstRec = recs[0];
+                  
+                  // Check if we're using the new installments format
+                  const usingNewFormat = firstRec.installments && firstRec.installmentAmounts;
+                  
+                  // Debug log to trace recipient format
+                  console.log('Recipient data format:', {
+                    afm: firstRec.afm,
+                    usingNewFormat,
+                    installments: firstRec.installments,
+                    installmentAmounts: firstRec.installmentAmounts,
+                    legacyInstallment: firstRec.installment
                   });
                   
-                  // Use first recipient for common information (name, afm)
-                  const firstRec = sortedRecs[0];
+                  // For old format, sort recipients by installment order
+                  let sortedRecs = [...recs];
+                  if (!usingNewFormat) {
+                    sortedRecs = [...recs].sort((a, b) => {
+                      // Convert Α, Β, Γ to numbers if possible for sorting
+                      const getInstallmentValue = (inst: string) => {
+                        if (inst === 'Α' || inst === 'A') return 1;
+                        if (inst === 'Β' || inst === 'B') return 2;
+                        if (inst === 'Γ' || inst === 'Γ' || inst === 'C') return 3;
+                        if (inst === 'ΕΦΑΠΑΞ') return 0;
+                        return isNaN(parseInt(inst)) ? 0 : parseInt(inst);
+                      };
+                      
+                      return getInstallmentValue(a.installment || 'Α') - getInstallmentValue(b.installment || 'Α');
+                    });
+                  }
                   
-                  // Calculate total amount for this recipient across all installments
-                  const totalAmount = sortedRecs.reduce((sum, r) => sum + r.amount, 0);
+                  // Calculate total amount 
+                  const totalAmount = usingNewFormat 
+                    ? Object.values(firstRec.installmentAmounts || {}).reduce((sum, amount) => sum + amount, 0)
+                    : sortedRecs.reduce((sum, r) => sum + r.amount, 0);
+                    
+                  // Get installments to display
+                  const installmentsToShow = usingNewFormat
+                    ? firstRec.installments || []
+                    : sortedRecs.length > 1 
+                      ? sortedRecs.map(r => r.installment) 
+                      : [firstRec.installment];
                   
                   return (
                     <div
@@ -384,13 +411,13 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                         <div className="font-medium">
                           {`${firstRec.firstname} του ${firstRec.fathername} ${firstRec.lastname}`}
                         </div>
-                        {sortedRecs.length > 1 ? (
+                        {installmentsToShow.length > 1 ? (
                           <Badge variant="outline" className="text-xs">
-                            {`${sortedRecs.length} Δόσεις`}
+                            {`${installmentsToShow.length} Δόσεις`}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-xs">
-                            {`Δόση ${firstRec.installment || 'Α'}`}
+                            {`Δόση ${installmentsToShow[0] || 'Α'}`}
                           </Badge>
                         )}
                       </div>
@@ -398,18 +425,32 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                         ΑΦΜ: {firstRec.afm}
                       </div>
                       
-                      {/* Show installment details if more than one */}
-                      {sortedRecs.length > 1 && (
+                      {/* Show installment details */}
+                      {installmentsToShow.length > 0 && (
                         <div className="text-xs mt-1 space-y-1">
-                          {sortedRecs.map((rec, idx) => (
-                            <div key={idx} className="flex justify-between py-1 px-2 bg-background/50 rounded">
-                              <span>Δόση {rec.installment || 'Α'}</span>
-                              <span>{rec.amount.toLocaleString('el-GR', {
-                                style: 'currency',
-                                currency: 'EUR'
-                              })}</span>
-                            </div>
-                          ))}
+                          {usingNewFormat ? (
+                            // New format with installmentAmounts
+                            installmentsToShow.map((installment, idx) => (
+                              <div key={idx} className="flex justify-between py-1 px-2 bg-background/50 rounded">
+                                <span>Δόση {installment}</span>
+                                <span>{(firstRec.installmentAmounts?.[installment] || 0).toLocaleString('el-GR', {
+                                  style: 'currency',
+                                  currency: 'EUR'
+                                })}</span>
+                              </div>
+                            ))
+                          ) : (
+                            // Legacy format with separate recipient records for each installment
+                            sortedRecs.map((rec, idx) => (
+                              <div key={idx} className="flex justify-between py-1 px-2 bg-background/50 rounded">
+                                <span>Δόση {rec.installment || 'Α'}</span>
+                                <span>{rec.amount.toLocaleString('el-GR', {
+                                  style: 'currency',
+                                  currency: 'EUR'
+                                })}</span>
+                              </div>
+                            ))
+                          )}
                         </div>
                       )}
                       
