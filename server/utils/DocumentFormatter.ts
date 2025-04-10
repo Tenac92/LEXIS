@@ -93,7 +93,7 @@ export class DocumentFormatter {
   private static readonly DEFAULT_MARGINS = {
     top: 0,
     right: 0,
-    bottom: 1000,
+    bottom: 0,
     left: 0,
   };
   private static readonly DOCUMENT_MARGINS = this.DEFAULT_MARGINS;
@@ -416,7 +416,7 @@ export class DocumentFormatter {
    * - Two signature fields with user name and department on the left
    */
   /**
-   * Get project title from the Projects table using MIS
+   * Get project title from the Projects table using MIS or NA853
    */
   public static async getProjectTitle(mis: string): Promise<string | null> {
     try {
@@ -425,44 +425,83 @@ export class DocumentFormatter {
         return null;
       }
 
-      console.log(`Fetching project title for MIS: ${mis}`);
-
-      const { data, error } = await supabase
+      console.log(`Fetching project title for input: ${mis}`);
+      
+      // Check if MIS is numeric or follows the pattern of project codes
+      const isNumericString = /^\d+$/.test(mis);
+      const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
+      const isProjectCode = projectCodePattern.test(mis);
+      
+      console.log(`[DocumentFormatter] getProjectTitle - Analysis: isNumericString=${isNumericString}, isProjectCode=${isProjectCode}`);
+      
+      let data, error;
+      
+      // Strategy 1: Try first with NA853 if it looks like a project code
+      if (isProjectCode) {
+        console.log(`[DocumentFormatter] getProjectTitle - Input appears to be a project code: ${mis}, trying na853 lookup`);
+        const result = await supabase
+          .from("Projects")
+          .select("project_title")
+          .eq("na853", mis)
+          .maybeSingle();
+          
+        data = result.data;
+        error = result.error;
+        
+        if (!error && data?.project_title) {
+          console.log(`[DocumentFormatter] Found project title by NA853: ${data.project_title}`);
+          return data.project_title;
+        }
+      }
+      
+      // Strategy 2: Default lookup by MIS
+      const result = await supabase
         .from("Projects")
         .select("project_title")
         .eq("mis", mis)
         .maybeSingle();
+        
+      data = result.data;
+      error = result.error;
 
       if (error) {
-        console.error("Error fetching project title:", error);
+        console.error("[DocumentFormatter] Error fetching project title:", error);
         return null;
       }
 
       if (!data || !data.project_title) {
-        console.log(`No project found with MIS: ${mis}`);
+        console.log(`[DocumentFormatter] No project found with MIS: ${mis}`);
         return null;
       }
 
-      console.log(`Found project title: ${data.project_title}`);
+      console.log(`[DocumentFormatter] Found project title: ${data.project_title}`);
       return data.project_title;
     } catch (error) {
-      console.error("Error in getProjectTitle:", error);
+      console.error("[DocumentFormatter] Error in getProjectTitle:", error);
       return null;
     }
   }
 
   /**
-   * Get project NA853 code from the Projects table using MIS
+   * Get project NA853 code from the Projects table using MIS or NA853
    */
   public static async getProjectNA853(mis: string): Promise<string | null> {
     try {
       if (!mis) {
-        console.error("No MIS provided for project NA853 lookup");
+        console.error("[DocumentFormatter] No MIS provided for project NA853 lookup");
         return null;
       }
+      
+      // If the input already looks like an NA853 code, it might be what we're searching for
+      const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
+      if (projectCodePattern.test(mis)) {
+        console.log(`[DocumentFormatter] Input appears to be an NA853 code already: ${mis}`);
+        return mis;
+      }
 
-      console.log(`Fetching project NA853 for MIS: ${mis}`);
+      console.log(`[DocumentFormatter] Fetching project NA853 for MIS: ${mis}`);
 
+      // Strategy 1: Standard lookup by MIS
       const { data, error } = await supabase
         .from("Projects")
         .select("na853")
@@ -470,19 +509,32 @@ export class DocumentFormatter {
         .maybeSingle();
 
       if (error) {
-        console.error("Error fetching project NA853:", error);
+        console.error("[DocumentFormatter] Error fetching project NA853:", error);
         return null;
       }
 
       if (!data || !data.na853) {
-        console.log(`No project NA853 found with MIS: ${mis}`);
+        console.log(`[DocumentFormatter] No project NA853 found with MIS: ${mis}`);
+        
+        // Strategy 2: Try to find if the MIS itself is an NA853 entry
+        const checkIfNA853 = await supabase
+          .from("Projects")
+          .select("na853")
+          .eq("na853", mis)
+          .maybeSingle();
+          
+        if (!checkIfNA853.error && checkIfNA853.data?.na853) {
+          console.log(`[DocumentFormatter] Found project NA853 by direct lookup: ${checkIfNA853.data.na853}`);
+          return checkIfNA853.data.na853;
+        }
+        
         return null;
       }
 
-      console.log(`Found project NA853: ${data.na853}`);
+      console.log(`[DocumentFormatter] Found project NA853: ${data.na853}`);
       return data.na853;
     } catch (error) {
-      console.error("Error in getProjectNA853:", error);
+      console.error("[DocumentFormatter] Error in getProjectNA853:", error);
       return null;
     }
   }
@@ -1803,18 +1855,18 @@ export class DocumentFormatter {
             prop: "τη",
           },
           address: {
-            address: "Κηφισίας 124 & Ιατρίδου 2",
-            tk: "11526",
-            region: "Αθήνα",
+            address: "",
+            tk: "",
+            region: "",
           },
           manager: {
-            name: "Σ. Παπαδόπουλος",
-            order: "Με εντολή Υπουργού",
-            title: "Ο Διευθυντής",
-            degree: "Δρ. Πολ. Μηχανικός",
-            prepose: "του",
+            name: "",
+            order: "",
+            title: "",
+            degree: "",
+            prepose: "",
           },
-          email: "daefk@civilprotection.gr",
+          email: "",
         };
       }
 
@@ -1830,18 +1882,18 @@ export class DocumentFormatter {
           prop: "τη",
         },
         address: {
-          address: "Κηφισίας 124 & Ιατρίδου 2",
-          tk: "11526",
-          region: "Αθήνα",
+          address: "",
+          tk: "",
+          region: "",
         },
         manager: {
-          name: "Σ. Παπαδόπουλος",
-          order: "Με εντολή Υπουργού",
-          title: "Ο Διευθυντής",
-          degree: "Δρ. Πολ. Μηχανικός",
-          prepose: "του",
+          name: "",
+          order: "",
+          title: "",
+          degree: "",
+          prepose: "",
         },
-        email: "daefk@civilprotection.gr",
+        email: "",
       };
     }
   }

@@ -559,6 +559,10 @@ export class BudgetService {
       console.log(`[BudgetService] GetBudget - Parameters: mis=${mis}`);
       console.log(`[BudgetService] GetBudget - Analysis: isNumericString=${isNumericString}, isProjectCode=${projectCodePattern.test(mis)}`);
       
+      // Declare variables at the top to avoid "used before declaration" errors
+      let budgetData: any = null;
+      let budgetError: any = null;
+
       // First try direct lookup by na853 if it's a project code
       if (projectCodePattern.test(mis)) {
         console.log(`[BudgetService] GetBudget - First trying direct lookup with na853 project code: ${mis}`);
@@ -682,8 +686,6 @@ export class BudgetService {
       // Get budget data directly using MIS
       // If we have a numeric MIS, we need to convert it to an integer for the query
       // If we couldn't convert the MIS to a numeric value, we'll first try to find the project
-      let budgetData;
-      let budgetError;
 
       try {
         // For numeric MIS, query directly against the integer column
@@ -921,7 +923,7 @@ export class BudgetService {
       
       // Get current budget with numeric MIS
       // Similar logic as in getBudget - handle integer column type
-      let budgetData;
+      let updateBudgetData;
       let error;
 
       try {
@@ -934,7 +936,7 @@ export class BudgetService {
             .eq('mis', numericalMis) // Use the number directly for integer column
             .single();
           
-          budgetData = result.data;
+          updateBudgetData = result.data;
           error = result.error;
         } else {
           // Try direct query with original value (last resort)
@@ -945,7 +947,7 @@ export class BudgetService {
             .eq('mis', misToSearch)
             .single();
           
-          budgetData = result.data;
+          updateBudgetData = result.data;
           error = result.error;
         }
       } catch (err) {
@@ -966,7 +968,7 @@ export class BudgetService {
         };
       }
         
-      if (error || !budgetData) {
+      if (error || !updateBudgetData) {
         console.error(`[BudgetService] Update - Error fetching budget data: ${error?.message || 'Not found'}`);
         return {
           status: 'error',
@@ -976,7 +978,7 @@ export class BudgetService {
       }
       
       // Apply the transaction to user_view
-      const currentUserView = budgetData.user_view || 0;
+      const currentUserView = updateBudgetData.user_view || 0;
       const newUserView = currentUserView + amount;
       
       // Update the budget
