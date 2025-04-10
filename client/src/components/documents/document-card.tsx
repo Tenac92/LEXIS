@@ -303,30 +303,86 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
             </div>
 
             <div className="flex-1 overflow-auto">
-              {recipients?.map((recipient, index) => (
-                <div
-                  key={index}
-                  className="mb-4 p-3 bg-muted/50 rounded-lg"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-medium">
-                      {`${recipient.firstname} του ${recipient.fathername} ${recipient.lastname}`}
+              {/* Group recipients by AFM (unique identifier for a person) */}
+              {(() => {
+                // Group recipients by AFM
+                const recipientsByAfm: Record<string, Recipient[]> = {};
+                recipients?.forEach(recipient => {
+                  if (!recipientsByAfm[recipient.afm]) {
+                    recipientsByAfm[recipient.afm] = [];
+                  }
+                  recipientsByAfm[recipient.afm].push(recipient);
+                });
+                
+                // Render each recipient group
+                return Object.entries(recipientsByAfm).map(([afm, recs], groupIndex) => {
+                  // Sort by installment number/letter to ensure consistent order
+                  const sortedRecs = [...recs].sort((a, b) => {
+                    // Convert Α, Β, Γ to numbers if possible for sorting
+                    const getInstallmentValue = (inst: string) => {
+                      if (inst === 'Α') return 1;
+                      if (inst === 'Β') return 2;
+                      if (inst === 'Γ') return 3;
+                      return isNaN(parseInt(inst)) ? 0 : parseInt(inst);
+                    };
+                    
+                    return getInstallmentValue(a.installment || 'Α') - getInstallmentValue(b.installment || 'Α');
+                  });
+                  
+                  // Use first recipient for common information (name, afm)
+                  const firstRec = sortedRecs[0];
+                  
+                  // Calculate total amount for this recipient across all installments
+                  const totalAmount = sortedRecs.reduce((sum, r) => sum + r.amount, 0);
+                  
+                  return (
+                    <div
+                      key={groupIndex}
+                      className="mb-4 p-3 bg-muted/50 rounded-lg"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="font-medium">
+                          {`${firstRec.firstname} του ${firstRec.fathername} ${firstRec.lastname}`}
+                        </div>
+                        {sortedRecs.length > 1 ? (
+                          <Badge variant="outline" className="text-xs">
+                            {`${sortedRecs.length} Δόσεις`}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">
+                            {`Δόση ${firstRec.installment || 'Α'}`}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        ΑΦΜ: {firstRec.afm}
+                      </div>
+                      
+                      {/* Show installment details if more than one */}
+                      {sortedRecs.length > 1 && (
+                        <div className="text-xs mt-1 space-y-1">
+                          {sortedRecs.map((rec, idx) => (
+                            <div key={idx} className="flex justify-between py-1 px-2 bg-background/50 rounded">
+                              <span>Δόση {rec.installment || 'Α'}</span>
+                              <span>{rec.amount.toLocaleString('el-GR', {
+                                style: 'currency',
+                                currency: 'EUR'
+                              })}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      <div className="text-sm font-medium mt-1">
+                        Σύνολο: {totalAmount.toLocaleString('el-GR', {
+                          style: 'currency',
+                          currency: 'EUR'
+                        })}
+                      </div>
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      {`Δόση ${recipient.installment || 'Α'}`}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    ΑΦΜ: {recipient.afm}
-                  </div>
-                  <div className="text-sm font-medium mt-1">
-                    Ποσό: {recipient.amount.toLocaleString('el-GR', {
-                      style: 'currency',
-                      currency: 'EUR'
-                    })}
-                  </div>
-                </div>
-              ))}
+                  );
+                });
+              })()}
 
               {(!recipients || recipients.length === 0) && (
                 <div className="text-center text-muted-foreground">
