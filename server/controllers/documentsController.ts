@@ -64,8 +64,10 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     // Create document with exact schema match and set initial status to pending
     const documentPayload = {
       unit,
-      project_id,
+      project_id, // This is used as 'mis' in the database table
+      mis: project_id, // Explicitly adding this to ensure redundancy
       project_na853: projectData.na853,
+      na853: projectData.na853, // Adding this for backup redundancy
       expenditure_type,
       status: 'pending', // Always set initial status to pending
       recipients: formattedRecipients,
@@ -204,7 +206,9 @@ router.post('/v2', async (req: Request, res: Response) => {
     const documentPayload = {
       unit,
       project_id,
+      mis: project_id, // Explicitly set the MIS field to match project_id
       project_na853,
+      na853: project_na853, // Explicitly set the NA853 field as backup
       expenditure_type,
       status: 'pending', // Always set initial status to pending
       recipients: formattedRecipients,
