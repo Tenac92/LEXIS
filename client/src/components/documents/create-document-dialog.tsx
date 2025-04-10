@@ -1300,7 +1300,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       form.setValue("unit", units[0].id);
     } else if (user?.units?.length === 1 && units?.length > 0) {
       // If user has only one assigned unit, find its matching unit object and select it
-      const matchingUnit = units.find(unit => unit.id === user.units[0]);
+      const userUnit = user?.units?.[0] || '';
+      const matchingUnit = units.find(unit => unit.id === userUnit);
       if (matchingUnit) {
         form.setValue("unit", matchingUnit.id);
       }
@@ -1329,7 +1330,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         });
 
         // Fetch regions data from API
-        const response = await apiRequest(`/api/projects/${encodeURIComponent(project.mis)}/regions`);
+        const response = await apiRequest(`/api/projects/${encodeURIComponent(project.mis || '')}/regions`);
         console.log('Region API response:', response);
         
         // Handle invalid response
