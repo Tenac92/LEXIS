@@ -543,8 +543,7 @@ export class DocumentFormatter {
             new Paragraph({
               children: [
                 new TextRun({
-                  text:
-                    '${projectTitle} ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || ""} της ΣΑΝΑ 853',
+                  text: `${projectTitle || ''} ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || ""} της ΣΑΝΑ 853`,
                   bold: true,
                   size: 24, // Reduced from 32 to 24
                 }),
