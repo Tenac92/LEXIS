@@ -1195,7 +1195,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         secondary_text: "",
         installment: "ΕΦΑΠΑΞ", // Διατηρούμε το παλιό πεδίο για συμβατότητα
         installments: ["ΕΦΑΠΑΞ"], // Default to ΕΦΑΠΑΞ for new recipients
-        installmentAmounts: { "ΕΦΑΠΑΞ": 0 } // Initialize installment amount
+        installmentAmounts: { "ΕΦΑΠΑΞ": 0 }, // Initialize installment amount
+        hideTouPrefix: false // Default to showing "ΤΟΥ" before father's name
       }
     ]);
   };
