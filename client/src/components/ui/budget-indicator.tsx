@@ -231,18 +231,36 @@ export function BudgetIndicator({
     ? budgetData.q4
     : parseFloat(budgetData.q4?.toString() || '0');
   
+  // IMPROVEMENT: Check if we have real-time budget data from WebSocket
+  // This will override the initial values from budgetData if available
+  const hasRealTimeBudget = realTimeBudgetValues && 
+    realTimeBudgetValues.available_budget !== undefined &&
+    realTimeBudgetValues.yearly_available !== undefined;
+  
   // Parse new budget indicators
-  const availableBudget = typeof budgetData.available_budget === 'number'
-    ? budgetData.available_budget
-    : parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString());
+  // If we have real-time values from the WebSocket, use those instead
+  const availableBudget = hasRealTimeBudget 
+    ? realTimeBudgetValues.available_budget
+    : (typeof budgetData.available_budget === 'number'
+      ? budgetData.available_budget
+      : parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString()));
   
-  const quarterAvailable = typeof budgetData.quarter_available === 'number'
-    ? budgetData.quarter_available
-    : parseFloat(budgetData.quarter_available?.toString() || '0');
+  const quarterAvailable = hasRealTimeBudget && realTimeBudgetValues.quarter_available !== undefined
+    ? realTimeBudgetValues.quarter_available
+    : (typeof budgetData.quarter_available === 'number'
+      ? budgetData.quarter_available
+      : parseFloat(budgetData.quarter_available?.toString() || '0'));
   
-  const yearlyAvailable = typeof budgetData.yearly_available === 'number'
-    ? budgetData.yearly_available
-    : parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString());
+  const yearlyAvailable = hasRealTimeBudget
+    ? realTimeBudgetValues.yearly_available
+    : (typeof budgetData.yearly_available === 'number'
+      ? budgetData.yearly_available
+      : parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString()));
+  
+  // Log if we're using real-time values
+  if (hasRealTimeBudget) {
+    console.log("[BudgetIndicator] Using real-time budget values from WebSocket:", realTimeBudgetValues);
+  }
   
   // Get the current quarter value based on quarter indicator
   let currentQuarterValue = 0;

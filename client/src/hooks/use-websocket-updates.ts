@@ -423,5 +423,5 @@ export function useWebSocketUpdates() {
     connect();
   }, [connect]);
 
-  return { isConnected, reconnect };
+  return { isConnected, reconnect, lastMessage };
 }
