@@ -1685,36 +1685,38 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                       <Card key={index} className="p-4 relative">
                         <div className="flex items-start gap-4">
                           <span className="text-sm font-medium min-w-[24px] text-center mt-2">{index + 1}</span>
-                          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 flex-1">
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 w-full">
                             <Input
                               {...form.register(`recipients.${index}.firstname`)}
                               placeholder="Όνομα"
-                              className="md:col-span-1"
+                              className="md:col-span-2"
                               autoComplete="off"
                             />
                             <Input
                               {...form.register(`recipients.${index}.lastname`)}
                               placeholder="Επώνυμο"
-                              className="md:col-span-1"
+                              className="md:col-span-2"
                               autoComplete="off"
                             />
                             <Input
                               {...form.register(`recipients.${index}.fathername`)}
                               placeholder="Πατρώνυμο"
-                              className="md:col-span-1"
+                              className="md:col-span-2"
                               autoComplete="off"
                             />
                             <Input
                               {...form.register(`recipients.${index}.afm`)}
                               placeholder="ΑΦΜ"
                               maxLength={9}
-                              className="md:col-span-1"
+                              className="md:col-span-2"
                               autoComplete="off"
                             />
-                            <div className="md:col-span-2 flex items-center gap-2">
+                            <div className="md:col-span-3 flex items-center gap-2">
                               <div className="flex-1">
                                 {renderRecipientInstallments(index)}
                               </div>
+                            </div>
+                            <div className="md:col-span-1 flex justify-end">
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -1924,7 +1926,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl" aria-describedby="dialog-description">
+      <DialogContent className="max-w-5xl" aria-describedby="dialog-description">
         <DialogHeader>
           <DialogTitle>Δημιουργία Εγγράφου</DialogTitle>
         </DialogHeader>
