@@ -17,6 +17,8 @@ export async function exportDocument(req: Request, res: Response) {
     }
 
     // Fetch document with recipients
+    console.log('Fetching document data with ID:', id);
+    
     const { data: document, error: docError } = await supabase
       .from('generated_documents')
       .select('*, recipients')
@@ -48,7 +50,7 @@ export async function exportDocument(req: Request, res: Response) {
     }
     
     // Log recipients data for debugging
-    const recipientsDebugInfo = document.recipients.map((recipient) => {
+    const recipientsDebugInfo = document.recipients.map((recipient: any) => {
       return {
         name: `${recipient.lastname} ${recipient.firstname}`,
         hasSecondaryText: Boolean(recipient.secondary_text),
