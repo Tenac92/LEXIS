@@ -22,6 +22,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "
 import { useAuth } from "@/hooks/use-auth";
 import { useBudgetUpdates } from "@/hooks/use-budget-updates";
 import type { BudgetValidationResponse, Project as ProjectType, Unit, Recipient, ApiResponse } from "@/lib/types";
+import { BudgetIndicator } from "@/components/ui/budget-indicator";
 
 // Constants
 const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
@@ -270,10 +271,7 @@ import type { BudgetData as BaseBudgetData } from "@/lib/types";
 // Χρησιμοποιούμε τον ίδιο τύπο για συμβατότητα
 interface BudgetData extends BaseBudgetData {}
 
-interface BudgetIndicatorProps {
-  budgetData: BudgetData;
-  currentAmount: number;
-}
+// Use the interface from the imported BudgetIndicator component
 
 interface CreateDocumentDialogProps {
   open: boolean;
@@ -337,99 +335,7 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
   );
 };
 
-// Budget Indicator Component
-const BudgetIndicator: React.FC<BudgetIndicatorProps> = ({ budgetData, currentAmount }) => {
-  // Parse values ensuring they are numbers
-  const userView = parseFloat(budgetData.user_view?.toString() || '0');
-  const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-  const katanomesEtous = parseFloat(budgetData.katanomes_etous?.toString() || '0');
-  const amount = parseFloat(currentAmount?.toString() || '0');
-  
-  // Parse quarter-related values
-  const currentQuarter = budgetData.current_quarter || '';
-  const q1 = parseFloat(budgetData.q1?.toString() || '0');
-  const q2 = parseFloat(budgetData.q2?.toString() || '0');
-  const q3 = parseFloat(budgetData.q3?.toString() || '0');
-  const q4 = parseFloat(budgetData.q4?.toString() || '0');
-  
-  // Parse new budget indicators
-  const availableBudget = parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString());
-  const quarterAvailable = parseFloat(budgetData.quarter_available?.toString() || '0');
-  const yearlyAvailable = parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString());
-  
-  // Get the current quarter value based on quarter indicator
-  let currentQuarterValue = 0;
-  if (currentQuarter === 'q1') {
-    currentQuarterValue = q1;
-  } else if (currentQuarter === 'q2') {
-    currentQuarterValue = q2;
-  } else if (currentQuarter === 'q3') {
-    currentQuarterValue = q3;
-  } else if (currentQuarter === 'q4') {
-    currentQuarterValue = q4;
-  }
-  
-  // If quarter_available isn't provided, calculate it
-  const quarterAvailableValue = quarterAvailable || (currentQuarterValue - userView);
-
-  // Calculate remaining budget after potential deduction
-  const remainingAvailable = availableBudget - amount;
-  
-  // Calculate percentage for progress bar
-  const percentageUsed = (amount / availableBudget) * 100 || 0;
-  
-  const getBadgeVariant = (percentage: number): BadgeVariant => {
-    if (percentage > 90) return "destructive";
-    if (percentage > 70) return "secondary";
-    return "default";
-  };
-
-  return (
-    <Card className="p-3 bg-gradient-to-br from-background/50 to-background border-primary/20">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-medium">Πληροφορίες Κατανομών</h3>
-          <Badge variant={getBadgeVariant(percentageUsed)} className="text-sm">
-            {percentageUsed.toFixed(1)}% Χρήση
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 text-sm">
-          <div>
-            <p className="text-muted-foreground">Διαθέσιμη Κατανομή</p>
-            <p className="font-medium text-primary">
-              {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Υπόλοιπο Τριμήνου {currentQuarter?.substring(1) || ''}</p>
-            <p className="font-medium">
-              {quarterAvailableValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Υπόλοιπο προς Πίστωση</p>
-            <p className="font-medium">
-              {yearlyAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <div className="h-1 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary transition-all duration-500 ease-in-out"
-              style={{ width: `${Math.min(percentageUsed, 100)}%` }}
-            />
-          </div>
-          <p className="text-sm text-muted-foreground text-right mt-1">
-            Τρέχον: {amount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-          </p>
-        </div>
-      </div>
-    </Card>
-  );
-};
+// Removed: Local BudgetIndicator Component - now importing from @/components/ui/budget-indicator
 
 // Schemas
 const recipientSchema = z.object({
