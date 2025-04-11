@@ -1043,10 +1043,15 @@ export class DocumentFormatter {
     // Process each recipient
     recipients.forEach((recipient, index) => {
       // Check if fathername exists and is not empty
-      const fullName = !recipient.fathername || recipient.fathername.trim() === ""
-        ? `${recipient.lastname} ${recipient.firstname}`.trim()
-        : `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
-      const afm = recipient.afm;
+      const firstname = recipient.firstname || '';
+      const lastname = recipient.lastname || '';
+      const fathername = recipient.fathername || '';
+      
+      // Check if fathername exists and is not empty
+      const fullName = !fathername || fathername.trim() === ""
+        ? `${lastname} ${firstname}`.trim()
+        : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
+      const afm = recipient.afm || '';
       const rowNumber = (index + 1).toString() + ".";
       let installments: string[] = [];
       if (

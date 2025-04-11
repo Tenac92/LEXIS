@@ -254,11 +254,10 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
       setExpenditureType(document.expenditure_type || '');
 
       // Safely parse recipients array
-      const safeRecipients = document.recipients && Array.isArray(document.recipients)
+      const safeRecipients = Array.isArray(document.recipients)
         ? document.recipients.map(r => ({
             firstname: String(r.firstname || ''),
             lastname: String(r.lastname || ''),
-            fathername: String(r.fathername || ''),
             afm: String(r.afm || ''),
             amount: typeof r.amount === 'string' ? parseFloat(r.amount) : Number(r.amount) || 0,
             installment: typeof r.installment === 'string' ? parseInt(r.installment) : Number(r.installment) || 1
@@ -283,7 +282,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   };
 
   const addRecipient = () => {
-    if (recipients.length >= 15) {
+    if (recipients.length >= 10) {
       toast({
         title: "Error",
         description: "Maximum 10 recipients allowed",
@@ -293,7 +292,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     }
     setRecipients([
       ...recipients,
-      { firstname: '', lastname: '', fathername: '', afm: '', amount: 0, installment: 1 }
+      { firstname: '', lastname: '', afm: '', amount: 0, installment: 1 }
     ]);
   };
 
@@ -305,7 +304,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     return recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
   };
 
-    const handleEdit = async () => {
+  const handleEdit = async () => {
     try {
       if (!document) {
         throw new Error('No document selected for editing');
@@ -315,7 +314,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
       console.log('[EditDocument] Starting edit for document:', document.id);
 
       // Form validation
-      const errors = [];
+      const errors: string[] = [];
       if (!String(projectId).trim()) errors.push('Project ID is required');
       if (!String(expenditureType).trim()) errors.push('Expenditure type is required');
       if (!recipients.length) errors.push('At least one recipient is required');
@@ -335,15 +334,12 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         if (isNaN(installment) || installment < 1 || installment > 12) {
           throw new Error(`Invalid installment for recipient ${index + 1}`);
         }
+
         return {
-          // Handle potentially undefined values safely
-          firstname: r.firstname ? String(r.firstname).trim() : '',
-          lastname: r.lastname ? String(r.lastname).trim() : '',
-          fathername: r.fathername ? String(r.fathername).trim() : '',
-          afm: r.afm ? String(r.afm).trim() : '',
-          // Convert amounts properly
-          amount: parseFloat(String(amount)),
-          // Ensure installment is a number
+          firstname: String(r.firstname).trim(),
+          lastname: String(r.lastname).trim(),
+          afm: String(r.afm).trim(),
+          amount,
           installment
         };
       });
@@ -357,29 +353,28 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         total_amount: calculateTotalAmount(),
       };
 
-      // Handle optional fields
-      const finalData = {
-        ...formData
-      };
-      
+      // Pre-process form data to handle empty protocol values
+      const processedData = { ...formData };
+
       // Only include protocol_date if it's not empty
-      if (!finalData.protocol_date || finalData.protocol_date === '') {
-        delete finalData.protocol_date;
+      if (!processedData.protocol_date || processedData.protocol_date === '') {
+        delete processedData.protocol_date;
       }
 
       // Only include protocol_number_input if it's not empty
-      if (!finalData.protocol_number_input || finalData.protocol_number_input === '') {
-        delete finalData.protocol_number_input;
+      if (!processedData.protocol_number_input || processedData.protocol_number_input === '') {
+        delete processedData.protocol_number_input;
       }
 
-      console.log('[EditDocument] Sending update with data:', finalData);
+
+      console.log('[EditDocument] Sending update with data:', processedData);
 
       const response = await apiRequest(`/api/documents/generated/${document.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(finalData)
+        body: JSON.stringify(processedData)
       });
 
       if (!response || response.error) {
