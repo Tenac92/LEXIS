@@ -211,15 +211,16 @@ export function BudgetIndicator({
   // If quarter_available isn't provided, calculate it
   const quarterAvailableValue = quarterAvailable || (currentQuarterValue - userView);
 
-  // Calculate remaining budget after potential deduction
+  // Calculate remaining budget after potential deduction in real-time
   const remainingAvailable = availableBudget - amount;
   
-  // Calculate percentage for progress bar
+  // Calculate percentage for progress bar, showing real-time usage as user types
   const percentageUsed = availableBudget > 0 ? ((amount / availableBudget) * 100) : 0;
   
-  // Check budget thresholds for warnings
+  // Check budget thresholds for warnings (showing in real-time as they type)
   const isExceeding20Percent = amount > (katanomesEtous * 0.2);
   const isExceedingEthsiaPistosi = amount > ethsiaPistosi;
+  const isExceedingAvailable = remainingAvailable < 0;
 
   // Show warnings when thresholds are exceeded
   if (isExceedingEthsiaPistosi && onValidationWarning) {
@@ -282,6 +283,15 @@ export function BudgetIndicator({
         <Alert>
           <AlertDescription>
             Το ποσό υπερβαίνει το 20% της ετήσιας κατανομής. Απαιτείται ανακατανομή.
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Show real-time warning for exceeding available budget */}
+      {isExceedingAvailable && !isExceedingEthsiaPistosi && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Το ποσό υπερβαίνει τον διαθέσιμο προϋπολογισμό κατά {Math.abs(remainingAvailable).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}.
           </AlertDescription>
         </Alert>
       )}
