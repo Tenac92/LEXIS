@@ -201,8 +201,10 @@ export function BudgetIndicator({
     currentQuarterValue = q4;
   }
   
-  // If quarter_available isn't provided, calculate it
-  const quarterAvailableValue = quarterAvailable || (currentQuarterValue - userView);
+  // If quarter_available isn't provided, calculate it including currentAmount
+  const quarterAvailableValue = quarterAvailable !== undefined ? 
+    (quarterAvailable - amount) : 
+    (currentQuarterValue - userView - amount);
 
   // Calculate remaining budget after potential deduction in real-time
   const remainingAvailable = availableBudget - amount;
@@ -240,7 +242,7 @@ export function BudgetIndicator({
           <div>
             <h3 className="text-sm font-medium text-gray-600">Διαθέσιμη Κατανομή</h3>
             <p className={`text-2xl font-bold ${remainingAvailable < 0 ? 'text-red-600' : 'text-blue-600'}`}>
-              {availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {remainingAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <div className="mt-2">
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -266,7 +268,7 @@ export function BudgetIndicator({
           <div>
             <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο προς Πίστωση</h3>
             <p className="text-2xl font-bold text-gray-700">
-              {yearlyAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {(yearlyAvailable - amount).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               Υπόλοιπο προς πίστωση για το έτος
