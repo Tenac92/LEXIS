@@ -658,6 +658,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Handle documents routes with proper authentication
     app.use('/api/documents', authenticateSession, documentsRouter);
     log('[Routes] Document routes setup complete');
+    
+    // Import test controller
+    const { 
+      testSecondaryTextEndpoint, 
+      getTestSecondaryText,
+      getDocumentSecondaryTextDebug
+    } = await import('./controllers/testController');
+    
+    // Test routes for debugging secondary_text field issues
+    app.post('/api/test/secondary-text', testSecondaryTextEndpoint);
+    app.get('/api/test/secondary-text', getTestSecondaryText);
+    app.get('/api/test/document/:id/secondary-text', getDocumentSecondaryTextDebug);
+    log('[Routes] Test routes for secondary_text debugging registered');
 
     // Template preview route
     app.use('/api/templates', authenticateSession, templatePreviewRouter);
