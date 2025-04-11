@@ -1755,7 +1755,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     </Button>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[calc(70vh-150px)] overflow-y-auto pr-2">
                     {recipients.map((recipient, index) => (
                       <Card key={index} className="p-4 relative">
                         <div className="flex items-start gap-4">
