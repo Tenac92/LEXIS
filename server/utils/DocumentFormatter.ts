@@ -1277,11 +1277,11 @@ export class DocumentFormatter {
       new TableRow({
         height: { value: 360, rule: HeightRule.EXACT },
         children: [
-          this.createHeaderCell("Α.Α.", "auto"),
-          this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
-          this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
-          this.createHeaderCell("ΔΟΣΗ", "auto"),
-          this.createHeaderCell("ΑΦΜ", "auto"),
+          this.createHeaderCell("Α.Α.", 7), // 7% πλάτος για το Α.Α.
+          this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", 25), // 25% πλάτος για το ΟΝΟΜΑΤΕΠΩΝΥΜΟ
+          this.createHeaderCell("ΠΟΣΟ (€)", 15), // 15% πλάτος για το ΠΟΣΟ
+          this.createHeaderCell("ΔΟΣΗ", 13), // 13% πλάτος για τη ΔΟΣΗ
+          this.createHeaderCell("ΑΦΜ", 15), // 15% πλάτος για το ΑΦΜ
         ],
       }),
     ];
@@ -1768,7 +1768,13 @@ export class DocumentFormatter {
     
     const children = [
       new Paragraph({
-        children: [new TextRun({ text: safeText, size: this.DEFAULT_FONT_SIZE })],
+        children: [
+          new TextRun({ 
+            text: safeText, 
+            size: this.DEFAULT_FONT_SIZE,
+            bold: true // Make primary text bold for better visibility
+          })
+        ],
         alignment: alignmentMap[alignment],
         spacing: { after: secondaryText ? 120 : 0 }, // Add spacing after the primary text if secondary text exists
       })
@@ -1796,7 +1802,8 @@ export class DocumentFormatter {
       rowSpan: rowSpan > 0 ? rowSpan : undefined,
       children: children,
       // Set specific properties for table cell to ensure content is properly displayed
-      width: { size: 30, type: WidthType.PERCENTAGE }, // Ensure cell is wide enough
+      width: { size: 25, type: WidthType.PERCENTAGE }, // Fixed width for name cell
+      margins: { marginUnitType: WidthType.DXA, top: 100, bottom: 100 } // Add cell margin for better spacing
     });
   }
 
@@ -1929,7 +1936,8 @@ export class DocumentFormatter {
       children: children,
       verticalAlign: VerticalAlign.CENTER,
       // Ensure cell allows content to expand properly
-      width: { size: secondaryText ? 35 : 20, type: WidthType.PERCENTAGE }, // Wider cell for secondary text
+      // Σταθερό πλάτος κελιού ανεξάρτητα από το δευτερεύον κείμενο
+      width: { size: 25, type: WidthType.PERCENTAGE },
       margins: { marginUnitType: WidthType.DXA, top: 100, bottom: 100 }, // Add cell margin for better spacing
     });
   }
