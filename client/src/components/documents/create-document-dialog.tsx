@@ -877,7 +877,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     isValidationLoading, 
     budgetError,
     validationError,
-    websocketConnected
+    websocketConnected,
+    broadcastUpdate
   } = useBudgetUpdates(selectedProjectId, currentAmount);
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
@@ -1931,6 +1932,20 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     }
   }, [regions, form]);
   
+  // Call broadcastUpdate whenever the amount changes to update other users in real-time
+  useEffect(() => {
+    // Only broadcast if we have a valid project ID and amount > 0
+    if (selectedProjectId && broadcastUpdate && currentAmount > 0) {
+      // Debounce broadcast to prevent excessive updates during typing
+      const broadcastTimeout = setTimeout(() => {
+        broadcastUpdate(currentAmount);
+        console.log("[Budget] Broadcasting amount update:", currentAmount);
+      }, 300); // 300ms debounce
+      
+      return () => clearTimeout(broadcastTimeout);
+    }
+  }, [selectedProjectId, currentAmount, broadcastUpdate]);
+
   // Add budget debugging effect
   useEffect(() => {
     // This is a safe place to log budget data (won't cause React rendering issues)
