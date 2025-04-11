@@ -579,12 +579,30 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     
     // Handle changing the amount for an installment
     const handleInstallmentAmountChange = (installment: string, amount: number) => {
+      // CRITICAL FIX: Guard against extremely large numbers that cause display issues
+      // Check if the number is unreasonably large (more than 1 billion)
+      // This prevents scientific notation or overflow display issues
+      if (!isFinite(amount) || amount > 1000000000) {
+        console.warn("[Budget Form] Prevented invalid amount entry:", amount);
+        // Show a warning toast to user
+        toast({
+          title: "Μη έγκυρο ποσό",
+          description: "Το ποσό που εισάγατε είναι πολύ μεγάλο και έχει διορθωθεί.",
+          variant: "destructive"
+        });
+        amount = 0;
+      }
+      
       const currentInstallmentAmounts = { ...installmentAmounts };
       currentInstallmentAmounts[installment] = amount;
       
       // Update total amount based on installment amounts
       const totalAmount = Object.values(currentInstallmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0);
-      form.setValue(`recipients.${index}.amount`, totalAmount);
+      
+      // Apply the same check to the total amount as a safety measure
+      const safeTotal = !isFinite(totalAmount) || totalAmount > 1000000000 ? 0 : totalAmount;
+      
+      form.setValue(`recipients.${index}.amount`, safeTotal);
       
       // Update installment amounts
       form.setValue(`recipients.${index}.installmentAmounts`, currentInstallmentAmounts);

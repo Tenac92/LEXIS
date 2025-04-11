@@ -154,9 +154,25 @@ export function BudgetIndicator({
     : parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
 
   // Handle currentAmount which could be number, string or null
-  const amount = typeof currentAmount === 'number'
-    ? currentAmount 
-    : currentAmount ? parseFloat(String(currentAmount)) : 0;
+  // CRITICAL FIX: Guard against extremely large numbers that cause display issues
+  let amount = 0;
+  try {
+    if (typeof currentAmount === 'number') {
+      // Check if the number is unreasonably large (more than 1 billion)
+      // This prevents scientific notation or overflow display issues
+      amount = !isFinite(currentAmount) || currentAmount > 1000000000 ? 0 : currentAmount;
+    } else if (currentAmount) {
+      const parsed = parseFloat(String(currentAmount));
+      amount = !isFinite(parsed) || parsed > 1000000000 ? 0 : parsed;
+    }
+    // Log any corrections we made
+    if (currentAmount && amount === 0) {
+      console.warn("[BudgetIndicator] Corrected invalid amount:", currentAmount, "→ 0");
+    }
+  } catch (e) {
+    console.error("[BudgetIndicator] Error parsing amount:", e);
+    amount = 0;
+  }
   
   // Parse quarter-related values
   const currentQuarter = budgetData.current_quarter || '';
