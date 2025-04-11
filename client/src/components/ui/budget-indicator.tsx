@@ -206,6 +206,11 @@ export function BudgetIndicator({
 
   // Calculate remaining budget after potential deduction in real-time
   const remainingAvailable = availableBudget - amount;
+  console.log("[BudgetIndicator] Real-time calculation:", { 
+    availableBudget, 
+    currentAmount: amount, 
+    remainingAvailable 
+  });
   
   // Calculate percentage for progress bar, showing real-time usage as user types
   const percentageUsed = availableBudget > 0 ? ((amount / availableBudget) * 100) : 0;

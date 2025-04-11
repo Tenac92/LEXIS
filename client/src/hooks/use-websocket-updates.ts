@@ -147,21 +147,23 @@ export function useWebSocketUpdates() {
                 // Store unique client session ID in the sessionStorage to identify our own updates
                 const clientSessionId = sessionStorage.getItem('clientSessionId');
                 
-                // If this update wasn't from our current session (to avoid self-updates)
+                // Always process budget updates, even from our own session
+                // This ensures all clients see updates in real-time
+                console.log(`[WebSocket] Received budget update for MIS ${budgetUpdate.mis}: €${budgetUpdate.amount.toLocaleString('el-GR')}`);
+                
+                // Force refetch of the budget validation to update all components showing this budget
+                // This will update the budget indicator component with new values
+                queryClient.invalidateQueries({ 
+                  queryKey: ["budget-validation", budgetUpdate.mis]
+                });
+                
+                // Also invalidate the budget data
+                queryClient.invalidateQueries({ 
+                  queryKey: ["budget", budgetUpdate.mis]
+                });
+                
+                // Only show a toast if it's not our own update
                 if (budgetUpdate.sessionId !== clientSessionId) {
-                  console.log(`[WebSocket] Received budget update for MIS ${budgetUpdate.mis}: €${budgetUpdate.amount.toLocaleString('el-GR')}`);
-                  
-                  // Force refetch of the budget validation to update all components showing this budget
-                  // This will update the budget indicator component with new values
-                  queryClient.invalidateQueries({ 
-                    queryKey: ["budget-validation", budgetUpdate.mis]
-                  });
-                  
-                  // Also invalidate the budget data
-                  queryClient.invalidateQueries({ 
-                    queryKey: ["budget", budgetUpdate.mis]
-                  });
-                  
                   // Display a subtle toast to inform the user about real-time updates
                   toast({
                     title: 'Συγχρονισμός κατανομών',
@@ -170,7 +172,7 @@ export function useWebSocketUpdates() {
                   });
                 } else {
                   // Just log if it's our own update
-                  console.log('[WebSocket] Ignoring self-generated budget update');
+                  console.log('[WebSocket] Processing our own budget update to update UI');
                 }
                 break;
 
