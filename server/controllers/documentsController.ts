@@ -58,7 +58,8 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       fathername: String(r.fathername).trim(),
       afm: String(r.afm).trim(),
       amount: parseFloat(String(r.amount)),
-      installment: String(r.installment).trim()
+      installment: String(r.installment).trim(),
+      secondary_text: r.secondary_text ? String(r.secondary_text).trim() : undefined
     }));
 
     const now = new Date().toISOString();

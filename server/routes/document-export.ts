@@ -64,6 +64,19 @@ export async function exportDocument(req: Request, res: Response) {
 
     // Generate primary document buffer
     console.log('Generating primary document...');
+    // Enhanced logging for document structure before sending to formatter
+    console.log('Document structure sample:', {
+      id: document.id,
+      unit: document.unit,
+      expenditure_type: document.expenditure_type,
+      recipientsCount: document.recipients?.length || 0,
+      recipients: document.recipients.slice(0, 2).map((r: any) => ({
+        name: `${r.lastname} ${r.firstname}`,
+        afm: r.afm,
+        secondary_text: r.secondary_text || 'NOT PROVIDED',
+        amount: r.amount
+      }))
+    });
     const primaryBuffer = await DocumentFormatter.generateDocument(document);
 
     if (!primaryBuffer || primaryBuffer.length === 0) {
