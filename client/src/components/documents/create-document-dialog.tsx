@@ -199,7 +199,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
               onFocus={handleFocus}
               onBlur={handleBlur}
               placeholder="Αναζήτηση με NA853 ή όνομα έργου... (Ctrl + /)"
-              className="flex-1 bg-transparent border-0 outline-none text-base placeholder:text-muted-foreground focus:ring-0 h-auto py-1 w-full"
+              className="flex-1 bg-transparent border-0 outline-none text-base placeholder:text-muted-foreground focus:ring-0 h-auto py-1 w-full min-w-[250px]"
             />
             {isSearching && (
               <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
@@ -243,7 +243,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
                             <Badge variant="outline" className="text-xs w-fit mb-1">
                               {na853Info?.full || project.id}
                             </Badge>
-                            <span className="text-sm">
+                            <span className="text-sm break-words">
                               {displayName}
                             </span>
                           </div>
