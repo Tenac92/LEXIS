@@ -1044,7 +1044,7 @@ export class DocumentFormatter {
     recipients.forEach((recipient, index) => {
       // Check if fathername exists and is not empty
       const fullName = !recipient.fathername || recipient.fathername.trim() === ""
-        ? `${recipient.lastname} ${recipient.firstname}${recipient.fathername && recipient.fathername.trim() !== "" ? ` ${recipient.fathername}` : ""}`.trim()
+        ? `${recipient.lastname} ${recipient.firstname}`.trim()
         : `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
       const afm = recipient.afm;
       const rowNumber = (index + 1).toString() + ".";
@@ -1275,7 +1275,7 @@ export class DocumentFormatter {
     recipients.forEach((recipient, index) => {
       // Check if fathername exists and is not empty
       const fullName = !recipient.fathername || recipient.fathername.trim() === ""
-        ? `${recipient.lastname} ${recipient.firstname}${recipient.fathername && recipient.fathername.trim() !== "" ? ` ${recipient.fathername}` : ""}`.trim()
+        ? `${recipient.lastname} ${recipient.firstname}`.trim()
         : `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
       const afm = recipient.afm;
       const rowNumber = (index + 1).toString() + ".";
