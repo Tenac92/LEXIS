@@ -1314,9 +1314,14 @@ export class DocumentFormatter {
         const installment = installments[0];
         const amount = installmentAmounts[installment] || recipient.amount;
 
+        // Δυναμικό ύψος γραμμής με βάση αν υπάρχει δευτερεύον κείμενο
+        const rowHeight = recipient.secondary_text ? 
+          { value: 600, rule: HeightRule.ATLEAST } : // Μεγαλύτερο ελάχιστο ύψος αν έχει δευτερεύον κείμενο
+          { value: 360, rule: HeightRule.EXACT };      // Σταθερό ύψος αν δεν έχει
+          
         rows.push(
           new TableRow({
-            height: { value: 360, rule: HeightRule.EXACT },
+            height: rowHeight,
             children: [
               this.createTableCell(rowNumber, "center"),
               this.createTableCellWithSecondaryText(fullName, recipient.secondary_text, "center"),
@@ -1898,9 +1903,11 @@ export class DocumentFormatter {
           children: [new TextRun({ 
             text: secondaryText, 
             size: this.DEFAULT_FONT_SIZE,
-            italics: true // Make secondary text italic to differentiate it
+            italics: true, // Make secondary text italic to differentiate it
+            break: 1       // Add line break to ensure proper spacing
           })],
           alignment: alignmentMap[alignment],
+          spacing: { before: 80, after: 80 }, // Add spacing before and after for better readability
         })
       );
     }
@@ -1909,6 +1916,8 @@ export class DocumentFormatter {
       columnSpan: colSpan,
       children: children,
       verticalAlign: VerticalAlign.CENTER,
+      // Ensure cell allows content to expand properly
+      width: { size: secondaryText ? 30 : 20, type: WidthType.PERCENTAGE },
     });
   }
 
