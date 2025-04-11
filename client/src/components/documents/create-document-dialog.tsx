@@ -344,6 +344,8 @@ const recipientSchema = z.object({
   fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
   afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
+  // Νέο πεδίο για δευτερεύον κείμενο
+  secondary_text: z.string().optional(),
   // Για συμβατότητα με το API (παλιά μορφή)
   installment: z.string().optional().default("Α"),
   // Νέο schema για πολλαπλές δόσεις ανά παραλήπτη
@@ -1089,6 +1091,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           fathername: r.fathername.trim(),
           afm: r.afm.trim(),
           amount: parseFloat(r.amount.toString()),
+          secondary_text: r.secondary_text?.trim() || "",
           installments: r.installments,
           installmentAmounts: r.installmentAmounts || {}
         })),
@@ -1189,6 +1192,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         fathername: "",
         afm: "",
         amount: 0,
+        secondary_text: "",
         installment: "ΕΦΑΠΑΞ", // Διατηρούμε το παλιό πεδίο για συμβατότητα
         installments: ["ΕΦΑΠΑΞ"], // Default to ΕΦΑΠΑΞ for new recipients
         installmentAmounts: { "ΕΦΑΠΑΞ": 0 } // Initialize installment amount
@@ -1715,6 +1719,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                               <div className="flex-1">
                                 {renderRecipientInstallments(index)}
                               </div>
+                            </div>
+                            <div className="md:col-span-12 mt-2">
+                              <Input
+                                {...form.register(`recipients.${index}.secondary_text`)}
+                                placeholder="Ελεύθερο Κείμενο"
+                                className="w-full"
+                                autoComplete="off"
+                              />
                             </div>
                             <div className="md:col-span-1 flex justify-end">
                               <Button
