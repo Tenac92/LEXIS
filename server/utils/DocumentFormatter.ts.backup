@@ -1028,7 +1028,7 @@ export class DocumentFormatter {
 
     const rows = [
       new TableRow({
-        height: { value: 360, rule: HeightRule.ATLEAST },
+        height: { value: 360, rule: HeightRule.EXACT },
         children: [
           this.createHeaderCell("Α.Α.", "auto"),
           this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
@@ -1070,7 +1070,7 @@ export class DocumentFormatter {
 
         rows.push(
           new TableRow({
-            height: { value: 360, rule: HeightRule.ATLEAST },
+            height: { value: 360, rule: HeightRule.EXACT },
             children: [
               this.createTableCell(rowNumber, "center"),
               this.createTableCellWithSecondaryText(fullName, recipient.secondary_text, "center"),
@@ -1164,7 +1164,7 @@ export class DocumentFormatter {
 
         rows.push(
           new TableRow({
-            height: { value: rowHeight, rule: HeightRule.ATLEAST },
+            height: { value: rowHeight, rule: HeightRule.EXACT },
             children: [
               indexCell,
               nameCell,
@@ -1189,7 +1189,7 @@ export class DocumentFormatter {
 
           rows.push(
             new TableRow({
-              height: { value: rowHeight, rule: HeightRule.ATLEAST },
+              height: { value: rowHeight, rule: HeightRule.EXACT },
               children: [
                 // These cells will be empty due to rowSpan in the first row
                 this.createTableCell(
@@ -1219,7 +1219,7 @@ export class DocumentFormatter {
     // Add total row to the table, formatting to match primary document
     rows.push(
       new TableRow({
-        height: { value: 360, rule: HeightRule.ATLEAST },
+        height: { value: 360, rule: HeightRule.EXACT },
         children: [
           this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
           this.createTableCell(
@@ -1412,7 +1412,7 @@ export class DocumentFormatter {
 
           rows.push(
             new TableRow({
-              height: { value: rowHeight, rule: HeightRule.ATLEAST },
+              height: { value: rowHeight, rule: HeightRule.EXACT },
               children: [
                 // These cells will be empty due to rowSpan in the first row
                 this.createTableCell(
@@ -1437,7 +1437,7 @@ export class DocumentFormatter {
     );
     rows.push(
       new TableRow({
-        height: { value: 360, rule: HeightRule.ATLEAST },
+        height: { value: 360, rule: HeightRule.EXACT },
         children: [
           this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
           this.createTableCell(
