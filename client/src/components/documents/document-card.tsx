@@ -251,7 +251,9 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
               <p className="font-medium">
                 {parseFloat(doc.total_amount?.toString() || '0').toLocaleString('el-GR', {
                   style: 'currency',
-                  currency: 'EUR'
+                  currency: 'EUR',
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
                 })}
               </p>
             </div>
@@ -435,7 +437,9 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                                 <span>Δόση {installment}</span>
                                 <span>{(firstRec.installmentAmounts?.[installment] || 0).toLocaleString('el-GR', {
                                   style: 'currency',
-                                  currency: 'EUR'
+                                  currency: 'EUR',
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2
                                 })}</span>
                               </div>
                             ))
@@ -446,7 +450,9 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                                 <span>Δόση {rec.installment || 'Α'}</span>
                                 <span>{rec.amount.toLocaleString('el-GR', {
                                   style: 'currency',
-                                  currency: 'EUR'
+                                  currency: 'EUR',
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2
                                 })}</span>
                               </div>
                             ))
@@ -457,7 +463,9 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                       <div className="text-sm font-medium mt-1">
                         Σύνολο: {totalAmount.toLocaleString('el-GR', {
                           style: 'currency',
-                          currency: 'EUR'
+                          currency: 'EUR',
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
                         })}
                       </div>
                     </div>
