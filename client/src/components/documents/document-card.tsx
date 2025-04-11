@@ -411,7 +411,9 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="font-medium">
-                          {`${firstRec.firstname} του ${firstRec.fathername} ${firstRec.lastname}`}
+                          {firstRec.fathername && firstRec.fathername.trim() !== ""
+                            ? `${firstRec.firstname} του ${firstRec.fathername} ${firstRec.lastname}`
+                            : `${firstRec.firstname} ${firstRec.lastname}`}
                         </div>
                         {installmentsToShow.length > 1 ? (
                           <Badge variant="outline" className="text-xs">
