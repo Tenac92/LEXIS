@@ -1,7 +1,8 @@
 import { type BudgetData } from "@/lib/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { BadgeInfo, Calculator, CalendarFold, PiggyBank } from "lucide-react";
+import { BadgeInfo, Calculator, CalendarFold, PiggyBank, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface BudgetIndicatorProps {
   budgetData: BudgetData;
@@ -119,6 +120,20 @@ export function BudgetIndicator({
   onValidationWarning 
 }: BudgetIndicatorProps) {
   const { toast } = useToast();
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Effect to show a brief "updating" indicator when budget data changes
+  // This provides a visual cue that real-time updates are occurring
+  useEffect(() => {
+    if (budgetData) {
+      setIsUpdating(true);
+      const timer = setTimeout(() => {
+        setIsUpdating(false);
+      }, 1000); // Show updating indicator for 1 second
+      
+      return () => clearTimeout(timer);
+    }
+  }, [budgetData?.available_budget]);
   
   // Enhanced debug output for main budget indicator 
   console.log("[BudgetIndicator] Rendering with data:", budgetData, "current amount:", currentAmount);
@@ -231,7 +246,13 @@ export function BudgetIndicator({
 
   return (
     <div className="space-y-4">
-      <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
+      <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg relative">
+        {isUpdating && (
+          <div className="absolute top-2 right-2 flex items-center text-xs text-blue-600 animate-pulse">
+            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+            <span>Συγχρονισμός...</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
             <h3 className="text-sm font-medium text-gray-600">Διαθέσιμη Κατανομή</h3>
