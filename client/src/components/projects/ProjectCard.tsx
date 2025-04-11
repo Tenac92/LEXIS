@@ -71,9 +71,24 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           q2: parseFloat(budgetData.q2?.toString() || '0'),
           q3: parseFloat(budgetData.q3?.toString() || '0'),
           q4: parseFloat(budgetData.q4?.toString() || '0'),
-          available_budget: budgetData.available_budget?.toString() || '',
-          quarter_available: budgetData.quarter_available?.toString() || '',
-          yearly_available: budgetData.yearly_available?.toString() || ''
+          // Calculate these values if they're not provided in the response
+          available_budget: budgetData.available_budget?.toString() || 
+            (parseFloat(budgetData.katanomes_etous?.toString() || '0') - 
+             parseFloat(budgetData.user_view?.toString() || '0')).toString(),
+          quarter_available: budgetData.quarter_available?.toString() || 
+            (() => {
+              // Get current quarter value
+              const currentQ = budgetData.current_quarter?.toString() || 'q1';
+              let quarterValue = 0;
+              if (currentQ === 'q1') quarterValue = parseFloat(budgetData.q1?.toString() || '0');
+              else if (currentQ === 'q2') quarterValue = parseFloat(budgetData.q2?.toString() || '0');
+              else if (currentQ === 'q3') quarterValue = parseFloat(budgetData.q3?.toString() || '0');
+              else if (currentQ === 'q4') quarterValue = parseFloat(budgetData.q4?.toString() || '0');
+              return (quarterValue - parseFloat(budgetData.user_view?.toString() || '0')).toString();
+            })(),
+          yearly_available: budgetData.yearly_available?.toString() || 
+            (parseFloat(budgetData.ethsia_pistosi?.toString() || '0') - 
+             parseFloat(budgetData.user_view?.toString() || '0')).toString()
         };
       } catch (error) {
         console.error('[Budget] Error fetching budget data:', error);

@@ -59,8 +59,11 @@ export function CompactBudgetIndicator({
     ? budgetData.available_budget
     : parseFloat(budgetData.available_budget?.toString() || '0');
 
-  // If available_budget is not in the response, calculate it
-  const calculatedAvailable = availableBudget || (katanomesEtous - userView);
+  // Convert to number before calculations
+  const numAvailableBudget = typeof availableBudget === 'string' ? parseFloat(availableBudget) : availableBudget;
+  
+  // If available_budget is not in the response or is 0, calculate it
+  const calculatedAvailable = (numAvailableBudget || 0) > 0 ? numAvailableBudget : (katanomesEtous - userView);
   
   // Calculate percentage used for visualization
   const percentageUsed = katanomesEtous > 0 ? ((userView / katanomesEtous) * 100) : 0;
