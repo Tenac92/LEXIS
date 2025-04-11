@@ -1042,8 +1042,8 @@ export class DocumentFormatter {
 
     // Process each recipient
     recipients.forEach((recipient, index) => {
-      // Check for hideTouPrefix flag, otherwise check if fathername exists and is not empty
-      const fullName = recipient.hideTouPrefix || !recipient.fathername || recipient.fathername.trim() === ""
+      // Check if fathername exists and is not empty
+      const fullName = !recipient.fathername || recipient.fathername.trim() === ""
         ? `${recipient.lastname} ${recipient.firstname}${recipient.fathername && recipient.fathername.trim() !== "" ? ` ${recipient.fathername}` : ""}`.trim()
         : `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
       const afm = recipient.afm;
@@ -1273,8 +1273,8 @@ export class DocumentFormatter {
 
     // Process each recipient
     recipients.forEach((recipient, index) => {
-      // Check for hideTouPrefix flag, otherwise check if fathername exists and is not empty
-      const fullName = recipient.hideTouPrefix || !recipient.fathername || recipient.fathername.trim() === ""
+      // Check if fathername exists and is not empty
+      const fullName = !recipient.fathername || recipient.fathername.trim() === ""
         ? `${recipient.lastname} ${recipient.firstname}${recipient.fathername && recipient.fathername.trim() !== "" ? ` ${recipient.fathername}` : ""}`.trim()
         : `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
       const afm = recipient.afm;
