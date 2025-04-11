@@ -67,7 +67,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fathername: String(r.fathername).trim(),
           afm: String(r.afm).trim(),
           amount: parseFloat(String(r.amount)),
-          installment: String(r.installment || 'Α').trim(),
           installments: Array.isArray(r.installments) ? r.installments : [String(r.installment || 'Α').trim()],
           installmentAmounts: r.installmentAmounts || {}
         }));
@@ -209,16 +208,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('[DIRECT_ROUTE_V2] Final NA853 value:', project_na853);
         }
         
-        // Format recipients data - Συμπεριλαμβάνουμε το πεδίο installmentAmounts
+        // Format recipients data - Συμπεριλαμβάνουμε το πεδίο installmentAmounts και αφαιρούμε το installment
         const formattedRecipients = recipients.map((r: any) => ({
           firstname: String(r.firstname).trim(),
           lastname: String(r.lastname).trim(),
           fathername: String(r.fathername || '').trim(),
           afm: String(r.afm).trim(),
           amount: parseFloat(String(r.amount)),
-          // Για συμβατότητα με παλιό schema, κρατάμε το πεδίο installment (χρησιμοποιεί την πρώτη δόση αν υπάρχει)
-          installment: String(r.installment || (r.installments && r.installments.length > 0 ? r.installments[0] : 'ΕΦΑΠΑΞ')).trim(),
-          // Νέο schema για πολλαπλές δόσεις - συμπεριλαμβάνουμε τα installments και installmentAmounts
+          // Νέο schema για πολλαπλές δόσεις - συμπεριλαμβάνουμε μόνο τα installments και installmentAmounts
           installments: Array.isArray(r.installments) ? r.installments : [String(r.installment || 'ΕΦΑΠΑΞ').trim()],
           installmentAmounts: r.installmentAmounts || {}
         }));
