@@ -1770,6 +1770,7 @@ export class DocumentFormatter {
       new Paragraph({
         children: [new TextRun({ text: safeText, size: this.DEFAULT_FONT_SIZE })],
         alignment: alignmentMap[alignment],
+        spacing: { after: secondaryText ? 120 : 0 }, // Add spacing after the primary text if secondary text exists
       })
     ];
     
@@ -1779,10 +1780,12 @@ export class DocumentFormatter {
         new Paragraph({
           children: [new TextRun({ 
             text: secondaryText, 
-            size: this.DEFAULT_FONT_SIZE,
-            italics: true // Make secondary text italic to differentiate it
+            size: this.DEFAULT_FONT_SIZE - 2, // Slightly smaller text for secondary
+            italics: true, // Make secondary text italic to differentiate it
+            break: 1 // Force line break for better spacing
           })],
           alignment: alignmentMap[alignment],
+          spacing: { before: 120, after: 120 }, // Add substantial spacing to ensure text is visible
         })
       );
     }
@@ -1792,6 +1795,8 @@ export class DocumentFormatter {
       verticalMerge,
       rowSpan: rowSpan > 0 ? rowSpan : undefined,
       children: children,
+      // Set specific properties for table cell to ensure content is properly displayed
+      width: { size: 30, type: WidthType.PERCENTAGE }, // Ensure cell is wide enough
     });
   }
 
@@ -1891,8 +1896,15 @@ export class DocumentFormatter {
     
     const children = [
       new Paragraph({
-        children: [new TextRun({ text: safeText, size: this.DEFAULT_FONT_SIZE })],
+        children: [
+          new TextRun({ 
+            text: safeText, 
+            size: this.DEFAULT_FONT_SIZE,
+            bold: true // Make primary text bold for better visibility
+          })
+        ],
         alignment: alignmentMap[alignment],
+        spacing: { after: secondaryText ? 120 : 0 }, // Add spacing after if secondary text exists
       })
     ];
     
@@ -1902,12 +1914,12 @@ export class DocumentFormatter {
         new Paragraph({
           children: [new TextRun({ 
             text: secondaryText, 
-            size: this.DEFAULT_FONT_SIZE,
+            size: this.DEFAULT_FONT_SIZE - 2, // Slightly smaller text for secondary
             italics: true, // Make secondary text italic to differentiate it
             break: 1       // Add line break to ensure proper spacing
           })],
           alignment: alignmentMap[alignment],
-          spacing: { before: 80, after: 80 }, // Add spacing before and after for better readability
+          spacing: { before: 120, after: 120 }, // Add substantial spacing to ensure text is visible
         })
       );
     }
@@ -1917,7 +1929,8 @@ export class DocumentFormatter {
       children: children,
       verticalAlign: VerticalAlign.CENTER,
       // Ensure cell allows content to expand properly
-      width: { size: secondaryText ? 30 : 20, type: WidthType.PERCENTAGE },
+      width: { size: secondaryText ? 35 : 20, type: WidthType.PERCENTAGE }, // Wider cell for secondary text
+      margins: { marginUnitType: WidthType.DXA, top: 100, bottom: 100 }, // Add cell margin for better spacing
     });
   }
 
