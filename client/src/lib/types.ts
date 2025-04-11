@@ -112,6 +112,25 @@ export interface ApiResponse<T> {
 }
 
 /**
+ * WebSocket Budget Update Message Type
+ * Used for real-time updates when users type budget amounts
+ */
+export interface BudgetUpdate {
+  type: 'budget_update';
+  mis: string;
+  amount: number;
+  timestamp: string;
+  userId?: string;
+  sessionId?: string;
+  // IMPROVEMENT: Simple budget data for direct calculation
+  simpleBudgetData?: {
+    available_budget: number;
+    yearly_available: number;
+    quarter_available: number;
+  };
+}
+
+/**
  * Result type for the useBudgetUpdates hook
  * Includes real-time budget data and validation result
  */

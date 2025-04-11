@@ -2,21 +2,17 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
+import { BudgetUpdate } from '@/lib/types';
 
-// Define the budget update message type
-export interface BudgetUpdateMessage {
-  mis: string;  // The project MIS (identifier)
-  amount: number;  // Current requested amount
-  timestamp: string;  // When the update happened
-  userId?: string;  // Which user initiated the update
-  sessionId?: string;  // Session ID to filter out self-updates
-}
+// For backward compatibility, keep the old type name as well
+export interface BudgetUpdateMessage extends BudgetUpdate {}
 
 export function useWebSocketUpdates() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | undefined>(undefined);
   const retryCountRef = useRef<number>(0);
   const [isConnected, setIsConnected] = useState(false);
+  const [lastMessage, setLastMessage] = useState<BudgetUpdate | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -144,12 +140,29 @@ export function useWebSocketUpdates() {
                 // Handle real-time budget update
                 const budgetUpdate = data.data as BudgetUpdateMessage;
                 
+                // IMPROVEMENT: Save the budget update message to make it available to other components
+                // This is used by BudgetIndicator to directly display real-time changes without refetching
+                setLastMessage({
+                  type: 'budget_update',
+                  mis: budgetUpdate.mis,
+                  amount: budgetUpdate.amount,
+                  timestamp: budgetUpdate.timestamp || new Date().toISOString(),
+                  userId: budgetUpdate.userId,
+                  sessionId: budgetUpdate.sessionId,
+                  simpleBudgetData: budgetUpdate.simpleBudgetData
+                });
+                
                 // Store unique client session ID in the sessionStorage to identify our own updates
                 const clientSessionId = sessionStorage.getItem('clientSessionId');
                 
                 // Always process budget updates, even from our own session
                 // This ensures all clients see updates in real-time
                 console.log(`[WebSocket] Received budget update for MIS ${budgetUpdate.mis}: €${budgetUpdate.amount.toLocaleString('el-GR')}`);
+                
+                // If we have the simplified budget data, log it
+                if (budgetUpdate.simpleBudgetData) {
+                  console.log('[WebSocket] Received simplified budget data:', budgetUpdate.simpleBudgetData);
+                }
                 
                 // Force refetch of the budget validation to update all components showing this budget
                 // This will update the budget indicator component with new values

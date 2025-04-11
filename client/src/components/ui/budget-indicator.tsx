@@ -1,8 +1,9 @@
-import { type BudgetData } from "@/lib/types";
+import { type BudgetData, type BudgetUpdate } from "@/lib/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { BadgeInfo, Calculator, CalendarFold, PiggyBank, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useWebSocketUpdates } from "@/hooks/use-websocket-updates";
 
 interface BudgetIndicatorProps {
   budgetData: BudgetData;
@@ -97,6 +98,44 @@ export function BudgetIndicator({
 }: BudgetIndicatorProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [realTimeBudgetValues, setRealTimeBudgetValues] = useState<{
+    available_budget?: number;
+    yearly_available?: number;
+    quarter_available?: number;
+  } | null>(null);
+  
+  // Subscribe to WebSocket updates and get real-time budget updates
+  const { lastMessage, isConnected } = useWebSocketUpdates();
+  
+  // Effect to handle budget updates from WebSocket
+  useEffect(() => {
+    if (lastMessage && lastMessage.type === 'budget_update') {
+      // Cast the message as BudgetUpdate
+      const budgetUpdate = lastMessage as BudgetUpdate;
+      
+      // Check if we have the simple budget data in the update
+      if (budgetUpdate.simpleBudgetData) {
+        console.log("[BudgetIndicator] Received real-time budget update:", budgetUpdate.simpleBudgetData);
+        
+        // Set real-time values from the WebSocket
+        setRealTimeBudgetValues(budgetUpdate.simpleBudgetData);
+        
+        // Show the updating indicator
+        setIsUpdating(true);
+        setTimeout(() => {
+          setIsUpdating(false);
+        }, 1500); // Show for a bit longer to make it noticeable
+        
+        // Show a toast notification for the update
+        toast({
+          title: "Ζωντανή ενημέρωση προϋπολογισμού",
+          description: "Τα ποσά έχουν ενημερωθεί σε πραγματικό χρόνο.",
+          variant: "default",
+          duration: 3000 // 3 seconds
+        });
+      }
+    }
+  }, [lastMessage, toast]);
   
   // Effect to show a brief "updating" indicator when budget data changes
   // This provides a visual cue that real-time updates are occurring
