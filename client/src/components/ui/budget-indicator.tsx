@@ -280,15 +280,19 @@ export function BudgetIndicator({
     (currentQuarterValue - userView - amount);
 
   // Calculate remaining budget after potential deduction in real-time
-  const remainingAvailable = availableBudget - amount;
+  // Ensure we have valid numbers by providing fallbacks
+  const safeAvailableBudget = typeof availableBudget === 'number' ? availableBudget : 0;
+  const safeYearlyAvailable = typeof yearlyAvailable === 'number' ? yearlyAvailable : 0;
+  
+  const remainingAvailable = safeAvailableBudget - amount;
   console.log("[BudgetIndicator] Real-time calculation:", { 
-    availableBudget, 
+    availableBudget: safeAvailableBudget, 
     currentAmount: amount, 
     remainingAvailable 
   });
   
   // Calculate percentage for progress bar, showing real-time usage as user types
-  const percentageUsed = availableBudget > 0 ? ((amount / availableBudget) * 100) : 0;
+  const percentageUsed = safeAvailableBudget > 0 ? ((amount / safeAvailableBudget) * 100) : 0;
   
   // Check budget thresholds for warnings (showing in real-time as they type)
   const isExceeding20Percent = amount > (katanomesEtous * 0.2);
@@ -341,7 +345,7 @@ export function BudgetIndicator({
           <div>
             <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο προς Πίστωση</h3>
             <p className="text-2xl font-bold text-gray-700">
-              {(yearlyAvailable - amount).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {(safeYearlyAvailable - amount).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               Υπόλοιπο προς πίστωση για το έτος

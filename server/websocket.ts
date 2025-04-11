@@ -15,6 +15,12 @@ export interface BudgetUpdate {
   timestamp: string;  // When the update happened
   userId?: string;  // Which user initiated the update
   sessionId?: string;  // Session ID to filter out self-updates
+  // IMPROVEMENT: Simple budget data for direct calculation
+  simpleBudgetData?: {
+    available_budget: number;
+    yearly_available: number;
+    quarter_available?: number;
+  };
 }
 
 export function createWebSocketServer(server: Server) {
@@ -268,6 +274,11 @@ export const broadcastBudgetUpdate = (wss: WebSocketServer, update: BudgetUpdate
   if (wss.clients.size === 0) {
     console.log('[WebSocket] No clients connected, skipping budget update broadcast');
     return;
+  }
+
+  // IMPROVEMENT: Log if simplified budget data is included
+  if (update.simpleBudgetData) {
+    console.log(`[WebSocket] Budget update includes simplified data:`, update.simpleBudgetData);
   }
 
   // Create budget update message
