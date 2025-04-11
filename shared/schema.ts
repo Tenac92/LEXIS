@@ -279,6 +279,7 @@ export const recipientSchema = z.object({
     .min(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία")
     .max(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
+  secondary_text: z.string().optional(), // Πεδίο για το ελεύθερο κείμενο κάτω από το όνομα
   installment: z.string().default("ΕΦΑΠΑΞ"), // Παλιό πεδίο για συμβατότητα
   installments: z.array(z.string()).default(["ΕΦΑΠΑΞ"]), // Νέο πεδίο για πολλαπλές δόσεις
   installmentAmounts: z.record(z.string(), z.number()).default({ΕΦΑΠΑΞ: 0}), // Πεδίο για ποσά ανά δόση
