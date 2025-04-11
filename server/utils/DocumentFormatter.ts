@@ -335,7 +335,15 @@ export class DocumentFormatter {
     documentData: DocumentData,
   ): Promise<Buffer> {
     try {
-      console.log("Generating primary document for:", documentData);
+      console.log("Generating primary document for:", {
+        id: documentData.id,
+        unit: documentData.unit,
+        recipients: documentData.recipients?.map(r => ({
+          name: `${r.lastname} ${r.firstname}`,
+          hasSecondaryText: Boolean(r.secondary_text),
+          secondaryTextSample: r.secondary_text ? r.secondary_text.substring(0, 20) + '...' : null
+        }))
+      });
 
       const unitDetails = await this.getUnitDetails(documentData.unit);
       console.log("Unit details:", unitDetails);
@@ -405,6 +413,22 @@ export class DocumentFormatter {
       return await Packer.toBuffer(doc);
     } catch (error) {
       console.error("Error generating primary document:", error);
+      // Add detailed error information to help with debugging
+      if (error instanceof Error) {
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        
+        // Check if there's an issue with the secondary_text field
+        if (error.message.includes('secondary_text')) {
+          console.error("Possible issue with secondary_text field in recipients:", 
+            documentData.recipients?.map(r => ({
+              name: `${r.lastname} ${r.firstname}`,
+              secondary_text: r.secondary_text
+            }))
+          );
+        }
+      }
       throw error;
     }
   }
@@ -1723,7 +1747,7 @@ export class DocumentFormatter {
    */
   private static createCellWithRowSpanAndSecondaryText(
     primaryText: string,
-    secondaryText: string | undefined,
+    secondaryText: string | undefined | null,
     alignment: "center" | "left" | "right" = AlignmentType.CENTER,
     rowSpan: number = 1,
     verticalMerge: "restart" | "continue" = VerticalMergeType.RESTART,
@@ -1734,15 +1758,18 @@ export class DocumentFormatter {
       right: AlignmentType.RIGHT,
     };
     
+    // Ensure primaryText is a string
+    const safeText = primaryText || "";
+    
     const children = [
       new Paragraph({
-        children: [new TextRun({ text: primaryText, size: this.DEFAULT_FONT_SIZE })],
+        children: [new TextRun({ text: safeText, size: this.DEFAULT_FONT_SIZE })],
         alignment: alignmentMap[alignment],
       })
     ];
     
     // Add secondary text as a second paragraph if it exists and isn't empty
-    if (secondaryText && secondaryText.trim()) {
+    if (secondaryText && typeof secondaryText === 'string' && secondaryText.trim()) {
       children.push(
         new Paragraph({
           children: [new TextRun({ 
@@ -1844,7 +1871,7 @@ export class DocumentFormatter {
    */
   private static createTableCellWithSecondaryText(
     primaryText: string,
-    secondaryText: string | undefined,
+    secondaryText: string | undefined | null,
     alignment: "left" | "center" | "right",
     colSpan?: number,
   ): TableCell {
@@ -1854,15 +1881,18 @@ export class DocumentFormatter {
       right: AlignmentType.RIGHT,
     };
     
+    // Ensure primaryText is a string
+    const safeText = primaryText || "";
+    
     const children = [
       new Paragraph({
-        children: [new TextRun({ text: primaryText, size: this.DEFAULT_FONT_SIZE })],
+        children: [new TextRun({ text: safeText, size: this.DEFAULT_FONT_SIZE })],
         alignment: alignmentMap[alignment],
       })
     ];
     
     // Add secondary text as a second paragraph if it exists and isn't empty
-    if (secondaryText && secondaryText.trim()) {
+    if (secondaryText && typeof secondaryText === 'string' && secondaryText.trim()) {
       children.push(
         new Paragraph({
           children: [new TextRun({ 
