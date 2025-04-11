@@ -62,6 +62,7 @@ router.get('/data/:mis', async (req: Request, res: Response) => {
 });
 
 // Validate budget for document
+
 router.post('/validate', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis, amount, sessionId } = req.body;
@@ -128,7 +129,8 @@ router.post('/validate', authenticateToken, async (req: AuthenticatedRequest, re
 });
 
 // Endpoint for broadcasting real-time updates during amount changes
-router.post('/broadcast-update', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+// No authentication required for this lightweight endpoint to enable real-time typing updates
+router.post('/broadcast-update', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis, amount, sessionId } = req.body;
     const requestedAmount = parseFloat(amount.toString());
