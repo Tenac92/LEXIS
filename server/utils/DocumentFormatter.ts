@@ -1260,7 +1260,7 @@ export class DocumentFormatter {
 
     const rows = [
       new TableRow({
-        height: { value: 360, rule: HeightRule.EXACT },
+        height: { value: 360, rule: HeightRule.ATLEAST },
         children: [
           this.createHeaderCell("Α.Α.", "auto"),
           this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
@@ -1299,9 +1299,15 @@ export class DocumentFormatter {
         const installment = installments[0];
         const amount = installmentAmounts[installment] || recipient.amount;
 
+        // Determine row height based on content
+        // Use AT_LEAST instead of EXACT to allow expansion for text
+        const rowHeight = recipient.secondary_text && recipient.secondary_text.trim() 
+          ? { value: 540, rule: HeightRule.AT_LEAST } // Taller row for secondary text
+          : { value: 360, rule: HeightRule.AT_LEAST }; // Standard row height, but still expandable
+        
         rows.push(
           new TableRow({
-            height: { value: 360, rule: HeightRule.EXACT },
+            height: rowHeight,
             children: [
               this.createTableCell(rowNumber, "center"),
               this.createTableCellWithSecondaryText(fullName, recipient.secondary_text, "center"),
