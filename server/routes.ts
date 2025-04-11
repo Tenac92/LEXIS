@@ -215,6 +215,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fathername: String(r.fathername || '').trim(),
           afm: String(r.afm).trim(),
           amount: parseFloat(String(r.amount)),
+          // Προσθήκη του πεδίου secondary_text για το ελεύθερο κείμενο
+          secondary_text: r.secondary_text ? String(r.secondary_text).trim() : "",
           // Νέο schema για πολλαπλές δόσεις - συμπεριλαμβάνουμε μόνο τα installments και installmentAmounts
           installments: Array.isArray(r.installments) ? r.installments : [String(r.installment || 'ΕΦΑΠΑΞ').trim()],
           installmentAmounts: r.installmentAmounts || {}
