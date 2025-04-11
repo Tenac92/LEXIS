@@ -1042,10 +1042,10 @@ export class DocumentFormatter {
 
     // Process each recipient
     recipients.forEach((recipient, index) => {
-      const fullName =
-        `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
-      const afm = recipient.afm;
-      const rowNumber = (index + 1).toString() + ".";
+      // Only add ΤΟΥ if fathername exists and is not empty
+      const fullName = recipient.fathername && recipient.fathername.trim() !== ""
+        ? `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim()
+        : `${recipient.lastname} ${recipient.firstname}`.trim();
 
       // Determine installments
       let installments: string[] = [];
@@ -1273,10 +1273,10 @@ export class DocumentFormatter {
 
     // Process each recipient
     recipients.forEach((recipient, index) => {
-      const fullName =
-        `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
-      const afm = recipient.afm;
-      const rowNumber = (index + 1).toString() + ".";
+      // Only add ΤΟΥ if fathername exists and is not empty
+      const fullName = recipient.fathername && recipient.fathername.trim() !== ""
+        ? `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim()
+        : `${recipient.lastname} ${recipient.firstname}`.trim();
 
       // Determine installments
       let installments: string[] = [];
