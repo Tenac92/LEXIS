@@ -1,0 +1,4 @@
+// Only add ΤΟΥ if fathername exists and is not empty
+      const fullName = recipient.fathername && recipient.fathername.trim() !== ""
+        ? `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim()
+        : `${recipient.lastname} ${recipient.firstname}`.trim();
