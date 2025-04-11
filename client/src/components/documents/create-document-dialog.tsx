@@ -610,9 +610,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     
     return (
       <div className="w-full">
-        <div className="mb-2">
-          <label className="inline-block text-sm font-medium mr-2">Δόσεις:</label>
-          <div className="inline-flex flex-wrap gap-1">
+        <div className="mb-2 flex items-center">
+          <label className="text-sm font-medium mr-2 whitespace-nowrap">Δόσεις:</label>
+          <div className="flex flex-row gap-1">
             {availableInstallments.map((installment) => (
               <Button
                 key={installment}
