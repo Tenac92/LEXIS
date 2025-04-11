@@ -341,7 +341,7 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
 const recipientSchema = z.object({
   firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
   lastname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-  fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  fathername: z.string().optional().default(""), // Made optional with empty string default
   afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
   // Νέο πεδίο για δευτερεύον κείμενο

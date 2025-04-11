@@ -335,15 +335,7 @@ export class DocumentFormatter {
     documentData: DocumentData,
   ): Promise<Buffer> {
     try {
-      console.log("Generating primary document for:", {
-        id: documentData.id,
-        unit: documentData.unit,
-        recipients: documentData.recipients?.map(r => ({
-          name: `${r.lastname} ${r.firstname}`,
-          hasSecondaryText: Boolean(r.secondary_text),
-          secondaryTextSample: r.secondary_text ? r.secondary_text.substring(0, 20) + '...' : null
-        }))
-      });
+      console.log("Generating primary document for:", documentData);
 
       const unitDetails = await this.getUnitDetails(documentData.unit);
       console.log("Unit details:", unitDetails);
@@ -413,22 +405,6 @@ export class DocumentFormatter {
       return await Packer.toBuffer(doc);
     } catch (error) {
       console.error("Error generating primary document:", error);
-      // Add detailed error information to help with debugging
-      if (error instanceof Error) {
-        console.error("Error name:", error.name);
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-        
-        // Check if there's an issue with the secondary_text field
-        if (error.message.includes('secondary_text')) {
-          console.error("Possible issue with secondary_text field in recipients:", 
-            documentData.recipients?.map(r => ({
-              name: `${r.lastname} ${r.firstname}`,
-              secondary_text: r.secondary_text
-            }))
-          );
-        }
-      }
       throw error;
     }
   }
@@ -1116,13 +1092,22 @@ export class DocumentFormatter {
         const rowSpan = installments.length;
         const rowHeight = 360; // Base height for one row
 
-        // Create cells for the first row with rowSpan, supporting secondary text
-        const nameCell = this.createCellWithRowSpanAndSecondaryText(
-          fullName,
-          recipient.secondary_text,
-          "center",
-          rowSpan
-        );
+        // Create cells for the first row with rowSpan
+        const nameCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: fullName,
+                  size: this.DEFAULT_FONT_SIZE,
+                }),
+              ],
+            }),
+          ],
+        });
 
         const indexCell = new TableCell({
           rowSpan: rowSpan,
@@ -1277,11 +1262,11 @@ export class DocumentFormatter {
       new TableRow({
         height: { value: 360, rule: HeightRule.EXACT },
         children: [
-          this.createHeaderCell("Α.Α.", 7), // 7% πλάτος για το Α.Α.
-          this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", 25), // 25% πλάτος για το ΟΝΟΜΑΤΕΠΩΝΥΜΟ
-          this.createHeaderCell("ΠΟΣΟ (€)", 15), // 15% πλάτος για το ΠΟΣΟ
-          this.createHeaderCell("ΔΟΣΗ", 13), // 13% πλάτος για τη ΔΟΣΗ
-          this.createHeaderCell("ΑΦΜ", 15), // 15% πλάτος για το ΑΦΜ
+          this.createHeaderCell("Α.Α.", "auto"),
+          this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
+          this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
+          this.createHeaderCell("ΔΟΣΗ", "auto"),
+          this.createHeaderCell("ΑΦΜ", "auto"),
         ],
       }),
     ];
@@ -1314,14 +1299,9 @@ export class DocumentFormatter {
         const installment = installments[0];
         const amount = installmentAmounts[installment] || recipient.amount;
 
-        // Δυναμικό ύψος γραμμής με βάση αν υπάρχει δευτερεύον κείμενο
-        const rowHeight = recipient.secondary_text ? 
-          { value: 600, rule: HeightRule.ATLEAST } : // Μεγαλύτερο ελάχιστο ύψος αν έχει δευτερεύον κείμενο
-          { value: 360, rule: HeightRule.EXACT };      // Σταθερό ύψος αν δεν έχει
-          
         rows.push(
           new TableRow({
-            height: rowHeight,
+            height: { value: 360, rule: HeightRule.EXACT },
             children: [
               this.createTableCell(rowNumber, "center"),
               this.createTableCellWithSecondaryText(fullName, recipient.secondary_text, "center"),
@@ -1348,12 +1328,21 @@ export class DocumentFormatter {
         const totalHeight = rowHeight * rowSpan;
 
         // Create cells for the first row with rowSpan
-        const nameCell = this.createCellWithRowSpanAndSecondaryText(
-          fullName,
-          recipient.secondary_text,
-          "center",
-          rowSpan
-        );
+        const nameCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: fullName,
+                  size: this.DEFAULT_FONT_SIZE,
+                }),
+              ],
+            }),
+          ],
+        });
 
         const indexCell = new TableCell({
           rowSpan: rowSpan,
@@ -1752,7 +1741,7 @@ export class DocumentFormatter {
    */
   private static createCellWithRowSpanAndSecondaryText(
     primaryText: string,
-    secondaryText: string | undefined | null,
+    secondaryText: string | undefined,
     alignment: "center" | "left" | "right" = AlignmentType.CENTER,
     rowSpan: number = 1,
     verticalMerge: "restart" | "continue" = VerticalMergeType.RESTART,
@@ -1763,46 +1752,32 @@ export class DocumentFormatter {
       right: AlignmentType.RIGHT,
     };
     
-    // Ensure primaryText is a string
-    const safeText = primaryText || "";
-    
-    // Ένα paragraph με όλα τα στοιχεία, χωρίς κενό μεταξύ ονόματος και δευτερεύοντος κειμένου
-    const paragraphChildren = [
-      new TextRun({ 
-        text: safeText, 
-        size: this.DEFAULT_FONT_SIZE,
-        bold: true // Make primary text bold for better visibility
+    const children = [
+      new Paragraph({
+        children: [new TextRun({ text: primaryText, size: this.DEFAULT_FONT_SIZE })],
+        alignment: alignmentMap[alignment],
       })
     ];
     
-    // Προσθήκη του δευτερεύοντος κειμένου στο ίδιο paragraph αν υπάρχει
-    if (secondaryText && typeof secondaryText === 'string' && secondaryText.trim()) {
-      // Προσθήκη αλλαγής γραμμής και κατόπιν του δευτερεύοντος κειμένου
-      paragraphChildren.push(
-        new TextRun({ 
-          text: "\n" + secondaryText, 
-          size: this.DEFAULT_FONT_SIZE - 2, // Μικρότερο μέγεθος για το δευτερεύον κείμενο
-          italics: true // Πλάγια γραφή για το δευτερεύον κείμενο
+    // Add secondary text as a second paragraph if it exists and isn't empty
+    if (secondaryText && secondaryText.trim()) {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ 
+            text: secondaryText, 
+            size: this.DEFAULT_FONT_SIZE,
+            italics: true // Make secondary text italic to differentiate it
+          })],
+          alignment: alignmentMap[alignment],
         })
       );
     }
-    
-    const children = [
-      new Paragraph({
-        children: paragraphChildren,
-        alignment: alignmentMap[alignment],
-        spacing: { after: 0 }, // Καθόλου επιπλέον διάστημα μετά
-      })
-    ];
 
     return new TableCell({
       verticalAlign: VerticalAlign.CENTER,
       verticalMerge,
       rowSpan: rowSpan > 0 ? rowSpan : undefined,
       children: children,
-      // Set specific properties for table cell to ensure content is properly displayed
-      width: { size: 25, type: WidthType.PERCENTAGE }, // Fixed width for name cell
-      margins: { marginUnitType: WidthType.DXA, top: 100, bottom: 100 } // Add cell margin for better spacing
     });
   }
 
@@ -1887,7 +1862,7 @@ export class DocumentFormatter {
    */
   private static createTableCellWithSecondaryText(
     primaryText: string,
-    secondaryText: string | undefined | null,
+    secondaryText: string | undefined,
     alignment: "left" | "center" | "right",
     colSpan?: number,
   ): TableCell {
@@ -1897,48 +1872,31 @@ export class DocumentFormatter {
       right: AlignmentType.RIGHT,
     };
     
-    // Ensure primaryText is a string
-    const safeText = primaryText || "";
-    
-    // Ένα paragraph με όλα τα στοιχεία, χωρίς κενό μεταξύ ονόματος και δευτερεύοντος κειμένου
-    const paragraphChildren = [
-      new TextRun({ 
-        text: safeText, 
-        size: this.DEFAULT_FONT_SIZE,
-        bold: true // Make primary text bold for better visibility
+    const children = [
+      new Paragraph({
+        children: [new TextRun({ text: primaryText, size: this.DEFAULT_FONT_SIZE })],
+        alignment: alignmentMap[alignment],
       })
     ];
     
-    // Προσθήκη του δευτερεύοντος κειμένου στο ίδιο paragraph αν υπάρχει
-    if (secondaryText && typeof secondaryText === 'string' && secondaryText.trim()) {
-      // Προσθήκη αλλαγής γραμμής και κατόπιν του δευτερεύοντος κειμένου
-      paragraphChildren.push(
-        new TextRun({ 
-          text: "\n" + secondaryText, 
-          size: this.DEFAULT_FONT_SIZE - 2, // Μικρότερο μέγεθος για το δευτερεύον κείμενο
-          italics: true // Πλάγια γραφή για το δευτερεύον κείμενο
+    // Add secondary text as a second paragraph if it exists and isn't empty
+    if (secondaryText && secondaryText.trim()) {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ 
+            text: secondaryText, 
+            size: this.DEFAULT_FONT_SIZE,
+            italics: true // Make secondary text italic to differentiate it
+          })],
+          alignment: alignmentMap[alignment],
         })
       );
     }
-    
-    const children = [
-      new Paragraph({
-        children: paragraphChildren,
-        alignment: alignmentMap[alignment],
-        spacing: { after: 0 }, // Καθόλου επιπλέον διάστημα μετά
-      })
-    ];
-    
-    // Το δευτερεύον κείμενο έχει ήδη προστεθεί στην κύρια παράγραφο παραπάνω
 
     return new TableCell({
       columnSpan: colSpan,
       children: children,
       verticalAlign: VerticalAlign.CENTER,
-      // Ensure cell allows content to expand properly
-      // Σταθερό πλάτος κελιού ανεξάρτητα από το δευτερεύον κείμενο
-      width: { size: 25, type: WidthType.PERCENTAGE },
-      margins: { marginUnitType: WidthType.DXA, top: 100, bottom: 100 }, // Add cell margin for better spacing
     });
   }
 
