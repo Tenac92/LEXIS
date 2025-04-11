@@ -14,6 +14,7 @@ export function useBudgetUpdates(
   const queryClient = useQueryClient();
   const { isConnected } = useWebSocketUpdates();
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Ensure we have a session ID for WebSocket message filtering
   useEffect(() => {

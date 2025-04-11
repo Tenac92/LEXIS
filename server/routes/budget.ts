@@ -127,6 +127,65 @@ router.post('/validate', authenticateToken, async (req: AuthenticatedRequest, re
   }
 });
 
+// Endpoint for broadcasting real-time updates during amount changes
+router.post('/broadcast-update', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis, amount, sessionId } = req.body;
+    const requestedAmount = parseFloat(amount.toString());
+
+    if (!mis) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'MIS parameter is required'
+      });
+    }
+
+    if (isNaN(requestedAmount)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Valid amount is required'
+      });
+    }
+
+    // Get the application-wide WebSocket server
+    const wss = req.app.get('wss');
+    
+    // If we have a WebSocket server, broadcast the budget update
+    if (wss) {
+      try {
+        // Broadcast the budget update to all connected clients without validation
+        // This is a lightweight alternative to /validate for real-time typing feedback
+        broadcastBudgetUpdate(wss, {
+          mis,
+          amount: requestedAmount,
+          timestamp: new Date().toISOString(),
+          userId: req.user?.id?.toString(),
+          sessionId // Client session ID to filter out self-updates
+        });
+        console.log(`[Budget] Broadcast real-time update for MIS ${mis} with amount ${requestedAmount}`);
+      } catch (broadcastError) {
+        console.error('[Budget] Failed to broadcast real-time update:', broadcastError);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to broadcast update'
+        });
+      }
+    }
+
+    // Return a simple success response
+    return res.json({
+      status: 'success',
+      message: 'Update broadcasted successfully'
+    });
+  } catch (error) {
+    console.error("[Budget] Error broadcasting update:", error);
+    return res.status(500).json({ 
+      status: 'error',
+      message: "Failed to broadcast update",
+    });
+  }
+});
+
 // Get available MIS and NA853 combinations
 router.get('/records', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
