@@ -68,8 +68,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           afm: String(r.afm).trim(),
           amount: parseFloat(String(r.amount)),
           installment: String(r.installment || 'Α').trim(),
-          installments: Array.isArray(r.installments) ? r.installments : [String(r.installment || 'Α').trim()]
-          // Αφαιρέθηκε: installmentAmounts: r.installmentAmounts || {}
+          installments: Array.isArray(r.installments) ? r.installments : [String(r.installment || 'Α').trim()],
+          installmentAmounts: r.installmentAmounts || {}
         }));
 
         const now = new Date().toISOString();
@@ -209,7 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('[DIRECT_ROUTE_V2] Final NA853 value:', project_na853);
         }
         
-        // Format recipients data - ΑΦΑΙΡΕΣΗ του πεδίου installmentAmounts για συμβατότητα με τη βάση δεδομένων
+        // Format recipients data - Συμπεριλαμβάνουμε το πεδίο installmentAmounts
         const formattedRecipients = recipients.map((r: any) => ({
           firstname: String(r.firstname).trim(),
           lastname: String(r.lastname).trim(),
@@ -218,9 +218,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: parseFloat(String(r.amount)),
           // Για συμβατότητα με παλιό schema, κρατάμε το πεδίο installment (χρησιμοποιεί την πρώτη δόση αν υπάρχει)
           installment: String(r.installment || (r.installments && r.installments.length > 0 ? r.installments[0] : 'ΕΦΑΠΑΞ')).trim(),
-          // Νέο schema για πολλαπλές δόσεις - κρατάμε ΜΟΝΟ το πεδίο installments χωρίς τα ποσά ανά δόση
-          installments: Array.isArray(r.installments) ? r.installments : [String(r.installment || 'ΕΦΑΠΑΞ').trim()]
-          // Αφαιρέθηκε: installmentAmounts: r.installmentAmounts || {}
+          // Νέο schema για πολλαπλές δόσεις - συμπεριλαμβάνουμε τα installments και installmentAmounts
+          installments: Array.isArray(r.installments) ? r.installments : [String(r.installment || 'ΕΦΑΠΑΞ').trim()],
+          installmentAmounts: r.installmentAmounts || {}
         }));
         
         const now = new Date().toISOString();
