@@ -1,0 +1,39 @@
+[WebSocket] Connected successfully
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "1no97om9ciia2b", timestamp: "2025-04-11T08:15:31.187Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "1no97om9ciia2b", timestamp: "2025-04-11T08:15:31.187Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-11T08:15:31.341Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-11T08:15:31.341Z"}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+Export failed: {"error":"Failed to export document","details":"rowNumber is not defined"}
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Export error: 
+Error {}
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Document data: 
+Object {id: 100, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Recipient data format: 
+Object {afm: "231213123", usingNewFormat: {…}, installments: Array(1), installmentAmounts: {…}, legacyInstallment: undefined}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+Document data: 
+Object {id: 100, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Recipient data format: 
+Object {afm: "231213123", usingNewFormat: {…}, installments: Array(1), installmentAmounts: {…}, legacyInstallment: undefined}
+[Budget Form Debug] Key values: 
+Object {selectedProjectId: "", currentAmount: 0, hasRecipients: false, recipients: Array(0)}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}

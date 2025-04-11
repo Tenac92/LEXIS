@@ -1046,8 +1046,8 @@ export class DocumentFormatter {
       const fullName = recipient.fathername && recipient.fathername.trim() !== ""
         ? `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim()
         : `${recipient.lastname} ${recipient.firstname}`.trim();
-
-      // Determine installments
+      const afm = recipient.afm;
+      const rowNumber = (index + 1).toString() + ".";
       let installments: string[] = [];
       if (
         Array.isArray(recipient.installments) &&
@@ -1277,8 +1277,8 @@ export class DocumentFormatter {
       const fullName = recipient.fathername && recipient.fathername.trim() !== ""
         ? `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim()
         : `${recipient.lastname} ${recipient.firstname}`.trim();
-
-      // Determine installments
+      const afm = recipient.afm;
+      const rowNumber = (index + 1).toString() + ".";
       let installments: string[] = [];
       if (
         Array.isArray(recipient.installments) &&
