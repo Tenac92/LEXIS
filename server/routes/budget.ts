@@ -132,7 +132,7 @@ router.post('/validate', authenticateToken, async (req: AuthenticatedRequest, re
 // No authentication required for this lightweight endpoint to enable real-time typing updates
 router.post('/broadcast-update', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { mis, amount, sessionId } = req.body;
+    const { mis, amount, sessionId, simpleBudgetData } = req.body;
     const requestedAmount = parseFloat(amount.toString());
 
     if (!mis) {
@@ -155,15 +155,28 @@ router.post('/broadcast-update', async (req: AuthenticatedRequest, res: Response
     // If we have a WebSocket server, broadcast the budget update
     if (wss) {
       try {
-        // Broadcast the budget update to all connected clients without validation
-        // This is a lightweight alternative to /validate for real-time typing feedback
+        // IMPROVEMENT: Now using the simplified budget data as requested by the user
+        // This broadcasts a direct subtracted value to all clients for real-time updates
+        // We're also broadcast to ALL clients by setting sessionId to null
+        
+        // Log what we're broadcasting
+        console.log(`[Budget] Broadcasting real-time update with simplified budget data:`, {
+          mis,
+          amount: requestedAmount,
+          simpleBudgetData
+        });
+        
+        // Broadcast the update to all connected clients without validation and without filtering by sessionId
         broadcastBudgetUpdate(wss, {
           mis,
           amount: requestedAmount,
           timestamp: new Date().toISOString(),
           userId: req.user?.id?.toString(),
-          sessionId // Client session ID to filter out self-updates
+          sessionId: null, // Send to ALL clients including the sender
+          // Add the simple budget calculation data
+          simpleBudgetData
         });
+        
         console.log(`[Budget] Broadcast real-time update for MIS ${mis} with amount ${requestedAmount}`);
       } catch (broadcastError) {
         console.error('[Budget] Failed to broadcast real-time update:', broadcastError);

@@ -561,7 +561,7 @@ export function useBudgetUpdates(
 
   // Function to manually broadcast an update immediately 
   const broadcastUpdate = async (amount: number) => {
-    if (!projectId || amount <= 0 || !sessionId) {
+    if (!projectId || (amount < 0) || !sessionId) {
       console.warn('[Budget] Cannot broadcast update - missing requirements', { projectId, amount, sessionId });
       return;
     }
@@ -585,6 +585,25 @@ export function useBudgetUpdates(
         }
       }
       
+      // IMPROVEMENT: Calculate budget changes directly here for simplicity
+      // This implements the simple subtraction logic the user requested
+      let simpleBudgetData = null;
+      if (budgetQuery.data) {
+        // Get the original values as numbers
+        const availableBudget = Number(budgetQuery.data.available_budget || 0);
+        const yearlyAvailable = Number(budgetQuery.data.yearly_available || 0);
+        const quarterAvailable = Number(budgetQuery.data.quarter_available || 0);
+        
+        // Subtract the current amount directly and ensure we have integers
+        simpleBudgetData = {
+          available_budget: Math.round(availableBudget - amount),
+          yearly_available: Math.round(yearlyAvailable - amount),
+          quarter_available: Math.round(quarterAvailable - amount)
+        };
+        
+        console.log(`[Budget] Simple calculation: Available ${availableBudget} - Amount ${amount} = Remaining ${simpleBudgetData.available_budget}`);
+      }
+      
       console.log(`[Budget] Manually broadcasting update for MIS: ${misValue}, amount: ${amount}`);
       
       // Send budget update via broadcast endpoint
@@ -598,7 +617,11 @@ export function useBudgetUpdates(
         body: JSON.stringify({
           mis: misValue,
           amount,
-          sessionId
+          // IMPROVEMENT: Send to ALL connected clients by setting sessionId to null
+          // This ensures everyone (including the current user) gets the update
+          sessionId: null,
+          // Include our simple budget calculation
+          simpleBudgetData
         })
       });
       
