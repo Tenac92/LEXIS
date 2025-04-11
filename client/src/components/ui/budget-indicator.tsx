@@ -107,9 +107,11 @@ export function BudgetIndicator({
         setIsUpdating(false);
       }, 1000); // Show updating indicator for 1 second
       
+      console.log("[BudgetIndicator] Budget data updated, showing sync indicator");
+      
       return () => clearTimeout(timer);
     }
-  }, [budgetData?.available_budget]);
+  }, [budgetData?.available_budget, currentAmount]);
   
   // Enhanced debug output for main budget indicator 
   console.log("[BudgetIndicator] Rendering with data:", budgetData, "current amount:", currentAmount);

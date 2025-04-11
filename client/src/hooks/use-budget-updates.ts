@@ -508,12 +508,13 @@ export function useBudgetUpdates(
         console.log(`[Budget] Broadcasting real-time update for MIS: ${misValue}, amount: ${currentAmount}`);
         
         // Use the lightweight broadcast endpoint instead of full validation
+        // This endpoint doesn't require authentication for real-time typing updates
         const response = await fetch('/api/budget/broadcast-update', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json'
           },
-          credentials: 'include',
+          // No credentials included for faster real-time updates
           body: JSON.stringify({
             mis: misValue,
             amount: currentAmount,
