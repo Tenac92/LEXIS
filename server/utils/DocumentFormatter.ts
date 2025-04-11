@@ -1092,22 +1092,13 @@ export class DocumentFormatter {
         const rowSpan = installments.length;
         const rowHeight = 360; // Base height for one row
 
-        // Create cells for the first row with rowSpan
-        const nameCell = new TableCell({
-          rowSpan: rowSpan,
-          verticalAlign: VerticalAlign.CENTER,
-          children: [
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [
-                new TextRun({
-                  text: fullName,
-                  size: this.DEFAULT_FONT_SIZE,
-                }),
-              ],
-            }),
-          ],
-        });
+        // Create cells for the first row with rowSpan, supporting secondary text
+        const nameCell = this.createCellWithRowSpanAndSecondaryText(
+          fullName,
+          recipient.secondary_text,
+          "center",
+          rowSpan
+        );
 
         const indexCell = new TableCell({
           rowSpan: rowSpan,
@@ -1328,21 +1319,12 @@ export class DocumentFormatter {
         const totalHeight = rowHeight * rowSpan;
 
         // Create cells for the first row with rowSpan
-        const nameCell = new TableCell({
-          rowSpan: rowSpan,
-          verticalAlign: VerticalAlign.CENTER,
-          children: [
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [
-                new TextRun({
-                  text: fullName,
-                  size: this.DEFAULT_FONT_SIZE,
-                }),
-              ],
-            }),
-          ],
-        });
+        const nameCell = this.createCellWithRowSpanAndSecondaryText(
+          fullName,
+          recipient.secondary_text,
+          "center",
+          rowSpan
+        );
 
         const indexCell = new TableCell({
           rowSpan: rowSpan,
