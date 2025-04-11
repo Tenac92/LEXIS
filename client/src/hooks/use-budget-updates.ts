@@ -559,10 +559,10 @@ export function useBudgetUpdates(
     } : 'No budget data'
   });
 
-  // Function to manually broadcast an update immediately
+  // Function to manually broadcast an update immediately 
   const broadcastUpdate = async (amount: number) => {
-    if (!projectId || amount <= 0 || !sessionId || !isConnected) {
-      console.warn('[Budget] Cannot broadcast update - missing requirements');
+    if (!projectId || amount <= 0 || !sessionId) {
+      console.warn('[Budget] Cannot broadcast update - missing requirements', { projectId, amount, sessionId });
       return;
     }
 
@@ -587,13 +587,14 @@ export function useBudgetUpdates(
       
       console.log(`[Budget] Manually broadcasting update for MIS: ${misValue}, amount: ${amount}`);
       
-      // Use the lightweight broadcast endpoint
+      // Use the lightweight broadcast endpoint without authentication
+      // This endpoint is specifically designed for real-time typing updates
       const response = await fetch('/api/budget/broadcast-update', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json'
         },
-        credentials: 'include',
+        // No credentials needed for the lightweight endpoint
         body: JSON.stringify({
           mis: misValue,
           amount,
@@ -603,6 +604,9 @@ export function useBudgetUpdates(
       
       if (!response.ok) {
         console.warn('[Budget] Failed to broadcast manual update:', response.status);
+        // Try to get error details
+        const errorText = await response.text();
+        console.error('[Budget] Broadcast error details:', errorText);
       } else {
         console.log('[Budget] Successfully broadcasted manual update');
       }
