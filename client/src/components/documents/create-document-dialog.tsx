@@ -346,6 +346,8 @@ const recipientSchema = z.object({
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
   // Νέο πεδίο για δευτερεύον κείμενο
   secondary_text: z.string().optional(),
+  // Έλεγχος για την προβολή του "ΤΟΥ" πριν το πατρώνυμο
+  hideTouPrefix: z.boolean().optional().default(false),
   // Για συμβατότητα με το API (παλιά μορφή)
   installment: z.string().optional().default("Α"),
   // Νέο schema για πολλαπλές δόσεις ανά παραλήπτη
@@ -1193,10 +1195,10 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         afm: "",
         amount: 0,
         secondary_text: "",
+        hideTouPrefix: false, // Default to showing "ΤΟΥ" prefix
         installment: "ΕΦΑΠΑΞ", // Διατηρούμε το παλιό πεδίο για συμβατότητα
         installments: ["ΕΦΑΠΑΞ"], // Default to ΕΦΑΠΑΞ for new recipients
-        installmentAmounts: { "ΕΦΑΠΑΞ": 0 }, // Initialize installment amount
-        hideTouPrefix: false // Default to showing "ΤΟΥ" before father's name
+        installmentAmounts: { "ΕΦΑΠΑΞ": 0 } // Initialize installment amount
       }
     ]);
   };
@@ -1703,12 +1705,28 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                               className="md:col-span-2"
                               autoComplete="off"
                             />
-                            <Input
-                              {...form.register(`recipients.${index}.fathername`)}
-                              placeholder="Πατρώνυμο"
-                              className="md:col-span-2"
-                              autoComplete="off"
-                            />
+                            <div className="relative md:col-span-2">
+                              <Input
+                                {...form.register(`recipients.${index}.fathername`)}
+                                placeholder="Πατρώνυμο"
+                                className="w-full"
+                                autoComplete="off"
+                              />
+                              <div className="mt-1 flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  id={`hideTouPrefix-${index}`}
+                                  className="h-4 w-4 rounded border-gray-300 text-primary"
+                                  checked={form.watch(`recipients.${index}.hideTouPrefix`) || false}
+                                  onChange={(e) => {
+                                    form.setValue(`recipients.${index}.hideTouPrefix`, e.target.checked);
+                                  }}
+                                />
+                                <label htmlFor={`hideTouPrefix-${index}`} className="text-xs text-muted-foreground">
+                                  Χωρίς "ΤΟΥ" πριν το πατρώνυμο
+                                </label>
+                              </div>
+                            </div>
                             <Input
                               {...form.register(`recipients.${index}.afm`)}
                               placeholder="ΑΦΜ"
