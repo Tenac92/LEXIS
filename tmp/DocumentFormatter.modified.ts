@@ -18,7 +18,7 @@ import {
 import path from "path";
 import { storage } from "../storage";
 import { Project } from "../../shared/schema";
-import { supabase } from "../config/db";
+import { supabase } from "../supabase-client";
 
 export type Recipient = {
   firstname: string;
