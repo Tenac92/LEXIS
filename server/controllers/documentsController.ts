@@ -198,7 +198,8 @@ router.post('/v2', async (req: Request, res: Response) => {
       fathername: String(r.fathername || '').trim(),
       afm: String(r.afm || '').trim(),
       amount: parseFloat(String(r.amount || 0)),
-      installment: String(r.installment || 'Α').trim()
+      installment: String(r.installment || 'Α').trim(),
+      secondary_text: r.secondary_text ? String(r.secondary_text).trim() : undefined
     }));
     
     const now = new Date().toISOString();
@@ -549,7 +550,8 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
       fathername: String(r.fathername || '').trim(),
       afm: String(r.afm).trim(),
       amount: parseFloat(String(r.amount)),
-      installment: String(r.installment).trim()
+      installment: String(r.installment).trim(),
+      secondary_text: r.secondary_text ? String(r.secondary_text).trim() : undefined
     }));
 
     const now = new Date().toISOString();
