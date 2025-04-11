@@ -1809,6 +1809,50 @@ export class DocumentFormatter {
       verticalAlign: VerticalAlign.CENTER,
     });
   }
+  
+  /**
+   * Creates a table cell with two lines of text (primary and secondary)
+   * Used for recipient names where secondary text is provided
+   */
+  private static createTableCellWithSecondaryText(
+    primaryText: string,
+    secondaryText: string | undefined,
+    alignment: "left" | "center" | "right",
+    colSpan?: number,
+  ): TableCell {
+    const alignmentMap = {
+      left: AlignmentType.LEFT,
+      center: AlignmentType.CENTER,
+      right: AlignmentType.RIGHT,
+    };
+    
+    const children = [
+      new Paragraph({
+        children: [new TextRun({ text: primaryText, size: this.DEFAULT_FONT_SIZE })],
+        alignment: alignmentMap[alignment],
+      })
+    ];
+    
+    // Add secondary text as a second paragraph if it exists and isn't empty
+    if (secondaryText && secondaryText.trim()) {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ 
+            text: secondaryText, 
+            size: this.DEFAULT_FONT_SIZE,
+            italics: true // Make secondary text italic to differentiate it
+          })],
+          alignment: alignmentMap[alignment],
+        })
+      );
+    }
+
+    return new TableCell({
+      columnSpan: colSpan,
+      children: children,
+      verticalAlign: VerticalAlign.CENTER,
+    });
+  }
 
   public static async getUnitDetails(
     unitCode: string,
