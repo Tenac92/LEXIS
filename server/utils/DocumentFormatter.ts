@@ -1766,35 +1766,34 @@ export class DocumentFormatter {
     // Ensure primaryText is a string
     const safeText = primaryText || "";
     
-    const children = [
-      new Paragraph({
-        children: [
-          new TextRun({ 
-            text: safeText, 
-            size: this.DEFAULT_FONT_SIZE,
-            bold: true // Make primary text bold for better visibility
-          })
-        ],
-        alignment: alignmentMap[alignment],
-        spacing: { after: secondaryText ? 120 : 0 }, // Add spacing after the primary text if secondary text exists
+    // Ένα paragraph με όλα τα στοιχεία, χωρίς κενό μεταξύ ονόματος και δευτερεύοντος κειμένου
+    const paragraphChildren = [
+      new TextRun({ 
+        text: safeText, 
+        size: this.DEFAULT_FONT_SIZE,
+        bold: true // Make primary text bold for better visibility
       })
     ];
     
-    // Add secondary text as a second paragraph if it exists and isn't empty
+    // Προσθήκη του δευτερεύοντος κειμένου στο ίδιο paragraph αν υπάρχει
     if (secondaryText && typeof secondaryText === 'string' && secondaryText.trim()) {
-      children.push(
-        new Paragraph({
-          children: [new TextRun({ 
-            text: secondaryText, 
-            size: this.DEFAULT_FONT_SIZE - 2, // Slightly smaller text for secondary
-            italics: true, // Make secondary text italic to differentiate it
-            break: 1 // Force line break for better spacing
-          })],
-          alignment: alignmentMap[alignment],
-          spacing: { before: 120, after: 120 }, // Add substantial spacing to ensure text is visible
+      // Προσθήκη αλλαγής γραμμής και κατόπιν του δευτερεύοντος κειμένου
+      paragraphChildren.push(
+        new TextRun({ 
+          text: "\n" + secondaryText, 
+          size: this.DEFAULT_FONT_SIZE - 2, // Μικρότερο μέγεθος για το δευτερεύον κείμενο
+          italics: true // Πλάγια γραφή για το δευτερεύον κείμενο
         })
       );
     }
+    
+    const children = [
+      new Paragraph({
+        children: paragraphChildren,
+        alignment: alignmentMap[alignment],
+        spacing: { after: 0 }, // Καθόλου επιπλέον διάστημα μετά
+      })
+    ];
 
     return new TableCell({
       verticalAlign: VerticalAlign.CENTER,
@@ -1901,35 +1900,36 @@ export class DocumentFormatter {
     // Ensure primaryText is a string
     const safeText = primaryText || "";
     
-    const children = [
-      new Paragraph({
-        children: [
-          new TextRun({ 
-            text: safeText, 
-            size: this.DEFAULT_FONT_SIZE,
-            bold: true // Make primary text bold for better visibility
-          })
-        ],
-        alignment: alignmentMap[alignment],
-        spacing: { after: secondaryText ? 120 : 0 }, // Add spacing after if secondary text exists
+    // Ένα paragraph με όλα τα στοιχεία, χωρίς κενό μεταξύ ονόματος και δευτερεύοντος κειμένου
+    const paragraphChildren = [
+      new TextRun({ 
+        text: safeText, 
+        size: this.DEFAULT_FONT_SIZE,
+        bold: true // Make primary text bold for better visibility
       })
     ];
     
-    // Add secondary text as a second paragraph if it exists and isn't empty
+    // Προσθήκη του δευτερεύοντος κειμένου στο ίδιο paragraph αν υπάρχει
     if (secondaryText && typeof secondaryText === 'string' && secondaryText.trim()) {
-      children.push(
-        new Paragraph({
-          children: [new TextRun({ 
-            text: secondaryText, 
-            size: this.DEFAULT_FONT_SIZE - 2, // Slightly smaller text for secondary
-            italics: true, // Make secondary text italic to differentiate it
-            break: 1       // Add line break to ensure proper spacing
-          })],
-          alignment: alignmentMap[alignment],
-          spacing: { before: 120, after: 120 }, // Add substantial spacing to ensure text is visible
+      // Προσθήκη αλλαγής γραμμής και κατόπιν του δευτερεύοντος κειμένου
+      paragraphChildren.push(
+        new TextRun({ 
+          text: "\n" + secondaryText, 
+          size: this.DEFAULT_FONT_SIZE - 2, // Μικρότερο μέγεθος για το δευτερεύον κείμενο
+          italics: true // Πλάγια γραφή για το δευτερεύον κείμενο
         })
       );
     }
+    
+    const children = [
+      new Paragraph({
+        children: paragraphChildren,
+        alignment: alignmentMap[alignment],
+        spacing: { after: 0 }, // Καθόλου επιπλέον διάστημα μετά
+      })
+    ];
+    
+    // Το δευτερεύον κείμενο έχει ήδη προστεθεί στην κύρια παράγραφο παραπάνω
 
     return new TableCell({
       columnSpan: colSpan,
