@@ -1300,10 +1300,10 @@ export class DocumentFormatter {
         const amount = installmentAmounts[installment] || recipient.amount;
 
         // Determine row height based on content
-        // Use AT_LEAST instead of EXACT to allow expansion for text
+        // Use ATLEAST instead of EXACT to allow expansion for text
         const rowHeight = recipient.secondary_text && recipient.secondary_text.trim() 
-          ? { value: 540, rule: HeightRule.AT_LEAST } // Taller row for secondary text
-          : { value: 360, rule: HeightRule.AT_LEAST }; // Standard row height, but still expandable
+          ? { value: 540, rule: HeightRule.ATLEAST } // Taller row for secondary text
+          : { value: 360, rule: HeightRule.ATLEAST }; // Standard row height, but still expandable
         
         rows.push(
           new TableRow({
@@ -1388,7 +1388,7 @@ export class DocumentFormatter {
 
         rows.push(
           new TableRow({
-            height: { value: rowHeight, rule: HeightRule.EXACT },
+            height: { value: rowHeight, rule: HeightRule.ATLEAST },
             children: [
               indexCell,
               nameCell,
