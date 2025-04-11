@@ -1043,7 +1043,7 @@ export class DocumentFormatter {
     // Process each recipient
     recipients.forEach((recipient, index) => {
       const fullName =
-        `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
+        recipient.fathername && recipient.fathername.trim() !== "" ? `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}` : `${recipient.lastname} ${recipient.firstname}`.trim();
       const afm = recipient.afm;
       const rowNumber = (index + 1).toString() + ".";
 
@@ -1274,7 +1274,7 @@ export class DocumentFormatter {
     // Process each recipient
     recipients.forEach((recipient, index) => {
       const fullName =
-        `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
+        recipient.fathername && recipient.fathername.trim() !== "" ? `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}` : `${recipient.lastname} ${recipient.firstname}`.trim();
       const afm = recipient.afm;
       const rowNumber = (index + 1).toString() + ".";
 
