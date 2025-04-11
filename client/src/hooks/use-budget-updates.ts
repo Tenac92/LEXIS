@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useWebSocketUpdates } from './use-websocket-updates';
-import type { BudgetData, BudgetValidationResponse } from '@/lib/types';
+import type { BudgetData, BudgetValidationResponse, BudgetHookResult } from '@/lib/types';
 
 /**
  * Custom hook for real-time budget data management
@@ -472,6 +472,75 @@ export function useBudgetUpdates(
     enabled: Boolean(projectId) && currentAmount > 0
   });
 
+  // Effect to broadcast amount changes in real-time with debouncing
+  useEffect(() => {
+    // Skip if we don't have a valid project or amount
+    if (!projectId || currentAmount <= 0 || !sessionId || !isConnected) {
+      return;
+    }
+
+    // Clear any existing timeout to implement debouncing
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+    }
+
+    // Set a new timeout to delay the update broadcast (debouncing)
+    const timeout = setTimeout(async () => {
+      try {
+        // Get the MIS from projects data
+        const allProjects = await queryClient.getQueryData(["/api/projects"]);
+        
+        let misValue = projectId;
+        
+        // Try to find the actual MIS if we have project data
+        if (Array.isArray(allProjects)) {
+          const projectData = allProjects.find(
+            (p: any) => 
+              String(p?.na853).toLowerCase() === String(projectId).toLowerCase() ||
+              String(p?.mis) === String(projectId)
+          );
+          
+          if (projectData) {
+            misValue = projectData.mis || projectData.na853 || projectId;
+          }
+        }
+        
+        console.log(`[Budget] Broadcasting real-time update for MIS: ${misValue}, amount: ${currentAmount}`);
+        
+        // Use the lightweight broadcast endpoint instead of full validation
+        const response = await fetch('/api/budget/broadcast-update', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            mis: misValue,
+            amount: currentAmount,
+            sessionId
+          })
+        });
+        
+        if (!response.ok) {
+          console.warn('[Budget] Failed to broadcast real-time update:', response.status);
+        } else {
+          console.log('[Budget] Successfully broadcasted real-time update');
+        }
+      } catch (error) {
+        console.error('[Budget] Error broadcasting real-time update:', error);
+      }
+    }, 300); // 300ms debounce delay - quick enough for real-time feel, but not too chatty
+    
+    setTypingTimeout(timeout);
+    
+    // Clean up timeout on unmount or when dependencies change
+    return () => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
+  }, [projectId, currentAmount, sessionId, isConnected, typingTimeout, queryClient]);
+
   // Enhanced debug logging for the hook's return values
   console.log('[Budget Hook Debug] Returning state:', {
     hasBudgetData: !!budgetQuery.data,
@@ -490,6 +559,58 @@ export function useBudgetUpdates(
     } : 'No budget data'
   });
 
+  // Function to manually broadcast an update immediately
+  const broadcastUpdate = async (amount: number) => {
+    if (!projectId || amount <= 0 || !sessionId || !isConnected) {
+      console.warn('[Budget] Cannot broadcast update - missing requirements');
+      return;
+    }
+
+    try {
+      // Get the MIS from projects data
+      const allProjects = await queryClient.getQueryData(["/api/projects"]);
+      
+      let misValue = projectId;
+      
+      // Try to find the actual MIS if we have project data
+      if (Array.isArray(allProjects)) {
+        const projectData = allProjects.find(
+          (p: any) => 
+            String(p?.na853).toLowerCase() === String(projectId).toLowerCase() ||
+            String(p?.mis) === String(projectId)
+        );
+        
+        if (projectData) {
+          misValue = projectData.mis || projectData.na853 || projectId;
+        }
+      }
+      
+      console.log(`[Budget] Manually broadcasting update for MIS: ${misValue}, amount: ${amount}`);
+      
+      // Use the lightweight broadcast endpoint
+      const response = await fetch('/api/budget/broadcast-update', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          mis: misValue,
+          amount,
+          sessionId
+        })
+      });
+      
+      if (!response.ok) {
+        console.warn('[Budget] Failed to broadcast manual update:', response.status);
+      } else {
+        console.log('[Budget] Successfully broadcasted manual update');
+      }
+    } catch (error) {
+      console.error('[Budget] Error broadcasting manual update:', error);
+    }
+  };
+
   return {
     budgetData: budgetQuery.data,
     validationResult: validationQuery.data,
@@ -497,6 +618,7 @@ export function useBudgetUpdates(
     isValidationLoading: validationQuery.isLoading,
     budgetError: budgetQuery.error,
     validationError: validationQuery.error,
-    websocketConnected: isConnected
+    websocketConnected: isConnected,
+    broadcastUpdate // Export the method for manual broadcasting
   };
 }

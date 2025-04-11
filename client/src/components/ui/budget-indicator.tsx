@@ -50,65 +50,41 @@ export function CompactBudgetIndicator({
     ? budgetData.user_view
     : parseFloat(budgetData.user_view?.toString() || '0');
 
-  // The API response doesn't include katanomes_etous directly, but it's in the sum field
-  const katanomesEtous = budgetData.katanomes_etous 
-    ? (typeof budgetData.katanomes_etous === 'number' 
-      ? budgetData.katanomes_etous 
-      : parseFloat(budgetData.katanomes_etous.toString()))
-    : (budgetData.sum?.katanomes_etous || 0);
+  const katanomesEtous = typeof budgetData.katanomes_etous === 'number'
+    ? budgetData.katanomes_etous
+    : parseFloat(budgetData.katanomes_etous?.toString() || '0');
 
-  const ethsiaPistosi = typeof budgetData.ethsia_pistosi === 'number'
-    ? budgetData.ethsia_pistosi
-    : parseFloat(budgetData.ethsia_pistosi?.toString() || '0');
-  
-  // Parse new budget indicators
   const availableBudget = typeof budgetData.available_budget === 'number'
     ? budgetData.available_budget
-    : parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString());
+    : parseFloat(budgetData.available_budget?.toString() || '0');
+
+  // If available_budget is not in the response, calculate it
+  const calculatedAvailable = availableBudget || (katanomesEtous - userView);
   
-  const quarterAvailable = typeof budgetData.quarter_available === 'number'
-    ? budgetData.quarter_available
-    : parseFloat(budgetData.quarter_available?.toString() || '0');
-  
-  const yearlyAvailable = typeof budgetData.yearly_available === 'number'
-    ? budgetData.yearly_available
-    : parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString());
-  
-  // Calculate percentage for progress bar
+  // Calculate percentage used for visualization
   const percentageUsed = katanomesEtous > 0 ? ((userView / katanomesEtous) * 100) : 0;
   
   return (
-    <div className="mt-2 space-y-2">
-      <div className="flex items-center justify-between text-sm">
+    <div className="mt-2">
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
         <div className="flex items-center">
-          <PiggyBank className="mr-1 h-4 w-4 text-blue-500" />
-          <span className="text-muted-foreground">Διαθέσιμη Κατανομή:</span>
+          <Calculator className="mr-2 h-4 w-4 text-blue-500" />
+          <span>Κατανομή: </span>
         </div>
-        <span className="font-medium">{availableBudget.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
+        <span className="font-medium">
+          {calculatedAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+        </span>
       </div>
       
-      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+      <div className="mt-1 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
         <div 
-          className={`h-full ${percentageUsed > 80 ? 'bg-orange-500' : percentageUsed > 100 ? 'bg-red-500' : 'bg-blue-500'} transition-all duration-300`}
+          className={`h-full ${percentageUsed > 90 ? 'bg-red-500' : 'bg-blue-500'}`}
           style={{ width: `${Math.min(percentageUsed, 100)}%` }}
         />
       </div>
       
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="flex flex-col">
-          <span className="text-muted-foreground flex items-center">
-            <CalendarFold className="mr-1 h-3 w-3" />
-            Υπόλοιπο Τριμήνου:
-          </span>
-          <span className="font-medium">{quarterAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
-        </div>
-        <div className="flex flex-col">
-          <span className="text-muted-foreground flex items-center">
-            <Calculator className="mr-1 h-3 w-3" />
-            Υπόλοιπο προς Πίστωση:
-          </span>
-          <span className="font-medium">{yearlyAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
-        </div>
+      <div className="flex justify-end text-xs text-gray-500 mt-0.5">
+        {percentageUsed.toFixed(1)}% χρησιμοποιήθηκε
       </div>
     </div>
   );

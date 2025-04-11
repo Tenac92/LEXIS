@@ -110,3 +110,18 @@ export interface ApiResponse<T> {
   data?: T;
   message?: string;
 }
+
+/**
+ * Result type for the useBudgetUpdates hook
+ * Includes real-time budget data and validation result
+ */
+export interface BudgetHookResult {
+  budgetData: BudgetData | undefined;
+  validationResult: BudgetValidationResponse | undefined;
+  isBudgetLoading: boolean;
+  isValidationLoading: boolean;
+  budgetError: Error | null;
+  validationError: Error | null;
+  websocketConnected: boolean;
+  broadcastUpdate: (amount: number) => Promise<void>; // Method to manually trigger real-time updates
+}
