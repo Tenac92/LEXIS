@@ -1720,7 +1720,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                 {renderRecipientInstallments(index)}
                               </div>
                             </div>
-                            <div className="md:col-span-12 mt-2">
+                            <div className="md:col-span-8 mt-2">
                               <Input
                                 {...form.register(`recipients.${index}.secondary_text`)}
                                 placeholder="Ελεύθερο Κείμενο"

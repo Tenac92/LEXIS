@@ -48,11 +48,14 @@ export async function exportDocument(req: Request, res: Response) {
     }
     
     // Log recipients data for debugging
-    console.log('Document recipients data:', document.recipients.map(r => ({
-      name: `${r.lastname} ${r.firstname}`,
-      hasSecondaryText: Boolean(r.secondary_text),
-      secondaryText: r.secondary_text
-    })));
+    const recipientsDebugInfo = document.recipients.map((recipient) => {
+      return {
+        name: `${recipient.lastname} ${recipient.firstname}`,
+        hasSecondaryText: Boolean(recipient.secondary_text),
+        secondaryText: recipient.secondary_text
+      };
+    });
+    console.log('Document recipients data:', recipientsDebugInfo);
 
     // Check format parameter if user wants a ZIP file with both documents
     const format = req.query.format as string;
