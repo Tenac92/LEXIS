@@ -1013,7 +1013,7 @@ export class DocumentFormatter {
    * Used in the second document
    */
   private static createRecipientsTableWithAction(
-    recipients: NonNullable<DocumentData["recipients"]>,
+    recipients: NonNullable<DocumentData["recipients"] & Array<{secondary_text?: string}>>,
     expenditureType: string,
   ): Table {
     const tableBorders: ITableBordersOptions = {
@@ -1072,7 +1072,7 @@ export class DocumentFormatter {
             height: { value: 360, rule: HeightRule.EXACT },
             children: [
               this.createTableCell(rowNumber, "center"),
-              this.createTableCell(fullName, "center"),
+              this.createTableCellWithSecondaryText(fullName, recipient.secondary_text, "center"),
               this.createTableCell(
                 amount.toLocaleString("el-GR", {
                   minimumFractionDigits: 2,
@@ -1246,7 +1246,7 @@ export class DocumentFormatter {
   }
 
   private static createPaymentTable(
-    recipients: NonNullable<DocumentData["recipients"]>,
+    recipients: NonNullable<DocumentData["recipients"] & Array<{secondary_text?: string}>>,
   ): Table {
     const tableBorders: ITableBordersOptions = {
       top: { style: BorderStyle.SINGLE, size: 1 },
@@ -1303,7 +1303,7 @@ export class DocumentFormatter {
             height: { value: 360, rule: HeightRule.EXACT },
             children: [
               this.createTableCell(rowNumber, "center"),
-              this.createTableCell(fullName, "center"),
+              this.createTableCellWithSecondaryText(fullName, recipient.secondary_text, "center"),
               this.createTableCell(
                 amount.toLocaleString("el-GR", {
                   minimumFractionDigits: 2,
@@ -1732,6 +1732,51 @@ export class DocumentFormatter {
           alignment,
         }),
       ],
+    });
+  }
+  
+  /**
+   * Creates a table cell with rowspan and secondary text support
+   */
+  private static createCellWithRowSpanAndSecondaryText(
+    primaryText: string,
+    secondaryText: string | undefined,
+    alignment: "center" | "left" | "right" = AlignmentType.CENTER,
+    rowSpan: number = 1,
+    verticalMerge: "restart" | "continue" = VerticalMergeType.RESTART,
+  ): TableCell {
+    const alignmentMap = {
+      left: AlignmentType.LEFT,
+      center: AlignmentType.CENTER,
+      right: AlignmentType.RIGHT,
+    };
+    
+    const children = [
+      new Paragraph({
+        children: [new TextRun({ text: primaryText, size: this.DEFAULT_FONT_SIZE })],
+        alignment: alignmentMap[alignment],
+      })
+    ];
+    
+    // Add secondary text as a second paragraph if it exists and isn't empty
+    if (secondaryText && secondaryText.trim()) {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ 
+            text: secondaryText, 
+            size: this.DEFAULT_FONT_SIZE,
+            italics: true // Make secondary text italic to differentiate it
+          })],
+          alignment: alignmentMap[alignment],
+        })
+      );
+    }
+
+    return new TableCell({
+      verticalAlign: VerticalAlign.CENTER,
+      verticalMerge,
+      rowSpan: rowSpan > 0 ? rowSpan : undefined,
+      children: children,
     });
   }
 
