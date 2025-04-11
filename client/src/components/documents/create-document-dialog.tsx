@@ -188,8 +188,8 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     };
 
     return (
-      <div className="relative w-full">
-        <Command className="relative rounded-lg border shadow-md w-full overflow-visible" ref={commandRef}>
+      <div className="relative w-full min-w-[500px]">
+        <Command className="relative rounded-lg border shadow-md w-full min-w-[500px] overflow-visible" ref={commandRef}>
           <div className="flex items-center px-4 py-3 gap-3 bg-background w-full">
             <Search className="h-5 w-5 shrink-0 opacity-50" />
             <CommandInput
@@ -199,7 +199,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
               onFocus={handleFocus}
               onBlur={handleBlur}
               placeholder="Αναζήτηση με NA853 ή όνομα έργου... (Ctrl + /)"
-              className="flex-1 bg-transparent border-0 outline-none text-base placeholder:text-muted-foreground focus:ring-0 h-auto py-1 w-full min-w-[250px]"
+              className="flex-1 bg-transparent border-0 outline-none text-base placeholder:text-muted-foreground focus:ring-0 h-auto py-1 w-full min-w-[500px]"
             />
             {isSearching && (
               <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
