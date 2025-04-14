@@ -55,7 +55,8 @@ interface BudgetHistoryEntry {
   change_reason: string;
   document_id?: number;
   document_status?: string;
-  created_by?: string;
+  created_by?: string;  // This now contains the actual user name
+  created_by_id?: string; // This contains the numeric user ID
   created_at: string;
   metadata?: {
     previous_version?: Record<string, any>;
@@ -137,7 +138,8 @@ export default function BudgetHistoryPage() {
         change_reason: entry.change_reason || '',
         document_id: entry.document_id,
         document_status: entry.document_status,
-        created_by: entry.created_by || 'System',
+        created_by: entry.created_by || 'Σύστημα',
+        created_by_id: entry.created_by_id || '',
         created_at: entry.created_at || new Date().toISOString(),
         metadata: entry.metadata || {}
       }))
@@ -221,10 +223,8 @@ export default function BudgetHistoryPage() {
               const cleanKey = key.replace(/"/g, '');
               let cleanValue = value.trim();
               
-              // Try to convert numeric values
-              if (!isNaN(Number(cleanValue))) {
-                cleanValue = Number(cleanValue);
-              }
+              // Check if it's a numeric string
+              const isNumeric = !isNaN(Number(cleanValue));
               
               parsedBudgetValues[cleanKey] = cleanValue;
             });
@@ -724,7 +724,18 @@ export default function BudgetHistoryPage() {
                                 <TableCell>
                                   <div className="flex items-center">
                                     <UserIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                                    <span>{entry.created_by || 'Σύστημα'}</span>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="hover:cursor-help">{entry.created_by || 'Σύστημα'}</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top">
+                                          <div className="text-xs">
+                                            ID: {entry.created_by_id || 'N/A'}
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   </div>
                                 </TableCell>
                                 <TableCell>
