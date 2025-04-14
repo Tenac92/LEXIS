@@ -1689,7 +1689,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                       <Card key={index} className="p-4 relative">
                         <div className="flex items-start gap-4">
                           <span className="text-sm font-medium min-w-[24px] text-center mt-2">{index + 1}</span>
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1 w-full">
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 flex-1 w-full">
                             <Input
                               {...form.register(`recipients.${index}.firstname`)}
                               placeholder="Όνομα"
@@ -1720,15 +1720,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                 {renderRecipientInstallments(index)}
                               </div>
                             </div>
-                            <div className="md:col-span-8">
-                              <Input
-                                {...form.register(`recipients.${index}.secondary_text`)}
-                                placeholder="Ελεύθερο Κείμενο"
-                                className="w-full"
-                                autoComplete="off"
-                              />
-                            </div>
-                            <div className="md:col-span-3">
+                            <Input
+                              {...form.register(`recipients.${index}.secondary_text`)}
+                              placeholder="Ελεύθερο Κείμενο"
+                              className="md:col-span-8 mt-3"
+                              autoComplete="off"
+                            />
+                            <div className="md:col-span-3 mt-3">
                               {/* Empty div to maintain spacing */}
                             </div>
                             <div className="md:col-span-1 flex justify-end">
