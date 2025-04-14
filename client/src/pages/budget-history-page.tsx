@@ -216,7 +216,7 @@ export default function BudgetHistoryPage() {
           // Sometimes the JSON might be malformed but still parseable with regex
           const matches = change_reason.match(/\"([^\"]+)\":([^,}]+)/g);
           if (matches) {
-            matches.forEach(match => {
+            matches.forEach((match: string) => {
               const [key, value] = match.split(':');
               const cleanKey = key.replace(/"/g, '');
               let cleanValue = value.trim();
@@ -279,24 +279,56 @@ export default function BudgetHistoryPage() {
             // Skip non-numeric values or create a special display for them
             const isNumeric = typeof value === 'number' || (typeof value === 'string' && !isNaN(parseFloat(value as string)));
             
+            // Get Greek UI label for the database field
+            const getGreekLabel = (dbField: string) => {
+              const fieldMappings: Record<string, string> = {
+                'ethsia_pistosi': 'Ετήσια Πίστωση',
+                'katanomes_etous': 'Κατανομές Έτους',
+                'user_view': 'Ποσό Διαβιβάσεων',
+                'q1': 'Τρίμηνο 1',
+                'q2': 'Τρίμηνο 2',
+                'q3': 'Τρίμηνο 3',
+                'q4': 'Τρίμηνο 4',
+                'katanomes_adjustment': 'Προσαρμογή Κατανομών',
+                'sum': 'Σύνολο'
+              };
+              
+              return fieldMappings[dbField] || dbField.replace(/_/g, ' ');
+            };
+            
+            // Get Greek translation for string values if needed
+            const getGreekValueTranslation = (fieldKey: string, fieldValue: any) => {
+              if (typeof fieldValue !== 'string') return fieldValue;
+              
+              const valueTranslations: Record<string, Record<string, string>> = {
+                'katanomes_adjustment': {
+                  'No change': 'Χωρίς αλλαγή',
+                  'Increased': 'Αυξήθηκε',
+                  'Decreased': 'Μειώθηκε'
+                }
+              };
+              
+              if (valueTranslations[fieldKey] && valueTranslations[fieldKey][fieldValue]) {
+                return valueTranslations[fieldKey][fieldValue];
+              }
+              
+              return fieldValue;
+            };
+            
+            const uiLabel = getGreekLabel(key);
+            const translatedValue = getGreekValueTranslation(key, value);
+            
             return (
               <div key={key} className={`p-2 border rounded ${isNumeric ? 'bg-blue-50' : ''}`}>
-                <div className="font-medium capitalize">
-                  {key === 'ethsia_pistosi' ? 'Ετήσια Πίστωση' :
-                   key === 'katanomes_etous' ? 'Κατανομές Έτους' :
-                   key === 'user_view' ? 'Ποσό Διαβιβάσεων' :
-                   key === 'q1' ? 'Τρίμηνο 1' :
-                   key === 'q2' ? 'Τρίμηνο 2' :
-                   key === 'q3' ? 'Τρίμηνο 3' :
-                   key === 'q4' ? 'Τρίμηνο 4' :
-                   key.replace(/_/g, ' ')}
+                <div className="font-medium">
+                  {uiLabel}
                 </div>
                 <div>
                   {isNumeric
-                    ? formatCurrency(value) 
-                    : typeof value === 'object' && value !== null
-                      ? JSON.stringify(value)
-                      : value?.toString() || '-'
+                    ? formatCurrency(translatedValue) 
+                    : typeof translatedValue === 'object' && translatedValue !== null
+                      ? JSON.stringify(translatedValue)
+                      : translatedValue?.toString() || '-'
                   }
                 </div>
               </div>
@@ -311,11 +343,40 @@ export default function BudgetHistoryPage() {
       <div className="mt-3">
         <h4 className="text-sm font-medium mb-1">Αιτία Αλλαγής</h4>
         <div className="text-xs bg-muted p-3 rounded whitespace-pre-wrap">
-          {change_reason
-            .replace('Updated from Excel import for', 'Ενημέρωση από αρχείο Excel για')
-            .replace(/\{/g, '{\n  ')
-            .replace(/\}/g, '\n}')
-            .replace(/,/g, ',\n  ')}
+          {(() => {
+            // First do basic formatting
+            let formattedReason = change_reason
+              .replace('Updated from Excel import for', 'Ενημέρωση από αρχείο Excel για')
+              .replace(/\{/g, '{\n  ')
+              .replace(/\}/g, '\n}')
+              .replace(/,/g, ',\n  ');
+            
+            // Then replace database field names with Greek UI labels
+            const fieldMappings: Record<string, string> = {
+              'ethsia_pistosi': 'Ετήσια Πίστωση',
+              'katanomes_etous': 'Κατανομές Έτους',
+              'user_view': 'Ποσό Διαβιβάσεων',
+              'q1': 'Τρίμηνο 1',
+              'q2': 'Τρίμηνο 2',
+              'q3': 'Τρίμηνο 3',
+              'q4': 'Τρίμηνο 4',
+              'katanomes_adjustment': 'Προσαρμογή Κατανομών',
+              'sum': 'Σύνολο'
+            };
+            
+            // Replace field names in formatted JSON
+            Object.entries(fieldMappings).forEach(([dbField, greekLabel]) => {
+              const fieldRegex = new RegExp(`"${dbField}"`, 'g');
+              formattedReason = formattedReason.replace(fieldRegex, `"${greekLabel}"`);
+            });
+            
+            // Replace value translations
+            formattedReason = formattedReason.replace(/"No change"/g, '"Χωρίς αλλαγή"');
+            formattedReason = formattedReason.replace(/"Increased"/g, '"Αυξήθηκε"');
+            formattedReason = formattedReason.replace(/"Decreased"/g, '"Μειώθηκε"');
+            
+            return formattedReason;
+          })()}
         </div>
       </div>
     ) : null;
