@@ -204,9 +204,36 @@ export default function BudgetHistoryPage() {
         if (valuesMatch && valuesMatch[1]) {
           // Parse the JSON string 
           parsedBudgetValues = JSON.parse(valuesMatch[1]);
+          
+          // Debug
+          console.log('Successfully parsed budget values:', parsedBudgetValues);
         }
       } catch (error) {
         console.error('Error parsing change_reason JSON:', error);
+        
+        // Try alternative approach for malformed JSON
+        try {
+          // Sometimes the JSON might be malformed but still parseable with regex
+          const matches = change_reason.match(/\"([^\"]+)\":([^,}]+)/g);
+          if (matches) {
+            matches.forEach(match => {
+              const [key, value] = match.split(':');
+              const cleanKey = key.replace(/"/g, '');
+              let cleanValue = value.trim();
+              
+              // Try to convert numeric values
+              if (!isNaN(Number(cleanValue))) {
+                cleanValue = Number(cleanValue);
+              }
+              
+              parsedBudgetValues[cleanKey] = cleanValue;
+            });
+            
+            console.log('Parsed budget values using regex fallback:', parsedBudgetValues);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback parsing also failed:', fallbackError);
+        }
       }
     }
 
@@ -283,8 +310,12 @@ export default function BudgetHistoryPage() {
     const changeReasonSection = change_reason ? (
       <div className="mt-3">
         <h4 className="text-sm font-medium mb-1">Αιτία Αλλαγής</h4>
-        <div className="text-xs bg-muted p-2 rounded whitespace-pre-wrap">
-          {change_reason.replace('Updated from Excel import for', 'Ενημέρωση από αρχείο Excel για')}
+        <div className="text-xs bg-muted p-3 rounded whitespace-pre-wrap">
+          {change_reason
+            .replace('Updated from Excel import for', 'Ενημέρωση από αρχείο Excel για')
+            .replace(/\{/g, '{\n  ')
+            .replace(/\}/g, '\n}')
+            .replace(/,/g, ',\n  ')}
         </div>
       </div>
     ) : null;
@@ -611,9 +642,20 @@ export default function BudgetHistoryPage() {
                                 </TableCell>
                                 <TableCell>
                                   {entry.change_reason ? (
-                                    <div className="max-w-[200px] truncate" title={entry.change_reason}>
-                                      {entry.change_reason.replace('Updated from Excel import for', 'Εισαγωγή από Excel για')}
-                                    </div>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="max-w-[200px] truncate hover:cursor-help">
+                                            {entry.change_reason.replace('Updated from Excel import for', 'Εισαγωγή από Excel για')}
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom" align="start" className="max-w-[400px] p-3">
+                                          <div className="text-xs whitespace-pre-wrap">
+                                            {entry.change_reason.replace('Updated from Excel import for', 'Εισαγωγή από Excel για')}
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   ) : (
                                     <span className="text-muted-foreground text-sm">-</span>
                                   )}
