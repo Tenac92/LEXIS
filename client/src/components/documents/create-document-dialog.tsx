@@ -1720,14 +1720,12 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                                 {renderRecipientInstallments(index)}
                               </div>
                             </div>
-                            <div className="md:col-span-8 mt-2">
-                              <Input
-                                {...form.register(`recipients.${index}.secondary_text`)}
-                                placeholder="Ελεύθερο Κείμενο"
-                                className="w-full"
-                                autoComplete="off"
-                              />
-                            </div>
+                            <Input
+                              {...form.register(`recipients.${index}.secondary_text`)}
+                              placeholder="Ελεύθερο Κείμενο"
+                              className="md:col-span-11"
+                              autoComplete="off"
+                            />
                             <div className="md:col-span-1 flex justify-end">
                               <Button
                                 type="button"
