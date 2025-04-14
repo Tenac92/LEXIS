@@ -732,11 +732,11 @@ export class DocumentFormatter {
             },
           },
           children: [
-            // Show only the project information with the project title in uppercase
+            // Show only the project information without uppercase formatting
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `${projectTitle ? `${projectTitle.toUpperCase()} - ` : ""}ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || "___"} της ΣΑΝΑ 853`,
+                  text: `${projectTitle ? `${projectTitle} - ` : ""}ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || "___"} της ΣΑΝΑ 853`,
                   bold: true,
                   size: 28, // Decreased font size 
                 }),
