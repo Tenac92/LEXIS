@@ -584,10 +584,17 @@ export class DocumentFormatter {
         documentData.project_na853 ||
         (documentData as any).mis?.toString() ||
         "";
+      console.log(`[DocumentFormatter] Secondary document - Finding project with MIS/NA853: ${projectMis}`);
+      console.log(`[DocumentFormatter] Secondary document - Document data:`, JSON.stringify({
+        id: documentData.id,
+        project_na853: documentData.project_na853,
+        mis: (documentData as any).mis,
+      }));
+      
       const projectTitle = await this.getProjectTitle(projectMis);
       const projectNA853 = await this.getProjectNA853(projectMis);
-      console.log(`Project title for MIS ${projectMis}:`, projectTitle);
-      console.log(`Project NA853 for MIS ${projectMis}:`, projectNA853);
+      console.log(`[DocumentFormatter] Secondary document - Project title for MIS ${projectMis}:`, projectTitle);
+      console.log(`[DocumentFormatter] Secondary document - Project NA853 for MIS ${projectMis}:`, projectNA853);
 
       // Get user information with fallbacks
       const userInfo = {
@@ -622,17 +629,30 @@ export class DocumentFormatter {
             },
           },
           children: [
-            // Main document title
+            // Main document title with enhanced formatting
             new Paragraph({
               children: [
                 new TextRun({
                   text: `${projectTitle || ""} ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || ""} της ΣΑΝΑ 853`,
                   bold: true,
-                  size: 24, // Reduced from 32 to 24
+                  size: 32, // Increased from 24 to 32 for better visibility
                 }),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { before: 400, after: 200 },
+              spacing: { before: 400, after: 400 }, // Increased spacing after
+            }),
+            
+            // Duplicate the title with different formatting to ensure visibility
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ ΕΓΓΡΑΦΟ`,
+                  bold: true,
+                  size: 28,
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 200, after: 400 },
             }),
 
             // Recipients table with ΠΡΑΞΗ column (includes total row)
