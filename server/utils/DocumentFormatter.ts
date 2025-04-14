@@ -441,14 +441,45 @@ export class DocumentFormatter {
       let error: any = null;
       let resultFound = false;
 
-      // Strategy 1: Try first with budget_na853 if it looks like a project code
-      if (isProjectCode) {
+      // DUMP ALL FIELDS for a specific record to debug issues
+      console.log(`[DocumentFormatter] Running diagnostic query to dump all fields for a few records`);
+      const diagnosticResult = await supabase
+        .from("Projects")
+        .select("*")
+        .limit(2);
+      
+      if (diagnosticResult.error) {
+        console.error("[DocumentFormatter] Diagnostic query error:", diagnosticResult.error.message);
+      } else if (diagnosticResult.data && diagnosticResult.data.length > 0) {
+        console.log(`[DocumentFormatter] Diagnostic record sample:`, JSON.stringify(diagnosticResult.data[0]));
+        console.log(`[DocumentFormatter] Available columns:`, Object.keys(diagnosticResult.data[0]).join(', '));
+      }
+
+      // Strategy 1: First try with na853 as this appears to be the right column based on schema
+      console.log(`[DocumentFormatter] Trying NA853 lookup with value: ${mis}`);
+      const na853Result = await supabase
+        .from("Projects")
+        .select("project_title, mis, na853, budget_na853")
+        .eq("na853", mis)
+        .maybeSingle();
+
+      if (na853Result.error) {
+        console.error("[DocumentFormatter] NA853 lookup error:", na853Result.error.message);
+      } else if (na853Result.data?.project_title) {
+        console.log(`[DocumentFormatter] Found project title by na853: '${na853Result.data.project_title}'`);
+        console.log(`[DocumentFormatter] Project details:`, JSON.stringify(na853Result.data));
+        resultFound = true;
+        return na853Result.data.project_title;
+      }
+
+      // Strategy 2: Try with budget_na853 if it looks like a project code
+      if (!resultFound && isProjectCode) {
         console.log(
-          `[DocumentFormatter] getProjectTitle - Input appears to be a project code: ${mis}, trying budget_na853 lookup`,
+          `[DocumentFormatter] Input appears to be a project code: ${mis}, trying budget_na853 lookup`,
         );
         const result = await supabase
           .from("Projects")
-          .select("project_title, mis")
+          .select("project_title, mis, na853, budget_na853")
           .eq("budget_na853", mis)
           .maybeSingle();
 
@@ -463,18 +494,18 @@ export class DocumentFormatter {
           console.log(
             `[DocumentFormatter] Found project title by budget_na853: '${data.project_title}'`,
           );
-          console.log(`[DocumentFormatter] Found MIS for this project: '${data.mis}'`);
+          console.log(`[DocumentFormatter] Project details:`, JSON.stringify(data));
           resultFound = true;
           return data.project_title;
         }
       }
 
-      // Strategy 2: Default lookup by MIS as numeric value
+      // Strategy 3: Default lookup by MIS as numeric value
       if (!resultFound && isNumericString) {
         console.log(`[DocumentFormatter] Trying MIS lookup with numeric value: ${mis}`);
         const result = await supabase
           .from("Projects")
-          .select("project_title, budget_na853")
+          .select("project_title, na853, budget_na853")
           .eq("mis", mis)
           .maybeSingle();
 
@@ -491,43 +522,62 @@ export class DocumentFormatter {
         } else {
           console.log(
             `[DocumentFormatter] Found project by MIS with title: '${data.project_title}'`,
-            `and budget_na853: '${data.budget_na853}'`
+            `and fields:`, JSON.stringify(data)
           );
           resultFound = true;
           return data.project_title;
         }
       }
 
-      // Strategy 3: Last resort - try a fuzzy search on both fields
+      // Strategy 4: Try through an exact match on either field
+      if (!resultFound) {
+        console.log(`[DocumentFormatter] Trying exact match search on multiple columns`);
+        
+        const exactResult = await supabase
+          .from("Projects")
+          .select("project_title, mis, na853, budget_na853")
+          .or(`na853.eq.${mis},budget_na853.eq.${mis}`)
+          .limit(1);
+          
+        if (exactResult.error) {
+          console.error("[DocumentFormatter] Exact match error:", exactResult.error.message);
+        } else if (exactResult.data && exactResult.data.length > 0) {
+          console.log(`[DocumentFormatter] Found project by exact match:`, exactResult.data[0]);
+          resultFound = true;
+          return exactResult.data[0].project_title;
+        }
+      }
+
+      // Strategy 5: Last resort - try a fuzzy search on multiple fields
       if (!resultFound) {
         console.log(`[DocumentFormatter] Trying fuzzy search for project with term: ${mis}`);
         
-        // Check if term contains both Greek and Latin characters, and try to split
-        const mixedPattern = /^(\d{4})([\u0370-\u03FF\u1F00-\u1FFF]+)(\d+)$/;
-        const mixedMatch = mis.match(mixedPattern);
-        
-        if (mixedMatch) {
-          const year = mixedMatch[1];
-          const code = mixedMatch[2];
-          const number = mixedMatch[3];
+        if (isProjectCode) {
+          // Check if term contains both Greek and Latin characters, and try to split
+          const mixedPattern = /^(\d{4})([\u0370-\u03FF\u1F00-\u1FFF]+)(\d+)$/;
+          const mixedMatch = mis.match(mixedPattern);
           
-          console.log(`[DocumentFormatter] Parsed mixed code - Year: ${year}, Code: ${code}, Number: ${number}`);
-          
-          // Try searching by partial matches
-          const likePattern = `%${year}%${code}%${number}%`;
-          console.log(`[DocumentFormatter] Using like pattern: ${likePattern}`);
-          
-          const result = await supabase
-            .from("Projects")
-            .select("project_title, budget_na853, mis")
-            .or(`budget_na853.ilike.${likePattern},mis.ilike.${likePattern}`)
-            .limit(1);
+          if (mixedMatch) {
+            const year = mixedMatch[1];
+            const code = mixedMatch[2];
+            const number = mixedMatch[3];
             
-          if (result.error) {
-            console.error("[DocumentFormatter] Fuzzy search error:", result.error.message);
-          } else if (result.data && result.data.length > 0) {
-            console.log(`[DocumentFormatter] Found project by fuzzy search: `, result.data[0]);
-            return result.data[0].project_title;
+            console.log(`[DocumentFormatter] Parsed mixed code - Year: ${year}, Code: ${code}, Number: ${number}`);
+            
+            // Try searching by partial matches using the ilike operator
+            const result = await supabase
+              .from("Projects")
+              .select("project_title, na853, budget_na853, mis")
+              .or(`na853.ilike.%${mis}%,budget_na853.ilike.%${mis}%,project_title.ilike.%${mis}%`)
+              .limit(1);
+              
+            if (result.error) {
+              console.error("[DocumentFormatter] Fuzzy search error:", result.error.message);
+            } else if (result.data && result.data.length > 0) {
+              console.log(`[DocumentFormatter] Found project by fuzzy search:`, result.data[0]);
+              resultFound = true;
+              return result.data[0].project_title;
+            }
           }
         }
       }
@@ -567,56 +617,59 @@ export class DocumentFormatter {
 
       console.log(`[DocumentFormatter] Fetching project NA853 for MIS: ${mis}`);
 
-      // Strategy 1: Standard lookup by MIS - using budget_na853 field
-      const { data, error } = await supabase
+      // Strategy 1: Try na853 field first
+      console.log(`[DocumentFormatter] Trying NA853 lookup with value: ${mis}`);
+      const na853Result = await supabase
         .from("Projects")
-        .select("budget_na853")
+        .select("na853, budget_na853")
         .eq("mis", mis)
         .maybeSingle();
-
-      if (error) {
-        console.error(
-          "[DocumentFormatter] Error fetching project NA853:",
-          error,
-        );
-        return null;
+        
+      if (!na853Result.error && na853Result.data?.na853) {
+        console.log(`[DocumentFormatter] Found project with na853: ${na853Result.data.na853}`);
+        return na853Result.data.na853;
       }
 
-      if (!data || !data.budget_na853) {
-        console.log(
-          `[DocumentFormatter] No project budget_na853 found with MIS: ${mis}`,
-        );
-
-        // Strategy 2: Try to find if the MIS itself is an NA853 entry - use both fields
-        const checkIfNA853 = await supabase
-          .from("Projects")
-          .select("budget_na853")
-          .eq("budget_na853", mis)
-          .maybeSingle();
-
-        if (!checkIfNA853.error) {
-          if (checkIfNA853.data?.budget_na853) {
-            console.log(
-              `[DocumentFormatter] Found project budget_na853 by direct lookup: ${checkIfNA853.data.budget_na853}`,
-            );
-            return checkIfNA853.data.budget_na853;
-          }
-        }
-
-        // Last resort: Use MIS as fallback
-        console.log(
-          `[DocumentFormatter] No budget_na853 found, using MIS as fallback: ${mis}`,
-        );
-        return mis;
+      // Strategy 2: Try budget_na853 field
+      if (!na853Result.error && na853Result.data?.budget_na853) {
+        console.log(`[DocumentFormatter] Found project with budget_na853: ${na853Result.data.budget_na853}`);
+        return na853Result.data.budget_na853;
+      }
+      
+      if (na853Result.error) {
+        console.error("[DocumentFormatter] Error in NA853 lookup:", na853Result.error.message);
       }
 
-      console.log(
-        `[DocumentFormatter] Found project budget_na853: ${data.budget_na853}`,
-      );
-      return data.budget_na853;
+      // Strategy 3: Try direct lookup if mis is actually a project code in na853 field
+      const directNA853 = await supabase
+        .from("Projects")
+        .select("na853")
+        .eq("na853", mis)
+        .maybeSingle();
+        
+      if (!directNA853.error && directNA853.data?.na853) {
+        console.log(`[DocumentFormatter] Found na853 by direct lookup: ${directNA853.data.na853}`);
+        return directNA853.data.na853;
+      }
+
+      // Strategy 4: Try direct lookup if mis is actually a project code in budget_na853 field
+      const directBudgetNA853 = await supabase
+        .from("Projects")
+        .select("budget_na853")
+        .eq("budget_na853", mis)
+        .maybeSingle();
+        
+      if (!directBudgetNA853.error && directBudgetNA853.data?.budget_na853) {
+        console.log(`[DocumentFormatter] Found budget_na853 by direct lookup: ${directBudgetNA853.data.budget_na853}`);
+        return directBudgetNA853.data.budget_na853;
+      }
+
+      // Last resort: Use MIS as fallback if it's not found
+      console.log(`[DocumentFormatter] No NA853 found after all attempts, using input as fallback: ${mis}`);
+      return mis;
     } catch (error) {
       console.error("[DocumentFormatter] Error in getProjectNA853:", error);
-      return null;
+      return mis; // Return the input as fallback in case of errors
     }
   }
 
