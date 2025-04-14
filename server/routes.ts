@@ -303,11 +303,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             changeReason: `Δημιουργία εγγράφου ID:${data.id} για το έργο με MIS:${projectMIS}`
           });
           
+          // Το BudgetService.updateBudget περιμένει sessionId σε μορφή κειμένου, το μορφοποιούμε κατάλληλα
+          const sessionIdForBudget = `document_${data.id}`;
+          
           const budgetResult = await BudgetService.updateBudget(
             projectMIS,                         // MIS
             documentPayload.total_amount,       // Amount
             (req as any).session?.user?.id || 'guest',  // User ID
-            data.id,                            // Document ID
+            sessionIdForBudget,                 // Session ID με τη μορφή "document_ID"
             `Δημιουργία εγγράφου ID:${data.id} για το έργο με MIS:${projectMIS}`  // Change reason
           );
           
