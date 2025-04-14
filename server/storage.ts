@@ -342,17 +342,22 @@ export class DatabaseStorage implements IStorage {
       
       if (userIds.length > 0) {
         // Fetch user names from the users table
+        console.log('[Storage] Fetching user data for user IDs:', userIds);
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, name')
           .in('id', userIds);
           
         if (!userError && userData) {
+          console.log('[Storage] Found user data:', userData);
           // Create a map of user IDs to user objects
+          // Always convert IDs to strings to ensure consistent lookup
           userMap = userData.reduce((acc, user) => {
-            acc[user.id] = user;
+            const userId = String(user.id); // Convert to string key
+            acc[userId] = user;
             return acc;
           }, {} as Record<string, { id: number, name: string }>);
+          console.log('[Storage] Created user map:', userMap);
         } else {
           console.error('[Storage] Error fetching user data:', userError);
         }
@@ -368,10 +373,23 @@ export class DatabaseStorage implements IStorage {
         const createdBy = entry.created_by;
         let creatorName = 'Σύστημα';
         
-        if (createdBy && userMap[createdBy]) {
-          creatorName = userMap[createdBy].name;
-        } else if (createdBy) {
-          creatorName = `Χρήστης ${createdBy}`;
+        console.log(`[Storage] Looking up creator name for ID: ${createdBy}, type: ${typeof createdBy}`);
+        
+        if (createdBy) {
+          // Try both as string and as number
+          const userId = String(createdBy);
+          const userIdInt = parseInt(userId);
+          
+          if (userMap[userId]) {
+            console.log(`[Storage] Found user by string ID: ${userId}`, userMap[userId]);
+            creatorName = userMap[userId].name;
+          } else if (userMap[userIdInt]) {
+            console.log(`[Storage] Found user by numeric ID: ${userIdInt}`, userMap[userIdInt]);
+            creatorName = userMap[userIdInt].name;
+          } else {
+            console.log(`[Storage] No user found for ID: ${createdBy}, using generic name`);
+            creatorName = `Χρήστης ${createdBy}`;
+          }
         }
         
         // The columns already match what the frontend expects, so we can use them directly
