@@ -629,26 +629,27 @@ export class DocumentFormatter {
             },
           },
           children: [
-            // Main document title with enhanced formatting
+            // Use a fixed title first to ensure something is always shown
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `${projectTitle || ""} ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || ""} της ΣΑΝΑ 853`,
+                  text: "ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ ΕΓΓΡΑΦΟ - ΚΡΑΤΙΚΗ ΑΡΩΓΗ",
                   bold: true,
-                  size: 32, // Increased from 24 to 32 for better visibility
+                  size: 36, // Increased size for maximum visibility
+                  color: "000000",  // Ensure black text
                 }),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { before: 400, after: 400 }, // Increased spacing after
+              spacing: { before: 400, after: 200 }, 
             }),
             
-            // Duplicate the title with different formatting to ensure visibility
+            // Then attempt to show project information if available
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ ΕΓΓΡΑΦΟ`,
+                  text: `${projectTitle ? `${projectTitle} - ` : ""}ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || "___"} της ΣΑΝΑ 853`,
                   bold: true,
-                  size: 28,
+                  size: 32, 
                 }),
               ],
               alignment: AlignmentType.CENTER,
