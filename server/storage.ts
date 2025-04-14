@@ -287,7 +287,7 @@ export class DatabaseStorage implements IStorage {
       
       const offset = (page - 1) * limit;
       
-      // Build the base query with the actual schema columns
+      // Build the base query with the actual schema columns and join with generated_documents for protocol_number_input
       let query = supabase
         .from('budget_history')
         .select(`
@@ -300,7 +300,11 @@ export class DatabaseStorage implements IStorage {
           document_id,
           created_by,
           created_at,
-          updated_at
+          updated_at,
+          generated_documents!budget_history_document_id_fkey (
+            protocol_number_input,
+            status
+          )
         `, { count: 'exact' });
       
       // Apply filters
@@ -406,6 +410,13 @@ export class DatabaseStorage implements IStorage {
           }
         }
         
+        // Extract document information from the join
+        const documentData = entry.generated_documents?.[0] || null;
+        const documentStatus = documentData?.status || null;
+        const protocolNumberInput = documentData?.protocol_number_input || null;
+        
+        console.log(`[Storage] Document data for entry ${entry.id}:`, documentData);
+        
         // The columns already match what the frontend expects, so we can use them directly
         return {
           id: entry.id,
@@ -415,7 +426,8 @@ export class DatabaseStorage implements IStorage {
           change_type: entry.change_type || '',
           change_reason: entry.change_reason || '',
           document_id: entry.document_id,
-          document_status: null, // We don't have document status in the schema
+          document_status: documentStatus, // Now set from the joined documents table
+          protocol_number_input: protocolNumberInput, // Add protocol number from documents table
           created_by: creatorName,
           created_by_id: entry.created_by,
           created_at: entry.created_at,

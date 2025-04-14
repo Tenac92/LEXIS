@@ -121,6 +121,7 @@ interface BudgetHistoryEntry {
   change_reason: string;
   document_id?: number;
   document_status?: string;
+  protocol_number_input?: string; // Add protocol number from backend
   created_by?: string;  // This now contains the actual user name
   created_by_id?: string; // This contains the numeric user ID
   created_at: string;
@@ -204,6 +205,7 @@ export default function BudgetHistoryPage() {
         change_reason: entry.change_reason || '',
         document_id: entry.document_id,
         document_status: entry.document_status,
+        protocol_number_input: entry.protocol_number_input, // Include protocol number from backend
         created_by: entry.created_by || 'Σύστημα',
         created_by_id: entry.created_by_id || '',
         created_at: entry.created_at || new Date().toISOString(),
@@ -829,7 +831,11 @@ export default function BudgetHistoryPage() {
                                         </TooltipTrigger>
                                         <TooltipContent>
                                           <div className="text-xs">
-                                            <div>ID Εγγράφου: {entry.document_id}</div>
+                                            {entry.protocol_number_input ? (
+                                              <div>Αρ. Πρωτ.: {entry.protocol_number_input}</div>
+                                            ) : (
+                                              <div>ID Εγγράφου: {entry.document_id}</div>
+                                            )}
                                             <div className="mt-1">Κλικ για προβολή εγγράφου</div>
                                           </div>
                                         </TooltipContent>
