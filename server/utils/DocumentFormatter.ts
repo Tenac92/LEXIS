@@ -422,11 +422,15 @@ export class DocumentFormatter {
   public static async getProjectTitle(mis: string): Promise<string | null> {
     try {
       if (!mis) {
-        console.error("[DocumentFormatter] No MIS provided for project title lookup");
+        console.error(
+          "[DocumentFormatter] No MIS provided for project title lookup",
+        );
         return null;
       }
 
-      console.log(`[DocumentFormatter] Fetching project title for input: '${mis}'`);
+      console.log(
+        `[DocumentFormatter] Fetching project title for input: '${mis}'`,
+      );
 
       // Check if MIS is numeric or follows the pattern of project codes
       const isNumericString = /^\d+$/.test(mis);
@@ -442,17 +446,28 @@ export class DocumentFormatter {
       let resultFound = false;
 
       // DUMP ALL FIELDS for a specific record to debug issues
-      console.log(`[DocumentFormatter] Running diagnostic query to dump all fields for a few records`);
+      console.log(
+        `[DocumentFormatter] Running diagnostic query to dump all fields for a few records`,
+      );
       const diagnosticResult = await supabase
         .from("Projects")
         .select("*")
         .limit(2);
-      
+
       if (diagnosticResult.error) {
-        console.error("[DocumentFormatter] Diagnostic query error:", diagnosticResult.error.message);
+        console.error(
+          "[DocumentFormatter] Diagnostic query error:",
+          diagnosticResult.error.message,
+        );
       } else if (diagnosticResult.data && diagnosticResult.data.length > 0) {
-        console.log(`[DocumentFormatter] Diagnostic record sample:`, JSON.stringify(diagnosticResult.data[0]));
-        console.log(`[DocumentFormatter] Available columns:`, Object.keys(diagnosticResult.data[0]).join(', '));
+        console.log(
+          `[DocumentFormatter] Diagnostic record sample:`,
+          JSON.stringify(diagnosticResult.data[0]),
+        );
+        console.log(
+          `[DocumentFormatter] Available columns:`,
+          Object.keys(diagnosticResult.data[0]).join(", "),
+        );
       }
 
       // Strategy 1: First try with na853 as this appears to be the right column based on schema
@@ -464,10 +479,18 @@ export class DocumentFormatter {
         .maybeSingle();
 
       if (na853Result.error) {
-        console.error("[DocumentFormatter] NA853 lookup error:", na853Result.error.message);
+        console.error(
+          "[DocumentFormatter] NA853 lookup error:",
+          na853Result.error.message,
+        );
       } else if (na853Result.data?.project_title) {
-        console.log(`[DocumentFormatter] Found project title by na853: '${na853Result.data.project_title}'`);
-        console.log(`[DocumentFormatter] Project details:`, JSON.stringify(na853Result.data));
+        console.log(
+          `[DocumentFormatter] Found project title by na853: '${na853Result.data.project_title}'`,
+        );
+        console.log(
+          `[DocumentFormatter] Project details:`,
+          JSON.stringify(na853Result.data),
+        );
         resultFound = true;
         return na853Result.data.project_title;
       }
@@ -487,14 +510,20 @@ export class DocumentFormatter {
         error = result.error;
 
         if (error) {
-          console.error("[DocumentFormatter] Budget lookup error:", error.message);
+          console.error(
+            "[DocumentFormatter] Budget lookup error:",
+            error.message,
+          );
         }
 
         if (!error && data?.project_title) {
           console.log(
             `[DocumentFormatter] Found project title by budget_na853: '${data.project_title}'`,
           );
-          console.log(`[DocumentFormatter] Project details:`, JSON.stringify(data));
+          console.log(
+            `[DocumentFormatter] Project details:`,
+            JSON.stringify(data),
+          );
           resultFound = true;
           return data.project_title;
         }
@@ -502,7 +531,9 @@ export class DocumentFormatter {
 
       // Strategy 3: Default lookup by MIS as numeric value
       if (!resultFound && isNumericString) {
-        console.log(`[DocumentFormatter] Trying MIS lookup with numeric value: ${mis}`);
+        console.log(
+          `[DocumentFormatter] Trying MIS lookup with numeric value: ${mis}`,
+        );
         const result = await supabase
           .from("Projects")
           .select("project_title, na853, budget_na853")
@@ -515,14 +546,15 @@ export class DocumentFormatter {
         if (error) {
           console.error(
             "[DocumentFormatter] Error fetching project title by MIS:",
-            error.message
+            error.message,
           );
         } else if (!data || !data.project_title) {
           console.log(`[DocumentFormatter] No project found with MIS: ${mis}`);
         } else {
           console.log(
             `[DocumentFormatter] Found project by MIS with title: '${data.project_title}'`,
-            `and fields:`, JSON.stringify(data)
+            `and fields:`,
+            JSON.stringify(data),
           );
           resultFound = true;
           return data.project_title;
@@ -531,18 +563,26 @@ export class DocumentFormatter {
 
       // Strategy 4: Try through an exact match on either field
       if (!resultFound) {
-        console.log(`[DocumentFormatter] Trying exact match search on multiple columns`);
-        
+        console.log(
+          `[DocumentFormatter] Trying exact match search on multiple columns`,
+        );
+
         const exactResult = await supabase
           .from("Projects")
           .select("project_title, mis, na853, budget_na853")
           .or(`na853.eq.${mis},budget_na853.eq.${mis}`)
           .limit(1);
-          
+
         if (exactResult.error) {
-          console.error("[DocumentFormatter] Exact match error:", exactResult.error.message);
+          console.error(
+            "[DocumentFormatter] Exact match error:",
+            exactResult.error.message,
+          );
         } else if (exactResult.data && exactResult.data.length > 0) {
-          console.log(`[DocumentFormatter] Found project by exact match:`, exactResult.data[0]);
+          console.log(
+            `[DocumentFormatter] Found project by exact match:`,
+            exactResult.data[0],
+          );
           resultFound = true;
           return exactResult.data[0].project_title;
         }
@@ -550,31 +590,43 @@ export class DocumentFormatter {
 
       // Strategy 5: Last resort - try a fuzzy search on multiple fields
       if (!resultFound) {
-        console.log(`[DocumentFormatter] Trying fuzzy search for project with term: ${mis}`);
-        
+        console.log(
+          `[DocumentFormatter] Trying fuzzy search for project with term: ${mis}`,
+        );
+
         if (isProjectCode) {
           // Check if term contains both Greek and Latin characters, and try to split
           const mixedPattern = /^(\d{4})([\u0370-\u03FF\u1F00-\u1FFF]+)(\d+)$/;
           const mixedMatch = mis.match(mixedPattern);
-          
+
           if (mixedMatch) {
             const year = mixedMatch[1];
             const code = mixedMatch[2];
             const number = mixedMatch[3];
-            
-            console.log(`[DocumentFormatter] Parsed mixed code - Year: ${year}, Code: ${code}, Number: ${number}`);
-            
+
+            console.log(
+              `[DocumentFormatter] Parsed mixed code - Year: ${year}, Code: ${code}, Number: ${number}`,
+            );
+
             // Try searching by partial matches using the ilike operator
             const result = await supabase
               .from("Projects")
               .select("project_title, na853, budget_na853, mis")
-              .or(`na853.ilike.%${mis}%,budget_na853.ilike.%${mis}%,project_title.ilike.%${mis}%`)
+              .or(
+                `na853.ilike.%${mis}%,budget_na853.ilike.%${mis}%,project_title.ilike.%${mis}%`,
+              )
               .limit(1);
-              
+
             if (result.error) {
-              console.error("[DocumentFormatter] Fuzzy search error:", result.error.message);
+              console.error(
+                "[DocumentFormatter] Fuzzy search error:",
+                result.error.message,
+              );
             } else if (result.data && result.data.length > 0) {
-              console.log(`[DocumentFormatter] Found project by fuzzy search:`, result.data[0]);
+              console.log(
+                `[DocumentFormatter] Found project by fuzzy search:`,
+                result.data[0],
+              );
               resultFound = true;
               return result.data[0].project_title;
             }
@@ -583,11 +635,12 @@ export class DocumentFormatter {
       }
 
       // If we got here, we couldn't find a project title
-      console.log(`[DocumentFormatter] No project title found for input: ${mis} after all attempts`);
-      
+      console.log(
+        `[DocumentFormatter] No project title found for input: ${mis} after all attempts`,
+      );
+
       // Return a default title as last resort if all strategies fail
       return "ΚΡΑΤΙΚΗ ΑΡΩΓΗ";
-      
     } catch (error) {
       console.error("[DocumentFormatter] Error in getProjectTitle:", error);
       return "ΚΡΑΤΙΚΗ ΑΡΩΓΗ"; // Provide a default title in case of errors
@@ -624,20 +677,27 @@ export class DocumentFormatter {
         .select("na853, budget_na853")
         .eq("mis", mis)
         .maybeSingle();
-        
+
       if (!na853Result.error && na853Result.data?.na853) {
-        console.log(`[DocumentFormatter] Found project with na853: ${na853Result.data.na853}`);
+        console.log(
+          `[DocumentFormatter] Found project with na853: ${na853Result.data.na853}`,
+        );
         return na853Result.data.na853;
       }
 
       // Strategy 2: Try budget_na853 field
       if (!na853Result.error && na853Result.data?.budget_na853) {
-        console.log(`[DocumentFormatter] Found project with budget_na853: ${na853Result.data.budget_na853}`);
+        console.log(
+          `[DocumentFormatter] Found project with budget_na853: ${na853Result.data.budget_na853}`,
+        );
         return na853Result.data.budget_na853;
       }
-      
+
       if (na853Result.error) {
-        console.error("[DocumentFormatter] Error in NA853 lookup:", na853Result.error.message);
+        console.error(
+          "[DocumentFormatter] Error in NA853 lookup:",
+          na853Result.error.message,
+        );
       }
 
       // Strategy 3: Try direct lookup if mis is actually a project code in na853 field
@@ -646,9 +706,11 @@ export class DocumentFormatter {
         .select("na853")
         .eq("na853", mis)
         .maybeSingle();
-        
+
       if (!directNA853.error && directNA853.data?.na853) {
-        console.log(`[DocumentFormatter] Found na853 by direct lookup: ${directNA853.data.na853}`);
+        console.log(
+          `[DocumentFormatter] Found na853 by direct lookup: ${directNA853.data.na853}`,
+        );
         return directNA853.data.na853;
       }
 
@@ -658,14 +720,18 @@ export class DocumentFormatter {
         .select("budget_na853")
         .eq("budget_na853", mis)
         .maybeSingle();
-        
+
       if (!directBudgetNA853.error && directBudgetNA853.data?.budget_na853) {
-        console.log(`[DocumentFormatter] Found budget_na853 by direct lookup: ${directBudgetNA853.data.budget_na853}`);
+        console.log(
+          `[DocumentFormatter] Found budget_na853 by direct lookup: ${directBudgetNA853.data.budget_na853}`,
+        );
         return directBudgetNA853.data.budget_na853;
       }
 
       // Last resort: Use MIS as fallback if it's not found
-      console.log(`[DocumentFormatter] No NA853 found after all attempts, using input as fallback: ${mis}`);
+      console.log(
+        `[DocumentFormatter] No NA853 found after all attempts, using input as fallback: ${mis}`,
+      );
       return mis;
     } catch (error) {
       console.error("[DocumentFormatter] Error in getProjectNA853:", error);
@@ -687,17 +753,28 @@ export class DocumentFormatter {
         documentData.project_na853 ||
         (documentData as any).mis?.toString() ||
         "";
-      console.log(`[DocumentFormatter] Secondary document - Finding project with MIS/NA853: ${projectMis}`);
-      console.log(`[DocumentFormatter] Secondary document - Document data:`, JSON.stringify({
-        id: documentData.id,
-        project_na853: documentData.project_na853,
-        mis: (documentData as any).mis,
-      }));
-      
+      console.log(
+        `[DocumentFormatter] Secondary document - Finding project with MIS/NA853: ${projectMis}`,
+      );
+      console.log(
+        `[DocumentFormatter] Secondary document - Document data:`,
+        JSON.stringify({
+          id: documentData.id,
+          project_na853: documentData.project_na853,
+          mis: (documentData as any).mis,
+        }),
+      );
+
       const projectTitle = await this.getProjectTitle(projectMis);
       const projectNA853 = await this.getProjectNA853(projectMis);
-      console.log(`[DocumentFormatter] Secondary document - Project title for MIS ${projectMis}:`, projectTitle);
-      console.log(`[DocumentFormatter] Secondary document - Project NA853 for MIS ${projectMis}:`, projectNA853);
+      console.log(
+        `[DocumentFormatter] Secondary document - Project title for MIS ${projectMis}:`,
+        projectTitle,
+      );
+      console.log(
+        `[DocumentFormatter] Secondary document - Project NA853 for MIS ${projectMis}:`,
+        projectNA853,
+      );
 
       // Get user information with fallbacks
       const userInfo = {
@@ -738,11 +815,11 @@ export class DocumentFormatter {
                 new TextRun({
                   text: `${projectTitle ? `${projectTitle} - ` : ""}ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || "___"} της ΣΑΝΑ 853`,
                   bold: true,
-                  size: 28, // Decreased font size 
+                  size: 24, // Decreased font size
                 }),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { before: 400, after: 400 },
+              spacing: { before: 400 },
             }),
 
             // Recipients table with ΠΡΑΞΗ column (includes total row)
@@ -750,12 +827,6 @@ export class DocumentFormatter {
               documentData.recipients || [],
               documentData.expenditure_type,
             ),
-
-            // Empty space
-            new Paragraph({
-              children: [new TextRun({ text: "" })],
-              spacing: { before: 200, after: 200 },
-            }),
 
             // Standard text about documentation retention
             new Paragraph({
@@ -801,7 +872,8 @@ export class DocumentFormatter {
                         new Paragraph({
                           children: [new TextRun({ text: "Ο ΣΥΝΤΑΞΑΣ" })],
                           alignment: AlignmentType.CENTER,
-                          spacing: { before: 400, after: 200 },
+                          bold: true,
+                          spacing: { before: 400, after: 400 },
                         }),
                         new Paragraph({
                           children: [new TextRun({ text: userInfo.name })],
@@ -809,7 +881,7 @@ export class DocumentFormatter {
                           spacing: { after: 200 },
                         }),
                         new Paragraph({
-                          children: [new TextRun({ text: userInfo.descr })],
+                          children: [new TextRun({ text: userInfo.descr || "", bold: true })],
                           alignment: AlignmentType.CENTER,
                         }),
                       ],
@@ -1124,7 +1196,9 @@ export class DocumentFormatter {
    * Used in the second document
    */
   private static createRecipientsTableWithAction(
-    recipients: NonNullable<DocumentData["recipients"] & Array<{secondary_text?: string}>>,
+    recipients: NonNullable<
+      DocumentData["recipients"] & Array<{ secondary_text?: string }>
+    >,
     expenditureType: string,
   ): Table {
     const tableBorders: ITableBordersOptions = {
@@ -1153,15 +1227,16 @@ export class DocumentFormatter {
     // Process each recipient
     recipients.forEach((recipient, index) => {
       // Check if fathername exists and is not empty
-      const firstname = recipient.firstname || '';
-      const lastname = recipient.lastname || '';
-      const fathername = recipient.fathername || '';
-      
+      const firstname = recipient.firstname || "";
+      const lastname = recipient.lastname || "";
+      const fathername = recipient.fathername || "";
+
       // Check if fathername exists and is not empty
-      const fullName = !fathername || fathername.trim() === ""
-        ? `${lastname} ${firstname}`.trim()
-        : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
-      const afm = recipient.afm || '';
+      const fullName =
+        !fathername || fathername.trim() === ""
+          ? `${lastname} ${firstname}`.trim()
+          : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
+      const afm = recipient.afm || "";
       const rowNumber = (index + 1).toString() + ".";
       let installments: string[] = [];
       if (
@@ -1188,7 +1263,11 @@ export class DocumentFormatter {
             height: { value: 360, rule: HeightRule.ATLEAST },
             children: [
               this.createTableCell(rowNumber, "center"),
-              this.createTableCellWithSecondaryText(fullName, recipient.secondary_text, "center"),
+              this.createTableCellWithSecondaryText(
+                fullName,
+                recipient.secondary_text,
+                "center",
+              ),
               this.createTableCell(
                 amount.toLocaleString("el-GR", {
                   minimumFractionDigits: 2,
@@ -1362,7 +1441,9 @@ export class DocumentFormatter {
   }
 
   private static createPaymentTable(
-    recipients: NonNullable<DocumentData["recipients"] & Array<{secondary_text?: string}>>,
+    recipients: NonNullable<
+      DocumentData["recipients"] & Array<{ secondary_text?: string }>
+    >,
   ): Table {
     const tableBorders: ITableBordersOptions = {
       top: { style: BorderStyle.SINGLE, size: 1 },
@@ -1389,9 +1470,10 @@ export class DocumentFormatter {
     // Process each recipient
     recipients.forEach((recipient, index) => {
       // Check if fathername exists and is not empty
-      const fullName = !recipient.fathername || recipient.fathername.trim() === ""
-        ? `${recipient.lastname} ${recipient.firstname}`.trim()
-        : `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
+      const fullName =
+        !recipient.fathername || recipient.fathername.trim() === ""
+          ? `${recipient.lastname} ${recipient.firstname}`.trim()
+          : `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
       const afm = recipient.afm;
       const rowNumber = (index + 1).toString() + ".";
       let installments: string[] = [];
@@ -1416,16 +1498,21 @@ export class DocumentFormatter {
 
         // Determine row height based on content
         // Use ATLEAST instead of EXACT to allow expansion for text
-        const rowHeight = recipient.secondary_text && recipient.secondary_text.trim() 
-          ? { value: 540, rule: HeightRule.ATLEAST } // Taller row for secondary text
-          : { value: 360, rule: HeightRule.ATLEAST }; // Standard row height, but still expandable
-        
+        const rowHeight =
+          recipient.secondary_text && recipient.secondary_text.trim()
+            ? { value: 540, rule: HeightRule.ATLEAST } // Taller row for secondary text
+            : { value: 360, rule: HeightRule.ATLEAST }; // Standard row height, but still expandable
+
         rows.push(
           new TableRow({
             height: rowHeight,
             children: [
               this.createTableCell(rowNumber, "center"),
-              this.createTableCellWithSecondaryText(fullName, recipient.secondary_text, "center"),
+              this.createTableCellWithSecondaryText(
+                fullName,
+                recipient.secondary_text,
+                "center",
+              ),
               this.createTableCell(
                 amount.toLocaleString("el-GR", {
                   minimumFractionDigits: 2,
@@ -1856,7 +1943,7 @@ export class DocumentFormatter {
       ],
     });
   }
-  
+
   /**
    * Creates a table cell with rowspan and secondary text support
    */
@@ -1872,25 +1959,29 @@ export class DocumentFormatter {
       center: AlignmentType.CENTER,
       right: AlignmentType.RIGHT,
     };
-    
+
     const children = [
       new Paragraph({
-        children: [new TextRun({ text: primaryText, size: this.DEFAULT_FONT_SIZE })],
+        children: [
+          new TextRun({ text: primaryText, size: this.DEFAULT_FONT_SIZE }),
+        ],
         alignment: alignmentMap[alignment],
-      })
+      }),
     ];
-    
+
     // Add secondary text as a second paragraph if it exists and isn't empty
     if (secondaryText && secondaryText.trim()) {
       children.push(
         new Paragraph({
-          children: [new TextRun({ 
-            text: secondaryText, 
-            size: this.DEFAULT_FONT_SIZE,
-            italics: true // Make secondary text italic to differentiate it
-          })],
+          children: [
+            new TextRun({
+              text: secondaryText,
+              size: this.DEFAULT_FONT_SIZE,
+              italics: true, // Make secondary text italic to differentiate it
+            }),
+          ],
           alignment: alignmentMap[alignment],
-        })
+        }),
       );
     }
 
@@ -1976,7 +2067,7 @@ export class DocumentFormatter {
       verticalAlign: VerticalAlign.CENTER,
     });
   }
-  
+
   /**
    * Creates a table cell with two lines of text (primary and secondary)
    * Used for recipient names where secondary text is provided
@@ -1992,25 +2083,29 @@ export class DocumentFormatter {
       center: AlignmentType.CENTER,
       right: AlignmentType.RIGHT,
     };
-    
+
     const children = [
       new Paragraph({
-        children: [new TextRun({ text: primaryText, size: this.DEFAULT_FONT_SIZE })],
+        children: [
+          new TextRun({ text: primaryText, size: this.DEFAULT_FONT_SIZE }),
+        ],
         alignment: alignmentMap[alignment],
-      })
+      }),
     ];
-    
+
     // Add secondary text as a second paragraph if it exists and isn't empty
     if (secondaryText && secondaryText.trim()) {
       children.push(
         new Paragraph({
-          children: [new TextRun({ 
-            text: secondaryText, 
-            size: this.DEFAULT_FONT_SIZE,
-            italics: true // Make secondary text italic to differentiate it
-          })],
+          children: [
+            new TextRun({
+              text: secondaryText,
+              size: this.DEFAULT_FONT_SIZE,
+              italics: true, // Make secondary text italic to differentiate it
+            }),
+          ],
           alignment: alignmentMap[alignment],
-        })
+        }),
       );
     }
 
