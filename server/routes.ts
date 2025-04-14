@@ -594,9 +594,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Budget routes
     log('[Routes] Setting up budget routes...');
     
-    // Allow public access to budget data by MIS for document creation
-    // Using our specialized controller function for MIS lookups
-    app.get('/api/budget/:mis', getBudgetByMis);
+    // Set up specific budget routes first
+    // Budget history route - must be registered BEFORE the MIS lookup route
+    log('[Routes] Setting up budget history route...');
+    app.get('/api/budget/history', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        console.log('[Budget] Handling dedicated history endpoint request');
+        
+        // Check authentication
+        if (!req.user?.id) {
+          return res.status(401).json({
+            status: 'error',
+            message: 'Authentication required',
+            data: [],
+            pagination: { total: 0, page: 1, limit: 10, pages: 0 }
+          });
+        }
+        
+        // Parse query parameters
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const mis = req.query.mis as string | undefined;
+        const changeType = req.query.change_type as string | undefined;
+        
+        console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}`);
+        
+        // Use the enhanced storage method with pagination
+        const result = await storage.getBudgetHistory(mis, page, limit, changeType);
+        
+        console.log(`[Budget] Successfully fetched ${result.data.length} of ${result.pagination.total} history records`);
+        
+        return res.json({
+          status: 'success',
+          data: result.data,
+          pagination: result.pagination
+        });
+      } catch (error) {
+        console.error('[Budget] History fetch error:', error);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to fetch budget history',
+          details: error instanceof Error ? error.message : 'Unknown error',
+          data: [],
+          pagination: { total: 0, page: 1, limit: 10, pages: 0 }
+        });
+      }
+    });
+    log('[Routes] Budget history route registered');
     
     // Budget notifications routes - must be registered BEFORE the main budget routes
     log('[Routes] Setting up budget notifications routes...');
@@ -607,6 +651,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Setting up budget upload routes...');
     app.use('/api/budget/upload', authenticateSession, budgetUploadRouter);
     log('[Routes] Budget upload routes setup complete');
+    
+    // Allow public access to budget data by MIS for document creation
+    // Using our specialized controller function for MIS lookups
+    // This MUST come AFTER more specific routes like /api/budget/history
+    app.get('/api/budget/:mis', getBudgetByMis);
     
     // Use authentication for all other budget routes
     // This MUST come after more specific /api/budget/* routes
