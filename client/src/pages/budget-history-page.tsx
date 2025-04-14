@@ -87,6 +87,7 @@ const BudgetHistoryDocument = ({ documentId, status }: { documentId: number, sta
           <Badge variant={status === 'completed' ? "default" : "outline"}>
             <FileText className="h-3 w-3 mr-1" />
             {status === 'completed' ? 'Ολοκληρωμένο' : 
+              protocolNumberInput ? `Αρ. Πρωτ.: ${protocolNumberInput}` :
               status === 'pending' ? 'Σε εκκρεμότητα' : 
               status || 'Σε εκκρεμότητα'}
           </Badge>
@@ -825,6 +826,7 @@ export default function BudgetHistoryPage() {
                                           <Badge variant={entry.document_status === 'completed' ? "default" : "outline"}>
                                             <FileText className="h-3 w-3 mr-1" />
                                             {entry.document_status === 'completed' ? 'Ολοκληρωμένο' : 
+                                             entry.protocol_number_input ? `Αρ. Πρωτ.: ${entry.protocol_number_input}` :
                                              entry.document_status === 'pending' ? 'Σε εκκρεμότητα' : 
                                              entry.document_status || 'Σε εκκρεμότητα'}
                                           </Badge>
