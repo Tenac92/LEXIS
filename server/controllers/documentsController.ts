@@ -41,7 +41,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     // Get project NA853
     const { data: projectData, error: projectError } = await supabase
       .from('Projects')
-      .select('budget_na853')
+      .select('na853, budget_na853')
       .eq('mis', project_id)
       .single();
 
@@ -68,7 +68,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const documentPayload = {
       unit,
       mis: project_id, // This matches the 'mis' field in the database table
-      project_na853: projectData.budget_na853,
+      project_na853: projectData.na853 || projectData.budget_na853, // Use na853 if available, otherwise fallback to budget_na853
       expenditure_type,
       status: 'pending', // Always set initial status to pending
       recipients: formattedRecipients,
@@ -140,54 +140,65 @@ router.post('/v2', async (req: Request, res: Response) => {
         // Look up in the Projects table - using the project_id as the MIS value
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
-          .select('budget_na853')
+          .select('na853, budget_na853')
           .eq('mis', project_id)
           .single();
         
-        if (!projectError && projectData && projectData.budget_na853) {
-          // Extract only numeric parts for database compatibility
-          const numericNA853 = String(projectData.budget_na853).replace(/\D/g, '');
-          if (numericNA853) {
-            project_na853 = numericNA853;
-            console.log('[DocumentsController] V2 Retrieved and converted NA853 from Projects table:', project_na853);
-          } else {
-            console.error('[DocumentsController] V2 Could not extract numeric value from NA853:', projectData.budget_na853);
-            // Try to use project_mis as numeric fallback
-            if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
-              project_na853 = req.body.project_mis;
-              console.log('[DocumentsController] V2 Using project_mis as numeric fallback:', req.body.project_mis);
+        if (!projectError && projectData) {
+          // First try to use the na853 field directly (this is the column referenced in the FK constraint)
+          if (projectData.na853) {
+            project_na853 = projectData.na853;
+            console.log('[DocumentsController] V2 Retrieved NA853 from Projects table:', project_na853);
+          } 
+          // If na853 is not available, try budget_na853 as a fallback
+          else if (projectData.budget_na853) {
+            project_na853 = projectData.budget_na853;
+            console.log('[DocumentsController] V2 Using budget_na853 as fallback:', project_na853);
+          } 
+          // No valid NA853 found in project data
+          else {
+            console.error('[DocumentsController] V2 No NA853 or budget_na853 available in project data');
+            // Try to use project_mis as fallback if available
+            if (req.body.project_mis) {
+              // Look up project by project_mis to find a matching NA853 code
+              const { data: projectByMis } = await supabase
+                .from('Projects')
+                .select('na853')
+                .eq('mis', req.body.project_mis)
+                .single();
+              
+              if (projectByMis && projectByMis.na853) {
+                project_na853 = projectByMis.na853;
+                console.log('[DocumentsController] V2 Found NA853 using project_mis lookup:', project_na853);
+              } else {
+                console.error('[DocumentsController] V2 Could not find valid NA853 for project');
+                return res.status(400).json({ 
+                  message: 'No valid NA853 found for the specified project', 
+                  error: 'Project NA853 could not be determined'
+                });
+              }
             } else {
-              // Last resort - use 0 as safe fallback
-              project_na853 = '0';
-              console.log('[DocumentsController] V2 Using safe numeric fallback: 0');
+              console.error('[DocumentsController] V2 No project_mis provided for fallback lookup');
+              return res.status(400).json({ 
+                message: 'No valid NA853 found and no project_mis provided for fallback', 
+                error: 'Project NA853 could not be determined'
+              });
             }
           }
         } else {
-          // If no data found in Projects table, use project_mis as fallback
-          if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
-            console.log('[DocumentsController] V2 Using project_mis directly as numeric fallback:', req.body.project_mis);
-            project_na853 = req.body.project_mis;
-          } else {
-            console.error('[DocumentsController] V2 Could not find project in Projects table:', projectError);
-            return res.status(400).json({ 
-              message: 'Project not found in Projects table and no fallback available', 
-              error: 'Project NA853 could not be determined'
-            });
-          }
+          // If no data found in Projects table
+          console.error('[DocumentsController] V2 Could not find project in Projects table:', projectError);
+          return res.status(400).json({ 
+            message: 'Project not found in Projects table', 
+            error: 'Project NA853 could not be determined'
+          });
         }
       } catch (error) {
         console.error('[DocumentsController] V2 Error during project lookup:', error);
-        
-        // If error happens, use project_mis as numeric fallback if available and valid
-        if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
-          console.log('[DocumentsController] V2 Using project_mis as numeric fallback due to error:', req.body.project_mis);
-          project_na853 = req.body.project_mis;
-        } else {
-          console.error('[DocumentsController] V2 No valid numeric fallback available');
-          // Last resort - use 0 as safe numeric value
-          project_na853 = '0';
-          console.log('[DocumentsController] V2 Using safe numeric fallback in error handler: 0');
-        }
+        return res.status(500).json({ 
+          message: 'Error during project lookup', 
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
     
@@ -510,14 +521,20 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
         
         const projectResult = await supabase
           .from('Projects')
-          .select('budget_na853')
+          .select('na853, budget_na853')
           .eq('mis', project_id)
           .single();
           
-        if (projectResult.data && projectResult.data.budget_na853) {
-          // Found in Projects table
-          project_na853 = String(projectResult.data.budget_na853);
-          console.log('[DOCUMENT_CONTROLLER] Retrieved NA853 from Projects table:', project_na853);
+        if (projectResult.data) {
+          if (projectResult.data.na853) {
+            // Found na853 in Projects table - use this as it matches the foreign key constraint
+            project_na853 = String(projectResult.data.na853);
+            console.log('[DOCUMENT_CONTROLLER] Retrieved na853 from Projects table:', project_na853);
+          } else if (projectResult.data.budget_na853) {
+            // Fall back to budget_na853 if na853 is not available
+            project_na853 = String(projectResult.data.budget_na853);
+            console.log('[DOCUMENT_CONTROLLER] Retrieved budget_na853 from Projects table:', project_na853);
+          }
         } else if (project_id && !isNaN(Number(project_id))) {
           // Use MIS as fallback if it's a number
           project_na853 = project_id;
