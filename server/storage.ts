@@ -333,9 +333,15 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Get the user information for the created_by fields
+      // Get unique user IDs and ensure they're all numbers
       const userIds = data
         .filter(entry => entry.created_by)
-        .map(entry => entry.created_by)
+        .map(entry => {
+          const id = typeof entry.created_by === 'string' 
+            ? parseInt(entry.created_by) 
+            : entry.created_by;
+          return id;
+        })
         .filter((id, index, self) => self.indexOf(id) === index); // Get unique IDs
       
       let userMap: Record<string, { id: number, name: string }> = {};
@@ -343,10 +349,18 @@ export class DatabaseStorage implements IStorage {
       if (userIds.length > 0) {
         // Fetch user names from the users table
         console.log('[Storage] Fetching user data for user IDs:', userIds);
-        const { data: userData, error: userError } = await supabase
+        
+        // Use a dynamic OR filter instead of IN to handle type mismatches
+        let query = supabase
           .from('users')
-          .select('id, name')
-          .in('id', userIds);
+          .select('id, name, email, role');
+        
+        // Add each user ID as a filter condition
+        if (userIds.length > 0) {
+          query = query.or(userIds.map(id => `id.eq.${id}`).join(','));
+        }
+        
+        const { data: userData, error: userError } = await query;
           
         if (!userError && userData) {
           console.log('[Storage] Found user data:', userData);
