@@ -56,7 +56,12 @@ interface BudgetHistoryEntry {
   document_status?: string;
   created_by?: string;
   created_at: string;
-  metadata?: Record<string, any>;
+  metadata?: {
+    previous_version?: Record<string, any>;
+    updated_version?: Record<string, any>;
+    changes?: Record<string, any>;
+    change_date?: string;
+  };
 }
 
 interface PaginationData {
@@ -185,86 +190,114 @@ export default function BudgetHistoryPage() {
   const renderMetadata = (metadata: Record<string, any>) => {
     if (!metadata) return null;
 
-    const quarterChanges = metadata.quarters ? (
-      <div className="mt-2">
-        <h4 className="text-sm font-medium mb-1">Αλλαγές Τριμήνου</h4>
-        <div className="grid grid-cols-4 gap-2 text-xs">
-          {Object.entries(metadata.quarters || {}).map(([quarter, values]: [string, any]) => (
-            <div key={quarter} className="p-2 border rounded">
-              <div className="font-medium uppercase">{quarter}</div>
-              <div className="text-muted-foreground">
-                Προηγούμενο: {formatCurrency(values.previous || 0)}
-              </div>
-              <div className="text-muted-foreground">
-                Νέο: {formatCurrency(values.new || 0)}
-              </div>
-              <div className={values.new < values.previous ? "text-red-500" : "text-green-500"}>
-                Διαφορά: {formatCurrency((values.new || 0) - (values.previous || 0))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ) : null;
+    const { previous_version, updated_version, changes, change_date } = metadata;
 
-    const previousValues = metadata.previous ? (
+    // Display budget data from previous version
+    const previousVersionSection = previous_version ? (
       <div className="mt-3">
         <h4 className="text-sm font-medium mb-1">Προηγούμενες Τιμές Προϋπολογισμού</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-          {Object.entries(metadata.previous || {}).map(([key, value]) => (
-            <div key={key} className="p-2 border rounded">
-              <div className="font-medium capitalize">{key.replace(/_/g, ' ')}</div>
-              <div>{typeof value === 'number' ? formatCurrency(value) : value?.toString() || '0'}</div>
-            </div>
-          ))}
+          {Object.entries(previous_version).map(([key, value]) => {
+            if (key === '__typename') return null; // Skip internal fields
+            return (
+              <div key={key} className="p-2 border rounded">
+                <div className="font-medium capitalize">{key.replace(/_/g, ' ')}</div>
+                <div>
+                  {typeof value === 'number' 
+                    ? formatCurrency(value) 
+                    : Array.isArray(value)
+                      ? value.join(', ')
+                      : typeof value === 'object' && value !== null
+                        ? JSON.stringify(value)
+                        : value?.toString() || '0'
+                  }
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     ) : null;
 
-    const newValues = metadata.new ? (
+    // Display budget data from updated version
+    const updatedVersionSection = updated_version ? (
       <div className="mt-3">
         <h4 className="text-sm font-medium mb-1">Νέες Τιμές Προϋπολογισμού</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-          {Object.entries(metadata.new || {}).map(([key, value]) => (
-            <div key={key} className="p-2 border rounded">
-              <div className="font-medium capitalize">{key.replace(/_/g, ' ')}</div>
-              <div>{typeof value === 'number' ? formatCurrency(value) : value?.toString() || '0'}</div>
-            </div>
-          ))}
+          {Object.entries(updated_version).map(([key, value]) => {
+            if (key === '__typename') return null; // Skip internal fields
+            return (
+              <div key={key} className="p-2 border rounded">
+                <div className="font-medium capitalize">{key.replace(/_/g, ' ')}</div>
+                <div>
+                  {typeof value === 'number' 
+                    ? formatCurrency(value) 
+                    : Array.isArray(value)
+                      ? value.join(', ')
+                      : typeof value === 'object' && value !== null
+                        ? JSON.stringify(value)
+                        : value?.toString() || '0'
+                  }
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     ) : null;
 
-    // Other metadata fields that are important to display
+    // Display detailed changes information
+    const changesSection = changes ? (
+      <div className="mt-3">
+        <h4 className="text-sm font-medium mb-1">Λεπτομέρειες Αλλαγών</h4>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+          {Object.entries(changes).map(([key, value]) => {
+            if (key === '__typename') return null; // Skip internal fields
+            return (
+              <div key={key} className="p-2 border rounded">
+                <div className="font-medium capitalize">{key.replace(/_/g, ' ')}</div>
+                <div>
+                  {typeof value === 'number' 
+                    ? formatCurrency(value) 
+                    : Array.isArray(value)
+                      ? value.join(', ')
+                      : typeof value === 'object' && value !== null
+                        ? JSON.stringify(value)
+                        : value?.toString() || '-'
+                  }
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    ) : null;
+
+    // Other important metadata like change date
     const otherFields = (
       <div className="mt-3 text-xs">
-        {metadata.na853 && (
+        {change_date && (
           <div className="mb-1">
-            <span className="font-medium">Κωδικός NA853:</span> {metadata.na853}
-          </div>
-        )}
-        {metadata.operation_type && (
-          <div className="mb-1">
-            <span className="font-medium">Τύπος Λειτουργίας:</span> {metadata.operation_type.replace(/_/g, ' ')}
-          </div>
-        )}
-        {metadata.active_quarter && (
-          <div className="mb-1">
-            <span className="font-medium">Ενεργό Τρίμηνο:</span> {metadata.active_quarter.toUpperCase()}
-          </div>
-        )}
-        {metadata.amount_deducted !== undefined && (
-          <div className="mb-1">
-            <span className="font-medium">Ποσό που Αφαιρέθηκε:</span> {formatCurrency(metadata.amount_deducted)}
-          </div>
-        )}
-        {metadata.timestamp && (
-          <div className="mb-1">
-            <span className="font-medium">Χρονική Σήμανση:</span> {
-              typeof metadata.timestamp === 'string' 
-                ? format(new Date(metadata.timestamp), 'dd/MM/yyyy HH:mm:ss')
-                : 'Μη έγκυρη ημερομηνία'
+            <span className="font-medium">Ημερομηνία Αλλαγής:</span> {
+              typeof change_date === 'string' 
+                ? format(new Date(change_date), 'dd/MM/yyyy HH:mm:ss')
+                : change_date
             }
+          </div>
+        )}
+        {previous_version?.na853 && (
+          <div className="mb-1">
+            <span className="font-medium">Κωδικός NA853:</span> {previous_version.na853}
+          </div>
+        )}
+        {changes?.reason && (
+          <div className="mb-1">
+            <span className="font-medium">Αιτιολογία:</span> {changes.reason}
+          </div>
+        )}
+        {previous_version?.quarter || updated_version?.quarter && (
+          <div className="mb-1">
+            <span className="font-medium">Τρίμηνο:</span> {(previous_version?.quarter || updated_version?.quarter)?.toUpperCase()}
           </div>
         )}
       </div>
@@ -272,10 +305,32 @@ export default function BudgetHistoryPage() {
 
     return (
       <div className="border-t mt-2 pt-2">
-        {quarterChanges}
-        {previousValues}
-        {newValues}
+        {previousVersionSection}
+        {updatedVersionSection}
+        {changesSection}
         {otherFields}
+        {/* Fallback for old metadata format */}
+        {metadata.quarters && (
+          <div className="mt-2">
+            <h4 className="text-sm font-medium mb-1">Αλλαγές Τριμήνου (Legacy)</h4>
+            <div className="grid grid-cols-4 gap-2 text-xs">
+              {Object.entries(metadata.quarters || {}).map(([quarter, values]: [string, any]) => (
+                <div key={quarter} className="p-2 border rounded">
+                  <div className="font-medium uppercase">{quarter}</div>
+                  <div className="text-muted-foreground">
+                    Προηγούμενο: {formatCurrency(values.previous || 0)}
+                  </div>
+                  <div className="text-muted-foreground">
+                    Νέο: {formatCurrency(values.new || 0)}
+                  </div>
+                  <div className={values.new < values.previous ? "text-red-500" : "text-green-500"}>
+                    Διαφορά: {formatCurrency((values.new || 0) - (values.previous || 0))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };

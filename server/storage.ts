@@ -287,18 +287,18 @@ export class DatabaseStorage implements IStorage {
       
       const offset = (page - 1) * limit;
       
-      // Build the base query with only required columns to avoid metadata error
+      // Build the base query with the new schema columns
       let query = supabase
         .from('budget_history')
         .select(`
           id,
           mis,
-          previous_amount,
-          new_amount,
           change_type,
-          change_reason,
-          document_id,
-          created_by,
+          change_date,
+          previous_version,
+          updated_version,
+          changes,
+          user_id,
           created_at
         `, { count: 'exact' });
       
@@ -332,22 +332,58 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Format the response data with default values for missing fields
+      // Transform to match the frontend expected format
       const formattedData = data?.map(entry => {
-        // Log the raw entry to debug missing fields
+        // Log the raw entry to debug
         console.log('[Storage] Raw budget history entry:', JSON.stringify(entry));
         
+        // Extract previous and new amounts from the JSON objects if available
+        let previousAmount = '0';
+        let newAmount = '0';
+        let changeReason = '';
+        
+        // Get previous amount from previous_version if available
+        if (entry.previous_version && typeof entry.previous_version === 'object') {
+          previousAmount = entry.previous_version.user_view || 
+                           entry.previous_version.sum || 
+                           entry.previous_version.total || 
+                           '0';
+        }
+        
+        // Get new amount from updated_version if available
+        if (entry.updated_version && typeof entry.updated_version === 'object') {
+          newAmount = entry.updated_version.user_view || 
+                      entry.updated_version.sum || 
+                      entry.updated_version.total || 
+                      '0';
+        }
+        
+        // Try to extract change_reason from changes
+        if (entry.changes && typeof entry.changes === 'object') {
+          changeReason = entry.changes.reason || 
+                         entry.changes.description || 
+                         (entry.changes.message ? String(entry.changes.message) : '');
+        }
+        
+        // Consolidate the data to the format expected by the frontend
         return {
           id: entry.id,
-          mis: entry.mis || 'Unknown',  // Provide a default value for mis
-          previous_amount: entry.previous_amount || '0',
-          new_amount: entry.new_amount || '0',
+          mis: entry.mis || 'Unknown',
+          previous_amount: previousAmount,
+          new_amount: newAmount,
           change_type: entry.change_type || '',
-          change_reason: entry.change_reason || '',
-          document_id: entry.document_id,
-          document_status: null, // We don't have document status in this version
-          created_by: entry.created_by || 'System',
+          change_reason: changeReason,
+          document_id: null, // We don't have document_id in the new schema
+          document_status: null, // We don't have document status in the new schema
+          created_by: entry.user_id ? String(entry.user_id) : 'System',
           created_at: entry.created_at,
-          metadata: {} // Provide an empty object since we're not querying metadata
+          // Add original data as metadata for detailed view
+          metadata: {
+            previous_version: entry.previous_version || {},
+            updated_version: entry.updated_version || {},
+            changes: entry.changes || {},
+            change_date: entry.change_date
+          }
         };
       }) || [];
       

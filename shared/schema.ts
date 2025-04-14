@@ -125,16 +125,14 @@ export const budgetNA853Split = pgTable("budget_na853_split", {
  */
 export const budgetHistory = pgTable("budget_history", {
   id: serial("id").primaryKey(),
-  mis: integer("mis").notNull(),
-  previous_amount: text("previous_amount").notNull(),
-  new_amount: text("new_amount").notNull(),
-  change_type: text("change_type").notNull(),
-  change_reason: text("change_reason"),
-  document_id: integer("document_id"),
-  document_status: text("document_status"),
-  created_by: text("created_by"),
+  mis: text("mis").notNull(),
+  change_type: text("change_type"),
+  change_date: text("change_date"),
+  previous_version: jsonb("previous_version"),
+  updated_version: jsonb("updated_version"),
+  changes: jsonb("changes"),
+  user_id: integer("user_id"),
   created_at: timestamp("created_at").defaultNow(),
-  metadata: jsonb("metadata").default({}),
 });
 
 /**
