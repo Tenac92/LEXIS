@@ -16,12 +16,22 @@ export async function exportDocument(req: Request, res: Response) {
       return res.status(400).json({ message: 'Invalid document ID' });
     }
 
-    // Fetch document with recipients
+    // Fetch document with recipients and user details
     console.log('Fetching document data with ID:', id);
     
     const { data: document, error: docError } = await supabase
       .from('generated_documents')
-      .select('*, recipients')
+      .select(`
+        *,
+        recipients,
+        generated_by:users!generated_documents_generated_by_fkey (
+          name,
+          email,
+          department,
+          telephone,
+          descr
+        )
+      `)
       .eq('id', parseInt(id))
       .single();
 
@@ -72,6 +82,13 @@ export async function exportDocument(req: Request, res: Response) {
       unit: document.unit,
       expenditure_type: document.expenditure_type,
       recipientsCount: document.recipients?.length || 0,
+      hasGeneratedBy: !!document.generated_by,
+      generatedBy: document.generated_by ? {
+        name: document.generated_by.name,
+        department: document.generated_by.department,
+        descr: document.generated_by.descr || 'DESCR NOT PROVIDED',
+        telephone: document.generated_by.telephone
+      } : 'NO USER DATA',
       recipients: document.recipients.slice(0, 2).map((r: any) => ({
         name: `${r.lastname} ${r.firstname}`,
         afm: r.afm,
