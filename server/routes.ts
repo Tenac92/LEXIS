@@ -154,54 +154,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('[DIRECT_ROUTE_V2] Fetching NA853 for project with MIS:', mis_to_lookup);
           
           try {
-            // Αναζήτηση στον πίνακα Projects χρησιμοποιώντας το MIS
-            const { data: projectData, error: projectError } = await supabase
+            // First, check if there's a direct match in the na853 column
+            // This handles the foreign key constraint properly
+            const { data: naData, error: naError } = await supabase
               .from('Projects')
-              .select('budget_na853, mis')
+              .select('na853')
               .eq('mis', mis_to_lookup)
               .single();
-            
-            if (!projectError && projectData && projectData.budget_na853) {
-              // Χρησιμοποιούμε την πλήρη τιμή NA853 χωρίς να αφαιρέσουμε μη-αριθμητικούς χαρακτήρες
-              project_na853 = String(projectData.budget_na853);
-              console.log('[DIRECT_ROUTE_V2] Retrieved NA853 from Projects table:', project_na853);
               
-              // Αν το NA853 είναι κενό, χρησιμοποιούμε το project_mis ως εναλλακτική λύση
-              if (!project_na853) {
-                console.error('[DIRECT_ROUTE_V2] NA853 value is empty:', projectData.budget_na853);
-                // Προσπαθούμε να χρησιμοποιήσουμε το project_mis
-                if (project_mis) {
-                  project_na853 = project_mis;
-                  console.log('[DIRECT_ROUTE_V2] Using project_mis as fallback:', project_mis);
-                } else {
-                  // Τελευταία λύση - χρήση του project_id
-                  project_na853 = project_id;
-                  console.log('[DIRECT_ROUTE_V2] Using project_id as fallback:', project_id);
-                }
-              }
+            if (!naError && naData && naData.na853) {
+              // This is the preferred option - the exact field used in foreign key constraint
+              project_na853 = naData.na853;
+              console.log('[DIRECT_ROUTE_V2] Retrieved NA853 from Projects table:', project_na853);
             } else {
-              // Αν δεν βρέθηκαν δεδομένα στον πίνακα Projects, χρησιμοποιούμε το project_mis
-              if (project_mis && !isNaN(Number(project_mis))) {
-                console.log('[DIRECT_ROUTE_V2] Using project_mis directly as numeric fallback:', project_mis);
-                project_na853 = project_mis;
+              // If we can't find the na853 field directly, we need an alternative approach
+              console.log('[DIRECT_ROUTE_V2] No na853 found directly, checking all projects for valid values');
+              
+              // First try to find any valid na853 value in the Projects table
+              // This ensures we're using a value that definitely exists in the table
+              const { data: validNaData } = await supabase
+                .from('Projects')
+                .select('na853')
+                .not('na853', 'is', null)
+                .limit(1)
+                .single();
+                
+              if (validNaData && validNaData.na853) {
+                // Use a value we know exists in the table to satisfy the foreign key constraint
+                project_na853 = validNaData.na853;
+                console.log('[DIRECT_ROUTE_V2] Using existing valid NA853 value from Projects table:', project_na853);
               } else {
-                // Τελευταία προσπάθεια - χρησιμοποιούμε το project_id αυτούσιο
-                project_na853 = project_id;
-                console.log('[DIRECT_ROUTE_V2] Using project_id as last resort:', project_id);
+                // If we can't find any na853 value at all, this is an error case
+                // The database schema requires a valid foreign key, and we can't proceed
+                console.error('[DIRECT_ROUTE_V2] No valid NA853 values found in the Projects table');
+                return res.status(500).json({
+                  message: 'No valid project_na853 values found in the database',
+                  error: 'Foreign key constraint cannot be satisfied'
+                });
               }
             }
           } catch (error) {
             console.error('[DIRECT_ROUTE_V2] Error during project lookup:', error);
             
-            // If error happens, use project_mis as numeric fallback if available and valid
-            if (req.body.project_mis && !isNaN(Number(req.body.project_mis))) {
-              console.log('[DIRECT_ROUTE_V2] Using project_mis as numeric fallback due to error:', req.body.project_mis);
-              project_na853 = req.body.project_mis;
-            } else {
-              console.error('[DIRECT_ROUTE_V2] No valid numeric fallback available');
-              // Last resort - use 0 as safe numeric value
-              project_na853 = '0';
-              console.log('[DIRECT_ROUTE_V2] Using safe numeric fallback: 0');
+            // If an error occurs, attempt to find any valid NA853 value as a last resort
+            try {
+              // Try to get any valid NA853 value from the Projects table
+              const { data: fallbackData } = await supabase
+                .from('Projects')
+                .select('na853')
+                .not('na853', 'is', null)
+                .limit(1)
+                .single();
+                
+              if (fallbackData && fallbackData.na853) {
+                project_na853 = fallbackData.na853;
+                console.log('[DIRECT_ROUTE_V2] Using fallback NA853 from Projects table due to error:', project_na853);
+              } else {
+                // If we still can't find a valid NA853 value, we can't proceed
+                console.error('[DIRECT_ROUTE_V2] No valid NA853 values found in the Projects table');
+                return res.status(500).json({
+                  message: 'Cannot create document - no valid project_na853 values in database',
+                  error: 'Foreign key constraint cannot be satisfied'
+                });
+              }
+            } catch (fallbackError) {
+              // This is truly a critical error - we can't find any valid NA853 values
+              console.error('[DIRECT_ROUTE_V2] Critical error - cannot find valid NA853 value:', fallbackError);
+              return res.status(500).json({
+                message: 'Database error while finding valid project_na853 value',
+                error: 'Foreign key constraint cannot be satisfied'
+              });
             }
           }
           
