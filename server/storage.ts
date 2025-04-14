@@ -332,11 +332,47 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
+      // Get the user information for the created_by fields
+      const userIds = data
+        .filter(entry => entry.created_by)
+        .map(entry => entry.created_by)
+        .filter((id, index, self) => self.indexOf(id) === index); // Get unique IDs
+      
+      let userMap: Record<string, { id: number, name: string }> = {};
+      
+      if (userIds.length > 0) {
+        // Fetch user names from the users table
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id, name')
+          .in('id', userIds);
+          
+        if (!userError && userData) {
+          // Create a map of user IDs to user objects
+          userMap = userData.reduce((acc, user) => {
+            acc[user.id] = user;
+            return acc;
+          }, {} as Record<string, { id: number, name: string }>);
+        } else {
+          console.error('[Storage] Error fetching user data:', userError);
+        }
+      }
+      
       // Format the response data with default values for missing fields
       // Transform to match the frontend expected format
       const formattedData = data?.map(entry => {
         // Log the raw entry to debug
         console.log('[Storage] Raw budget history entry:', JSON.stringify(entry));
+        
+        // Get user name if available
+        const createdBy = entry.created_by;
+        let creatorName = 'Σύστημα';
+        
+        if (createdBy && userMap[createdBy]) {
+          creatorName = userMap[createdBy].name;
+        } else if (createdBy) {
+          creatorName = `Χρήστης ${createdBy}`;
+        }
         
         // The columns already match what the frontend expects, so we can use them directly
         return {
@@ -348,7 +384,8 @@ export class DatabaseStorage implements IStorage {
           change_reason: entry.change_reason || '',
           document_id: entry.document_id,
           document_status: null, // We don't have document status in the schema
-          created_by: entry.created_by ? String(entry.created_by) : 'System',
+          created_by: creatorName,
+          created_by_id: entry.created_by,
           created_at: entry.created_at,
           // Add metadata for detailed view
           metadata: {

@@ -19,7 +19,8 @@ import {
   Info, 
   FileText, 
   RefreshCw,
-  Search 
+  Search,
+  User as UserIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -582,11 +583,28 @@ export default function BudgetHistoryPage() {
                                     : 'N/A'}
                                 </TableCell>
                                 <TableCell>{entry.mis}</TableCell>
-                                <TableCell>{formatCurrency(previousAmount)}</TableCell>
-                                <TableCell>{formatCurrency(newAmount)}</TableCell>
-                                <TableCell className={change < 0 ? "text-red-500" : "text-green-500"}>
-                                  {change < 0 ? '' : '+'}
-                                  {formatCurrency(change)}
+                                <TableCell>
+                                  <div className="font-medium">{formatCurrency(previousAmount)}</div>
+                                  {previousAmount > 0 && <div className="text-xs text-muted-foreground">Προηγούμενη τιμή</div>}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium">{formatCurrency(newAmount)}</div>
+                                  {newAmount > 0 && <div className="text-xs text-muted-foreground">Νέα τιμή</div>}
+                                </TableCell>
+                                <TableCell>
+                                  <div className={`font-medium ${change < 0 ? "text-red-500" : change > 0 ? "text-green-500" : ""}`}>
+                                    {change === 0 ? '-' : (
+                                      <>
+                                        {change > 0 ? '+' : ''}
+                                        {formatCurrency(change)}
+                                      </>
+                                    )}
+                                  </div>
+                                  {change !== 0 && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {change > 0 ? 'Αύξηση' : 'Μείωση'} {Math.abs(Math.round((change / (previousAmount || 1)) * 100))}%
+                                    </div>
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   {entry.change_type ? getChangeTypeBadge(entry.change_type) : '-'}
@@ -594,13 +612,18 @@ export default function BudgetHistoryPage() {
                                 <TableCell>
                                   {entry.change_reason ? (
                                     <div className="max-w-[200px] truncate" title={entry.change_reason}>
-                                      {entry.change_reason}
+                                      {entry.change_reason.replace('Updated from Excel import for', 'Εισαγωγή από Excel για')}
                                     </div>
                                   ) : (
                                     <span className="text-muted-foreground text-sm">-</span>
                                   )}
                                 </TableCell>
-                                <TableCell>{entry.created_by || 'Σύστημα'}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <UserIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                                    <span>{entry.created_by || 'Σύστημα'}</span>
+                                  </div>
+                                </TableCell>
                                 <TableCell>
                                   {entry.document_id ? (
                                     <TooltipProvider>
@@ -614,7 +637,10 @@ export default function BudgetHistoryPage() {
                                           </Badge>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                          ID Εγγράφου: {entry.document_id}
+                                          <div className="text-xs">
+                                            <div>ID Εγγράφου: {entry.document_id}</div>
+                                            <div className="mt-1">Κλικ για προβολή εγγράφου</div>
+                                          </div>
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
