@@ -386,7 +386,16 @@ export default function BudgetHistoryPage() {
     // Display budget amounts change
     const amountChangeSection = (previous_amount !== undefined || new_amount !== undefined) ? (
       <div className="mt-3 p-3 border rounded">
-        <h4 className="text-sm font-medium mb-2">Αλλαγή Ποσού</h4>
+        <h4 className="text-sm font-medium mb-2">
+          {change_type === 'document_created' 
+            ? 'Μεταβολή Διαθέσιμου Προϋπολογισμού' 
+            : 'Αλλαγή Ποσού'}
+        </h4>
+        {change_type === 'document_created' && (
+          <div className="text-xs mb-2 text-muted-foreground">
+            Η δημιουργία εγγράφου μειώνει το διαθέσιμο προϋπολογισμό (διαφορά κατανομών έτους και ποσού διαβιβάσεων)
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-2 text-sm">
           <div>
             <span className="text-xs text-muted-foreground">Προηγούμενο</span>
