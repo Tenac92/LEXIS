@@ -46,6 +46,72 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 
+// Hook για να ελέγχει αν ένα έγγραφο έχει protocol_number_input
+const useDocumentProtocolNumber = (documentId: number | null) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['documentProtocolNumber', documentId],
+    queryFn: async () => {
+      if (!documentId) return null;
+      try {
+        const response = await fetch(`/api/documents/${documentId}`);
+        if (!response.ok) return null;
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching document:', error);
+        return null;
+      }
+    },
+    enabled: !!documentId, // Μόνο αν υπάρχει documentId
+    staleTime: 5 * 60 * 1000, // 5 λεπτά
+    gcTime: 10 * 60 * 1000, // Χρησιμοποιούμε gcTime αντί για cacheTime στην τελευταία έκδοση του TanStack Query
+  });
+
+  const protocolNumberInput = data && typeof data === 'object' && 'protocol_number_input' in data
+    ? data.protocol_number_input
+    : null;
+
+  return {
+    protocolNumberInput,
+    isLoading,
+  };
+};
+
+// Component που εμφανίζει το document_id ή το protocol_number_input αν υπάρχει
+const BudgetHistoryDocument = ({ documentId, status }: { documentId: number, status?: string }) => {
+  const { protocolNumberInput, isLoading } = useDocumentProtocolNumber(documentId);
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant={status === 'completed' ? "default" : "outline"}>
+            <FileText className="h-3 w-3 mr-1" />
+            {status === 'completed' ? 'Ολοκληρωμένο' : 
+              status === 'pending' ? 'Σε εκκρεμότητα' : 
+              status || 'Σε εκκρεμότητα'}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div className="text-xs">
+            {isLoading ? (
+              <div>Φόρτωση στοιχείων εγγράφου...</div>
+            ) : (
+              <>
+                {protocolNumberInput ? (
+                  <div>Αρ. Πρωτ.: {protocolNumberInput}</div>
+                ) : (
+                  <div>ID Εγγράφου: {documentId}</div>
+                )}
+                <div className="mt-1">Κλικ για προβολή εγγράφου</div>
+              </>
+            )}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 interface BudgetHistoryEntry {
   id: number;
   mis: string;
