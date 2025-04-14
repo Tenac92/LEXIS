@@ -192,7 +192,7 @@ export default function BudgetHistoryPage() {
   };
 
   // Function to get metadata display
-  const renderMetadata = (metadata: Record<string, any>) => {
+  const renderMetadata = (metadata: Record<string, any>, entryChangeType?: string) => {
     if (!metadata) return null;
 
     const { previous_version, updated_version, changes, change_date, previous_amount, new_amount, change_reason } = metadata;
@@ -387,11 +387,11 @@ export default function BudgetHistoryPage() {
     const amountChangeSection = (previous_amount !== undefined || new_amount !== undefined) ? (
       <div className="mt-3 p-3 border rounded">
         <h4 className="text-sm font-medium mb-2">
-          {change_type === 'document_created' 
+          {entryChangeType === 'document_created' 
             ? 'Μεταβολή Διαθέσιμου Προϋπολογισμού' 
             : 'Αλλαγή Ποσού'}
         </h4>
-        {change_type === 'document_created' && (
+        {entryChangeType === 'document_created' && (
           <div className="text-xs mb-2 text-muted-foreground">
             Η δημιουργία εγγράφου μειώνει το διαθέσιμο προϋπολογισμό (διαφορά κατανομών έτους και ποσού διαβιβάσεων)
           </div>
@@ -777,7 +777,7 @@ export default function BudgetHistoryPage() {
                               {isExpanded && (
                                 <TableRow className="bg-muted/30">
                                   <TableCell colSpan={10} className="p-4">
-                                    {entry.metadata ? renderMetadata(entry.metadata) : (
+                                    {entry.metadata ? renderMetadata(entry.metadata, entry.change_type) : (
                                       <div className="text-muted-foreground text-sm italic">
                                         Δεν υπάρχουν διαθέσιμα επιπρόσθετα μεταδεδομένα
                                       </div>

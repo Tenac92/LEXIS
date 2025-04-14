@@ -1019,10 +1019,11 @@ export class BudgetService {
         const previousAvailable = katanomesEtous - currentUserView;
         const newAvailable = katanomesEtous - newUserView;
         
+        // Convert to correct decimal type using Zod schema expectations
         await storage.createBudgetHistoryEntry({
           mis: numericalMis ?? ((/^\d+$/.test(mis)) ? parseInt(mis) : 0), // Ensure numeric MIS
-          previous_amount: previousAvailable,
-          new_amount: newAvailable,
+          previous_amount: previousAvailable.toString(), // Convert to string for decimal type
+          new_amount: newAvailable.toString(), // Convert to string for decimal type
           change_type: 'document_created',
           change_reason: changeReason || documentChangeReason,
           document_id: documentId, // This is numeric ID parsed from sessionId
