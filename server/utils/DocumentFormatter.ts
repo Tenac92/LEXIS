@@ -123,6 +123,9 @@ export class DocumentFormatter {
       name: documentData.generated_by?.name || documentData.user_name || "",
       department:
         documentData.generated_by?.department || documentData.department || "",
+      // Add descr field for both document types
+      descr:
+        documentData.generated_by?.descr || (documentData as any).descr || "",
       // Handle telephone as number by converting to string
       contact_number:
         (documentData.generated_by?.telephone !== undefined
@@ -870,9 +873,8 @@ export class DocumentFormatter {
                       },
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: "Ο ΣΥΝΤΑΞΑΣ" })],
+                          children: [new TextRun({ text: "Ο ΣΥΝΤΑΞΑΣ", bold: true })],
                           alignment: AlignmentType.CENTER,
-                          bold: true,
                           spacing: { before: 400, after: 400 },
                         }),
                         new Paragraph({
