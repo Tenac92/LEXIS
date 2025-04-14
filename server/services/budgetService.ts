@@ -1012,40 +1012,15 @@ export class BudgetService {
         // Get the current NA853 value from the budget data
         const na853 = updateBudgetData.na853 || '';
         
-        // Create budget history entry with the standard schema
+        // Create budget history entry with the new schema that matches the DB structure
         await storage.createBudgetHistoryEntry({
-          mis,
+          mis: numericalMis ?? ((/^\d+$/.test(mis)) ? parseInt(mis) : 0), // Ensure numeric MIS
+          previous_amount: currentUserView,
+          new_amount: newUserView,
           change_type: 'document_created',
-          change_date: changeDate,
-          previous_version: {
-            user_view: currentUserView,
-            ethsia_pistosi: updateBudgetData.ethsia_pistosi || 0,
-            q1: updateBudgetData.q1 || 0,
-            q2: updateBudgetData.q2 || 0,
-            q3: updateBudgetData.q3 || 0,
-            q4: updateBudgetData.q4 || 0,
-            katanomes_etous: updateBudgetData.katanomes_etous || 0,
-            na853: na853
-          },
-          updated_version: {
-            user_view: newUserView,
-            ethsia_pistosi: updateBudgetData.ethsia_pistosi || 0,
-            q1: updateBudgetData.q1 || 0,
-            q2: updateBudgetData.q2 || 0,
-            q3: updateBudgetData.q3 || 0,
-            q4: updateBudgetData.q4 || 0,
-            katanomes_etous: updateBudgetData.katanomes_etous || 0,
-            na853: na853
-          },
-          changes: {
-            reason: documentChangeReason,
-            operation_type: 'document_creation',
-            document_amount: amount,
-            current_quarter: currentQuarter,
-            timestamp: changeDate,
-            session_id: sessionId || null
-          },
-          user_id: userId ? parseInt(userId) : null
+          change_reason: changeReason || documentChangeReason,
+          document_id: documentId, // This is numeric ID parsed from sessionId
+          created_by: userId ? parseInt(userId) : null
         });
         
         console.log(`[BudgetService] Update - Created standardized history entry for MIS: ${mis}`);
