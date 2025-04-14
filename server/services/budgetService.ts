@@ -7,6 +7,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from '../data';
+import { storage } from '../storage';
+import { InsertBudgetHistory } from '@shared/schema';
 
 // Configure types for budget data
 interface BudgetData {
