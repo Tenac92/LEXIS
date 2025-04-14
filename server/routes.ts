@@ -594,6 +594,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Budget routes
     log('[Routes] Setting up budget routes...');
     
+    // Import the storage interface
+    const { storage } = await import('./storage');
+    
     // Set up specific budget routes first
     // Budget history route - must be registered BEFORE the MIS lookup route
     log('[Routes] Setting up budget history route...');
