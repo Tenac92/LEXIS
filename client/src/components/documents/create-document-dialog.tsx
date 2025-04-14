@@ -1715,16 +1715,18 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                               className="md:col-span-2"
                               autoComplete="off"
                             />
-                            <Input
-                              {...form.register(`recipients.${index}.secondary_text`)}
-                              placeholder="Ελεύθερο Κείμενο"
-                              className="md:col-span-8"
-                              autoComplete="off"
-                            />
                             <div className="md:col-span-3 flex items-center gap-2">
                               <div className="flex-1">
                                 {renderRecipientInstallments(index)}
                               </div>
+                            </div>
+                            <div className="md:col-span-11">
+                              <Input
+                                {...form.register(`recipients.${index}.secondary_text`)}
+                                placeholder="Ελεύθερο Κείμενο"
+                                className="w-full"
+                                autoComplete="off"
+                              />
                             </div>
                             <div className="md:col-span-1 flex justify-end">
                               <Button
