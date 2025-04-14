@@ -257,7 +257,7 @@ export default function BudgetHistoryPage() {
                 <div className="font-medium capitalize">
                   {key === 'ethsia_pistosi' ? 'Ετήσια Πίστωση' :
                    key === 'katanomes_etous' ? 'Κατανομές Έτους' :
-                   key === 'user_view' ? 'Τρέχον Ποσό' :
+                   key === 'user_view' ? 'Ποσό Διαβιβάσεων' :
                    key === 'q1' ? 'Τρίμηνο 1' :
                    key === 'q2' ? 'Τρίμηνο 2' :
                    key === 'q3' ? 'Τρίμηνο 3' :
