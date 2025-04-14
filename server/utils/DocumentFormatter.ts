@@ -732,31 +732,17 @@ export class DocumentFormatter {
             },
           },
           children: [
-            // Use a fixed title first to ensure something is always shown
+            // Show only the project information with the project title in uppercase
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "ΣΥΜΠΛΗΡΩΜΑΤΙΚΟ ΕΓΓΡΑΦΟ - ΚΡΑΤΙΚΗ ΑΡΩΓΗ",
+                  text: `${projectTitle ? `${projectTitle.toUpperCase()} - ` : ""}ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || "___"} της ΣΑΝΑ 853`,
                   bold: true,
-                  size: 36, // Increased size for maximum visibility
-                  color: "000000",  // Ensure black text
+                  size: 28, // Decreased font size 
                 }),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { before: 400, after: 200 }, 
-            }),
-            
-            // Then attempt to show project information if available
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `${projectTitle ? `${projectTitle} - ` : ""}ΑΡ.ΕΡΓΟΥ: ${projectNA853 || documentData.project_na853 || "___"} της ΣΑΝΑ 853`,
-                  bold: true,
-                  size: 32, 
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-              spacing: { before: 200, after: 400 },
+              spacing: { before: 400, after: 400 },
             }),
 
             // Recipients table with ΠΡΑΞΗ column (includes total row)
