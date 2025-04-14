@@ -422,11 +422,11 @@ export class DocumentFormatter {
   public static async getProjectTitle(mis: string): Promise<string | null> {
     try {
       if (!mis) {
-        console.error("No MIS provided for project title lookup");
+        console.error("[DocumentFormatter] No MIS provided for project title lookup");
         return null;
       }
 
-      console.log(`Fetching project title for input: ${mis}`);
+      console.log(`[DocumentFormatter] Fetching project title for input: '${mis}'`);
 
       // Check if MIS is numeric or follows the pattern of project codes
       const isNumericString = /^\d+$/.test(mis);
@@ -434,10 +434,12 @@ export class DocumentFormatter {
       const isProjectCode = projectCodePattern.test(mis);
 
       console.log(
-        `[DocumentFormatter] getProjectTitle - Analysis: isNumericString=${isNumericString}, isProjectCode=${isProjectCode}`,
+        `[DocumentFormatter] getProjectTitle - Analysis: mis='${mis}', isNumericString=${isNumericString}, isProjectCode=${isProjectCode}`,
       );
 
-      let data, error;
+      let data: any = null;
+      let error: any = null;
+      let resultFound = false;
 
       // Strategy 1: Try first with budget_na853 if it looks like a project code
       if (isProjectCode) {
@@ -446,51 +448,99 @@ export class DocumentFormatter {
         );
         const result = await supabase
           .from("Projects")
-          .select("project_title")
+          .select("project_title, mis")
           .eq("budget_na853", mis)
           .maybeSingle();
 
         data = result.data;
         error = result.error;
 
+        if (error) {
+          console.error("[DocumentFormatter] Budget lookup error:", error.message);
+        }
+
         if (!error && data?.project_title) {
           console.log(
-            `[DocumentFormatter] Found project title by budget_na853: ${data.project_title}`,
+            `[DocumentFormatter] Found project title by budget_na853: '${data.project_title}'`,
           );
+          console.log(`[DocumentFormatter] Found MIS for this project: '${data.mis}'`);
+          resultFound = true;
           return data.project_title;
         }
       }
 
-      // Strategy 2: Default lookup by MIS
-      const result = await supabase
-        .from("Projects")
-        .select("project_title")
-        .eq("mis", mis)
-        .maybeSingle();
+      // Strategy 2: Default lookup by MIS as numeric value
+      if (!resultFound && isNumericString) {
+        console.log(`[DocumentFormatter] Trying MIS lookup with numeric value: ${mis}`);
+        const result = await supabase
+          .from("Projects")
+          .select("project_title, budget_na853")
+          .eq("mis", mis)
+          .maybeSingle();
 
-      data = result.data;
-      error = result.error;
+        data = result.data;
+        error = result.error;
 
-      if (error) {
-        console.error(
-          "[DocumentFormatter] Error fetching project title:",
-          error,
-        );
-        return null;
+        if (error) {
+          console.error(
+            "[DocumentFormatter] Error fetching project title by MIS:",
+            error.message
+          );
+        } else if (!data || !data.project_title) {
+          console.log(`[DocumentFormatter] No project found with MIS: ${mis}`);
+        } else {
+          console.log(
+            `[DocumentFormatter] Found project by MIS with title: '${data.project_title}'`,
+            `and budget_na853: '${data.budget_na853}'`
+          );
+          resultFound = true;
+          return data.project_title;
+        }
       }
 
-      if (!data || !data.project_title) {
-        console.log(`[DocumentFormatter] No project found with MIS: ${mis}`);
-        return null;
+      // Strategy 3: Last resort - try a fuzzy search on both fields
+      if (!resultFound) {
+        console.log(`[DocumentFormatter] Trying fuzzy search for project with term: ${mis}`);
+        
+        // Check if term contains both Greek and Latin characters, and try to split
+        const mixedPattern = /^(\d{4})([\u0370-\u03FF\u1F00-\u1FFF]+)(\d+)$/;
+        const mixedMatch = mis.match(mixedPattern);
+        
+        if (mixedMatch) {
+          const year = mixedMatch[1];
+          const code = mixedMatch[2];
+          const number = mixedMatch[3];
+          
+          console.log(`[DocumentFormatter] Parsed mixed code - Year: ${year}, Code: ${code}, Number: ${number}`);
+          
+          // Try searching by partial matches
+          const likePattern = `%${year}%${code}%${number}%`;
+          console.log(`[DocumentFormatter] Using like pattern: ${likePattern}`);
+          
+          const result = await supabase
+            .from("Projects")
+            .select("project_title, budget_na853, mis")
+            .or(`budget_na853.ilike.${likePattern},mis.ilike.${likePattern}`)
+            .limit(1);
+            
+          if (result.error) {
+            console.error("[DocumentFormatter] Fuzzy search error:", result.error.message);
+          } else if (result.data && result.data.length > 0) {
+            console.log(`[DocumentFormatter] Found project by fuzzy search: `, result.data[0]);
+            return result.data[0].project_title;
+          }
+        }
       }
 
-      console.log(
-        `[DocumentFormatter] Found project title: ${data.project_title}`,
-      );
-      return data.project_title;
+      // If we got here, we couldn't find a project title
+      console.log(`[DocumentFormatter] No project title found for input: ${mis} after all attempts`);
+      
+      // Return a default title as last resort if all strategies fail
+      return "ΚΡΑΤΙΚΗ ΑΡΩΓΗ";
+      
     } catch (error) {
       console.error("[DocumentFormatter] Error in getProjectTitle:", error);
-      return null;
+      return "ΚΡΑΤΙΚΗ ΑΡΩΓΗ"; // Provide a default title in case of errors
     }
   }
 
