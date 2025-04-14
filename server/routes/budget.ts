@@ -78,15 +78,26 @@ router.post('/validate', authenticateToken, async (req: AuthenticatedRequest, re
         await storage.createBudgetHistoryEntry({
           mis,
           change_type: 'notification_created',
-          change_reason: `Budget notification created: ${result.notificationType}`,
-          created_by: req.user.id,
-          created_at: new Date().toISOString(),
-          metadata: {
+          change_date: new Date().toISOString(),
+          previous_version: budgetData ? {
+            user_view: budgetData.user_view || 0,
+            ethsia_pistosi: budgetData.ethsia_pistosi || 0,
+            katanomes_etous: budgetData.katanomes_etous || 0,
+            na853: budgetData.na853 || ''
+          } : null,
+          updated_version: budgetData ? {
+            user_view: budgetData.user_view || 0,
+            ethsia_pistosi: budgetData.ethsia_pistosi || 0,
+            katanomes_etous: budgetData.katanomes_etous || 0,
+            na853: budgetData.na853 || ''
+          } : null,
+          changes: {
+            reason: `Budget notification created: ${result.notificationType}`,
             notification_type: result.notificationType,
             priority: result.priority,
-            current_budget: budgetData?.user_view,
             requested_amount: requestedAmount
-          }
+          },
+          user_id: req.user.id ? parseInt(req.user.id) : null
         });
       } catch (notifError) {
         console.error('Failed to create budget notification:', notifError);
@@ -394,37 +405,45 @@ router.put('/bulk-update', authenticateToken, async (req: AuthenticatedRequest, 
           throw new Error(`Failed to update budget split for MIS ${mis}: ${updateError.message}`);
         }
 
-        // Create a budget history entry with detailed metadata
+        // Create a budget history entry with detailed metadata using the new schema
         await storage.createBudgetHistoryEntry({
           mis,
-          previous_amount: currentBudget.user_view?.toString() || '0',
-          new_amount: data.user_view?.toString() || '0',
           change_type: 'manual_adjustment',
-          change_reason: changeReason,
-          created_by: userId,
-          metadata: {
+          change_date: new Date().toISOString(),
+          previous_version: {
+            ethsia_pistosi: currentBudget.ethsia_pistosi || 0,
+            q1: currentBudget.q1 || 0,
+            q2: currentBudget.q2 || 0,
+            q3: currentBudget.q3 || 0,
+            q4: currentBudget.q4 || 0,
+            katanomes_etous: currentBudget.katanomes_etous || 0,
+            user_view: currentBudget.user_view || 0,
+            na853: na853,
+            total_spent: currentBudget.total_spent || 0
+          },
+          updated_version: {
+            ethsia_pistosi: data.ethsia_pistosi || 0,
+            q1: data.q1 || 0,
+            q2: data.q2 || 0,
+            q3: data.q3 || 0,
+            q4: data.q4 || 0,
+            katanomes_etous: data.katanomes_etous || 0,
+            user_view: data.user_view || 0,
+            na853: na853,
+            total_spent: currentBudget.total_spent || 0 // Total spent remains unchanged
+          },
+          changes: {
+            reason: changeReason,
             operation_type: 'bulk_update',
-            na853,
-            quarters: {
-              q1: { previous: parseFloat(currentBudget.q1?.toString() || '0'), new: parseFloat(data.q1?.toString() || '0') },
-              q2: { previous: parseFloat(currentBudget.q2?.toString() || '0'), new: parseFloat(data.q2?.toString() || '0') },
-              q3: { previous: parseFloat(currentBudget.q3?.toString() || '0'), new: parseFloat(data.q3?.toString() || '0') },
-              q4: { previous: parseFloat(currentBudget.q4?.toString() || '0'), new: parseFloat(data.q4?.toString() || '0') }
+            quarters_delta: {
+              q1: parseFloat(data.q1?.toString() || '0') - parseFloat(currentBudget.q1?.toString() || '0'),
+              q2: parseFloat(data.q2?.toString() || '0') - parseFloat(currentBudget.q2?.toString() || '0'),
+              q3: parseFloat(data.q3?.toString() || '0') - parseFloat(currentBudget.q3?.toString() || '0'),
+              q4: parseFloat(data.q4?.toString() || '0') - parseFloat(currentBudget.q4?.toString() || '0')
             },
-            previous: {
-              ethsia_pistosi: currentBudget.ethsia_pistosi,
-              katanomes_etous: currentBudget.katanomes_etous,
-              user_view: currentBudget.user_view,
-              total_spent: currentBudget.total_spent || 0
-            },
-            new: {
-              ethsia_pistosi: data.ethsia_pistosi,
-              katanomes_etous: data.katanomes_etous,
-              user_view: data.user_view,
-              total_spent: currentBudget.total_spent || 0 // Total spent remains unchanged
-            },
-            timestamp: new Date().toISOString()
-          }
+            user_view_delta: parseFloat(data.user_view?.toString() || '0') - parseFloat(currentBudget.user_view?.toString() || '0')
+          },
+          user_id: parseInt(userId)
         });
 
         console.log(`[Budget] Successfully updated budget split for MIS ${mis} and tracked in history`);
