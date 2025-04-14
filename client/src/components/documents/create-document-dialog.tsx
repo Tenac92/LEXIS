@@ -1718,7 +1718,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                             <Input
                               {...form.register(`recipients.${index}.secondary_text`)}
                               placeholder="Ελεύθερο Κείμενο"
-                              className="md:col-span-2"
+                              className="md:col-span-8"
                               autoComplete="off"
                             />
                             <div className="md:col-span-3 flex items-center gap-2">
