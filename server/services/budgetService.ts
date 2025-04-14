@@ -1013,10 +1013,16 @@ export class BudgetService {
         const na853 = updateBudgetData.na853 || '';
         
         // Create budget history entry with the new schema that matches the DB structure
+        // For document creation, we want to show the reduction in available budget (katanomes_etous)
+        // instead of the increase in user_view
+        const katanomesEtous = updateBudgetData.katanomes_etous || 0;
+        const previousAvailable = katanomesEtous - currentUserView;
+        const newAvailable = katanomesEtous - newUserView;
+        
         await storage.createBudgetHistoryEntry({
           mis: numericalMis ?? ((/^\d+$/.test(mis)) ? parseInt(mis) : 0), // Ensure numeric MIS
-          previous_amount: currentUserView,
-          new_amount: newUserView,
+          previous_amount: previousAvailable,
+          new_amount: newAvailable,
           change_type: 'document_created',
           change_reason: changeReason || documentChangeReason,
           document_id: documentId, // This is numeric ID parsed from sessionId
