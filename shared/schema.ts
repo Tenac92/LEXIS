@@ -49,6 +49,7 @@ export const users = pgTable("users", {
   units: text("units").array(),
   department: text("department"),
   telephone: text("telephone"),
+  descr: text("descr"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at"),
 });

@@ -162,7 +162,8 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
       role: sessionUser.role,
       units: sessionUser.units || [],
       department: sessionUser.department || undefined,
-      telephone: sessionUser.telephone || undefined
+      telephone: sessionUser.telephone || undefined,
+      descr: sessionUser.descr || undefined
     };
     
     console.log('[Auth] User authenticated:', { 
@@ -377,6 +378,7 @@ export async function authenticateUser(email: string, password: string): Promise
       units: userData.units || [],
       department: userData.department || undefined,
       telephone: userData.telephone || undefined,
+      descr: userData.descr || undefined,
       created_at: userData.created_at || undefined,
       updated_at: userData.updated_at || undefined
     };
@@ -509,7 +511,8 @@ export async function setupAuth(app: Express) {
         role: userData.role,
         units: userData.units || [],
         department: userData.department || undefined,
-        telephone: userData.telephone || undefined
+        telephone: userData.telephone || undefined,
+        descr: userData.descr || undefined
       };
 
       // Store user data in session with expiry
@@ -668,7 +671,8 @@ export async function setupAuth(app: Express) {
         role: req.user.role,
         units: req.user.units || [],
         department: req.user.department || null,
-        telephone: req.user.telephone || null
+        telephone: req.user.telephone || null,
+        descr: req.user.descr || null
       };
       
       // Send as a direct user object for consistency with the login endpoint
