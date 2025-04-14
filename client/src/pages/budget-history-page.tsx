@@ -190,10 +190,135 @@ export default function BudgetHistoryPage() {
   const renderMetadata = (metadata: Record<string, any>) => {
     if (!metadata) return null;
 
-    const { previous_version, updated_version, changes, change_date } = metadata;
+    const { previous_version, updated_version, changes, change_date, previous_amount, new_amount, change_reason } = metadata;
+    
+    // Try to parse budget values from change_reason which contains the actual data
+    let parsedBudgetValues: Record<string, any> = {};
+    
+    if (change_reason) {
+      // Extract JSON-like data from the change_reason
+      try {
+        // Look for the part after "Updated values: " which contains the JSON object
+        const valuesMatch = change_reason.match(/Updated values: (\{.*\})/);
+        if (valuesMatch && valuesMatch[1]) {
+          // Parse the JSON string 
+          parsedBudgetValues = JSON.parse(valuesMatch[1]);
+        }
+      } catch (error) {
+        console.error('Error parsing change_reason JSON:', error);
+      }
+    }
 
-    // Display budget data from previous version
-    const previousVersionSection = previous_version ? (
+    // Get project info from the change_reason
+    let projectInfo = {
+      mis: '',
+      na853: ''
+    };
+
+    if (change_reason) {
+      const misMatch = change_reason.match(/MIS (\d+)/);
+      const na853Match = change_reason.match(/NA853: ([^\)]+)/);
+      
+      if (misMatch && misMatch[1]) projectInfo.mis = misMatch[1];
+      if (na853Match && na853Match[1]) projectInfo.na853 = na853Match[1];
+    }
+
+    // Create a section for project information
+    const projectInfoSection = (projectInfo.mis || projectInfo.na853) ? (
+      <div className="mt-3 bg-muted p-3 rounded-md">
+        <h4 className="text-sm font-medium mb-2">Στοιχεία Έργου</h4>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          {projectInfo.mis && (
+            <div className="flex items-center">
+              <span className="font-medium mr-2">MIS:</span> {projectInfo.mis}
+            </div>
+          )}
+          {projectInfo.na853 && (
+            <div className="flex items-center">
+              <span className="font-medium mr-2">Κωδικός NA853:</span> {projectInfo.na853}
+            </div>
+          )}
+        </div>
+      </div>
+    ) : null;
+
+    // Display budget values parsed from change_reason
+    const budgetValuesSection = Object.keys(parsedBudgetValues).length > 0 ? (
+      <div className="mt-3">
+        <h4 className="text-sm font-medium mb-1">Τιμές Προϋπολογισμού</h4>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+          {Object.entries(parsedBudgetValues).map(([key, value]) => {
+            // Skip non-numeric values or create a special display for them
+            const isNumeric = typeof value === 'number' || (typeof value === 'string' && !isNaN(parseFloat(value as string)));
+            
+            return (
+              <div key={key} className={`p-2 border rounded ${isNumeric ? 'bg-blue-50' : ''}`}>
+                <div className="font-medium capitalize">
+                  {key === 'ethsia_pistosi' ? 'Ετήσια Πίστωση' :
+                   key === 'katanomes_etous' ? 'Κατανομές Έτους' :
+                   key === 'user_view' ? 'Τρέχον Ποσό' :
+                   key === 'q1' ? 'Τρίμηνο 1' :
+                   key === 'q2' ? 'Τρίμηνο 2' :
+                   key === 'q3' ? 'Τρίμηνο 3' :
+                   key === 'q4' ? 'Τρίμηνο 4' :
+                   key.replace(/_/g, ' ')}
+                </div>
+                <div>
+                  {isNumeric
+                    ? formatCurrency(value) 
+                    : typeof value === 'object' && value !== null
+                      ? JSON.stringify(value)
+                      : value?.toString() || '-'
+                  }
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    ) : null;
+
+    // Display change reason in a more readable format
+    const changeReasonSection = change_reason ? (
+      <div className="mt-3">
+        <h4 className="text-sm font-medium mb-1">Αιτία Αλλαγής</h4>
+        <div className="text-xs bg-muted p-2 rounded whitespace-pre-wrap">
+          {change_reason.replace('Updated from Excel import for', 'Ενημέρωση από αρχείο Excel για')}
+        </div>
+      </div>
+    ) : null;
+
+    // Display budget amounts change
+    const amountChangeSection = (previous_amount !== undefined || new_amount !== undefined) ? (
+      <div className="mt-3 p-3 border rounded">
+        <h4 className="text-sm font-medium mb-2">Αλλαγή Ποσού</h4>
+        <div className="grid grid-cols-3 gap-2 text-sm">
+          <div>
+            <span className="text-xs text-muted-foreground">Προηγούμενο</span>
+            <div className="font-medium">{formatCurrency(previous_amount || 0)}</div>
+          </div>
+          <div>
+            <span className="text-xs text-muted-foreground">Νέο</span>
+            <div className="font-medium">{formatCurrency(new_amount || 0)}</div>
+          </div>
+          <div>
+            <span className="text-xs text-muted-foreground">Διαφορά</span>
+            <div className={
+              (new_amount || 0) > (previous_amount || 0) 
+                ? "font-medium text-green-600" 
+                : (new_amount || 0) < (previous_amount || 0) 
+                  ? "font-medium text-red-600" 
+                  : "font-medium"
+            }>
+              {formatCurrency((new_amount || 0) - (previous_amount || 0))}
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : null;
+
+    // Fallback: Display previous_version if available
+    const previousVersionSection = Object.keys(previous_version || {}).length > 0 ? (
       <div className="mt-3">
         <h4 className="text-sm font-medium mb-1">Προηγούμενες Τιμές Προϋπολογισμού</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
@@ -219,8 +344,8 @@ export default function BudgetHistoryPage() {
       </div>
     ) : null;
 
-    // Display budget data from updated version
-    const updatedVersionSection = updated_version ? (
+    // Fallback: Display updated_version if available
+    const updatedVersionSection = Object.keys(updated_version || {}).length > 0 ? (
       <div className="mt-3">
         <h4 className="text-sm font-medium mb-1">Νέες Τιμές Προϋπολογισμού</h4>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
@@ -246,8 +371,8 @@ export default function BudgetHistoryPage() {
       </div>
     ) : null;
 
-    // Display detailed changes information
-    const changesSection = changes ? (
+    // Display changes info if available
+    const changesSection = Object.keys(changes || {}).length > 0 ? (
       <div className="mt-3">
         <h4 className="text-sm font-medium mb-1">Λεπτομέρειες Αλλαγών</h4>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
@@ -305,6 +430,10 @@ export default function BudgetHistoryPage() {
 
     return (
       <div className="border-t mt-2 pt-2">
+        {projectInfoSection}
+        {amountChangeSection}
+        {budgetValuesSection}
+        {changeReasonSection}
         {previousVersionSection}
         {updatedVersionSection}
         {changesSection}
