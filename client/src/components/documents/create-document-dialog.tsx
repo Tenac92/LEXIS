@@ -411,8 +411,8 @@ const recipientSchema = z.object({
   fathername: z.string().optional().default(""), // Made optional with empty string default
   afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
-  // Νέο πεδίο για δευτερεύον κείμενο
-  secondary_text: z.string().optional(),
+  // Νέο πεδίο για δευτερεύον κείμενο - default empty string
+  secondary_text: z.string().default(""),
   // Για συμβατότητα με το API (παλιά μορφή)
   installment: z.string().optional().default("Α"),
   // Νέο schema για πολλαπλές δόσεις ανά παραλήπτη
