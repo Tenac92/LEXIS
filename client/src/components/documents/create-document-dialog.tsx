@@ -2483,18 +2483,16 @@ export function CreateDocumentDialog({
                   {isBudgetLoading ? (
                     <BudgetIndicator
                       budgetData={{
-                        user_view: "0",
-                        current_budget: "0", 
+                        current_budget: "0",
                         ethsia_pistosi: "0",
+                        user_view: "0",
                         q1: "0",
                         q2: "0", 
                         q3: "0",
                         q4: "0",
                         katanomes_etous: "0",
-                        available_budget: "0",
-                        total_budget: "0",
-                        annual_budget: "0"
-                      } as any}
+                        available_budget: "0"
+                      }}
                       currentAmount={currentAmount}
                       isLoading={true}
                     />
