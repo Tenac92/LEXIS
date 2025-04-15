@@ -518,6 +518,9 @@ export function CreateDocumentDialog({
   // Second effect: After form is reset and we have user data, set the unit
   // But only if there's no unit already set in the form data
   useEffect(() => {
+    // Only proceed if we have data about the user
+    if (!user) return;
+    
     // Only auto-set unit if dialog was just opened (formReset) AND there's no unit already in form data
     if (formReset && user?.units && user?.units.length > 0 && !formData.unit) {
       // Set flag to prevent circular updates while we initialize
@@ -525,16 +528,22 @@ export function CreateDocumentDialog({
       
       // Small delay to ensure units query has completed
       const timer = setTimeout(() => {
-        const defaultUnit = user?.units?.[0] || "";
-        console.log("[CreateDocument] Setting default unit:", defaultUnit);
+        // Check again if the context still doesn't have a unit (could have been set meanwhile)
+        if (!formData.unit) {
+          const defaultUnit = user?.units?.[0] || "";
+          console.log("[CreateDocument] Setting default unit:", defaultUnit);
+          
+          // Only set if we don't have a unit already (empty creation)
+          form.setValue("unit", defaultUnit);
+        }
         
-        // Only set if we don't have a unit already (empty creation)
-        form.setValue("unit", defaultUnit);
         setFormReset(false); // Reset the flag
         
-        // Allow updates again
-        isUpdatingFromContext.current = false;
-      }, 500);
+        // Allow updates again after a short delay to prevent race conditions
+        setTimeout(() => {
+          isUpdatingFromContext.current = false;
+        }, 100);
+      }, 300);
 
       return () => clearTimeout(timer);
     } else if (formReset) {

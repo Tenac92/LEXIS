@@ -51,11 +51,24 @@ export const DocumentFormProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [formData, setFormData] = useState<DocumentFormData>(defaultFormData);
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Enhanced updateFormData that performs more efficient merging
   const updateFormData = (newData: Partial<DocumentFormData>) => {
-    setFormData(prev => ({
-      ...prev,
-      ...newData,
-    }));
+    setFormData(prev => {
+      // Handle empty recipients array case specifically to prevent issues
+      if (newData.recipients && newData.recipients.length === 0 && prev.recipients && prev.recipients.length === 0) {
+        // Skip update if both are empty arrays to prevent unnecessary re-renders
+        const updatedData = { ...prev, ...newData };
+        // Create a new object without recipients key to avoid TypeScript error
+        const { recipients, ...dataWithoutRecipients } = updatedData;
+        // Then add back the original recipients array to maintain reference
+        return { ...dataWithoutRecipients, recipients: prev.recipients };
+      }
+      
+      return {
+        ...prev,
+        ...newData,
+      };
+    });
   };
 
   const resetFormData = () => {
