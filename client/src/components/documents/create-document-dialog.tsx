@@ -97,6 +97,7 @@ function useDebounce<T>(value: T, delay?: number): T {
   return debouncedValue;
 }
 
+// Optimized project select component with better search performance and error handling
 const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
   function ProjectSelect(props, ref) {
     const { value, onChange, projects, disabled } = props;
@@ -106,11 +107,21 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const commandRef = useRef<HTMLDivElement>(null);
+    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Cache the selected project to prevent unnecessary lookups
+    const selectedProject = useMemo(() => 
+      projects.find((project) => project.id === value),
+    [projects, value]);
+
+    // Use a 300ms debounce for search to prevent UI lag
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
-    const selectedProject = projects.find((project) => project.id === value);
 
+    // Text normalization helper for more accurate search results
     const normalizeText = useCallback((text: string) => {
+      // Avoid operations on empty text
+      if (!text) return "";
+      
       return text
         .toLowerCase()
         .normalize("NFD")
@@ -118,66 +129,80 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
         .trim();
     }, []);
 
+    // Extract NA853 code from project names for better display
     const extractNA853Info = useCallback((name: string) => {
+      if (!name) return null;
+      
       // Look for patterns like 2024ΝΑ85300016 or 2024NA85300016
       const match = name.match(/\d{4}(?:NA|ΝΑ)853\d+/i);
       if (!match) return null;
+      
       const code = match[0];
       const parts = name.split(" - ");
+      
       return {
         full: code,
-        displayText: parts.slice(1).join(" - "), // Everything after the NA853 code
+        displayText: parts.length > 1 ? parts.slice(1).join(" - ") : name, // Handle missing separator
         numbers: code.replace(/\D/g, ""), // Extract all numbers from the code
         originalMatch: match,
       };
     }, []);
 
+    // Memoized filtered projects list with improved error handling
     const filteredProjects = useMemo(() => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      
+      // Set searching state with a small delay to prevent flashing UI
       setIsSearching(true);
       setError(null);
 
       try {
+        // Return all projects if search is empty
         if (!debouncedSearchQuery.trim()) {
+          searchTimeoutRef.current = setTimeout(() => setIsSearching(false), 100);
           return projects;
         }
 
         const searchTerm = normalizeText(debouncedSearchQuery);
         const isNumericSearch = /^\d+$/.test(searchTerm);
+        
+        // Only log in development to reduce console noise
+        if (process.env.NODE_ENV !== 'production') {
+          console.log("Search debug:", {
+            searchTerm,
+            isNumericSearch,
+            projectCount: projects.length,
+          });
+        }
 
-        console.log("Search debug:", {
-          searchTerm,
-          isNumericSearch,
-          projectCount: projects.length,
-        });
-
+        // Improved search algorithm with better error tolerance
         const results = projects.filter((project) => {
+          // Guard against undefined projects
+          if (!project || !project.name || !project.id) return false;
+          
           const normalizedProjectName = normalizeText(project.name);
-          const na853Match = project.id
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase());
-
-          // For numeric searches, match NA853 code
-          if (isNumericSearch) {
-            console.log("Numeric search:", {
-              projectName: project.name,
-              projectId: project.id,
-              searchTerm,
-              matches: project.id.includes(searchTerm),
-            });
-            if (project.id.includes(searchTerm)) {
+          const normalizedProjectId = normalizeText(project.id);
+          
+          // Match project ID for NA853 codes
+          if (normalizedProjectId.includes(searchTerm)) {
+            return true;
+          }
+          
+          // For numeric searches, try to match MIS field too
+          if (isNumericSearch && project.mis) {
+            const normalizedMis = normalizeText(project.mis);
+            if (normalizedMis.includes(searchTerm)) {
               return true;
             }
           }
-
-          return na853Match || normalizedProjectName.includes(searchTerm);
+          
+          // Finally check project name
+          return normalizedProjectName.includes(searchTerm);
         });
 
-        console.log("Search results:", {
-          searchTerm,
-          resultCount: results.length,
-          results: results.map((r) => r.name),
-        });
-
+        // Show meaningful error message if no results
         if (results.length === 0) {
           setError(
             `Δεν βρέθηκαν έργα που να ταιριάζουν με "${debouncedSearchQuery}"`,
@@ -186,11 +211,12 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
 
         return results;
       } catch (error) {
-        console.error("Search error:", error);
-        setError("Σφάλμα κατά την αναζήτηση");
+        console.error("Project search error:", error);
+        setError("Σφάλμα κατά την αναζήτηση. Παρακαλώ δοκιμάστε ξανά.");
         return projects;
       } finally {
-        setIsSearching(false);
+        // Clear searching state with a slight delay to prevent UI flicker
+        searchTimeoutRef.current = setTimeout(() => setIsSearching(false), 100);
       }
     }, [projects, debouncedSearchQuery, normalizeText]);
 
