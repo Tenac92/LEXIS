@@ -177,7 +177,7 @@ export function BudgetIndicator({
     console.warn("[BudgetIndicator] No budget data received!");
   }
 
-  // Improved empty state handling - show a message when no budget data is available
+  // ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Βελτιωμένη διαχείριση κενής κατάστασης - εμφανίζει μήνυμα όταν δεν υπάρχουν διαθέσιμα δεδομένα προϋπολογισμού
   if (!budgetData) {
     console.log("[BudgetIndicator] No budget data available, showing placeholder");
     return (
@@ -188,6 +188,29 @@ export function BudgetIndicator({
             <h3 className="text-sm font-medium text-gray-600">Επιλέξτε έργο για να δείτε τον προϋπολογισμό</h3>
             <p className="text-xs text-gray-500 mt-1">
               Τα στοιχεία προϋπολογισμού θα εμφανιστούν μόλις επιλέξετε έργο
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Επιπλέον έλεγχος για μηδενικά δεδομένα προϋπολογισμού (έχουμε αντικείμενο αλλά χωρίς τιμές)
+  if (
+    budgetData && 
+    (!budgetData.katanomes_etous || budgetData.katanomes_etous === 0) && 
+    (!budgetData.user_view || budgetData.user_view === 0) && 
+    (!budgetData.available_budget || budgetData.available_budget === 0)
+  ) {
+    console.log("[BudgetIndicator] Budget data has zero values, showing warning placeholder");
+    return (
+      <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-xl border border-orange-100/50 shadow-lg">
+        <div className="flex items-center justify-center h-20">
+          <div className="flex flex-col items-center text-center">
+            <PiggyBank className="h-8 w-8 mb-2 text-orange-300" />
+            <h3 className="text-sm font-medium text-gray-600">Λείπουν δεδομένα προϋπολογισμού</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Το επιλεγμένο έργο δεν έχει δεδομένα κατανομών ή προϋπολογισμού
             </p>
           </div>
         </div>

@@ -560,17 +560,21 @@ export function CreateDocumentDialog({
     setLocalCurrentStep(step);
   };
   
+  // CRITICAL FIX: Υλοποίηση σωστού συγχρονισμού του context με τη φόρμα
+  // Διασφάλιση ότι οι τιμές που έρχονται από το context δεν θα χαθούν με χρήση useEffect
+  const formDefaultValues = useMemo(() => ({
+    unit: formData.unit || "",
+    project_id: formData.project_id || "",
+    region: formData.region || "",
+    expenditure_type: formData.expenditure_type || "",
+    recipients: formData.recipients || [],
+    status: formData.status || "draft",
+    selectedAttachments: formData.selectedAttachments || [],
+  }), []);
+  
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
-    defaultValues: {
-      unit: formData.unit || "",
-      project_id: formData.project_id || "",
-      region: formData.region || "",
-      expenditure_type: formData.expenditure_type || "",
-      recipients: formData.recipients || [],
-      status: formData.status || "draft",
-      selectedAttachments: formData.selectedAttachments || [],
-    },
+    defaultValues: formDefaultValues,
   });
   
   // OPTIMIZED: Units query defined early to avoid reference errors
