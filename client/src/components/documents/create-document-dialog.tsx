@@ -606,8 +606,9 @@ export function CreateDocumentDialog({
   
   // Effect to sync form state with context (debounced to prevent lag)
   useEffect(() => {
-    // Skip updates when we're loading from context
+    // Skip updates when we're loading from context to prevent circular updates
     if (isUpdatingFromContext.current) {
+      console.log("[CreateDocument] Skipping form sync due to context loading flag");
       return;
     }
     
@@ -629,7 +630,18 @@ export function CreateDocumentDialog({
         selectedAttachments: selectedAttachments,
       };
       
-      // Save to context
+      // Add additional debugging for recipient data
+      if (recipients && recipients.length > 0) {
+        console.log("[CreateDocument] Syncing form with recipients:", 
+          recipients.map(r => ({
+            name: `${r.lastname} ${r.firstname}`,
+            amount: r.amount,
+            installments: r.installments
+          }))
+        );
+      }
+      
+      // Save to context with special flag to prevent circular updates
       updateFormData(formState);
       
       // Log for debugging (reduce frequency of logs)
@@ -706,77 +718,121 @@ export function CreateDocumentDialog({
 
     // Control function to toggle an installment selection
     const handleInstallmentToggle = (installment: string) => {
-      const currentInstallments = [...selectedInstallments];
-      const currentInstallmentAmounts = { ...installmentAmounts };
-
-      // If clicking ΕΦΑΠΑΞ, clear other selections
-      if (installment === "ΕΦΑΠΑΞ") {
-        // If ΕΦΑΠΑΞ was already selected, just return
-        if (currentInstallments.includes("ΕΦΑΠΑΞ")) return;
-
-        // Set ΕΦΑΠΑΞ as the only installment
-        form.setValue(`recipients.${index}.installments`, ["ΕΦΑΠΑΞ"]);
-
-        // Initialize the ΕΦΑΠΑΞ amount with the total amount if available
-        if (currentRecipient && typeof currentRecipient.amount === "number") {
-          currentInstallmentAmounts["ΕΦΑΠΑΞ"] = currentRecipient.amount;
-        } else {
-          currentInstallmentAmounts["ΕΦΑΠΑΞ"] = 0;
+      // Set flag to prevent circular updates
+      isUpdatingFromContext.current = true;
+      
+      try {
+        const currentInstallments = [...selectedInstallments];
+        const currentInstallmentAmounts = { ...installmentAmounts };
+  
+        // If clicking ΕΦΑΠΑΞ, clear other selections
+        if (installment === "ΕΦΑΠΑΞ") {
+          // If ΕΦΑΠΑΞ was already selected, just return
+          if (currentInstallments.includes("ΕΦΑΠΑΞ")) {
+            isUpdatingFromContext.current = false;
+            return;
+          }
+  
+          // Set ΕΦΑΠΑΞ as the only installment
+          form.setValue(`recipients.${index}.installments`, ["ΕΦΑΠΑΞ"]);
+  
+          // Initialize the ΕΦΑΠΑΞ amount with the total amount if available
+          if (currentRecipient && typeof currentRecipient.amount === "number") {
+            currentInstallmentAmounts["ΕΦΑΠΑΞ"] = currentRecipient.amount;
+          } else {
+            currentInstallmentAmounts["ΕΦΑΠΑΞ"] = 0;
+          }
+  
+          // Clear other installment amounts
+          Object.keys(currentInstallmentAmounts).forEach((key) => {
+            if (key !== "ΕΦΑΠΑΞ") delete currentInstallmentAmounts[key];
+          });
+  
+          form.setValue(
+            `recipients.${index}.installmentAmounts`,
+            currentInstallmentAmounts,
+          );
+          
+          // Also update the form context directly
+          const manuallyUpdatedRecipients = [...recipients];
+          if (manuallyUpdatedRecipients[index]) {
+            manuallyUpdatedRecipients[index] = {
+              ...manuallyUpdatedRecipients[index],
+              installments: ["ΕΦΑΠΑΞ"],
+              installmentAmounts: currentInstallmentAmounts
+            };
+            
+            // Update form context but don't trigger the normal useEffect
+            updateFormData({
+              recipients: manuallyUpdatedRecipients
+            });
+          }
+          
+          return;
         }
-
-        // Clear other installment amounts
-        Object.keys(currentInstallmentAmounts).forEach((key) => {
-          if (key !== "ΕΦΑΠΑΞ") delete currentInstallmentAmounts[key];
-        });
-
+  
+        // If there's ΕΦΑΠΑΞ selected and clicking another option, remove ΕΦΑΠΑΞ
+        if (currentInstallments.includes("ΕΦΑΠΑΞ")) {
+          currentInstallments.splice(currentInstallments.indexOf("ΕΦΑΠΑΞ"), 1);
+          // Remove ΕΦΑΠΑΞ amount
+          delete currentInstallmentAmounts["ΕΦΑΠΑΞ"];
+        }
+  
+        // Toggle the selected installment
+        const installmentIndex = currentInstallments.indexOf(installment);
+        if (installmentIndex > -1) {
+          // Remove the installment if already selected
+          currentInstallments.splice(installmentIndex, 1);
+          // Remove corresponding amount
+          delete currentInstallmentAmounts[installment];
+        } else {
+          // Add the installment
+          currentInstallments.push(installment);
+          // Initialize with zero amount
+          currentInstallmentAmounts[installment] = 0;
+        }
+  
+        // Check if new selection is in sequence
+        if (
+          !areInstallmentsInSequence(currentInstallments) &&
+          currentInstallments.length > 1
+        ) {
+          toast({
+            title: "Μη έγκυρες δόσεις",
+            description:
+              "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
+            variant: "destructive",
+          });
+          return;
+        }
+  
+        // Update the form with the new selection and amounts
+        form.setValue(`recipients.${index}.installments`, currentInstallments);
         form.setValue(
           `recipients.${index}.installmentAmounts`,
           currentInstallmentAmounts,
         );
-        return;
+        
+        // Also update the form context directly
+        const manuallyUpdatedRecipients = [...recipients];
+        if (manuallyUpdatedRecipients[index]) {
+          manuallyUpdatedRecipients[index] = {
+            ...manuallyUpdatedRecipients[index],
+            installments: currentInstallments,
+            installmentAmounts: currentInstallmentAmounts
+          };
+          
+          // Update form context directly but don't trigger normal useEffect
+          updateFormData({
+            recipients: manuallyUpdatedRecipients
+          });
+        }
+      } finally {
+        // Reset the flag after all form updates are completed
+        setTimeout(() => {
+          isUpdatingFromContext.current = false;
+        }, 50);
       }
-
-      // If there's ΕΦΑΠΑΞ selected and clicking another option, remove ΕΦΑΠΑΞ
-      if (currentInstallments.includes("ΕΦΑΠΑΞ")) {
-        currentInstallments.splice(currentInstallments.indexOf("ΕΦΑΠΑΞ"), 1);
-        // Remove ΕΦΑΠΑΞ amount
-        delete currentInstallmentAmounts["ΕΦΑΠΑΞ"];
-      }
-
-      // Toggle the selected installment
-      const installmentIndex = currentInstallments.indexOf(installment);
-      if (installmentIndex > -1) {
-        // Remove the installment if already selected
-        currentInstallments.splice(installmentIndex, 1);
-        // Remove corresponding amount
-        delete currentInstallmentAmounts[installment];
-      } else {
-        // Add the installment
-        currentInstallments.push(installment);
-        // Initialize with zero amount
-        currentInstallmentAmounts[installment] = 0;
-      }
-
-      // Check if new selection is in sequence
-      if (
-        !areInstallmentsInSequence(currentInstallments) &&
-        currentInstallments.length > 1
-      ) {
-        toast({
-          title: "Μη έγκυρες δόσεις",
-          description:
-            "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Update the form with the new selection and amounts
-      form.setValue(`recipients.${index}.installments`, currentInstallments);
-      form.setValue(
-        `recipients.${index}.installmentAmounts`,
-        currentInstallmentAmounts,
-      );
     };
 
     // Handle changing the amount for an installment
@@ -784,41 +840,74 @@ export function CreateDocumentDialog({
       installment: string,
       amount: number,
     ) => {
-      // CRITICAL FIX: Guard against extremely large numbers that cause display issues
-      // Check if the number is unreasonably large (more than 1 billion)
-      // This prevents scientific notation or overflow display issues
-      if (!isFinite(amount) || amount > 1000000000) {
-        console.warn("[Budget Form] Prevented invalid amount entry:", amount);
-        // Show a warning toast to user
-        toast({
-          title: "Μη έγκυρο ποσό",
-          description:
-            "Το ποσό που εισάγατε είναι πολύ μεγάλο και έχει διορθωθεί.",
-          variant: "destructive",
-        });
-        amount = 0;
+      // Set a flag to temporarily prevent context updates from reflecting back
+      isUpdatingFromContext.current = true;
+      
+      try {
+        // CRITICAL FIX: Guard against extremely large numbers that cause display issues
+        // Check if the number is unreasonably large (more than 1 billion)
+        // This prevents scientific notation or overflow display issues
+        if (!isFinite(amount) || amount > 1000000000) {
+          console.warn("[Budget Form] Prevented invalid amount entry:", amount);
+          // Show a warning toast to user
+          toast({
+            title: "Μη έγκυρο ποσό",
+            description:
+              "Το ποσό που εισάγατε είναι πολύ μεγάλο και έχει διορθωθεί.",
+            variant: "destructive",
+          });
+          amount = 0;
+        }
+
+        // Create a deep copy of current installment amounts
+        const currentInstallmentAmounts = { ...installmentAmounts };
+        currentInstallmentAmounts[installment] = amount;
+
+        // Update total amount based on installment amounts
+        const totalAmount = Object.values(currentInstallmentAmounts).reduce(
+          (sum, amount) => sum + (amount || 0),
+          0,
+        );
+
+        // Apply the same check to the total amount as a safety measure
+        const safeTotal =
+          !isFinite(totalAmount) || totalAmount > 1000000000 ? 0 : totalAmount;
+
+        // First, update the form's local state
+        form.setValue(`recipients.${index}.amount`, safeTotal);
+
+        // Update installment amounts
+        form.setValue(
+          `recipients.${index}.installmentAmounts`,
+          currentInstallmentAmounts,
+        );
+        
+        // Log what's happening for debugging
+        console.log("[Recipient Amount] Updated amount for installment", installment, "to", amount, 
+          "total recipient amount:", safeTotal);
+          
+        // Manually update the context immediately for this specific recipient
+        // to prevent losing the state on dialog close/open
+        const manuallyUpdatedRecipients = [...recipients];
+        if (manuallyUpdatedRecipients[index]) {
+          manuallyUpdatedRecipients[index] = {
+            ...manuallyUpdatedRecipients[index],
+            amount: safeTotal,
+            installmentAmounts: currentInstallmentAmounts
+          };
+          
+          // Update form context directly with this single change
+          // but don't trigger the normal useEffect
+          updateFormData({
+            recipients: manuallyUpdatedRecipients
+          });
+        }
+      } finally {
+        // Reset flag after a short delay to allow React to complete rendering
+        setTimeout(() => {
+          isUpdatingFromContext.current = false;
+        }, 50);
       }
-
-      const currentInstallmentAmounts = { ...installmentAmounts };
-      currentInstallmentAmounts[installment] = amount;
-
-      // Update total amount based on installment amounts
-      const totalAmount = Object.values(currentInstallmentAmounts).reduce(
-        (sum, amount) => sum + (amount || 0),
-        0,
-      );
-
-      // Apply the same check to the total amount as a safety measure
-      const safeTotal =
-        !isFinite(totalAmount) || totalAmount > 1000000000 ? 0 : totalAmount;
-
-      form.setValue(`recipients.${index}.amount`, safeTotal);
-
-      // Update installment amounts
-      form.setValue(
-        `recipients.${index}.installmentAmounts`,
-        currentInstallmentAmounts,
-      );
     };
 
     return (
@@ -881,7 +970,7 @@ export function CreateDocumentDialog({
               <span>Συνολικό ποσό:</span>
               <span className="text-primary">
                 {Object.values(installmentAmounts)
-                  .reduce((sum, amount) => sum + (amount || 0), 0)
+                  .reduce((sum: number, amount: number) => sum + (amount || 0), 0)
                   .toLocaleString("el-GR", {
                     style: "currency",
                     currency: "EUR",

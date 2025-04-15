@@ -51,7 +51,7 @@ export const DocumentFormProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [formData, setFormData] = useState<DocumentFormData>(defaultFormData);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Enhanced updateFormData that performs more efficient merging
+  // Enhanced updateFormData that performs deep merging with special handling for recipients
   const updateFormData = (newData: Partial<DocumentFormData>) => {
     setFormData(prev => {
       // Handle empty recipients array case specifically to prevent issues
@@ -63,7 +63,60 @@ export const DocumentFormProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // Then add back the original recipients array to maintain reference
         return { ...dataWithoutRecipients, recipients: prev.recipients };
       }
+
+      // Special handling for recipients to preserve internal state during partial updates
+      if (newData.recipients && prev.recipients) {
+        // Create a copy of the previous recipients
+        const updatedRecipients = [...prev.recipients];
+        
+        // If the arrays are different lengths, use the new one entirely
+        if (newData.recipients.length !== prev.recipients.length) {
+          return {
+            ...prev,
+            ...newData
+          };
+        }
+        
+        // For same length arrays, perform a careful merge, preserving references
+        // when the objects haven't actually changed
+        newData.recipients.forEach((recipient, index) => {
+          if (index < updatedRecipients.length) {
+            // Create a new recipient only if the data has actually changed
+            const prevRecipient = updatedRecipients[index];
+            
+            // Perform deep comparison of object properties to detect actual changes
+            let hasChanged = false;
+            
+            // Check if any field has changed
+            if (recipient.firstname !== prevRecipient.firstname ||
+                recipient.lastname !== prevRecipient.lastname ||
+                recipient.fathername !== prevRecipient.fathername ||
+                recipient.afm !== prevRecipient.afm ||
+                recipient.amount !== prevRecipient.amount ||
+                recipient.secondary_text !== prevRecipient.secondary_text ||
+                recipient.installment !== prevRecipient.installment) {
+              hasChanged = true;
+            }
+            
+            // Only update if something actually changed
+            if (hasChanged) {
+              updatedRecipients[index] = {
+                ...prevRecipient,
+                ...recipient
+              };
+            }
+          }
+        });
+        
+        // Return the updated data with carefully merged recipients
+        return {
+          ...prev,
+          ...newData,
+          recipients: updatedRecipients
+        };
+      }
       
+      // Default case: use standard object spreading for flat merge
       return {
         ...prev,
         ...newData,
