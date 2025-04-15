@@ -574,11 +574,17 @@ export function CreateDocumentDialog({
     
     try {
       // STAGE 1: Authenticate and prefetch data silently - don't touch the form yet
-      const [refreshedUser] = await Promise.all([
-        refreshUser(),
-        // Also refresh units in parallel
-        refetchUnits()
-      ]);
+      // Fetch user data and units in parallel for efficiency
+      const refreshedUser = await refreshUser();
+      
+      // Refresh units if available, otherwise fail silently
+      if (typeof refetchUnits === 'function') {
+        try {
+          await refetchUnits();
+        } catch (err) {
+          console.warn("[CreateDocument] Non-critical error refreshing units:", err);
+        }
+      }
       
       if (!refreshedUser) {
         console.warn("[CreateDocument] No authenticated user found, dialog may not function properly");
@@ -667,7 +673,9 @@ export function CreateDocumentDialog({
     // AND when we have user units available 
     // AND when there's no unit already in form or context
     if (formReset && 
-        user?.units?.length > 0 && 
+        user?.units && 
+        Array.isArray(user.units) && 
+        user.units.length > 0 && 
         !formData.unit && 
         !form.getValues().unit &&
         unitInitializationRef.current.attemptCount < 3) { // Safety limit on retry attempts
@@ -1250,7 +1258,11 @@ export function CreateDocumentDialog({
   };
 
   // Queries
-  const { data: units = [], isLoading: unitsLoading } = useQuery({
+  const { 
+    data: units = [], 
+    isLoading: unitsLoading,
+    refetch: refetchUnits // Explicitly named refetch function for global use
+  } = useQuery({
     queryKey: ["units"],
     queryFn: async () => {
       try {
