@@ -761,8 +761,8 @@ export function CreateDocumentDialog({
         return (order[a as keyof typeof order] || 99) - (order[b as keyof typeof order] || 99);
       });
       
-      // IMPORTANT: Update the local state immediately for visual feedback
-      setSelectedInstallments(updatedInstallments);
+      // Store the updated installments for the UI to use
+      // No need for local state since selectedInstallments is derived from the form
       
       // Set flag to prevent circular updates during complex state changes
       isUpdatingFromContext.current = true;

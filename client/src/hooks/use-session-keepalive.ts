@@ -4,9 +4,9 @@ import { useToast } from './use-toast';
 import { queryClient } from '@/lib/queryClient';
 
 // Configuration for session management
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
-const ACTIVITY_THRESHOLD = 60 * 1000; // 1 minute of inactivity before we stop refreshing
-const WARNING_THRESHOLD = 15 * 60 * 1000; // Show warning 15 minutes before expected session expiry
+const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes (increased from 5 to reduce lag)
+const ACTIVITY_THRESHOLD = 3 * 60 * 1000; // 3 minutes of inactivity before we stop refreshing
+const WARNING_THRESHOLD = 20 * 60 * 1000; // Show warning 20 minutes before expected session expiry
 const MAX_SESSION_AGE = 8 * 60 * 60 * 1000; // 8 hours (this should match the server-side setting)
 
 export interface SessionKeepaliveOptions {
@@ -145,29 +145,60 @@ export function useSessionKeepalive(options: SessionKeepaliveOptions = {}) {
     };
   }, [user]);
   
-  // Function to refresh the session
+  // Performance optimized refresh session function
+  // Uses requestIdleCallback when available to minimize UI impact
   const refreshSession = async () => {
-    try {
-      await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
-      const result = await refreshUser();
-      
-      if (result) {
-        // Session is still valid
+    // Check if we've refreshed recently (within the last minute) to prevent excessive refreshes
+    const now = Date.now();
+    const timeSinceLastRefresh = now - sessionStartRef.current;
+    if (timeSinceLastRefresh < 60000) {
+      // Skip refresh if we refreshed less than a minute ago
+      return true;
+    }
+    
+    // Use a debounced approach to reduce multiple rapid refreshes
+    const refreshAction = async () => {
+      try {
+        // First update local state to avoid UI flicker
         setSessionHealth('active');
-        setIsWarningVisible(false);
         
-        // Reset the session start time to extend the effective session duration
-        sessionStartRef.current = Date.now();
-        return true;
-      } else {
-        // Session is invalid
+        // Then make the actual API call
+        await queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+        const result = await refreshUser();
+        
+        if (result) {
+          // Session is still valid
+          setIsWarningVisible(false);
+          
+          // Reset the session start time to extend the effective session duration
+          sessionStartRef.current = Date.now();
+          return true;
+        } else {
+          // Session is invalid
+          handleSessionExpiry();
+          return false;
+        }
+      } catch (error) {
+        console.error('[SessionKeepalive] Error refreshing session:', error);
         handleSessionExpiry();
         return false;
       }
-    } catch (error) {
-      console.error('[SessionKeepalive] Error refreshing session:', error);
-      handleSessionExpiry();
-      return false;
+    };
+    
+    // Use requestIdleCallback if available for better performance
+    if (typeof window.requestIdleCallback === 'function') {
+      return new Promise(resolve => {
+        window.requestIdleCallback(() => {
+          refreshAction().then(resolve);
+        }, { timeout: 2000 }); // 2 second timeout to ensure it runs even if the system is busy
+      });
+    } else {
+      // Fallback to setTimeout for browsers without requestIdleCallback
+      return new Promise(resolve => {
+        setTimeout(() => {
+          refreshAction().then(resolve);
+        }, 50); // Small delay to avoid blocking the main thread
+      });
     }
   };
   
