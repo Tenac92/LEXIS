@@ -193,14 +193,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let inactivityTimer: number | undefined;
     let lastActivity = Date.now();
+    let sessionRefreshTimer: number | undefined;
     
+    // Keep track of user activity
     const resetTimer = () => {
+      // Update last activity timestamp
       lastActivity = Date.now();
+      
+      // Clear existing timeout
       clearTimeout(inactivityTimer);
       
-      // If it's been more than 1 minute since last session check
-      if (Date.now() - lastActivity > 60000) {
-        refetch();
+      // Log activity for debugging (occasionally)
+      if (Math.random() > 0.95) {
+        console.log("[SessionKeeper] User active, refreshing session");
       }
       
       // Set a new timer for 5 minutes
@@ -210,18 +215,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }, 5 * 60 * 1000);
     };
     
+    // Set up a regular session refresh interval (every 4 minutes)
+    // This ensures the session stays active during form interactions
+    const startSessionKeepAlive = () => {
+      // Clear any existing timer
+      clearTimeout(sessionRefreshTimer);
+      
+      // Set up periodic session refresh
+      sessionRefreshTimer = window.setInterval(() => {
+        // Only refresh if the user has been active in the last 10 minutes
+        if (Date.now() - lastActivity < 10 * 60 * 1000) {
+          fetch('/api/auth/me', { credentials: 'include' })
+            .then(response => {
+              if (response.ok) {
+                // Session is valid, no further action needed
+                return response.json();
+              }
+              return null;
+            })
+            .catch(error => {
+              console.warn("[SessionKeeper] Session check error:", error);
+            });
+        }
+      }, 4 * 60 * 1000); // Every 4 minutes
+    };
+    
     // Add event listeners for user activity
     const activityEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
     activityEvents.forEach(event => {
       window.addEventListener(event, resetTimer);
     });
     
-    // Set initial timer
+    // Initialize timers
     resetTimer();
+    startSessionKeepAlive();
     
     // Cleanup
     return () => {
       clearTimeout(inactivityTimer);
+      clearInterval(sessionRefreshTimer);
       activityEvents.forEach(event => {
         window.removeEventListener(event, resetTimer);
       });

@@ -53,8 +53,8 @@ export const PUBLIC_ROUTES = [
   '/api/auth/me'
 ];
 
-// Maximum session age in milliseconds (8 hours)
-export const MAX_SESSION_AGE = 8 * 60 * 60 * 1000;
+// Maximum session age in milliseconds (24 hours)
+export const MAX_SESSION_AGE = 24 * 60 * 60 * 1000;
 
 // Password validation schema
 export const changePasswordSchema = z.object({
@@ -76,7 +76,7 @@ export const sessionMiddleware = session({
   cookie: {
     secure: process.env.NODE_ENV === 'production', // Only true in production
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: 48 * 60 * 60 * 1000, // 48 hours (extended from 24)
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin in production
     path: '/',
     domain: process.env.COOKIE_DOMAIN || undefined, // Set domain for cross-domain cookies
@@ -217,16 +217,33 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    // Check session age
+    // Check session age - using a more lenient approach
     const sessionCreatedAt = req.session.createdAt ? new Date(req.session.createdAt).getTime() : 0;
     const currentTime = new Date().getTime();
 
-    if (currentTime - sessionCreatedAt > MAX_SESSION_AGE) {
-      console.log('[Auth] Session expired');
-      req.session.destroy((err) => {
-        if (err) console.error('[Auth] Error destroying expired session:', err);
+    // Only enforce session expiration if the session is more than MAX_SESSION_AGE old
+    // And provide an extension mechanism for active sessions
+    if (sessionCreatedAt > 0 && currentTime - sessionCreatedAt > MAX_SESSION_AGE) {
+      console.log('[Auth] Session age check:', {
+        age: Math.floor((currentTime - sessionCreatedAt) / (60 * 60 * 1000)) + ' hours',
+        userId: req.session.user?.id,
+        path: req.path
       });
-      return res.status(401).json({ message: "Session expired" });
+      
+      // If this is an API call for data (not a form submission), extend the session
+      // This prevents disrupting users during active work
+      if (req.method === 'GET' || req.path.includes('/api/auth/me')) {
+        console.log('[Auth] Extending session for active user');
+        // Update the session timestamp to extend its life
+        req.session.createdAt = new Date();
+      } else {
+        // For form submissions and other writes, enforce the expiration
+        console.log('[Auth] Session truly expired, user needs to re-login');
+        req.session.destroy((err) => {
+          if (err) console.error('[Auth] Error destroying expired session:', err);
+        });
+        return res.status(401).json({ message: "Session expired" });
+      }
     }
 
     // Ensure all required user properties are present
