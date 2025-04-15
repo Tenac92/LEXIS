@@ -524,6 +524,8 @@ export function CreateDocumentDialog({
 
   // Function to handle dialog closing with multiple fallback mechanisms
   const closeDialogCompletely = useCallback(() => {
+    // No need to reset form data - we preserve state when closing
+
     // Direct click approach using ref
     if (dialogCloseRef.current) {
       dialogCloseRef.current.click();
@@ -1390,10 +1392,9 @@ export function CreateDocumentDialog({
           description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
         });
 
-        // Reset form and close dialog
-        form.reset();
-        setCurrentStep(0);
-
+        // No longer reset form - data is preserved in context
+        // Just close the dialog and the data will persist in our context
+        
         // Force close the dialog
         onClose();
         onOpenChange(false);
