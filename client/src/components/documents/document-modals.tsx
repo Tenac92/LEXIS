@@ -679,104 +679,126 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[800px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Επεξεργασία Εγγράφου</DialogTitle>
-          <DialogDescription>
-            Κάντε αλλαγές στο έγγραφο εδώ. Πατήστε αποθήκευση όταν τελειώσετε.
+          <DialogTitle className="text-xl font-bold text-primary">Επεξεργασία Εγγράφου</DialogTitle>
+          <DialogDescription className="text-base">
+            Συμπληρώστε τα πεδία παρακάτω για να τροποποιήσετε το έγγραφο. Πατήστε αποθήκευση όταν τελειώσετε.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-4">
             {/* Project Information */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="space-y-2">
-                <Label>Αριθμός Πρωτοκόλλου</Label>
-                <Input
-                  value={protocolNumber}
-                  onChange={(e) => setProtocolNumber(e.target.value)}
-                  placeholder="Εισάγετε αριθμό πρωτοκόλλου"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Ημερομηνία Πρωτοκόλλου</Label>
-                <Input
-                  type="date"
-                  value={protocolDate}
-                  onChange={(e) => setProtocolDate(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>ID Έργου (ΝΑ853)</Label>
-                <div className="flex gap-2 items-start">
-                  <div className="flex-1">
+                <h3 className="font-medium">Στοιχεία Πρωτοκόλλου</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Αριθμός Πρωτοκόλλου</Label>
                     <Input
-                      value={projectId}
-                      onChange={(e) => setProjectId(e.target.value)}
-                      placeholder="Εισάγετε ID έργου ή MIS"
-                      required
-                      className={projectId && /^\d+$/.test(projectId) ? "border-blue-300 focus:border-blue-500 bg-blue-50" : ""}
+                      value={protocolNumber}
+                      onChange={(e) => setProtocolNumber(e.target.value)}
+                      placeholder="Εισάγετε αριθμό πρωτοκόλλου"
                     />
-                    {projectId && /^\d+$/.test(projectId) && (
-                      <p className="text-xs text-blue-600 mt-1 font-medium">
-                        <span>Αναγνωρίστηκε πιθανός κωδικός MIS. Μπορείτε να μετατρέψετε σε ΝΑ853.</span>
-                      </p>
-                    )}
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="whitespace-nowrap min-w-[115px] h-10"
-                    onClick={() => {
-                      const mis = projectId.trim();
-                      if (mis && /^\d+$/.test(mis)) {
-                        loadProjectIdFromMis(mis);
-                      } else {
-                        toast({
-                          title: "Προσοχή",
-                          description: "Εισάγετε έναν έγκυρο κωδικό MIS (μόνο αριθμοί)",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Αναζήτηση...
-                      </>
-                    ) : (
-                      <>Εύρεση ΝΑ853</>
-                    )}
-                  </Button>
+                  <div className="space-y-2">
+                    <Label>Ημερομηνία Πρωτοκόλλου</Label>
+                    <Input
+                      type="date"
+                      value={protocolDate}
+                      onChange={(e) => setProtocolDate(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Εισάγετε αριθμό MIS και πατήστε "Εύρεση ΝΑ853" για αυτόματη μετατροπή</p>
               </div>
+              
               <div className="space-y-2">
-                <Label>Τύπος Δαπάνης</Label>
-                <Input
-                  value={expenditureType}
-                  onChange={(e) => setExpenditureType(e.target.value)}
-                  placeholder="Εισάγετε τύπο δαπάνης"
-                  required
-                />
+                <h3 className="font-medium">Στοιχεία Έργου</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>ID Έργου (ΝΑ853)</Label>
+                    <div className="flex gap-2 items-start">
+                      <div className="flex-1">
+                        <Input
+                          value={projectId}
+                          onChange={(e) => setProjectId(e.target.value)}
+                          placeholder="Εισάγετε ID έργου ή MIS"
+                          required
+                          className={projectId && /^\d+$/.test(projectId) ? "border-blue-300 focus:border-blue-500 bg-blue-50" : ""}
+                        />
+                        {projectId && /^\d+$/.test(projectId) && (
+                          <p className="text-xs text-blue-600 mt-1 font-medium">
+                            <span>Αναγνωρίστηκε πιθανός κωδικός MIS</span>
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="whitespace-nowrap min-w-[115px] h-10"
+                        onClick={() => {
+                          const mis = projectId.trim();
+                          if (mis && /^\d+$/.test(mis)) {
+                            loadProjectIdFromMis(mis);
+                          } else {
+                            toast({
+                              title: "Προσοχή",
+                              description: "Εισάγετε έναν έγκυρο κωδικό MIS (μόνο αριθμοί)",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Αναζήτηση...
+                          </>
+                        ) : (
+                          <>Εύρεση ΝΑ853</>
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Καταχωρίστε κωδικό MIS και πατήστε το κουμπί</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Τύπος Δαπάνης</Label>
+                    <Input
+                      value={expenditureType}
+                      onChange={(e) => setExpenditureType(e.target.value)}
+                      placeholder="Εισάγετε τύπο δαπάνης"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Recipients Section */}
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <Label>Δικαιούχοι</Label>
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-lg font-medium">Δικαιούχοι</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Προσθήκη έως 10 δικαιούχων
+                  </p>
+                </div>
                 <Button
+                  type="button"
                   onClick={addRecipient}
+                  disabled={recipients.length >= 10 || loading}
                   variant="outline"
                   size="sm"
+                  className="flex items-center gap-1"
                 >
+                  <svg className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                   Προσθήκη Δικαιούχου
                 </Button>
               </div>
@@ -876,10 +898,10 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
             </div>
 
             {/* Total Amount */}
-            <div className="p-4 bg-muted rounded-lg">
+            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg shadow-sm">
               <div className="flex justify-between items-center">
-                <span className="font-medium">Συνολικό Ποσό:</span>
-                <span className="text-lg font-bold">
+                <span className="font-medium text-primary-foreground">Συνολικό Ποσό:</span>
+                <span className="text-lg font-bold text-primary">
                   {new Intl.NumberFormat('el-GR', {
                     style: 'currency',
                     currency: 'EUR'
