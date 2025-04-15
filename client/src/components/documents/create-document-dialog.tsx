@@ -656,7 +656,7 @@ export function CreateDocumentDialog({
     };
   }, [selectedUnit, selectedProjectId, selectedRegion, selectedExpenditureType, recipients, selectedAttachments, updateFormData]);
 
-  const currentAmount = recipients.reduce((sum, r) => {
+  const currentAmount = recipients.reduce((sum: number, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
   }, 0);
 
@@ -685,12 +685,12 @@ export function CreateDocumentDialog({
     const letters = installments.filter((i) => i !== "ΕΦΑΠΑΞ");
 
     // Create a map of letter to index
-    const letterOrder = ALL_INSTALLMENTS.reduce(
+    const letterOrder = ALL_INSTALLMENTS.reduce<Record<string, number>>(
       (acc, letter, idx) => {
         acc[letter] = idx;
         return acc;
       },
-      {} as Record<string, number>,
+      {},
     );
 
     // Sort by the order of letters in ALL_INSTALLMENTS
@@ -864,7 +864,7 @@ export function CreateDocumentDialog({
         currentInstallmentAmounts[installment] = amount;
 
         // Update total amount based on installment amounts
-        const totalAmount = Object.values(currentInstallmentAmounts).reduce(
+        const totalAmount = Object.values(currentInstallmentAmounts).reduce<number>(
           (sum, amount) => sum + (amount || 0),
           0,
         );
@@ -1411,7 +1411,7 @@ export function CreateDocumentDialog({
         mis: projectForSubmission.mis,
       });
 
-      const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
+      const totalAmount = data.recipients.reduce<number>((sum, r) => sum + r.amount, 0);
 
       // Validate budget with our own fetch to prevent auth redirects
       try {
@@ -1916,7 +1916,7 @@ export function CreateDocumentDialog({
 
       if (isValid) {
         setDirection(1);
-        setCurrentStep((prev) => Math.min(prev + 1, 3));
+        setCurrentStep(Math.min(currentStep + 1, 3));
       } else {
         const errors = form.formState.errors;
         const errorFields = Object.keys(errors);
@@ -1970,7 +1970,7 @@ export function CreateDocumentDialog({
 
   const handlePrevious = () => {
     setDirection(-1);
-    setCurrentStep((prev) => Math.max(prev - 1, 0));
+    setCurrentStep(Math.max(currentStep - 1, 0));
   };
 
   const renderStepContent = () => {
