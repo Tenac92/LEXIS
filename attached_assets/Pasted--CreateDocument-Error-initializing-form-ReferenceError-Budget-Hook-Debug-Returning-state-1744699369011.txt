@@ -1,0 +1,104 @@
+[CreateDocument] Error initializing form: 
+ReferenceError {}
+
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[CreateDocument] Dialog opened, refreshing form and units data
+[Auth] Manually refreshing user session
+[CreateDocument] Skipping form sync due to context loading flag
+[CreateDocument] Error initializing form: 
+ReferenceError {}
+
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[CreateDocument] Dialog opened, refreshing form and units data
+[Auth] Manually refreshing user session
+[CreateDocument] Skipping form sync due to context loading flag
+[CreateDocument] Error initializing form: 
+ReferenceError {}
+
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[CreateDocument] Dialog opened, refreshing form and units data
+[Auth] Manually refreshing user session
+[CreateDocument] Skipping form sync due to context loading flag
+[CreateDocument] Error initializing form: 
+ReferenceError {}
+
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[CreateDocument] Dialog opened, refreshing form and units data
+[Auth] Manually refreshing user session
+[CreateDocument] Error initializing form: 
+ReferenceError {}
+
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[CreateDocument] Dialog opened, refreshing form and units data
+[Auth] Manually refreshing user session
+[CreateDocument] Skipping form sync due to context loading flag
+[CreateDocument] Error initializing form: 
+ReferenceError {}
+
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[CreateDocument] Skipping form sync due to context loading flag
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[CreateDocument] Saved form state to context
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+Σύστημα Διαχείρισης Εγγράφων
+
+Κ Κυριακού
+Διαβιβαστικά
+Έργα
+Επισκόπηση Πίνακα Ελέγχου
+Σύνολο Εγγράφων
+3
+
+Εκκρεμή Έγγραφα
+3
+
+Ολοκληρωμένα Έγγραφα
+0
+
+Συνολικός Προϋπολογισμός
+28.2M €
+
+Κατανομή Κατάστασης Έργων
+ΕνεργόΣε ΕκκρεμότηταΣε Αναμονή ΑνακατανομήςΟλοκληρωμένο
+Κατανομή Προϋπολογισμού
+Ενεργό
+Σε Εκκρεμότητα
+Σε Αναμονή Ανακατανομής
+Ολοκληρωμένο
+0 €
+7.5M €
+15.0M €
+22.5M €
+30.0M €
+Πρόσφατη Δραστηριότητα
+Project 5174692: Budget changed from 4934.00 to 4903.00
+
+document_created
+
+15/4/2025
+Project 5174692: Budget changed from 4967.00 to 4934.00
+
+document_created
+
+15/4/2025
+Project 5174692: Budget changed from 5000.00 to 4967.00
+
+document_created
+
+15/4/2025
+
+0 €Notification ΣφάλμαΠροέκυψε σφάλμα κατά την προετοιμασία της φόρμας. Παρακαλώ δοκιμάστε ξανά.

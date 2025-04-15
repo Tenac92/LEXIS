@@ -527,25 +527,22 @@ export function CreateDocumentDialog({
         });
       }
       
-      // Batch all form updates together to prevent multiple re-renders
+      // Create a complete form values object including attachments to prevent reference errors
       const formValues = {
         unit: formData?.unit || "",
         project_id: formData?.project_id || "",
         region: formData?.region || "",
         expenditure_type: formData?.expenditure_type || "",
         recipients: Array.isArray(formData?.recipients) ? formData.recipients : [],
-        status: formData?.status || "draft"
+        status: formData?.status || "draft",
+        // Important: Include selectedAttachments in the form reset to avoid reference errors
+        selectedAttachments: Array.isArray(formData?.selectedAttachments) ? formData.selectedAttachments : []
       };
       
-      // Reset form with all values at once
+      // Reset form with all values at once in a single operation
       form.reset(formValues);
       
-      // Set attachments separately
-      if (formData?.selectedAttachments) {
-        setSelectedAttachments(formData.selectedAttachments);
-      }
-      
-      // Restore step from context
+      // Restore step from context if valid
       if (typeof savedStep === 'number' && savedStep >= 0) {
         setLocalCurrentStep(savedStep);
       }
