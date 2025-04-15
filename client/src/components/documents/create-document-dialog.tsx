@@ -537,6 +537,49 @@ export function CreateDocumentDialog({
       selectedAttachments: formData.selectedAttachments || [],
     },
   });
+  
+  // OPTIMIZED: Units query defined early to avoid reference errors
+  const { 
+    data: units = [], 
+    isLoading: unitsLoading,
+    refetch: refetchUnits 
+  } = useQuery({
+    queryKey: ["units"],
+    queryFn: async () => {
+      try {
+        console.log("[CreateDocument] Fetching units...");
+        const response = await apiRequest("/api/users/units");
+
+        if (!response || !Array.isArray(response)) {
+          console.error("Error fetching units: Invalid response format");
+          toast({
+            title: "Σφάλμα",
+            description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
+            variant: "destructive",
+          });
+          return [];
+        }
+
+        console.log(
+          "[CreateDocument] Units fetched successfully:",
+          response.length,
+        );
+        return response.map((item: any) => ({
+          id: item.unit || item.id,
+          name: item.unit_name || item.name,
+        }));
+      } catch (error) {
+        console.error("Units fetch error:", error);
+        toast({
+          title: "Σφάλμα",
+          description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
+          variant: "destructive",
+        });
+        return [];
+      }
+    },
+    retry: 2,
+  });
 
   // COMPLETE REWRITE: Multi-stage dialog initialization for complete flicker prevention
   // Uses advanced state management and form reconciliation techniques
@@ -1257,48 +1300,7 @@ export function CreateDocumentDialog({
     );
   };
 
-  // Queries
-  const { 
-    data: units = [], 
-    isLoading: unitsLoading,
-    refetch: refetchUnits // Explicitly named refetch function for global use
-  } = useQuery({
-    queryKey: ["units"],
-    queryFn: async () => {
-      try {
-        console.log("[CreateDocument] Fetching units...");
-        const response = await apiRequest("/api/users/units");
-
-        if (!response || !Array.isArray(response)) {
-          console.error("Error fetching units: Invalid response format");
-          toast({
-            title: "Σφάλμα",
-            description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
-            variant: "destructive",
-          });
-          return [];
-        }
-
-        console.log(
-          "[CreateDocument] Units fetched successfully:",
-          response.length,
-        );
-        return response.map((item: any) => ({
-          id: item.unit || item.id,
-          name: item.unit_name || item.name,
-        }));
-      } catch (error) {
-        console.error("Units fetch error:", error);
-        toast({
-          title: "Σφάλμα",
-          description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
-          variant: "destructive",
-        });
-        return [];
-      }
-    },
-    retry: 2,
-  });
+  // Queries below for other data (units query moved to top of component)
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<
     Project[]
