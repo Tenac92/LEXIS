@@ -1,0 +1,99 @@
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[BudgetIndicator] Rendering with data: 
+Object {user_view: "97", total_budget: "5000", katanomes_etous: "5000", ethsia_pistosi: "22000", current_budget: "97", …}
+ current amount: 0
+[BudgetIndicator] Debug - data types: 
+Object {user_view: "string", katanomes_etous: "string", ethsia_pistosi: "string", available_budget: "string", values: {…}, …}
+[BudgetIndicator] Real-time calculation: 
+Object {availableBudget: 4903, currentAmount: 0, remainingAvailable: 4903}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[BudgetIndicator] Rendering with data: 
+Object {user_view: "97", total_budget: "5000", katanomes_etous: "5000", ethsia_pistosi: "22000", current_budget: "97", …}
+ current amount: 0
+[BudgetIndicator] Debug - data types: 
+Object {user_view: "string", katanomes_etous: "string", ethsia_pistosi: "string", available_budget: "string", values: {…}, …}
+[BudgetIndicator] Real-time calculation: 
+Object {availableBudget: 4903, currentAmount: 0, remainingAvailable: 4903}
+[CreateDocument] Saved form state to context before step change
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[CreateDocument] Dialog opened, refreshing form and units data
+[Auth] Manually refreshing user session
+[Budget Debug] budgetData state: 
+Object {available: true, currentStep: 2, projectId: "2024ΝΑ85300001", currentAmount: 0}
+[Budget Debug] Budget data details: 
+Object {user_view: "97", total_budget: "5000", katanomes_etous: "5000", ethsia_pistosi: "22000", current_budget: "97", …}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: true, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[BudgetIndicator] Rendering with data: 
+Object {user_view: "97", total_budget: "5000", katanomes_etous: "5000", ethsia_pistosi: "22000", current_budget: "97", …}
+ current amount: 0
+[BudgetIndicator] Debug - data types: 
+Object {user_view: "string", katanomes_etous: "string", ethsia_pistosi: "string", available_budget: "string", values: {…}, …}
+[BudgetIndicator] Real-time calculation: 
+Object {availableBudget: 4903, currentAmount: 0, remainingAvailable: 4903}
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1744704780866
+[BudgetIndicator] Budget data updated, showing sync indicator
+[BudgetIndicator] Rendering with data: 
+Object {user_view: "97", total_budget: "5000", katanomes_etous: "5000", ethsia_pistosi: "22000", current_budget: "97", …}
+ current amount: 0
+[BudgetIndicator] Debug - data types: 
+Object {user_view: "string", katanomes_etous: "string", ethsia_pistosi: "string", available_budget: "string", values: {…}, …}
+[BudgetIndicator] Real-time calculation: 
+Object {availableBudget: 4903, currentAmount: 0, remainingAvailable: 4903}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[CreateDocument] Fetching units...
+[CreateDocument] Units query invalidated for refresh
+[CreateDocument] Fetching units...
+[CreateDocument] Form initialized from context successfully
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+[Budget Debug] budgetData state: 
+Object {available: false, currentStep: 2, projectId: "", currentAmount: 0}
+[WebSocket] Connection error: 
+Event {isTrusted: true}
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+[WebSocket] Checking session validity
+[WebSocket] Connection closed: 1006 
+[WebSocket] Checking session validity
+[WebSocket] Abnormal closure - connection dropped
+[WebSocket] Attempting reconnect in 1800ms (attempt 1/10)
+[WebSocket] Connection closed: 1005 
+[WebSocket] Checking session validity
+[WebSocket] No status code in close frame
+[WebSocket] Attempting reconnect in 1083ms (attempt 1/10)
+[Budget Hook Debug] Returning state: 
+Object {hasBudgetData: false, hasValidationResult: false, isBudgetLoading: false, isValidationLoading: false, hasBudgetError: false, …}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[CreateDocument] Units fetched successfully: 11
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[CreateDocument] Units fetched successfully: 11
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1744704782106
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1744704782727
+[WebSocket] Connected successfully
+[WebSocket] Checking session validity
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "q9t36gkm9i86fr4", timestamp: "2025-04-15T08:12:59.584Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "q9t36gkm9i86fr4", timestamp: "2025-04-15T08:12:59.584Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-15T08:12:59.743Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-04-15T08:12:59.743Z"}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[WebSocket] Connected successfully
+[WebSocket] Checking session validity
