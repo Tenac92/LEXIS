@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import { Trash2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 interface ViewModalProps {
@@ -778,53 +780,75 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                   Προσθήκη Δικαιούχου
                 </Button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3 max-h-[calc(70vh-150px)] overflow-y-auto pr-2">
                 {recipients.map((recipient, index) => (
-                  <div key={index} className="p-4 bg-muted rounded-lg">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium">Δικαιούχος #{index + 1}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeRecipient(index)}
-                        className="text-destructive"
-                      >
-                        Αφαίρεση
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
+                  <Card key={index} className="p-4 relative">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
+                      {/* Όνομα */}
                       <Input
                         value={recipient.firstname}
                         onChange={(e) => handleRecipientChange(index, 'firstname', e.target.value)}
                         placeholder="Όνομα"
+                        className="md:col-span-2 md:row-span-1"
+                        autoComplete="off"
                         required
                       />
+
+                      {/* Επώνυμο */}
                       <Input
                         value={recipient.lastname}
                         onChange={(e) => handleRecipientChange(index, 'lastname', e.target.value)}
                         placeholder="Επίθετο"
+                        className="md:col-span-2 md:row-span-1"
+                        autoComplete="off"
                         required
                       />
+
+                      {/* Πατρώνυμο */}
                       <Input
                         value={recipient.fathername || ''}
                         onChange={(e) => handleRecipientChange(index, 'fathername', e.target.value)}
                         placeholder="Πατρώνυμο"
+                        className="md:col-span-2 md:row-span-1"
+                        autoComplete="off"
                       />
+
+                      {/* ΑΦΜ */}
                       <Input
                         value={recipient.afm}
                         onChange={(e) => handleRecipientChange(index, 'afm', e.target.value)}
                         placeholder="ΑΦΜ"
                         maxLength={9}
+                        className="md:col-span-2 md:row-span-1"
+                        autoComplete="off"
                         required
                       />
+
+                      {/* Ποσό */}
                       <Input
                         value={recipient.amount}
                         type="number"
                         onChange={(e) => handleRecipientChange(index, 'amount', e.target.value)}
                         placeholder="Ποσό"
                         step="0.01"
+                        className="md:col-span-2 md:row-span-1"
                         required
                       />
+
+                      {/* Delete Button - same row as the inputs */}
+                      <div className="md:col-span-1 md:col-start-12 md:row-start-1 flex justify-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeRecipient(index)}
+                          className="shrink-0"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+
+                      {/* Second row - installment and secondary text */}
                       <Input
                         value={recipient.installment}
                         type="number"
@@ -832,10 +856,21 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                         placeholder="Δόση"
                         min="1"
                         max="12"
+                        className="md:col-span-2 md:row-start-2"
                         required
                       />
+
+                      {/* Secondary text placeholder - empty for backward compatibility */}
+                      <div className="md:col-span-8 md:row-start-2">
+                        {/* For installment type info */}
+                        <div className="text-xs text-muted-foreground">
+                          {recipient.installment === 1 ? 'ΕΦΑΠΑΞ / Α' : 
+                           recipient.installment === 2 ? 'Β' : 
+                           recipient.installment === 3 ? 'Γ' : `Δόση #${recipient.installment}`}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  </Card>
                 ))}
               </div>
             </div>
