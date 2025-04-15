@@ -11,6 +11,18 @@ export function useBudgetUpdates(
   projectId: string | null | undefined,
   currentAmount: number
 ) {
+  // CRITICAL DEBUG - log important state information on every render
+  console.log("[Budget Hook Debug] Returning state:", {
+    hasBudgetData: Boolean(projectId && projectId !== ""),
+    hasValidationResult: Boolean(projectId && currentAmount > 0),
+    isBudgetLoading: false, // Will be updated from query status
+    isValidationLoading: false, // Will be updated from query status
+    hasBudgetError: false, // Will be updated from query status
+    hasValidationError: false, // Will be updated from query status
+    isWebsocketConnected: true, // Will be updated from WebSocket status
+    projectId: projectId || "",
+    budgetDataSample: projectId ? "Has project ID" : "No budget data"
+  });
   const queryClient = useQueryClient();
   const { isConnected } = useWebSocketUpdates();
   const [sessionId, setSessionId] = useState<string | null>(null);

@@ -504,6 +504,12 @@ export function CreateDocumentDialog({
         // Get current values directly from the form
         const formValues = form.getValues();
         
+        // ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ: Καταγράφω το τρέχον project_id για ευκολότερη αποσφαλμάτωση
+        console.log("[CreateDocument] Storing project_id in form context:", 
+          formValues.project_id, 
+          "Current step:", currentStep, 
+          "Target step:", step);
+        
         // Always save ALL form field values to context before changing steps
         // This is the critical fix for the unit reset issue
         updateFormData({
@@ -515,6 +521,25 @@ export function CreateDocumentDialog({
           status: formValues.status || "draft",
           selectedAttachments: formValues.selectedAttachments
         });
+        
+        if (formValues.project_id) {
+          // CRITICAL: Αν μεταβαίνουμε στο βήμα παραληπτών, μεταδίδουμε την ενημέρωση ID έργου
+          console.log("[CreateDocument] Project ID detected:", formValues.project_id, "Broadcasting for budget data prefetch");
+          
+          // Αυτό εξασφαλίζει ότι θα γίνει επαναφόρτωση των δεδομένων προϋπολογισμού στο επόμενο βήμα
+          if (step === 2 && budgetData && broadcastUpdate) {
+            setTimeout(() => {
+              try {
+                if (broadcastUpdate) {
+                  broadcastUpdate(currentAmount || 0);
+                  console.log("[CreateDocument] Budget update broadcast triggered for recipient step");
+                }
+              } catch (e) {
+                console.error("[CreateDocument] Error broadcasting budget update:", e);
+              }
+            }, 150);
+          }
+        }
         
         // Only log infrequently to avoid unnecessary JavaScript processing
         if (Math.random() > 0.8) {
@@ -1447,6 +1472,16 @@ export function CreateDocumentDialog({
     websocketConnected,
     broadcastUpdate,
   } = useBudgetUpdates(selectedProjectId, currentAmount);
+  
+  // CRITICAL DEBUG: Add budget data state logging for steps
+  useEffect(() => {
+    console.log("[Budget Debug] budgetData state:", {
+      available: Boolean(budgetData),
+      currentStep: currentStep,
+      projectId: selectedProjectId,
+      currentAmount
+    });
+  }, [budgetData, selectedProjectId, currentAmount, currentStep]);
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
     queryKey: ["attachments", form.watch("expenditure_type")],
