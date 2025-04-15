@@ -108,6 +108,16 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     const inputRef = useRef<HTMLInputElement>(null);
     const commandRef = useRef<HTMLDivElement>(null);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    
+    // Debug the project selection state
+    useEffect(() => {
+      console.log("[ProjectSelect] Current props:", { 
+        value, 
+        projectsCount: projects?.length || 0,
+        disabled,
+        hasProjects: Array.isArray(projects) && projects.length > 0 
+      });
+    }, [value, projects, disabled]);
 
     // Cache the selected project to prevent unnecessary lookups
     const selectedProject = useMemo(() => 
@@ -1307,15 +1317,22 @@ export function CreateDocumentDialog({
   >({
     queryKey: ["projects", selectedUnit],
     queryFn: async (): Promise<Project[]> => {
-      if (!selectedUnit) return [];
+      if (!selectedUnit) {
+        console.log("[Projects] No unit selected, returning empty projects array");
+        return [];
+      }
 
       try {
         console.log(`[Projects] Fetching projects for unit: ${selectedUnit}`);
-        const response = await apiRequest<any>(
-          `/api/projects/by-unit/${encodeURIComponent(selectedUnit)}`,
-        );
+        
+        // Add cache-busting parameter and use more robust fetch pattern
+        const url = `/api/projects/by-unit/${encodeURIComponent(selectedUnit)}?t=${Date.now()}`;
+        console.log(`[Projects] Request URL: ${url}`);
+        
+        const response = await apiRequest<any>(url);
+        console.log(`[Projects] Received response:`, typeof response);
 
-        // Force response to be an array
+        // Force response to be an array with better error checking
         let projectsArray: any[] = [];
 
         if (!response) {
@@ -2304,7 +2321,28 @@ export function CreateDocumentDialog({
                     <FormItem>
                       <FormLabel>Επιλογή Μονάδας</FormLabel>
                       <Select
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          // First update the field directly for immediate UI update
+                          field.onChange(value);
+                          
+                          // Log to help with debugging
+                          console.log("[UnitSelect] Unit selected:", value);
+                          
+                          // Always save the form context after unit change
+                          const formValues = form.getValues();
+                          updateFormData({
+                            ...formValues,
+                            unit: value,
+                            // Clear project when unit changes to avoid invalid combinations
+                            project_id: ""
+                          });
+                          
+                          // Force a refresh of projects data
+                          setTimeout(() => {
+                            // Invalidate projects to force a refresh with the new unit
+                            queryClient.invalidateQueries({ queryKey: ["projects", value] });
+                          }, 100);
+                        }}
                         value={field.value}
                         disabled={unitsLoading || user?.units?.length === 1}
                       >
@@ -2322,6 +2360,9 @@ export function CreateDocumentDialog({
                         </SelectContent>
                       </Select>
                       <FormMessage />
+                      {field.value && <p className="text-xs text-muted-foreground mt-1">
+                        Επιλεγμένη μονάδα: {units.find((u: any) => u.id === field.value)?.name || field.value}
+                      </p>}
                     </FormItem>
                   )}
                 />
