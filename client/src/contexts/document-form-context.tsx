@@ -51,77 +51,138 @@ export const DocumentFormProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [formData, setFormData] = useState<DocumentFormData>(defaultFormData);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Enhanced updateFormData that performs deep merging with special handling for recipients
+  // References for handling rate limiting and batching
+  const updateTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isUpdatingRef = React.useRef<boolean>(false);
+  const updateQueueRef = React.useRef<Partial<DocumentFormData>[]>([]);
+  const lastDataRef = React.useRef<Partial<DocumentFormData> | null>(null);
+  const lastUpdateTimeRef = React.useRef<number>(0);
+  
+  // MAJOR OPTIMIZATION: Advanced updateFormData with rate limiting and deep equal checks
+  // This significantly reduces flickering by minimizing state updates
   const updateFormData = (newData: Partial<DocumentFormData>) => {
-    setFormData(prev => {
-      // Handle empty recipients array case specifically to prevent issues
-      if (newData.recipients && newData.recipients.length === 0 && prev.recipients && prev.recipients.length === 0) {
-        // Skip update if both are empty arrays to prevent unnecessary re-renders
-        const updatedData = { ...prev, ...newData };
-        // Create a new object without recipients key to avoid TypeScript error
-        const { recipients, ...dataWithoutRecipients } = updatedData;
-        // Then add back the original recipients array to maintain reference
-        return { ...dataWithoutRecipients, recipients: prev.recipients };
-      }
-
-      // Special handling for recipients to preserve internal state during partial updates
-      if (newData.recipients && prev.recipients) {
-        // Create a copy of the previous recipients
-        const updatedRecipients = [...prev.recipients];
+    // Check if update is in progress or if data is identical to prevent reentry
+    if (isUpdatingRef.current && JSON.stringify(newData) === JSON.stringify(lastDataRef.current)) {
+      return; // Prevent circular updates
+    }
+    
+    // Store for deep comparison
+    lastDataRef.current = {...newData};
+    
+    // Rate limiting for rapid-fire updates
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
+    const isCritical = newData.status === "submitted";
+    
+    // Accumulate updates instead of applying immediately
+    updateQueueRef.current.push({...newData});
+    
+    // If we already have a scheduled update, just queue this one
+    if (updateTimeoutRef.current) {
+      return;
+    }
+    
+    // Add adaptive delay based on update frequency to improve UI stability
+    const delay = isCritical ? 0 : (timeSinceLastUpdate < 300 ? 350 : 200);
+    
+    // Schedule a single update that will process all queued changes
+    updateTimeoutRef.current = setTimeout(() => {
+      // Signal that we're in the middle of an update to prevent circular calls
+      isUpdatingRef.current = true;
+      
+      try {
+        // Get all queued updates and clear the queue
+        const updates = [...updateQueueRef.current];
+        updateQueueRef.current = [];
         
-        // If the arrays are different lengths, use the new one entirely
-        if (newData.recipients.length !== prev.recipients.length) {
-          return {
-            ...prev,
-            ...newData
-          };
-        }
+        // Merge all queued updates into a single update
+        const mergedUpdate = updates.reduce((acc, update) => ({...acc, ...update}), {});
         
-        // For same length arrays, perform a careful merge, preserving references
-        // when the objects haven't actually changed
-        newData.recipients.forEach((recipient, index) => {
-          if (index < updatedRecipients.length) {
-            // Create a new recipient only if the data has actually changed
-            const prevRecipient = updatedRecipients[index];
-            
-            // Perform deep comparison of object properties to detect actual changes
-            let hasChanged = false;
-            
-            // Check if any field has changed
-            if (recipient.firstname !== prevRecipient.firstname ||
-                recipient.lastname !== prevRecipient.lastname ||
-                recipient.fathername !== prevRecipient.fathername ||
-                recipient.afm !== prevRecipient.afm ||
-                recipient.amount !== prevRecipient.amount ||
-                recipient.secondary_text !== prevRecipient.secondary_text ||
-                recipient.installment !== prevRecipient.installment) {
-              hasChanged = true;
-            }
-            
-            // Only update if something actually changed
-            if (hasChanged) {
-              updatedRecipients[index] = {
-                ...prevRecipient,
-                ...recipient
+        // Apply the merged update with our optimized logic
+        setFormData(prev => {
+          let result = {...prev};
+          
+          // OPTIMIZATION: Handle recipients specially to avoid unnecessary re-renders
+          if (mergedUpdate.recipients) {
+            // Empty recipients special case
+            if (mergedUpdate.recipients.length === 0 && prev.recipients.length === 0) {
+              // Skip - don't update empty arrays
+            } 
+            // Different length arrays - replace entirely
+            else if (mergedUpdate.recipients.length !== prev.recipients.length) {
+              result = {
+                ...result,
+                recipients: mergedUpdate.recipients
               };
+            } 
+            // Same length arrays - compare carefully
+            else {
+              const updatedRecipients = [...prev.recipients];
+              let hasAnyRecipientChanged = false;
+              
+              mergedUpdate.recipients.forEach((newRecipient, index) => {
+                const prevRecipient = prev.recipients[index];
+                
+                // Deep comparison for each field that matters for rendering
+                const hasChanged = 
+                  newRecipient.firstname !== prevRecipient.firstname ||
+                  newRecipient.lastname !== prevRecipient.lastname ||
+                  newRecipient.fathername !== prevRecipient.fathername ||
+                  newRecipient.afm !== prevRecipient.afm ||
+                  newRecipient.amount !== prevRecipient.amount ||
+                  newRecipient.secondary_text !== prevRecipient.secondary_text ||
+                  newRecipient.installment !== prevRecipient.installment ||
+                  // Compare installments arrays
+                  JSON.stringify(newRecipient.installments) !== JSON.stringify(prevRecipient.installments) ||
+                  // Compare installment amounts
+                  JSON.stringify(newRecipient.installmentAmounts) !== JSON.stringify(prevRecipient.installmentAmounts);
+                
+                if (hasChanged) {
+                  updatedRecipients[index] = {
+                    ...prevRecipient,
+                    ...newRecipient
+                  };
+                  hasAnyRecipientChanged = true;
+                }
+              });
+              
+              // Only update the recipients array if something actually changed
+              if (hasAnyRecipientChanged) {
+                result = {
+                  ...result,
+                  recipients: updatedRecipients
+                };
+              }
             }
+            
+            // Remove recipients from mergedUpdate to avoid double-application
+            const { recipients, ...restOfUpdate } = mergedUpdate;
+            
+            // Apply all other updates
+            result = {
+              ...result,
+              ...restOfUpdate
+            };
+          } else {
+            // Simple case - just apply all updates
+            result = {
+              ...result,
+              ...mergedUpdate
+            };
           }
+          
+          return result;
         });
         
-        // Return the updated data with carefully merged recipients
-        return {
-          ...prev,
-          ...newData,
-          recipients: updatedRecipients
-        };
+        // Update timestamp for rate limiting
+        lastUpdateTimeRef.current = Date.now();
+        
+      } finally {
+        // Reset update flag after state change is applied
+        isUpdatingRef.current = false;
+        updateTimeoutRef.current = null;
       }
-      
-      // Default case: use standard object spreading for flat merge
-      return {
-        ...prev,
-        ...newData,
-      };
-    });
+    }, delay);
   };
 
   const resetFormData = () => {
