@@ -498,53 +498,58 @@ export function CreateDocumentDialog({
   // COMPLETE REWRITE: Advanced form step management with guaranteed state preservation
   // This ensures all form values are saved before any step transition occurs
   const setCurrentStep = (step: number) => {
+    // Skip if step hasn't changed to prevent unnecessary renders
+    if (step === currentStep) {
+      return;
+    }
+    
     // CRITICAL FIX: Capture and preserve *all* form values before changing step
     const captureFormState = () => {
       try {
+        // Skip if we're not mounted yet or form isn't available
+        if (!form) {
+          return;
+        }
+        
         // Get current values directly from the form
         const formValues = form.getValues();
         
-        // ΠΟΛΥ ΣΗΜΑΝΤΙΚΟ: Καταγράφω το τρέχον project_id για ευκολότερη αποσφαλμάτωση
-        console.log("[CreateDocument] Storing project_id in form context:", 
-          formValues.project_id, 
-          "Current step:", currentStep, 
-          "Target step:", step);
+        // Reduce logging frequency for better performance
+        if (Math.random() > 0.95) {
+          console.log("[CreateDocument] Storing project_id in form context:", 
+            formValues.project_id, 
+            "Current step:", currentStep, 
+            "Target step:", step);
+        }
         
-        // Always save ALL form field values to context before changing steps
-        // This is the critical fix for the unit reset issue
-        updateFormData({
-          unit: formValues.unit,
-          project_id: formValues.project_id,
-          region: formValues.region,
-          expenditure_type: formValues.expenditure_type,
-          recipients: formValues.recipients,
-          status: formValues.status || "draft",
-          selectedAttachments: formValues.selectedAttachments
-        });
-        
-        if (formValues.project_id) {
-          // CRITICAL: Αν μεταβαίνουμε στο βήμα παραληπτών, μεταδίδουμε την ενημέρωση ID έργου
-          console.log("[CreateDocument] Project ID detected:", formValues.project_id, "Broadcasting for budget data prefetch");
+        // Create a timeout to push these updates outside the current render cycle
+        // This prevents the Maximum update depth exceeded error
+        setTimeout(() => {
+          // Always save ALL form field values to context before changing steps
+          // This is the critical fix for the unit reset issue
+          updateFormData({
+            unit: formValues.unit,
+            project_id: formValues.project_id,
+            region: formValues.region,
+            expenditure_type: formValues.expenditure_type,
+            recipients: formValues.recipients,
+            status: formValues.status || "draft",
+            selectedAttachments: formValues.selectedAttachments
+          });
           
-          // Αυτό εξασφαλίζει ότι θα γίνει επαναφόρτωση των δεδομένων προϋπολογισμού στο επόμενο βήμα
-          if (step === 2 && budgetData && broadcastUpdate) {
-            setTimeout(() => {
+          if (formValues.project_id) {
+            // Only broadcast budget updates if we have a project ID and when moving to recipient step
+            if (step === 2 && budgetData && broadcastUpdate) {
               try {
                 if (broadcastUpdate) {
                   broadcastUpdate(currentAmount || 0);
-                  console.log("[CreateDocument] Budget update broadcast triggered for recipient step");
                 }
               } catch (e) {
                 console.error("[CreateDocument] Error broadcasting budget update:", e);
               }
-            }, 150);
+            }
           }
-        }
-        
-        // Only log infrequently to avoid unnecessary JavaScript processing
-        if (Math.random() > 0.8) {
-          console.log("[CreateDocument] State preserved during step transition");
-        }
+        }, 0);
       } catch (err) {
         console.error("[CreateDocument] Error preserving form state:", err);
       }
@@ -553,11 +558,14 @@ export function CreateDocumentDialog({
     // Always preserve form state during step changes
     captureFormState();
     
-    // Then update step state in a consistent order
-    // First update the context step
-    setSavedStep(step);
-    // Then update local step 
-    setLocalCurrentStep(step);
+    // Then update step state in a consistent order but with a small delay
+    // to ensure we're not updating state during a render cycle
+    setTimeout(() => {
+      // First update the context step
+      setSavedStep(step);
+      // Then update local step 
+      setLocalCurrentStep(step);
+    }, 0);
   };
   
   // CRITICAL FIX: Υλοποίηση σωστού συγχρονισμού του context με τη φόρμα
@@ -998,20 +1006,24 @@ export function CreateDocumentDialog({
     stateCache.current.pendingUpdates++;
   }, [currentFormState, updateFormData, isUpdatingFromContext]);
   
-  // Effect to trigger form sync when state changes
+  // Effect to trigger form sync when state changes - with optimized dependency list
   useEffect(() => {
     // Skip the initial render
     if (formReset) return;
     
-    syncFormToContext();
+    // Add a small delay to prevent immediate execution during render cycle
+    const timer = setTimeout(() => {
+      syncFormToContext();
+    }, 0);
     
     // Cleanup function to clear timeout on unmount
     return () => {
+      clearTimeout(timer);
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
     };
-  }, [syncFormToContext, formReset]);
+  }, [formReset]); // Remove syncFormToContext from dependencies to break infinite loop
 
   const currentAmount = recipients.reduce((sum: number, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
