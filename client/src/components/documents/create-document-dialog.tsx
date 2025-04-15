@@ -2060,6 +2060,20 @@ export function CreateDocumentDialog({
       const isValid = await form.trigger(fieldsToValidate);
 
       if (isValid) {
+        // CRITICAL FIX: Explicitly save all form data to context before changing steps
+        // This prevents the unit selection from resetting when moving between steps
+        const formValues = form.getValues();
+        updateFormData({
+          unit: formValues.unit,
+          project_id: formValues.project_id,
+          region: formValues.region,
+          expenditure_type: formValues.expenditure_type,
+          recipients: formValues.recipients,
+          status: formValues.status,
+          selectedAttachments: formValues.selectedAttachments
+        });
+        
+        console.log("[CreateDocument] Saved form state to context before step change");
         setDirection(1);
         setCurrentStep(Math.min(currentStep + 1, 3));
       } else {
@@ -2114,6 +2128,20 @@ export function CreateDocumentDialog({
   };
 
   const handlePrevious = () => {
+    // CRITICAL FIX: Also save form state when going back
+    // This ensures unit selection persistence when navigating between steps
+    const formValues = form.getValues();
+    updateFormData({
+      unit: formValues.unit,
+      project_id: formValues.project_id,
+      region: formValues.region,
+      expenditure_type: formValues.expenditure_type,
+      recipients: formValues.recipients,
+      status: formValues.status,
+      selectedAttachments: formValues.selectedAttachments
+    });
+    
+    console.log("[CreateDocument] Saved form state before going to previous step");
     setDirection(-1);
     setCurrentStep(Math.max(currentStep - 1, 0));
   };
