@@ -205,6 +205,20 @@ export const DocumentFormProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setCurrentStep(0);
   };
 
+  // CRITICAL DEBUG: Απαραίτητη αποσφαλμάτωση για το project_id στα βήματα
+  React.useEffect(() => {
+    // Καταγράφουμε μόνο όταν υπάρχει project ID για να μειώσουμε τη συχνότητα καταγραφής
+    if (formData.project_id) {
+      console.log('[DocumentForm Context] Current state:', {
+        step: currentStep,
+        projectId: formData.project_id,
+        unit: formData.unit,
+        hasRecipients: formData.recipients && formData.recipients.length > 0,
+        recipientsCount: formData.recipients?.length || 0
+      });
+    }
+  }, [formData.project_id, currentStep, formData.unit, formData.recipients]);
+
   return (
     <DocumentFormContext.Provider value={{ 
       formData, 

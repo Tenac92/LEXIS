@@ -1471,17 +1471,21 @@ export function CreateDocumentDialog({
     validationError,
     websocketConnected,
     broadcastUpdate,
-  } = useBudgetUpdates(selectedProjectId, currentAmount);
+  // ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Αν το selectedProjectId είναι κενό, χρησιμοποιούμε το project_id από το context!
+  // Αυτό διορθώνει το πρόβλημα όπου το προϋπολογισμός δε φαίνεται στο βήμα 2 (παραλήπτες)
+  } = useBudgetUpdates(selectedProjectId || formData.project_id, currentAmount);
   
   // CRITICAL DEBUG: Add budget data state logging for steps
   useEffect(() => {
     console.log("[Budget Debug] budgetData state:", {
       available: Boolean(budgetData),
       currentStep: currentStep,
-      projectId: selectedProjectId,
+      selectedProjectId: selectedProjectId,
+      contextProjectId: formData.project_id,
+      usingProjectId: selectedProjectId || formData.project_id,
       currentAmount
     });
-  }, [budgetData, selectedProjectId, currentAmount, currentStep]);
+  }, [budgetData, selectedProjectId, formData.project_id, currentAmount, currentStep]);
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
     queryKey: ["attachments", form.watch("expenditure_type")],
