@@ -485,6 +485,9 @@ export function CreateDocumentDialog({
         "[CreateDocument] Dialog opened, refreshing form and units data",
       );
 
+      // Set flag to prevent circular updates
+      isUpdatingFromContext.current = true;
+      
       // Set the form values from context
       form.reset({
         unit: formData.unit || "",
@@ -504,23 +507,41 @@ export function CreateDocumentDialog({
 
       // Set a flag that form has been reset
       setFormReset(true);
+      
+      // Reset flag after loading is complete
+      setTimeout(() => {
+        isUpdatingFromContext.current = false;
+      }, 200);
     }
   }, [open, queryClient, form, formData, savedStep]);
 
   // Second effect: After form is reset and we have user data, set the unit
+  // But only if there's no unit already set in the form data
   useEffect(() => {
-    if (formReset && user?.units && user?.units.length > 0) {
+    // Only auto-set unit if dialog was just opened (formReset) AND there's no unit already in form data
+    if (formReset && user?.units && user?.units.length > 0 && !formData.unit) {
+      // Set flag to prevent circular updates while we initialize
+      isUpdatingFromContext.current = true;
+      
       // Small delay to ensure units query has completed
       const timer = setTimeout(() => {
         const defaultUnit = user?.units?.[0] || "";
         console.log("[CreateDocument] Setting default unit:", defaultUnit);
+        
+        // Only set if we don't have a unit already (empty creation)
         form.setValue("unit", defaultUnit);
         setFormReset(false); // Reset the flag
+        
+        // Allow updates again
+        isUpdatingFromContext.current = false;
       }, 500);
 
       return () => clearTimeout(timer);
+    } else if (formReset) {
+      // Just reset the flag without changing the unit if we already have data
+      setFormReset(false);
     }
-  }, [formReset, user, form]);
+  }, [formReset, user, form, formData.unit]);
 
   // Function to handle dialog closing with multiple fallback mechanisms
   const closeDialogCompletely = useCallback(() => {
@@ -558,9 +579,17 @@ export function CreateDocumentDialog({
 
   // Use a reference to store the timeout ID for debouncing
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+  
+  // Flag to prevent circular updates
+  const isUpdatingFromContext = useRef(false);
+  
   // Effect to sync form state with context (debounced to prevent lag)
   useEffect(() => {
+    // Skip updates when we're loading from context
+    if (isUpdatingFromContext.current) {
+      return;
+    }
+    
     // Clear any existing timeout to debounce updates
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
