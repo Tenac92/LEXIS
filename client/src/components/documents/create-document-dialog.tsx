@@ -477,55 +477,81 @@ export function CreateDocumentDialog({
     },
   });
 
-  // First effect: When dialog opens, check authentication and set form from context
+  // Handler for dialog opening - extracted as callback to reduce complexity
+  const handleDialogOpen = useCallback(async () => {
+    console.log("[CreateDocument] Dialog opened, refreshing form and units data");
+    
+    // Reset form first to clear any previous data
+    form.reset();
+    
+    // Set flag to prevent form data syncing to context while we initialize
+    isUpdatingFromContext.current = true;
+    setFormReset(true);
+    
+    try {
+      // Refresh user session to ensure we have valid authentication
+      const refreshedUser = await refreshUser();
+      
+      if (!refreshedUser) {
+        console.warn("[CreateDocument] No authenticated user found, dialog may not function properly");
+        toast({
+          title: "Προειδοποίηση σύνδεσης",
+          description: "Η συνεδρία σας ενδέχεται να έχει λήξει. Αν αντιμετωπίσετε προβλήματα, ανανεώστε τη σελίδα.",
+          duration: 6000,
+        });
+      }
+      
+      // Batch all form updates together to prevent multiple re-renders
+      const formValues = {
+        unit: formData?.unit || "",
+        project_id: formData?.project_id || "",
+        region: formData?.region || "",
+        expenditure_type: formData?.expenditure_type || "",
+        recipients: Array.isArray(formData?.recipients) ? formData.recipients : [],
+        status: formData?.status || "draft"
+      };
+      
+      // Reset form with all values at once
+      form.reset(formValues);
+      
+      // Set attachments separately
+      if (formData?.selectedAttachments) {
+        setSelectedAttachments(formData.selectedAttachments);
+      }
+      
+      // Restore step from context
+      if (typeof savedStep === 'number' && savedStep >= 0) {
+        setLocalCurrentStep(savedStep);
+      }
+      
+      // Invalidate all relevant queries to force a fresh fetch
+      // This ensures we have the latest data
+      queryClient.invalidateQueries({ queryKey: ["units"] });
+      
+      console.log("[CreateDocument] Form initialized from context successfully");
+    } catch (error) {
+      console.error("[CreateDocument] Error initializing form:", error);
+      toast({
+        title: "Σφάλμα",
+        description: "Προέκυψε σφάλμα κατά την προετοιμασία της φόρμας. Παρακαλώ δοκιμάστε ξανά.",
+        variant: "destructive",
+      });
+    } finally {
+      // Reset flags after loading is complete with a sufficient delay
+      // to ensure all React state updates have completed
+      setTimeout(() => {
+        isUpdatingFromContext.current = false;
+        setFormReset(false);
+      }, 300);
+    }
+  }, [form, formData, queryClient, refreshUser, savedStep, toast]);
+  
+  // Effect to handle dialog open state
   useEffect(() => {
     if (open) {
-      console.log(
-        "[CreateDocument] Dialog opened, refreshing form and units data",
-      );
-
-      // Aggressively refresh authentication state before loading dialog
-      // This ensures we have proper permissions for API calls
-      refreshUser().then((refreshedUser) => {
-        if (!refreshedUser) {
-          console.warn("[CreateDocument] No authenticated user found, dialog may not function properly");
-          toast({
-            title: "Authentication Notice",
-            description: "Your session may have expired. If you encounter errors, please refresh the page.",
-            duration: 6000,
-          });
-        }
-        
-        // Set flag to prevent circular updates
-        isUpdatingFromContext.current = true;
-        
-        // Set the form values from context
-        form.reset({
-          unit: formData.unit || "",
-          project_id: formData.project_id || "",
-          region: formData.region || "",
-          expenditure_type: formData.expenditure_type || "",
-          recipients: formData.recipients || [],
-          status: formData.status || "draft",
-          selectedAttachments: formData.selectedAttachments || [],
-        });
-  
-        // Restore step from context
-        setLocalCurrentStep(savedStep);
-  
-        // Invalidate all relevant queries to force a fresh fetch
-        queryClient.invalidateQueries({ queryKey: ["units"] });
-        
-        // Set a flag that form has been reset
-        setFormReset(true);
-        
-        // Reset flag after loading is complete
-        setTimeout(() => {
-          isUpdatingFromContext.current = false;
-        }, 200);
-      });
+      handleDialogOpen();
     }
-  }, [open, queryClient, form, formData, savedStep, refreshUser, toast]);
+  }, [open, handleDialogOpen]);
 
   // Second effect: After form is reset and we have user data, set the unit
   // But only if there's no unit already set in the form data
@@ -604,8 +630,21 @@ export function CreateDocumentDialog({
   // Flag to prevent circular updates
   const isUpdatingFromContext = useRef(false);
   
-  // Effect to sync form state with context (debounced to prevent lag)
-  useEffect(() => {
+  // Memoized form state to prevent unnecessary re-renders
+  const currentFormState = useMemo(() => {
+    return {
+      unit: selectedUnit,
+      project_id: selectedProjectId,
+      region: selectedRegion,
+      expenditure_type: selectedExpenditureType,
+      recipients: recipients,
+      status: "draft",
+      selectedAttachments: selectedAttachments,
+    };
+  }, [selectedUnit, selectedProjectId, selectedRegion, selectedExpenditureType, recipients, selectedAttachments]);
+  
+  // Debounced form sync function to reduce update frequency
+  const syncFormToContext = useCallback(() => {
     // Skip updates when we're loading from context to prevent circular updates
     if (isUpdatingFromContext.current) {
       console.log("[CreateDocument] Skipping form sync due to context loading flag");
@@ -619,34 +658,31 @@ export function CreateDocumentDialog({
     
     // Set a new timeout to update the context after a delay
     updateTimeoutRef.current = setTimeout(() => {
-      // Create a complete form data object
-      const formState = {
-        unit: selectedUnit,
-        project_id: selectedProjectId,
-        region: selectedRegion,
-        expenditure_type: selectedExpenditureType,
-        recipients: recipients,
-        status: "draft",
-        selectedAttachments: selectedAttachments,
-      };
-      
-      // Add additional debugging for recipient data
+      // Only log recipient data if it exists and is meaningful
       if (recipients && recipients.length > 0) {
         console.log("[CreateDocument] Syncing form with recipients:", 
           recipients.map(r => ({
-            name: `${r.lastname} ${r.firstname}`,
-            amount: r.amount,
-            installments: r.installments
+            name: r.firstname && r.lastname ? `${r.lastname} ${r.firstname}` : " ",
+            amount: r.amount || 0,
+            installments: r.installments || ["ΕΦΑΠΑΞ"]
           }))
         );
       }
       
       // Save to context with special flag to prevent circular updates
-      updateFormData(formState);
+      updateFormData(currentFormState);
       
       // Log for debugging (reduce frequency of logs)
       console.log("[CreateDocument] Saved form state to context");
-    }, 300); // Debounce delay of 300ms
+    }, 500); // Increased debounce delay to 500ms for better performance
+  }, [currentFormState, updateFormData, recipients, isUpdatingFromContext]);
+  
+  // Effect to trigger form sync when state changes
+  useEffect(() => {
+    // Skip the initial render
+    if (formReset) return;
+    
+    syncFormToContext();
     
     // Cleanup function to clear timeout on unmount
     return () => {
@@ -654,7 +690,7 @@ export function CreateDocumentDialog({
         clearTimeout(updateTimeoutRef.current);
       }
     };
-  }, [selectedUnit, selectedProjectId, selectedRegion, selectedExpenditureType, recipients, selectedAttachments, updateFormData]);
+  }, [syncFormToContext, formReset]);
 
   const currentAmount = recipients.reduce((sum: number, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
