@@ -265,14 +265,23 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     // Safely parse recipients array with proper error handling
     try {
       const safeRecipients = document.recipients && Array.isArray(document.recipients)
-        ? document.recipients.map(r => ({
-            firstname: String(r.firstname || ''),
-            lastname: String(r.lastname || ''),
-            fathername: String(r.fathername || ''),
-            afm: String(r.afm || ''),
-            amount: typeof r.amount === 'string' ? parseFloat(r.amount) || 0 : Number(r.amount) || 0,
-            installment: typeof r.installment === 'string' ? parseInt(r.installment) || 1 : Number(r.installment) || 1
-          }))
+        ? document.recipients.map(r => {
+            // Create a properly typed recipient object
+            const recipient: Recipient = {
+              firstname: String(r.firstname || ''),
+              lastname: String(r.lastname || ''),
+              afm: String(r.afm || ''),
+              amount: typeof r.amount === 'string' ? parseFloat(r.amount) || 0 : Number(r.amount) || 0,
+              installment: typeof r.installment === 'string' ? parseInt(r.installment) || 1 : Number(r.installment) || 1
+            };
+            
+            // Add fathername if it exists in the original data
+            if ('fathername' in r && r.fathername) {
+              recipient.fathername = String(r.fathername);
+            }
+            
+            return recipient;
+          })
         : [];
 
       setRecipients(safeRecipients);
@@ -406,8 +415,12 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         body: JSON.stringify(formData)
       });
 
-      if (!response || response.error) {
-        throw new Error(response?.error || 'Αποτυχία ενημέρωσης εγγράφου');
+      // Check if response is valid and doesn't contain errors
+      if (!response || typeof response === 'object' && 'error' in response) {
+        const errorMessage = response && typeof response === 'object' && 'error' in response 
+          ? String(response.error) 
+          : 'Αποτυχία ενημέρωσης εγγράφου';
+        throw new Error(errorMessage);
       }
 
       // Invalidate cache to refresh data
@@ -522,6 +535,11 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                         onChange={(e) => handleRecipientChange(index, 'lastname', e.target.value)}
                         placeholder="Επίθετο"
                         required
+                      />
+                      <Input
+                        value={recipient.fathername || ''}
+                        onChange={(e) => handleRecipientChange(index, 'fathername', e.target.value)}
+                        placeholder="Πατρώνυμο"
                       />
                       <Input
                         value={recipient.afm}
