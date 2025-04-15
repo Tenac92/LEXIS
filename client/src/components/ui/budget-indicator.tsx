@@ -6,10 +6,11 @@ import { useState, useEffect } from "react";
 import { useWebSocketUpdates } from "@/hooks/use-websocket-updates";
 
 interface BudgetIndicatorProps {
-  budgetData: BudgetData;
+  budgetData: BudgetData; // Required parameter
   currentAmount?: number;
   onValidationWarning?: (type: 'funding' | 'reallocation') => void;
   compact?: boolean;
+  isLoading?: boolean;
 }
 
 // Compact version of the budget indicator for project cards
@@ -97,7 +98,8 @@ export function CompactBudgetIndicator({
 export function BudgetIndicator({ 
   budgetData, 
   currentAmount = 0,
-  onValidationWarning 
+  onValidationWarning,
+  isLoading = false
 }: BudgetIndicatorProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -177,6 +179,19 @@ export function BudgetIndicator({
     console.warn("[BudgetIndicator] No budget data received!");
   }
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg relative">
+        <div className="flex items-center justify-center py-6">
+          <div className="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent mr-3"></div>
+          <span className="text-lg font-medium text-primary">Φόρτωση δεδομένων προϋπολογισμού...</span>
+        </div>
+      </div>
+    );
+  }
+  
+  // Return nothing if no data
   if (!budgetData) return null;
 
   // Parse values ensuring they are numbers (handling both string and number inputs)
