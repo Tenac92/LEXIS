@@ -451,7 +451,7 @@ export function CreateDocumentDialog({
   const [loading, setLoading] = useState(false);
   const [formReset, setFormReset] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
 
   // References
@@ -463,10 +463,6 @@ export function CreateDocumentDialog({
     setLocalCurrentStep(step);
     setSavedStep(step);
   };
-
-  // Initialize form with values from context
-  // Get the auth context to access refreshUser
-  const { refreshUser } = useAuth();
   
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
