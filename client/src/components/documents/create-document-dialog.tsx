@@ -442,8 +442,11 @@ export function CreateDocumentDialog({
   onOpenChange,
   onClose,
 }: CreateDocumentDialogProps) {
+  // Get form state from context
+  const { formData, updateFormData, currentStep: savedStep, setCurrentStep: setSavedStep } = useDocumentForm();
+  
   // Basic state
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setLocalCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
   const [loading, setLoading] = useState(false);
   const [formReset, setFormReset] = useState(false);
@@ -454,38 +457,47 @@ export function CreateDocumentDialog({
   // References
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const dialogCloseRef = React.useRef<HTMLButtonElement>(null);
+  
+  // Set current step using the context
+  const setCurrentStep = (step: number) => {
+    setLocalCurrentStep(step);
+    setSavedStep(step);
+  };
 
-  // Initialize form with default values
+  // Initialize form with values from context
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
     defaultValues: {
-      unit: "",
-      project_id: "",
-      region: "",
-      expenditure_type: "",
-      recipients: [],
-      status: "draft",
-      selectedAttachments: [],
+      unit: formData.unit || "",
+      project_id: formData.project_id || "",
+      region: formData.region || "",
+      expenditure_type: formData.expenditure_type || "",
+      recipients: formData.recipients || [],
+      status: formData.status || "draft",
+      selectedAttachments: formData.selectedAttachments || [],
     },
   });
 
-  // First effect: When dialog opens, invalidate queries and reset form
+  // First effect: When dialog opens, invalidate queries and set form from context
   useEffect(() => {
     if (open) {
       console.log(
         "[CreateDocument] Dialog opened, refreshing form and units data",
       );
 
-      // Reset the form to default values
+      // Set the form values from context
       form.reset({
-        unit: "",
-        project_id: "",
-        region: "",
-        expenditure_type: "",
-        recipients: [],
-        status: "draft",
-        selectedAttachments: [],
+        unit: formData.unit || "",
+        project_id: formData.project_id || "",
+        region: formData.region || "",
+        expenditure_type: formData.expenditure_type || "",
+        recipients: formData.recipients || [],
+        status: formData.status || "draft",
+        selectedAttachments: formData.selectedAttachments || [],
       });
+
+      // Restore step from context
+      setLocalCurrentStep(savedStep);
 
       // Invalidate all relevant queries to force a fresh fetch
       queryClient.invalidateQueries({ queryKey: ["units"] });
@@ -493,7 +505,7 @@ export function CreateDocumentDialog({
       // Set a flag that form has been reset
       setFormReset(true);
     }
-  }, [open, queryClient, form]);
+  }, [open, queryClient, form, formData, savedStep]);
 
   // Second effect: After form is reset and we have user data, set the unit
   useEffect(() => {
@@ -538,6 +550,29 @@ export function CreateDocumentDialog({
   const selectedUnit = form.watch("unit");
   const selectedProjectId = form.watch("project_id");
   const recipients = form.watch("recipients") || [];
+  const selectedRegion = form.watch("region");
+  const selectedExpenditureType = form.watch("expenditure_type");
+  const selectedAttachments = form.watch("selectedAttachments") || [];
+
+  // Effect to sync form state with context
+  useEffect(() => {
+    // Create a complete form data object
+    const formState = {
+      unit: selectedUnit,
+      project_id: selectedProjectId,
+      region: selectedRegion,
+      expenditure_type: selectedExpenditureType,
+      recipients: recipients,
+      status: "draft",
+      selectedAttachments: selectedAttachments,
+    };
+    
+    // Save to context
+    updateFormData(formState);
+    
+    // Log for debugging
+    console.log("[CreateDocument] Saved form state to context", formState);
+  }, [selectedUnit, selectedProjectId, selectedRegion, selectedExpenditureType, recipients, selectedAttachments, updateFormData]);
 
   const currentAmount = recipients.reduce((sum, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
