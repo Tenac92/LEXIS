@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { useWebSocketUpdates } from "@/hooks/use-websocket-updates";
 
 interface BudgetIndicatorProps {
-  budgetData: BudgetData;
+  budgetData?: BudgetData;  // Make budgetData optional
   currentAmount?: number;
   onValidationWarning?: (type: 'funding' | 'reallocation') => void;
   compact?: boolean;
@@ -177,7 +177,23 @@ export function BudgetIndicator({
     console.warn("[BudgetIndicator] No budget data received!");
   }
 
-  if (!budgetData) return null;
+  // Improved empty state handling - show a message when no budget data is available
+  if (!budgetData) {
+    console.log("[BudgetIndicator] No budget data available, showing placeholder");
+    return (
+      <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
+        <div className="flex items-center justify-center h-20">
+          <div className="flex flex-col items-center text-center">
+            <PiggyBank className="h-8 w-8 mb-2 text-blue-300" />
+            <h3 className="text-sm font-medium text-gray-600">Επιλέξτε έργο για να δείτε τον προϋπολογισμό</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Τα στοιχεία προϋπολογισμού θα εμφανιστούν μόλις επιλέξετε έργο
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Parse values ensuring they are numbers (handling both string and number inputs)
   const userView = typeof budgetData.user_view === 'number' 

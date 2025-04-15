@@ -2478,13 +2478,11 @@ export function CreateDocumentDialog({
 
             {currentStep === 2 && (
               <div className="space-y-4">
-                {/* Logs moved to useEffect for proper debugging */}
-                {budgetData && (
-                  <BudgetIndicator
-                    budgetData={budgetData}
-                    currentAmount={currentAmount}
-                  />
-                )}
+                {/* Always show budget indicator for recipient step, with conditional rendering inside component */}
+                <BudgetIndicator
+                  budgetData={budgetData}
+                  currentAmount={currentAmount}
+                />
 
                 <div>
                   <div className="flex justify-between items-center mb-4">
