@@ -2478,36 +2478,13 @@ export function CreateDocumentDialog({
 
             {currentStep === 2 && (
               <div className="space-y-4">
-                {/* Show budget indicator at the top of recipients step */}
-                <div className="mb-3 border rounded-md p-3 bg-background/60">
-                  {isBudgetLoading ? (
-                    <BudgetIndicator
-                      budgetData={{
-                        current_budget: "0",
-                        ethsia_pistosi: "0",
-                        user_view: "0",
-                        q1: "0",
-                        q2: "0", 
-                        q3: "0",
-                        q4: "0",
-                        katanomes_etous: "0",
-                        available_budget: "0"
-                      }}
-                      currentAmount={currentAmount}
-                      isLoading={true}
-                    />
-                  ) : budgetData ? (
-                    <BudgetIndicator
-                      budgetData={budgetData}
-                      currentAmount={currentAmount}
-                      isLoading={false}
-                    />
-                  ) : (
-                    <div className="py-4 text-center text-muted-foreground">
-                      <p>Δεν υπάρχουν δεδομένα προϋπολογισμού για το επιλεγμένο έργο.</p>
-                    </div>
-                  )}
-                </div>
+                {/* Logs moved to useEffect for proper debugging */}
+                {budgetData && (
+                  <BudgetIndicator
+                    budgetData={budgetData}
+                    currentAmount={currentAmount}
+                  />
+                )}
 
                 <div>
                   <div className="flex justify-between items-center mb-4">
