@@ -263,10 +263,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
   
-  // Function to manually refresh the user session
+  // Function to manually refresh the user session with debouncing
   const refreshUser = async (): Promise<User | null> => {
     try {
+      // Use a static variable to track last refresh time to prevent excessive refreshes
+      const now = Date.now();
+      if ((refreshUser as any).lastRefresh && now - (refreshUser as any).lastRefresh < 5000) {
+        console.log('[Auth] Skipping refresh - too soon since last refresh');
+        return user ?? null;
+      }
+      
       console.log('[Auth] Manually refreshing user session');
+      (refreshUser as any).lastRefresh = now;
+      
       const result = await refetch();
       return result.data ?? null;
     } catch (error) {

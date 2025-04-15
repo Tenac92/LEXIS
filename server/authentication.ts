@@ -654,8 +654,38 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Get current user route with enhanced error handling for sdegdaefk.gr support
-  app.get("/api/auth/me", authenticateSession, (req: AuthenticatedRequest, res, next) => {
+  // Get current user route with enhanced error handling and session refresh
+  app.get("/api/auth/me", (req: AuthenticatedRequest, res, next) => {
+    // Special handling for /api/auth/me to be more lenient
+    try {
+      if (!req.session?.user?.id) {
+        return res.status(401).json({
+          authenticated: false,
+          message: 'Authentication required'
+        });
+      }
+      
+      // Valid session found - touch/refresh the session
+      req.session.touch();
+      
+      // Continue with regular authentication
+      authenticateSession(req, res, (err) => {
+        if (err) {
+          // Only for /api/auth/me, we return a structured response for auth errors
+          return res.status(401).json({
+            authenticated: false,
+            message: err instanceof Error ? err.message : 'Authentication required'
+          });
+        }
+        next();
+      });
+    } catch (error) {
+      return res.status(401).json({
+        authenticated: false,
+        message: error instanceof Error ? error.message : 'Authentication error'
+      });
+    }
+  }, (req: AuthenticatedRequest, res, next) => {
     try {
       if (!req.user) {
         console.log('[Auth] No user found in authenticated request');
