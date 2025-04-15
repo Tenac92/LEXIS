@@ -257,6 +257,33 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   // Use this ref to avoid repeated updates of the same document
   const processedDocumentId = useRef<string | null>(null);
 
+  // Function to load NA853 code (project ID) from MIS
+  const loadProjectIdFromMis = async (mis: string) => {
+    if (!mis) return;
+    
+    try {
+      console.log(`[EditDocument] Fetching NA853 code for MIS: ${mis}`);
+      const response = await fetch(`/api/document-na853/${mis}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.na853) {
+          console.log(`[EditDocument] Found NA853 code: ${data.na853} for MIS: ${mis}`);
+          setProjectId(data.na853);
+          return data.na853;
+        } else {
+          console.log(`[EditDocument] No NA853 code found for MIS: ${mis}`);
+        }
+      } else {
+        console.error(`[EditDocument] Failed to fetch NA853 for MIS: ${mis}`);
+      }
+    } catch (error) {
+      console.error(`[EditDocument] Error fetching NA853 for MIS ${mis}:`, error);
+    }
+    
+    return null;
+  };
+
   // Use effect with a proper cleanup to prevent memory leaks and infinite loops
   useEffect(() => {
     // Skip processing if document is undefined or dialog is not open
@@ -278,7 +305,17 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
       new Date(document.protocol_date).toISOString().split('T')[0] :
       ''
     );
-    setProjectId(document.project_id || '');
+    
+    // Initialize with document.project_id and then check if we need to load from MIS
+    const currentProjectId = document.project_id || '';
+    setProjectId(currentProjectId);
+    
+    // If project_id contains a MIS number (digits only), try to load the NA853 code
+    if (currentProjectId && /^\d+$/.test(currentProjectId)) {
+      console.log(`[EditDocument] Project ID appears to be a MIS number: ${currentProjectId}`);
+      loadProjectIdFromMis(currentProjectId);
+    }
+    
     setExpenditureType(document.expenditure_type || '');
 
     // Safely parse recipients array with proper error handling
@@ -596,13 +633,36 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                 />
               </div>
               <div className="space-y-2">
-                <Label>ID Έργου</Label>
-                <Input
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                  placeholder="Εισάγετε ID έργου"
-                  required
-                />
+                <Label>ID Έργου (ΝΑ853)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    placeholder="Εισάγετε ID έργου ή MIS"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="whitespace-nowrap"
+                    onClick={() => {
+                      const mis = projectId.trim();
+                      if (mis && /^\d+$/.test(mis)) {
+                        loadProjectIdFromMis(mis);
+                      } else {
+                        toast({
+                          title: "Προσοχή",
+                          description: "Εισάγετε έναν έγκυρο κωδικό MIS (μόνο αριθμοί)",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    Εύρεση ΝΑ853
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Για αυτόματη μετατροπή MIS σε NA853, εισάγετε τον κωδικό MIS και πατήστε "Εύρεση ΝΑ853"</p>
               </div>
               <div className="space-y-2">
                 <Label>Τύπος Δαπάνης</Label>
