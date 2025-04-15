@@ -556,37 +556,55 @@ export function CreateDocumentDialog({
   const selectedExpenditureType = form.watch("expenditure_type");
   const selectedAttachments = form.watch("selectedAttachments") || [];
 
-  // Effect to sync form state with context
+  // Use a reference to store the timeout ID for debouncing
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Effect to sync form state with context (debounced to prevent lag)
   useEffect(() => {
-    // Create a complete form data object
-    const formState = {
-      unit: selectedUnit,
-      project_id: selectedProjectId,
-      region: selectedRegion,
-      expenditure_type: selectedExpenditureType,
-      recipients: recipients,
-      status: "draft",
-      selectedAttachments: selectedAttachments,
+    // Clear any existing timeout to debounce updates
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+    
+    // Set a new timeout to update the context after a delay
+    updateTimeoutRef.current = setTimeout(() => {
+      // Create a complete form data object
+      const formState = {
+        unit: selectedUnit,
+        project_id: selectedProjectId,
+        region: selectedRegion,
+        expenditure_type: selectedExpenditureType,
+        recipients: recipients,
+        status: "draft",
+        selectedAttachments: selectedAttachments,
+      };
+      
+      // Save to context
+      updateFormData(formState);
+      
+      // Log for debugging (reduce frequency of logs)
+      console.log("[CreateDocument] Saved form state to context");
+    }, 300); // Debounce delay of 300ms
+    
+    // Cleanup function to clear timeout on unmount
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
     };
-    
-    // Save to context
-    updateFormData(formState);
-    
-    // Log for debugging
-    console.log("[CreateDocument] Saved form state to context", formState);
   }, [selectedUnit, selectedProjectId, selectedRegion, selectedExpenditureType, recipients, selectedAttachments, updateFormData]);
 
   const currentAmount = recipients.reduce((sum, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
   }, 0);
 
-  // Debug log for key values
-  console.log("[Budget Form Debug] Key values:", {
-    selectedProjectId,
-    currentAmount,
-    hasRecipients: recipients.length > 0,
-    recipients,
-  });
+  // Debug log only occasionally to reduce console noise
+  useEffect(() => {
+    if (recipients.length > 0) {
+      // Only log when recipients change and at a reasonable frequency
+      console.log("[Budget Form Debug] Recipients updated:", recipients.length);
+    }
+  }, [recipients.length]);
 
   // Add this function to get available installments based on expenditure type
   const getAvailableInstallments = (expenditureType: string) => {
