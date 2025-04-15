@@ -666,11 +666,19 @@ export function CreateDocumentDialog({
     };
   }, [selectedUnit, selectedProjectId, selectedRegion, selectedExpenditureType, recipients, selectedAttachments]);
   
-  // Debounced form sync function to reduce update frequency
+  // Create state comparison ref to minimize updates
+  const syncStateRef = useRef<{
+    lastSyncedState?: any;
+    logCounter: number;
+  }>({
+    logCounter: 0
+  });
+
+  // Deeply optimized form sync function to dramatically reduce flickering
   const syncFormToContext = useCallback(() => {
     // Skip updates when we're loading from context to prevent circular updates
     if (isUpdatingFromContext.current) {
-      console.log("[CreateDocument] Skipping form sync due to context loading flag");
+      // Silently skip instead of logging to reduce console noise
       return;
     }
     
@@ -678,27 +686,37 @@ export function CreateDocumentDialog({
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
     }
+
+    // Define a stable reference for state comparison
+    const prevFormState = syncStateRef.current?.lastSyncedState;
+    const formStateChanged = !prevFormState || 
+      JSON.stringify(prevFormState) !== JSON.stringify(currentFormState);
+    
+    // Only proceed if the state actually changed
+    if (!formStateChanged) {
+      return;
+    }
     
     // Set a new timeout to update the context after a delay
     updateTimeoutRef.current = setTimeout(() => {
-      // Only log recipient data if it exists and is meaningful
-      if (recipients && recipients.length > 0) {
-        console.log("[CreateDocument] Syncing form with recipients:", 
-          recipients.map(r => ({
-            name: r.firstname && r.lastname ? `${r.lastname} ${r.firstname}` : " ",
-            amount: r.amount || 0,
-            installments: r.installments || ["ΕΦΑΠΑΞ"]
-          }))
-        );
-      }
+      // Reduce logging to absolute minimum to improve performance
+      
+      // Store the current state for future comparisons
+      syncStateRef.current = {
+        ...syncStateRef.current,
+        lastSyncedState: { ...currentFormState }
+      };
       
       // Save to context with special flag to prevent circular updates
       updateFormData(currentFormState);
       
-      // Log for debugging (reduce frequency of logs)
-      console.log("[CreateDocument] Saved form state to context");
-    }, 500); // Increased debounce delay to 500ms for better performance
-  }, [currentFormState, updateFormData, recipients, isUpdatingFromContext]);
+      // Log only occasionally by using a counter to reduce console overhead
+      if (syncStateRef.current.logCounter % 5 === 0) {
+        console.log("[CreateDocument] Saved form state to context");
+      }
+      syncStateRef.current.logCounter++;
+    }, 800); // Increased debounce delay to 800ms for better performance and reduced flickering
+  }, [currentFormState, updateFormData, isUpdatingFromContext]);
   
   // Effect to trigger form sync when state changes
   useEffect(() => {
