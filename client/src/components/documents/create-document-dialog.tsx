@@ -718,10 +718,13 @@ export function CreateDocumentDialog({
 
     // Control function to toggle an installment selection
     const handleInstallmentToggle = (installment: string) => {
+      console.log("[Installment] Toggle installment:", installment, "current:", selectedInstallments);
+    
       // Set flag to prevent circular updates
       isUpdatingFromContext.current = true;
       
       try {
+        // Create a fresh copy to avoid state mutation issues
         const currentInstallments = [...selectedInstallments];
         const currentInstallmentAmounts = { ...installmentAmounts };
   
@@ -734,39 +737,37 @@ export function CreateDocumentDialog({
           }
   
           // Set ΕΦΑΠΑΞ as the only installment
-          form.setValue(`recipients.${index}.installments`, ["ΕΦΑΠΑΞ"]);
-  
-          // Initialize the ΕΦΑΠΑΞ amount with the total amount if available
-          if (currentRecipient && typeof currentRecipient.amount === "number") {
-            currentInstallmentAmounts["ΕΦΑΠΑΞ"] = currentRecipient.amount;
-          } else {
-            currentInstallmentAmounts["ΕΦΑΠΑΞ"] = 0;
-          }
-  
-          // Clear other installment amounts
+          const newInstallments = ["ΕΦΑΠΑΞ"];
+          const newInstallmentAmounts = { "ΕΦΑΠΑΞ": currentRecipient?.amount || 0 };
+          
+          // Clear other installment amounts - create a brand new object
           Object.keys(currentInstallmentAmounts).forEach((key) => {
             if (key !== "ΕΦΑΠΑΞ") delete currentInstallmentAmounts[key];
           });
   
-          form.setValue(
-            `recipients.${index}.installmentAmounts`,
-            currentInstallmentAmounts,
-          );
+          // IMPORTANT: First update the local form state
+          form.setValue(`recipients.${index}.installments`, newInstallments);
+          form.setValue(`recipients.${index}.installmentAmounts`, newInstallmentAmounts);
           
-          // Also update the form context directly
-          const manuallyUpdatedRecipients = [...recipients];
-          if (manuallyUpdatedRecipients[index]) {
-            manuallyUpdatedRecipients[index] = {
-              ...manuallyUpdatedRecipients[index],
-              installments: ["ΕΦΑΠΑΞ"],
-              installmentAmounts: currentInstallmentAmounts
-            };
-            
-            // Update form context but don't trigger the normal useEffect
-            updateFormData({
-              recipients: manuallyUpdatedRecipients
-            });
-          }
+          console.log("[Installment] Set to ΕΦΑΠΑΞ with amount:", newInstallmentAmounts["ΕΦΑΠΑΞ"]);
+          
+          // Then trigger a manual context update to ensure persistence
+          setTimeout(() => {
+            // Also update the form context directly with a deep copy
+            const manuallyUpdatedRecipients = JSON.parse(JSON.stringify(recipients));
+            if (manuallyUpdatedRecipients[index]) {
+              manuallyUpdatedRecipients[index] = {
+                ...manuallyUpdatedRecipients[index],
+                installments: newInstallments,
+                installmentAmounts: newInstallmentAmounts
+              };
+              
+              // Update form context immediately but don't trigger the normal useEffect
+              updateFormData({
+                recipients: manuallyUpdatedRecipients
+              });
+            }
+          }, 100);
           
           return;
         }
@@ -806,32 +807,41 @@ export function CreateDocumentDialog({
           return;
         }
   
+        // Store final values to ensure consistency
+        const finalInstallments = [...currentInstallments];
+        const finalInstallmentAmounts = {...currentInstallmentAmounts};
+        
+        console.log("[Installment] Updated installments:", finalInstallments);
+  
         // Update the form with the new selection and amounts
-        form.setValue(`recipients.${index}.installments`, currentInstallments);
+        form.setValue(`recipients.${index}.installments`, finalInstallments);
         form.setValue(
           `recipients.${index}.installmentAmounts`,
-          currentInstallmentAmounts,
+          finalInstallmentAmounts,
         );
         
-        // Also update the form context directly
-        const manuallyUpdatedRecipients = [...recipients];
-        if (manuallyUpdatedRecipients[index]) {
-          manuallyUpdatedRecipients[index] = {
-            ...manuallyUpdatedRecipients[index],
-            installments: currentInstallments,
-            installmentAmounts: currentInstallmentAmounts
-          };
-          
-          // Update form context directly but don't trigger normal useEffect
-          updateFormData({
-            recipients: manuallyUpdatedRecipients
-          });
-        }
+        // Delay the context update to ensure form state is stable
+        setTimeout(() => {
+          // Update the context with deep-copied data to ensure no reference sharing
+          const manuallyUpdatedRecipients = JSON.parse(JSON.stringify(recipients));
+          if (manuallyUpdatedRecipients[index]) {
+            manuallyUpdatedRecipients[index] = {
+              ...manuallyUpdatedRecipients[index],
+              installments: finalInstallments,
+              installmentAmounts: finalInstallmentAmounts
+            };
+            
+            // Update form context directly but don't trigger normal useEffect
+            updateFormData({
+              recipients: manuallyUpdatedRecipients
+            });
+          }
+        }, 100);
       } finally {
         // Reset the flag after all form updates are completed
         setTimeout(() => {
           isUpdatingFromContext.current = false;
-        }, 50);
+        }, 150);
       }
     };
 
@@ -2271,21 +2281,36 @@ export function CreateDocumentDialog({
                                   .watch("selectedAttachments")
                                   ?.includes(attachment.id)}
                                 onCheckedChange={(checked) => {
-                                  const current =
-                                    form.watch("selectedAttachments") || [];
+                                  console.log("[Attachment] Toggle attachment:", attachment.id, checked ? "checked" : "unchecked");
+                                  
+                                  // Get current selection with a fresh copy
+                                  const current = [...(form.watch("selectedAttachments") || [])];
+                                  
+                                  // Create a new array
+                                  let newSelections;
+                                  
                                   if (checked) {
-                                    form.setValue("selectedAttachments", [
-                                      ...current,
-                                      attachment.id,
-                                    ]);
+                                    // Add the attachment ID if checked
+                                    newSelections = [...current, attachment.id];
+                                    console.log("[Attachment] Adding attachment:", attachment.id);
                                   } else {
-                                    form.setValue(
-                                      "selectedAttachments",
-                                      current.filter(
-                                        (id) => id !== attachment.id,
-                                      ),
-                                    );
+                                    // Remove the attachment ID if unchecked
+                                    newSelections = current.filter(id => id !== attachment.id);
+                                    console.log("[Attachment] Removing attachment:", attachment.id);
                                   }
+                                  
+                                  console.log("[Attachment] New selections:", newSelections);
+                                  
+                                  // Set in the form
+                                  form.setValue("selectedAttachments", newSelections);
+                                  
+                                  // Also update form context to ensure selections persist
+                                  setTimeout(() => {
+                                    console.log("[Attachment] Updating context with:", newSelections);
+                                    updateFormData({
+                                      selectedAttachments: newSelections
+                                    });
+                                  }, 100);
                                 }}
                               />
                               <span>{attachment.title}</span>

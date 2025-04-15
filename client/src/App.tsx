@@ -26,7 +26,7 @@ import { SessionWarning } from "@/components/auth/SessionWarning";
 import SessionInit from "@/components/auth/SessionInit";
 import { DocumentFormProvider } from "@/contexts/document-form-context";
 
-function Router() {
+function Router(): JSX.Element {
   return (
     <PageTransition>
       <Switch>
