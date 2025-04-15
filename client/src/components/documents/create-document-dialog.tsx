@@ -850,6 +850,8 @@ export function CreateDocumentDialog({
       installment: string,
       amount: number,
     ) => {
+      console.log("[Installment Amount] Changing amount for", installment, "to", amount);
+      
       // Set a flag to temporarily prevent context updates from reflecting back
       isUpdatingFromContext.current = true;
       
@@ -869,13 +871,16 @@ export function CreateDocumentDialog({
           amount = 0;
         }
 
-        // Create a deep copy of current installment amounts
-        const currentInstallmentAmounts = { ...installmentAmounts };
+        // Create a deep copy of current installment amounts - use a fresh new object
+        // to prevent any reference issues
+        const currentInstallmentAmounts = JSON.parse(JSON.stringify(installmentAmounts || {}));
+        
+        // Set the new amount for this installment
         currentInstallmentAmounts[installment] = amount;
 
-        // Update total amount based on installment amounts
+        // Update total amount based on installment amounts - make sure we only sum numbers
         const totalAmount = Object.values(currentInstallmentAmounts).reduce<number>(
-          (sum, amount) => sum + (amount || 0),
+          (sum, val) => sum + (typeof val === 'number' ? val : 0),
           0,
         );
 
@@ -883,40 +888,47 @@ export function CreateDocumentDialog({
         const safeTotal =
           !isFinite(totalAmount) || totalAmount > 1000000000 ? 0 : totalAmount;
 
-        // First, update the form's local state
-        form.setValue(`recipients.${index}.amount`, safeTotal);
-
-        // Update installment amounts
+        console.log("[Installment Amount] New total is:", safeTotal);
+          
+        // First, update the form's local state - use a specific order to avoid racing conditions
         form.setValue(
           `recipients.${index}.installmentAmounts`,
           currentInstallmentAmounts,
         );
         
+        form.setValue(`recipients.${index}.amount`, safeTotal);
+        
         // Log what's happening for debugging
         console.log("[Recipient Amount] Updated amount for installment", installment, "to", amount, 
           "total recipient amount:", safeTotal);
           
-        // Manually update the context immediately for this specific recipient
-        // to prevent losing the state on dialog close/open
-        const manuallyUpdatedRecipients = [...recipients];
-        if (manuallyUpdatedRecipients[index]) {
-          manuallyUpdatedRecipients[index] = {
-            ...manuallyUpdatedRecipients[index],
-            amount: safeTotal,
-            installmentAmounts: currentInstallmentAmounts
-          };
+        // Wait a small amount of time before updating context to avoid race conditions
+        setTimeout(() => {
+          // Make a deep copy of the recipients array to prevent reference issues
+          const manuallyUpdatedRecipients = JSON.parse(JSON.stringify(recipients));
           
-          // Update form context directly with this single change
-          // but don't trigger the normal useEffect
-          updateFormData({
-            recipients: manuallyUpdatedRecipients
-          });
-        }
+          if (manuallyUpdatedRecipients[index]) {
+            // Update with a completely fresh object to avoid any reference issues
+            manuallyUpdatedRecipients[index] = {
+              ...manuallyUpdatedRecipients[index],
+              amount: safeTotal,
+              installmentAmounts: {...currentInstallmentAmounts}
+            };
+            
+            console.log("[Recipient Amount] Updating form context with:", manuallyUpdatedRecipients[index]);
+            
+            // Update form context directly with this single change
+            // but don't trigger the normal useEffect
+            updateFormData({
+              recipients: manuallyUpdatedRecipients
+            });
+          }
+        }, 100);
       } finally {
-        // Reset flag after a short delay to allow React to complete rendering
+        // Reset flag after a longer delay to ensure all React updates complete
         setTimeout(() => {
           isUpdatingFromContext.current = false;
-        }, 50);
+        }, 150);
       }
     };
 

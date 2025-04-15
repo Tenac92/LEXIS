@@ -15,7 +15,9 @@ import BudgetHistoryPage from "@/pages/budget-history-page";
 import NotificationsPage from "@/pages/NotificationsPage";
 import AdminNotificationsPage from "@/pages/AdminNotificationsPage";
 import AdminBudgetUploadPage from "@/pages/AdminBudgetUploadPage";
+// Fix type issue by explicitly defining component return type
 import QuarterManagementPage from "@/pages/admin/QuarterManagementPage";
+import { FC } from "react";
 import BulkUpdatePage from "@/pages/projects/bulk-update";
 import TemplatesPage from "@/pages/templates";
 import TestSecondaryText from "@/pages/test-secondary-text";
@@ -43,7 +45,7 @@ function Router(): JSX.Element {
         <ProtectedRoute path="/notifications" component={NotificationsPage} />
         <ProtectedRoute path="/admin/notifications" component={AdminNotificationsPage} />
         <ProtectedRoute path="/admin/budget-upload" component={AdminBudgetUploadPage} />
-        <ProtectedRoute path="/admin/quarter-management" component={QuarterManagementPage} />
+        <ProtectedRoute path="/admin/quarter-management" component={() => <QuarterManagementPage />} />
         <Route path="/test/secondary-text" component={TestSecondaryText} />
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
