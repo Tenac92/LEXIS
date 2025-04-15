@@ -214,7 +214,10 @@ interface GeneratedDocument {
     fathername?: string;
     afm: string;
     amount: number | string;
-    installment: number | string;
+    installment?: number | string;
+    // New format fields
+    installments?: string[];
+    installmentAmounts?: Record<string, number>;
   }>;
   created_at: string;
   status: string;
@@ -229,7 +232,7 @@ interface EditModalProps {
   onEdit: (id: string) => void;
 }
 
-// Define a proper Recipient interface
+// Define a proper Recipient interface with both formats
 interface Recipient {
   firstname: string;
   lastname: string;
@@ -237,6 +240,9 @@ interface Recipient {
   afm: string;
   amount: number;
   installment: number;
+  // New format fields
+  installments?: string[];
+  installmentAmounts?: Record<string, number>;
 }
 
 export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditModalProps) {
@@ -266,6 +272,12 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     try {
       const safeRecipients = document.recipients && Array.isArray(document.recipients)
         ? document.recipients.map(r => {
+            // Detect if using the new format (installments and installmentAmounts)
+            const isNewFormat = Array.isArray(r.installments) && 
+                               r.installments.length > 0 && 
+                               r.installmentAmounts && 
+                               Object.keys(r.installmentAmounts).length > 0;
+            
             // Create a properly typed recipient object
             const recipient: Recipient = {
               firstname: String(r.firstname || ''),
@@ -278,6 +290,37 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
             // Add fathername if it exists in the original data
             if ('fathername' in r && r.fathername) {
               recipient.fathername = String(r.fathername);
+            }
+            
+            // Include new format fields if present
+            if (isNewFormat) {
+              console.log('Found recipient with new format structure:', { 
+                afm: r.afm,
+                installments: r.installments,
+                installmentAmounts: r.installmentAmounts
+              });
+              
+              // Make a defensive copy of installments array
+              if (r.installments && Array.isArray(r.installments)) {
+                recipient.installments = [...r.installments];
+                
+                // If using new format but it has legacy installment field as well,
+                // make sure they're in sync (set installment to 1 for ΕΦΑΠΑΞ or letter index otherwise)
+                if (r.installments.includes('ΕΦΑΠΑΞ')) {
+                  recipient.installment = 1;
+                } else if (r.installments.includes('Α')) {
+                  recipient.installment = 1;
+                } else if (r.installments.includes('Β')) {
+                  recipient.installment = 2;
+                } else if (r.installments.includes('Γ')) {
+                  recipient.installment = 3;
+                }
+              }
+              
+              // Make a defensive copy of installmentAmounts object
+              if (r.installmentAmounts && typeof r.installmentAmounts === 'object') {
+                recipient.installmentAmounts = {...r.installmentAmounts};
+              }
             }
             
             return recipient;
@@ -379,15 +422,38 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
           throw new Error(`Μη έγκυρη δόση για τον δικαιούχο #${recipientNumber} (πρέπει να είναι μεταξύ 1-12)`);
         }
         
-        // Add validated recipient
-        validatedRecipients.push({
+        // Check if this recipient has the new format fields
+        const isNewFormat = r.installments && Array.isArray(r.installments) && 
+                           r.installments.length > 0 && 
+                           r.installmentAmounts && 
+                           Object.keys(r.installmentAmounts || {}).length > 0;
+                           
+        // Create validated recipient object with basic fields
+        const validatedRecipient: Record<string, any> = {
           firstname: safeString(r.firstname),
           lastname: safeString(r.lastname),
           fathername: safeString(r.fathername),
           afm: safeString(r.afm),
-          amount: amount,
-          installment: installment
-        });
+          amount: amount
+        };
+        
+        if (isNewFormat) {
+          // Use new format fields
+          console.log(`Saving recipient #${recipientNumber} with new format data:`, {
+            installments: r.installments,
+            amounts: r.installmentAmounts
+          });
+          
+          // Add the new format fields to the API payload
+          validatedRecipient.installments = r.installments;
+          validatedRecipient.installmentAmounts = r.installmentAmounts;
+        } else {
+          // Use legacy installment field
+          validatedRecipient.installment = installment;
+        }
+        
+        // Add validated recipient to array
+        validatedRecipients.push(validatedRecipient);
       }
 
       // Build data object with proper optional fields handling
