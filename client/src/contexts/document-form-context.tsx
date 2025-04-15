@@ -61,10 +61,14 @@ export const DocumentFormProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // MAJOR OPTIMIZATION: Advanced updateFormData with rate limiting and deep equal checks
   // This significantly reduces flickering by minimizing state updates
   const updateFormData = (newData: Partial<DocumentFormData>) => {
-    // Check if update is in progress or if data is identical to prevent reentry
-    if (isUpdatingRef.current && JSON.stringify(newData) === JSON.stringify(lastDataRef.current)) {
-      return; // Prevent circular updates
-    }
+    // CRITICAL FIX: Check if update is in progress but always allow unit/project updates
+  // This ensures select dropdowns always work correctly
+  if (isUpdatingRef.current && 
+      JSON.stringify(newData) === JSON.stringify(lastDataRef.current) &&
+      !newData.unit && // Always allow unit changes through
+      !newData.project_id) { // Always allow project changes through
+    return; // Only prevent circular updates for non-critical fields
+  }
     
     // Store for deep comparison
     lastDataRef.current = {...newData};
@@ -82,8 +86,10 @@ export const DocumentFormProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return;
     }
     
-    // Add adaptive delay based on update frequency to improve UI stability
-    const delay = isCritical ? 0 : (timeSinceLastUpdate < 300 ? 350 : 200);
+    // CRITICAL FIX: Use immediate updates for dropdowns and forms, delay only for recipients
+    // This dramatically improves the responsiveness of UI controls
+    const hasUnitOrProject = newData.unit !== undefined || newData.project_id !== undefined;
+    const delay = isCritical || hasUnitOrProject ? 0 : (timeSinceLastUpdate < 300 ? 250 : 150);
     
     // Schedule a single update that will process all queued changes
     updateTimeoutRef.current = setTimeout(() => {
@@ -102,8 +108,17 @@ export const DocumentFormProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setFormData(prev => {
           let result = {...prev};
           
-          // OPTIMIZATION: Handle recipients specially to avoid unnecessary re-renders
-          if (mergedUpdate.recipients) {
+          // CRITICAL FIX: Prioritize UI control updates
+          if (mergedUpdate.unit !== undefined || mergedUpdate.project_id !== undefined || 
+              mergedUpdate.region !== undefined || mergedUpdate.expenditure_type !== undefined) {
+            // For form controls, always apply updates immediately without optimization
+            result = {
+              ...result,
+              ...mergedUpdate
+            };
+          }
+          // OPTIMIZATION: Only apply recipient-specific optimizations to avoid unnecessary re-renders
+          else if (mergedUpdate.recipients) {
             // Empty recipients special case
             if (mergedUpdate.recipients.length === 0 && prev.recipients.length === 0) {
               // Skip - don't update empty arrays
