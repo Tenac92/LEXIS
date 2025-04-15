@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
 import {
   Form,
@@ -54,7 +55,6 @@ import {
   CommandInput,
   CommandItem,
 } from "@/components/ui/command";
-import { useAuth } from "@/hooks/use-auth";
 import { useBudgetUpdates } from "@/hooks/use-budget-updates";
 import type {
   BudgetValidationResponse,
@@ -465,6 +465,9 @@ export function CreateDocumentDialog({
   };
 
   // Initialize form with values from context
+  // Get the auth context to access refreshUser
+  const { refreshUser } = useAuth();
+  
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
     defaultValues: {
@@ -478,42 +481,55 @@ export function CreateDocumentDialog({
     },
   });
 
-  // First effect: When dialog opens, invalidate queries and set form from context
+  // First effect: When dialog opens, check authentication and set form from context
   useEffect(() => {
     if (open) {
       console.log(
         "[CreateDocument] Dialog opened, refreshing form and units data",
       );
 
-      // Set flag to prevent circular updates
-      isUpdatingFromContext.current = true;
-      
-      // Set the form values from context
-      form.reset({
-        unit: formData.unit || "",
-        project_id: formData.project_id || "",
-        region: formData.region || "",
-        expenditure_type: formData.expenditure_type || "",
-        recipients: formData.recipients || [],
-        status: formData.status || "draft",
-        selectedAttachments: formData.selectedAttachments || [],
+      // Aggressively refresh authentication state before loading dialog
+      // This ensures we have proper permissions for API calls
+      refreshUser().then((refreshedUser) => {
+        if (!refreshedUser) {
+          console.warn("[CreateDocument] No authenticated user found, dialog may not function properly");
+          toast({
+            title: "Authentication Notice",
+            description: "Your session may have expired. If you encounter errors, please refresh the page.",
+            duration: 6000,
+          });
+        }
+        
+        // Set flag to prevent circular updates
+        isUpdatingFromContext.current = true;
+        
+        // Set the form values from context
+        form.reset({
+          unit: formData.unit || "",
+          project_id: formData.project_id || "",
+          region: formData.region || "",
+          expenditure_type: formData.expenditure_type || "",
+          recipients: formData.recipients || [],
+          status: formData.status || "draft",
+          selectedAttachments: formData.selectedAttachments || [],
+        });
+  
+        // Restore step from context
+        setLocalCurrentStep(savedStep);
+  
+        // Invalidate all relevant queries to force a fresh fetch
+        queryClient.invalidateQueries({ queryKey: ["units"] });
+        
+        // Set a flag that form has been reset
+        setFormReset(true);
+        
+        // Reset flag after loading is complete
+        setTimeout(() => {
+          isUpdatingFromContext.current = false;
+        }, 200);
       });
-
-      // Restore step from context
-      setLocalCurrentStep(savedStep);
-
-      // Invalidate all relevant queries to force a fresh fetch
-      queryClient.invalidateQueries({ queryKey: ["units"] });
-
-      // Set a flag that form has been reset
-      setFormReset(true);
-      
-      // Reset flag after loading is complete
-      setTimeout(() => {
-        isUpdatingFromContext.current = false;
-      }, 200);
     }
-  }, [open, queryClient, form, formData, savedStep]);
+  }, [open, queryClient, form, formData, savedStep, refreshUser, toast]);
 
   // Second effect: After form is reset and we have user data, set the unit
   // But only if there's no unit already set in the form data

@@ -16,12 +16,29 @@ export function useWebSocketUpdates() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Function to check session status
+  // Function to check session status with improved error handling
   const checkSession = useCallback(async () => {
     try {
-      await queryClient.refetchQueries({ queryKey: ['/api/auth/me'] });
+      console.log('[WebSocket] Checking session validity');
+      const result = await queryClient.refetchQueries({ queryKey: ['/api/auth/me'] });
+      
+      // Check if the result indicates we're not authenticated
+      const queryData = queryClient.getQueryData(['/api/auth/me']);
+      if (!queryData) {
+        console.warn('[WebSocket] Session check failed - no authenticated user found');
+        
+        // If we have a WebSocket connection, close it as we're no longer authenticated
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          console.log('[WebSocket] Closing connection due to session expiration');
+          wsRef.current.close(1000, 'Session expired');
+          wsRef.current = null;
+        }
+      }
+      
+      return result;
     } catch (error) {
       console.error('[WebSocket] Session check failed:', error);
+      return null;
     }
   }, []);
 
