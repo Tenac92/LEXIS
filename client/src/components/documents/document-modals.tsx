@@ -263,6 +263,8 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     
     try {
       console.log(`[EditDocument] Fetching NA853 code for MIS: ${mis}`);
+      setLoading(true); // Show loading indicator while fetching
+      
       const response = await fetch(`/api/document-na853/${mis}`);
       
       if (response.ok) {
@@ -270,15 +272,36 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         if (data && data.na853) {
           console.log(`[EditDocument] Found NA853 code: ${data.na853} for MIS: ${mis}`);
           setProjectId(data.na853);
+          toast({
+            title: "Επιτυχία",
+            description: `Βρέθηκε ο κωδικός NA853: ${data.na853} για το MIS: ${mis}`,
+          });
           return data.na853;
         } else {
           console.log(`[EditDocument] No NA853 code found for MIS: ${mis}`);
+          toast({
+            title: "Προσοχή",
+            description: `Δε βρέθηκε κωδικός NA853 για το MIS: ${mis}`,
+            variant: "destructive",
+          });
         }
       } else {
         console.error(`[EditDocument] Failed to fetch NA853 for MIS: ${mis}`);
+        toast({
+          title: "Σφάλμα",
+          description: `Αποτυχία αναζήτησης κωδικού NA853 για το MIS: ${mis}`,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error(`[EditDocument] Error fetching NA853 for MIS ${mis}:`, error);
+      toast({
+        title: "Σφάλμα",
+        description: `Σφάλμα κατά την αναζήτηση κωδικού NA853: ${error instanceof Error ? error.message : 'Άγνωστο σφάλμα'}`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false); // Hide loading indicator
     }
     
     return null;
@@ -461,9 +484,30 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
       if (!String(expenditureType).trim()) errors.push('Απαιτείται ο τύπος δαπάνης');
       if (!recipients.length) errors.push('Απαιτείται τουλάχιστον ένας δικαιούχος');
 
+      // Validate individual recipients
+      recipients.forEach((recipient, index) => {
+        const firstName = String(recipient.firstname || '').trim();
+        const lastName = String(recipient.lastname || '').trim();
+        const afm = String(recipient.afm || '').trim();
+        
+        if (!firstName) {
+          errors.push(`Λείπει το όνομα για τον δικαιούχο #${index + 1}`);
+        }
+        
+        if (!lastName) {
+          errors.push(`Λείπει το επώνυμο για τον δικαιούχο #${index + 1}`);
+        }
+        
+        if (!afm) {
+          errors.push(`Λείπει το ΑΦΜ για τον δικαιούχο #${index + 1}`);
+        } else if (afm.length !== 9 || !/^\d+$/.test(afm)) {
+          errors.push(`Μη έγκυρο ΑΦΜ για τον δικαιούχο #${index + 1} (πρέπει να είναι 9 ψηφία)`);
+        }
+      });
+
       // Early validation failure
       if (errors.length > 0) {
-        throw new Error(errors.join(', '));
+        throw new Error(errors.join('<br>'));
       }
 
       // Process all recipients in one go with a more robust approach
@@ -593,11 +637,39 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
 
     } catch (error) {
       console.error('[EditDocument] Error:', error);
-      toast({
-        title: "Σφάλμα",
-        description: error instanceof Error ? error.message : "Αποτυχία ενημέρωσης εγγράφου",
-        variant: "destructive",
-      });
+      
+      // Format error message for better readability in toasts
+      const errorMessage = error instanceof Error ? error.message : "Αποτυχία ενημέρωσης εγγράφου";
+      
+      // Check if error message contains HTML-like formatting (<br>)
+      if (errorMessage.includes('<br>')) {
+        const errorPoints = errorMessage.split('<br>').map(msg => msg.trim()).filter(Boolean);
+        
+        // Show a summary toast
+        toast({
+          title: "Σφάλμα επικύρωσης",
+          description: `Βρέθηκαν ${errorPoints.length} σφάλματα. Παρακαλώ διορθώστε τα πεδία με πρόβλημα.`,
+          variant: "destructive",
+        });
+        
+        // Show individual error messages
+        errorPoints.forEach((point, index) => {
+          setTimeout(() => {
+            toast({
+              title: `Σφάλμα #${index + 1}`,
+              description: point,
+              variant: "destructive",
+            });
+          }, index * 300); // Show errors with a small delay between them
+        });
+      } else {
+        // Show a single error toast for simple errors
+        toast({
+          title: "Σφάλμα",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -634,18 +706,26 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
               </div>
               <div className="space-y-2">
                 <Label>ID Έργου (ΝΑ853)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={projectId}
-                    onChange={(e) => setProjectId(e.target.value)}
-                    placeholder="Εισάγετε ID έργου ή MIS"
-                    required
-                  />
+                <div className="flex gap-2 items-start">
+                  <div className="flex-1">
+                    <Input
+                      value={projectId}
+                      onChange={(e) => setProjectId(e.target.value)}
+                      placeholder="Εισάγετε ID έργου ή MIS"
+                      required
+                      className={projectId && /^\d+$/.test(projectId) ? "border-blue-300 focus:border-blue-500 bg-blue-50" : ""}
+                    />
+                    {projectId && /^\d+$/.test(projectId) && (
+                      <p className="text-xs text-blue-600 mt-1 font-medium">
+                        <span>Αναγνωρίστηκε πιθανός κωδικός MIS. Μπορείτε να μετατρέψετε σε ΝΑ853.</span>
+                      </p>
+                    )}
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="whitespace-nowrap"
+                    className="whitespace-nowrap min-w-[115px] h-10"
                     onClick={() => {
                       const mis = projectId.trim();
                       if (mis && /^\d+$/.test(mis)) {
@@ -658,11 +738,22 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                         });
                       }
                     }}
+                    disabled={loading}
                   >
-                    Εύρεση ΝΑ853
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Αναζήτηση...
+                      </>
+                    ) : (
+                      <>Εύρεση ΝΑ853</>
+                    )}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">Για αυτόματη μετατροπή MIS σε NA853, εισάγετε τον κωδικό MIS και πατήστε "Εύρεση ΝΑ853"</p>
+                <p className="text-xs text-muted-foreground mt-1">Εισάγετε αριθμό MIS και πατήστε "Εύρεση ΝΑ853" για αυτόματη μετατροπή</p>
               </div>
               <div className="space-y-2">
                 <Label>Τύπος Δαπάνης</Label>
