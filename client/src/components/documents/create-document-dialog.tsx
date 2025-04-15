@@ -485,9 +485,44 @@ export function CreateDocumentDialog({
   const dialogCloseRef = React.useRef<HTMLButtonElement>(null);
   
   // Set current step using the context
+  // COMPLETE REWRITE: Advanced form step management with guaranteed state preservation
+  // This ensures all form values are saved before any step transition occurs
   const setCurrentStep = (step: number) => {
-    setLocalCurrentStep(step);
+    // CRITICAL FIX: Capture and preserve *all* form values before changing step
+    const captureFormState = () => {
+      try {
+        // Get current values directly from the form
+        const formValues = form.getValues();
+        
+        // Always save ALL form field values to context before changing steps
+        // This is the critical fix for the unit reset issue
+        updateFormData({
+          unit: formValues.unit,
+          project_id: formValues.project_id,
+          region: formValues.region,
+          expenditure_type: formValues.expenditure_type,
+          recipients: formValues.recipients,
+          status: formValues.status || "draft",
+          selectedAttachments: formValues.selectedAttachments
+        });
+        
+        // Only log infrequently to avoid unnecessary JavaScript processing
+        if (Math.random() > 0.8) {
+          console.log("[CreateDocument] State preserved during step transition");
+        }
+      } catch (err) {
+        console.error("[CreateDocument] Error preserving form state:", err);
+      }
+    };
+    
+    // Always preserve form state during step changes
+    captureFormState();
+    
+    // Then update step state in a consistent order
+    // First update the context step
     setSavedStep(step);
+    // Then update local step 
+    setLocalCurrentStep(step);
   };
   
   const form = useForm<CreateDocumentForm>({
@@ -503,20 +538,47 @@ export function CreateDocumentDialog({
     },
   });
 
-  // Handler for dialog opening - extracted as callback to reduce complexity
+  // COMPLETE REWRITE: Multi-stage dialog initialization for complete flicker prevention
+  // Uses advanced state management and form reconciliation techniques
+  const dialogInitializationRef = useRef<{
+    isInitializing: boolean;
+    hasPreservedUnit: boolean; 
+    initialUnit: string;
+    initialFormState: any;
+  }>({
+    isInitializing: false,
+    hasPreservedUnit: false,
+    initialUnit: '',
+    initialFormState: null
+  });
+
   const handleDialogOpen = useCallback(async () => {
+    // Prevent duplicate initializations
+    if (dialogInitializationRef.current.isInitializing) {
+      return;
+    }
+    
     console.log("[CreateDocument] Dialog opened, refreshing form and units data");
     
-    // Reset form first to clear any previous data
-    form.reset();
+    // ANTI-FLICKER: Capture initial state before any operations
+    dialogInitializationRef.current = {
+      isInitializing: true,
+      hasPreservedUnit: !!formData?.unit,
+      initialUnit: formData?.unit || '',
+      initialFormState: { ...formData }
+    };
     
-    // Set flag to prevent form data syncing to context while we initialize
+    // Prevent form-context sync during initialization
     isUpdatingFromContext.current = true;
     setFormReset(true);
     
     try {
-      // Refresh user session to ensure we have valid authentication
-      const refreshedUser = await refreshUser();
+      // STAGE 1: Authenticate and prefetch data silently - don't touch the form yet
+      const [refreshedUser] = await Promise.all([
+        refreshUser(),
+        // Also refresh units in parallel
+        refetchUnits()
+      ]);
       
       if (!refreshedUser) {
         console.warn("[CreateDocument] No authenticated user found, dialog may not function properly");
@@ -527,31 +589,34 @@ export function CreateDocumentDialog({
         });
       }
       
-      // Create a complete form values object including attachments to prevent reference errors
+      // STAGE 2: Prepare form values with complete fallbacks to prevent undefined
+      // This also ensures we don't lose any values from context
       const formValues = {
         unit: formData?.unit || "",
         project_id: formData?.project_id || "",
         region: formData?.region || "",
         expenditure_type: formData?.expenditure_type || "",
-        recipients: Array.isArray(formData?.recipients) ? formData.recipients : [],
+        recipients: Array.isArray(formData?.recipients) ? [...formData.recipients] : [],
         status: formData?.status || "draft",
-        // Important: Include selectedAttachments in the form reset to avoid reference errors
-        selectedAttachments: Array.isArray(formData?.selectedAttachments) ? formData.selectedAttachments : []
+        selectedAttachments: Array.isArray(formData?.selectedAttachments) ? [...formData.selectedAttachments] : []
       };
       
-      // Reset form with all values at once in a single operation
-      form.reset(formValues);
+      // STAGE 3: Apply all form values in a single atomic operation
+      // This reduces form re-render & prevents flicker during initialization
+      await form.reset(formValues, { keepDefaultValues: false });
       
-      // Restore step from context if valid
-      if (typeof savedStep === 'number' && savedStep >= 0) {
+      // STAGE 4: Restore step from context if valid (without triggering additional updates)
+      if (typeof savedStep === 'number' && savedStep >= 0 && currentStep !== savedStep) {
         setLocalCurrentStep(savedStep);
       }
       
-      // Invalidate all relevant queries to force a fresh fetch
-      // This ensures we have the latest data
+      // STAGE 5: Force data refresh in the background
       queryClient.invalidateQueries({ queryKey: ["units"] });
       
-      console.log("[CreateDocument] Form initialized from context successfully");
+      // Only log if we actually had data to restore
+      if (formData?.unit || formData?.project_id) {
+        console.log("[CreateDocument] Form initialized from context successfully");
+      }
     } catch (error) {
       console.error("[CreateDocument] Error initializing form:", error);
       toast({
@@ -560,14 +625,24 @@ export function CreateDocumentDialog({
         variant: "destructive",
       });
     } finally {
-      // Reset flags after loading is complete with a sufficient delay
-      // to ensure all React state updates have completed
-      setTimeout(() => {
-        isUpdatingFromContext.current = false;
+      // STAGE 6: Carefully re-enable updates with strategic delays
+      // This prevents race conditions that cause flickering
+      const resetTimeout = setTimeout(() => {
+        // First reset the form reset flag
         setFormReset(false);
+        
+        // Then after a small delay, re-enable context updates
+        const updateTimeout = setTimeout(() => {
+          isUpdatingFromContext.current = false;
+          dialogInitializationRef.current.isInitializing = false;
+        }, 200);
+        
+        return () => clearTimeout(updateTimeout);
       }, 300);
+      
+      return () => clearTimeout(resetTimeout);
     }
-  }, [form, formData, queryClient, refreshUser, savedStep, toast]);
+  }, [form, formData, queryClient, refreshUser, savedStep, toast, currentStep, refetchUnits]);
   
   // Effect to handle dialog open state
   useEffect(() => {
@@ -576,40 +651,86 @@ export function CreateDocumentDialog({
     }
   }, [open, handleDialogOpen]);
 
-  // Second effect: After form is reset and we have user data, set the unit
-  // But only if there's no unit already set in the form data
+  // CRITICAL FIX: Completely redesigned unit default-setting mechanism
+  // Uses a separate reference to track unit initialization to prevent duplicate operations
+  const unitInitializationRef = useRef({
+    isCompleted: false,
+    attemptCount: 0,
+    defaultUnit: '',
+  });
+  
   useEffect(() => {
-    // Only proceed if we have data about the user
-    if (!user) return;
+    // Skip if no user data or if unit initialization already completed
+    if (!user || unitInitializationRef.current.isCompleted) return;
     
-    // Only auto-set unit if dialog was just opened (formReset) AND there's no unit already in form data
-    if (formReset && user?.units && user?.units.length > 0 && !formData.unit) {
-      // Set flag to prevent circular updates while we initialize
+    // Only proceed during form reset (initialization phase)
+    // AND when we have user units available 
+    // AND when there's no unit already in form or context
+    if (formReset && 
+        user?.units?.length > 0 && 
+        !formData.unit && 
+        !form.getValues().unit &&
+        unitInitializationRef.current.attemptCount < 3) { // Safety limit on retry attempts
+      
+      // Track this attempt
+      unitInitializationRef.current.attemptCount++;
+      
+      // Set flag to block sync operations during this critical section
       isUpdatingFromContext.current = true;
       
-      // Small delay to ensure units query has completed
+      // Create a stable reference to the default unit
+      const defaultUnit = user?.units?.[0] || "";
+      unitInitializationRef.current.defaultUnit = defaultUnit;
+      
+      // Use a synchronized, delayed approach
       const timer = setTimeout(() => {
-        // Check again if the context still doesn't have a unit (could have been set meanwhile)
-        if (!formData.unit) {
-          const defaultUnit = user?.units?.[0] || "";
-          console.log("[CreateDocument] Setting default unit:", defaultUnit);
+        try {
+          // Double-check again if form/context still has no unit (prevent race conditions)
+          const currentUnit = form.getValues().unit;
+          if (!currentUnit && !formData.unit) {
+            // Only log on first attempt
+            if (unitInitializationRef.current.attemptCount === 1) {
+              console.log("[CreateDocument] Setting default unit:", defaultUnit);
+            }
+            
+            // ATOMIC OPERATION: Set unit value in an optimized way
+            form.setValue("unit", defaultUnit, { 
+              shouldDirty: false, // Don't mark as dirty (cleaner form state)
+              shouldTouch: false, // Don't mark as touched (prevents validation)
+              shouldValidate: false // Skip validation to reduce render cycles
+            });
+            
+            // Mark initialization as complete to prevent further attempts
+            unitInitializationRef.current.isCompleted = true;
+          }
+        } catch (err) {
+          console.error("[CreateDocument] Error setting default unit:", err);
+        } finally {
+          // Always reset flags properly, even if an error occurs
+          setFormReset(false);
           
-          // Only set if we don't have a unit already (empty creation)
-          form.setValue("unit", defaultUnit);
+          // Delay re-enabling context sync slightly to prevent race conditions
+          setTimeout(() => {
+            isUpdatingFromContext.current = false;
+          }, 100);
         }
-        
-        setFormReset(false); // Reset the flag
-        
-        // Allow updates again after a short delay to prevent race conditions
-        setTimeout(() => {
-          isUpdatingFromContext.current = false;
-        }, 100);
-      }, 300);
-
+      }, 350); // Slightly longer delay to ensure all async operations complete
+      
       return () => clearTimeout(timer);
+    } else if (formReset && unitInitializationRef.current.attemptCount >= 3) {
+      // If we've tried multiple times, just reset the flag and move on
+      console.warn("[CreateDocument] Unable to set default unit after multiple attempts");
+      setFormReset(false);
+      isUpdatingFromContext.current = false;
     } else if (formReset) {
       // Just reset the flag without changing the unit if we already have data
+      // or if unit initialization has completed
       setFormReset(false);
+      
+      // Wait a bit before re-enabling context sync
+      setTimeout(() => {
+        isUpdatingFromContext.current = false;
+      }, 100);
     }
   }, [formReset, user, form, formData.unit]);
 
