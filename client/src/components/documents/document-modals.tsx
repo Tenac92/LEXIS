@@ -211,6 +211,7 @@ interface GeneratedDocument {
   recipients?: Array<{
     firstname: string;
     lastname: string;
+    fathername?: string;
     afm: string;
     amount: number | string;
     installment: number | string;
@@ -228,6 +229,16 @@ interface EditModalProps {
   onEdit: (id: string) => void;
 }
 
+// Define a proper Recipient interface
+interface Recipient {
+  firstname: string;
+  lastname: string;
+  fathername?: string;
+  afm: string;
+  amount: number;
+  installment: number;
+}
+
 export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -235,39 +246,46 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   const [protocolDate, setProtocolDate] = useState('');
   const [projectId, setProjectId] = useState('');
   const [expenditureType, setExpenditureType] = useState('');
-  const [recipients, setRecipients] = useState<Array<{
-    firstname: string;
-    lastname: string;
-    afm: string;
-    amount: number;
-    installment: number;
-  }>>([]);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
 
+  // Use effect with a proper cleanup to prevent memory leaks
   useEffect(() => {
-    if (document) {
-      setProtocolNumber(document.protocol_number_input || '');
-      setProtocolDate(document.protocol_date ?
-        new Date(document.protocol_date).toISOString().split('T')[0] :
-        ''
-      );
-      setProjectId(document.project_id || '');
-      setExpenditureType(document.expenditure_type || '');
+    // Skip processing if document is undefined or dialog is not open
+    if (!document || !isOpen) return;
+    
+    // Process the document data
+    setProtocolNumber(document.protocol_number_input || '');
+    setProtocolDate(document.protocol_date ?
+      new Date(document.protocol_date).toISOString().split('T')[0] :
+      ''
+    );
+    setProjectId(document.project_id || '');
+    setExpenditureType(document.expenditure_type || '');
 
-      // Safely parse recipients array
+    // Safely parse recipients array with proper error handling
+    try {
       const safeRecipients = document.recipients && Array.isArray(document.recipients)
         ? document.recipients.map(r => ({
             firstname: String(r.firstname || ''),
             lastname: String(r.lastname || ''),
             fathername: String(r.fathername || ''),
             afm: String(r.afm || ''),
-            amount: typeof r.amount === 'string' ? parseFloat(r.amount) : Number(r.amount) || 0,
-            installment: typeof r.installment === 'string' ? parseInt(r.installment) : Number(r.installment) || 1
+            amount: typeof r.amount === 'string' ? parseFloat(r.amount) || 0 : Number(r.amount) || 0,
+            installment: typeof r.installment === 'string' ? parseInt(r.installment) || 1 : Number(r.installment) || 1
           }))
         : [];
 
       setRecipients(safeRecipients);
+    } catch (error) {
+      console.error('Error parsing recipients:', error);
+      setRecipients([]);
     }
-  }, [document]);
+    
+    // Return a cleanup function to reset state when component unmounts or dependencies change
+    return () => {
+      // We don't reset state on cleanup because it causes flickering when the dialog reopens
+    };
+  }, [document, isOpen]);
 
   const handleRecipientChange = (index: number, field: string, value: string | number) => {
     const updatedRecipients = [...recipients];
@@ -305,102 +323,111 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     return recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
   };
 
-    const handleEdit = async () => {
+  const handleEdit = async () => {
+    if (loading) return; // Prevent multiple submissions
+    
     try {
       if (!document) {
-        throw new Error('No document selected for editing');
+        throw new Error('Δεν επιλέχθηκε έγγραφο για επεξεργασία');
       }
       
       setLoading(true);
-      console.log('[EditDocument] Starting edit for document:', document.id);
-
-      // Form validation
+      
+      // Form validation - collect all errors at once
       const errors = [];
-      if (!String(projectId).trim()) errors.push('Project ID is required');
-      if (!String(expenditureType).trim()) errors.push('Expenditure type is required');
-      if (!recipients.length) errors.push('At least one recipient is required');
+      if (!String(projectId).trim()) errors.push('Απαιτείται το ID έργου');
+      if (!String(expenditureType).trim()) errors.push('Απαιτείται ο τύπος δαπάνης');
+      if (!recipients.length) errors.push('Απαιτείται τουλάχιστον ένας δικαιούχος');
 
+      // Early validation failure
       if (errors.length > 0) {
         throw new Error(errors.join(', '));
       }
 
-      // Validate and transform recipients data
-      const validatedRecipients = recipients.map((r, index) => {
-        const amount = typeof r.amount === 'string' ? parseFloat(r.amount) : r.amount;
-        const installment = typeof r.installment === 'string' ? parseInt(r.installment) : r.installment;
-
-        if (isNaN(amount) || amount <= 0) {
-          throw new Error(`Invalid amount for recipient ${index + 1}`);
-        }
-        if (isNaN(installment) || installment < 1 || installment > 12) {
-          throw new Error(`Invalid installment for recipient ${index + 1}`);
-        }
-        return {
-          // Handle potentially undefined values safely
-          firstname: r.firstname ? String(r.firstname).trim() : '',
-          lastname: r.lastname ? String(r.lastname).trim() : '',
-          fathername: r.fathername ? String(r.fathername).trim() : '',
-          afm: r.afm ? String(r.afm).trim() : '',
-          // Convert amounts properly
-          amount: parseFloat(String(amount)),
-          // Ensure installment is a number
-          installment
+      // Process all recipients in one go with a more robust approach
+      const validatedRecipients = [];
+      
+      for (let i = 0; i < recipients.length; i++) {
+        const r = recipients[i];
+        const recipientNumber = i + 1;
+        
+        // Safe conversion - avoid repetitive code
+        const safeString = (value: string | undefined | null): string => value ? String(value).trim() : '';
+        const safeNumber = (value: any, defaultValue: number): number => {
+          const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+          return isNaN(num) ? defaultValue : num;
         };
-      });
+        
+        // Specific validations
+        const amount = safeNumber(r.amount, 0);
+        const installment = safeNumber(r.installment, 1);
+        
+        if (amount <= 0) {
+          throw new Error(`Μη έγκυρο ποσό για τον δικαιούχο #${recipientNumber}`);
+        }
+        
+        if (installment < 1 || installment > 12) {
+          throw new Error(`Μη έγκυρη δόση για τον δικαιούχο #${recipientNumber} (πρέπει να είναι μεταξύ 1-12)`);
+        }
+        
+        // Add validated recipient
+        validatedRecipients.push({
+          firstname: safeString(r.firstname),
+          lastname: safeString(r.lastname),
+          fathername: safeString(r.fathername),
+          afm: safeString(r.afm),
+          amount: amount,
+          installment: installment
+        });
+      }
 
-      const formData = {
-        protocol_number_input: String(protocolNumber).trim(),
-        protocol_date: protocolDate,
+      // Build data object with proper optional fields handling
+      const formData: Record<string, any> = {
         project_id: String(projectId).trim(),
         expenditure_type: String(expenditureType).trim(),
         recipients: validatedRecipients,
-        total_amount: calculateTotalAmount(),
-      };
-
-      // Handle optional fields
-      const finalData = {
-        ...formData
+        total_amount: calculateTotalAmount()
       };
       
-      // Only include protocol_date if it's not empty
-      if (!finalData.protocol_date || finalData.protocol_date === '') {
-        delete finalData.protocol_date;
+      // Only add protocol fields if they're not empty
+      const trimmedProtocolNumber = String(protocolNumber).trim();
+      if (trimmedProtocolNumber) {
+        formData.protocol_number_input = trimmedProtocolNumber;
+      }
+      
+      if (protocolDate) {
+        formData.protocol_date = protocolDate;
       }
 
-      // Only include protocol_number_input if it's not empty
-      if (!finalData.protocol_number_input || finalData.protocol_number_input === '') {
-        delete finalData.protocol_number_input;
-      }
-
-      console.log('[EditDocument] Sending update with data:', finalData);
-
+      // Send optimized API request
       const response = await apiRequest(`/api/documents/generated/${document.id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(finalData)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
       });
 
       if (!response || response.error) {
-        throw new Error(response?.error || 'Failed to update document');
+        throw new Error(response?.error || 'Αποτυχία ενημέρωσης εγγράφου');
       }
 
+      // Invalidate cache to refresh data
       await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
-
+      
+      // Success message and cleanup
       toast({
-        title: "Success",
-        description: "Document updated successfully",
+        title: "Επιτυχία",
+        description: "Το έγγραφο ενημερώθηκε επιτυχώς",
       });
 
+      // Call callbacks and close modal
       onEdit(document.id.toString());
       onClose();
 
     } catch (error) {
-      console.error('[EditDocument] Error updating document:', error);
+      console.error('[EditDocument] Error:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update document",
+        title: "Σφάλμα",
+        description: error instanceof Error ? error.message : "Αποτυχία ενημέρωσης εγγράφου",
         variant: "destructive",
       });
     } finally {
