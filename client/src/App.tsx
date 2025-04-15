@@ -24,6 +24,7 @@ import { PageTransition } from "@/components/ui/page-transition";
 import { SessionKeeper } from "@/components/auth/SessionKeeper";
 import { SessionWarning } from "@/components/auth/SessionWarning";
 import SessionInit from "@/components/auth/SessionInit";
+import { DocumentFormProvider } from "@/contexts/document-form-context";
 
 function Router() {
   return (
@@ -55,10 +56,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router />
-        <SessionKeeper />
-        <SessionInit />
-        <Toaster />
+        <DocumentFormProvider>
+          <Router />
+          <SessionKeeper />
+          <SessionInit />
+          <Toaster />
+        </DocumentFormProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

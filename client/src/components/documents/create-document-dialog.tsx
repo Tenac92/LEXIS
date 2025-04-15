@@ -60,10 +60,11 @@ import type {
   BudgetValidationResponse,
   Project as ProjectType,
   Unit,
-  Recipient,
+  Recipient as RecipientType,
   ApiResponse,
 } from "@/lib/types";
 import { BudgetIndicator } from "@/components/ui/budget-indicator";
+import { useDocumentForm } from "@/contexts/document-form-context";
 
 // Constants
 const DKA_TYPES = ["ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"];
