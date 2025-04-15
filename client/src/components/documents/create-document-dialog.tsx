@@ -719,129 +719,109 @@ export function CreateDocumentDialog({
     // Control function to toggle an installment selection
     const handleInstallmentToggle = (installment: string) => {
       console.log("[Installment] Toggle installment:", installment, "current:", selectedInstallments);
-    
-      // Set flag to prevent circular updates
-      isUpdatingFromContext.current = true;
       
-      try {
-        // Create a fresh copy to avoid state mutation issues
-        const currentInstallments = [...selectedInstallments];
-        const currentInstallmentAmounts = { ...installmentAmounts };
-  
-        // If clicking ΕΦΑΠΑΞ, clear other selections
-        if (installment === "ΕΦΑΠΑΞ") {
-          // If ΕΦΑΠΑΞ was already selected, just return
-          if (currentInstallments.includes("ΕΦΑΠΑΞ")) {
-            isUpdatingFromContext.current = false;
-            return;
-          }
-  
-          // Set ΕΦΑΠΑΞ as the only installment
-          const newInstallments = ["ΕΦΑΠΑΞ"];
-          const newInstallmentAmounts = { "ΕΦΑΠΑΞ": currentRecipient?.amount || 0 };
-          
-          // Clear other installment amounts - create a brand new object
-          Object.keys(currentInstallmentAmounts).forEach((key) => {
-            if (key !== "ΕΦΑΠΑΞ") delete currentInstallmentAmounts[key];
-          });
-  
-          // IMPORTANT: First update the local form state
-          form.setValue(`recipients.${index}.installments`, newInstallments);
-          form.setValue(`recipients.${index}.installmentAmounts`, newInstallmentAmounts);
-          
-          console.log("[Installment] Set to ΕΦΑΠΑΞ with amount:", newInstallmentAmounts["ΕΦΑΠΑΞ"]);
-          
-          // Then trigger a manual context update to ensure persistence
-          setTimeout(() => {
-            // Also update the form context directly with a deep copy
-            const manuallyUpdatedRecipients = JSON.parse(JSON.stringify(recipients));
-            if (manuallyUpdatedRecipients[index]) {
-              manuallyUpdatedRecipients[index] = {
-                ...manuallyUpdatedRecipients[index],
-                installments: newInstallments,
-                installmentAmounts: newInstallmentAmounts
-              };
-              
-              // Update form context immediately but don't trigger the normal useEffect
-              updateFormData({
-                recipients: manuallyUpdatedRecipients
-              });
-            }
-          }, 100);
-          
-          return;
-        }
-  
-        // If there's ΕΦΑΠΑΞ selected and clicking another option, remove ΕΦΑΠΑΞ
-        if (currentInstallments.includes("ΕΦΑΠΑΞ")) {
-          currentInstallments.splice(currentInstallments.indexOf("ΕΦΑΠΑΞ"), 1);
-          // Remove ΕΦΑΠΑΞ amount
-          delete currentInstallmentAmounts["ΕΦΑΠΑΞ"];
-        }
-  
-        // Toggle the selected installment
-        const installmentIndex = currentInstallments.indexOf(installment);
-        if (installmentIndex > -1) {
-          // Remove the installment if already selected
-          currentInstallments.splice(installmentIndex, 1);
-          // Remove corresponding amount
-          delete currentInstallmentAmounts[installment];
+      // CRITICAL: First update local component state immediately for better UI response
+      // This is important to make the UI feel responsive
+      let updatedInstallments = [...selectedInstallments];
+      
+      // EFAPAX is exclusive with other installments
+      if (installment === "ΕΦΑΠΑΞ") {
+        // If EFAPAX is clicked, clear all others
+        updatedInstallments = ["ΕΦΑΠΑΞ"];
+      } else {
+        // Remove EFAPAX if it exists
+        updatedInstallments = updatedInstallments.filter(i => i !== "ΕΦΑΠΑΞ");
+        
+        // Toggle the clicked installment
+        if (updatedInstallments.includes(installment)) {
+          updatedInstallments = updatedInstallments.filter(i => i !== installment);
         } else {
-          // Add the installment
-          currentInstallments.push(installment);
-          // Initialize with zero amount
-          currentInstallmentAmounts[installment] = 0;
+          updatedInstallments.push(installment);
         }
-  
-        // Check if new selection is in sequence
-        if (
-          !areInstallmentsInSequence(currentInstallments) &&
-          currentInstallments.length > 1
-        ) {
+        
+        // If nothing is selected, default to EFAPAX
+        if (updatedInstallments.length === 0) {
+          updatedInstallments = ["ΕΦΑΠΑΞ"];
+        }
+        
+        // Check if installments are in sequence (A, B, C)
+        if (!areInstallmentsInSequence(updatedInstallments) && updatedInstallments.length > 1) {
           toast({
             title: "Μη έγκυρες δόσεις",
-            description:
-              "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
+            description: "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
             variant: "destructive",
           });
           return;
         }
-  
-        // Store final values to ensure consistency
-        const finalInstallments = [...currentInstallments];
-        const finalInstallmentAmounts = {...currentInstallmentAmounts};
+      }
+      
+      // Sort installments in proper order
+      updatedInstallments.sort((a, b) => {
+        const order = { "Α": 1, "Β": 2, "Γ": 3, "ΕΦΑΠΑΞ": 0 };
+        return (order[a as keyof typeof order] || 99) - (order[b as keyof typeof order] || 99);
+      });
+      
+      // IMPORTANT: Update the local state immediately for visual feedback
+      setSelectedInstallments(updatedInstallments);
+      
+      // Set flag to prevent circular updates during complex state changes
+      isUpdatingFromContext.current = true;
+      
+      try {
+        // Create new installment amounts object with updated keys
+        const newInstallmentAmounts: Record<string, number> = {};
         
-        console.log("[Installment] Updated installments:", finalInstallments);
-  
-        // Update the form with the new selection and amounts
-        form.setValue(`recipients.${index}.installments`, finalInstallments);
-        form.setValue(
-          `recipients.${index}.installmentAmounts`,
-          finalInstallmentAmounts,
-        );
+        // Preserve existing amounts for remaining installments
+        updatedInstallments.forEach(inst => {
+          newInstallmentAmounts[inst] = installmentAmounts[inst] || 0;
+        });
         
-        // Delay the context update to ensure form state is stable
+        // Special handling for EFAPAX - it should get the total amount
+        if (updatedInstallments.includes("ΕΦΑΠΑΞ") && updatedInstallments.length === 1) {
+          newInstallmentAmounts["ΕΦΑΠΑΞ"] = currentRecipient?.amount || 0;
+        }
+        
+        // Log the updates for debugging
+        console.log("[Installment] Updating to:", updatedInstallments);
+        console.log("[Installment] New amounts:", newInstallmentAmounts);
+        
+        // 1. First, update the local state with the new selection directly
+        form.setValue(`recipients.${index}.installments`, [...updatedInstallments]);
+        
+        // 2. Wait a bit, then update the amounts to avoid race conditions
         setTimeout(() => {
-          // Update the context with deep-copied data to ensure no reference sharing
-          const manuallyUpdatedRecipients = JSON.parse(JSON.stringify(recipients));
-          if (manuallyUpdatedRecipients[index]) {
-            manuallyUpdatedRecipients[index] = {
-              ...manuallyUpdatedRecipients[index],
-              installments: finalInstallments,
-              installmentAmounts: finalInstallmentAmounts
-            };
+          form.setValue(
+            `recipients.${index}.installmentAmounts`,
+            {...newInstallmentAmounts},
+          );
+          
+          // 3. Finally, after form is updated, sync to the context
+          setTimeout(() => {
+            // Create completely new objects to avoid any reference issues
+            const manuallyUpdatedRecipients = JSON.parse(JSON.stringify(recipients));
             
-            // Update form context directly but don't trigger normal useEffect
-            updateFormData({
-              recipients: manuallyUpdatedRecipients
-            });
-          }
-        }, 100);
+            if (manuallyUpdatedRecipients[index]) {
+              // Create a completely new object for this recipient
+              manuallyUpdatedRecipients[index] = {
+                ...manuallyUpdatedRecipients[index],
+                installments: [...updatedInstallments],
+                installmentAmounts: {...newInstallmentAmounts}
+              };
+              
+              // Update form context with complete new state
+              updateFormData({
+                recipients: manuallyUpdatedRecipients
+              });
+              
+              console.log("[Installment] Context updated with:", manuallyUpdatedRecipients[index]);
+            }
+          }, 100);
+        }, 50);
       } finally {
-        // Reset the flag after all form updates are completed
+        // Reset the flag after all operations complete
         setTimeout(() => {
           isUpdatingFromContext.current = false;
-        }, 150);
+        }, 250); // Longer timeout to ensure all operations complete
       }
     };
 
