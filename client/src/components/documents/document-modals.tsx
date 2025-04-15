@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 interface ViewModalProps {
   isOpen: boolean;
@@ -240,7 +240,7 @@ interface Recipient {
   afm: string;
   amount: number;
   installment: number;
-  // New format fields
+  // New format fields - can't be undefined with spread operators
   installments?: string[];
   installmentAmounts?: Record<string, number>;
 }
@@ -253,13 +253,26 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   const [projectId, setProjectId] = useState('');
   const [expenditureType, setExpenditureType] = useState('');
   const [recipients, setRecipients] = useState<Recipient[]>([]);
+  
+  // Use this ref to avoid repeated updates of the same document
+  const processedDocumentId = useRef<string | null>(null);
 
-  // Use effect with a proper cleanup to prevent memory leaks
+  // Use effect with a proper cleanup to prevent memory leaks and infinite loops
   useEffect(() => {
     // Skip processing if document is undefined or dialog is not open
     if (!document || !isOpen) return;
     
-    // Process the document data
+    // To prevent infinite update loops, we'll check if this document has already been processed
+    // Only process it if it's a new document or dialog just opened
+    if (processedDocumentId.current === document.id) {
+      console.log(`[EditDocument] Document ${document.id} already processed, skipping state updates`);
+      return;
+    }
+    
+    console.log(`[EditDocument] Processing document ${document.id} for the first time`);
+    processedDocumentId.current = document.id;
+    
+    // Process the document data - simple string fields first
     setProtocolNumber(document.protocol_number_input || '');
     setProtocolDate(document.protocol_date ?
       new Date(document.protocol_date).toISOString().split('T')[0] :
@@ -270,72 +283,91 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
 
     // Safely parse recipients array with proper error handling
     try {
-      const safeRecipients = document.recipients && Array.isArray(document.recipients)
-        ? document.recipients.map(r => {
-            // Detect if using the new format (installments and installmentAmounts)
-            const isNewFormat = Array.isArray(r.installments) && 
-                               r.installments.length > 0 && 
-                               r.installmentAmounts && 
-                               Object.keys(r.installmentAmounts).length > 0;
-            
-            // Create a properly typed recipient object
-            const recipient: Recipient = {
-              firstname: String(r.firstname || ''),
-              lastname: String(r.lastname || ''),
-              afm: String(r.afm || ''),
-              amount: typeof r.amount === 'string' ? parseFloat(r.amount) || 0 : Number(r.amount) || 0,
-              installment: typeof r.installment === 'string' ? parseInt(r.installment) || 1 : Number(r.installment) || 1
-            };
-            
-            // Add fathername if it exists in the original data
-            if ('fathername' in r && r.fathername) {
-              recipient.fathername = String(r.fathername);
-            }
-            
-            // Include new format fields if present
-            if (isNewFormat) {
-              console.log('Found recipient with new format structure:', { 
-                afm: r.afm,
-                installments: r.installments,
-                installmentAmounts: r.installmentAmounts
-              });
-              
-              // Make a defensive copy of installments array
-              if (r.installments && Array.isArray(r.installments)) {
-                recipient.installments = [...r.installments];
-                
-                // If using new format but it has legacy installment field as well,
-                // make sure they're in sync (set installment to 1 for ΕΦΑΠΑΞ or letter index otherwise)
-                if (r.installments.includes('ΕΦΑΠΑΞ')) {
-                  recipient.installment = 1;
-                } else if (r.installments.includes('Α')) {
-                  recipient.installment = 1;
-                } else if (r.installments.includes('Β')) {
-                  recipient.installment = 2;
-                } else if (r.installments.includes('Γ')) {
-                  recipient.installment = 3;
-                }
-              }
-              
-              // Make a defensive copy of installmentAmounts object
-              if (r.installmentAmounts && typeof r.installmentAmounts === 'object') {
-                recipient.installmentAmounts = {...r.installmentAmounts};
-              }
-            }
-            
-            return recipient;
-          })
-        : [];
+      // Skip if recipients is not an array
+      if (!document.recipients || !Array.isArray(document.recipients)) {
+        console.log('[EditDocument] No recipients found or not an array');
+        setRecipients([]);
+        return;
+      }
+      
+      // Debug information
+      console.log(`[EditDocument] Processing ${document.recipients.length} recipients`, 
+        document.recipients.map(r => ({
+          afm: r.afm,
+          hasNewFormat: !!(r.installments && r.installmentAmounts)
+        }))
+      );
 
+      // Map recipients to our internal format
+      const safeRecipients = document.recipients.map(r => {
+        // Detect if using the new format with installments array
+        const hasInstallments = r.installments && Array.isArray(r.installments) && r.installments.length > 0;
+        const hasInstallmentAmounts = r.installmentAmounts && 
+                                   typeof r.installmentAmounts === 'object' && 
+                                   Object.keys(r.installmentAmounts).length > 0;
+        const isNewFormat = hasInstallments && hasInstallmentAmounts;
+        
+        // Create a properly typed recipient with basic fields
+        const recipient: Recipient = {
+          firstname: String(r.firstname || ''),
+          lastname: String(r.lastname || ''),
+          afm: String(r.afm || ''),
+          amount: typeof r.amount === 'string' ? parseFloat(r.amount) || 0 : Number(r.amount) || 0,
+          installment: typeof r.installment === 'string' ? parseInt(r.installment) || 1 : Number(r.installment) || 1
+        };
+        
+        // Add fathername if it exists in the original data
+        if ('fathername' in r && r.fathername) {
+          recipient.fathername = String(r.fathername);
+        }
+        
+        // Only handle new format if both fields are present
+        if (isNewFormat) {
+          console.log(`[EditDocument] Recipient ${r.afm} uses new installment format:`, {
+            installments: r.installments,
+            installmentAmounts: r.installmentAmounts
+          });
+          
+          // Copy installments array if it exists and is an array
+          if (hasInstallments && Array.isArray(r.installments)) {
+            recipient.installments = [...r.installments];
+          }
+          
+          // Copy installmentAmounts object if it exists
+          if (hasInstallmentAmounts) {
+            recipient.installmentAmounts = { ...r.installmentAmounts };
+          }
+          
+          // Set consistent installment number based on installments array
+          if (hasInstallments && Array.isArray(r.installments)) {
+            if (r.installments.includes('ΕΦΑΠΑΞ')) {
+              recipient.installment = 1;
+            } else if (r.installments.includes('Α')) {
+              recipient.installment = 1;
+            } else if (r.installments.includes('Β')) {
+              recipient.installment = 2;
+            } else if (r.installments.includes('Γ')) {
+              recipient.installment = 3;
+            }
+          }
+        }
+        
+        return recipient;
+      });
+
+      console.log('[EditDocument] Processed recipients:', safeRecipients);
       setRecipients(safeRecipients);
     } catch (error) {
-      console.error('Error parsing recipients:', error);
+      console.error('[EditDocument] Error parsing recipients:', error);
       setRecipients([]);
     }
     
-    // Return a cleanup function to reset state when component unmounts or dependencies change
+    // Return a cleanup function to reset state when dialog closes
     return () => {
-      // We don't reset state on cleanup because it causes flickering when the dialog reopens
+      if (!isOpen) {
+        // Reset the processed document ID when the dialog closes
+        processedDocumentId.current = null;
+      }
     };
   }, [document, isOpen]);
 
@@ -383,6 +415,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         throw new Error('Δεν επιλέχθηκε έγγραφο για επεξεργασία');
       }
       
+      console.log('[EditDocument] Starting document edit process...');
       setLoading(true);
       
       // Form validation - collect all errors at once
@@ -398,6 +431,9 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
 
       // Process all recipients in one go with a more robust approach
       const validatedRecipients = [];
+      let preserveNewFormat = false; // Flag to check if we need to preserve the new format
+      
+      console.log(`[EditDocument] Starting validation of ${recipients.length} recipients`);
       
       for (let i = 0; i < recipients.length; i++) {
         const r = recipients[i];
@@ -422,12 +458,17 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
           throw new Error(`Μη έγκυρη δόση για τον δικαιούχο #${recipientNumber} (πρέπει να είναι μεταξύ 1-12)`);
         }
         
-        // Check if this recipient has the new format fields
-        const isNewFormat = r.installments && Array.isArray(r.installments) && 
-                           r.installments.length > 0 && 
-                           r.installmentAmounts && 
-                           Object.keys(r.installmentAmounts || {}).length > 0;
-                           
+        // Check if this recipient has the new format fields - use of defensive checks
+        const hasInstallments = r.installments && Array.isArray(r.installments) && r.installments.length > 0;
+        const hasInstallmentAmounts = r.installmentAmounts && 
+                                     typeof r.installmentAmounts === 'object' && 
+                                     Object.keys(r.installmentAmounts || {}).length > 0;
+        const isNewFormat = hasInstallments && hasInstallmentAmounts;
+        
+        if (isNewFormat) {
+          preserveNewFormat = true; // We've detected new format data, so let's preserve it
+        }
+        
         // Create validated recipient object with basic fields
         const validatedRecipient: Record<string, any> = {
           firstname: safeString(r.firstname),
@@ -437,18 +478,29 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
           amount: amount
         };
         
+        // Handle the installment formats
         if (isNewFormat) {
-          // Use new format fields
-          console.log(`Saving recipient #${recipientNumber} with new format data:`, {
+          // For new format, include both the installments array and installmentAmounts object
+          console.log(`[EditDocument] Recipient #${recipientNumber} using new installment format:`, {
             installments: r.installments,
-            amounts: r.installmentAmounts
+            installmentAmounts: r.installmentAmounts
           });
           
-          // Add the new format fields to the API payload
-          validatedRecipient.installments = r.installments;
-          validatedRecipient.installmentAmounts = r.installmentAmounts;
+          // Make defensive copies to avoid mutations
+          if (hasInstallments && Array.isArray(r.installments) && r.installments.length > 0) {
+            // TypeScript knows r.installments is a non-empty array here
+            validatedRecipient.installments = [...r.installments];
+          }
+          
+          if (hasInstallmentAmounts) {
+            validatedRecipient.installmentAmounts = {...r.installmentAmounts};
+          }
+          
+          // Also include the legacy installment field for backward compatibility
+          validatedRecipient.installment = installment;
         } else {
-          // Use legacy installment field
+          // For legacy format, just include the installment number
+          console.log(`[EditDocument] Recipient #${recipientNumber} using legacy installment format: ${installment}`);
           validatedRecipient.installment = installment;
         }
         
