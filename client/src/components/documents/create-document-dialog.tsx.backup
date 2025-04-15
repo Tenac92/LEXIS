@@ -1300,7 +1300,7 @@ export function CreateDocumentDialog({
     );
   };
 
-  // Queries below for other data using the units query defined at top of component
+  // Queries below for other data (units query moved to top of component)
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<
     Project[]
