@@ -1,33 +1,74 @@
 import * as React from "react";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Check, ChevronDown, FileText, FileX, Plus, Search, Trash2, User } from "lucide-react";
+import {
+  AlertCircle,
+  Check,
+  ChevronDown,
+  FileText,
+  FileX,
+  Plus,
+  Search,
+  Trash2,
+  User,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 import { useAuth } from "@/hooks/use-auth";
 import { useBudgetUpdates } from "@/hooks/use-budget-updates";
-import type { BudgetValidationResponse, Project as ProjectType, Unit, Recipient, ApiResponse } from "@/lib/types";
+import type {
+  BudgetValidationResponse,
+  Project as ProjectType,
+  Unit,
+  Recipient,
+  ApiResponse,
+} from "@/lib/types";
 import { BudgetIndicator } from "@/components/ui/budget-indicator";
 
 // Constants
-const DKA_TYPES = ['ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'];
-const DKA_INSTALLMENTS = ['ΕΦΑΠΑΞ', 'Α', 'Β', 'Γ'];
-const ALL_INSTALLMENTS = ['ΕΦΑΠΑΞ', 'Α', 'Β', 'Γ', 'Ε', 'Ζ', 'Η', 'Θ', 'Ι', 'Κ', 'Λ', 'Μ'];
+const DKA_TYPES = ["ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"];
+const DKA_INSTALLMENTS = ["ΕΦΑΠΑΞ", "Α", "Β", "Γ"];
+const ALL_INSTALLMENTS = ["ΕΦΑΠΑΞ", "Α", "Β", "Γ"];
 
 // Project selection component
 interface Project {
@@ -66,10 +107,11 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     const commandRef = useRef<HTMLDivElement>(null);
 
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
-    const selectedProject = projects.find(project => project.id === value);
+    const selectedProject = projects.find((project) => project.id === value);
 
     const normalizeText = useCallback((text: string) => {
-      return text.toLowerCase()
+      return text
+        .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
         .trim();
@@ -80,12 +122,12 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
       const match = name.match(/\d{4}(?:NA|ΝΑ)853\d+/i);
       if (!match) return null;
       const code = match[0];
-      const parts = name.split(' - ');
+      const parts = name.split(" - ");
       return {
         full: code,
-        displayText: parts.slice(1).join(' - '), // Everything after the NA853 code
-        numbers: code.replace(/\D/g, ''), // Extract all numbers from the code
-        originalMatch: match
+        displayText: parts.slice(1).join(" - "), // Everything after the NA853 code
+        numbers: code.replace(/\D/g, ""), // Extract all numbers from the code
+        originalMatch: match,
       };
     }, []);
 
@@ -101,23 +143,25 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
         const searchTerm = normalizeText(debouncedSearchQuery);
         const isNumericSearch = /^\d+$/.test(searchTerm);
 
-        console.log('Search debug:', {
+        console.log("Search debug:", {
           searchTerm,
           isNumericSearch,
-          projectCount: projects.length
+          projectCount: projects.length,
         });
 
-        const results = projects.filter(project => {
+        const results = projects.filter((project) => {
           const normalizedProjectName = normalizeText(project.name);
-          const na853Match = project.id.toLowerCase().includes(searchTerm.toLowerCase());
+          const na853Match = project.id
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
 
           // For numeric searches, match NA853 code
           if (isNumericSearch) {
-            console.log('Numeric search:', {
+            console.log("Numeric search:", {
               projectName: project.name,
               projectId: project.id,
               searchTerm,
-              matches: project.id.includes(searchTerm)
+              matches: project.id.includes(searchTerm),
             });
             if (project.id.includes(searchTerm)) {
               return true;
@@ -127,20 +171,22 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
           return na853Match || normalizedProjectName.includes(searchTerm);
         });
 
-        console.log('Search results:', {
+        console.log("Search results:", {
           searchTerm,
           resultCount: results.length,
-          results: results.map(r => r.name)
+          results: results.map((r) => r.name),
         });
 
         if (results.length === 0) {
-          setError(`Δεν βρέθηκαν έργα που να ταιριάζουν με "${debouncedSearchQuery}"`);
+          setError(
+            `Δεν βρέθηκαν έργα που να ταιριάζουν με "${debouncedSearchQuery}"`,
+          );
         }
 
         return results;
       } catch (error) {
-        console.error('Search error:', error);
-        setError('Σφάλμα κατά την αναζήτηση');
+        console.error("Search error:", error);
+        setError("Σφάλμα κατά την αναζήτηση");
         return projects;
       } finally {
         setIsSearching(false);
@@ -149,39 +195,39 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
 
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === '/' && (e.metaKey || e.ctrlKey)) {
+        if (e.key === "/" && (e.metaKey || e.ctrlKey)) {
           e.preventDefault();
           inputRef.current?.focus();
         }
       };
 
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
     }, []);
 
     useEffect(() => {
       // Reset search query when selection changes
       if (selectedProject && !isFocused) {
         const na853Info = extractNA853Info(selectedProject.name);
-        const displayText = na853Info ?
-          `${na853Info.full} - ${na853Info.displayText}` :
-          selectedProject.name;
+        const displayText = na853Info
+          ? `${na853Info.full} - ${na853Info.displayText}`
+          : selectedProject.name;
         setSearchQuery(displayText);
       }
     }, [selectedProject, isFocused, extractNA853Info]);
 
     const handleFocus = () => {
       setIsFocused(true);
-      setSearchQuery('');
+      setSearchQuery("");
     };
 
     const handleBlur = () => {
       setTimeout(() => {
         if (selectedProject && !searchQuery.trim()) {
           const na853Info = extractNA853Info(selectedProject.name);
-          const displayText = na853Info ?
-            `${na853Info.full} - ${na853Info.displayText}` :
-            selectedProject.name;
+          const displayText = na853Info
+            ? `${na853Info.full} - ${na853Info.displayText}`
+            : selectedProject.name;
           setSearchQuery(displayText);
         }
         setIsFocused(false);
@@ -190,7 +236,10 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
 
     return (
       <div className="relative w-full min-w-[500px]">
-        <Command className="relative rounded-lg border shadow-md w-full min-w-[500px] overflow-visible" ref={commandRef}>
+        <Command
+          className="relative rounded-lg border shadow-md w-full min-w-[500px] overflow-visible"
+          ref={commandRef}
+        >
           <div className="flex items-center px-4 py-3 gap-3 bg-background w-full">
             <Search className="h-5 w-5 shrink-0 opacity-50" />
             <CommandInput
@@ -199,15 +248,13 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
               onValueChange={setSearchQuery}
               onFocus={handleFocus}
               onBlur={handleBlur}
-              placeholder="Αναζήτηση με NA853 ή όνομα έργου... (Ctrl + /)"
+              placeholder="Αναζήτηση με NA853 ή όνομα έργου"
               className="flex-1 bg-transparent border-0 outline-none text-base placeholder:text-muted-foreground focus:ring-0 h-auto py-1 w-full min-w-[500px]"
             />
             {isSearching && (
               <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
             )}
-            <kbd className="pointer-events-none hidden md:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-              <span className="text-xs">⌘</span>K
-            </kbd>
+            {/* <kbd className="pointer-events-none hidden md:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100"></kbd> */}
           </div>
 
           {isFocused && (
@@ -226,7 +273,9 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
                   <CommandGroup className="max-h-[300px] overflow-y-auto">
                     {filteredProjects.map((project) => {
                       const na853Info = extractNA853Info(project.name);
-                      const displayName = na853Info ? na853Info.displayText : project.name;
+                      const displayName = na853Info
+                        ? na853Info.displayText
+                        : project.name;
                       return (
                         <CommandItem
                           key={project.id}
@@ -237,11 +286,14 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
                           }}
                           className={cn(
                             "cursor-pointer py-3 px-4 hover:bg-accent",
-                            project.id === value && "bg-accent"
+                            project.id === value && "bg-accent",
                           )}
                         >
                           <div className="flex flex-col gap-1 w-full">
-                            <Badge variant="outline" className="text-xs w-fit mb-1">
+                            <Badge
+                              variant="outline"
+                              className="text-xs w-fit mb-1"
+                            >
                               {na853Info?.full || project.id}
                             </Badge>
                             <span className="text-sm break-words">
@@ -259,7 +311,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
         </Command>
       </div>
     );
-  }
+  },
 );
 
 ProjectSelect.displayName = "ProjectSelect";
@@ -285,18 +337,18 @@ type BadgeVariant = "default" | "destructive" | "outline" | "secondary";
 const stepVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? 1000 : -1000,
-    opacity: 0
+    opacity: 0,
   }),
   center: {
     zIndex: 1,
     x: 0,
-    opacity: 1
+    opacity: 1,
   },
   exit: (direction: number) => ({
     zIndex: 0,
     x: direction < 0 ? 1000 : -1000,
-    opacity: 0
-  })
+    opacity: 0,
+  }),
 };
 
 // Step Indicator Component
@@ -305,29 +357,39 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
     { title: "Επιλογή Μονάδας", icon: <User className="h-4 w-4" /> },
     { title: "Στοιχεία Έργου", icon: <FileText className="h-4 w-4" /> },
     { title: "Δικαιούχοι", icon: <User className="h-4 w-4" /> },
-    { title: "Συνημμένα", icon: <FileText className="h-4 w-4" /> }
+    { title: "Συνημμένα", icon: <FileText className="h-4 w-4" /> },
   ];
 
   return (
     <div className="flex items-center justify-center mb-8">
       {steps.map((step, index) => (
         <div key={index} className="flex items-center">
-          <div className={`flex items-center justify-center ${
-            index <= currentStep ? 'text-primary' : 'text-muted-foreground'
-          }`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-              index === currentStep ? 'border-primary bg-primary/10' :
-                index < currentStep ? 'border-primary bg-primary text-background' :
-                  'border-muted'
-            }`}>
+          <div
+            className={`flex items-center justify-center ${
+              index <= currentStep ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+                index === currentStep
+                  ? "border-primary bg-primary/10"
+                  : index < currentStep
+                    ? "border-primary bg-primary text-background"
+                    : "border-muted"
+              }`}
+            >
               {index < currentStep ? <Check className="h-4 w-4" /> : step.icon}
             </div>
-            <span className="ml-2 text-sm font-medium hidden md:block">{step.title}</span>
+            <span className="ml-2 text-sm font-medium hidden md:block">
+              {step.title}
+            </span>
           </div>
           {index < steps.length - 1 && (
-            <ChevronDown className={`mx-2 h-4 w-4 rotate-[-90deg] ${
-              index < currentStep ? 'text-primary' : 'text-muted-foreground'
-            }`} />
+            <ChevronDown
+              className={`mx-2 h-4 w-4 rotate-[-90deg] ${
+                index < currentStep ? "text-primary" : "text-muted-foreground"
+              }`}
+            />
           )}
         </div>
       ))}
@@ -339,8 +401,12 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
 
 // Schemas
 const recipientSchema = z.object({
-  firstname: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-  lastname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  firstname: z
+    .string()
+    .min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
+  lastname: z
+    .string()
+    .min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
   fathername: z.string().optional().default(""), // Made optional with empty string default
   afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
@@ -349,7 +415,9 @@ const recipientSchema = z.object({
   // Για συμβατότητα με το API (παλιά μορφή)
   installment: z.string().optional().default("Α"),
   // Νέο schema για πολλαπλές δόσεις ανά παραλήπτη
-  installments: z.array(z.string()).min(1, "Πρέπει να επιλέξετε τουλάχιστον μία δόση"),
+  installments: z
+    .array(z.string())
+    .min(1, "Πρέπει να επιλέξετε τουλάχιστον μία δόση"),
   // Installment amounts map - keys are installment names (e.g., "Α", "Β", "ΕΦΑΠΑΞ"), values are amounts
   installmentAmounts: z.record(z.string(), z.number()).optional().default({}),
 });
@@ -362,13 +430,17 @@ const createDocumentSchema = z.object({
   recipients: z.array(recipientSchema).optional().default([]),
   total_amount: z.number().optional(),
   status: z.string().default("draft"),
-  selectedAttachments: z.array(z.string()).optional().default([])
+  selectedAttachments: z.array(z.string()).optional().default([]),
 });
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
 // Main component
-export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocumentDialogProps) {
+export function CreateDocumentDialog({
+  open,
+  onOpenChange,
+  onClose,
+}: CreateDocumentDialogProps) {
   // Basic state
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -377,11 +449,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   // References
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const dialogCloseRef = React.useRef<HTMLButtonElement>(null);
-  
+
   // Initialize form with default values
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
@@ -392,15 +464,17 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       expenditure_type: "",
       recipients: [],
       status: "draft",
-      selectedAttachments: []
-    }
+      selectedAttachments: [],
+    },
   });
-  
+
   // First effect: When dialog opens, invalidate queries and reset form
   useEffect(() => {
     if (open) {
-      console.log('[CreateDocument] Dialog opened, refreshing form and units data');
-      
+      console.log(
+        "[CreateDocument] Dialog opened, refreshing form and units data",
+      );
+
       // Reset the form to default values
       form.reset({
         unit: "",
@@ -409,28 +483,28 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         expenditure_type: "",
         recipients: [],
         status: "draft",
-        selectedAttachments: []
+        selectedAttachments: [],
       });
-      
+
       // Invalidate all relevant queries to force a fresh fetch
-      queryClient.invalidateQueries({ queryKey: ['units'] });
-      
+      queryClient.invalidateQueries({ queryKey: ["units"] });
+
       // Set a flag that form has been reset
       setFormReset(true);
     }
   }, [open, queryClient, form]);
-  
+
   // Second effect: After form is reset and we have user data, set the unit
   useEffect(() => {
     if (formReset && user?.units && user?.units.length > 0) {
       // Small delay to ensure units query has completed
       const timer = setTimeout(() => {
-        const defaultUnit = user?.units?.[0] || '';
-        console.log('[CreateDocument] Setting default unit:', defaultUnit);
-        form.setValue('unit', defaultUnit);
+        const defaultUnit = user?.units?.[0] || "";
+        console.log("[CreateDocument] Setting default unit:", defaultUnit);
+        form.setValue("unit", defaultUnit);
         setFormReset(false); // Reset the flag
       }, 500);
-      
+
       return () => clearTimeout(timer);
     }
   }, [formReset, user, form]);
@@ -441,7 +515,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     if (dialogCloseRef.current) {
       dialogCloseRef.current.click();
     }
-    
+
     // Use the provided callback functions
     onClose();
     onOpenChange(false);
@@ -449,11 +523,13 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     // Fallback with Escape key
     setTimeout(() => {
       if (open) {
-        document.dispatchEvent(new KeyboardEvent('keydown', { 
-          key: 'Escape', 
-          code: 'Escape', 
-          bubbles: true 
-        }));
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "Escape",
+            code: "Escape",
+            bubbles: true,
+          }),
+        );
       }
     }, 100);
   }, [onOpenChange, onClose, open]);
@@ -463,93 +539,104 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
   const recipients = form.watch("recipients") || [];
 
   const currentAmount = recipients.reduce((sum, r) => {
-    return sum + (typeof r.amount === 'number' ? r.amount : 0);
+    return sum + (typeof r.amount === "number" ? r.amount : 0);
   }, 0);
-  
+
   // Debug log for key values
   console.log("[Budget Form Debug] Key values:", {
     selectedProjectId,
     currentAmount,
     hasRecipients: recipients.length > 0,
-    recipients
+    recipients,
   });
 
   // Add this function to get available installments based on expenditure type
   const getAvailableInstallments = (expenditureType: string) => {
-    return DKA_TYPES.includes(expenditureType) ? DKA_INSTALLMENTS : ALL_INSTALLMENTS;
+    return DKA_TYPES.includes(expenditureType)
+      ? DKA_INSTALLMENTS
+      : ALL_INSTALLMENTS;
   };
 
   // Helper function to check if installments are in sequence
   const areInstallmentsInSequence = (installments: string[]) => {
     if (installments.length <= 1) return true;
-    if (installments.includes("ΕΦΑΠΑΞ") && installments.length > 1) return false;
-    
+    if (installments.includes("ΕΦΑΠΑΞ") && installments.length > 1)
+      return false;
+
     // Filter out ΕΦΑΠΑΞ and get only the Greek letter installments
-    const letters = installments.filter(i => i !== "ΕΦΑΠΑΞ");
-    
+    const letters = installments.filter((i) => i !== "ΕΦΑΠΑΞ");
+
     // Create a map of letter to index
-    const letterOrder = ALL_INSTALLMENTS.reduce((acc, letter, idx) => {
-      acc[letter] = idx;
-      return acc;
-    }, {} as Record<string, number>);
-    
+    const letterOrder = ALL_INSTALLMENTS.reduce(
+      (acc, letter, idx) => {
+        acc[letter] = idx;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
     // Sort by the order of letters in ALL_INSTALLMENTS
-    const sortedLetters = [...letters].sort((a, b) => letterOrder[a] - letterOrder[b]);
-    
+    const sortedLetters = [...letters].sort(
+      (a, b) => letterOrder[a] - letterOrder[b],
+    );
+
     // Check if the letters are consecutive in ALL_INSTALLMENTS
     for (let i = 1; i < sortedLetters.length; i++) {
-      const prevIdx = letterOrder[sortedLetters[i-1]];
+      const prevIdx = letterOrder[sortedLetters[i - 1]];
       const currIdx = letterOrder[sortedLetters[i]];
       if (currIdx - prevIdx !== 1) return false;
     }
-    
+
     return true;
   };
 
   // Update the recipients section rendering
   const renderRecipientInstallments = (index: number) => {
-    const expenditureType = form.watch('expenditure_type');
+    const expenditureType = form.watch("expenditure_type");
     const availableInstallments = getAvailableInstallments(expenditureType);
     const currentRecipient = form.watch(`recipients.${index}`);
     const selectedInstallments = currentRecipient?.installments || [];
     const installmentAmounts = currentRecipient?.installmentAmounts || {};
-    
+
     // Control function to toggle an installment selection
     const handleInstallmentToggle = (installment: string) => {
       const currentInstallments = [...selectedInstallments];
       const currentInstallmentAmounts = { ...installmentAmounts };
-      
+
       // If clicking ΕΦΑΠΑΞ, clear other selections
       if (installment === "ΕΦΑΠΑΞ") {
         // If ΕΦΑΠΑΞ was already selected, just return
         if (currentInstallments.includes("ΕΦΑΠΑΞ")) return;
-        
+
         // Set ΕΦΑΠΑΞ as the only installment
         form.setValue(`recipients.${index}.installments`, ["ΕΦΑΠΑΞ"]);
-        
+
         // Initialize the ΕΦΑΠΑΞ amount with the total amount if available
-        if (currentRecipient && typeof currentRecipient.amount === 'number') {
+        if (currentRecipient && typeof currentRecipient.amount === "number") {
           currentInstallmentAmounts["ΕΦΑΠΑΞ"] = currentRecipient.amount;
         } else {
           currentInstallmentAmounts["ΕΦΑΠΑΞ"] = 0;
         }
-        
+
         // Clear other installment amounts
-        Object.keys(currentInstallmentAmounts).forEach(key => {
+        Object.keys(currentInstallmentAmounts).forEach((key) => {
           if (key !== "ΕΦΑΠΑΞ") delete currentInstallmentAmounts[key];
         });
-        
-        form.setValue(`recipients.${index}.installmentAmounts`, currentInstallmentAmounts);
+
+        form.setValue(
+          `recipients.${index}.installmentAmounts`,
+          currentInstallmentAmounts,
+        );
         return;
       }
-      
+
       // If there's ΕΦΑΠΑΞ selected and clicking another option, remove ΕΦΑΠΑΞ
       if (currentInstallments.includes("ΕΦΑΠΑΞ")) {
         currentInstallments.splice(currentInstallments.indexOf("ΕΦΑΠΑΞ"), 1);
         // Remove ΕΦΑΠΑΞ amount
         delete currentInstallmentAmounts["ΕΦΑΠΑΞ"];
       }
-      
+
       // Toggle the selected installment
       const installmentIndex = currentInstallments.indexOf(installment);
       if (installmentIndex > -1) {
@@ -563,24 +650,34 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         // Initialize with zero amount
         currentInstallmentAmounts[installment] = 0;
       }
-      
+
       // Check if new selection is in sequence
-      if (!areInstallmentsInSequence(currentInstallments) && currentInstallments.length > 1) {
+      if (
+        !areInstallmentsInSequence(currentInstallments) &&
+        currentInstallments.length > 1
+      ) {
         toast({
           title: "Μη έγκυρες δόσεις",
-          description: "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
-          variant: "destructive"
+          description:
+            "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
+          variant: "destructive",
         });
         return;
       }
-      
+
       // Update the form with the new selection and amounts
       form.setValue(`recipients.${index}.installments`, currentInstallments);
-      form.setValue(`recipients.${index}.installmentAmounts`, currentInstallmentAmounts);
+      form.setValue(
+        `recipients.${index}.installmentAmounts`,
+        currentInstallmentAmounts,
+      );
     };
-    
+
     // Handle changing the amount for an installment
-    const handleInstallmentAmountChange = (installment: string, amount: number) => {
+    const handleInstallmentAmountChange = (
+      installment: string,
+      amount: number,
+    ) => {
       // CRITICAL FIX: Guard against extremely large numbers that cause display issues
       // Check if the number is unreasonably large (more than 1 billion)
       // This prevents scientific notation or overflow display issues
@@ -589,37 +686,51 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         // Show a warning toast to user
         toast({
           title: "Μη έγκυρο ποσό",
-          description: "Το ποσό που εισάγατε είναι πολύ μεγάλο και έχει διορθωθεί.",
-          variant: "destructive"
+          description:
+            "Το ποσό που εισάγατε είναι πολύ μεγάλο και έχει διορθωθεί.",
+          variant: "destructive",
         });
         amount = 0;
       }
-      
+
       const currentInstallmentAmounts = { ...installmentAmounts };
       currentInstallmentAmounts[installment] = amount;
-      
+
       // Update total amount based on installment amounts
-      const totalAmount = Object.values(currentInstallmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0);
-      
+      const totalAmount = Object.values(currentInstallmentAmounts).reduce(
+        (sum, amount) => sum + (amount || 0),
+        0,
+      );
+
       // Apply the same check to the total amount as a safety measure
-      const safeTotal = !isFinite(totalAmount) || totalAmount > 1000000000 ? 0 : totalAmount;
-      
+      const safeTotal =
+        !isFinite(totalAmount) || totalAmount > 1000000000 ? 0 : totalAmount;
+
       form.setValue(`recipients.${index}.amount`, safeTotal);
-      
+
       // Update installment amounts
-      form.setValue(`recipients.${index}.installmentAmounts`, currentInstallmentAmounts);
+      form.setValue(
+        `recipients.${index}.installmentAmounts`,
+        currentInstallmentAmounts,
+      );
     };
-    
+
     return (
       <div className="w-full">
         <div className="mb-2 flex items-center">
-          <label className="text-sm font-medium mr-2 whitespace-nowrap">Δόσεις:</label>
+          <label className="text-sm font-medium mr-2 whitespace-nowrap">
+            Δόσεις:
+          </label>
           <div className="flex flex-row gap-1">
             {availableInstallments.map((installment) => (
               <Button
                 key={installment}
                 type="button"
-                variant={selectedInstallments.includes(installment) ? "default" : "outline"}
+                variant={
+                  selectedInstallments.includes(installment)
+                    ? "default"
+                    : "outline"
+                }
                 size="sm"
                 onClick={() => handleInstallmentToggle(installment)}
                 className="h-7 px-2 min-w-[32px]"
@@ -629,11 +740,11 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             ))}
           </div>
         </div>
-        
+
         {selectedInstallments.length > 0 && (
           <div className="space-y-2">
             <div className="grid grid-cols-1 gap-1.5">
-              {selectedInstallments.map(installment => (
+              {selectedInstallments.map((installment) => (
                 <div key={installment} className="flex items-center gap-1.5">
                   <div className="font-medium text-xs bg-muted px-2 py-1 rounded min-w-[60px] text-center">
                     {installment}
@@ -644,18 +755,32 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                       step="0.01"
                       min="0"
                       value={installmentAmounts[installment] || 0}
-                      onChange={(e) => handleInstallmentAmountChange(installment, parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        handleInstallmentAmountChange(
+                          installment,
+                          parseFloat(e.target.value) || 0,
+                        )
+                      }
                       className="pr-5 h-8 text-sm"
                       placeholder="Ποσό"
                     />
-                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">€</span>
+                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
+                      €
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
             <div className="text-xs font-medium flex justify-between pt-1.5 border-t">
               <span>Συνολικό ποσό:</span>
-              <span className="text-primary">{Object.values(installmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</span>
+              <span className="text-primary">
+                {Object.values(installmentAmounts)
+                  .reduce((sum, amount) => sum + (amount || 0), 0)
+                  .toLocaleString("el-GR", {
+                    style: "currency",
+                    currency: "EUR",
+                  })}
+              </span>
             </div>
           </div>
         )}
@@ -668,304 +793,363 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     queryKey: ["units"],
     queryFn: async () => {
       try {
-        console.log('[CreateDocument] Fetching units...');
-        const response = await apiRequest('/api/users/units');
-        
+        console.log("[CreateDocument] Fetching units...");
+        const response = await apiRequest("/api/users/units");
+
         if (!response || !Array.isArray(response)) {
-          console.error('Error fetching units: Invalid response format');
+          console.error("Error fetching units: Invalid response format");
           toast({
             title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
-            variant: "destructive"
+            variant: "destructive",
           });
           return [];
         }
-        
-        console.log('[CreateDocument] Units fetched successfully:', response.length);
+
+        console.log(
+          "[CreateDocument] Units fetched successfully:",
+          response.length,
+        );
         return response.map((item: any) => ({
           id: item.unit || item.id,
-          name: item.unit_name || item.name
+          name: item.unit_name || item.name,
         }));
       } catch (error) {
-        console.error('Units fetch error:', error);
+        console.error("Units fetch error:", error);
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
-          variant: "destructive"
+          variant: "destructive",
         });
         return [];
       }
     },
-    retry: 2
+    retry: 2,
   });
 
-  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<
+    Project[]
+  >({
     queryKey: ["projects", selectedUnit],
     queryFn: async (): Promise<Project[]> => {
       if (!selectedUnit) return [];
 
       try {
         console.log(`[Projects] Fetching projects for unit: ${selectedUnit}`);
-        const response = await apiRequest<any>(`/api/projects/by-unit/${encodeURIComponent(selectedUnit)}`);
-        
+        const response = await apiRequest<any>(
+          `/api/projects/by-unit/${encodeURIComponent(selectedUnit)}`,
+        );
+
         // Force response to be an array
         let projectsArray: any[] = [];
-        
+
         if (!response) {
-          console.error('[Projects] Error fetching projects: No response received');
+          console.error(
+            "[Projects] Error fetching projects: No response received",
+          );
           toast({
             title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
-            variant: "destructive"
+            variant: "destructive",
           });
           return [];
         }
-        
+
         // Determine if we have a valid response
         if (Array.isArray(response)) {
           projectsArray = response;
-        } else if (response && typeof response === 'object' && response.data && Array.isArray(response.data)) {
+        } else if (
+          response &&
+          typeof response === "object" &&
+          response.data &&
+          Array.isArray(response.data)
+        ) {
           // Handle wrapped API response {data: [...]}
           projectsArray = response.data;
         } else {
-          console.error('[Projects] Error fetching projects: Invalid response format', response);
+          console.error(
+            "[Projects] Error fetching projects: Invalid response format",
+            response,
+          );
           toast({
-            title: "Σφάλμα", 
+            title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης έργων. Μη έγκυρη μορφή απάντησης.",
-            variant: "destructive"
+            variant: "destructive",
           });
           return [];
         }
-        
+
         // Handle empty array case
         if (projectsArray.length === 0) {
           console.log(`[Projects] No projects found for unit: ${selectedUnit}`);
           toast({
             title: "Πληροφορία",
             description: "Δεν βρέθηκαν έργα για την επιλεγμένη μονάδα.",
-            variant: "destructive"
+            variant: "destructive",
           });
           return [];
         }
-        
-        console.log(`[Projects] Found ${projectsArray.length} projects for unit: ${selectedUnit}`);
-        
+
+        console.log(
+          `[Projects] Found ${projectsArray.length} projects for unit: ${selectedUnit}`,
+        );
+
         // Map and transform the projects data
-        const validProjects = projectsArray.filter(item => item !== null && item !== undefined);
-        
+        const validProjects = projectsArray.filter(
+          (item) => item !== null && item !== undefined,
+        );
+
         return validProjects.map((item: any) => {
           // Process expenditure types
           let expenditureTypes: string[] = [];
           if (item.expenditure_type) {
             try {
-              if (typeof item.expenditure_type === 'string') {
+              if (typeof item.expenditure_type === "string") {
                 expenditureTypes = JSON.parse(item.expenditure_type);
               } else if (Array.isArray(item.expenditure_type)) {
                 expenditureTypes = item.expenditure_type;
               }
             } catch (e) {
-              console.error('[Projects] Error parsing expenditure_type for project:', item.mis, e);
+              console.error(
+                "[Projects] Error parsing expenditure_type for project:",
+                item.mis,
+                e,
+              );
             }
           }
 
           // Store both MIS and NA853 for proper querying
           const projectId = item.na853 || String(item.mis);
-          const name = item.na853 ?
-            `${item.na853} - ${item.event_description || item.project_title || 'No description'}` :
-            item.event_description || item.project_title || 'No description';
+          const name = item.na853
+            ? `${item.na853} - ${item.event_description || item.project_title || "No description"}`
+            : item.event_description || item.project_title || "No description";
 
           return {
             id: projectId,
             mis: String(item.mis), // Store MIS separately
             name,
-            expenditure_types: expenditureTypes || []
+            expenditure_types: expenditureTypes || [],
           };
         });
       } catch (error) {
-        console.error('[Projects] Projects fetch error:', error);
+        console.error("[Projects] Projects fetch error:", error);
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
-          variant: "destructive"
+          variant: "destructive",
         });
         return [];
       }
     },
-    enabled: Boolean(selectedUnit)
+    enabled: Boolean(selectedUnit),
   });
 
-
   // Use our custom budget updates hook that handles both API and WebSocket updates
-  const { 
-    budgetData, 
-    validationResult, 
-    isBudgetLoading, 
-    isValidationLoading, 
+  const {
+    budgetData,
+    validationResult,
+    isBudgetLoading,
+    isValidationLoading,
     budgetError,
     validationError,
     websocketConnected,
-    broadcastUpdate
+    broadcastUpdate,
   } = useBudgetUpdates(selectedProjectId, currentAmount);
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
-    queryKey: ['attachments', form.watch('expenditure_type')],
+    queryKey: ["attachments", form.watch("expenditure_type")],
     queryFn: async () => {
       try {
-        const expenditureType = form.watch('expenditure_type');
+        const expenditureType = form.watch("expenditure_type");
 
         if (!expenditureType) {
           return [];
         }
 
         // Use direct fetch instead of apiRequest to prevent authentication issues
-        const response = await fetch(`/api/attachments/${encodeURIComponent(expenditureType)}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Request-ID': `req-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`
+        const response = await fetch(
+          `/api/attachments/${encodeURIComponent(expenditureType)}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Request-ID": `req-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
+            },
+            credentials: "include",
           },
-          credentials: 'include'
-        });
-        
+        );
+
         // Handle authentication errors (401)
         if (response.status === 401) {
-          console.warn('Authentication required for attachments');
+          console.warn("Authentication required for attachments");
           // Show authentication error message instead of hardcoded defaults
-          return [{
-            id: 'auth-error',
-            title: 'Απαιτείται σύνδεση',
-            file_type: 'none',
-            description: 'Παρακαλώ συνδεθείτε ξανά για να δείτε τα διαθέσιμα συνημμένα.'
-          }];
+          return [
+            {
+              id: "auth-error",
+              title: "Απαιτείται σύνδεση",
+              file_type: "none",
+              description:
+                "Παρακαλώ συνδεθείτε ξανά για να δείτε τα διαθέσιμα συνημμένα.",
+            },
+          ];
         }
-        
+
         // Handle other errors
         if (!response.ok) {
-          console.error('Attachments request failed:', response.status);
+          console.error("Attachments request failed:", response.status);
           // Show error message instead of hardcoded defaults
-          return [{
-            id: 'server-error',
-            title: 'Σφάλμα εύρεσης συνημμένων',
-            file_type: 'none',
-            description: `Σφάλμα διακομιστή: ${response.status}. Παρακαλώ δοκιμάστε ξανά αργότερα.`
-          }];
+          return [
+            {
+              id: "server-error",
+              title: "Σφάλμα εύρεσης συνημμένων",
+              file_type: "none",
+              description: `Σφάλμα διακομιστή: ${response.status}. Παρακαλώ δοκιμάστε ξανά αργότερα.`,
+            },
+          ];
         }
-        
+
         // Process successful response
         const data = await response.json();
         if (!data) {
           // Return a message about empty data response instead of hardcoded defaults
-          return [{
-            id: 'empty-response',
-            title: 'Δεν βρέθηκαν συνημμένα',
-            file_type: 'none',
-            description: 'Ο διακομιστής δεν επέστρεψε δεδομένα συνημμένων.'
-          }];
+          return [
+            {
+              id: "empty-response",
+              title: "Δεν βρέθηκαν συνημμένα",
+              file_type: "none",
+              description: "Ο διακομιστής δεν επέστρεψε δεδομένα συνημμένων.",
+            },
+          ];
         }
-        
+
         // Check if the response has a message about no attachments found
-        if (data.status === 'success' && data.message && Array.isArray(data.attachments) && data.attachments.length === 0) {
+        if (
+          data.status === "success" &&
+          data.message &&
+          Array.isArray(data.attachments) &&
+          data.attachments.length === 0
+        ) {
           // No attachments found with message
-          
+
           // Return a special "no attachments" entry that will be displayed differently in the UI
-          return [{
-            id: 'no-attachments',
-            title: 'Δεν βρέθηκαν συνημμένα',
-            file_type: 'none',
-            description: data.message || 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.'
-          }];
+          return [
+            {
+              id: "no-attachments",
+              title: "Δεν βρέθηκαν συνημμένα",
+              file_type: "none",
+              description:
+                data.message ||
+                "Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.",
+            },
+          ];
         }
-        
+
         // Check if the response has attachments in the standard API format
-        if (data.status === 'success' && Array.isArray(data.attachments) && data.attachments.length > 0) {
+        if (
+          data.status === "success" &&
+          Array.isArray(data.attachments) &&
+          data.attachments.length > 0
+        ) {
           // Found attachments in standard format
-          
+
           // Convert each attachment title to our display format
           return data.attachments.map((title: string) => ({
             id: title, // Use the title as the ID for selection
             title,
-            file_type: 'document',
-            description: `Απαιτείται για ${expenditureType}`
+            file_type: "document",
+            description: `Απαιτείται για ${expenditureType}`,
           }));
         }
-        
+
         // Fallback for legacy format or unexpected response format
         // Unexpected format, trying fallback extraction
-        
+
         // For safety, attempt to extract attachments from any response format
         let extractedAttachments: string[] = [];
-        
+
         // Try to extract from data.attachments if it exists
         if (data.attachments && Array.isArray(data.attachments)) {
           extractedAttachments = data.attachments;
-        } 
+        }
         // Try to extract from root array
         else if (Array.isArray(data)) {
           extractedAttachments = data;
         }
-        
+
         if (extractedAttachments.length > 0) {
           return extractedAttachments.map((title: string) => ({
             id: title,
             title,
-            file_type: 'document',
-            description: `Απαιτείται για ${expenditureType}`
+            file_type: "document",
+            description: `Απαιτείται για ${expenditureType}`,
           }));
         }
-        
+
         // If we couldn't extract anything, return a "no attachments" message
-        return [{
-          id: 'no-attachments-fallback',
-          title: 'Δεν βρέθηκαν συνημμένα',
-          file_type: 'none',
-          description: 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.'
-        }];
+        return [
+          {
+            id: "no-attachments-fallback",
+            title: "Δεν βρέθηκαν συνημμένα",
+            file_type: "none",
+            description: "Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.",
+          },
+        ];
       } catch (error) {
-        console.error('Error fetching attachments:', error);
+        console.error("Error fetching attachments:", error);
         // Return a message about the error instead of hardcoded defaults
-        return [{
-          id: 'fetch-error',
-          title: 'Σφάλμα εύρεσης συνημμένων',
-          file_type: 'none',
-          description: 'Παρουσιάστηκε σφάλμα κατά την αναζήτηση συνημμένων. Παρακαλώ επικοινωνήστε με τον διαχειριστή.'
-        }];
+        return [
+          {
+            id: "fetch-error",
+            title: "Σφάλμα εύρεσης συνημμένων",
+            file_type: "none",
+            description:
+              "Παρουσιάστηκε σφάλμα κατά την αναζήτηση συνημμένων. Παρακαλώ επικοινωνήστε με τον διαχειριστή.",
+          },
+        ];
       }
     },
-    enabled: Boolean(form.watch('expenditure_type'))
+    enabled: Boolean(form.watch("expenditure_type")),
   });
 
   // Show toast notifications for validation status
   useEffect(() => {
     if (validationResult) {
-      if (validationResult.status === 'warning' && validationResult.message) {
+      if (validationResult.status === "warning" && validationResult.message) {
         toast({
           title: "Προειδοποίηση προϋπολογισμού",
           description: validationResult.message,
-          variant: "warning"
+          variant: "warning",
         });
-      } else if (validationResult.status === 'error' && validationResult.message) {
+      } else if (
+        validationResult.status === "error" &&
+        validationResult.message
+      ) {
         toast({
           title: "Σφάλμα προϋπολογισμού",
           description: validationResult.message,
-          variant: "destructive"
+          variant: "destructive",
         });
-      } else if (validationResult.status === 'success' && validationResult.message) {
+      } else if (
+        validationResult.status === "success" &&
+        validationResult.message
+      ) {
         toast({
           title: "Επιτυχής έλεγχος προϋπολογισμού",
           description: validationResult.message,
-          variant: "default"
+          variant: "default",
         });
       }
     }
   }, [validationResult, toast]);
 
-  const isSubmitDisabled = validationResult?.status === 'error' || !validationResult?.canCreate;
+  const isSubmitDisabled =
+    validationResult?.status === "error" || !validationResult?.canCreate;
 
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
   const handleSubmit = async (data: CreateDocumentForm) => {
     try {
-      console.log('Starting form submission with data:', data);
+      console.log("Starting form submission with data:", data);
 
       // Basic form validation
       if (!data.project_id) {
@@ -976,34 +1160,43 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         throw new Error("Απαιτείται τουλάχιστον ένας δικαιούχος");
       }
 
-      const invalidRecipients = data.recipients.some(r =>
-        !r.firstname || !r.lastname || !r.afm || typeof r.amount !== 'number' || 
-        !r.installments || r.installments.length === 0
+      const invalidRecipients = data.recipients.some(
+        (r) =>
+          !r.firstname ||
+          !r.lastname ||
+          !r.afm ||
+          typeof r.amount !== "number" ||
+          !r.installments ||
+          r.installments.length === 0,
       );
 
       if (invalidRecipients) {
         throw new Error("Όλα τα πεδία δικαιούχου πρέπει να συμπληρωθούν");
       }
-      
+
       // Validate that all installments are in sequence
-      const hasInvalidSequence = data.recipients.some(r => {
+      const hasInvalidSequence = data.recipients.some((r) => {
         if (r.installments.length <= 1) return false;
         return !areInstallmentsInSequence(r.installments);
       });
-      
+
       if (hasInvalidSequence) {
-        throw new Error("Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)");
+        throw new Error(
+          "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όn�ι Α+Γ)",
+        );
       }
-      
+
       // Validate that all installments have amounts entered
-      const missingInstallmentAmounts = data.recipients.some(recipient => {
-        return recipient.installments.some(installment => {
-          return !recipient.installmentAmounts || 
-                 typeof recipient.installmentAmounts[installment] !== 'number' || 
-                 recipient.installmentAmounts[installment] <= 0;
+      const missingInstallmentAmounts = data.recipients.some((recipient) => {
+        return recipient.installments.some((installment) => {
+          return (
+            !recipient.installmentAmounts ||
+            typeof recipient.installmentAmounts[installment] !== "number" ||
+            recipient.installmentAmounts[installment] <= 0
+          );
         });
       });
-      
+
       if (missingInstallmentAmounts) {
         throw new Error("Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο από 0");
       }
@@ -1011,14 +1204,16 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       setLoading(true);
 
       // Find project to get MIS
-      const projectForSubmission = projects.find(p => p.id === data.project_id);
+      const projectForSubmission = projects.find(
+        (p) => p.id === data.project_id,
+      );
       if (!projectForSubmission?.mis) {
         throw new Error("Δεν βρέθηκε το MIS του έργου");
       }
 
-      console.log('Found project for submission:', {
+      console.log("Found project for submission:", {
         id: projectForSubmission.id,
-        mis: projectForSubmission.mis
+        mis: projectForSubmission.mis,
       });
 
       const totalAmount = data.recipients.reduce((sum, r) => sum + r.amount, 0);
@@ -1026,52 +1221,63 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       // Validate budget with our own fetch to prevent auth redirects
       try {
         // Making manual budget validation request for submit
-        const budgetValidationResponse = await fetch('/api/budget/validate', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'X-Request-ID': `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+        const budgetValidationResponse = await fetch("/api/budget/validate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Request-ID": `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           },
-          credentials: 'include',
+          credentials: "include",
           body: JSON.stringify({
             mis: projectForSubmission.mis,
             amount: totalAmount.toString(),
-            sessionId: sessionStorage.getItem('clientSessionId') || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
-          })
+            sessionId:
+              sessionStorage.getItem("clientSessionId") ||
+              `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`,
+          }),
         });
-        
+
         // Handle authorization issues gracefully
         if (budgetValidationResponse.status === 401) {
-          console.warn('Auth warning for budget validation during submit');
+          console.warn("Auth warning for budget validation during submit");
           toast({
             title: "Προειδοποίηση",
-            description: "Απαιτείται επαναλογίνση για πλήρη έλεγχο προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
-            variant: "destructive"
+            description:
+              "Απαιτείται επαναλογίνση για πλήρη έλεγχο προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
+            variant: "destructive",
           });
-        } 
+        }
         // Handle other errors gracefully
         else if (!budgetValidationResponse.ok) {
-          console.error('Budget validation failed:', budgetValidationResponse.status);
+          console.error(
+            "Budget validation failed:",
+            budgetValidationResponse.status,
+          );
           toast({
             title: "Προειδοποίηση",
-            description: "Αδυναμία ελέγχου προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
-            variant: "destructive"
+            description:
+              "Αδυναμία ελέγχου προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
+            variant: "destructive",
           });
         }
         // Process successful validation
         else {
           const budgetValidation = await budgetValidationResponse.json();
-          
+
           if (!budgetValidation.canCreate) {
-            throw new Error(budgetValidation.message || "Δεν είναι δυνατή η δημιουργία εγγράφου λόγω περιορισμών προϋπολογισμού");
+            throw new Error(
+              budgetValidation.message ||
+                "Δεν είναι δυνατή η δημιουργία εγγράφου λόγω περιορισμών προϋπολογισμού",
+            );
           }
         }
       } catch (validationError) {
-        console.error('Budget validation error:', validationError);
+        console.error("Budget validation error:", validationError);
         toast({
           title: "Προειδοποίηση",
-          description: "Σφάλμα κατά τον έλεγχο προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
-          variant: "destructive"
+          description:
+            "Σφάλμα κατά τον έλεγχο προϋπολογισμού. Η διαδικασία θα συνεχιστεί με επιφύλαξη.",
+          variant: "destructive",
         });
       }
 
@@ -1085,7 +1291,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         project_mis: projectForSubmission.mis,
         region: data.region,
         expenditure_type: data.expenditure_type,
-        recipients: data.recipients.map(r => ({
+        recipients: data.recipients.map((r) => ({
           firstname: r.firstname.trim(),
           lastname: r.lastname.trim(),
           fathername: r.fathername.trim(),
@@ -1093,14 +1299,14 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           amount: parseFloat(r.amount.toString()),
           secondary_text: r.secondary_text?.trim() || "",
           installments: r.installments,
-          installmentAmounts: r.installmentAmounts || {}
+          installmentAmounts: r.installmentAmounts || {},
         })),
         total_amount: totalAmount,
         status: "draft",
-        attachments: data.selectedAttachments || []
+        attachments: data.selectedAttachments || [],
       };
 
-      console.log('Sending payload to create document:', payload);
+      console.log("Sending payload to create document:", payload);
 
       // Attempt document creation with v2 API endpoint
       try {
@@ -1109,64 +1315,79 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
           ...payload,
           project_mis: projectForSubmission.mis, // Ensure we always pass project_mis
         };
-        
+
         // Use the v2-documents endpoint which handles document creation with proper error handling
-        const response = await apiRequest('/api/v2-documents', {
-          method: 'POST',
+        const response = (await apiRequest("/api/v2-documents", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify(enhancedPayload)
-        }) as { id?: number; message?: string };
-        
-        if (!response || typeof response !== 'object' || !response.id) {
-          throw new Error('Σφάλμα δημιουργίας εγγράφου: Μη έγκυρη απάντηση από τον διακομιστή');
+          body: JSON.stringify(enhancedPayload),
+        })) as { id?: number; message?: string };
+
+        if (!response || typeof response !== "object" || !response.id) {
+          throw new Error(
+            "Σφάλμα δημιουργίας εγγράφου: Μη έγκυρη απάντηση από τον διακομιστή",
+          );
         }
-        
-        console.log('Document created successfully with ID:', response.id);
+
+        console.log("Document created successfully with ID:", response.id);
 
         // Invalidate queries and show success message before returning
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["documents"] }),
           queryClient.invalidateQueries({ queryKey: ["budget"] }),
-          queryClient.invalidateQueries({ queryKey: ["budget", data.project_id] }),
           queryClient.invalidateQueries({
-            queryKey: ["budget-validation", projectForSubmission.mis, totalAmount]
-          })
+            queryKey: ["budget", data.project_id],
+          }),
+          queryClient.invalidateQueries({
+            queryKey: [
+              "budget-validation",
+              projectForSubmission.mis,
+              totalAmount,
+            ],
+          }),
         ]);
 
         toast({
           title: "Επιτυχία",
-          description: "Το έγγραφο δημιουργήθηκε επιτυχώς"
+          description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
         });
 
         // Reset form and close dialog
         form.reset();
         setCurrentStep(0);
-        
+
         // Force close the dialog
         onClose();
         onOpenChange(false);
-        
+
         if (dialogCloseRef.current) {
           dialogCloseRef.current.click();
         }
-        
+
         // Return response after dialog closing logic
         return response;
       } catch (error) {
-        console.error('Document creation failed:', error);
-        throw new Error(error instanceof Error ? error.message : 'Αποτυχία δημιουργίας εγγράφου. Παρακαλώ προσπαθήστε ξανά αργότερα.');
+        console.error("Document creation failed:", error);
+        throw new Error(
+          error instanceof Error
+            ? error.message
+            : "Αποτυχία δημιουργίας εγγράφου. Παρακαλώ προσπαθήστε ξανά αργότερα.",
+        );
       }
 
       // Nothing needed here as the document creation logic
       // and dialog closing are all handled in the try-catch block above
     } catch (error) {
-      console.error('Document creation error:', error);
+      console.error("Document creation error:", error);
       toast({
         title: "Σφάλμα",
-        description: error instanceof Error ? error.message : "Αποτυχία δημιουργίας εγγράφου",
-        variant: "destructive"
+        description:
+          error instanceof Error
+            ? error.message
+            : "Αποτυχία δημιουργίας εγγράφου",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -1178,8 +1399,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
     if (currentRecipients.length >= 10) {
       toast({
         title: "Μέγιστος Αριθμός Δικαιούχων",
-        description: "Δεν μπορείτε να προσθέσετε περισσότερους από 10 δικαιούχους.",
-        variant: "destructive"
+        description:
+          "Δεν μπορείτε να προσθέσετε περιp�σότερους από 10 δικαιούχους.",
+        variant: "destructive",
       });
       return;
     }
@@ -1195,14 +1417,17 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         secondary_text: "",
         installment: "ΕΦΑΠΑΞ", // Διατηρούμε το παλιό πεδίο για συμβατότητα
         installments: ["ΕΦΑΠΑΞ"], // Default to ΕΦΑΠΑΞ for new recipients
-        installmentAmounts: { "ΕΦΑΠΑΞ": 0 } // Initialize installment amount
-      }
+        installmentAmounts: { ΕΦΑΠΑΞ: 0 }, // Initialize installment amount
+      },
     ]);
   };
 
   const removeRecipient = (index: number) => {
     const currentRecipients = form.watch("recipients") || [];
-    form.setValue("recipients", currentRecipients.filter((_, i) => i !== index));
+    form.setValue(
+      "recipients",
+      currentRecipients.filter((_, i) => i !== index),
+    );
   };
 
   useEffect(() => {
@@ -1215,9 +1440,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
 
   useEffect(() => {
     if (selectedProjectId) {
-      const project = projects.find(p => p.id === selectedProjectId);
+      const project = projects.find((p) => p.id === selectedProjectId);
       if (project) {
-        form.setValue('expenditure_type', '');
+        form.setValue("expenditure_type", "");
       }
     }
   }, [selectedProjectId, projects, form]);
@@ -1229,8 +1454,8 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       form.setValue("unit", units[0].id);
     } else if (user?.units?.length === 1 && units?.length > 0) {
       // If user has only one assigned unit, find its matching unit object and select it
-      const userUnit = user?.units?.[0] || '';
-      const matchingUnit = units.find(unit => unit.id === userUnit);
+      const userUnit = user?.units?.[0] || "";
+      const matchingUnit = units.find((unit) => unit.id === userUnit);
       if (matchingUnit) {
         form.setValue("unit", matchingUnit.id);
       }
@@ -1244,126 +1469,155 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       if (!selectedProjectId) {
         return [];
       }
-      
+
       try {
         // Find the project to get its MIS
-        const project = projects.find(p => p.id === selectedProjectId);
+        const project = projects.find((p) => p.id === selectedProjectId);
         if (!project) {
-          console.error('Project not found:', selectedProjectId);
+          console.error("Project not found:", selectedProjectId);
           return [];
         }
 
-        console.log('Fetching regions for project:', {
+        console.log("Fetching regions for project:", {
           id: selectedProjectId,
-          mis: project.mis
+          mis: project.mis,
         });
 
         // Fetch regions data from API
-        const response = await apiRequest(`/api/projects/${encodeURIComponent(project.mis || '')}/regions`);
-        console.log('Region API response:', response);
-        
+        const response = await apiRequest(
+          `/api/projects/${encodeURIComponent(project.mis || "")}/regions`,
+        );
+        console.log("Region API response:", response);
+
         // Handle invalid response
-        if (!response || typeof response !== 'object') {
-          console.log('Invalid response format:', response);
+        if (!response || typeof response !== "object") {
+          console.log("Invalid response format:", response);
           return [];
         }
-        
+
         // Handle the nested structure of the response
         try {
-          let processedRegions: Array<{id: string, name: string, type: string}> = [];
+          let processedRegions: Array<{
+            id: string;
+            name: string;
+            type: string;
+          }> = [];
           const typedResponse = response as Record<string, any>;
-          
+
           // Handle object with nested arrays
           if (typedResponse.region && Array.isArray(typedResponse.region)) {
-            console.log('Processing region data with format:', typeof typedResponse.region[0]);
-            
+            console.log(
+              "Processing region data with format:",
+              typeof typedResponse.region[0],
+            );
+
             // Handle case where typedResponse.region contains region objects
-            if (typedResponse.region.length > 0 && typeof typedResponse.region[0] === 'object') {
+            if (
+              typedResponse.region.length > 0 &&
+              typeof typedResponse.region[0] === "object"
+            ) {
               // Extract and flatten the regional_unit values if available
-              for (const regionItem of typedResponse.region as Record<string, any>[]) {
-                if (regionItem.regional_unit && Array.isArray(regionItem.regional_unit)) {
+              for (const regionItem of typedResponse.region as Record<
+                string,
+                any
+              >[]) {
+                if (
+                  regionItem.regional_unit &&
+                  Array.isArray(regionItem.regional_unit)
+                ) {
                   // Process regional_unit values first (preferred)
                   for (const unit of regionItem.regional_unit as string[]) {
-                    if (typeof unit === 'string' && unit.trim()) {
+                    if (typeof unit === "string" && unit.trim()) {
                       processedRegions.push({
                         id: unit,
                         name: unit,
-                        type: 'regional_unit'
+                        type: "regional_unit",
                       });
                     }
                   }
                 }
-                
+
                 // If no regional_unit found, fall back to region values
-                if (processedRegions.length === 0 && regionItem.region && Array.isArray(regionItem.region)) {
+                if (
+                  processedRegions.length === 0 &&
+                  regionItem.region &&
+                  Array.isArray(regionItem.region)
+                ) {
                   for (const region of regionItem.region as string[]) {
-                    if (typeof region === 'string' && region.trim()) {
+                    if (typeof region === "string" && region.trim()) {
                       processedRegions.push({
                         id: region,
                         name: region,
-                        type: 'region'
+                        type: "region",
                       });
                     }
                   }
                 }
               }
-            } 
+            }
             // Handle case where typedResponse.region is a direct array of strings
-            else if (typedResponse.region.length > 0 && typeof typedResponse.region[0] === 'string') {
+            else if (
+              typedResponse.region.length > 0 &&
+              typeof typedResponse.region[0] === "string"
+            ) {
               for (const region of typedResponse.region as string[]) {
-                if (typeof region === 'string' && region.trim()) {
+                if (typeof region === "string" && region.trim()) {
                   processedRegions.push({
                     id: region,
                     name: region,
-                    type: 'region'
+                    type: "region",
                   });
                 }
               }
             }
           }
-          
+
           // Also check for regional_unit at the top level
-          if (processedRegions.length === 0 && typedResponse.regional_unit && Array.isArray(typedResponse.regional_unit)) {
+          if (
+            processedRegions.length === 0 &&
+            typedResponse.regional_unit &&
+            Array.isArray(typedResponse.regional_unit)
+          ) {
             for (const unit of typedResponse.regional_unit as string[]) {
-              if (typeof unit === 'string' && unit.trim()) {
+              if (typeof unit === "string" && unit.trim()) {
                 processedRegions.push({
                   id: unit,
                   name: unit,
-                  type: 'regional_unit'
+                  type: "regional_unit",
                 });
               }
             }
           }
-          
+
           // If we found any regions in any format, return them
           if (processedRegions.length > 0) {
-            console.log('Processed region data:', processedRegions);
+            console.log("Processed region data:", processedRegions);
             return processedRegions;
           }
-          
+
           // No valid regions were found
-          console.log('No regions found for project:', project.mis);
+          console.log("No regions found for project:", project.mis);
           return [];
         } catch (err) {
-          console.error('Error processing region data:', err);
+          console.error("Error processing region data:", err);
           return [];
         }
-        
+
         // Shouldn't reach here due to earlier check, but just in case
-        console.log('No valid region or regional_unit data found');
+        console.log("No valid region or regional_unit data found");
         return [];
       } catch (error) {
         // Handle any errors
-        console.error('Error fetching regions:', error);
+        console.error("Error fetching regions:", error);
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης περιοχών",
-          variant: "destructive"
+          variant: "destructive",
         });
         return [];
       }
     },
-    enabled: Boolean(selectedProjectId) && projects.length > 0
+    enabled: Boolean(selectedProjectId) && projects.length > 0,
   });
 
   const handleNext = async () => {
@@ -1387,68 +1641,75 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             toast({
               title: "Σφάλμα Επικύρωσης",
               description: "Παρακαλώ προσθέστε τουλάχιστον έναν δικαιούχο",
-              variant: "destructive"
+              variant: "destructive",
             });
             return;
           }
 
-          const invalidRecipient = recipients.find(r =>
-            !r.firstname?.trim() ||
-            !r.lastname?.trim() ||
-            !r.afm?.trim() ||
-            typeof r.amount !== 'number' ||
-            !r.amount ||
-            !r.installments || 
-            r.installments.length === 0
+          const invalidRecipient = recipients.find(
+            (r) =>
+              !r.firstname?.trim() ||
+              !r.lastname?.trim() ||
+              !r.afm?.trim() ||
+              typeof r.amount !== "number" ||
+              !r.amount ||
+              !r.installments ||
+              r.installments.length === 0,
           );
 
           if (invalidRecipient) {
             toast({
               title: "Σφάλμα Επικύρωσης",
-              description: "Παρακαλώ συμπληρώστε όλα τα πεδία για κάθε δικαιούχο",
-              variant: "destructive"
+              description:
+                "Παρακαλώ συμπληρώστε όλα τα πεδία για κάθε δικαιούχο",
+              variant: "destructive",
             });
             return;
           }
-          
+
           // Check that all installments have corresponding amount values
-          const recipientWithoutInstallmentAmounts = recipients.find(r => {
+          const recipientWithoutInstallmentAmounts = recipients.find((r) => {
             if (!r.installmentAmounts) return true;
-            
+
             // For each installment, make sure there's a corresponding amount value
-            return r.installments.some(installment => {
-              return !r.installmentAmounts || 
-                     !(installment in r.installmentAmounts) || 
-                     typeof r.installmentAmounts[installment] !== 'number' ||
-                     r.installmentAmounts[installment] <= 0;
+            return r.installments.some((installment) => {
+              return (
+                !r.installmentAmounts ||
+                !(installment in r.installmentAmounts) ||
+                typeof r.installmentAmounts[installment] !== "number" ||
+                r.installmentAmounts[installment] <= 0
+              );
             });
           });
-          
+
           if (recipientWithoutInstallmentAmounts) {
             toast({
               title: "Σφάλμα Επικύρωσης",
               description: "Παρακαλώ συμπληρώστε ποσό για κάθε επιλεγμένη δόση",
-              variant: "destructive"
+              variant: "destructive",
             });
             return;
           }
-          
+
           // For recipients with multiple installments, validate that each installment has a non-zero amount
-          const recipientWithZeroInstallmentAmount = recipients.find(r => {
+          const recipientWithZeroInstallmentAmount = recipients.find((r) => {
             if (r.installments.length <= 1) return false;
-            
-            return r.installments.some(installment => {
-              return !r.installmentAmounts || 
-                     !(installment in r.installmentAmounts) || 
-                     r.installmentAmounts[installment] <= 0;
+
+            return r.installments.some((installment) => {
+              return (
+                !r.installmentAmounts ||
+                !(installment in r.installmentAmounts) ||
+                r.installmentAmounts[installment] <= 0
+              );
             });
           });
-          
+
           if (recipientWithZeroInstallmentAmount) {
             toast({
               title: "Σφάλμα Επικύρωσης",
-              description: "Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο του μηδενός",
-              variant: "destructive"
+              description:
+                "Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο του μηδενός",
+              variant: "destructive",
             });
             return;
           }
@@ -1465,21 +1726,23 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       } else {
         const errors = form.formState.errors;
         const errorFields = Object.keys(errors);
-        const errorMessage = errorFields.length > 0
-          ? `Παρακαλώ ελέγξτε τα πεδία: ${errorFields.join(", ")}`
-          : "Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία";
+        const errorMessage =
+          errorFields.length > 0
+            ? `Παρακαλώ ελέγξτε τα πεδία: ${errorFields.join(", ")}`
+            : "Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία";
 
         toast({
           title: "Σφάλμα Επικύρωσης",
           description: errorMessage,
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Navigation error:', error);
+      console.error("Navigation error:", error);
       toast({
-        title: "Σφάλμα", description: "Προέκυψε σφάλμα κατά την μετάβαση στο επόμενο βήμα",
-        variant: "destructive"
+        title: "Σφάλμα",
+        description: "Προέκυψε σφάλμα κατά την μετάβαση στο επόμενο βήμα",
+        variant: "destructive",
       });
     }
   };
@@ -1493,19 +1756,20 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         } else {
           toast({
             title: "Σφάλμα Επικύρωσης",
-            description: "Παρακαλώ ελέγξτε ότι όλα τα πεδία είναι συμπληρωμένα σωστά",
-            variant: "destructive"
+            description:
+              "Παρακαλώ ελέγξτε ότι όλα τα πεδία είναι συμπληρωμένα σωστά",
+            variant: "destructive",
           });
         }
       } else {
         await handleNext();
       }
     } catch (error) {
-      console.error('Form navigation/submission error:', error);
+      console.error("Form navigation/submission error:", error);
       toast({
         title: "Σφάλμα",
         description: error instanceof Error ? error.message : "Προέκυψε σφάλμα",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -1592,19 +1856,25 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   {regions.length > 0 && (
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        {regions[0]?.type === 'regional_unit' ? 'Περιφερειακή Ενότητα' : 'Περιφέρεια'}
+                        {regions[0]?.type === "regional_unit"
+                          ? "Περιφερειακή Ενότητα"
+                          : "Περιφέρεια"}
                       </label>
                       <Select
                         value={form.watch("region")}
-                        onValueChange={(value) => form.setValue("region", value)}
+                        onValueChange={(value) =>
+                          form.setValue("region", value)
+                        }
                         disabled={regions.length === 1 || regionsLoading}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={
-                            regions[0]?.type === 'regional_unit' ?
-                              'Επιλέξτε Περιφερειακή Ενότητα' :
-                              'Επιλέξτε Περιφέρεια'
-                          } />
+                          <SelectValue
+                            placeholder={
+                              regions[0]?.type === "regional_unit"
+                                ? "Επιλέξτε Περιφερειακή Ενότητα"
+                                : "Επιλέξτε Περιφέρεια"
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {regions.map((region) => (
@@ -1634,14 +1904,21 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {selectedProject?.expenditure_types?.length > 0 ? (
-                                selectedProject.expenditure_types.map((type: string) => (
-                                  <SelectItem key={type} value={type}>
-                                    {type}
-                                  </SelectItem>
-                                ))
+                              {selectedProject?.expenditure_types?.length >
+                              0 ? (
+                                selectedProject.expenditure_types.map(
+                                  (type: string) => (
+                                    <SelectItem key={type} value={type}>
+                                      {type}
+                                    </SelectItem>
+                                  ),
+                                )
                               ) : (
-                                <SelectItem key="no-expenditure-types" value="" disabled>
+                                <SelectItem
+                                  key="no-expenditure-types"
+                                  value=""
+                                  disabled
+                                >
                                   Δεν υπάρχουν διαθέσιμοι τύποι δαπάνης
                                 </SelectItem>
                               )}
@@ -1670,7 +1947,9 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   <div className="flex justify-between items-center mb-4">
                     <div>
                       <h3 className="text-lg font-medium">Δικαιούχοι</h3>
-                      <p className="text-sm text-muted-foreground">Προσθήκη έως 10 δικαιούχων</p>
+                      <p className="text-sm text-muted-foreground">
+                        Προσθήκη έως 10 δικαιούχων
+                      </p>
                     </div>
                     <Button
                       type="button"
@@ -1687,60 +1966,69 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                   <div className="space-y-3 max-h-[calc(70vh-150px)] overflow-y-auto pr-2">
                     {recipients.map((recipient, index) => (
                       <Card key={index} className="p-4 relative">
-                        <div className="flex items-start gap-4">
-                          <span className="text-sm font-medium min-w-[24px] text-center mt-2">{index + 1}</span>
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 flex-1 w-full">
-                            <Input
-                              {...form.register(`recipients.${index}.firstname`)}
-                              placeholder="Όνομα"
-                              className="md:col-span-2"
-                              autoComplete="off"
-                            />
-                            <Input
-                              {...form.register(`recipients.${index}.lastname`)}
-                              placeholder="Επώνυμο"
-                              className="md:col-span-2"
-                              autoComplete="off"
-                            />
-                            <Input
-                              {...form.register(`recipients.${index}.fathername`)}
-                              placeholder="Πατρώνυμο"
-                              className="md:col-span-2"
-                              autoComplete="off"
-                            />
-                            <Input
-                              {...form.register(`recipients.${index}.afm`)}
-                              placeholder="ΑΦΜ"
-                              maxLength={9}
-                              className="md:col-span-2"
-                              autoComplete="off"
-                            />
-                            <div className="md:col-span-3 flex items-center gap-2">
-                              <div className="flex-1">
-                                {renderRecipientInstallments(index)}
-                              </div>
-                            </div>
-                            <Input
-                              {...form.register(`recipients.${index}.secondary_text`)}
-                              placeholder="Ελεύθερο Κείμενο"
-                              className="md:col-span-8 mt-3"
-                              autoComplete="off"
-                            />
-                            <div className="md:col-span-3 mt-3">
-                              {/* Empty div to maintain spacing */}
-                            </div>
-                            <div className="md:col-span-1 flex justify-end">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeRecipient(index)}
-                                className="shrink-0"
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
+                          {/* Όνομα */}
+                          <Input
+                            {...form.register(`recipients.${index}.firstname`)}
+                            placeholder="Όνομα"
+                            className="md:col-span-2 md:row-span-1"
+                            autoComplete="off"
+                          />
+
+                          {/* Επώνυμο */}
+                          <Input
+                            {...form.register(`recipients.${index}.lastname`)}
+                            placeholder="Επώνυμο"
+                            className="md:col-span-2 md:row-span-1"
+                            autoComplete="off"
+                          />
+
+                          {/* Πατρώνυμο */}
+                          <Input
+                            {...form.register(`recipients.${index}.fathername`)}
+                            placeholder="Πατρώνυμο"
+                            className="md:col-span-2 md:row-span-1"
+                            autoComplete="off"
+                          />
+
+                          {/* ΑΦΜ */}
+                          <Input
+                            {...form.register(`recipients.${index}.afm`)}
+                            placeholder="ΑΦΜ"
+                            maxLength={9}
+                            className="md:col-span-2 md:row-span-1"
+                            autoComplete="off"
+                          />
+
+                          {/* renderRecipientInstallments(index) */}
+                          <div className="md:col-span-3 md:row-span-2 flex items-start">
+                            <div className="flex-1">
+                              {renderRecipientInstallments(index)}
                             </div>
                           </div>
+
+                          {/* Delete Button - same row as the inputs */}
+                          <div className="md:col-span-1 md:col-start-12 md:row-start-1 flex justify-end">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeRecipient(index)}
+                              className="shrink-0"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+
+                          {/* Ελεύθερο Κείμενο */}
+                          <Input
+                            {...form.register(
+                              `recipients.${index}.secondary_text`,
+                            )}
+                            placeholder="Ελεύθερο Κείμενο"
+                            className="md:col-span-8 md:row-start-2"
+                            autoComplete="off"
+                          />
                         </div>
                       </Card>
                     ))}
@@ -1759,43 +2047,57 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                     </div>
                   ) : attachments.length > 0 ? (
                     <div className="space-y-2">
-                      {attachments.map((attachment: { 
-                        id: string; 
-                        file_type: string; 
-                        title: string; 
-                        description?: string 
-                      }) => (
-                        attachment.file_type === 'none' ? (
-                          // Display message for no attachments found
-                          <div key={attachment.id} className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                            <FileX className="h-12 w-12 mb-4" />
-                            <p className="font-medium">{attachment.title}</p>
-                            <p className="text-sm">{attachment.description}</p>
-                          </div>
-                        ) : (
-                          // Display regular attachments with checkboxes
-                          <div
-                            key={attachment.id}
-                            className="flex items-center space-x-2 rounded-lg border p-3"
-                          >
-                            <Checkbox
-                              checked={form.watch("selectedAttachments")?.includes(attachment.id)}
-                              onCheckedChange={(checked) => {
-                                const current = form.watch("selectedAttachments") || [];
-                                if (checked) {
-                                  form.setValue("selectedAttachments", [...current, attachment.id]);
-                                } else {
-                                  form.setValue(
-                                    "selectedAttachments",
-                                    current.filter((id) => id !== attachment.id)
-                                  );
-                                }
-                              }}
-                            />
-                            <span>{attachment.title}</span>
-                          </div>
-                        )
-                      ))}
+                      {attachments.map(
+                        (attachment: {
+                          id: string;
+                          file_type: string;
+                          title: string;
+                          description?: string;
+                        }) =>
+                          attachment.file_type === "none" ? (
+                            // Display message for no attachments found
+                            <div
+                              key={attachment.id}
+                              className="flex flex-col items-center justify-center py-8 text-muted-foreground"
+                            >
+                              <FileX className="h-12 w-12 mb-4" />
+                              <p className="font-medium">{attachment.title}</p>
+                              <p className="text-sm">
+                                {attachment.description}
+                              </p>
+                            </div>
+                          ) : (
+                            // Display regular attachments with checkboxes
+                            <div
+                              key={attachment.id}
+                              className="flex items-center space-x-2 rounded-lg border p-3"
+                            >
+                              <Checkbox
+                                checked={form
+                                  .watch("selectedAttachments")
+                                  ?.includes(attachment.id)}
+                                onCheckedChange={(checked) => {
+                                  const current =
+                                    form.watch("selectedAttachments") || [];
+                                  if (checked) {
+                                    form.setValue("selectedAttachments", [
+                                      ...current,
+                                      attachment.id,
+                                    ]);
+                                  } else {
+                                    form.setValue(
+                                      "selectedAttachments",
+                                      current.filter(
+                                        (id) => id !== attachment.id,
+                                      ),
+                                    );
+                                  }
+                                }}
+                              />
+                              <span>{attachment.title}</span>
+                            </div>
+                          ),
+                      )}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -1826,7 +2128,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
                         <span>Αποθήκευση...</span>
                       </>
                     ) : (
-                      'Αποθήκευση'
+                      "Αποθήκευση"
                     )}
                   </Button>
                 </div>
@@ -1846,11 +2148,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
             >
               Προηγούμενο
             </Button>
-            <Button
-              type="button"
-              onClick={handleNext}
-              disabled={loading}
-            >
+            <Button type="button" onClick={handleNext} disabled={loading}>
               Επόμενο
             </Button>
           </div>
@@ -1870,7 +2168,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       form.setValue("region", regions[0].id);
     }
   }, [regions, form]);
-  
+
   // Call broadcastUpdate whenever the amount changes to update other users in real-time
   useEffect(() => {
     // Only broadcast if we have a valid project ID and amount > 0
@@ -1880,7 +2178,7 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         broadcastUpdate(currentAmount);
         console.log("[Budget] Broadcasting amount update:", currentAmount);
       }, 300); // 300ms debounce
-      
+
       return () => clearTimeout(broadcastTimeout);
     }
   }, [selectedProjectId, currentAmount, broadcastUpdate]);
@@ -1892,19 +2190,19 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
       available: !!budgetData,
       currentStep,
       projectId: selectedProjectId,
-      currentAmount
+      currentAmount,
     });
 
     if (budgetData) {
       console.log("[Budget Debug] Budget data details:", budgetData);
     }
   }, [budgetData, currentStep, selectedProjectId, currentAmount]);
-  
+
   // Add an effect for enhanced dialog close handling
   useEffect(() => {
     // Handler to help force close the dialog when escape is pressed
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && open) {
+      if (e.key === "Escape" && open) {
         // Close dialog when Escape key is pressed
         if (dialogCloseRef.current) {
           dialogCloseRef.current.click();
@@ -1913,47 +2211,55 @@ export function CreateDocumentDialog({ open, onOpenChange, onClose }: CreateDocu
         onClose();
       }
     };
-    
+
     // Get any close buttons after render to allow additional close mechanisms
     const setupCloseHandlers = () => {
-      const closeButtons = document.querySelectorAll('[data-dialog-close="true"], .dialog-close');
-      closeButtons.forEach(button => {
-        button.addEventListener('click', () => {
+      const closeButtons = document.querySelectorAll(
+        '[data-dialog-close="true"], .dialog-close',
+      );
+      closeButtons.forEach((button) => {
+        button.addEventListener("click", () => {
           // Handle dialog close button click
           onOpenChange(false);
           onClose();
         });
       });
     };
-    
+
     // Setup handlers after a short delay to ensure DOM is ready
     if (open) {
       setTimeout(setupCloseHandlers, 100);
-      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener("keydown", handleKeyDown);
     }
-    
+
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [open, onOpenChange, onClose]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl" aria-describedby="dialog-description">
+      <DialogContent
+        className="max-w-5xl"
+        aria-describedby="dialog-description"
+      >
         <DialogHeader>
           <DialogTitle>Δημιουργία Εγγράφου</DialogTitle>
         </DialogHeader>
         <span id="dialog-description" className="sr-only">
-          Φόρμα δημιουργίας νέου εγγράφου με βήματα για την επιλογή μονάδας, έργου, και δικαιούχων
+          Φόρμα δημιουργίας νέου εγγράφου με βήματα για την επιλογή μονάδας,
+          έργου, και δικαιούχων
         </span>
         <StepIndicator currentStep={currentStep} />
         <Form {...form}>
-          <div className="space-y-6">
-            {renderStepContent()}
-          </div>
+          <div className="space-y-6">{renderStepContent()}</div>
         </Form>
         {/* Hidden close button with ref for programmatic closing */}
-        <DialogClose ref={dialogCloseRef} className="hidden" data-dialog-close="true" />
+        <DialogClose
+          ref={dialogCloseRef}
+          className="hidden"
+          data-dialog-close="true"
+        />
       </DialogContent>
     </Dialog>
   );
