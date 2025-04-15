@@ -574,16 +574,16 @@ export function CreateDocumentDialog({
     
     try {
       // STAGE 1: Authenticate and prefetch data silently - don't touch the form yet
-      // Fetch user data and units in parallel for efficiency
+      // Fetch user data only - we'll refresh units through queryClient instead
       const refreshedUser = await refreshUser();
       
-      // Refresh units if available, otherwise fail silently
-      if (typeof refetchUnits === 'function') {
-        try {
-          await refetchUnits();
-        } catch (err) {
-          console.warn("[CreateDocument] Non-critical error refreshing units:", err);
-        }
+      // Refresh units via query invalidation - more reliable and avoids reference issues
+      try {
+        // Force refresh units data through query invalidation
+        queryClient.invalidateQueries({ queryKey: ["units"] });
+        console.log("[CreateDocument] Units query invalidated for refresh");
+      } catch (err) {
+        console.warn("[CreateDocument] Non-critical error refreshing units:", err);
       }
       
       if (!refreshedUser) {
@@ -648,7 +648,7 @@ export function CreateDocumentDialog({
       
       return () => clearTimeout(resetTimeout);
     }
-  }, [form, formData, queryClient, refreshUser, savedStep, toast, currentStep, refetchUnits]);
+  }, [form, formData, queryClient, refreshUser, savedStep, toast, currentStep]);
   
   // Effect to handle dialog open state
   useEffect(() => {
