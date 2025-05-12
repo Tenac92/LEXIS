@@ -757,10 +757,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Units routes
     log('[Routes] Registering units routes...');
     
-    // Public units endpoint for document creation - bypasses authentication
-    app.get('/api/users/units', async (req, res) => {
+    // Public units endpoint for document creation WITHOUT authentication
+    app.get('/api/public/units', async (req, res) => {
       try {
-        console.log('[Units] Public access to units list (skipping auth)');
+        console.log('[Units] Completely public access to units list');
         
         // Query Monada table for units
         const { data: unitsData, error } = await supabase
@@ -785,6 +785,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(transformedUnits);
       } catch (error) {
         console.error('[Units] Error in public units access:', error);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to fetch units'
+        });
+      }
+    });
+    
+    // Original units endpoint with authentication
+    app.get('/api/users/units', authenticateSession, async (req, res) => {
+      try {
+        console.log('[Units] Authenticated access to units list');
+        
+        // Query Monada table for units
+        const { data: unitsData, error } = await supabase
+          .from('Monada')
+          .select('unit, unit_name');
+        
+        if (error) {
+          console.error('[Units] Error fetching units:', error);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch units'
+          });
+        }
+        
+        // Transform data to match client expectations
+        const transformedUnits = (unitsData || []).map(unit => ({
+          id: unit.unit,
+          name: unit.unit_name
+        }));
+        
+        console.log('[Units] Successfully fetched units:', transformedUnits.length);
+        return res.json(transformedUnits);
+      } catch (error) {
+        console.error('[Units] Error in units access:', error);
         return res.status(500).json({
           status: 'error',
           message: 'Failed to fetch units'

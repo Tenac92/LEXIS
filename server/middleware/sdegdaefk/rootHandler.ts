@@ -41,6 +41,12 @@ function isFromSdegdaefkDomain(req: Request): boolean {
  * Middleware to handle browser requests to the root path from sdegdaefk.gr
  */
 export function rootHandler(req: Request, res: Response, next: NextFunction) {
+  // Allow units endpoint to bypass
+  if (req.path === '/api/users/units') {
+    console.log('[RootHandler] Allowing units endpoint to bypass: ', req.path);
+    return next();
+  }
+  
   // Only handle GET requests to the root path from sdegdaefk.gr
   const isRootPath = req.path === '/' || req.path === '';
   const isFromSdegdaefk = isFromSdegdaefkDomain(req);

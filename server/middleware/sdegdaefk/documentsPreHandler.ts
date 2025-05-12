@@ -112,6 +112,12 @@ function sendFriendlyDbErrorResponse(req: Request, res: Response): void {
  * Middleware to preemptively handle document requests when database issues are detected
  */
 export async function documentsPreHandler(req: Request, res: Response, next: NextFunction) {
+  // Allow /api/users/units to bypass this handler
+  if (req.path === '/api/users/units') {
+    console.log('[DocumentsPreHandler] Allowing units endpoint to bypass authentication');
+    return next();
+  }
+  
   // Only process requests from sdegdaefk.gr domain related to documents
   if (!isFromSdegdaefkDomain(req) || !(req.path.startsWith('/documents') || req.path.includes('document'))) {
     return next();
