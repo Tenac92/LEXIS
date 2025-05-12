@@ -94,7 +94,7 @@ export class TemplateManager {
           name,
           description,
           category,
-          template_data: templateData,
+          content: templateData,
           created_by: userId,
           structure_version: '1.0',
           is_active: true
@@ -284,7 +284,7 @@ export class TemplateManager {
       name: 'Default Document Template',
       description: 'Default template for all expenditure types except ΕΚΤΟΣ ΕΔΡΑΣ',
       category: 'default',
-      template_data: {
+      content: {
         sections: [{
           properties: {
             page: {

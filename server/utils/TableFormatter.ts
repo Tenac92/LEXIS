@@ -67,7 +67,7 @@ export function createTextCell(
     width = 100,
     widthType = WidthType.PERCENTAGE,
     bold = false,
-    alignment = AlignmentType.LEFT as AlignmentType,
+    alignment = AlignmentType.LEFT,
     borders = DEFAULT_BORDERS,
     verticalAlign = VerticalAlign.CENTER,
     verticalMerge,
@@ -189,13 +189,13 @@ export function createCurrencyCell(
   options: {
     width?: number;
     bold?: boolean;
-    alignment?: string;
+    alignment?: typeof AlignmentType[keyof typeof AlignmentType];
   } = {}
 ): TableCell {
   const {
     width = 20,
     bold = false,
-    alignment = AlignmentType.RIGHT,
+    alignment = AlignmentType.RIGHT as AlignmentType,
   } = options;
 
   const numericAmount = safeNumber(amount);
@@ -204,7 +204,7 @@ export function createCurrencyCell(
   return createTextCell(formattedAmount, {
     width,
     bold,
-    alignment,
+    alignment: typeof alignment === 'string' ? AlignmentType.RIGHT : alignment,
   });
 }
 
