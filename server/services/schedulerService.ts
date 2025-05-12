@@ -6,8 +6,7 @@
  */
 
 import cron from 'node-cron';
-import { db } from '../drizzle';
-import { executeSQL } from '../drizzle';
+import { supabase } from '../config/db';
 // Import logger from the correct path
 // First try the utils directory, fall back to direct console if not found
 let logger: any;
@@ -81,11 +80,9 @@ export async function processQuarterTransition(wss: WebSocketServer, isVerificat
     logger.info(`[Quarter Transition] Processing quarter transition to ${currentQuarterKey}`);
     
     // First, check which budgets need updating (where last_quarter_check is not equal to current quarter)
-    const { data: budgetsToUpdate, error: queryError } = await db.query(
-      'budget_na853_split', 
-      'select', 
-      ['id', 'mis', 'na853', 'last_quarter_check', 'q1', 'q2', 'q3', 'q4', 'user_view', 'sum']
-    ) as any;
+    const { data: budgetsToUpdate, error: queryError } = await supabase
+      .from('budget_na853_split')
+      .select('id, mis, na853, last_quarter_check, q1, q2, q3, q4, user_view, sum');
     
     if (queryError) {
       logger.error(`[Quarter Transition] Error querying budgets: ${queryError.message}`);
@@ -184,18 +181,16 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
     };
     
     // Update the budget record
-    const { error: updateError } = await db.query(
-      'budget_na853_split',
-      'update',
-      {
+    const { error: updateError } = await supabase
+      .from('budget_na853_split')
+      .update({
         last_quarter_check: newQuarterKey,
         current_quarter: newQuarterKey,
         quarter_available: quarterAvailable,
         sum: sumObject,
         updated_at: new Date().toISOString()
-      },
-      { id: budget.id }
-    ) as any;
+      })
+      .eq('id', budget.id);
     
     if (updateError) {
       logger.error(`[Quarter Transition] Error updating budget ${budget.mis}: ${updateError.message}`);
@@ -250,10 +245,9 @@ async function createQuarterChangeHistoryEntry(
 ) {
   try {
     // Create an entry in the budget_history table
-    const { error } = await db.query(
-      'budget_history',
-      'insert',
-      {
+    const { error } = await supabase
+      .from('budget_history')
+      .insert({
         mis: mis,
         change_type: 'quarter_change',
         amount: newValue,
@@ -272,8 +266,7 @@ async function createQuarterChangeHistoryEntry(
           operation_type: 'quarter_change',
           active_quarter: newQuarter
         }
-      }
-    ) as any;
+      });
     
     if (error) {
       logger.error(`[Quarter Transition] Error creating history entry for ${mis}: ${error.message}`);
