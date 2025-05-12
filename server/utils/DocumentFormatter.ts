@@ -1471,12 +1471,16 @@ export class DocumentFormatter {
 
     // Process each recipient
     recipients.forEach((recipient, index) => {
+      // Ensure all recipient properties exist and handle undefined/null values safely
+      const firstname = recipient.firstname || '';
+      const lastname = recipient.lastname || '';
+      const fathername = recipient.fathername || '';
+      
       // Check if fathername exists and is not empty
-      const fullName =
-        !recipient.fathername || recipient.fathername.trim() === ""
-          ? `${recipient.lastname} ${recipient.firstname}`.trim()
-          : `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
-      const afm = recipient.afm;
+      const fullName = !fathername || fathername.trim() === ""
+        ? `${lastname} ${firstname}`.trim()
+        : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
+      const afm = recipient.afm || '';
       const rowNumber = (index + 1).toString() + ".";
       let installments: string[] = [];
       if (
@@ -1634,9 +1638,9 @@ export class DocumentFormatter {
       }
     });
 
-    // Calculate total amount
+    // Calculate total amount, safely handling undefined or null values
     const totalAmount = recipients.reduce(
-      (sum, recipient) => sum + recipient.amount,
+      (sum, recipient) => sum + (recipient.amount || 0),
       0,
     );
     rows.push(
