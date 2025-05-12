@@ -607,10 +607,7 @@ export function CreateDocumentDialog({
           return [];
         }
 
-        console.log(
-          "[CreateDocument] Units fetched successfully:",
-          data.length,
-        );
+        // Units fetched successfully - processing data
         
         return data.map((item: any) => ({
           id: item.id || item.unit,
@@ -672,7 +669,7 @@ export function CreateDocumentDialog({
       try {
         // Force refresh units data through query invalidation
         queryClient.invalidateQueries({ queryKey: ["public-units"] });
-        console.log("[CreateDocument] Units query invalidated for refresh");
+        // Units query invalidated to refresh data
       } catch (err) {
         console.warn("[CreateDocument] Non-critical error refreshing units:", err);
       }
@@ -789,7 +786,7 @@ export function CreateDocumentDialog({
           if (!currentUnit && !formData.unit) {
             // Only log on first attempt
             if (unitInitializationRef.current.attemptCount === 1) {
-              console.log("[CreateDocument] Setting default unit:", defaultUnit);
+              // Setting default unit from previous selection
             }
             
             // ATOMIC OPERATION: Set unit value in an optimized way
@@ -998,7 +995,7 @@ export function CreateDocumentDialog({
       
       // Log only very occasionally to reduce console noise
       if (stateCache.current.logCounter % 10 === 0) {
-        console.log("[CreateDocument] Saved form state to context");
+        // Form state saved to context for persistence
       }
       stateCache.current.logCounter++;
     }, updateDelay);
@@ -1034,7 +1031,7 @@ export function CreateDocumentDialog({
   useEffect(() => {
     if (recipients.length > 0) {
       // Only log when recipients change and at a reasonable frequency
-      console.log("[Budget Form Debug] Recipients updated:", recipients.length);
+      // Recipients updated in budget form
     }
   }, [recipients.length]);
 
@@ -1088,7 +1085,7 @@ export function CreateDocumentDialog({
 
     // Control function to toggle an installment selection - simplified version
     const handleInstallmentToggle = (installment: string) => {
-      console.log("[Installment] Toggle installment:", installment, "current:", selectedInstallments);
+      // Toggling installment selection
       
       // Create a copy of current installments
       let newInstallments = [...selectedInstallments];
@@ -1157,8 +1154,7 @@ export function CreateDocumentDialog({
         }
         
         // Log for debugging
-        console.log("[Installment] New installments:", newInstallments);
-        console.log("[Installment] New amounts:", newAmounts);
+        // Updated installments and amounts
         
         // Update form values immediately
         form.setValue(`recipients.${index}.installments`, newInstallments);
@@ -1197,7 +1193,7 @@ export function CreateDocumentDialog({
       installment: string,
       amount: number,
     ) => {
-      console.log("[Installment Amount] Changing amount for", installment, "to", amount);
+      // Updating installment amount
       
       // Set a flag to temporarily prevent context updates from reflecting back
       isUpdatingFromContext.current = true;
