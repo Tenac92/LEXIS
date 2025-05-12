@@ -584,9 +584,18 @@ export async function setupAuth(app: Express) {
       });
 
       // Match the response format that the client expects
+      // Ensure we only include fields that are expected by the client
+      const clientUser = {
+        id: sessionUser.id,
+        name: sessionUser.name,
+        email: sessionUser.email,
+        role: sessionUser.role,
+        units: sessionUser.units || []
+      };
+      
       return res.status(200).json({
         message: "Login successful",
-        user: sessionUser
+        user: clientUser
       });
 
     } catch (error) {

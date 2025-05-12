@@ -37,12 +37,24 @@ function useLoginMutation() {
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Login failed');
+          try {
+            const error = await response.json();
+            throw new Error(error.message || 'Login failed');
+          } catch (parseError) {
+            // If JSON parsing fails, use the status text
+            console.error('Error parsing error response:', parseError);
+            throw new Error(`Login failed: ${response.statusText}`);
+          }
         }
 
-        const data = await response.json();
-        console.log('Login successful:', data);
+        let data;
+        try {
+          data = await response.json();
+          console.log('Login successful:', data);
+        } catch (parseError) {
+          console.error('Error parsing success response:', parseError);
+          throw new Error('Login failed: Invalid response format');
+        }
         
         // Check if the data includes a user object (new format) or if it's the user itself (old format)
         const userData = data.user || data;
@@ -52,10 +64,8 @@ function useLoginMutation() {
           id: userData.id,
           name: userData.name || "Guest User",
           email: userData.email,
-          role: userData.role as 'admin' | 'user',
-          units: userData.units || [],
-          department: userData.department || undefined,
-          telephone: userData.telephone || undefined
+          role: userData.role,
+          units: userData.units || []
         };
         
         return user;
@@ -75,9 +85,7 @@ function useLoginMutation() {
         name: user.name,
         email: user.email,
         role: user.role,
-        units: user.units || [],
-        department: user.department || undefined,
-        telephone: user.telephone || undefined
+        units: user.units || []
       };
       console.log('Processed user for cache:', processedUser);
       
@@ -168,10 +176,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: userData.id,
             name: userData.name || "Guest User",
             email: userData.email,
-            role: userData.role as 'admin' | 'user',
-            units: userData.units || [],
-            department: userData.department || undefined,
-            telephone: userData.telephone || undefined
+            role: userData.role,
+            units: userData.units || []
           };
           
           return user;
