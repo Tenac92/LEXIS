@@ -39,7 +39,7 @@ type PageOrientationValue = typeof PageOrientation[keyof typeof PageOrientation]
 export function createStandardParagraph(
   text: string,
   options: {
-    alignment?: typeof AlignmentType[keyof typeof AlignmentType];
+    alignment?: AlignmentTypeValue;
     bold?: boolean;
     size?: number;
     spacing?: {

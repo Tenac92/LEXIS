@@ -6,13 +6,16 @@ import { createLogger } from './logger';
 
 const logger = createLogger('TemplateManager');
 
+// Define type-level constant for proper type checking
+type PageOrientationValue = typeof PageOrientation[keyof typeof PageOrientation];
+
 interface TemplateData {
   sections: Array<{
     properties: {
       page: {
         size: { width: number; height: number };
         margins: { top: number; right: number; bottom: number; left: number };
-        orientation?: typeof PageOrientation[keyof typeof PageOrientation];
+        orientation?: PageOrientationValue;
       };
     };
     children: any[];
