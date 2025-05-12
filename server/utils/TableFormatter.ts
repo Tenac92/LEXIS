@@ -56,9 +56,9 @@ export function createTextCell(
     width?: number;
     widthType?: number;
     bold?: boolean;
-    alignment?: string;
+    alignment?: typeof AlignmentType[keyof typeof AlignmentType];
     borders?: any;
-    verticalAlign?: string;
+    verticalAlign?: typeof VerticalAlign[keyof typeof VerticalAlign];
     verticalMerge?: "restart" | "continue";
     margins?: { top?: number; right?: number; bottom?: number; left?: number };
   } = {}
@@ -67,7 +67,7 @@ export function createTextCell(
     width = 100,
     widthType = WidthType.PERCENTAGE,
     bold = false,
-    alignment = AlignmentType.LEFT,
+    alignment = AlignmentType.LEFT as AlignmentType,
     borders = DEFAULT_BORDERS,
     verticalAlign = VerticalAlign.CENTER,
     verticalMerge,
@@ -80,7 +80,7 @@ export function createTextCell(
     verticalAlign,
     children: [
       new Paragraph({
-        alignment,
+        alignment: typeof alignment === 'string' ? AlignmentType.LEFT : alignment,
         children: [
           new TextRun({
             text: safeString(text),
