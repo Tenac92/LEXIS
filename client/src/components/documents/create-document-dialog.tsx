@@ -591,15 +591,30 @@ export function CreateDocumentDialog({
     isLoading: unitsLoading,
     refetch: refetchUnits 
   } = useQuery({
-    queryKey: ["units"],
+    queryKey: ["public-units"],
     queryFn: async () => {
       try {
         console.log("[CreateDocument] Fetching units using public endpoint...");
+        
         // Use the new public endpoint which doesn't require authentication
-        const response = await apiRequest("/api/public/units");
+        // Use fetch directly to bypass the API request function's authentication handling
+        const response = await fetch("/api/public/units", {
+          method: "GET",
+          headers: {
+            "Accept": "application/json",
+            "X-Request-ID": `units-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+          }
+        });
 
-        if (!response || !Array.isArray(response)) {
-          console.error("Error fetching units: Invalid response format");
+        if (!response.ok) {
+          console.error(`[CreateDocument] Units fetch error: ${response.status} ${response.statusText}`);
+          throw new Error(`Failed to fetch units: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data || !Array.isArray(data)) {
+          console.error("[CreateDocument] Error fetching units: Invalid response format", data);
           toast({
             title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
@@ -610,14 +625,15 @@ export function CreateDocumentDialog({
 
         console.log(
           "[CreateDocument] Units fetched successfully:",
-          response.length,
+          data.length,
         );
-        return response.map((item: any) => ({
-          id: item.unit || item.id,
-          name: item.unit_name || item.name,
+        
+        return data.map((item: any) => ({
+          id: item.id || item.unit,
+          name: item.name || item.unit_name,
         }));
       } catch (error) {
-        console.error("Units fetch error:", error);
+        console.error("[CreateDocument] Units fetch error:", error);
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
