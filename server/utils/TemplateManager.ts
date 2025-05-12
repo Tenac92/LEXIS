@@ -12,7 +12,7 @@ interface TemplateData {
       page: {
         size: { width: number; height: number };
         margins: { top: number; right: number; bottom: number; left: number };
-        orientation?: PageOrientation;
+        orientation?: typeof PageOrientation[keyof typeof PageOrientation];
       };
     };
     children: any[];
@@ -132,11 +132,11 @@ export class TemplateManager {
       logger.debug(`[TemplateManager] Generating preview for template ID: ${templateId}`);
       
       const template = await this.getTemplate(templateId);
-      if (!template.template_data) {
-        throw new Error(`Template with ID ${templateId} has no template_data`);
+      if (!template.content) {
+        throw new Error(`Template with ID ${templateId} has no content data`);
       }
 
-      const templateData = template.template_data as TemplateData;
+      const templateData = template.content as TemplateData;
 
       if (!templateData.sections || !Array.isArray(templateData.sections) || templateData.sections.length === 0) {
         throw new Error(`Template ${templateId} has invalid or empty sections`);
