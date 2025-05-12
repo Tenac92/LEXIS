@@ -578,7 +578,7 @@ export function CreateDocumentDialog({
     queryKey: ["public-units"],
     queryFn: async () => {
       try {
-        console.log("[CreateDocument] Fetching units using public endpoint...");
+        // Fetch units using public endpoint
         
         // Use the new public endpoint which doesn't require authentication
         // Use fetch directly to bypass the API request function's authentication handling
@@ -649,7 +649,7 @@ export function CreateDocumentDialog({
       return;
     }
     
-    console.log("[CreateDocument] Dialog opened, refreshing form and units data");
+    // Dialog initialization - form and units data will be refreshed
     
     // ANTI-FLICKER: Capture initial state before any operations
     dialogInitializationRef.current = {
@@ -712,10 +712,10 @@ export function CreateDocumentDialog({
       
       // Only log if we actually had data to restore
       if (formData?.unit || formData?.project_id) {
-        console.log("[CreateDocument] Form initialized from context successfully");
+        // Form initialized from context successfully
       }
     } catch (error) {
-      console.error("[CreateDocument] Error initializing form:", error);
+      // Error handling without console noise
       toast({
         title: "Σφάλμα",
         description: "Προέκυψε σφάλμα κατά την προετοιμασία της φόρμας. Παρακαλώ δοκιμάστε ξανά.",
