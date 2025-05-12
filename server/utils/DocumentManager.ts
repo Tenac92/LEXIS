@@ -2,6 +2,10 @@ import { supabase } from '../config/db';
 import { DocumentValidator } from './DocumentValidator';
 import { DocumentFormatter } from './DocumentFormatter';
 
+import { createLogger } from './logger';
+
+const logger = createLogger('DocumentManager');
+
 interface DocumentFilters {
   unit?: string;
   status?: string;
@@ -25,7 +29,7 @@ export class DocumentManager {
   async loadDocuments(filters: DocumentFilters = {}) {
     try {
       // Loading documents with the specified filters
-      console.log('[DocumentManager] Loading documents with filters:', JSON.stringify(filters));
+      logger.debug('[DocumentManager] Loading documents with filters:', JSON.stringify(filters));
 
       // Get the supabase client from the unified data layer
       const { supabase } = await import('../data');
@@ -99,7 +103,7 @@ export class DocumentManager {
           break;
         } catch (retryError) {
           retryCount++;
-          console.warn(`[DocumentManager] Query attempt ${retryCount} failed:`, retryError);
+          logger.warn(`[DocumentManager] Query attempt ${retryCount} failed:`, retryError);
           
           if (retryCount >= MAX_RETRIES) {
             // If we've exhausted all retries, throw the error
@@ -116,17 +120,17 @@ export class DocumentManager {
       const { data, error } = result || { data: [], error: null };
 
       if (error) {
-        console.error('[DocumentManager] Error loading documents:', error);
+        logger.error('[DocumentManager] Error loading documents:', error);
         
         // Handle specific database error codes
         if (error.code === '57P01') { // terminating connection due to administrator command
-          console.warn('[DocumentManager] Database connection terminated by administrator, returning empty results');
+          logger.warn('[DocumentManager] Database connection terminated by administrator, returning empty results');
           return [];
         }
         
         // For connection errors, return empty results instead of failing
         if (error.code === '08006' || error.code === '08001' || error.code === '08004') {
-          console.warn('[DocumentManager] Database connection error, returning empty results');
+          logger.warn('[DocumentManager] Database connection error, returning empty results');
           return [];
         }
         
@@ -156,12 +160,12 @@ export class DocumentManager {
       }
 
       // Documents loaded successfully with filtering applied
-      console.log(`[DocumentManager] Successfully loaded ${filteredData.length} documents`);
+      logger.debug(`[DocumentManager] Successfully loaded ${filteredData.length} documents`);
       return filteredData;
     } catch (error) {
-      console.error('[DocumentManager] Load documents error:', error);
+      logger.error('[DocumentManager] Load documents error:', error);
       // Return empty data instead of failing the request
-      console.warn('[DocumentManager] Returning empty results due to error');
+      logger.warn('[DocumentManager] Returning empty results due to error');
       return [];
     }
   }
@@ -179,7 +183,7 @@ export class DocumentManager {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('[DocumentManager] Load recipients error:', error);
+      logger.error('[DocumentManager] Load recipients error:', error);
       throw error;
     }
   }
@@ -187,7 +191,7 @@ export class DocumentManager {
   async createDocument(documentData: any) {
     try {
       // Document creation initiated with validated data
-      console.log('[DocumentManager] Creating document with data:', JSON.stringify(documentData));
+      logger.debug('[DocumentManager] Creating document with data:', JSON.stringify(documentData));
       
       // Get the supabase client from the unified data layer
       const { supabase } = await import('../data');
@@ -197,7 +201,7 @@ export class DocumentManager {
         for (const recipient of documentData.recipients) {
           if (!recipient.afm || !recipient.firstname || !recipient.lastname || 
               typeof recipient.amount !== 'number' || typeof recipient.installment !== 'number') {
-            console.error('[DocumentManager] Invalid recipient data:', recipient);
+            logger.error('[DocumentManager] Invalid recipient data:', recipient);
             throw new Error('Invalid recipient data. Please check all required fields are provided.');
           }
         }
@@ -210,14 +214,14 @@ export class DocumentManager {
         .single();
       
       if (error) {
-        console.error('[DocumentManager] Supabase insert error:', error);
+        logger.error('[DocumentManager] Supabase insert error:', error);
         throw error;
       }
 
-      console.log('[DocumentManager] Document created successfully, ID:', data?.id);
+      logger.debug('[DocumentManager] Document created successfully, ID:', data?.id);
       return data;
     } catch (error) {
-      console.error('[DocumentManager] Create document error:', error);
+      logger.error('[DocumentManager] Create document error:', error);
       throw error;
     }
   }
@@ -234,7 +238,7 @@ export class DocumentManager {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Update document error:', error);
+      logger.error('Update document error:', error);
       throw error;
     }
   }
@@ -252,7 +256,7 @@ export class DocumentManager {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Add attachments error:', error);
+      logger.error('Add attachments error:', error);
       throw error;
     }
   }
@@ -288,7 +292,7 @@ export class DocumentManager {
         .single();
 
       if (fetchError || !existingDoc) {
-        console.error('[DocumentManager] Error fetching document:', fetchError);
+        logger.error('[DocumentManager] Error fetching document:', fetchError);
         throw new Error('Failed to fetch document');
       }
 
@@ -326,7 +330,7 @@ export class DocumentManager {
         .single();
 
       if (updateError) {
-        console.error('[DocumentManager] Error updating document:', updateError);
+        logger.error('[DocumentManager] Error updating document:', updateError);
         throw new Error(`Failed to update document: ${updateError.message}`);
       }
 
@@ -341,12 +345,12 @@ export class DocumentManager {
         // Document formatting completed successfully
         return { document: updatedDoc, buffer: docxBuffer };
       } catch (formatError: any) {
-        console.error('[DocumentManager] Error formatting document:', formatError);
+        logger.error('[DocumentManager] Error formatting document:', formatError);
         const errorMessage = formatError?.message || 'Unknown formatting error';
         throw new Error(`Failed to format document: ${errorMessage}`);
       }
     } catch (error) {
-      console.error('[DocumentManager] Generate orthi epanalipsi error:', error);
+      logger.error('[DocumentManager] Generate orthi epanalipsi error:', error);
       throw error;
     }
   }
@@ -369,7 +373,7 @@ export class DocumentManager {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Fetch document fields error:', error);
+      logger.error('Fetch document fields error:', error);
       throw error;
     }
   }

@@ -24,6 +24,10 @@ import * as path from "path";
 import { format } from "date-fns";
 import { after } from "node:test";
 
+import { createLogger } from './logger';
+
+const logger = createLogger('DocumentFormatter');
+
 interface UserDetails {
   name: string;
   email?: string;
@@ -338,10 +342,10 @@ export class DocumentFormatter {
     documentData: DocumentData,
   ): Promise<Buffer> {
     try {
-      console.log("Generating primary document for:", documentData);
+      logger.debug("Generating primary document for:", documentData);
 
       const unitDetails = await this.getUnitDetails(documentData.unit);
-      console.log("Unit details:", unitDetails);
+      logger.debug("Unit details:", unitDetails);
 
       // Get project title and NA853 code from database
       const projectMis =
@@ -350,8 +354,8 @@ export class DocumentFormatter {
         "";
       const projectTitle = await this.getProjectTitle(projectMis);
       const projectNA853 = await this.getProjectNA853(projectMis);
-      console.log(`Project title for MIS ${projectMis}:`, projectTitle);
-      console.log(`Project NA853 for MIS ${projectMis}:`, projectNA853);
+      logger.debug(`Project title for MIS ${projectMis}:`, projectTitle);
+      logger.debug(`Project NA853 for MIS ${projectMis}:`, projectNA853);
 
       // Create a modified document data with NA853 if available
       const enrichedDocumentData = {
@@ -407,7 +411,7 @@ export class DocumentFormatter {
 
       return await Packer.toBuffer(doc);
     } catch (error) {
-      console.error("Error generating primary document:", error);
+      logger.error("Error generating primary document:", error);
       throw error;
     }
   }
@@ -425,13 +429,13 @@ export class DocumentFormatter {
   public static async getProjectTitle(mis: string): Promise<string | null> {
     try {
       if (!mis) {
-        console.error(
+        logger.error(
           "[DocumentFormatter] No MIS provided for project title lookup",
         );
         return null;
       }
 
-      console.log(
+      logger.debug(
         `[DocumentFormatter] Fetching project title for input: '${mis}'`,
       );
 
@@ -440,7 +444,7 @@ export class DocumentFormatter {
       const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
       const isProjectCode = projectCodePattern.test(mis);
 
-      console.log(
+      logger.debug(
         `[DocumentFormatter] getProjectTitle - Analysis: mis='${mis}', isNumericString=${isNumericString}, isProjectCode=${isProjectCode}`,
       );
 
@@ -449,7 +453,7 @@ export class DocumentFormatter {
       let resultFound = false;
 
       // DUMP ALL FIELDS for a specific record to debug issues
-      console.log(
+      logger.debug(
         `[DocumentFormatter] Running diagnostic query to dump all fields for a few records`,
       );
       const diagnosticResult = await supabase
@@ -458,23 +462,23 @@ export class DocumentFormatter {
         .limit(2);
 
       if (diagnosticResult.error) {
-        console.error(
+        logger.error(
           "[DocumentFormatter] Diagnostic query error:",
           diagnosticResult.error.message,
         );
       } else if (diagnosticResult.data && diagnosticResult.data.length > 0) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Diagnostic record sample:`,
           JSON.stringify(diagnosticResult.data[0]),
         );
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Available columns:`,
           Object.keys(diagnosticResult.data[0]).join(", "),
         );
       }
 
       // Strategy 1: First try with na853 as this appears to be the right column based on schema
-      console.log(`[DocumentFormatter] Trying NA853 lookup with value: ${mis}`);
+      logger.debug(`[DocumentFormatter] Trying NA853 lookup with value: ${mis}`);
       const na853Result = await supabase
         .from("Projects")
         .select("project_title, mis, na853, budget_na853")
@@ -482,15 +486,15 @@ export class DocumentFormatter {
         .maybeSingle();
 
       if (na853Result.error) {
-        console.error(
+        logger.error(
           "[DocumentFormatter] NA853 lookup error:",
           na853Result.error.message,
         );
       } else if (na853Result.data?.project_title) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Found project title by na853: '${na853Result.data.project_title}'`,
         );
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Project details:`,
           JSON.stringify(na853Result.data),
         );
@@ -500,7 +504,7 @@ export class DocumentFormatter {
 
       // Strategy 2: Try with budget_na853 if it looks like a project code
       if (!resultFound && isProjectCode) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Input appears to be a project code: ${mis}, trying budget_na853 lookup`,
         );
         const result = await supabase
@@ -513,17 +517,17 @@ export class DocumentFormatter {
         error = result.error;
 
         if (error) {
-          console.error(
+          logger.error(
             "[DocumentFormatter] Budget lookup error:",
             error.message,
           );
         }
 
         if (!error && data?.project_title) {
-          console.log(
+          logger.debug(
             `[DocumentFormatter] Found project title by budget_na853: '${data.project_title}'`,
           );
-          console.log(
+          logger.debug(
             `[DocumentFormatter] Project details:`,
             JSON.stringify(data),
           );
@@ -534,7 +538,7 @@ export class DocumentFormatter {
 
       // Strategy 3: Default lookup by MIS as numeric value
       if (!resultFound && isNumericString) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Trying MIS lookup with numeric value: ${mis}`,
         );
         const result = await supabase
@@ -547,14 +551,14 @@ export class DocumentFormatter {
         error = result.error;
 
         if (error) {
-          console.error(
+          logger.error(
             "[DocumentFormatter] Error fetching project title by MIS:",
             error.message,
           );
         } else if (!data || !data.project_title) {
-          console.log(`[DocumentFormatter] No project found with MIS: ${mis}`);
+          logger.debug(`[DocumentFormatter] No project found with MIS: ${mis}`);
         } else {
-          console.log(
+          logger.debug(
             `[DocumentFormatter] Found project by MIS with title: '${data.project_title}'`,
             `and fields:`,
             JSON.stringify(data),
@@ -566,7 +570,7 @@ export class DocumentFormatter {
 
       // Strategy 4: Try through an exact match on either field
       if (!resultFound) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Trying exact match search on multiple columns`,
         );
 
@@ -577,12 +581,12 @@ export class DocumentFormatter {
           .limit(1);
 
         if (exactResult.error) {
-          console.error(
+          logger.error(
             "[DocumentFormatter] Exact match error:",
             exactResult.error.message,
           );
         } else if (exactResult.data && exactResult.data.length > 0) {
-          console.log(
+          logger.debug(
             `[DocumentFormatter] Found project by exact match:`,
             exactResult.data[0],
           );
@@ -593,7 +597,7 @@ export class DocumentFormatter {
 
       // Strategy 5: Last resort - try a fuzzy search on multiple fields
       if (!resultFound) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Trying fuzzy search for project with term: ${mis}`,
         );
 
@@ -607,7 +611,7 @@ export class DocumentFormatter {
             const code = mixedMatch[2];
             const number = mixedMatch[3];
 
-            console.log(
+            logger.debug(
               `[DocumentFormatter] Parsed mixed code - Year: ${year}, Code: ${code}, Number: ${number}`,
             );
 
@@ -621,12 +625,12 @@ export class DocumentFormatter {
               .limit(1);
 
             if (result.error) {
-              console.error(
+              logger.error(
                 "[DocumentFormatter] Fuzzy search error:",
                 result.error.message,
               );
             } else if (result.data && result.data.length > 0) {
-              console.log(
+              logger.debug(
                 `[DocumentFormatter] Found project by fuzzy search:`,
                 result.data[0],
               );
@@ -638,14 +642,14 @@ export class DocumentFormatter {
       }
 
       // If we got here, we couldn't find a project title
-      console.log(
+      logger.debug(
         `[DocumentFormatter] No project title found for input: ${mis} after all attempts`,
       );
 
       // Return a default title as last resort if all strategies fail
       return "ΚΡΑΤΙΚΗ ΑΡΩΓΗ";
     } catch (error) {
-      console.error("[DocumentFormatter] Error in getProjectTitle:", error);
+      logger.error("[DocumentFormatter] Error in getProjectTitle:", error);
       return "ΚΡΑΤΙΚΗ ΑΡΩΓΗ"; // Provide a default title in case of errors
     }
   }
@@ -656,7 +660,7 @@ export class DocumentFormatter {
   public static async getProjectNA853(mis: string): Promise<string | null> {
     try {
       if (!mis) {
-        console.error(
+        logger.error(
           "[DocumentFormatter] No MIS provided for project NA853 lookup",
         );
         return null;
@@ -665,16 +669,16 @@ export class DocumentFormatter {
       // If the input already looks like an NA853 code, it might be what we're searching for
       const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
       if (projectCodePattern.test(mis)) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Input appears to be an NA853 code already: ${mis}`,
         );
         return mis;
       }
 
-      console.log(`[DocumentFormatter] Fetching project NA853 for MIS: ${mis}`);
+      logger.debug(`[DocumentFormatter] Fetching project NA853 for MIS: ${mis}`);
 
       // Strategy 1: Try na853 field first
-      console.log(`[DocumentFormatter] Trying NA853 lookup with value: ${mis}`);
+      logger.debug(`[DocumentFormatter] Trying NA853 lookup with value: ${mis}`);
       const na853Result = await supabase
         .from("Projects")
         .select("na853, budget_na853")
@@ -682,7 +686,7 @@ export class DocumentFormatter {
         .maybeSingle();
 
       if (!na853Result.error && na853Result.data?.na853) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Found project with na853: ${na853Result.data.na853}`,
         );
         return na853Result.data.na853;
@@ -690,14 +694,14 @@ export class DocumentFormatter {
 
       // Strategy 2: Try budget_na853 field
       if (!na853Result.error && na853Result.data?.budget_na853) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Found project with budget_na853: ${na853Result.data.budget_na853}`,
         );
         return na853Result.data.budget_na853;
       }
 
       if (na853Result.error) {
-        console.error(
+        logger.error(
           "[DocumentFormatter] Error in NA853 lookup:",
           na853Result.error.message,
         );
@@ -711,7 +715,7 @@ export class DocumentFormatter {
         .maybeSingle();
 
       if (!directNA853.error && directNA853.data?.na853) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Found na853 by direct lookup: ${directNA853.data.na853}`,
         );
         return directNA853.data.na853;
@@ -725,19 +729,19 @@ export class DocumentFormatter {
         .maybeSingle();
 
       if (!directBudgetNA853.error && directBudgetNA853.data?.budget_na853) {
-        console.log(
+        logger.debug(
           `[DocumentFormatter] Found budget_na853 by direct lookup: ${directBudgetNA853.data.budget_na853}`,
         );
         return directBudgetNA853.data.budget_na853;
       }
 
       // Last resort: Use MIS as fallback if it's not found
-      console.log(
+      logger.debug(
         `[DocumentFormatter] No NA853 found after all attempts, using input as fallback: ${mis}`,
       );
       return mis;
     } catch (error) {
-      console.error("[DocumentFormatter] Error in getProjectNA853:", error);
+      logger.error("[DocumentFormatter] Error in getProjectNA853:", error);
       return mis; // Return the input as fallback in case of errors
     }
   }
@@ -746,20 +750,20 @@ export class DocumentFormatter {
     documentData: DocumentData,
   ): Promise<Buffer> {
     try {
-      console.log("Generating secondary document for:", documentData);
+      logger.debug("Generating secondary document for:", documentData);
 
       const unitDetails = await this.getUnitDetails(documentData.unit);
-      console.log("Unit details:", unitDetails);
+      logger.debug("Unit details:", unitDetails);
 
       // Get project title and NA853 code from database
       const projectMis =
         documentData.project_na853 ||
         (documentData as any).mis?.toString() ||
         "";
-      console.log(
+      logger.debug(
         `[DocumentFormatter] Secondary document - Finding project with MIS/NA853: ${projectMis}`,
       );
-      console.log(
+      logger.debug(
         `[DocumentFormatter] Secondary document - Document data:`,
         JSON.stringify({
           id: documentData.id,
@@ -770,11 +774,11 @@ export class DocumentFormatter {
 
       const projectTitle = await this.getProjectTitle(projectMis);
       const projectNA853 = await this.getProjectNA853(projectMis);
-      console.log(
+      logger.debug(
         `[DocumentFormatter] Secondary document - Project title for MIS ${projectMis}:`,
         projectTitle,
       );
-      console.log(
+      logger.debug(
         `[DocumentFormatter] Secondary document - Project NA853 for MIS ${projectMis}:`,
         projectNA853,
       );
@@ -1011,7 +1015,7 @@ export class DocumentFormatter {
 
       return await Packer.toBuffer(doc);
     } catch (error) {
-      console.error("Error generating secondary document:", error);
+      logger.error("Error generating secondary document:", error);
       throw error;
     }
   }
@@ -2127,11 +2131,11 @@ export class DocumentFormatter {
   ): Promise<UnitDetails | null> {
     try {
       if (!unitCode) {
-        console.error("No unit code provided");
+        logger.error("No unit code provided");
         return null;
       }
 
-      console.log("Fetching unit details for:", unitCode);
+      logger.debug("Fetching unit details for:", unitCode);
 
       // Try exact match on unit field first
       let { data: unitData, error: unitError } = await supabase
@@ -2142,7 +2146,7 @@ export class DocumentFormatter {
 
       // If not found, try with unit_name.name using containsJson query
       if (!unitData && !unitError) {
-        console.log(
+        logger.debug(
           "Unit not found by exact match on unit field, trying unit_name.name",
         );
 
@@ -2163,16 +2167,16 @@ export class DocumentFormatter {
             ) || null;
 
           if (unitData) {
-            console.log("Found unit by unit_name.name match:", unitData.unit);
+            logger.debug("Found unit by unit_name.name match:", unitData.unit);
           }
         } else if (fetchError) {
-          console.error("Error fetching all units:", fetchError);
+          logger.error("Error fetching all units:", fetchError);
         }
       }
 
       // If still not found, try case-insensitive search on unit field
       if (!unitData && !unitError) {
-        console.log(
+        logger.debug(
           "Unit not found by exact match, trying case-insensitive search on unit field",
         );
         ({ data: unitData, error: unitError } = await supabase
@@ -2183,12 +2187,12 @@ export class DocumentFormatter {
       }
 
       if (unitError) {
-        console.error("Error fetching unit details:", unitError);
+        logger.error("Error fetching unit details:", unitError);
         return null;
       }
 
       if (!unitData) {
-        console.log("No unit found in database, returning default values");
+        logger.debug("No unit found in database, returning default values");
         // Return default unit details instead of null
         return {
           unit: unitCode,
@@ -2212,10 +2216,10 @@ export class DocumentFormatter {
         };
       }
 
-      console.log("Unit details fetched:", unitData);
+      logger.debug("Unit details fetched:", unitData);
       return unitData;
     } catch (error) {
-      console.error("Error in getUnitDetails:", error);
+      logger.error("Error in getUnitDetails:", error);
       // Return default unit details on error
       return {
         unit: unitCode,
@@ -2263,7 +2267,7 @@ export class DocumentFormatter {
     id?: number; // Optional ID that might be passed
   }): Promise<Buffer> {
     try {
-      console.log("Formatting orthi epanalipsi document with data:", data);
+      logger.debug("Formatting orthi epanalipsi document with data:", data);
 
       // Get unit details
       const unitDetails = await DocumentFormatter.getUnitDetails(data.unit);
@@ -2373,7 +2377,7 @@ export class DocumentFormatter {
 
       return await Packer.toBuffer(doc);
     } catch (error) {
-      console.error("Error formatting orthi epanalipsi document:", error);
+      logger.error("Error formatting orthi epanalipsi document:", error);
       throw error;
     }
   }

@@ -2,6 +2,10 @@ import { Document, Packer, Paragraph, TextRun, ISectionOptions, PageOrientation 
 import { type DocumentTemplate } from '@shared/schema';
 import { supabase } from '../config/db';
 
+import { createLogger } from './logger';
+
+const logger = createLogger('TemplateManager');
+
 interface TemplateData {
   sections: Array<{
     properties: {
@@ -24,7 +28,7 @@ interface PreviewOptions {
 export class TemplateManager {
   static async getTemplateForExpenditure(expenditureType: string): Promise<DocumentTemplate | null> {
     try {
-      console.log(`[TemplateManager] Fetching template for expenditure type: ${expenditureType}`);
+      logger.debug(`[TemplateManager] Fetching template for expenditure type: ${expenditureType}`);
       
       // First try to find a specific template for this expenditure type
       let { data: specificTemplate, error: specificError } = await supabase
@@ -35,7 +39,7 @@ export class TemplateManager {
         .single();
 
       if (specificError) {
-        console.error('[TemplateManager] Error fetching specific template:', specificError);
+        logger.error('[TemplateManager] Error fetching specific template:', specificError);
         
         // Only throw if it's not a "not found" error
         if (specificError.code !== 'PGRST116') {
@@ -44,11 +48,11 @@ export class TemplateManager {
       }
 
       if (specificTemplate) {
-        console.log(`[TemplateManager] Found specific template for: ${expenditureType}`);
+        logger.debug(`[TemplateManager] Found specific template for: ${expenditureType}`);
         return specificTemplate;
       }
 
-      console.log(`[TemplateManager] No specific template found for: ${expenditureType}, fetching default template`);
+      logger.debug(`[TemplateManager] No specific template found for: ${expenditureType}, fetching default template`);
       
       // If no specific template found, get the default template
       const { data: defaultTemplate, error: defaultError } = await supabase
@@ -59,19 +63,19 @@ export class TemplateManager {
         .single();
 
       if (defaultError) {
-        console.error('[TemplateManager] Error fetching default template:', defaultError);
+        logger.error('[TemplateManager] Error fetching default template:', defaultError);
         throw new Error(`Failed to fetch default template: ${defaultError.message}`);
       }
 
       if (!defaultTemplate) {
-        console.error('[TemplateManager] No default template found');
+        logger.error('[TemplateManager] No default template found');
         throw new Error('No template found: neither specific nor default template exists');
       }
 
-      console.log('[TemplateManager] Using default template');
+      logger.debug('[TemplateManager] Using default template');
       return defaultTemplate;
     } catch (error) {
-      console.error('[TemplateManager] Error in getTemplateForExpenditure:', error);
+      logger.error('[TemplateManager] Error in getTemplateForExpenditure:', error);
       throw error; // Propagate the error so it can be handled by the calling function
     }
   }
@@ -101,7 +105,7 @@ export class TemplateManager {
       if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error creating template:', error);
+      logger.error('Error creating template:', error);
       throw new Error('Failed to create template');
     }
   }
@@ -125,7 +129,7 @@ export class TemplateManager {
     options: PreviewOptions = {}
   ): Promise<Buffer> {
     try {
-      console.log(`[TemplateManager] Generating preview for template ID: ${templateId}`);
+      logger.debug(`[TemplateManager] Generating preview for template ID: ${templateId}`);
       
       const template = await this.getTemplate(templateId);
       if (!template.template_data) {
@@ -156,22 +160,22 @@ export class TemplateManager {
       });
 
       // Create document from template
-      console.log('[TemplateManager] Creating document from template sections');
+      logger.debug('[TemplateManager] Creating document from template sections');
       const doc = new Document({
         sections: sections
       });
 
-      console.log('[TemplateManager] Packing document to buffer');
+      logger.debug('[TemplateManager] Packing document to buffer');
       return await Packer.toBuffer(doc);
     } catch (error) {
-      console.error('[TemplateManager] Error generating preview:', error);
+      logger.error('[TemplateManager] Error generating preview:', error);
       throw new Error(`Failed to generate preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   private static processTemplateChildren(children: any[], data: any): any[] {
     if (!children || !Array.isArray(children)) {
-      console.warn('[TemplateManager] Invalid children in template:', children);
+      logger.warn('[TemplateManager] Invalid children in template:', children);
       return [];
     }
     
@@ -194,21 +198,21 @@ export class TemplateManager {
           }
           return child;
         } catch (error) {
-          console.error(`[TemplateManager] Error processing child at index ${index}:`, error);
-          console.error(`[TemplateManager] Problematic child:`, JSON.stringify(child));
+          logger.error(`[TemplateManager] Error processing child at index ${index}:`, error);
+          logger.error(`[TemplateManager] Problematic child:`, JSON.stringify(child));
           // Return an empty text run instead of failing the entire document generation
           return new TextRun('');
         }
       });
     } catch (error) {
-      console.error('[TemplateManager] Error in processTemplateChildren:', error);
+      logger.error('[TemplateManager] Error in processTemplateChildren:', error);
       return [new TextRun('[Template processing error]')];
     }
   }
 
   private static replacePlaceholders(text: string, data: any): string {
     if (!text || typeof text !== 'string') {
-      console.warn('[TemplateManager] Invalid text for placeholder replacement:', text);
+      logger.warn('[TemplateManager] Invalid text for placeholder replacement:', text);
       return '';
     }
     
@@ -218,12 +222,12 @@ export class TemplateManager {
           const value = key.split('.').reduce((obj: any, k: string) => obj?.[k], data);
           return value !== undefined && value !== null ? String(value) : match;
         } catch (error) {
-          console.warn(`[TemplateManager] Error processing placeholder ${match}:`, error);
+          logger.warn(`[TemplateManager] Error processing placeholder ${match}:`, error);
           return match;
         }
       });
     } catch (error) {
-      console.error('[TemplateManager] Error in replacePlaceholders:', error);
+      logger.error('[TemplateManager] Error in replacePlaceholders:', error);
       return text; // Return original text on error
     }
   }

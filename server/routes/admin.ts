@@ -36,10 +36,11 @@ export function registerAdminRoutes(router: Router, wss: any) {
       });
     } catch (error) {
       logger.error('[Admin API] Error in manual quarter transition check', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return res.status(500).json({
         success: false,
         message: 'Error initiating quarter transition check',
-        error: error.message
+        error: errorMessage
       });
     }
   });
@@ -69,10 +70,11 @@ export function registerAdminRoutes(router: Router, wss: any) {
       });
     } catch (error) {
       logger.error('[Admin API] Error in forced quarter transition', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return res.status(500).json({
         success: false,
         message: 'Error processing forced quarter transition',
-        error: error.message
+        error: errorMessage
       });
     }
   });
@@ -104,10 +106,11 @@ export function registerAdminRoutes(router: Router, wss: any) {
       });
     } catch (error) {
       logger.error('[Admin API] Error getting quarter transition status', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return res.status(500).json({
         success: false,
         message: 'Error getting quarter transition status',
-        error: error.message
+        error: errorMessage
       });
     }
   });

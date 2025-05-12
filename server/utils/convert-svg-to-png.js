@@ -3,6 +3,10 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
+import { createLogger } from './logger';
+
+const logger = createLogger('ConvertSvgToPng');
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -15,8 +19,8 @@ sharp(svgPath)
   .png()
   .toFile(pngPath)
   .then(() => {
-    console.log(`Successfully converted ${svgPath} to ${pngPath}`);
+    logger.debug(`Successfully converted ${svgPath} to ${pngPath}`);
   })
   .catch(err => {
-    console.error('Error converting SVG to PNG:', err);
+    logger.error('Error converting SVG to PNG:', err);
   });

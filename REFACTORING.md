@@ -21,10 +21,13 @@ This document describes the refactoring and code improvements applied to the cod
      - `SafeDataHelpers.ts` - Utility functions for safely handling data
      - `TableFormatter.ts` - Functions for table generation
      - `RecipientFormatter.ts` - Functions for recipient data formatting
+     - `HeaderFormatter.ts` - Functions for document headers and titles
+     - `DocumentHelpers.ts` - General document structure helpers
 
 4. **Maintenance Tools**
    - Created `scripts/maintenance.sh` for code organization
    - Created `scripts/code-check.js` for code quality analysis
+   - Created `scripts/replace-console-logs.js` for automated console.log replacement with structured logging
 
 ## Future Refactoring Recommendations
 
