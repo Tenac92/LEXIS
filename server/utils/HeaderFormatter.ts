@@ -17,6 +17,10 @@ import { createLogger } from "./logger";
 
 const logger = createLogger('HeaderFormatter');
 
+// Define type-level constants for proper type checking
+type AlignmentTypeValue = typeof AlignmentType[keyof typeof AlignmentType];
+type HeadingLevelValue = typeof HeadingLevel[keyof typeof HeadingLevel];
+
 /**
  * Creates a document title paragraph with proper styling
  * @param text Title text
@@ -26,9 +30,9 @@ const logger = createLogger('HeaderFormatter');
 export function createTitleParagraph(
   text: string,
   options: {
-    alignment?: typeof AlignmentType[keyof typeof AlignmentType];
+    alignment?: AlignmentTypeValue;
     bold?: boolean;
-    heading?: typeof HeadingLevel[keyof typeof HeadingLevel];
+    heading?: HeadingLevelValue;
     spacing?: number;
   } = {}
 ): Paragraph {
@@ -67,9 +71,9 @@ export function createTitleParagraph(
 export function createHeaderParagraph(
   text: string,
   options: {
-    alignment?: typeof AlignmentType[keyof typeof AlignmentType];
+    alignment?: AlignmentTypeValue;
     bold?: boolean;
-    heading?: typeof HeadingLevel[keyof typeof HeadingLevel];
+    heading?: HeadingLevelValue;
     spacing?: number;
     size?: number;
   } = {}
@@ -83,8 +87,8 @@ export function createHeaderParagraph(
   } = options;
   
   return new Paragraph({
-    alignment: typeof alignment === 'string' ? AlignmentType.LEFT : alignment,
-    heading: typeof heading === 'string' ? HeadingLevel.HEADING_2 : heading,
+    alignment,
+    heading,
     spacing: {
       before: spacing,
       after: spacing,

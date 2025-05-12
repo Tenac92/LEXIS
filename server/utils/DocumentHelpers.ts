@@ -25,6 +25,11 @@ import { createLogger } from "./logger";
 
 const logger = createLogger('DocumentHelpers');
 
+// Define type-level constants for proper type checking
+type AlignmentTypeValue = typeof AlignmentType[keyof typeof AlignmentType];
+type HeadingLevelValue = typeof HeadingLevel[keyof typeof HeadingLevel];
+type PageOrientationValue = typeof PageOrientation[keyof typeof PageOrientation];
+
 /**
  * Creates a standard paragraph with text
  * @param text The text content
