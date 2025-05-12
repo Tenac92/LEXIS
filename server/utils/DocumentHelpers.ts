@@ -34,7 +34,7 @@ const logger = createLogger('DocumentHelpers');
 export function createStandardParagraph(
   text: string,
   options: {
-    alignment?: string;
+    alignment?: typeof AlignmentType[keyof typeof AlignmentType];
     bold?: boolean;
     size?: number;
     spacing?: {
@@ -54,7 +54,7 @@ export function createStandardParagraph(
   } = options;
 
   return new Paragraph({
-    alignment,
+    alignment: typeof alignment === 'string' ? AlignmentType.LEFT : alignment,
     spacing,
     children: [
       new TextRun({

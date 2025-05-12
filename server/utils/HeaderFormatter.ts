@@ -26,9 +26,9 @@ const logger = createLogger('HeaderFormatter');
 export function createTitleParagraph(
   text: string,
   options: {
-    alignment?: string;
+    alignment?: typeof AlignmentType[keyof typeof AlignmentType];
     bold?: boolean;
-    heading?: HeadingLevel;
+    heading?: typeof HeadingLevel[keyof typeof HeadingLevel];
     spacing?: number;
   } = {}
 ): Paragraph {
@@ -42,8 +42,8 @@ export function createTitleParagraph(
   logger.debug(`Creating title paragraph with text: ${text}`);
   
   return new Paragraph({
-    alignment,
-    heading,
+    alignment: typeof alignment === 'string' ? AlignmentType.CENTER : alignment,
+    heading: typeof heading === 'string' ? HeadingLevel.HEADING_1 : heading,
     spacing: {
       before: spacing,
       after: spacing,
@@ -67,9 +67,9 @@ export function createTitleParagraph(
 export function createHeaderParagraph(
   text: string,
   options: {
-    alignment?: string;
+    alignment?: typeof AlignmentType[keyof typeof AlignmentType];
     bold?: boolean;
-    heading?: HeadingLevel;
+    heading?: typeof HeadingLevel[keyof typeof HeadingLevel];
     spacing?: number;
     size?: number;
   } = {}
@@ -83,8 +83,8 @@ export function createHeaderParagraph(
   } = options;
   
   return new Paragraph({
-    alignment,
-    heading,
+    alignment: typeof alignment === 'string' ? AlignmentType.LEFT : alignment,
+    heading: typeof heading === 'string' ? HeadingLevel.HEADING_2 : heading,
     spacing: {
       before: spacing,
       after: spacing,
