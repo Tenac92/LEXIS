@@ -1231,7 +1231,7 @@ export function CreateDocumentDialog({
         const safeTotal =
           !isFinite(totalAmount) || totalAmount > 1000000000 ? 0 : totalAmount;
 
-        console.log("[Installment Amount] New total is:", safeTotal);
+        // Updated recipient total amount
           
         // First, update the form's local state - use a specific order to avoid racing conditions
         form.setValue(
@@ -1241,9 +1241,7 @@ export function CreateDocumentDialog({
         
         form.setValue(`recipients.${index}.amount`, safeTotal);
         
-        // Log what's happening for debugging
-        console.log("[Recipient Amount] Updated amount for installment", installment, "to", amount, 
-          "total recipient amount:", safeTotal);
+        // Updated installment amount and recalculated total recipient amount
           
         // Wait a small amount of time before updating context to avoid race conditions
         setTimeout(() => {
@@ -1258,7 +1256,7 @@ export function CreateDocumentDialog({
               installmentAmounts: {...currentInstallmentAmounts}
             };
             
-            console.log("[Recipient Amount] Updating form context with:", manuallyUpdatedRecipients[index]);
+            // Updating form context with modified recipient data
             
             // Update form context directly with this single change
             // but don't trigger the normal useEffect
@@ -1356,7 +1354,7 @@ export function CreateDocumentDialog({
     queryKey: ["projects", selectedUnit],
     queryFn: async (): Promise<Project[]> => {
       if (!selectedUnit) {
-        console.log("[Projects] No unit selected, returning empty projects array");
+        // No unit selected, returning empty projects array
         return [];
       }
 
