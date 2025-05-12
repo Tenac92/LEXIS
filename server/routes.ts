@@ -757,11 +757,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Units routes
     log('[Routes] Registering units routes...');
     
-    // TODO: Refactor - Move this public units endpoint to unitsController
-    // Allow public access to units endpoint for document creation
+    // Public units endpoint for document creation - bypasses authentication
     app.get('/api/users/units', async (req, res) => {
       try {
-        console.log('[Units] Public access to units list');
+        console.log('[Units] Public access to units list (skipping auth)');
         
         // Query Monada table for units
         const { data: unitsData, error } = await supabase
@@ -776,8 +775,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        console.log('[Units] Successfully fetched units:', unitsData?.length || 0);
-        return res.json(unitsData || []);
+        // Transform data to match client expectations
+        const transformedUnits = (unitsData || []).map(unit => ({
+          id: unit.unit,
+          name: unit.unit_name
+        }));
+        
+        console.log('[Units] Successfully fetched units:', transformedUnits.length);
+        return res.json(transformedUnits);
       } catch (error) {
         console.error('[Units] Error in public units access:', error);
         return res.status(500).json({
