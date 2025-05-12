@@ -50,7 +50,8 @@ declare module 'express-session' {
 export const PUBLIC_ROUTES = [
   '/api/auth/login',
   '/api/auth/register',
-  '/api/auth/me'
+  '/api/auth/me',
+  '/api/users/units'
 ];
 
 // Maximum session age in milliseconds (24 hours)
