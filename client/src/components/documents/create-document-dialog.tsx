@@ -109,14 +109,11 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
     const commandRef = useRef<HTMLDivElement>(null);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     
-    // Debug the project selection state
+    // Only log in development mode if needed for debugging
     useEffect(() => {
-      console.log("[ProjectSelect] Current props:", { 
-        value, 
-        projectsCount: projects?.length || 0,
-        disabled,
-        hasProjects: Array.isArray(projects) && projects.length > 0 
-      });
+      if (process.env.NODE_ENV === 'development' && value) {
+        // Debug logging removed in production
+      }
     }, [value, projects, disabled]);
 
     // Cache the selected project to prevent unnecessary lookups
@@ -178,14 +175,7 @@ const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
         const searchTerm = normalizeText(debouncedSearchQuery);
         const isNumericSearch = /^\d+$/.test(searchTerm);
         
-        // Only log in development to reduce console noise
-        if (process.env.NODE_ENV !== 'production') {
-          console.log("Search debug:", {
-            searchTerm,
-            isNumericSearch,
-            projectCount: projects.length,
-          });
-        }
+        // Remove all debug logging for cleaner console
 
         // Improved search algorithm with better error tolerance
         const results = projects.filter((project) => {
@@ -514,13 +504,7 @@ export function CreateDocumentDialog({
         // Get current values directly from the form
         const formValues = form.getValues();
         
-        // Reduce logging frequency for better performance
-        if (Math.random() > 0.95) {
-          console.log("[CreateDocument] Storing project_id in form context:", 
-            formValues.project_id, 
-            "Current step:", currentStep, 
-            "Target step:", step);
-        }
+        // Removed debug logging for better performance
         
         // Create a timeout to push these updates outside the current render cycle
         // This prevents the Maximum update depth exceeded error
@@ -1508,16 +1492,10 @@ export function CreateDocumentDialog({
   // Αυτό διορθώνει το πρόβλημα όπου το προϋπολογισμός δε φαίνεται στο βήμα 2 (παραλήπτες)
   } = useBudgetUpdates(selectedProjectId || formData.project_id, currentAmount);
   
-  // CRITICAL DEBUG: Add budget data state logging for steps
+  // Budget data validation and tracking (debug logging removed)
   useEffect(() => {
-    console.log("[Budget Debug] budgetData state:", {
-      available: Boolean(budgetData),
-      currentStep: currentStep,
-      selectedProjectId: selectedProjectId,
-      contextProjectId: formData.project_id,
-      usingProjectId: selectedProjectId || formData.project_id,
-      currentAmount
-    });
+    // Effect will silently track budget data state without console logs
+    // This helps with performance and keeps the console clean
   }, [budgetData, selectedProjectId, formData.project_id, currentAmount, currentStep]);
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
