@@ -776,10 +776,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Transform data to match client expectations
-        const transformedUnits = (unitsData || []).map(unit => ({
-          id: unit.unit,
-          name: unit.unit_name
-        }));
+        // Transform data to match client expectations
+        const transformedUnits = (unitsData || []).map(unit => {
+          // Handle the case where unit_name might be an object or a string
+          let unitName = "";
+          if (typeof unit.unit_name === "object" && unit.unit_name !== null) {
+            // Extract name property if it's an object
+            unitName = unit.unit_name.name || "";
+          } else {
+            // Use directly if it's a string
+            unitName = unit.unit_name || "";
+          }
+          
+          return {
+            id: unit.unit,
+            name: unitName
+          };
+        });
         
         console.log('[Units] Successfully fetched units:', transformedUnits.length);
         return res.json(transformedUnits);
