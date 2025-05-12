@@ -18,6 +18,10 @@ import {
   VerticalAlign,
   VerticalMergeType,
 } from "docx";
+
+// Define type-level constants for proper type checking
+type AlignmentTypeValue = typeof AlignmentType[keyof typeof AlignmentType];
+type VerticalAlignValue = typeof VerticalAlign[keyof typeof VerticalAlign];
 import { safeString, safeNumber, safeEuroFormat } from "./SafeDataHelpers";
 
 /**
@@ -56,9 +60,9 @@ export function createTextCell(
     width?: number;
     widthType?: number;
     bold?: boolean;
-    alignment?: typeof AlignmentType[keyof typeof AlignmentType];
+    alignment?: AlignmentTypeValue;
     borders?: any;
-    verticalAlign?: typeof VerticalAlign[keyof typeof VerticalAlign];
+    verticalAlign?: VerticalAlignValue;
     verticalMerge?: "restart" | "continue";
     margins?: { top?: number; right?: number; bottom?: number; left?: number };
   } = {}
@@ -189,13 +193,13 @@ export function createCurrencyCell(
   options: {
     width?: number;
     bold?: boolean;
-    alignment?: typeof AlignmentType[keyof typeof AlignmentType];
+    alignment?: AlignmentTypeValue;
   } = {}
 ): TableCell {
   const {
     width = 20,
     bold = false,
-    alignment = AlignmentType.RIGHT as AlignmentType,
+    alignment = AlignmentType.RIGHT,
   } = options;
 
   const numericAmount = safeNumber(amount);
@@ -204,7 +208,7 @@ export function createCurrencyCell(
   return createTextCell(formattedAmount, {
     width,
     bold,
-    alignment: typeof alignment === 'string' ? AlignmentType.RIGHT : alignment,
+    alignment,
   });
 }
 
