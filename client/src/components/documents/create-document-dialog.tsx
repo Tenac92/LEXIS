@@ -687,7 +687,7 @@ export function CreateDocumentDialog({
       // Refresh units via query invalidation - more reliable and avoids reference issues
       try {
         // Force refresh units data through query invalidation
-        queryClient.invalidateQueries({ queryKey: ["units"] });
+        queryClient.invalidateQueries({ queryKey: ["public-units"] });
         console.log("[CreateDocument] Units query invalidated for refresh");
       } catch (err) {
         console.warn("[CreateDocument] Non-critical error refreshing units:", err);
@@ -724,7 +724,7 @@ export function CreateDocumentDialog({
       }
       
       // STAGE 5: Force data refresh in the background
-      queryClient.invalidateQueries({ queryKey: ["units"] });
+      queryClient.invalidateQueries({ queryKey: ["public-units"] });
       
       // Only log if we actually had data to restore
       if (formData?.unit || formData?.project_id) {
