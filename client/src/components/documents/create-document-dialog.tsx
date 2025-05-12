@@ -594,8 +594,9 @@ export function CreateDocumentDialog({
     queryKey: ["units"],
     queryFn: async () => {
       try {
-        console.log("[CreateDocument] Fetching units...");
-        const response = await apiRequest("/api/users/units");
+        console.log("[CreateDocument] Fetching units using public endpoint...");
+        // Use the new public endpoint which doesn't require authentication
+        const response = await apiRequest("/api/public/units");
 
         if (!response || !Array.isArray(response)) {
           console.error("Error fetching units: Invalid response format");
