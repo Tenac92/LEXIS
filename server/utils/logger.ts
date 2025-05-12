@@ -1,59 +1,99 @@
 /**
- * Unified Logger
+ * Structured Logger
  * 
- * Centralized logging for the application.
- * Provides consistent log formatting and categorization.
+ * This module provides a standardized logging interface to replace
+ * console.log statements throughout the application.
  */
 
-// Define log levels
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-// Interface for logger
-interface Logger {
-  debug(message: string, ...args: any[]): void;
-  info(message: string, ...args: any[]): void;
-  warn(message: string, ...args: any[]): void;
-  error(message: string, ...args: any[]): void;
+// Log levels
+export enum LogLevel {
+  DEBUG = 'debug',
+  INFO = 'info',
+  WARN = 'warn',
+  ERROR = 'error'
 }
 
-/**
- * Format a log message with timestamp and additional data
- */
-function formatLogMessage(level: LogLevel, message: string, args: any[]): string {
-  const timestamp = new Date().toISOString();
-  const formattedMessage = `${timestamp} [${level.toUpperCase()}] ${message}`;
-  
-  if (args.length > 0) {
-    try {
-      const argsString = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg) : arg
-      ).join(' ');
-      return `${formattedMessage} ${argsString}`;
-    } catch (e) {
-      return `${formattedMessage} [Error formatting args: ${e.message}]`;
-    }
-  }
-  
-  return formattedMessage;
-}
+// Current environment log level - can be set via environment variable
+// Only logs at this level or higher will be output
+const currentLogLevel = 
+  process.env.LOG_LEVEL?.toLowerCase() as LogLevel || 
+  (process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG);
 
-/**
- * Create a logger that logs to the console
- */
-export const logger: Logger = {
-  debug(message: string, ...args: any[]) {
-    console.debug(formatLogMessage('debug', message, args));
-  },
-  
-  info(message: string, ...args: any[]) {
-    console.log(formatLogMessage('info', message, args));
-  },
-  
-  warn(message: string, ...args: any[]) {
-    console.warn(formatLogMessage('warn', message, args));
-  },
-  
-  error(message: string, ...args: any[]) {
-    console.error(formatLogMessage('error', message, args));
-  }
+// Log level numerical values for comparison
+const logLevelValues = {
+  [LogLevel.DEBUG]: 0,
+  [LogLevel.INFO]: 1,
+  [LogLevel.WARN]: 2,
+  [LogLevel.ERROR]: 3
 };
+
+/**
+ * Formats the current time as HH:MM:SS
+ */
+function getFormattedTime(): string {
+  return new Date().toLocaleTimeString('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
+/**
+ * Determine if a given log level should be output
+ * based on the current environment configuration
+ */
+function shouldLog(level: LogLevel): boolean {
+  return logLevelValues[level] >= logLevelValues[currentLogLevel];
+}
+
+/**
+ * Base logging function
+ */
+function log(level: LogLevel, module: string, message: any, ...args: any[]): void {
+  if (!shouldLog(level)) {
+    return;
+  }
+
+  const timestamp = getFormattedTime();
+  const logPrefix = `${timestamp} [${level.toUpperCase()}] [${module}]`;
+  
+  // Handle different types of messages
+  if (typeof message === 'string') {
+    if (args.length > 0) {
+      console[level](logPrefix, message, ...args);
+    } else {
+      console[level](logPrefix, message);
+    }
+  } else {
+    // For objects, arrays, etc.
+    console[level](logPrefix, message, ...args);
+  }
+}
+
+/**
+ * Create a logger instance for a specific module
+ */
+export function createLogger(moduleName: string) {
+  return {
+    debug: (message: any, ...args: any[]) => 
+      log(LogLevel.DEBUG, moduleName, message, ...args),
+    
+    info: (message: any, ...args: any[]) => 
+      log(LogLevel.INFO, moduleName, message, ...args),
+    
+    warn: (message: any, ...args: any[]) => 
+      log(LogLevel.WARN, moduleName, message, ...args),
+    
+    error: (message: any, ...args: any[]) => 
+      log(LogLevel.ERROR, moduleName, message, ...args)
+  };
+}
+
+// Create a default logger instance
+export const logger = createLogger('app');
+
+// Example usage:
+// const logger = createLogger('DocumentService');
+// logger.info('Processing document', { id: 123 });
+// logger.error('Failed to generate document', error);

@@ -8,7 +8,9 @@
 import { Router, Request, Response } from 'express';
 import { requireAdmin, AuthenticatedRequest } from '../authentication';
 import { manualQuarterTransitionCheck, processQuarterTransition } from '../services/schedulerService';
-import { logger } from '../utils/logger';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('AdminRoutes');
 
 export function registerAdminRoutes(router: Router, wss: any) {
   // Admin route group with admin authentication requirement
