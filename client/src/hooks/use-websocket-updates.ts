@@ -134,7 +134,7 @@ export function useWebSocketUpdates() {
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            console.log('[WebSocket] Received message:', data);
+            // Processing incoming WebSocket message
 
             switch (data.type) {
               case 'notification':
@@ -174,11 +174,11 @@ export function useWebSocketUpdates() {
                 
                 // Always process budget updates, even from our own session
                 // This ensures all clients see updates in real-time
-                console.log(`[WebSocket] Received budget update for MIS ${budgetUpdate.mis}: €${budgetUpdate.amount.toLocaleString('el-GR')}`);
+                // Received real-time budget update for project MIS
                 
                 // If we have the simplified budget data, log it
                 if (budgetUpdate.simpleBudgetData) {
-                  console.log('[WebSocket] Received simplified budget data:', budgetUpdate.simpleBudgetData);
+                  // Received simplified budget calculation data
                 }
                 
                 // Force refetch of the budget validation to update all components showing this budget
@@ -202,19 +202,19 @@ export function useWebSocketUpdates() {
                   });
                 } else {
                   // Just log if it's our own update
-                  console.log('[WebSocket] Processing our own budget update to update UI');
+                  // Processing our own budget update to refresh UI
                 }
                 break;
 
               case 'connection':
               case 'acknowledgment':
-                console.log(`[WebSocket] ${data.type} received:`, data);
+                // Processing server connection/acknowledgment message
                 
                 // When we connect, generate and store a unique session ID if we don't have one
                 if (data.type === 'connection' && !sessionStorage.getItem('clientSessionId')) {
                   const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
                   sessionStorage.setItem('clientSessionId', newSessionId);
-                  console.log(`[WebSocket] Generated new client session ID: ${newSessionId}`);
+                  // Generated unique client session ID for WebSocket identification
                 }
                 break;
 
@@ -240,7 +240,7 @@ export function useWebSocketUpdates() {
                 break;
 
               default:
-                console.log('[WebSocket] Unhandled message type:', data.type);
+                // Received unhandled message type from WebSocket server
             }
           } catch (error) {
             console.error('[WebSocket] Error processing message:', error);
@@ -256,7 +256,7 @@ export function useWebSocketUpdates() {
         };
 
         ws.onclose = (event) => {
-          console.log('[WebSocket] Connection closed:', event.code, event.reason);
+          // WebSocket connection closed, checking status code
           setIsConnected(false);
           
           // Clear connection timeout if it exists
@@ -273,12 +273,12 @@ export function useWebSocketUpdates() {
             switch (event.code) {
               // Normal closure (usually server-initiated)
               case 1000:
-                console.log('[WebSocket] Clean closure, will reconnect');
+                // Normal WebSocket closure, will attempt reconnect
                 return true;
                 
               // Going away (browser navigating away)
               case 1001:
-                console.log('[WebSocket] Browser navigating away');
+                // Browser navigation detected
                 return document.visibilityState === 'visible'; // Only reconnect if page is visible
                 
               // Protocol error
