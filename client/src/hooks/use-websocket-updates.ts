@@ -333,7 +333,7 @@ export function useWebSocketUpdates() {
             const jitter = Math.floor(Math.random() * 1000);
             const backoff = baseBackoff + jitter;
             
-            console.log(`[WebSocket] Attempting reconnect in ${backoff}ms (attempt ${retryCountRef.current + 1}/${MAX_RETRIES})`);
+            // Attempting reconnection with exponential backoff
 
             if (reconnectTimeoutRef.current) {
               clearTimeout(reconnectTimeoutRef.current);
