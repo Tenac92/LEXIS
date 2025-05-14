@@ -172,7 +172,7 @@ export function useBudgetUpdates(
         let responseData;
         try {
           responseData = await response.json();
-          console.log('[Budget] Raw budget response:', responseData);
+          // Received raw budget response from API
         } catch (jsonError) {
           console.error('[Budget] Failed to parse JSON response:', jsonError);
           throw new Error('Invalid JSON response from server');
@@ -183,16 +183,16 @@ export function useBudgetUpdates(
         
         if (responseData?.status === 'success' && responseData.data) {
           budgetData = responseData.data;
-          console.log('[Budget] Successfully extracted budget data from success response', budgetData);
+          // Successfully extracted budget data from response
         } else if (responseData?.status === 'error') {
           console.error('[Budget] Budget API returned error:', responseData.message || 'Unknown error');
           // Check if the error response includes fallback data (server might return zeros to prevent UI breaking)
           if (responseData.data && typeof responseData.data === 'object') {
-            console.log('[Budget] Using fallback data from error response', responseData.data);
+            // Using fallback data provided in error response
             budgetData = responseData.data;
           } else {
             // Return empty budget on API error - allow UI to still function
-            console.log('[Budget] No fallback data in error response, using zeros');
+            // No fallback data available, using zeros for budget values
             return {
               user_view: 0,
               total_budget: 0,
@@ -212,11 +212,11 @@ export function useBudgetUpdates(
           }
         } else {
           // Direct response data (not wrapped in status/data structure)
-          console.log('[Budget] Direct response data:', responseData);
+          // Processing direct API response data
           budgetData = responseData;
         }
       
-        console.log('[Budget] Extracted budget data:', budgetData);
+        // Final budget data extracted and ready to use
         
         // Return normalized budget data with original string/number values
         return {
@@ -311,7 +311,7 @@ export function useBudgetUpdates(
               String(p?.na853).toLowerCase() === String(projectId).toLowerCase() ||
               String(p?.mis) === String(projectId)
           );
-          console.log('[Budget] Found matching project for validation:', projectData);
+          // Found matching project for budget validation
         } else {
           projectData = allProjects;
         }
@@ -334,11 +334,10 @@ export function useBudgetUpdates(
 
         // Use the MIS directly for validation (can be numeric or alphanumeric)
         
-        console.log(`[Budget] Validating budget for MIS: ${misValue}, amount: ${currentAmount}`);
+        // Validating budget for project MIS and requested amount
         
         // For MIS values with special characters or Greek letters, encode for transport in JSON
-        // Note: JSON.stringify handles this for us, but we should be consistent with our debug logs
-        console.log(`[Budget] Encoded MIS for validation: ${encodeURIComponent(misValue)}`);
+        // Note: JSON.stringify handles this for us, but we encode it for consistency
         
         // Using fetch directly instead of apiRequest to avoid auto-redirect on 401
         const response = await fetch('/api/budget/validate', {
