@@ -19,7 +19,7 @@ export function useWebSocketUpdates() {
   // Function to check session status with improved error handling
   const checkSession = useCallback(async () => {
     try {
-      console.log('[WebSocket] Checking session validity');
+      // Verify if user session is still valid
       const result = await queryClient.refetchQueries({ queryKey: ['/api/auth/me'] });
       
       // Check if the result indicates we're not authenticated
@@ -29,7 +29,7 @@ export function useWebSocketUpdates() {
         
         // If we have a WebSocket connection, close it as we're no longer authenticated
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          console.log('[WebSocket] Closing connection due to session expiration');
+          // Closing WebSocket connection due to expired session
           wsRef.current.close(1000, 'Session expired');
           wsRef.current = null;
         }
@@ -45,13 +45,13 @@ export function useWebSocketUpdates() {
   // Connect to WebSocket with improved error handling
   const connect = useCallback(() => {
     if (!user) {
-      console.log('[WebSocket] Not connecting, no authenticated user');
+      // Not establishing WebSocket connection - user not authenticated
       return;
     }
 
     // If we already have a connection, don't reconnect
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      console.log('[WebSocket] Already connected');
+      // WebSocket connection already established
       return;
     }
 
@@ -85,7 +85,7 @@ export function useWebSocketUpdates() {
       
       // Add timestamp to URL to prevent caching issues
       const wsUrl = `${protocol}//${host}/ws?t=${Date.now()}`;
-      console.log('[WebSocket] Attempting to connect:', wsUrl);
+      // Attempting to establish WebSocket connection
 
       // Create new WebSocket connection
       try {
@@ -107,7 +107,7 @@ export function useWebSocketUpdates() {
 
         // Set up event handlers
         ws.onopen = () => {
-          console.log('[WebSocket] Connected successfully');
+          // WebSocket connection established successfully
           clearTimeout(connectionTimeout); // Clear the timeout on successful connection
           setIsConnected(true);
           retryCountRef.current = 0;
