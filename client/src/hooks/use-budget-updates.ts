@@ -588,7 +588,7 @@ export function useBudgetUpdates(
         // Calculated remaining budget amounts by subtracting requested amount
       }
       
-      console.log(`[Budget] Manually broadcasting update for MIS: ${misValue}, amount: ${amount}`);
+      // Manually broadcasting budget update to all connected clients
       
       // Send budget update via broadcast endpoint
       // Note: We need to include credentials as the endpoint still requires authentication
@@ -610,15 +610,15 @@ export function useBudgetUpdates(
       });
       
       if (!response.ok) {
-        console.warn('[Budget] Failed to broadcast manual update:', response.status);
+        // Failed to broadcast manual budget update
         // Try to get error details
         const errorText = await response.text();
-        console.error('[Budget] Broadcast error details:', errorText);
+        // Retrieved detailed error response from server
       } else {
-        console.log('[Budget] Successfully broadcasted manual update');
+        // Manual budget update successfully broadcast to all clients
       }
     } catch (error) {
-      console.error('[Budget] Error broadcasting manual update:', error);
+      // Error occurred while attempting to broadcast manual budget update
     }
   };
 
