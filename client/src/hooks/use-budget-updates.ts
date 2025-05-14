@@ -366,11 +366,11 @@ export function useBudgetUpdates(
         }
         
         if (!response.ok) {
-          console.error('[Budget] Validation request failed:', response.status);
+          // Validation request failed with HTTP status code
           // Try to get error details if possible
           try {
             const errorText = await response.text();
-            console.error('[Budget] Validation error response:', errorText);
+            // Error details received from server
           } catch (textError) {
             // Ignore text error, we already have the status code
           }
@@ -386,10 +386,10 @@ export function useBudgetUpdates(
         // Check if the response is actually JSON before parsing
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
-          console.error(`[Budget] Validation received non-JSON response: ${contentType}`);
+          // Received non-JSON content type in response
           try {
             const text = await response.text();
-            console.error('[Budget] Validation non-JSON response body:', text.substring(0, 500) + (text.length > 500 ? '...' : ''));
+            // Non-JSON response received, response might be HTML or plain text error
           } catch (textError) {
             // Ignore text error, we already identified the content type issue
           }
@@ -406,9 +406,9 @@ export function useBudgetUpdates(
         let data;
         try {
           data = await response.json();
-          console.log('[Budget] Validation response:', data);
+          // Successfully parsed validation response data
         } catch (jsonError) {
-          console.error('[Budget] Failed to parse validation JSON response:', jsonError);
+          // Failed to parse JSON response from validation endpoint
           return { 
             status: 'error', 
             canCreate: false,
@@ -444,8 +444,8 @@ export function useBudgetUpdates(
           ? error.message 
           : 'Unknown error validating budget';
           
-        console.error('[Budget] Budget validation error:', error);
-        console.error('[Budget] Validation error message:', errorMessage);
+        // Runtime error occurred during budget validation process
+        // Captured detailed error message for troubleshooting
         
         // Create a debug info object to help with troubleshooting
         const debugInfo = {
