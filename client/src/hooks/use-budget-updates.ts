@@ -455,7 +455,7 @@ export function useBudgetUpdates(
           error: errorMessage,
           timestamp: new Date().toISOString()
         };
-        console.error('[Budget] Validation debug info:', debugInfo);
+        // Created debug info object with validation context details
         
         return {
           status: 'error',
@@ -505,7 +505,7 @@ export function useBudgetUpdates(
           }
         }
         
-        console.log(`[Budget] Broadcasting real-time update for MIS: ${misValue}, amount: ${currentAmount}`);
+        // Broadcasting real-time budget update via WebSocket
         
         // Use the broadcast endpoint for real-time updates
         const response = await fetch('/api/budget/broadcast-update', {
@@ -522,12 +522,12 @@ export function useBudgetUpdates(
         });
         
         if (!response.ok) {
-          console.warn('[Budget] Failed to broadcast real-time update:', response.status);
+          // Failed to broadcast real-time budget update
         } else {
-          console.log('[Budget] Successfully broadcasted real-time update');
+          // Real-time budget update broadcast successful
         }
       } catch (error) {
-        console.error('[Budget] Error broadcasting real-time update:', error);
+        // Error occurred during WebSocket budget update broadcast
       }
     }, 300); // 300ms debounce delay - quick enough for real-time feel, but not too chatty
     
@@ -546,7 +546,7 @@ export function useBudgetUpdates(
   // Function to manually broadcast an update immediately 
   const broadcastUpdate = async (amount: number) => {
     if (!projectId || (amount < 0) || !sessionId) {
-      console.warn('[Budget] Cannot broadcast update - missing requirements', { projectId, amount, sessionId });
+      // Cannot broadcast update - missing required parameters
       return;
     }
 
@@ -585,7 +585,7 @@ export function useBudgetUpdates(
           quarter_available: Math.round(quarterAvailable - amount)
         };
         
-        console.log(`[Budget] Simple calculation: Available ${availableBudget} - Amount ${amount} = Remaining ${simpleBudgetData.available_budget}`);
+        // Calculated remaining budget amounts by subtracting requested amount
       }
       
       console.log(`[Budget] Manually broadcasting update for MIS: ${misValue}, amount: ${amount}`);
