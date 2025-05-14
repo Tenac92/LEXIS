@@ -125,11 +125,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
         }
 
         const fallbackData = await fallbackResponse.json();
-        console.log('[NotificationCenter] Alternate endpoint success:', {
-          type: typeof fallbackData,
-          isArray: Array.isArray(fallbackData),
-          count: Array.isArray(fallbackData) ? fallbackData.length : 0
-        });
+        // Alternate endpoint fetched data successfully
 
         // Ensure we always return an array
         if (!Array.isArray(fallbackData)) {
@@ -178,7 +174,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
     if (isError && loadingState === 'error' && localNotifications.length === 0) {
       const manualFetch = async () => {
         try {
-          console.log('[NotificationCenter] Attempting manual fetch after error...');
+          // Attempting manual fetch after previous error
           
           // Try the standard endpoint with a direct fetch
           const response = await fetch('/api/budget/notifications', {
@@ -192,7 +188,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
           if (response.ok) {
             const data = await response.json();
             if (Array.isArray(data)) {
-              console.log('[NotificationCenter] Manual fetch succeeded:', data.length);
+              // Manual fetch succeeded
               setLocalNotifications(data);
               setLoadingState('success');
               setErrorMessage(null);
@@ -326,12 +322,17 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
         // Handle potential date parsing errors
         let formattedDate = "Unknown date";
         try {
-          const createdAt = parseISO(notification.created_at);
-          if (!isNaN(createdAt.getTime())) {
-            formattedDate = formatDistanceToNow(createdAt, { addSuffix: true });
+          // Ensure created_at is a string before parsing
+          // Use type guard to ensure created_at is a string
+          const createdAtValue = notification.created_at;
+          if (typeof createdAtValue === 'string' && createdAtValue) {
+            const createdAt = parseISO(createdAtValue);
+            if (!isNaN(createdAt.getTime())) {
+              formattedDate = formatDistanceToNow(createdAt, { addSuffix: true });
+            }
           }
         } catch (err) {
-          console.error("[NotificationCenter] Date parsing error:", err);
+          // Date parsing error - silent fallback to "Unknown date"
         }
 
         return (
