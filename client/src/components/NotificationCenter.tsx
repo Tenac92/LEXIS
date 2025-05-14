@@ -64,7 +64,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
   } = useQuery<BudgetNotification[]>({
     queryKey: ['/api/budget-notifications/admin'],
     queryFn: async () => {
-      console.log('[NotificationCenter] Fetching notifications...');
+      // Fetching notifications from API endpoints
       setLoadingState('loading');
       setErrorMessage(null);
       
@@ -82,11 +82,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
 
         if (response.ok) {
           const data = await response.json();
-          console.log('[NotificationCenter] Primary endpoint success:', {
-            type: typeof data,
-            isArray: Array.isArray(data),
-            count: Array.isArray(data) ? data.length : 0
-          });
+          // Primary endpoint fetched data successfully
 
           // Ensure we always return an array
           if (!Array.isArray(data)) {
@@ -110,7 +106,7 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
       
       // If primary endpoint fails, try the alternate endpoint
       try {
-        console.log('[NotificationCenter] Trying alternate endpoint...');
+        // Trying alternate endpoint for fallback
         const fallbackResponse = await fetch('/api/budget/notifications', {
           credentials: 'include',
           headers: {

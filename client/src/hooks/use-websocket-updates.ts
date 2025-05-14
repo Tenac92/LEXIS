@@ -344,7 +344,7 @@ export function useWebSocketUpdates() {
               connect();
             }, backoff);
           } else if (!shouldReconnect) {
-            console.log('[WebSocket] Not attempting reconnect due to close code');
+            // Not attempting reconnection due to specific close code
             // Still make sure the session is valid
             queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
           } else {
@@ -352,7 +352,7 @@ export function useWebSocketUpdates() {
             
             // Reset retry count after a longer timeout to allow future reconnects
             setTimeout(() => {
-              console.log('[WebSocket] Resetting retry count after cooldown');
+              // Resetting retry count after cooldown period
               retryCountRef.current = 0;
             }, 60000); // 1 minute cooldown
             
@@ -398,12 +398,12 @@ export function useWebSocketUpdates() {
     };
 
     const handleOnline = () => {
-      console.log('[WebSocket] Network online, reconnecting...');
+      // Network is back online, attempting to reconnect
       connect();
     };
 
     const handleOffline = () => {
-      console.log('[WebSocket] Network offline');
+      // Network connection is now offline
       setIsConnected(false);
     };
 
