@@ -1,0 +1,73 @@
+[WebSocket] Attempting reconnect in 1993ms (attempt 1/10)
+[WebSocket] Session check failed - no authenticated user found
+[WebSocket] Closing connection due to session expiration
+[WebSocket] Connection closed: 1000 Session expired
+[WebSocket] Checking session validity
+[WebSocket] Clean closure, will reconnect
+[WebSocket] Attempting reconnect in 1024ms (attempt 1/10)
+[WebSocket] Session check failed - no authenticated user found
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1747206068882
+[WebSocket] Connected successfully
+[WebSocket] Checking session validity
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "02k5gmanldovm", timestamp: "2025-05-14T07:01:06.226Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "02k5gmanldovm", timestamp: "2025-05-14T07:01:06.226Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-05-14T07:01:06.385Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-05-14T07:01:06.385Z"}
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1747206069876
+[WebSocket] Session check failed - no authenticated user found
+[WebSocket] Closing connection due to session expiration
+[WebSocket] Connection closed: 1000 Session expired
+[WebSocket] Checking session validity
+[WebSocket] Clean closure, will reconnect
+[WebSocket] Attempting reconnect in 1947ms (attempt 1/10)
+[WebSocket] Session check failed - no authenticated user found
+[WebSocket] Connected successfully
+[WebSocket] Checking session validity
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "8wysuqmanldpn4", timestamp: "2025-05-14T07:01:07.216Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "8wysuqmanldpn4", timestamp: "2025-05-14T07:01:07.216Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-05-14T07:01:07.374Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-05-14T07:01:07.374Z"}
+[WebSocket] Session check failed - no authenticated user found
+[WebSocket] Closing connection due to session expiration
+[WebSocket] Connection closed: 1000 Session expired
+[WebSocket] Checking session validity
+[WebSocket] Clean closure, will reconnect
+[WebSocket] Attempting reconnect in 1610ms (attempt 1/10)
+[WebSocket] Session check failed - no authenticated user found
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1747206072883
+[WebSocket] Attempting to connect: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1747206072884
+[WebSocket] Connected successfully
+[WebSocket] Checking session validity
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "tr6j6emanldryy", timestamp: "2025-05-14T07:01:10.234Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "tr6j6emanldryy", timestamp: "2025-05-14T07:01:10.234Z"}
+[WebSocket] Received message: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-05-14T07:01:10.383Z"}
+[WebSocket] acknowledgment received: 
+Object {type: "acknowledgment", message: "Message received", timestamp: "2025-05-14T07:01:10.383Z"}
+[WebSocket] Connected successfully
+[WebSocket] Checking session validity
+[WebSocket] Session check failed - no authenticated user found
+[WebSocket] Closing connection due to session expiration
+[WebSocket] Received message: 
+Object {type: "connection", message: "Connected to notification service", clientId: "mh03momanldsld", timestamp: "2025-05-14T07:01:11.041Z"}
+[WebSocket] connection received: 
+Object {type: "connection", message: "Connected to notification service", clientId: "mh03momanldsld", timestamp: "2025-05-14T07:01:11.041Z"}
+[WebSocket] Connection closed: 1000 Session expired
+[WebSocket] Checking session validity
+[WebSocket] Clean closure, will reconnect
+[WebSocket] Attempting reconnect in 1399ms (attempt 1/10)
+[WebSocket] Session check failed - no authenticated user found
+[WebSocket] Closing connection due to session expiration
+[WebSocket] Connection closed: 1000 Session expired
+[WebSocket] Checking session validity
+[WebSocket] Clean closure, will reconnect
