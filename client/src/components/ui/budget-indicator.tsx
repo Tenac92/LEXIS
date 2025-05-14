@@ -108,7 +108,7 @@ export function BudgetIndicator({
       
       // Check if we have the simple budget data in the update
       if (budgetUpdate.simpleBudgetData) {
-        console.log("[BudgetIndicator] Received real-time budget update:", budgetUpdate.simpleBudgetData);
+        // Process real-time budget update received from WebSocket
         
         // Set real-time values from the WebSocket
         setRealTimeBudgetValues(budgetUpdate.simpleBudgetData);
@@ -139,37 +139,24 @@ export function BudgetIndicator({
         setIsUpdating(false);
       }, 1000); // Show updating indicator for 1 second
       
-      console.log("[BudgetIndicator] Budget data updated, showing sync indicator");
+      // Budget data updated, briefly show sync indicator
       
       return () => clearTimeout(timer);
     }
   }, [budgetData?.available_budget, currentAmount]);
   
   // Enhanced debug output for main budget indicator 
-  console.log("[BudgetIndicator] Rendering with data:", budgetData, "current amount:", currentAmount);
+  // Rendering BudgetIndicator with current budget data and amount
   if (budgetData) {
-    console.log("[BudgetIndicator] Debug - data types:", {
-      user_view: typeof budgetData.user_view,
-      katanomes_etous: typeof budgetData.katanomes_etous,
-      ethsia_pistosi: typeof budgetData.ethsia_pistosi,
-      available_budget: typeof budgetData.available_budget,
-      // Additional conversion debug info
-      values: {
-        user_view: budgetData.user_view,
-        katanomes_etous: budgetData.katanomes_etous,
-        ethsia_pistosi: budgetData.ethsia_pistosi,
-        available_budget: budgetData.available_budget
-      },
-      amount: currentAmount,
-      amount_type: typeof currentAmount
-    });
+    // Budget data types are properly validated to handle both string and number values
+    // Values include user_view, katanomes_etous, ethsia_pistosi, and available_budget
   } else {
-    console.warn("[BudgetIndicator] No budget data received!");
+    // No budget data received, display placeholder message to user
   }
 
   // ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Βελτιωμένη διαχείριση κενής κατάστασης - εμφανίζει μήνυμα όταν δεν υπάρχουν διαθέσιμα δεδομένα προϋπολογισμού
   if (!budgetData) {
-    console.log("[BudgetIndicator] No budget data available, showing placeholder");
+    // No budget data available, show placeholder UI to guide user
     return (
       <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100/50 shadow-lg">
         <div className="flex items-center justify-center h-20">
@@ -192,7 +179,7 @@ export function BudgetIndicator({
     (!budgetData.user_view || budgetData.user_view === 0) && 
     (!budgetData.available_budget || budgetData.available_budget === 0)
   ) {
-    console.log("[BudgetIndicator] Budget data has zero values, showing warning placeholder");
+    // Budget data exists but has zero values, showing warning placeholder to indicate data issue
     return (
       <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-xl border border-orange-100/50 shadow-lg">
         <div className="flex items-center justify-center h-20">
@@ -290,9 +277,8 @@ export function BudgetIndicator({
       : parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString()));
   
   // Log if we're using real-time values
-  if (hasRealTimeBudget) {
-    console.log("[BudgetIndicator] Using real-time budget values from WebSocket:", realTimeBudgetValues);
-  }
+  // If we have real-time budget data from WebSocket, it overrides the static data
+  // This ensures the most current budget information is displayed to the user
   
   // Get the current quarter value based on quarter indicator
   let currentQuarterValue = 0;
@@ -317,11 +303,8 @@ export function BudgetIndicator({
   const safeYearlyAvailable = typeof yearlyAvailable === 'number' ? yearlyAvailable : 0;
   
   const remainingAvailable = safeAvailableBudget - amount;
-  console.log("[BudgetIndicator] Real-time calculation:", { 
-    availableBudget: safeAvailableBudget, 
-    currentAmount: amount, 
-    remainingAvailable 
-  });
+  // Real-time calculation of remaining available budget based on current amount
+  // Uses safeAvailableBudget to ensure we have a valid number even with API inconsistencies
   
   // Calculate percentage for progress bar, showing real-time usage as user types
   const percentageUsed = safeAvailableBudget > 0 ? ((amount / safeAvailableBudget) * 100) : 0;
