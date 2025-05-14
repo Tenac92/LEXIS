@@ -55,7 +55,7 @@ export function useBudgetUpdates(
       }
 
       try {
-        console.log('[Budget] Fetching budget data for project:', { id: projectId });
+        // Fetching budget data for project
         
         // Find the project to get its MIS
         let projectData;
@@ -65,7 +65,7 @@ export function useBudgetUpdates(
             queryKey: ["/api/projects"]
           });
           
-          console.log('[Budget] Project data fetched:', allProjects);
+          // Project data fetched successfully
           
           // Find the specific project that matches either the ID or na853
           if (Array.isArray(allProjects)) {
@@ -74,7 +74,7 @@ export function useBudgetUpdates(
                 String(p?.na853).toLowerCase() === String(projectId).toLowerCase() ||
                 String(p?.mis) === String(projectId)
             );
-            console.log('[Budget] Found matching project:', projectData);
+            // Found matching project for budget data
           } else {
             projectData = allProjects;
           }
@@ -134,11 +134,10 @@ export function useBudgetUpdates(
         // Fetch budget data from API - no need to convert to numeric MIS anymore
         // The server-side has been updated to handle both numeric and alphanumeric MIS values
         
-        console.log(`[Budget] Fetching budget data for MIS: ${misValue}`);
+        // Fetching budget data for project's MIS
         
         // For MIS values with special characters or Greek letters, encode the URI component
         const encodedMisValue = encodeURIComponent(misValue);
-        console.log(`[Budget] Encoded MIS value: ${encodedMisValue}`);
         
         // Use the correct endpoint path - this public endpoint doesn't require authentication
         const response = await fetch(`/api/budget/${encodedMisValue}`);
