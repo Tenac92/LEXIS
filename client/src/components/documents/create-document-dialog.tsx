@@ -1359,14 +1359,10 @@ export function CreateDocumentDialog({
       }
 
       try {
-        console.log(`[Projects] Fetching projects for unit: ${selectedUnit}`);
-        
-        // Add cache-busting parameter and use more robust fetch pattern
+        // Fetching projects for the selected unit with cache-busting
         const url = `/api/projects/by-unit/${encodeURIComponent(selectedUnit)}?t=${Date.now()}`;
-        console.log(`[Projects] Request URL: ${url}`);
         
         const response = await apiRequest<any>(url);
-        console.log(`[Projects] Received response:`, typeof response);
 
         // Force response to be an array with better error checking
         let projectsArray: any[] = [];
@@ -1409,7 +1405,7 @@ export function CreateDocumentDialog({
 
         // Handle empty array case
         if (projectsArray.length === 0) {
-          console.log(`[Projects] No projects found for unit: ${selectedUnit}`);
+          // No projects found for the selected unit
           toast({
             title: "Πληροφορία",
             description: "Δεν βρέθηκαν έργα για την επιλεγμένη μονάδα.",
@@ -1418,9 +1414,7 @@ export function CreateDocumentDialog({
           return [];
         }
 
-        console.log(
-          `[Projects] Found ${projectsArray.length} projects for unit: ${selectedUnit}`,
-        );
+        // Found projects for the selected unit
 
         // Map and transform the projects data
         const validProjects = projectsArray.filter(
@@ -1685,7 +1679,7 @@ export function CreateDocumentDialog({
 
   const handleSubmit = async (data: CreateDocumentForm) => {
     try {
-      console.log("Starting form submission with data:", data);
+      // Begin form submission process
 
       // Basic form validation
       if (!data.project_id) {

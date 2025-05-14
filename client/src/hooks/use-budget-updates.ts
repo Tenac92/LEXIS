@@ -11,18 +11,8 @@ export function useBudgetUpdates(
   projectId: string | null | undefined,
   currentAmount: number
 ) {
-  // CRITICAL DEBUG - log important state information on every render
-  console.log("[Budget Hook Debug] Returning state:", {
-    hasBudgetData: Boolean(projectId && projectId !== ""),
-    hasValidationResult: Boolean(projectId && currentAmount > 0),
-    isBudgetLoading: false, // Will be updated from query status
-    isValidationLoading: false, // Will be updated from query status
-    hasBudgetError: false, // Will be updated from query status
-    hasValidationError: false, // Will be updated from query status
-    isWebsocketConnected: true, // Will be updated from WebSocket status
-    projectId: projectId || "",
-    budgetDataSample: projectId ? "Has project ID" : "No budget data"
-  });
+  // State values that will be returned by the hook, initialized here
+  // and updated later with actual values from queries
   const queryClient = useQueryClient();
   const { isConnected } = useWebSocketUpdates();
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -553,23 +543,7 @@ export function useBudgetUpdates(
     };
   }, [projectId, currentAmount, sessionId, isConnected, typingTimeout, queryClient]);
 
-  // Enhanced debug logging for the hook's return values
-  console.log('[Budget Hook Debug] Returning state:', {
-    hasBudgetData: !!budgetQuery.data,
-    hasValidationResult: !!validationQuery.data,
-    isBudgetLoading: budgetQuery.isLoading,
-    isValidationLoading: validationQuery.isLoading,
-    hasBudgetError: !!budgetQuery.error,
-    hasValidationError: !!validationQuery.error,
-    isWebsocketConnected: isConnected,
-    projectId,
-    // Include first few budget values if available (for debugging)
-    budgetDataSample: budgetQuery.data ? {
-      user_view: budgetQuery.data.user_view,
-      katanomes_etous: budgetQuery.data.katanomes_etous,
-      available_budget: budgetQuery.data.available_budget
-    } : 'No budget data'
-  });
+  // Prepare hook return values with current state
 
   // Function to manually broadcast an update immediately 
   const broadcastUpdate = async (amount: number) => {
