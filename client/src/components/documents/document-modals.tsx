@@ -54,10 +54,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
 
       const formattedDate = new Date(protocolDate).toISOString().split('T')[0];
 
-      console.log('Αποθήκευση πρωτοκόλλου:', {
-        protocolNumber,
-        protocolDate: formattedDate
-      });
+      // Saving protocol information with validated number and formatted date
 
       const response = await apiRequest<{ success: boolean; message: string; data?: any }>(`/api/documents/generated/${document.id}/protocol`, {
         method: 'PATCH',
@@ -84,7 +81,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       onClose();
 
     } catch (error) {
-      console.error('Σφάλμα αποθήκευσης πρωτοκόλλου:', error);
+      // Protocol saving error occurred, now display toast notification to user
       toast({
         title: "Σφάλμα",
         description: error instanceof Error ? error.message : "Αποτυχία ενημέρωσης πρωτοκόλλου",

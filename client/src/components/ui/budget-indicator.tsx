@@ -225,10 +225,12 @@ export function BudgetIndicator({
     }
     // Log any corrections we made
     if (currentAmount && amount === 0) {
-      console.warn("[BudgetIndicator] Corrected invalid amount:", currentAmount, "→ 0");
+      // Invalid amount detected and corrected to zero to prevent display issues
+      // This prevents scientific notation or overflow display issues for extremely large numbers
     }
   } catch (e) {
-    console.error("[BudgetIndicator] Error parsing amount:", e);
+    // Error handling: If amount parsing fails, reset to 0 as a safe default
+    // This ensures the component always displays something valid even with data issues
     amount = 0;
   }
   
