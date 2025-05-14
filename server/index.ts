@@ -42,11 +42,42 @@ console.log('[Startup] Beginning server initialization');
 
 // Verify required environment variables with detailed logging
 const requiredEnvVars = [
-  // 'DATABASE_URL', // No longer required after Supabase migration
-  'SUPABASE_URL',
-  'SUPABASE_KEY',
   'SESSION_SECRET'
 ];
+
+// Extract Supabase credentials from DATABASE_URL if they're not already set
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
+  if (process.env.DATABASE_URL) {
+    console.log('[Startup] SUPABASE_URL or SUPABASE_KEY not found, trying to extract from DATABASE_URL');
+    try {
+      // Parse PostgreSQL URL format: postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres
+      const databaseUrl = process.env.DATABASE_URL;
+      const urlPattern = /postgresql:\/\/postgres:(.+)@db\.(.+)\.supabase\.co/;
+      const matches = databaseUrl.match(urlPattern);
+      
+      if (matches && matches.length >= 3) {
+        const supabaseKey = matches[1]; // Password is the Supabase key
+        const projectRef = matches[2]; // Project reference is part of hostname
+        const supabaseUrl = `https://${projectRef}.supabase.co`;
+        
+        process.env.SUPABASE_URL = supabaseUrl;
+        process.env.SUPABASE_KEY = supabaseKey;
+        
+        console.log(`[Startup] Successfully extracted Supabase credentials from DATABASE_URL`);
+        console.log(`[Startup] SUPABASE_URL: ${supabaseUrl}`);
+        console.log(`[Startup] SUPABASE_KEY: ${supabaseKey.substring(0, 4)}...${supabaseKey.substring(supabaseKey.length - 4)}`);
+      } else {
+        console.error('[Startup] Failed to extract Supabase credentials from DATABASE_URL');
+        requiredEnvVars.push('SUPABASE_URL', 'SUPABASE_KEY');
+      }
+    } catch (error) {
+      console.error('[Startup] Error extracting Supabase credentials:', error);
+      requiredEnvVars.push('SUPABASE_URL', 'SUPABASE_KEY');
+    }
+  } else {
+    requiredEnvVars.push('SUPABASE_URL', 'SUPABASE_KEY');
+  }
+}
 
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missingVars.length > 0) {
