@@ -1,0 +1,1595 @@
+
+> rest-express@1.0.0 dev
+> tsx server/index.ts
+
+[Storage] In-memory session store initialized
+5:41:24 AM [auth] [Auth] Using default cookie settings (no domain specified) with SameSite=Lax
+[Database] Supabase configuration validated
+5:41:24 AM [warn] [Database] Warning: Accessing Supabase client before initialization is complete
+5:41:24 AM [warn] [Database] Warning: Attempting to use Drizzle directly. This is no longer supported.
+[Startup] Beginning server initialization
+[Startup] Environment variables validated
+[Startup] Testing database connection...
+[DB] Testing database connection (2 retries left)...
+[DB] Connection marked as successful
+[DB] Connection test successful
+[Startup] Database connection successfully verified
+[Startup] Express app created
+[Startup] Trust proxy enabled with level: 1
+[Startup] Security headers applied
+[Startup] CORS middleware for sdegdaefk.gr applied
+[Startup] GeoIP restriction middleware applied (Greece only)
+[Startup] Body parsing middleware configured
+[Startup] Session middleware initialized
+[Startup] Request logging middleware configured
+[Startup] sdegdaefk.gr root path handler applied
+[Startup] sdegdaefk.gr documents pre-handler applied for DB error prevention
+[Startup] Authentication setup: using session middleware and auth routes
+[Startup] Registering routes...
+5:41:25 AM [express] [Routes] Setting up authentication routes...
+5:41:25 AM [info] [Database] Successfully initialized Supabase client
+[Database] Connection verified with data: [ { id: 76 } ]
+5:41:25 AM [express] [Routes] Authentication routes setup complete with consolidated router
+5:41:25 AM [express] [Routes] Setting up users routes...
+5:41:25 AM [express] [Routes] Users routes setup complete
+5:41:25 AM [express] [Routes] Setting up budget routes...
+5:41:25 AM [express] [Routes] Setting up budget history route...
+5:41:25 AM [express] [Routes] Budget history route registered
+5:41:25 AM [express] [Routes] Setting up budget notifications routes...
+5:41:25 AM [express] [Routes] Budget notifications routes setup complete
+5:41:25 AM [express] [Routes] Setting up budget upload routes...
+5:41:25 AM [express] [Routes] Budget upload routes setup complete
+5:41:25 AM [express] [Routes] Main budget routes registered
+5:41:25 AM [express] [Routes] Setting up document routes...
+5:41:25 AM [express] [Routes] Document routes setup complete
+5:41:25 AM [express] [Routes] Test routes for secondary_text debugging registered
+5:41:25 AM [express] [Routes] Registering units routes...
+5:41:25 AM [express] [Routes] Units routes registered
+5:41:25 AM [express] [Routes] Registering attachments routes...
+5:41:25 AM [express] [Routes] Attachments routes registered
+5:41:25 AM [express] [Routes] Registering healthcheck routes...
+5:41:25 AM [express] [Routes] Registering enhanced health check routes...
+5:41:25 AM [express] [Routes] Registering sdegdaefk.gr diagnostic routes...
+5:41:25 AM [express] [Routes] Special handler for /documents browser requests registered successfully
+5:41:25 AM [express] [Routes] Special handler for /auth browser requests registered successfully
+5:41:25 AM [express] [Routes] Healthcheck routes registered
+5:41:25 AM [express] [Routes] Setting up admin routes...
+5:41:25 AM [express] [Routes] Admin routes registered successfully
+[Startup] Routes registered successfully
+[Startup] Database error recovery middleware applied
+[Startup] Enhanced Supabase error handler applied
+[WebSocket] Server initialized on path: /ws
+[Startup] WebSocket server initialized on /ws
+5:41:25 AM [express] [Routes] WebSocket server connected to admin routes
+[Startup] WebSocket server connected to admin routes
+[INFO] [Scheduler] Quarter transition scheduled for 00:01 on 1st day of each quarter
+[INFO] [Scheduler] Initialized scheduled tasks
+[Startup] Scheduled tasks initialized including quarter transitions
+[Startup] Setting up Vite development server...
+[Startup] Vite setup complete
+[Startup] Server running at http://0.0.0.0:5000
+[Startup] Environment: development
+[Startup] Node version: v20.18.1
+[Startup] Scheduling database health checks every 15 minutes
+5:41:26 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+5:41:28 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:28 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"5c97-hMFTi23JsEoBI/tchTdtcm5ih/U\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:28 AM [cors] [CORS] Method: GET, Path: /@vite/client
+5:41:28 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:29 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:29 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:29 AM [cors] [CORS] Method: GET, Path: /src/main.tsx
+5:41:29 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:30 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:30 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"46bc-6Tn5IZwHtpLVITC6wERYgp5tzPY\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:30 AM [cors] [CORS] Method: GET, Path: /@react-refresh
+5:41:30 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:30 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:30 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/main.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:30 AM [cors] [CORS] Method: GET, Path: /src/App.tsx
+5:41:30 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+[INFO] [Scheduler] Running initial quarter verification check to ensure system is properly set up
+[INFO] [Quarter Transition] Processing quarter transition to q2
+5:41:30 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:30 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/main.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:30 AM [cors] [CORS] Method: GET, Path: /src/index.css
+5:41:30 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:30 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:30 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"27a-50Oe5S7HDq59Hm15o909pGTGmf8\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@vite/client","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:30 AM [cors] [CORS] Method: GET, Path: /@fs/home/runner/workspace/node_modules/vite/dist/client/env.mjs
+5:41:30 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+[INFO] [Quarter Transition] Found 195 budget records to process
+[INFO] [Quarter Transition] 194 budgets need quarter updates
+[INFO] [Quarter Transition] Verification mode - would update these budgets: 5203852, 5222542, 5222551, 5203856, 5203861, 5222550, 5203810, 5203815, 5203822, 5185579, 5188987, 5203826, 5203831, 5174718, 5188986, 5203838, 5203843, 5174723, 5185551, 5222546, 5203829, 5203828, 5203869, 5203874, 5203878, 5203811, 5203814, 5203816, 5203821, 5203823, 5203824, 5201404, 5188992, 5174689, 5174126, 5203830, 5188991, 5185960, 5203848, 5203850, 5203851, 5222794, 5222545, 5174694, 5200058, 5168551, 5174706, 5200059, 5203836, 5203839, 5203842, 5203845, 5203847, 5185646, 5174722, 5185847, 5174695, 5222549, 5203855, 5203858, 5203859, 5203860, 5203863, 5222552, 5222556, 5224425, 5224465, 5224476, 5224503, 5203864, 5203865, 5203867, 5203868, 5203871, 5224487, 5224470, 5203866, 5203879, 5203880, 5203891, 5203896, 5203900, 5203905, 5222789, 5222807, 5203914, 5203908, 5222811, 5222786, 5203912, 5203922, 5222802, 5222805, 5203792, 5222787, 5203849, 5203854, 5203924, 5189048, 5200656, 5203927, 5203928, 5203933, 5174713, 5173997, 5203935, 5203795, 5174712, 5174065, 5203805, 5185909, 5174085, 5174090, 5168550, 5203888, 5203894, 5203898, 5203902, 5203906, 5203790, 5222798, 5203907, 5203915, 5222809, 5222810, 5222540, 5222544, 5203921, 5203923, 5222801, 5222803, 5222795, 5203820, 5203883, 5203895, 5203897, 5203899, 5203901, 5201405, 5222808, 5222806, 5203913, 5203918, 5203910, 5222785, 5203911, 5203920, 5203800, 5222804, 5203797, 5203825, 5203832, 5203876, 5222800, 5203926, 5188985, 5174125, 5203939, 5203929, 5174707, 5180891, 5203940, 5222799, 5222792, 5203925, 5189050, 5201407, 5198090, 5203938, 5203932, 5222793, 5189047, 5185773, 5203934, 5203936, 5203937, 5203794, 5174127, 5174076, 5174721, 5174711, 5203877, 5174710, 5203804, 5203807, 5185638, 5189045, 5174688, 5203835, 5174719, 5203796, 5203809, 5174691, 5174123
+5:41:31 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:31 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"1d8e-Hn4CQfmdDYVrUnIGLhu+eHvmcRo\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:31 AM [cors] [CORS] Method: GET, Path: /src/lib/queryClient.ts
+5:41:31 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:31 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:31 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"fc7-7ivpFsRhyW99Ms8xj1E+E+SrxdQ\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:31 AM [cors] [CORS] Method: GET, Path: /src/components/ui/toaster.tsx
+5:41:31 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:31 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:31 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"28c2-I2tRsV+35R3+f28LLiwkjygM3Gg\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:31 AM [cors] [CORS] Method: GET, Path: /src/hooks/use-auth.tsx
+5:41:31 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:31 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:31 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"f68-XUEiMg+Gx2yYdLytWkybh+J1CZE\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:31 AM [cors] [CORS] Method: GET, Path: /src/pages/home-page.tsx
+5:41:31 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:32 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:32 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"ede-70YcX6DDdDuUGCKtsEwkHCQA8RI\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:32 AM [cors] [CORS] Method: GET, Path: /src/pages/not-found.tsx
+5:41:32 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:32 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:32 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"26d0-k9h10Kbp7mQtqLzEjzRCj/IhnDs\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:32 AM [cors] [CORS] Method: GET, Path: /src/pages/auth-page.tsx
+5:41:32 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:32 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:32 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"4418-QDhPd/V/88IOb0d+eE+nXmBVOEE\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:32 AM [cors] [CORS] Method: GET, Path: /src/pages/projects/index.tsx
+5:41:32 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:32 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:32 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"9a48-JaVRHqtCU81eoU4UDS72sSFwBRE\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:32 AM [cors] [CORS] Method: GET, Path: /src/pages/documents-page.tsx
+5:41:32 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:33 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:33 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"5832-GIvlKlvI+e+XNWjqtI93Wclt8w8\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:33 AM [cors] [CORS] Method: GET, Path: /src/pages/projects/[mis].tsx
+5:41:33 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:33 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:33 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"1abf4-4XgTH+zpBw/8TM9atGhdsUPicVE\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:33 AM [cors] [CORS] Method: GET, Path: /src/pages/projects/[mis]/edit.tsx
+5:41:33 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:33 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:33 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"12ba0-2p4iuYIPn9vVXn4U4vlHXkP4NrE\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:33 AM [cors] [CORS] Method: GET, Path: /src/pages/users/index.tsx
+5:41:33 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:33 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:33 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"132b5-mHK6CM+kty5Mp9HZnXAzXyBH+Ok\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:33 AM [cors] [CORS] Method: GET, Path: /src/pages/budget-history-page.tsx
+5:41:33 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:33 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:33 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"444e-iHBNUApWN4IcpTPOC06j4bzyZPI\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:33 AM [cors] [CORS] Method: GET, Path: /src/pages/NotificationsPage.tsx
+5:41:33 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:33 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:33 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"5929-t9a2x6XHXg/p6ivLH9pO5gPKywc\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:33 AM [cors] [CORS] Method: GET, Path: /src/pages/AdminNotificationsPage.tsx
+5:41:33 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:34 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:34 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"a534-k2xDZ+8ULjlg1cnntHn2OYMkzQ8\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:34 AM [cors] [CORS] Method: GET, Path: /src/pages/AdminBudgetUploadPage.tsx
+5:41:34 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:34 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:34 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"7df9-WrYgAIJMJ5gAVPvRWNUKyijKidU\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:34 AM [cors] [CORS] Method: GET, Path: /src/pages/admin/QuarterManagementPage.tsx
+5:41:34 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:34 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:34 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"801a-dLsHV12ICyopmwp1txJz8XFpZoA\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:34 AM [cors] [CORS] Method: GET, Path: /src/pages/projects/bulk-update.tsx
+5:41:34 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:34 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:34 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"5583-yHym6v6N97idAWofaIEa787n50U\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:34 AM [cors] [CORS] Method: GET, Path: /src/pages/templates/index.tsx
+5:41:34 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:34 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:34 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"53b5-yzV+ElWkHPBC7EtT/45CwRN0bqA\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:34 AM [cors] [CORS] Method: GET, Path: /src/pages/test-secondary-text.tsx
+5:41:34 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:35 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:35 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"f64-SyICPDbHhEYpm5RPu5BtA8mcqgA\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:35 AM [cors] [CORS] Method: GET, Path: /src/lib/protected-route.tsx
+5:41:35 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:35 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:35 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"cce-dbwUwPEp0lss3IRp3RuHC342K7A\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:35 AM [cors] [CORS] Method: GET, Path: /src/components/ui/page-transition.tsx
+5:41:35 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:35 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:35 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"1c8b-0jNgn62LNVA1F3Htte3hln1lqMU\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:35 AM [cors] [CORS] Method: GET, Path: /src/components/auth/SessionKeeper.tsx
+5:41:35 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:35 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:35 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"a06-7hiS8BESnLkDx26l3s4WLU15Vqc\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:35 AM [cors] [CORS] Method: GET, Path: /src/components/auth/SessionInit.tsx
+5:41:35 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:35 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:35 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"2295-89ElS4OF+1/pc7hgZKAS0LuDEPE\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/App.tsx?v=s0x6Rf-_ox2QMzvVjd_l9","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:35 AM [cors] [CORS] Method: GET, Path: /src/contexts/document-form-context.tsx
+5:41:35 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:36 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:36 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"c30-N3gAv7wv8uXUo3mYtTtAVUbR800\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/toaster.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:36 AM [cors] [CORS] Method: GET, Path: /src/hooks/use-toast.ts
+5:41:36 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:36 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:36 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"21e3-9GgfZp4cyQOO3Lp/w+acZME+bHg\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/toaster.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:36 AM [cors] [CORS] Method: GET, Path: /src/components/ui/toast.tsx
+5:41:36 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:36 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:36 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"8027-fzJ3lwNg7MQ9neQQ2PriEgm9kxo\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/home-page.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:36 AM [cors] [CORS] Method: GET, Path: /src/components/dashboard/dashboard.tsx
+5:41:36 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:36 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:36 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"17d2-7ib4g++kVuz/CxkcQoZB1mEkRME\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/home-page.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:36 AM [cors] [CORS] Method: GET, Path: /src/components/ui/fab.tsx
+5:41:36 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:36 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:36 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"68af-ZSJY3vIxHioSqackydRHFbjnQv0\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/home-page.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:36 AM [cors] [CORS] Method: GET, Path: /src/components/header/index.tsx
+5:41:36 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:37 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:37 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"1564-Bqu1MXY0kNWWUu64tpue8hZDFfI\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/not-found.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:37 AM [cors] [CORS] Method: GET, Path: /src/components/ui/card.tsx
+5:41:37 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:37 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:37 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"1062-YxZw10+XhSrRa/USwAPcTjVzqNA\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/auth-page.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:37 AM [cors] [CORS] Method: GET, Path: /src/components/ui/button.tsx
+5:41:37 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:37 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:37 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"c2a-S0Jt6NU73E6VK9fJPbAj1icoLA0\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/auth-page.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:37 AM [cors] [CORS] Method: GET, Path: /src/components/ui/input.tsx
+5:41:37 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:37 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:37 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"bf0-YXl98UyW+uM0FZt+xMlaIjb12TI\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/auth-page.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:37 AM [cors] [CORS] Method: GET, Path: /src/components/ui/label.tsx
+5:41:37 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:37 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:37 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"2d17-6VDYR8pOz5Yv/GzUmaovTbC2Pgk\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/index.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:37 AM [cors] [CORS] Method: GET, Path: /src/components/ui/select.tsx
+5:41:37 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:37 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:37 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"5fad-FfgEHURVSbwR67d0bEYpldiBsjM\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/index.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:37 AM [cors] [CORS] Method: GET, Path: /src/components/projects/ProjectCard.tsx
+5:41:37 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:38 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:38 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"21cd-s5Uoh3rUZ+12hv+qBaaKDOhNNeI\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/documents-page.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:38 AM [cors] [CORS] Method: GET, Path: /src/components/ui/sheet.tsx
+5:41:38 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:38 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:38 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"7f9f-icliCsjzKON60FXp7Sbz8+IFMX0\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/documents-page.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:38 AM [cors] [CORS] Method: GET, Path: /src/components/documents/document-card.tsx
+5:41:38 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:38 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:38 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"10904-0GWHRKHowY2RESSJSQ6YipEck/o\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/documents-page.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:38 AM [cors] [CORS] Method: GET, Path: /src/components/documents/document-modals.tsx
+5:41:38 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:38 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:38 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"bc7-yfQJoM3FTAoz573v3pUgUAZAhxM\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis].tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:38 AM [cors] [CORS] Method: GET, Path: /src/components/ui/badge.tsx
+5:41:38 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:39 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:39 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"220b-U7nAsSTC5UpjZpsY2WGwmyESUbM\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis]/edit.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:39 AM [cors] [CORS] Method: GET, Path: /src/components/ui/form.tsx
+5:41:39 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:39 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:39 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"bf0-n0v0oW+HB3Q/F+1k9uk+V5bOVAc\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis]/edit.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:39 AM [cors] [CORS] Method: GET, Path: /src/components/ui/textarea.tsx
+5:41:39 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:39 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:39 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"1235-rfWmoA9+KuQhBQG9dWMJVQQwyOc\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis]/edit.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:39 AM [cors] [CORS] Method: GET, Path: /src/components/ui/tabs.tsx
+5:41:39 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:39 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:39 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"270d-7XzQMmpiEpgnJ+htyQpicsck/NM\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis]/edit.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:39 AM [cors] [CORS] Method: GET, Path: /@fs/home/runner/workspace/shared/schema.ts
+5:41:39 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:39 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:39 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"1b3e-YlE2NsVM45HOiBuvc9t3Vmw90FY\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/users/index.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:39 AM [cors] [CORS] Method: GET, Path: /src/components/ui/table.tsx
+5:41:39 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:40 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:40 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"2093-Xp9AE4qGzgyH4yKnPPmpNGuH47A\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/users/index.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:40 AM [cors] [CORS] Method: GET, Path: /src/components/ui/dialog.tsx
+5:41:40 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:40 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:40 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"19bd-6Ee4cv1sflWg9XiSpvpFl4uEsGY\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/users/index.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:40 AM [cors] [CORS] Method: GET, Path: /src/components/ui/multi-select.tsx
+5:41:40 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:40 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:40 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"db4-TBKZMJTYw2JGerfzd6k6URkg3xY\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/budget-history-page.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:40 AM [cors] [CORS] Method: GET, Path: /src/components/ui/tooltip.tsx
+5:41:40 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:40 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:40 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"5222-EYGlumS9QRyOuNaR9DEzosGsGbs\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/NotificationsPage.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:40 AM [cors] [CORS] Method: GET, Path: /src/components/NotificationCenter.tsx
+5:41:40 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:40 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:40 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"1152-mqeeeOeHoouGKs7JibRmJNCH2+4\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/AdminBudgetUploadPage.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:40 AM [cors] [CORS] Method: GET, Path: /src/components/ui/alert.tsx
+5:41:40 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:40 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:40 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"10b-elSjuJdKvPX2iaYu2MJ6+/VsvvQ\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/AdminNotificationsPage.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:40 AM [cors] [CORS] Method: GET, Path: /src/lib/utils.ts
+5:41:40 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:41 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:41 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"a94-7iwT8IBxRh4Jt9DOmyZMq5AcPsY\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/admin/QuarterManagementPage.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:41 AM [cors] [CORS] Method: GET, Path: /src/lib/services/adminService.ts
+5:41:41 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:41 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:41 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"2593-b3FGluBf09zwdVAysHXYlvLWg88\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/bulk-update.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:41 AM [cors] [CORS] Method: GET, Path: /src/components/ui/command.tsx
+5:41:41 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:41 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:41 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"b06-PqZt1T9kyN5Nazd7nlFyZZtweHY\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/templates/index.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:41 AM [cors] [CORS] Method: GET, Path: /src/components/ui/loading-spinner.tsx
+5:41:41 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:41 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:41 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"e87-+oj4FhgP7HSNp8pNLfKziMyA8BY\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/bulk-update.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:41 AM [cors] [CORS] Method: GET, Path: /src/components/ui/popover.tsx
+5:41:41 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:42 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:42 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"bfb-wVZx729w1I6+QOCv1cFgSKgLYDA\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/test-secondary-text.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:42 AM [cors] [CORS] Method: GET, Path: /src/components/ui/separator.tsx
+5:41:42 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:42 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:42 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"16c7-UlbhODbflJLhHuNnGG8BRBumsoo\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/auth/SessionKeeper.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:42 AM [cors] [CORS] Method: GET, Path: /src/components/auth/SessionWarning.tsx
+5:41:42 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:42 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:42 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"1dec5-nKZHZ9FZarhfS7rUduQqDp3Ajoc\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/fab.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:42 AM [cors] [CORS] Method: GET, Path: /src/components/documents/create-document-dialog.tsx
+5:41:42 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:42 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:42 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"2c53-w0BprTeB0soRbFQJSHQGzdMao5U\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/auth/SessionKeeper.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:42 AM [cors] [CORS] Method: GET, Path: /src/hooks/use-websocket-updates.ts
+5:41:42 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:42 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:42 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"2f00-PTaeJ2CqOpq5d8Wbi1a47fGGyfs\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/header/index.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:42 AM [cors] [CORS] Method: GET, Path: /src/components/ui/dropdown-menu.tsx
+5:41:42 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:43 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:43 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"3b28-+EpvU/+oNI5NUODJRt3n9aZjFZ4\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/header/index.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:43 AM [cors] [CORS] Method: GET, Path: /src/components/auth/change-password-modal.tsx
+5:41:43 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:43 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:43 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"2dad-L5LV1fL7X1X+q831pcx3QmC+voc\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/projects/ProjectCard.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:43 AM [cors] [CORS] Method: GET, Path: /src/components/ui/alert-dialog.tsx
+5:41:43 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:43 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:43 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"7473-AvExPOV3Bdv6cn108n+mctEcZU8\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/projects/ProjectCard.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:43 AM [cors] [CORS] Method: GET, Path: /src/components/projects/ProjectDetailsDialog.tsx
+5:41:43 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:43 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:43 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"609e-IC/5Nsx1tb0p5bTKa6xxLhGU2dw\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/projects/ProjectCard.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:43 AM [cors] [CORS] Method: GET, Path: /src/components/ui/budget-indicator.tsx
+5:41:43 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:43 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:43 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"a28a-BoLDrbDo0SU1wMxBi8DEAVijlsY\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/document-card.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:43 AM [cors] [CORS] Method: GET, Path: /src/components/documents/orthi-epanalipsi-modal.tsx
+5:41:43 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:44 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:44 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"f4b-5NZfvbfKov7ioAHH1IpqHxk4a4k\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:44 AM [cors] [CORS] Method: GET, Path: /src/components/ui/checkbox.tsx
+5:41:44 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:44 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:44 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"43cf-KWnOPef1oleP4u+lQtbD33XVyoo\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.4.204","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:44 AM [cors] [CORS] Method: GET, Path: /src/hooks/use-budget-updates.ts
+5:41:44 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:45 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:41:45 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","if-none-match":"W/\"131f-ACrBAES2ohy07q0kEmAO7wG/+HM\"","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/orthi-epanalipsi-modal.tsx","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"script","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:41:45 AM [cors] [CORS] Method: GET, Path: /src/components/ui/scroll-area.tsx
+5:41:45 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:41:45 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:41:45 AM [express] [Request] GET /api/auth/me from 10.81.1.135
+5:41:45 AM [express] GET /api/auth/me 401 in 2ms
+5:41:46 AM [vite] hmr update /src/components/ui/budget-indicator.tsx, /src/index.css?v=s0x6Rf-_ox2QMzvVjd_l9
+5:41:57 AM [vite] hmr update /src/components/ui/budget-indicator.tsx, /src/index.css?v=s0x6Rf-_ox2QMzvVjd_l9 (x2)
+5:44:04 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:04 AM [express] [Request] GET /api/auth/me from 10.81.1.135
+5:44:04 AM [express] GET /api/auth/me 401 in 1ms
+5:44:09 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:44:09 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","content-length":"63","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","content-type":"application/json","cookie":"sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/auth","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"empty","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.7, 10.81.1.135","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":""}
+5:44:09 AM [cors] [CORS] Method: POST, Path: /api/auth/login
+5:44:09 AM [cors-auth] [CORS] Processing authentication route: /api/auth/login from origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+5:44:09 AM [geoip] [GeoIP] Exempt path /api/auth/login bypassing geo-restrictions
+5:44:09 AM [express] [Request] POST /api/auth/login from 10.81.1.135
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  'content-length': '63',
+  accept: '*/*',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  'content-type': 'application/json',
+  cookie: 'sid=s%3A6k4Y7RseI-PpbkJuHBuv6Vp1tA0Wqn4q.m2KSOWJMFdh%2BKjUVSgn3exN2Ru1w6NksDx2Z3OtJw7c',
+  origin: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/auth',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.1.135',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': ''
+}
+5:44:10 AM [auth] [Auth] Login successful for user: kkyriakou@civilprotection.gr
+5:44:10 AM [express] POST /api/auth/login 200 in 534ms
+5:44:10 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:10 AM [express] [Request] GET /api/auth/me from 10.81.1.135
+5:44:10 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.1.135"}
+5:44:10 AM [express] GET /api/auth/me 200 in 2ms
+5:44:10 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:10 AM [express] [Request] GET /api/dashboard/stats from 10.81.4.204
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: '*/*',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"3f1-yWjl7AZHcyP9Mx4/FW4EQIVgsjg"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.4.204',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'query-1747374253648-6qkdvn6'
+}
+[Auth] Checking session: {
+  hasSession: true,
+  hasUser: true,
+  sessionID: 'aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs',
+  cookies: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  ip: '10.81.4.204',
+  protocol: 'https',
+  secure: true,
+  path: '/api/dashboard/stats',
+  isPublicRoute: false
+}
+[Auth] User authenticated: {
+  id: 82,
+  name: 'Κ Κυριακού',
+  email: 'kkyriakou@civilprotection.gr',
+  role: 'user',
+  units: [
+    'ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΟΥ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΚΡΗΤΗΣ',
+    'ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ'
+  ],
+  sessionID: 'aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs',
+  ip: '10.81.4.204'
+}
+[Dashboard] Starting to fetch dashboard statistics...
+5:44:11 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:11 AM [express] [Request] GET /api/public/units from 10.81.1.135
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.1.135',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374253654-mpfo0bf'
+}
+[Units] Completely public access to units list
+[WebSocket] New client connected: n91y8lmaqdihab from 172.31.128.68
+5:44:11 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:11 AM [express] [Request] GET /api/auth/me from 10.81.3.238
+5:44:11 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.3.238"}
+5:44:11 AM [express] GET /api/auth/me 304 in 1ms
+[WebSocket] Received message from n91y8lmaqdihab: { type: 'connect', timestamp: '2025-05-16T05:44:14.431Z' }
+[Units] Successfully fetched units: 11
+5:44:11 AM [express] GET /api/public/units 304 in 392ms
+5:44:11 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:11 AM [express] [Request] GET /api/auth/me from 10.81.3.238
+5:44:11 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.3.238"}
+5:44:11 AM [express] GET /api/auth/me 304 in 1ms
+[Dashboard] Successfully compiled stats: {
+  documents: { total: 6, pending: 6, completed: 0 },
+  projects: { active: 0, pending: 0, pending_reallocation: 141, completed: 0 },
+  budgets: [ 'active', 'pending', 'pending_reallocation', 'completed' ]
+}
+5:44:11 AM [express] GET /api/dashboard/stats 304 in 1083ms
+5:44:12 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:12 AM [express] [Request] GET /api/auth/me from 10.81.3.238
+5:44:12 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.3.238"}
+5:44:12 AM [express] GET /api/auth/me 304 in 1ms
+[WebSocket] New client connected: x1c1umaqdihz3 from 172.31.128.68
+[WebSocket] Received message from x1c1umaqdihz3: { type: 'connect', timestamp: '2025-05-16T05:44:15.323Z' }
+5:44:12 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:12 AM [express] [Request] GET /api/auth/me from 10.81.3.238
+5:44:12 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.3.238"}
+5:44:12 AM [express] GET /api/auth/me 304 in 1ms
+[WebSocket] New client connected: 2bl4mmaqdiilz from 172.31.128.68
+[WebSocket] Received message from 2bl4mmaqdiilz: { type: 'connect', timestamp: '2025-05-16T05:44:16.148Z' }
+5:44:13 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:13 AM [express] [Request] GET /api/auth/me from 10.81.3.238
+5:44:13 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.3.238"}
+5:44:13 AM [express] GET /api/auth/me 304 in 2ms
+5:44:20 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:20 AM [express] [Request] GET /api/auth/me from 10.81.3.238
+5:44:20 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.3.238"}
+5:44:20 AM [express] GET /api/auth/me 304 in 4ms
+5:44:20 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:20 AM [express] [Request] GET /api/public/units from 10.81.3.238
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.3.238',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374263349-vir8mbp'
+}
+[Units] Completely public access to units list
+5:44:20 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:20 AM [express] [Request] GET /api/projects/by-unit/%CE%93%CE%95%CE%9D%CE%99%CE%9A%CE%97%20%CE%94%CE%99%CE%95%CE%A5%CE%98%CE%A5%CE%9D%CE%A3%CE%97%20%CE%91%CE%A0%CE%9F%CE%9A%CE%91%CE%A4%CE%91%CE%A3%CE%A4%CE%91%CE%A3%CE%97%CE%A3%20%CE%95%CE%A0%CE%99%CE%A0%CE%A4%CE%A9%CE%A3%CE%95%CE%A9%CE%9D%20%CE%A6%CE%A5%CE%A3%CE%99%CE%9A%CE%A9%CE%9D%20%CE%9A%CE%91%CE%A4%CE%91%CE%A3%CE%A4%CE%A1%CE%9F%CE%A6%CE%A9%CE%9D from 10.81.4.204
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: '*/*',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  'content-type': 'application/json',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.4.204',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'req-1747374263394-gmkodrs'
+}
+[Auth] Checking session: {
+  hasSession: true,
+  hasUser: true,
+  sessionID: 'aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs',
+  cookies: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  ip: '10.81.4.204',
+  protocol: 'https',
+  secure: true,
+  path: '/by-unit/%CE%93%CE%95%CE%9D%CE%99%CE%9A%CE%97%20%CE%94%CE%99%CE%95%CE%A5%CE%98%CE%A5%CE%9D%CE%A3%CE%97%20%CE%91%CE%A0%CE%9F%CE%9A%CE%91%CE%A4%CE%91%CE%A3%CE%A4%CE%91%CE%A3%CE%97%CE%A3%20%CE%95%CE%A0%CE%99%CE%A0%CE%A4%CE%A9%CE%A3%CE%95%CE%A9%CE%9D%20%CE%A6%CE%A5%CE%A3%CE%99%CE%9A%CE%A9%CE%9D%20%CE%9A%CE%91%CE%A4%CE%91%CE%A3%CE%A4%CE%A1%CE%9F%CE%A6%CE%A9%CE%9D',
+  isPublicRoute: false
+}
+[Auth] User authenticated: {
+  id: 82,
+  name: 'Κ Κυριακού',
+  email: 'kkyriakou@civilprotection.gr',
+  role: 'user',
+  units: [
+    'ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΟΥ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΚΡΗΤΗΣ',
+    'ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ'
+  ],
+  sessionID: 'aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs',
+  ip: '10.81.4.204'
+}
+[Projects] Fetching projects for unit: ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ
+[Storage] Getting projects for unit: ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ
+[Units] Successfully fetched units: 11
+5:44:20 AM [express] GET /api/public/units 304 in 207ms
+5:44:21 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:21 AM [express] [Request] GET /api/public/units from 10.81.3.238
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.3.238',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374263351-mua7wr9'
+}
+[Units] Completely public access to units list
+[Storage] Normalized unit name: γενικη διευθυνση αποκαταστασης επιπτωσεων φυσικων καταστροφων
+[Storage] Search terms: [
+  'γενικη διευθυνση αποκαταστασης επιπτωσεων φυσικων καταστροφων',
+  'αποκαταστασης επιπτωσεων φυσικων καταστροφων',
+  'γενικη',
+  'διευθυνση',
+  'αποκαταστασης',
+  'επιπτωσεων',
+  'φυσικων',
+  'καταστροφων'
+]
+[Storage] Project 5168550 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5168551 agencies: [ 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ' ]
+[Storage] Project 5173997 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5174065 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174076 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5174085 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5174090 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174123 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174125 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174126 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174127 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ' ]
+[Storage] Project 5174688 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5174689 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174691 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5189048 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5174692 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5174694 agencies: [ 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5174695 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5174706 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5174707 agencies: [ 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5174710 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5174711 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5174712 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5174713 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ' ]
+[Storage] Project 5174718 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5174719 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5174721 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5174722 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174723 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5180891 agencies: [
+  'ΔΑΕΦΚ-ΚΕ',
+  'ΔΑΕΦΚ-ΒΕ',
+  'ΔΑΕΦΚ-ΔΕ',
+  'ΤΑΕΦΚ-ΑΑ',
+  'ΤΑΕΦΚ-ΔΑ',
+  'ΤΑΕΦΚ ΧΑΝΙΩΝ',
+  'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ'
+]
+[Storage] Project 5185551 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5185579 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5185638 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5185646 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ' ]
+[Storage] Project 5185773 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5185847 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5185909 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5185960 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5188985 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5188986 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5188987 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5188991 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5188992 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5189045 agencies: [ 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5189047 agencies: [ 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5189050 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5198090 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5200058 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5200059 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5200656 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5201404 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5201405 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5201407 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203790 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΣ ΑΧΑΡΝΩΝ' ]
+[Storage] Project 5203792 agencies: [ 'ΓΔΑΕΦΚ', 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203794 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203795 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203796 agencies: [ 'ΤΑΣ ΜΕΣΣΗΝΙΑΣ' ]
+[Storage] Project 5203797 agencies: [
+  'ΔΑΕΦΚ-ΚΕ',
+  'ΤΑΠ ΗΛΕΙΑΣ',
+  'ΤΑΣ ΑΧΑΪΑΣ',
+  'ΤΑΣ ΚΟΖΑΝΗΣ',
+  'ΤΑΣ ΜΕΣΣΗΝΙΑΣ'
+]
+[Storage] Project 5203800 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203804 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203805 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203807 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ', 'ΤΑΣ ΜΕΣΣΗΝΙΑΣ', 'ΤΑΣ ΛΕΥΚΑΔΑΣ', 'ΤΑΠ ΗΛΕΙΑΣ' ]
+[Storage] Project 5203809 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203810 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203811 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ', 'ΤΑΠ ΗΛΕΙΑΣ' ]
+[Storage] Project 5203814 agencies: [ 'ΤΑΣ ΜΕΣΣΗΝΙΑΣ' ]
+[Storage] Project 5203815 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ' ]
+[Storage] Project 5203816 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203820 agencies: [ 'ΓΔΑΕΦΚ', 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203821 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203822 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203823 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΣ ΚΕΦΑΛΟΝΙΑΣ' ]
+[Storage] Project 5203824 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203825 agencies: [ 'ΓΔΑΕΦΚ', 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ', 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203826 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203828 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ' ]
+[Storage] Project 5203829 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203830 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΣ ΑΧΑΪΑΣ', 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203831 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203832 agencies: [ 'ΓΔΑΕΦΚ', 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203835 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ', 'ΤΑΣ ΚΕΦΑΛΟΝΙΑΣ', 'ΤΑΣ ΛΕΥΚΑΔΑΣ' ]
+[Storage] Project 5203836 agencies: [ 'ΤΑΠ ΗΛΕΙΑΣ', 'ΤΑΣ ΚΕΦΑΛΟΝΙΑΣ' ]
+[Storage] Project 5203838 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203839 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΠ ΗΛΕΙΑΣ' ]
+[Storage] Project 5203842 agencies: [ 'ΤΑΠ ΗΛΕΙΑΣ', 'ΤΑΣ ΑΧΑΪΑΣ' ]
+[Storage] Project 5203843 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203845 agencies: [ 'ΤΑΣ ΜΕΣΣΗΝΙΑΣ' ]
+[Storage] Project 5203847 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203848 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203849 agencies: [ 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΣ ΑΧΑΪΑΣ' ]
+[Storage] Project 5203850 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203851 agencies: [ 'ΤΑΠ ΗΛΕΙΑΣ', 'ΤΑΣ ΚΟΖΑΝΗΣ', 'ΤΑΣ ΜΕΣΣΗΝΙΑΣ', 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203852 agencies: [ 'ΤΑΠ ΗΛΕΙΑΣ' ]
+[Storage] Project 5203854 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203855 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203856 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203858 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203859 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203860 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203861 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203863 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203864 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203865 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ', 'ΤΑΠ ΗΛΕΙΑΣ', 'ΤΑΣ ΚΟΖΑΝΗΣ', 'ΤΑΣ ΚΕΦΑΛΟΝΙΑΣ' ]
+[Storage] Project 5203866 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203867 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203868 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203869 agencies: [ 'ΔΑΕΦΚ-ΚΕ*', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5203871 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203874 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203876 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203877 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222811 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203878 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203879 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203880 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203883 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203888 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5203891 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203894 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203895 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5203896 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203897 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203898 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203899 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203900 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203901 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203902 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203905 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5203906 agencies: [ 'ΔΑΕΦΚ-ΒΕ', 'ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ' ]
+[Storage] Project 5203907 agencies: [ 'ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ' ]
+[Storage] Project 5203908 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203910 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203921 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203911 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203912 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203913 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5203914 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203915 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203918 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203920 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203922 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5203923 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203924 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203925 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203926 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203927 agencies: [ 'ΓΔΑΕΦΚ', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5203928 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203929 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203932 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203933 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5203934 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203935 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203936 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203937 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203938 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203939 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203940 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5222540 agencies: [ 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5222542 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5222544 agencies: [ 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5222545 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222546 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222549 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222550 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5222551 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5222552 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222556 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5222785 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5222786 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222787 agencies: [ 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5222789 agencies: [ 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5222792 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5222793 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5222794 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5222795 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222798 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222799 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222800 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5222801 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222802 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222803 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222804 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5222805 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5222806 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5222807 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222808 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222809 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222810 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5224425 agencies: [ 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ' ]
+[Storage] Project 5224465 agencies: [ 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5224470 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5224476 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5224487 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5224503 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Found 0 projects for unit: ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ
+[Projects] No projects found for unit: ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ
+5:44:21 AM [express] GET /api/projects/by-unit/%CE%93%CE%95%CE%9D%CE%99%CE%9A%CE%97%20%CE%94%CE%99%CE%95%CE%A5%CE%98%CE%A5%CE%9D%CE%A3%CE%97%20%CE%91%CE%A0%CE%9F%CE%9A%CE%91%CE%A4%CE%91%CE%A3%CE%A4%CE%91%CE%A3%CE%97%CE%A3%20%CE%95%CE%A0%CE%99%CE%A0%CE%A4%CE%A9%CE%A3%CE%95%CE%A9%CE%9D%20%CE%A6%CE%A5%CE%A3%CE%99%CE%9A%CE%A9%CE%9D%20%CE%9A%CE%91%CE%A4%CE%91%CE%A3%CE%A4%CE%A1%CE%9F%CE%A6%CE%A9%CE%9D 200 in 633ms
+[Units] Successfully fetched units: 11
+5:44:21 AM [express] GET /api/public/units 304 in 372ms
+5:44:21 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:21 AM [express] [Request] GET /api/auth/me from 10.81.4.204
+5:44:21 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.4.204"}
+5:44:21 AM [express] GET /api/auth/me 304 in 1ms
+5:44:21 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:21 AM [express] [Request] GET /api/public/units from 10.81.4.204
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.4.204',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374264803-t0c5ioy'
+}
+[Units] Completely public access to units list
+[Units] Successfully fetched units: 11
+5:44:22 AM [express] GET /api/public/units 304 in 375ms
+5:44:22 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:22 AM [express] [Request] GET /api/public/units from 10.81.4.204
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.4.204',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374264804-2zgpb3v'
+}
+[Units] Completely public access to units list
+[Units] Successfully fetched units: 11
+5:44:22 AM [express] GET /api/public/units 304 in 153ms
+5:44:23 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:23 AM [express] [Request] GET /api/projects/by-unit/%CE%94%CE%91%CE%95%CE%A6%CE%9A-%CE%94%CE%95 from 10.81.4.204
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: '*/*',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  'content-type': 'application/json',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.4.204',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'req-1747374266414-m1li268'
+}
+[Auth] Checking session: {
+  hasSession: true,
+  hasUser: true,
+  sessionID: 'aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs',
+  cookies: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  ip: '10.81.4.204',
+  protocol: 'https',
+  secure: true,
+  path: '/by-unit/%CE%94%CE%91%CE%95%CE%A6%CE%9A-%CE%94%CE%95',
+  isPublicRoute: false
+}
+[Auth] User authenticated: {
+  id: 82,
+  name: 'Κ Κυριακού',
+  email: 'kkyriakou@civilprotection.gr',
+  role: 'user',
+  units: [
+    'ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΟΥ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΚΡΗΤΗΣ',
+    'ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ'
+  ],
+  sessionID: 'aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs',
+  ip: '10.81.4.204'
+}
+[Projects] Fetching projects for unit: ΔΑΕΦΚ-ΔΕ
+[Storage] Getting projects for unit: ΔΑΕΦΚ-ΔΕ
+5:44:23 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:23 AM [express] [Request] GET /api/auth/me from 10.81.3.238
+5:44:23 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.3.238"}
+5:44:23 AM [express] GET /api/auth/me 304 in 2ms
+5:44:23 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:23 AM [express] [Request] GET /api/public/units from 10.81.3.238
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.3.238',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374266794-32eadf4'
+}
+[Units] Completely public access to units list
+[Storage] Normalized unit name: δαεφκ-δε
+[Storage] Search terms: [ 'δαεφκ-δε', 'δαεφκ-δε' ]
+[Storage] Project 5168550 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5168551 agencies: [ 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ' ]
+[Storage] Project 5173997 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5174065 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174076 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5174085 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5174090 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174123 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174125 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174126 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174127 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ' ]
+[Storage] Project 5174688 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5174689 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174691 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5189048 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5174692 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5174694 agencies: [ 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5174695 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5174706 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5174707 agencies: [ 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5174710 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5174711 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5174712 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5174713 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ' ]
+[Storage] Project 5174718 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5174719 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5174721 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5174722 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5174723 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5180891 agencies: [
+  'ΔΑΕΦΚ-ΚΕ',
+  'ΔΑΕΦΚ-ΒΕ',
+  'ΔΑΕΦΚ-ΔΕ',
+  'ΤΑΕΦΚ-ΑΑ',
+  'ΤΑΕΦΚ-ΔΑ',
+  'ΤΑΕΦΚ ΧΑΝΙΩΝ',
+  'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ'
+]
+[Storage] Project 5185551 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5185579 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5185638 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5185646 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ' ]
+[Storage] Project 5185773 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5185847 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5185909 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5185960 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5188985 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5188986 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5188987 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5188991 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5188992 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5189045 agencies: [ 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5189047 agencies: [ 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5189050 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5198090 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5200058 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5200059 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5200656 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5201404 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5201405 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5201407 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203790 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΣ ΑΧΑΡΝΩΝ' ]
+[Storage] Project 5203792 agencies: [ 'ΓΔΑΕΦΚ', 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203794 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203795 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203796 agencies: [ 'ΤΑΣ ΜΕΣΣΗΝΙΑΣ' ]
+[Storage] Project 5203797 agencies: [
+  'ΔΑΕΦΚ-ΚΕ',
+  'ΤΑΠ ΗΛΕΙΑΣ',
+  'ΤΑΣ ΑΧΑΪΑΣ',
+  'ΤΑΣ ΚΟΖΑΝΗΣ',
+  'ΤΑΣ ΜΕΣΣΗΝΙΑΣ'
+]
+[Storage] Project 5203800 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203804 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203805 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203807 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ', 'ΤΑΣ ΜΕΣΣΗΝΙΑΣ', 'ΤΑΣ ΛΕΥΚΑΔΑΣ', 'ΤΑΠ ΗΛΕΙΑΣ' ]
+[Storage] Project 5203809 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203810 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203811 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ', 'ΤΑΠ ΗΛΕΙΑΣ' ]
+[Storage] Project 5203814 agencies: [ 'ΤΑΣ ΜΕΣΣΗΝΙΑΣ' ]
+[Storage] Project 5203815 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ' ]
+[Storage] Project 5203816 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203820 agencies: [ 'ΓΔΑΕΦΚ', 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203821 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203822 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203823 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΣ ΚΕΦΑΛΟΝΙΑΣ' ]
+[Storage] Project 5203824 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203825 agencies: [ 'ΓΔΑΕΦΚ', 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ', 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203826 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203828 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ' ]
+[Storage] Project 5203829 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203830 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΣ ΑΧΑΪΑΣ', 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203831 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203832 agencies: [ 'ΓΔΑΕΦΚ', 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203835 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ', 'ΤΑΣ ΚΕΦΑΛΟΝΙΑΣ', 'ΤΑΣ ΛΕΥΚΑΔΑΣ' ]
+[Storage] Project 5203836 agencies: [ 'ΤΑΠ ΗΛΕΙΑΣ', 'ΤΑΣ ΚΕΦΑΛΟΝΙΑΣ' ]
+[Storage] Project 5203838 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203839 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΠ ΗΛΕΙΑΣ' ]
+[Storage] Project 5203842 agencies: [ 'ΤΑΠ ΗΛΕΙΑΣ', 'ΤΑΣ ΑΧΑΪΑΣ' ]
+[Storage] Project 5203843 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203845 agencies: [ 'ΤΑΣ ΜΕΣΣΗΝΙΑΣ' ]
+[Storage] Project 5203847 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203848 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203849 agencies: [ 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΣ ΑΧΑΪΑΣ' ]
+[Storage] Project 5203850 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203851 agencies: [ 'ΤΑΠ ΗΛΕΙΑΣ', 'ΤΑΣ ΚΟΖΑΝΗΣ', 'ΤΑΣ ΜΕΣΣΗΝΙΑΣ', 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203852 agencies: [ 'ΤΑΠ ΗΛΕΙΑΣ' ]
+[Storage] Project 5203854 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203855 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203856 agencies: [ 'ΤΑΣ ΚΟΖΑΝΗΣ' ]
+[Storage] Project 5203858 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203859 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203860 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203861 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203863 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203864 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203865 agencies: [ 'ΤΑΣ ΑΧΑΪΑΣ', 'ΤΑΠ ΗΛΕΙΑΣ', 'ΤΑΣ ΚΟΖΑΝΗΣ', 'ΤΑΣ ΚΕΦΑΛΟΝΙΑΣ' ]
+[Storage] Project 5203866 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203867 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203868 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203869 agencies: [ 'ΔΑΕΦΚ-ΚΕ*', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5203871 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203874 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203876 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203877 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222811 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203878 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203879 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203880 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203883 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203888 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5203891 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203894 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203895 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5203896 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203897 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203898 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203899 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203900 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203901 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203902 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203905 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5203906 agencies: [ 'ΔΑΕΦΚ-ΒΕ', 'ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ' ]
+[Storage] Project 5203907 agencies: [ 'ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ' ]
+[Storage] Project 5203908 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203910 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203921 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203911 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203912 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203913 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5203914 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203915 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5203918 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203920 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203922 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5203923 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203924 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203925 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203926 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203927 agencies: [ 'ΓΔΑΕΦΚ', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5203928 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203929 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203932 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5203933 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΔΕ', 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5203934 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203935 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5203936 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203937 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203938 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203939 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5203940 agencies: [ 'ΓΔΑΕΦΚ*', 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5222540 agencies: [ 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5222542 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5222544 agencies: [ 'ΤΑΕΦΚ ΧΑΝΙΩΝ' ]
+[Storage] Project 5222545 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222546 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222549 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222550 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5222551 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5222552 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222556 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5222785 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5222786 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222787 agencies: [ 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5222789 agencies: [ 'ΤΑΕΦΚ-ΑΑ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5222792 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5222793 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5222794 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5222795 agencies: [ 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222798 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222799 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222800 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5222801 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222802 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222803 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222804 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5222805 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5222806 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΔΑΕΦΚ-ΑΚ' ]
+[Storage] Project 5222807 agencies: [ 'ΔΑΕΦΚ-ΚΕ', 'ΤΑΕΦΚ-ΑΑ' ]
+[Storage] Project 5222808 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222809 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5222810 agencies: [ 'ΔΑΕΦΚ-ΚΕ' ]
+[Storage] Project 5224425 agencies: [ 'ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ' ]
+[Storage] Project 5224465 agencies: [ 'ΤΑΕΦΚ-ΔΑ' ]
+[Storage] Project 5224470 agencies: [ 'ΔΑΕΦΚ-ΒΕ' ]
+[Storage] Project 5224476 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5224487 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Project 5224503 agencies: [ 'ΔΑΕΦΚ-ΔΕ' ]
+[Storage] Found 38 projects for unit: ΔΑΕΦΚ-ΔΕ
+[Projects] Found 38 projects for unit: ΔΑΕΦΚ-ΔΕ
+5:44:24 AM [express] GET /api/projects/by-unit/%CE%94%CE%91%CE%95%CE%A6%CE%9A-%CE%94%CE%95 200 in 559ms
+[Units] Successfully fetched units: 11
+5:44:24 AM [express] GET /api/public/units 304 in 354ms
+5:44:24 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:24 AM [express] [Request] GET /api/public/units from 10.81.3.238
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.3.238',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374266795-a3j3ycs'
+}
+[Units] Completely public access to units list
+[Units] Successfully fetched units: 11
+5:44:25 AM [express] GET /api/public/units 304 in 359ms
+5:44:25 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:25 AM [express] [Request] GET /api/public/units from 10.81.3.238
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.3.238',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374267780-0v25w9y'
+}
+[Units] Completely public access to units list
+[WebSocket] Heartbeat - Clients: 3 (3 active, 0 terminated)
+[Units] Successfully fetched units: 11
+5:44:25 AM [express] GET /api/public/units 304 in 142ms
+5:44:25 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:25 AM [express] [Request] GET /api/public/units from 10.81.3.238
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.3.238',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374267782-es9q95z'
+}
+[Units] Completely public access to units list
+[Units] Successfully fetched units: 11
+5:44:26 AM [express] GET /api/public/units 304 in 370ms
+5:44:26 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:26 AM [express] [Request] GET /api/auth/me from 10.81.3.238
+5:44:26 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.3.238"}
+5:44:26 AM [express] GET /api/auth/me 304 in 1ms
+5:44:27 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:27 AM [express] [Request] GET /api/public/units from 10.81.3.238
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.3.238',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374269895-d64z5fi'
+}
+[Units] Completely public access to units list
+[Units] Successfully fetched units: 11
+5:44:27 AM [express] GET /api/public/units 304 in 363ms
+5:44:27 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:27 AM [express] [Request] GET /api/public/units from 10.81.3.238
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: 'application/json',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"784-o3jLibT5gxghSlPxHnImxOo8+WY"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.3.238',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'units-1747374269897-2xr87jn'
+}
+[Units] Completely public access to units list
+5:44:27 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:27 AM [express] [Request] GET /api/projects from 10.81.4.204
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: '*/*',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  'if-none-match': 'W/"3d7f0-E+vrz3FEUHocF7MfBhv2JttiRbo"',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.4.204',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'query-1747374270811-di9gx08'
+}
+[Auth] Checking session: {
+  hasSession: true,
+  hasUser: true,
+  sessionID: 'aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs',
+  cookies: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  ip: '10.81.4.204',
+  protocol: 'https',
+  secure: true,
+  path: '/',
+  isPublicRoute: false
+}
+[Auth] User authenticated: {
+  id: 82,
+  name: 'Κ Κυριακού',
+  email: 'kkyriakou@civilprotection.gr',
+  role: 'user',
+  units: [
+    'ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΟΥ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ',
+    'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΚΡΗΤΗΣ',
+    'ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ'
+  ],
+  sessionID: 'aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs',
+  ip: '10.81.4.204'
+}
+[Projects] Fetching all projects
+5:44:27 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:27 AM [express] [Request] GET /api/projects/5174706/regions from 10.81.1.135
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: '*/*',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  'content-type': 'application/json',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.1.135',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': '',
+  'x-request-id': 'req-1747374270814-z750f5r'
+}
+[Projects] Public access fetching regions for project: 5174706
+[Units] Successfully fetched units: 11
+5:44:28 AM [express] GET /api/public/units 304 in 372ms
+[Projects] Regions for project 5174706 : {
+  region: [ 'ΔΥΤ. ΕΛΛΑΔΑΣ' ],
+  municipality: [ 'Ι.Π. ΜΕΣΣΟΛΟΓΓΙΟΥ' ],
+  regional_unit: [ 'ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ' ]
+}
+5:44:28 AM [express] GET /api/projects/5174706/regions 200 in 422ms
+5:44:28 AM [express] GET /api/projects 304 in 537ms
+5:44:28 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+5:44:28 AM [express] [Request] GET /api/budget/5174706 from 10.81.4.204
+[Request] Headers: {
+  host: 'da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+  accept: '*/*',
+  'accept-encoding': 'gzip, br, zstd',
+  'accept-language': 'el-GR,el;q=0.9',
+  cookie: 'sid=s%3AaAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs.LQTag1eYUnpkEftrR8PmhKUMugjkvEYnrr6SWwPv%2B9c',
+  referer: 'https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/',
+  'sec-ch-ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-origin',
+  'x-forwarded-for': '84.205.214.7, 10.81.4.204',
+  'x-forwarded-proto': 'https',
+  'x-imforwards': '20',
+  'x-replit-user-bio': '',
+  'x-replit-user-id': '',
+  'x-replit-user-name': '',
+  'x-replit-user-profile-image': '',
+  'x-replit-user-roles': '',
+  'x-replit-user-teams': '',
+  'x-replit-user-url': ''
+}
+[Budget] Public access to budget data for MIS: 5174706
+[Budget] Request headers: {"accept":"*/*","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"}
+[Budget] Decoded MIS if needed: 5174706
+[Budget] Handling numeric MIS: 5174706
+[Budget] Found budget for numeric MIS=5174706
+5:44:29 AM [express] GET /api/budget/5174706 200 in 347ms
+[WebSocket] Client disconnected: {
+  clientId: 'x1c1umaqdihz3',
+  address: '172.31.128.68',
+  code: 1005,
+  reason: 'No reason provided',
+  timestamp: '2025-05-16T05:44:29.385Z'
+}
+[WebSocket] Client disconnected: {
+  clientId: 'n91y8lmaqdihab',
+  address: '172.31.128.68',
+  code: 1005,
+  reason: 'No reason provided',
+  timestamp: '2025-05-16T05:44:29.386Z'
+}
+5:44:29 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:29 AM [express] [Request] GET /api/auth/me from 10.81.4.204
+5:44:29 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.4.204"}
+5:44:29 AM [express] GET /api/auth/me 304 in 1ms
+5:44:30 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:30 AM [express] [Request] GET /api/auth/me from 10.81.4.204
+5:44:30 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.4.204"}
+5:44:30 AM [express] GET /api/auth/me 304 in 1ms
+[WebSocket] New client connected: 9kjirhmaqdixap from 172.31.128.68
+[WebSocket] Received message from 9kjirhmaqdixap: { type: 'connect', timestamp: '2025-05-16T05:44:35.188Z' }
+5:44:32 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:32 AM [express] [Request] GET /api/auth/me from 10.81.4.204
+5:44:32 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.4.204"}
+5:44:32 AM [express] GET /api/auth/me 304 in 1ms
+[WebSocket] New client connected: dljrvmaqdixyk from 172.31.128.68
+[WebSocket] Received message from dljrvmaqdixyk: { type: 'connect', timestamp: '2025-05-16T05:44:36.048Z' }
+5:44:33 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+5:44:33 AM [express] [Request] GET /api/auth/me from 10.81.4.204
+5:44:33 AM [auth] [Auth] Returning current user: {"id":82,"role":"user","sessionID":"aAMFFrGDtqeBy4_qU8QPExuj6d9l1kAs","ip":"10.81.4.204"}
+5:44:33 AM [express] GET /api/auth/me 304 in 0ms
+[WebSocket] Heartbeat - Clients: 3 (3 active, 0 terminated)
