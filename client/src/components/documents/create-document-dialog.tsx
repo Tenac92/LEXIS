@@ -609,10 +609,45 @@ export function CreateDocumentDialog({
 
         // Units fetched successfully - processing data
         
-        return data.map((item: any) => ({
-          id: item.id || item.unit,
-          name: item.name || item.unit_name,
-        }));
+        // Enhanced data transformation with additional debugging
+        console.log("[CreateDocument] Processing units data:", JSON.stringify(data));
+        
+        const processedUnits = data.map((item: any) => {
+          // For debugging purposes
+          if (!item.unit && !item.id) {
+            console.warn("[CreateDocument] Unit missing id/unit field:", item);
+          }
+          
+          // First handle the ID
+          const unitId = item.id || item.unit || '';
+          
+          // Then handle the display name with proper fallbacks
+          let unitName = '';
+          
+          // Case 1: Direct name property
+          if (item.name) {
+            unitName = item.name;
+          } 
+          // Case 2: unit_name is a string
+          else if (typeof item.unit_name === 'string') {
+            unitName = item.unit_name;
+          } 
+          // Case 3: unit_name is an object with name property
+          else if (item.unit_name && typeof item.unit_name === 'object' && item.unit_name.name) {
+            unitName = item.unit_name.name;
+          }
+          // Case 4: Fall back to unit value if nothing else
+          else {
+            unitName = String(item.unit || unitId || 'Άγνωστη Μονάδα');
+          }
+          
+          return {
+            id: unitId,
+            name: unitName,
+          };
+        });
+        
+        return processedUnits;
       } catch (error) {
         console.error("[CreateDocument] Units fetch error:", error);
         toast({
