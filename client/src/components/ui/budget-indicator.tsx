@@ -294,10 +294,14 @@ export function BudgetIndicator({
     currentQuarterValue = q4;
   }
   
-  // If quarter_available isn't provided, calculate it including currentAmount
-  const quarterAvailableValue = quarterAvailable !== undefined ? 
-    (quarterAvailable - amount) : 
-    (currentQuarterValue - userView - amount);
+  // Display both the original quarter value and the value after deduction
+  // First, calculate the original quarter value (without subtracting the current amount)
+  const originalQuarterValue = quarterAvailable !== undefined ? 
+    quarterAvailable : 
+    (currentQuarterValue - userView);
+    
+  // Then calculate what would remain after the current amount is subtracted
+  const quarterAvailableValue = originalQuarterValue - amount;
 
   // Calculate remaining budget after potential deduction in real-time
   // Ensure we have valid numbers by providing fallbacks
@@ -353,11 +357,16 @@ export function BudgetIndicator({
           <div>
             <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο Τριμήνου {currentQuarter?.substring(1) || ''}</h3>
             <p className="text-2xl font-bold text-gray-700">
-              {quarterAvailableValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {originalQuarterValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               Υπόλοιπο τρέχοντος τριμήνου
             </p>
+            {amount > 0 && (
+              <p className="text-xs text-blue-600 mt-1">
+                Μετά την αφαίρεση: {quarterAvailableValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              </p>
+            )}
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο προς Πίστωση</h3>
