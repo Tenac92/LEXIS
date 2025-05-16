@@ -359,7 +359,7 @@ export function BudgetIndicator({
           <div>
             <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο Τριμήνου {currentQuarter?.substring(1) || ''}</h3>
             <p className="text-2xl font-bold text-gray-700">
-              {actualQuarterValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              {originalQuarterValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               Υπόλοιπο τρέχοντος τριμήνου
