@@ -34,7 +34,7 @@ interface DocumentItem {
   status?: string;
 }
 
-export function Dashboard() {
+export function UserDashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
@@ -278,4 +278,4 @@ export function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default UserDashboard;
