@@ -82,10 +82,10 @@ export async function getDashboardStats(req: Request, res: Response) {
       }
     });
 
-    // Get recent budget history with limit
+    // Get recent budget history with limit and enhanced info
     const { data: historyData, error: historyError } = await supabase
       .from('budget_history')
-      .select('id, change_type, mis, previous_amount, new_amount, created_at')
+      .select('id, change_type, mis, previous_amount, new_amount, created_at, created_by, document_id, change_reason')
       .order('created_at', { ascending: false })
       .limit(5);
 
@@ -94,16 +94,69 @@ export async function getDashboardStats(req: Request, res: Response) {
       throw historyError;
     }
 
-    const recentActivity = historyData?.map(activity => ({
-      id: activity.id,
-      type: activity.change_type,
-      description: `Project ${activity.mis}: Budget changed from ${
-        parseAmount(activity.previous_amount).toFixed(2)
-      } to ${
-        parseAmount(activity.new_amount).toFixed(2)
-      }`,
-      date: activity.created_at
-    })) || [];
+    // Get information about users for better activity display
+    const userIds = historyData?.map(entry => entry.created_by).filter(Boolean) || [];
+    let userData: Record<string, string> = {};
+    
+    if (userIds.length > 0) {
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, name')
+        .in('id', userIds);
+        
+      if (!usersError && users) {
+        userData = users.reduce((acc: Record<string, string>, user) => {
+          acc[user.id] = user.name;
+          return acc;
+        }, {});
+      }
+    }
+
+    // Enhanced activity items with better descriptions and more details
+    const recentActivity = historyData?.map(activity => {
+      const previousAmount = parseAmount(activity.previous_amount);
+      const newAmount = parseAmount(activity.new_amount);
+      const difference = newAmount - previousAmount;
+      const userName = activity.created_by ? (userData[activity.created_by] || `User ${activity.created_by}`) : 'System';
+      
+      // Format amount change with clear increase/decrease indicator
+      const changeText = difference > 0 
+        ? `αύξηση κατά ${Math.abs(difference).toFixed(2)}€` 
+        : `μείωση κατά ${Math.abs(difference).toFixed(2)}€`;
+      
+      // Create a more meaningful description
+      let description = `Έργο ${activity.mis}: `;
+      
+      if (activity.change_type === 'admin_update') {
+        description += `Διοικητική ενημέρωση προϋπολογισμού (${changeText})`;
+      } else if (activity.change_type === 'document_approved') {
+        description += `Έγκριση εγγράφου με ${changeText}`;
+      } else if (activity.change_type === 'notification_created') {
+        description += `Δημιουργία ειδοποίησης για ${changeText}`;
+      } else if (activity.change_type === 'import') {
+        description += `Εισαγωγή νέων δεδομένων με ${changeText}`;
+      } else {
+        description += `${changeText} (από ${previousAmount.toFixed(2)}€ σε ${newAmount.toFixed(2)}€)`;
+      }
+      
+      // If there's a reason, add it
+      if (activity.change_reason) {
+        description += ` - Αιτία: ${activity.change_reason}`;
+      }
+      
+      return {
+        id: activity.id,
+        type: activity.change_type,
+        description,
+        date: activity.created_at,
+        createdBy: userName,
+        documentId: activity.document_id,
+        mis: activity.mis,
+        previousAmount,
+        newAmount,
+        changeAmount: difference
+      };
+    }) || [];
 
     const response = {
       totalDocuments: documentStats?.total || 0,

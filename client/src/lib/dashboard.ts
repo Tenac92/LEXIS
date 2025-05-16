@@ -15,7 +15,13 @@ export const statsSchema = z.object({
     id: z.number(),
     type: z.string(),
     description: z.string(),
-    date: z.string()
+    date: z.string(),
+    createdBy: z.string().optional(),
+    documentId: z.number().optional(),
+    mis: z.string().optional(),
+    previousAmount: z.number().optional(),
+    newAmount: z.number().optional(),
+    changeAmount: z.number().optional()
   })).optional()
 });
 

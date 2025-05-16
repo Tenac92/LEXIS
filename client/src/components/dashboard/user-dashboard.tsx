@@ -257,8 +257,34 @@ export function UserDashboard() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <p className="font-medium">{activity.description}</p>
-                    <div className="flex items-center mt-1">
-                      <span className="text-sm text-muted-foreground mr-2">{activity.type}</span>
+                    <div className="flex flex-wrap items-center mt-2 gap-2">
+                      {activity.documentId && (
+                        <Link href={`/documents/${activity.documentId}`}>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer">
+                            Έγγραφο #{activity.documentId}
+                          </span>
+                        </Link>
+                      )}
+                      {activity.changeAmount !== undefined && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          activity.changeAmount > 0 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {activity.changeAmount > 0 ? '+' : ''}
+                          {activity.changeAmount.toFixed(2)}€
+                        </span>
+                      )}
+                      {activity.mis && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                          MIS: {activity.mis}
+                        </span>
+                      )}
+                      {activity.createdBy && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                          {activity.createdBy}
+                        </span>
+                      )}
                       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                         {new Date(activity.date).toLocaleDateString('el-GR')}
                       </span>
