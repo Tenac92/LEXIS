@@ -2360,26 +2360,35 @@ export function CreateDocumentDialog({
                       <FormLabel>Επιλογή Μονάδας</FormLabel>
                       <Select
                         onValueChange={(value) => {
-                          // First update the field directly for immediate UI update
-                          field.onChange(value);
-                          
-                          // Log to help with debugging
-                          console.log("[UnitSelect] Unit selected:", value);
-                          
-                          // Always save the form context after unit change
-                          const formValues = form.getValues();
-                          updateFormData({
-                            ...formValues,
-                            unit: value,
-                            // Clear project when unit changes to avoid invalid combinations
-                            project_id: ""
-                          });
-                          
-                          // Force a refresh of projects data
-                          setTimeout(() => {
-                            // Invalidate projects to force a refresh with the new unit
-                            queryClient.invalidateQueries({ queryKey: ["projects", value] });
-                          }, 100);
+                          try {
+                            // First update the field directly for immediate UI update
+                            field.onChange(value);
+                            
+                            // Log to help with debugging
+                            console.log("[UnitSelect] Unit selected:", value);
+                            
+                            // Mark unit initialization as completed to prevent overriding user selection
+                            if (!unitInitializationRef.current.isCompleted) {
+                              unitInitializationRef.current.isCompleted = true;
+                            }
+                            
+                            // Always save the form context after unit change
+                            const formValues = form.getValues();
+                            updateFormData({
+                              ...formValues,
+                              unit: value,
+                              // Clear project when unit changes to avoid invalid combinations
+                              project_id: ""
+                            });
+                            
+                            // Force a refresh of projects data
+                            setTimeout(() => {
+                              // Invalidate projects to force a refresh with the new unit
+                              queryClient.invalidateQueries({ queryKey: ["projects", value] });
+                            }, 100);
+                          } catch (error) {
+                            console.error("[UnitSelect] Error during unit selection:", error);
+                          }
                         }}
                         value={field.value}
                         disabled={unitsLoading || user?.units?.length === 1}
@@ -2390,16 +2399,24 @@ export function CreateDocumentDialog({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {units.map((unit: any) => (
-                            <SelectItem key={unit.id} value={unit.id}>
-                              {unit.name}
+                          {Array.isArray(units) && units.length > 0 ? (
+                            units.map((unit: any) => (
+                              <SelectItem key={unit.id || unit.name} value={unit.id}>
+                                {unit.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="" disabled>
+                              Δεν βρέθηκαν μονάδες
                             </SelectItem>
-                          ))}
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                       {field.value && <p className="text-xs text-muted-foreground mt-1">
-                        Επιλεγμένη μονάδα: {units.find((u: any) => u.id === field.value)?.name || field.value}
+                        Επιλεγμένη μονάδα: {Array.isArray(units) && units.length > 0 
+                          ? (units.find((u: any) => u.id === field.value)?.name || field.value)
+                          : field.value}
                       </p>}
                     </FormItem>
                   )}
