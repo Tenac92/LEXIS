@@ -2430,7 +2430,9 @@ export function CreateDocumentDialog({
                       >
                         <FormControl>
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Επιλέξτε μονάδα" />
+                            <SelectValue 
+                              placeholder={field.value && unitsLoading ? "Φόρτωση..." : "Επιλέξτε μονάδα"} 
+                            />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -2448,10 +2450,11 @@ export function CreateDocumentDialog({
                         </SelectContent>
                       </Select>
                       <FormMessage />
-                      {field.value && <p className="text-xs text-muted-foreground mt-1">
+                      {field.value && <p className="text-xs text-muted-foreground mt-1 font-medium">
                         Επιλεγμένη μονάδα: {Array.isArray(units) && units.length > 0 
-                          ? (units.find((u: any) => u.id === field.value)?.name || field.value)
-                          : field.value}
+                          ? (units.find((u: any) => u.id === field.value)?.name || 
+                             (user?.units?.length === 1 ? user.units[0] : field.value))
+                          : (user?.units?.length === 1 ? user.units[0] : field.value)}
                       </p>}
                     </FormItem>
                   )}
@@ -2803,11 +2806,31 @@ export function CreateDocumentDialog({
     );
   };
 
+  // Immediate unit selection when there's only one unit available
   useEffect(() => {
     if (user?.units?.length === 1) {
-      form.setValue("unit", user.units[0]);
+      // Set the unit value immediately without delay
+      const unitValue = user.units[0];
+      form.setValue("unit", unitValue, { 
+        shouldDirty: false,
+        shouldValidate: false
+      });
+      
+      // Also update form context data to ensure consistency
+      updateFormData({
+        ...formData,
+        unit: unitValue
+      });
+      
+      // Mark unit initialization as completed to prevent overrides
+      if (unitInitializationRef.current) {
+        unitInitializationRef.current.isCompleted = true;
+        unitInitializationRef.current.defaultUnit = unitValue;
+      }
+      
+      console.log("[CreateDocument] Auto-selected the only available unit:", unitValue);
     }
-  }, [user?.units, form]);
+  }, [user?.units, form, formData, updateFormData]);
 
   useEffect(() => {
     if (regions.length === 1) {
