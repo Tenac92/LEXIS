@@ -9,26 +9,10 @@ import {
   AlertCircle,
   CheckCircle2,
   PlusCircle,
-  Download,
   Upload,
-  BarChart3,
   Euro
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-  Sector
-} from 'recharts';
-import React from 'react';
+import React, { useState } from 'react';
 
 import type { DashboardStats } from "@/lib/dashboard";
 import { formatCurrency } from "@/lib/services/dashboard";
@@ -43,70 +27,22 @@ const formatLargeNumber = (value: number): string => {
   return `${value.toFixed(0)} €`;
 };
 
-
-// Define chart colors with better contrast
-const CHART_COLORS = {
-  active: '#10b981',      // Emerald
-  pending: '#f59e0b',     // Amber
-  pending_reallocation: '#6366f1', // Indigo
-  completed: '#3b82f6'    // Blue
-};
-
-// Status translation mapping
-const STATUS_TRANSLATIONS: Record<string, string> = {
-  active: 'Ενεργό',
-  pending: 'Σε Εκκρεμότητα',
-  pending_reallocation: 'Σε Αναμονή Ανακατανομής',
-  completed: 'Ολοκληρωμένο'
-};
-
-// Custom active shape for pie chart
-const renderActiveShape = (props: any) => {
-  const {
-    cx, cy, innerRadius, outerRadius, startAngle, endAngle,
-    fill, payload, percent, value
-  } = props;
-
-  return (
-    <g>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-      />
-      <Sector
-        cx={cx}
-        cy={cy}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        innerRadius={outerRadius + 6}
-        outerRadius={outerRadius + 10}
-        fill={fill}
-      />
-      <text x={cx} y={cy} dy={-20} textAnchor="middle" fill="#888">
-        {payload.name}
-      </text>
-      <text x={cx} y={cy} dy={8} textAnchor="middle" fill="#333" className="text-lg font-semibold">
-        {value}
-      </text>
-      <text x={cx} y={cy} dy={25} textAnchor="middle" fill="#666">
-        {`(${(percent * 100).toFixed(1)}%)`}
-      </text>
-    </g>
-  );
-};
-
 export function Dashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const [activePieIndex, setActivePieIndex] = React.useState(0);
+  
+  // State for user's documents filtered by unit
+  const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
 
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
+    retry: 2,
+    refetchOnWindowFocus: false
+  });
+  
+  // Query for user's recent documents
+  const { data: userDocuments, isLoading: isLoadingUserDocs } = useQuery({
+    queryKey: ["/api/documents/user"],
     retry: 2,
     refetchOnWindowFocus: false
   });
@@ -131,26 +67,28 @@ export function Dashboard() {
     );
   }
 
-  // Prepare chart data with Greek translations
-  const chartData = Object.entries(stats.projectStats).map(([status, count]) => ({
-    name: STATUS_TRANSLATIONS[status] || status,
+  // Calculate user's activity stats
+  const userUnits = user?.units || [];
+  const userUnitCounts = userUnits.reduce((acc: Record<string, number>, unit: string) => {
+    acc[unit] = stats.pendingDocuments; // We're simplifying here - ideally we'd have per-unit data
+    return acc;
+  }, {});
+  
+  // Generate data for the user's units activity chart
+  const userActivityData = Object.entries(userUnitCounts).map(([unit, count]) => ({
+    name: unit.length > 30 ? unit.substring(0, 30) + '...' : unit,
+    fullName: unit,
     count,
-    budget: stats.budgetTotals?.[status] || 0,
-    fill: CHART_COLORS[status as keyof typeof CHART_COLORS]
+    fill: '#3b82f6' // Consistent blue color
   }));
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  // Simplified tooltip component
+  const SimpleTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-4 shadow-lg rounded-lg border border-gray-200">
-          <p className="font-semibold mb-2">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {entry.name === 'budget'
-                ? `Προϋπολογισμός: ${formatLargeNumber(entry.value)}`
-                : `Πλήθος: ${entry.value}`}
-            </p>
-          ))}
+          <p className="font-semibold mb-2">{payload[0].payload.fullName}</p>
+          <p className="text-sm">Εκκρεμή έγγραφα: {payload[0].value}</p>
         </div>
       );
     }
@@ -161,27 +99,31 @@ export function Dashboard() {
     <div className="space-y-6">
       {/* Header with quick actions */}
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-semibold">Επισκόπηση Πίνακα Ελέγχου</h2>
-        {isAdmin && (
-          <div className="flex gap-2">
-            <Link href="/projects/new">
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Νέο Έργο
-              </Button>
-            </Link>
-            <Link href="/projects/bulk-update">
-              <Button variant="outline">
-                <Upload className="mr-2 h-4 w-4" />
-                Μαζική Ενημέρωση
-              </Button>
-            </Link>
-            <Button variant="secondary">
-              <Download className="mr-2 h-4 w-4" />
-              Εξαγωγή Δεδομένων
+        <h2 className="text-2xl font-semibold">Πίνακας Ελέγχου</h2>
+        <div className="flex gap-2">
+          <Link href="/documents">
+            <Button variant="outline">
+              <FileText className="mr-2 h-4 w-4" />
+              Όλα τα Έγγραφα
             </Button>
-          </div>
-        )}
+          </Link>
+          {isAdmin && (
+            <>
+              <Link href="/projects/new">
+                <Button>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Νέο Έργο
+                </Button>
+              </Link>
+              <Link href="/projects/bulk-update">
+                <Button variant="outline">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Μαζική Ενημέρωση
+                </Button>
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Main stats */}
@@ -237,118 +179,112 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Project Status and Budget Distribution */}
+      {/* User's activity and documents */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Project Status Distribution */}
+        {/* My Units */}
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-6">Κατανομή Κατάστασης Έργων</h3>
-          <div className="h-[400px]"> {/* Increased height for better visibility */}
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  dataKey="count"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={80}
-                  outerRadius={120}
-                  activeIndex={activePieIndex}
-                  activeShape={renderActiveShape}
-                  onMouseEnter={(_, index) => setActivePieIndex(index)}
+          <h3 className="text-lg font-semibold mb-4">Οι Μονάδες μου</h3>
+          <div className="space-y-4">
+            {userUnits.length > 0 ? (
+              userUnits.map((unit, index) => (
+                <div 
+                  key={index} 
+                  className={`p-4 rounded-lg cursor-pointer border transition-colors ${
+                    selectedUnit === unit ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50 border-border'
+                  }`}
+                  onClick={() => setSelectedUnit(selectedUnit === unit ? null : unit)}
                 >
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.fill}
-                      strokeWidth={1}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  verticalAlign="bottom"
-                  height={36}
-                  formatter={(value) => (
-                    <span className="text-sm font-medium">{value}</span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+                  <p className="font-medium">{unit}</p>
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-sm text-muted-foreground">Εκκρεμή έγγραφα</span>
+                    <span className="font-semibold text-primary">{stats.pendingDocuments}</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-4 text-center text-muted-foreground">
+                Δεν βρέθηκαν μονάδες
+              </div>
+            )}
           </div>
         </Card>
 
-        {/* Budget Distribution */}
+        {/* Recent Documents */}
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-6">Κατανομή Προϋπολογισμού</h3>
-          <div className="h-[400px]"> {/* Increased height for better visibility */}
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 20, right: 50, left: 50, bottom: 60 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  opacity={0.1}
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
-                  interval={0}
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tickFormatter={formatLargeNumber}
-                  tick={{ fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={80}
-                />
-                <Tooltip
-                  content={<CustomTooltip />}
-                  cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
-                />
-                <Bar
-                  dataKey="budget"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={60}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.fill}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <h3 className="text-lg font-semibold mb-4">Πρόσφατα Έγγραφά μου</h3>
+          <div className="space-y-4">
+            {isLoadingUserDocs ? (
+              <div className="flex justify-center p-6">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : userDocuments && userDocuments.length > 0 ? (
+              userDocuments.slice(0, 5).map((doc: any) => (
+                <div key={doc.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div>
+                    <p className="font-medium">{doc.title || "Έγγραφο χωρίς τίτλο"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {doc.status === 'pending' ? 'Εκκρεμεί' : 
+                       doc.status === 'completed' ? 'Ολοκληρώθηκε' : 'Σε επεξεργασία'}
+                    </p>
+                  </div>
+                  <Link href={`/documents/${doc.id}`}>
+                    <Button size="sm" variant="ghost">Προβολή</Button>
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <div className="text-center p-4 text-muted-foreground">
+                <p>Δεν βρέθηκαν πρόσφατα έγγραφα</p>
+                <Button className="mt-4" size="sm" asChild>
+                  <Link href="/documents/new">Δημιουργία Εγγράφου</Link>
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="mt-4 text-right">
+            <Button variant="link" size="sm" asChild>
+              <Link href="/documents">Προβολή όλων</Link>
+            </Button>
           </div>
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      {stats.recentActivity && stats.recentActivity.length > 0 && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Πρόσφατη Δραστηριότητα</h3>
-          <div className="space-y-4">
-            {stats.recentActivity.map((activity) => (
-              <div key={activity.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                <div>
-                  <p className="font-medium">{activity.description}</p>
-                  <p className="text-sm text-muted-foreground">{activity.type}</p>
+      {/* Recent Activity - Expanded section */}
+      <Card className="p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Πρόσφατη Δραστηριότητα</h3>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/budget/history">Προβολή όλων</Link>
+          </Button>
+        </div>
+        
+        <div className="space-y-4">
+          {stats.recentActivity && stats.recentActivity.length > 0 ? (
+            stats.recentActivity.map((activity) => (
+              <div 
+                key={activity.id} 
+                className="p-4 rounded-lg border hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="font-medium">{activity.description}</p>
+                    <div className="flex items-center mt-1">
+                      <span className="text-sm text-muted-foreground mr-2">{activity.type}</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                        {new Date(activity.date).toLocaleDateString('el-GR')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  {new Date(activity.date).toLocaleDateString('el-GR')}
-                </span>
               </div>
-            ))}
-          </div>
-        </Card>
-      )}
+            ))
+          ) : (
+            <div className="text-center p-6 text-muted-foreground">
+              Δεν υπάρχει καταγεγραμμένη πρόσφατη δραστηριότητα
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
