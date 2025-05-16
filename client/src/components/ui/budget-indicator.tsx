@@ -299,6 +299,9 @@ export function BudgetIndicator({
     quarterAvailable : 
     (currentQuarterValue - userView);
     
+  // Store original quarter value for reference
+  const originalQuarterValue = actualQuarterValue;
+    
   // Then calculate what would remain after the current amount is subtracted (for UI purposes elsewhere)
   const quarterAvailableValue = actualQuarterValue - amount;
 
