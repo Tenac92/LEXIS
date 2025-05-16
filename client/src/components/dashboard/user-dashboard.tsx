@@ -56,6 +56,22 @@ export function UserDashboard() {
 
   // Make sure userDocs is always an array
   const userDocuments = Array.isArray(userDocs) ? userDocs : [];
+  
+  // Enhanced formatting for activity display
+  const formatActivityDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('el-GR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return dateString;
+    }
+  };
 
   if (isLoading) {
     return (

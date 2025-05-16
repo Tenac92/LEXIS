@@ -76,6 +76,43 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
 });
 
 /**
+ * Get documents for the current user
+ * GET /api/documents/user
+ */
+router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Check if user is authenticated
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ 
+        message: 'Μη εξουσιοδοτημένη πρόσβαση. Παρακαλώ συνδεθείτε.' 
+      });
+    }
+    
+    // Fetch user's documents safely
+    const { data, error } = await supabase
+      .from('generated_documents')
+      .select('id, title, status, created_at')
+      .eq('generated_by', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    if (error) {
+      log(`[Documents] Error fetching user documents: ${error}`, 'error');
+      throw error;
+    }
+    
+    return res.status(200).json(data || []);
+    
+  } catch (error) {
+    log(`Error fetching document: ${error}`, 'error');
+    return res.status(500).json({
+      message: 'Αποτυχία φόρτωσης εγγράφων',
+      error: error instanceof Error ? error.message : 'Άγνωστο σφάλμα'
+    });
+  }
+});
+
+/**
  * Get a specific document by ID
  * GET /api/documents/:id
  */
