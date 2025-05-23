@@ -294,16 +294,41 @@ export function BudgetIndicator({
     currentQuarterValue = q4;
   }
   
+  // Get the current quarter based on date if not provided
+  const getCurrentQuarterNumber = () => {
+    const now = new Date();
+    const month = now.getMonth() + 1; // JavaScript months are 0-indexed
+    return Math.ceil(month / 3);
+  };
+  
+  // Determine the current quarter number
+  let currentQuarterNumber = 0;
+  if (currentQuarter === 'q1') currentQuarterNumber = 1;
+  else if (currentQuarter === 'q2') currentQuarterNumber = 2;
+  else if (currentQuarter === 'q3') currentQuarterNumber = 3;
+  else if (currentQuarter === 'q4') currentQuarterNumber = 4;
+  else currentQuarterNumber = getCurrentQuarterNumber();
+  
+  // Log for debugging
+  console.log("[Budget Debug] Quarter information:", { 
+    currentQuarter, 
+    currentQuarterNumber,
+    currentQuarterValue, 
+    userView,
+    q1, q2, q3, q4 
+  });
+  
   // Calculate the true quarter value without subtracting the current amount
-  const actualQuarterValue = quarterAvailable !== undefined ? 
+  // First check if quarter_available is directly provided
+  const actualQuarterValue = quarterAvailable !== undefined && quarterAvailable > 0 ? 
     quarterAvailable : 
-    (currentQuarterValue - userView);
-    
-  // Store original quarter value for reference
-  const originalQuarterValue = actualQuarterValue;
-    
+    (currentQuarterValue > 0 ? currentQuarterValue - userView : 0);
+  
+  // Store original quarter value for reference - ensure it's never negative
+  const originalQuarterValue = Math.max(0, actualQuarterValue);
+  
   // Then calculate what would remain after the current amount is subtracted (for UI purposes elsewhere)
-  const quarterAvailableValue = actualQuarterValue - amount;
+  const quarterAvailableValue = Math.max(0, originalQuarterValue - amount);
 
   // Calculate remaining budget after potential deduction in real-time
   // Ensure we have valid numbers by providing fallbacks

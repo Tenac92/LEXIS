@@ -612,6 +612,21 @@ export function CreateDocumentDialog({
         // Enhanced data transformation with additional debugging
         console.log("[CreateDocument] Processing units data:", JSON.stringify(data));
         
+        // Process abbreviated unit IDs mapping
+        const unitAbbreviations: Record<string, string> = {
+          "ΔΑΕΦΚ-ΚΕ": "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
+          "ΔΑΕΦΚ-ΒΕ": "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΑΣ ΕΛΛΑΔΟΣ",
+          "ΔΑΕΦΚ-ΔΕ": "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ",
+          "ΤΑΕΦΚ-ΑΑ": "ΤΜΗΜΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
+          "ΤΑΕΦΚ-ΔΑ": "ΤΜΗΜΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ"
+        };
+        
+        // If the user only has access to one unit, track it for auto-selection
+        let userSingleUnit = "";
+        if (user?.units?.length === 1) {
+          userSingleUnit = user.units[0];
+        }
+        
         const processedUnits = data.map((item: any) => {
           // For debugging purposes
           if (!item.unit && !item.id) {
@@ -619,7 +634,21 @@ export function CreateDocumentDialog({
           }
           
           // First handle the ID
-          const unitId = item.id || item.unit || '';
+          let unitId = item.id || item.unit || '';
+          
+          // Ensure the unit ID matches the expected format if it's abbreviated
+          if (user?.units?.includes(unitId) || Object.keys(unitAbbreviations).includes(unitId)) {
+            // Keep the unit ID as is - it's already in the correct format
+          } else if (unitId.length > 20) {
+            // For long unit IDs, try to find the abbreviated form
+            const abbrevEntry = Object.entries(unitAbbreviations).find(([abbrev, fullName]) => 
+              fullName === unitId || unitId.includes(fullName)
+            );
+            
+            if (abbrevEntry) {
+              unitId = abbrevEntry[0]; // Use the abbreviated form
+            }
+          }
           
           // Then handle the display name with proper fallbacks
           let unitName = '';
@@ -636,7 +665,11 @@ export function CreateDocumentDialog({
           else if (item.unit_name && typeof item.unit_name === 'object' && item.unit_name.name) {
             unitName = item.unit_name.name;
           }
-          // Case 4: Fall back to unit value if nothing else
+          // Case 4: Look up the full name from abbreviations
+          else if (unitAbbreviations[unitId]) {
+            unitName = unitAbbreviations[unitId];
+          }
+          // Case 5: Fall back to unit value if nothing else
           else {
             unitName = String(item.unit || unitId || 'Άγνωστη Μονάδα');
           }
