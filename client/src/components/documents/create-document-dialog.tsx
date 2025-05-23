@@ -2849,8 +2849,13 @@ export function CreateDocumentDialog({
   };
 
   // Immediate unit selection when there's only one unit available
+  const unitInitializedRef = useRef(false);
+  
   useEffect(() => {
-    if (user?.units?.length === 1) {
+    // Only run this once to avoid infinite loops
+    if (user?.units?.length === 1 && !unitInitializedRef.current) {
+      unitInitializedRef.current = true;
+      
       // Set the unit value immediately without delay
       const unitValue = user.units[0];
       form.setValue("unit", unitValue, { 
