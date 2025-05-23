@@ -382,15 +382,15 @@ export function BudgetIndicator({
             </div>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο Τριμήνου {currentQuarter?.substring(1) || ''}</h3>
-            <p className="text-2xl font-bold text-gray-700">
+            <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο Τριμήνου {currentQuarter?.substring(1) || currentQuarterNumber || ''}</h3>
+            <p className={`text-2xl font-bold ${originalQuarterValue > 0 ? 'text-gray-700' : 'text-blue-600'}`}>
               {originalQuarterValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               Υπόλοιπο τρέχοντος τριμήνου
             </p>
             {amount > 0 && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className={`text-xs ${quarterAvailableValue < 0 ? 'text-red-500' : 'text-gray-500'} mt-1`}>
                 Μετά την αφαίρεση: {quarterAvailableValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
               </p>
             )}

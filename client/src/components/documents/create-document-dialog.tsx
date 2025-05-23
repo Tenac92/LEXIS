@@ -2464,7 +2464,16 @@ export function CreateDocumentDialog({
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue 
-                              placeholder={field.value && unitsLoading ? "Φόρτωση..." : "Επιλέξτε μονάδα"} 
+                              placeholder={
+                                field.value ? 
+                                (unitsLoading ? "Φόρτωση..." : 
+                                  (Array.isArray(units) && units.length > 0 
+                                    ? (units.find((u: any) => u.id === field.value)?.name || 
+                                       (user?.units?.length === 1 ? user.units[0] : field.value))
+                                    : (user?.units?.length === 1 ? user.units[0] : field.value))
+                                ) : 
+                                "Επιλέξτε μονάδα"
+                              } 
                             />
                           </SelectTrigger>
                         </FormControl>
