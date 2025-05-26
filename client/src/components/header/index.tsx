@@ -152,6 +152,19 @@ export function Header() {
               </Link>
             )}
 
+            {(isAdmin || isManager) && (
+              <Link href="/employees">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
+                >
+                  <Users className="h-4 w-4" />
+                  Υπάλληλοι
+                </Button>
+              </Link>
+            )}
+
             {isAdmin && (
               <>
                 <Link href="/users">
