@@ -55,6 +55,14 @@ export function AFMRecipientAutocomplete({
   });
 
   const handleSelectEmployee = (employee: Employee) => {
+    console.log('[AFM Debug] Auto-filling form fields with employee data:', {
+      firstname: employee.name,
+      lastname: employee.surname, 
+      fathername: employee.fathername,
+      afm: employee.afm,
+      secondary_text: employee.attribute
+    });
+    
     onSelectEmployee(employee);
     setOpen(false);
     setSearchTerm("");
@@ -167,14 +175,17 @@ export function ManualRecipientForm({ onAddRecipient, disabled }: ManualRecipien
   // Auto-fill form when employee is selected
   useEffect(() => {
     if (selectedEmployee) {
-      setFormData({
+      console.log('[AFM Debug] Auto-filling form fields with selected employee:', selectedEmployee);
+      const newFormData = {
         firstname: selectedEmployee.name || "",
         lastname: selectedEmployee.surname || "",
         fathername: selectedEmployee.fathername || "",
-        afm: selectedEmployee.afm || "",
+        afm: String(selectedEmployee.afm || ""),
         amount: 0,
         secondary_text: selectedEmployee.attribute || "",
-      });
+      };
+      console.log('[AFM Debug] Setting form data to:', newFormData);
+      setFormData(newFormData);
     }
   }, [selectedEmployee]);
 
