@@ -498,8 +498,21 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      console.log(`[Storage] Successfully fetched ${data?.length || 0} employees`);
-      return data || [];
+      // Map database column names to expected property names
+      const mappedData = data?.map(employee => ({
+        id: employee.id,
+        surname: employee.Surname,
+        name: employee.Name,
+        fathername: employee.Fathername,
+        afm: employee.AFM,
+        klados: employee.Klados,
+        attribute: employee.Attribute,
+        workaf: employee.workaf,
+        monada: employee.monada
+      })) || [];
+      
+      console.log(`[Storage] Successfully fetched ${mappedData.length} employees`);
+      return mappedData;
     } catch (error) {
       console.error('[Storage] Error in getAllEmployees:', error);
       throw error;
@@ -521,8 +534,21 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      console.log(`[Storage] Successfully fetched ${data?.length || 0} employees for unit: ${unit}`);
-      return data || [];
+      // Map database column names to expected property names
+      const mappedData = data?.map(employee => ({
+        id: employee.id,
+        surname: employee.Surname,
+        name: employee.Name,
+        fathername: employee.Fathername,
+        afm: employee.AFM,
+        klados: employee.Klados,
+        attribute: employee.Attribute,
+        workaf: employee.workaf,
+        monada: employee.monada
+      })) || [];
+      
+      console.log(`[Storage] Successfully fetched ${mappedData.length} employees for unit: ${unit}`);
+      return mappedData;
     } catch (error) {
       console.error('[Storage] Error in getEmployeesByUnit:', error);
       throw error;
@@ -544,8 +570,21 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      console.log(`[Storage] Found ${data?.length || 0} employees matching AFM: ${afm}`);
-      return data || [];
+      // Map database column names to expected property names
+      const mappedData = data?.map(employee => ({
+        id: employee.id,
+        surname: employee.Surname,
+        name: employee.Name,
+        fathername: employee.Fathername,
+        afm: employee.AFM,
+        klados: employee.Klados,
+        attribute: employee.Attribute,
+        workaf: employee.workaf,
+        monada: employee.monada
+      })) || [];
+      
+      console.log(`[Storage] Found ${mappedData.length} employees matching AFM: ${afm}`);
+      return mappedData;
     } catch (error) {
       console.error('[Storage] Error in searchEmployeesByAFM:', error);
       throw error;
