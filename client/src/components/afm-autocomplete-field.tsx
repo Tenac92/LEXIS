@@ -100,6 +100,14 @@ export function AFMAutocompleteField({
 
   // Handle employee selection
   const handleEmployeeSelect = useCallback((employee: Employee) => {
+    console.log('[AFM Debug] Auto-filling form fields with employee data:', {
+      firstname: employee.name,
+      lastname: employee.surname,
+      fathername: employee.fathername,
+      afm: employee.afm,
+      secondary_text: employee.attribute
+    });
+    
     setSelectedEmployee(employee);
     const afmValue = String(employee.afm || "");
     setSearchTerm(afmValue);
@@ -212,7 +220,7 @@ export function AFMAutocompleteField({
         <div className="flex items-center gap-2 text-sm text-green-700">
           <Check className="h-4 w-4" />
           <span>
-            Βρέθηκε: {exactMatch.surname} {exactMatch.name}
+            Στοιχεία συμπληρώθηκαν αυτόματα
           </span>
         </div>
       )}
