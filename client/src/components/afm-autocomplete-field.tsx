@@ -24,18 +24,8 @@ import {
 import { cn } from "@/lib/utils";
 import { type Employee } from "@shared/schema";
 
-// Type to handle both database formats (capitalized and lowercase)
-type EmployeeData = Employee | {
-  id: number;
-  Surname?: string | null;
-  Name?: string | null;
-  Fathername?: string | null;
-  AFM?: string | null;
-  Klados?: string | null;
-  Attribute?: string | null;
-  workaf?: string | null;
-  monada?: string | null;
-};
+// Employee data type from the API
+type EmployeeData = Employee;
 
 interface AFMAutocompleteFieldProps {
   value: string;

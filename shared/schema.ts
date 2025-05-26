@@ -250,14 +250,14 @@ export const monada = pgTable("Monada", {
  * Employees Table
  * Contains employee information for autocomplete and recipient management
  */
-export const employees = pgTable("Employes", {
+export const employees = pgTable("Employees", {
   id: serial("id").primaryKey(),
-  surname: text("Surname"),
-  name: text("Name"),
-  fathername: text("Fathername"),
-  afm: text("AFM"),
-  klados: text("Klados"),
-  attribute: text("Attribute"),
+  surname: text("surname"),
+  name: text("name"),
+  fathername: text("fathername"),
+  afm: serial("afm").unique(),
+  klados: text("klados"),
+  attribute: text("attribute"),
   workaf: text("workaf"),
   monada: text("monada"),
 }, (table) => ({

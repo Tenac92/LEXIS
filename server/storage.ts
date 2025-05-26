@@ -489,30 +489,17 @@ export class DatabaseStorage implements IStorage {
       console.log('[Storage] Fetching all employees');
       
       const { data, error } = await supabase
-        .from('Employes')
+        .from('Employees')
         .select('*')
-        .order('Surname', { ascending: true });
+        .order('surname', { ascending: true });
         
       if (error) {
         console.error('[Storage] Error fetching employees:', error);
         throw error;
       }
       
-      // Map database column names to expected property names
-      const mappedData = data?.map(employee => ({
-        id: employee.id,
-        surname: employee.Surname,
-        name: employee.Name,
-        fathername: employee.Fathername,
-        afm: employee.AFM,
-        klados: employee.Klados,
-        attribute: employee.Attribute,
-        workaf: employee.workaf,
-        monada: employee.monada
-      })) || [];
-      
-      console.log(`[Storage] Successfully fetched ${mappedData.length} employees`);
-      return mappedData;
+      console.log(`[Storage] Successfully fetched ${data?.length || 0} employees`);
+      return data || [];
     } catch (error) {
       console.error('[Storage] Error in getAllEmployees:', error);
       throw error;
@@ -524,31 +511,18 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Fetching employees for unit: ${unit}`);
       
       const { data, error } = await supabase
-        .from('Employes')
+        .from('Employees')
         .select('*')
         .eq('monada', unit)
-        .order('Surname', { ascending: true });
+        .order('surname', { ascending: true });
         
       if (error) {
         console.error('[Storage] Error fetching employees by unit:', error);
         throw error;
       }
       
-      // Map database column names to expected property names
-      const mappedData = data?.map(employee => ({
-        id: employee.id,
-        surname: employee.Surname,
-        name: employee.Name,
-        fathername: employee.Fathername,
-        afm: employee.AFM,
-        klados: employee.Klados,
-        attribute: employee.Attribute,
-        workaf: employee.workaf,
-        monada: employee.monada
-      })) || [];
-      
-      console.log(`[Storage] Successfully fetched ${mappedData.length} employees for unit: ${unit}`);
-      return mappedData;
+      console.log(`[Storage] Successfully fetched ${data?.length || 0} employees for unit: ${unit}`);
+      return data || [];
     } catch (error) {
       console.error('[Storage] Error in getEmployeesByUnit:', error);
       throw error;
@@ -560,33 +534,18 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Searching employees by AFM: ${afm}`);
       
       const { data, error } = await supabase
-        .from('Employes')
+        .from('Employees')
         .select('*')
-        .ilike('AFM', `%${afm}%`)
-        .order('Surname', { ascending: true });
+        .ilike('afm', `%${afm}%`)
+        .order('surname', { ascending: true });
         
       if (error) {
         console.error('[Storage] Error searching employees by AFM:', error);
         throw error;
       }
       
-      // Map database column names to expected property names
-      const mappedData = data?.map(employee => ({
-        id: employee.id,
-        surname: employee.Surname,
-        name: employee.Name,
-        fathername: employee.Fathername,
-        afm: employee.AFM,
-        klados: employee.Klados,
-        attribute: employee.Attribute,
-        workaf: employee.workaf,
-        monada: employee.monada
-      })) || [];
-      
-      console.log(`[Storage] Raw employee data:`, data?.[0]);
-      console.log(`[Storage] Mapped employee data:`, mappedData?.[0]);
-      console.log(`[Storage] Found ${mappedData.length} employees matching AFM: ${afm}`);
-      return mappedData;
+      console.log(`[Storage] Found ${data?.length || 0} employees matching AFM: ${afm}`);
+      return data || [];
     } catch (error) {
       console.error('[Storage] Error in searchEmployeesByAFM:', error);
       throw error;
@@ -598,7 +557,7 @@ export class DatabaseStorage implements IStorage {
       console.log('[Storage] Creating new employee:', employee);
       
       const { data, error } = await supabase
-        .from('Employes')
+        .from('Employees')
         .insert(employee)
         .select()
         .single();
@@ -621,7 +580,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Updating employee ${id}:`, employee);
       
       const { data, error } = await supabase
-        .from('Employes')
+        .from('Employees')
         .update(employee)
         .eq('id', id)
         .select()
