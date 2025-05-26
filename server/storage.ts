@@ -482,6 +482,143 @@ export class DatabaseStorage implements IStorage {
       };
     }
   }
+
+  // Employee management methods
+  async getAllEmployees(): Promise<Employee[]> {
+    try {
+      console.log('[Storage] Fetching all employees');
+      
+      const { data, error } = await supabase
+        .from('Employes')
+        .select('*')
+        .order('Surname', { ascending: true });
+        
+      if (error) {
+        console.error('[Storage] Error fetching employees:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully fetched ${data?.length || 0} employees`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getAllEmployees:', error);
+      throw error;
+    }
+  }
+
+  async getEmployeesByUnit(unit: string): Promise<Employee[]> {
+    try {
+      console.log(`[Storage] Fetching employees for unit: ${unit}`);
+      
+      const { data, error } = await supabase
+        .from('Employes')
+        .select('*')
+        .eq('monada', unit)
+        .order('Surname', { ascending: true });
+        
+      if (error) {
+        console.error('[Storage] Error fetching employees by unit:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully fetched ${data?.length || 0} employees for unit: ${unit}`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getEmployeesByUnit:', error);
+      throw error;
+    }
+  }
+
+  async searchEmployeesByAFM(afm: string): Promise<Employee[]> {
+    try {
+      console.log(`[Storage] Searching employees by AFM: ${afm}`);
+      
+      const { data, error } = await supabase
+        .from('Employes')
+        .select('*')
+        .ilike('AFM', `%${afm}%`)
+        .order('Surname', { ascending: true });
+        
+      if (error) {
+        console.error('[Storage] Error searching employees by AFM:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Found ${data?.length || 0} employees matching AFM: ${afm}`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in searchEmployeesByAFM:', error);
+      throw error;
+    }
+  }
+
+  async createEmployee(employee: InsertEmployee): Promise<Employee> {
+    try {
+      console.log('[Storage] Creating new employee:', employee);
+      
+      const { data, error } = await supabase
+        .from('Employes')
+        .insert(employee)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error creating employee:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully created employee:', data);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in createEmployee:', error);
+      throw error;
+    }
+  }
+
+  async updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee> {
+    try {
+      console.log(`[Storage] Updating employee ${id}:`, employee);
+      
+      const { data, error } = await supabase
+        .from('Employes')
+        .update(employee)
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error updating employee:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully updated employee:', data);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in updateEmployee:', error);
+      throw error;
+    }
+  }
+
+  async deleteEmployee(id: number): Promise<void> {
+    try {
+      console.log(`[Storage] Deleting employee ${id}`);
+      
+      const { error } = await supabase
+        .from('Employes')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.error('[Storage] Error deleting employee:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully deleted employee ${id}`);
+    } catch (error) {
+      console.error('[Storage] Error in deleteEmployee:', error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

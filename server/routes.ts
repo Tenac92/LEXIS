@@ -13,6 +13,7 @@ import { router as unitsRouter } from "./controllers/unitsController";
 import { router as usersRouter } from "./controllers/usersController";
 import { router as projectRouter } from "./controllers/projectController";
 import { router as documentsRouter } from "./controllers/documentsController";
+import employeesRouter from "./controllers/employeesController";
 import templatePreviewRouter from "./routes/template-preview";
 import authRouter from "./routes/auth";
 import budgetUploadRouter from "./routes/budget-upload"; // Import the budget upload router
@@ -674,6 +675,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Setting up budget notifications routes...');
     app.use('/api/budget-notifications', authenticateSession, budgetNotificationsRouter);
     log('[Routes] Budget notifications routes setup complete');
+    
+    // Employee management routes
+    log('[Routes] Setting up employee management routes...');
+    app.use('/api/employees', authenticateSession, employeesRouter);
+    log('[Routes] Employee management routes setup complete');
     
     // Budget upload routes for Excel file imports - MUST come BEFORE the main budget routes
     log('[Routes] Setting up budget upload routes...');
