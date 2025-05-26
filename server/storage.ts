@@ -1,4 +1,4 @@
-import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project, type BudgetNA853Split, type InsertBudgetHistory } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project, type BudgetNA853Split, type InsertBudgetHistory, type Employee, type InsertEmployee } from "@shared/schema";
 import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
 import session from 'express-session';
@@ -24,6 +24,14 @@ export interface IStorage {
       pages: number
     }
   }>;
+  
+  // Employee management operations
+  getAllEmployees(): Promise<Employee[]>;
+  getEmployeesByUnit(unit: string): Promise<Employee[]>;
+  searchEmployeesByAFM(afm: string): Promise<Employee[]>;
+  createEmployee(employee: InsertEmployee): Promise<Employee>;
+  updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee>;
+  deleteEmployee(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {

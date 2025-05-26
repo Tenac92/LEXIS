@@ -246,6 +246,27 @@ export const monada = pgTable("Monada", {
   address: jsonb("address"),
 });
 
+/**
+ * Employees Table
+ * Contains employee information for autocomplete and recipient management
+ */
+export const employees = pgTable("Employes", {
+  id: serial("id").primaryKey(),
+  surname: text("Surname"),
+  name: text("Name"),
+  fathername: text("Fathername"),
+  afm: text("AFM"),
+  klados: text("Klados"),
+  attribute: text("Attribute"),
+  workaf: text("workaf"),
+  monada: text("monada"),
+}, (table) => ({
+  monadaReference: foreignKey({
+    columns: [table.monada],
+    foreignColumns: [monada.unit],
+  }),
+}));
+
 // ==============================================================
 // 2. Table Definitions above, Schema Helpers below
 // ==============================================================
@@ -301,6 +322,8 @@ export const insertBudgetHistorySchema = createInsertSchema(budgetHistory);
 export const insertBudgetNotificationSchema =
   createInsertSchema(budgetNotifications);
 
+export const insertEmployeeSchema = createInsertSchema(employees);
+
 // Budget validation schema for validating budget changes
 export const budgetValidationSchema = z.object({
   mis: z.union([z.string().min(1, "Κωδικός MIS απαιτείται"), z.number().int()]),
@@ -322,6 +345,7 @@ export type BudgetNotification = typeof budgetNotifications.$inferSelect;
 export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
 export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type Employee = typeof employees.$inferSelect;
 
 // ==============================================================
 // 4. Entity Types above, Insert Types below
@@ -338,6 +362,7 @@ export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
 export type InsertBudgetNotification = z.infer<
   typeof insertBudgetNotificationSchema
 >;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Recipient = z.infer<typeof recipientSchema>;
 
 // ==============================================================
@@ -431,4 +456,5 @@ export type Database = {
   documentTemplates: typeof documentTemplates.$inferSelect;
   monada: Monada;
   projects: Project;
+  employees: Employee;
 };
