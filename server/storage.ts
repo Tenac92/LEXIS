@@ -533,10 +533,11 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Searching employees by AFM: ${afm}`);
       
+      // Use raw SQL to search bigint field as text
       const { data, error } = await supabase
         .from('Employees')
         .select('*')
-        .ilike('afm', `%${afm}%`)
+        .filter('afm::text', 'like', `%${afm}%`)
         .order('surname', { ascending: true });
         
       if (error) {
