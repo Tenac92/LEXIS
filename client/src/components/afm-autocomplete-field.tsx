@@ -24,10 +24,23 @@ import {
 import { cn } from "@/lib/utils";
 import { type Employee } from "@shared/schema";
 
+// Type to handle both database formats (capitalized and lowercase)
+type EmployeeData = Employee | {
+  id: number;
+  Surname?: string | null;
+  Name?: string | null;
+  Fathername?: string | null;
+  AFM?: string | null;
+  Klados?: string | null;
+  Attribute?: string | null;
+  workaf?: string | null;
+  monada?: string | null;
+};
+
 interface AFMAutocompleteFieldProps {
   value: string;
   onChange: (value: string) => void;
-  onEmployeeSelect?: (employee: Employee | null) => void;
+  onEmployeeSelect?: (employee: EmployeeData | null) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -181,18 +194,18 @@ export function AFMAutocompleteField({
                         <User className="h-4 w-4 mt-1 text-muted-foreground" />
                         <div className="flex flex-col">
                           <div className="font-medium">
-                            {employee.surname} {employee.name}
+                            {(employee as any).surname || (employee as any).Surname} {(employee as any).name || (employee as any).Name}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {employee.fathername}
+                            {(employee as any).fathername || (employee as any).Fathername}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {employee.attribute} • {employee.monada}
+                            {(employee as any).attribute || (employee as any).Attribute} • {(employee as any).monada}
                           </div>
                         </div>
                       </div>
                       <Badge variant="secondary" className="shrink-0">
-                        {employee.afm}
+                        {(employee as any).afm || (employee as any).AFM}
                       </Badge>
                     </CommandItem>
                   ))}
