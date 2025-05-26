@@ -533,19 +533,31 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Searching employees by AFM: ${afm}`);
       
-      // Use raw SQL to search bigint field as text
+      // For bigint fields, use range search to find AFM numbers that start with the search term
+      const searchNum = parseInt(afm);
+      if (isNaN(searchNum)) {
+        return [];
+      }
+      
+      // Calculate range for numbers that start with the search term
+      const multiplier = Math.pow(10, (9 - afm.length)); // AFM is typically 9 digits
+      const rangeStart = searchNum * multiplier;
+      const rangeEnd = (searchNum + 1) * multiplier - 1;
+      
       const { data, error } = await supabase
         .from('Employees')
         .select('*')
-        .filter('afm::text', 'like', `%${afm}%`)
-        .order('surname', { ascending: true });
+        .gte('afm', rangeStart)
+        .lte('afm', rangeEnd)
+        .order('surname', { ascending: true })
+        .limit(20);
         
       if (error) {
         console.error('[Storage] Error searching employees by AFM:', error);
         throw error;
       }
       
-      console.log(`[Storage] Found ${data?.length || 0} employees matching AFM: ${afm}`);
+      console.log(`[Storage] Found ${data?.length || 0} employees matching AFM range ${rangeStart}-${rangeEnd}`);
       return data || [];
     } catch (error) {
       console.error('[Storage] Error in searchEmployeesByAFM:', error);
