@@ -583,6 +583,8 @@ export class DatabaseStorage implements IStorage {
         monada: employee.monada
       })) || [];
       
+      console.log(`[Storage] Raw employee data:`, data?.[0]);
+      console.log(`[Storage] Mapped employee data:`, mappedData?.[0]);
       console.log(`[Storage] Found ${mappedData.length} employees matching AFM: ${afm}`);
       return mappedData;
     } catch (error) {
