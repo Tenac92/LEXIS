@@ -87,7 +87,7 @@ export function AFMAutocompleteField({
     onChange(newValue);
     
     // Clear selected employee if AFM doesn't match
-    if (selectedEmployee && selectedEmployee.afm !== newValue) {
+    if (selectedEmployee && String(selectedEmployee.afm) !== newValue) {
       setSelectedEmployee(null);
       onEmployeeSelect?.(null);
     }
@@ -101,14 +101,15 @@ export function AFMAutocompleteField({
   // Handle employee selection
   const handleEmployeeSelect = useCallback((employee: Employee) => {
     setSelectedEmployee(employee);
-    setSearchTerm(employee.afm || "");
-    onChange(employee.afm || "");
+    const afmValue = String(employee.afm || "");
+    setSearchTerm(afmValue);
+    onChange(afmValue);
     onEmployeeSelect?.(employee);
     setIsOpen(false);
   }, [onChange, onEmployeeSelect]);
 
   // Find exact match in current results
-  const exactMatch = employees.find((emp: Employee) => emp.afm === searchTerm);
+  const exactMatch = employees.find((emp: Employee) => String(emp.afm) === searchTerm);
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -176,7 +177,7 @@ export function AFMAutocompleteField({
                   {employees.map((employee: Employee) => (
                     <CommandItem
                       key={employee.id}
-                      value={employee.afm}
+                      value={String(employee.afm)}
                       onSelect={() => handleEmployeeSelect(employee)}
                       className="flex items-start justify-between cursor-pointer p-3"
                     >
@@ -239,7 +240,7 @@ export function useAFMRecipientAutoFill() {
       firstname: employee.name || "",
       lastname: employee.surname || "",
       fathername: employee.fathername || "",
-      afm: employee.afm || "",
+      afm: String(employee.afm || ""),
       secondary_text: employee.attribute || "",
     };
   }, []);
