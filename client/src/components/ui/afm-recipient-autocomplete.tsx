@@ -123,7 +123,8 @@ export function AFMRecipientAutocomplete({
                     key={employee.id}
                     value={String(employee.afm)}
                     onSelect={() => handleSelectEmployee(employee)}
-                    className="flex items-center justify-between cursor-pointer"
+                    onClick={() => handleSelectEmployee(employee)}
+                    className="flex items-center justify-between cursor-pointer hover:bg-accent"
                   >
                     <div className="flex items-center">
                       <User className="mr-2 h-4 w-4" />
