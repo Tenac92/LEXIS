@@ -121,7 +121,7 @@ export function AFMRecipientAutocomplete({
                 {employees.map((employee: Employee) => (
                   <CommandItem
                     key={employee.id}
-                    value={employee.afm}
+                    value={String(employee.afm)}
                     onSelect={() => handleSelectEmployee(employee)}
                     className="flex items-center justify-between cursor-pointer"
                   >
