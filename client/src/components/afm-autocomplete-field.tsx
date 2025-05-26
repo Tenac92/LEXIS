@@ -65,6 +65,10 @@ export function AFMAutocompleteField({
       try {
         const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
         const data = await response.json();
+        console.log(`[AFM Debug] Search results for "${searchTerm}":`, data);
+        if (data.success && data.data?.length > 0) {
+          console.log(`[AFM Debug] First employee data:`, data.data[0]);
+        }
         return data.success ? data.data : [];
       } catch (error) {
         console.error('Error searching employees:', error);
