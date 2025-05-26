@@ -1,7 +1,7 @@
 import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-// Import from the auth middleware which re-exports from the authentication module
-import { authenticateSession, User, AuthenticatedRequest } from "./middleware/auth";
+// Import directly from centralized authentication
+import { authenticateSession, User, AuthenticatedRequest } from "./authentication";
 import apiRouter from "./controllers";
 import { getDashboardStats } from "./controllers/dashboard";
 // Import the budgetController for the getBudgetByMis function
