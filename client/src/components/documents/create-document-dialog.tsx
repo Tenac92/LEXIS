@@ -48,6 +48,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { AFMInputWithAutoFill } from "@/components/afm-autocomplete-field";
 import {
   Command,
   CommandEmpty,
@@ -2667,14 +2668,28 @@ export function CreateDocumentDialog({
                             autoComplete="off"
                           />
 
-                          {/* ΑΦΜ */}
-                          <Input
-                            {...form.register(`recipients.${index}.afm`)}
-                            placeholder="ΑΦΜ"
-                            maxLength={9}
-                            className="md:col-span-2 md:row-span-1"
-                            autoComplete="off"
-                          />
+                          {/* ΑΦΜ με αυτόματη συμπλήρωση */}
+                          <div className="md:col-span-2 md:row-span-1">
+                            <AFMInputWithAutoFill
+                              value={recipient.afm || ""}
+                              onChange={(value) => {
+                                updateRecipient(index, "afm", value);
+                              }}
+                              onAutoFill={(employeeData) => {
+                                if (employeeData) {
+                                  // Auto-fill all recipient fields from employee data
+                                  updateRecipient(index, "firstname", employeeData.firstname);
+                                  updateRecipient(index, "lastname", employeeData.lastname);
+                                  updateRecipient(index, "fathername", employeeData.fathername);
+                                  updateRecipient(index, "afm", employeeData.afm);
+                                  updateRecipient(index, "secondary_text", employeeData.secondary_text);
+                                }
+                              }}
+                              placeholder="ΑΦΜ"
+                              className="w-full"
+                              disabled={isSubmitting}
+                            />
+                          </div>
 
                           {/* renderRecipientInstallments(index) */}
                           <div className="md:col-span-3 md:row-span-2 flex items-start">
