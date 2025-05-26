@@ -250,6 +250,12 @@ export function Header() {
                           Ιστορικό Προϋπ.
                         </Button>
                       </Link>
+                      <Link href="/employees">
+                        <Button variant="ghost" className="w-full justify-start">
+                          <Users className="h-4 w-4 mr-2" />
+                          Υπάλληλοι
+                        </Button>
+                      </Link>
                       {isAdmin && (
                         <>
                           <Link href="/users">
