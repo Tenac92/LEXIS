@@ -1,9 +1,9 @@
 import express from 'express';
-import { authenticateSession } from '../auth';
+import { authenticateSession } from '../authentication';
 import documentsRouter from './documentsController';
 import { router as budgetRouter } from './budgetController';
 import { router as recipientsRouter } from './recipientsController';
-import { router as statsRouter } from './statsController';
+// statsController removed - functionality moved to dashboard
 import { router as usersRouter } from './usersController';
 import { router as projectRouter } from './projectController';
 

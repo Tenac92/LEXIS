@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateToken } from "../middleware/authMiddleware";
+import { authenticateToken } from "../authentication";
 import { storage } from "../storage";
 
 export const router = Router();

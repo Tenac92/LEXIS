@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { authenticateSession } from '../auth';
+import { authenticateSession } from '../authentication';
 import type { User } from '@shared/schema';
 import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
