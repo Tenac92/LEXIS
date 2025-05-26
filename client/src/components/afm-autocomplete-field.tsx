@@ -105,12 +105,6 @@ export function AFMAutocompleteField({
 
   return (
     <div className={cn("space-y-2", className)}>
-      {label && (
-        <Label htmlFor="afm-input">
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </Label>
-      )}
       
       <div className="relative">
         <Popover open={isOpen} onOpenChange={setIsOpen}>
