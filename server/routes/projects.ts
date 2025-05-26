@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { supabase } from '../config/db';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateToken } from '../authentication';
 import { Project } from '@shared/schema';
 import * as xlsx from 'xlsx';
 import multer from 'multer';
