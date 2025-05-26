@@ -193,5 +193,4 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-export { router as employeesRouter };
 export default router;
