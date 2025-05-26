@@ -604,7 +604,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Deleting employee ${id}`);
       
       const { error } = await supabase
-        .from('Employes')
+        .from('Employees')
         .delete()
         .eq('id', id);
         
