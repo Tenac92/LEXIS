@@ -2673,21 +2673,27 @@ export function CreateDocumentDialog({
                             <AFMInputWithAutoFill
                               value={recipient.afm || ""}
                               onChange={(value) => {
-                                updateRecipient(index, "afm", value);
+                                const currentRecipients = form.getValues("recipients");
+                                currentRecipients[index].afm = value;
+                                form.setValue("recipients", [...currentRecipients]);
                               }}
                               onAutoFill={(employeeData) => {
                                 if (employeeData) {
                                   // Auto-fill all recipient fields from employee data
-                                  updateRecipient(index, "firstname", employeeData.firstname);
-                                  updateRecipient(index, "lastname", employeeData.lastname);
-                                  updateRecipient(index, "fathername", employeeData.fathername);
-                                  updateRecipient(index, "afm", employeeData.afm);
-                                  updateRecipient(index, "secondary_text", employeeData.secondary_text);
+                                  const currentRecipients = form.getValues("recipients");
+                                  currentRecipients[index] = {
+                                    ...currentRecipients[index],
+                                    firstname: employeeData.firstname,
+                                    lastname: employeeData.lastname,
+                                    fathername: employeeData.fathername,
+                                    afm: employeeData.afm,
+                                    secondary_text: employeeData.secondary_text,
+                                  };
+                                  form.setValue("recipients", [...currentRecipients]);
                                 }
                               }}
                               placeholder="ΑΦΜ"
                               className="w-full"
-                              disabled={isSubmitting}
                             />
                           </div>
 
