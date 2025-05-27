@@ -14,7 +14,7 @@ interface AuthenticatedRequest extends Request {
 const router = Router();
 
 // Get budget notifications - always handle this route first
-router.get('/notifications', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/notifications', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json([]);  // Return empty array even for auth errors
@@ -63,7 +63,7 @@ router.get('/data/:mis', async (req: Request, res: Response) => {
 
 // Validate budget for document
 
-router.post('/validate', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/validate', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis, amount, sessionId } = req.body;
     const requestedAmount = parseFloat(amount.toString());
@@ -213,7 +213,7 @@ router.post('/broadcast-update', async (req: AuthenticatedRequest, res: Response
 });
 
 // Get available MIS and NA853 combinations
-router.get('/records', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/records', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     console.log('[Budget] Fetching available MIS and NA853 combinations');
 
@@ -255,7 +255,7 @@ router.get('/records', authenticateToken, async (req: AuthenticatedRequest, res:
 });
 
 // Get budget history with pagination
-router.get('/history', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/history', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     console.log('[Budget] Fetching budget history');
     
@@ -326,7 +326,7 @@ router.get('/history', authenticateToken, async (req: AuthenticatedRequest, res:
   }
 });
 
-router.put('/bulk-update', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.put('/bulk-update', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     console.log('[Budget] Starting bulk update for budget_na853_split');
 
@@ -479,7 +479,7 @@ router.put('/bulk-update', authenticateToken, async (req: AuthenticatedRequest, 
 });
 
 // Route to analyze changes between budget updates (for admins only)
-router.get('/:mis/analyze-changes', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/:mis/analyze-changes', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Check if user has admin role
     if (req.user?.role !== 'admin') {

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { errorMiddleware } from "./middleware/errorMiddleware";
+import { errorHandler } from "./middleware/errorHandler";
 import { securityHeaders } from "./middleware/securityHeaders";
 // Import sessionMiddleware from the new centralized authentication module
 import { sessionMiddleware } from './authentication';
@@ -212,7 +212,7 @@ async function startServer() {
       console.log('[Startup] Enhanced Supabase error handler applied');
       
       // Legacy error handling middleware as fallback
-      app.use(errorMiddleware);
+      app.use(errorHandler);
 
       // Create WebSocket server with error handling
       try {

@@ -5,4 +5,4 @@
  * This file is kept for backwards compatibility only
  */
 
-export { errorHandler, isDatabaseConnectionError } from './errorHandler';
+export { errorHandler } from './errorHandler';

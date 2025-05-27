@@ -15,7 +15,7 @@ import { router as projectRouter } from "./controllers/projectController";
 import { router as documentsRouter } from "./controllers/documentsController";
 import employeesRouter from "./controllers/employeesController";
 import templatePreviewRouter from "./routes/template-preview";
-import authRouter from "./routes/auth";
+// import authRouter from "./routes/auth"; // Commented out - auth handled in authentication.ts
 import budgetUploadRouter from "./routes/budget-upload"; // Import the budget upload router
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
 import healthcheckRouter from "./routes/healthcheck"; // Import the original healthcheck router
@@ -745,17 +745,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Document routes setup complete');
     
     // Import test controller
-    const { 
-      testSecondaryTextEndpoint, 
-      getTestSecondaryText,
-      getDocumentSecondaryTextDebug
-    } = await import('./controllers/testController');
-    
-    // Test routes for debugging secondary_text field issues
-    app.post('/api/test/secondary-text', testSecondaryTextEndpoint);
-    app.get('/api/test/secondary-text', getTestSecondaryText);
-    app.get('/api/test/document/:id/secondary-text', getDocumentSecondaryTextDebug);
-    log('[Routes] Test routes for secondary_text debugging registered');
+//     const { 
+//       testSecondaryTextEndpoint, 
+//       getTestSecondaryText,
+//       getDocumentSecondaryTextDebug
+//     } = await import('./controllers/testController');
+//     
+//     // Test routes for debugging secondary_text field issues
+//     app.post('/api/test/secondary-text', testSecondaryTextEndpoint);
+//     app.get('/api/test/secondary-text', getTestSecondaryText);
+//     app.get('/api/test/document/:id/secondary-text', getDocumentSecondaryTextDebug);
+//     log('[Routes] Test routes for secondary_text debugging registered');
 
     // Template preview route
     app.use('/api/templates', authenticateSession, templatePreviewRouter);
