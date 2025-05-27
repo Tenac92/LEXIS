@@ -1,0 +1,199 @@
+/**
+ * Smart AFM Autocomplete Component
+ * Switches between employee and beneficiary data based on expenditure type:
+ * - "ΕΚΤΟΣ ΕΔΡΑΣ" -> uses employee table
+ * - All other types -> uses beneficiary table (filtered by type)
+ */
+
+import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Check, ChevronsUpDown, Search, User, Building2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { type Employee, type Beneficiary } from "@shared/schema";
+
+interface SmartAFMAutocompleteProps {
+  expenditureType: string;
+  onSelectPerson: (person: Employee | Beneficiary) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+}
+
+export function SmartAFMAutocomplete({
+  expenditureType,
+  onSelectPerson,
+  placeholder = "Αναζήτηση με ΑΦΜ...",
+  disabled = false,
+  className
+}: SmartAFMAutocompleteProps) {
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Determine if we should use employee or beneficiary data
+  const useEmployeeData = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ";
+  
+  // Fetch employees when expenditure type is "ΕΚΤΟΣ ΕΔΡΑΣ"
+  const { data: employees = [], isLoading: employeesLoading } = useQuery({
+    queryKey: ['/api/employees/search', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm || searchTerm.length < 2) return [];
+      const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
+      const data = await response.json();
+      return data.success ? data.data : [];
+    },
+    enabled: useEmployeeData && searchTerm.length >= 2,
+  });
+
+  // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
+  const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
+    queryKey: ['/api/beneficiaries/search', searchTerm, expenditureType],
+    queryFn: async () => {
+      if (!searchTerm || searchTerm.length < 2) return [];
+      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}&type=${encodeURIComponent(expenditureType)}`);
+      const data = await response.json();
+      return data.success ? data.data : [];
+    },
+    enabled: !useEmployeeData && searchTerm.length >= 2,
+  });
+
+  const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;
+  const searchResults = useEmployeeData ? employees : beneficiaries;
+
+  const handleSelect = useCallback((person: Employee | Beneficiary) => {
+    console.log('[Smart AFM Debug] Selected person:', {
+      type: useEmployeeData ? 'Employee' : 'Beneficiary',
+      expenditureType,
+      person
+    });
+    
+    onSelectPerson(person);
+    setOpen(false);
+    setSearchTerm("");
+  }, [onSelectPerson, useEmployeeData, expenditureType]);
+
+  // Get appropriate display text for the current mode
+  const getDisplayText = () => {
+    if (useEmployeeData) {
+      return "Αναζήτηση υπαλλήλου (ΕΚΤΟΣ ΕΔΡΑΣ)";
+    }
+    return `Αναζήτηση δικαιούχου (${expenditureType})`;
+  };
+
+  const getIcon = () => {
+    return useEmployeeData ? <User className="h-4 w-4" /> : <Building2 className="h-4 w-4" />;
+  };
+
+  return (
+    <div className={cn("flex flex-col gap-2", className)}>
+      {/* Info badge showing current mode */}
+      <div className="flex items-center gap-2">
+        <Badge variant={useEmployeeData ? "default" : "secondary"} className="text-xs">
+          {getIcon()}
+          <span className="ml-1">
+            {useEmployeeData ? "Υπάλληλοι" : "Δικαιούχοι"}
+          </span>
+        </Badge>
+        <span className="text-xs text-muted-foreground">
+          {expenditureType}
+        </span>
+      </div>
+
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="justify-between"
+            disabled={disabled}
+          >
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                {getDisplayText()}
+              </span>
+            </div>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0">
+          <Command>
+            <CommandInput
+              placeholder={`Εισάγετε ΑΦΜ για αναζήτηση...`}
+              value={searchTerm}
+              onValueChange={setSearchTerm}
+            />
+            <CommandList>
+              <CommandEmpty>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    <span className="ml-2 text-sm">Αναζήτηση...</span>
+                  </div>
+                ) : searchTerm.length < 2 ? (
+                  <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+                    Εισάγετε τουλάχιστον 2 χαρακτήρες
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+                    {useEmployeeData 
+                      ? "Δεν βρέθηκε υπάλληλος με αυτό το ΑΦΜ"
+                      : `Δεν βρέθηκε δικαιούχος τύπου "${expenditureType}" με αυτό το ΑΦΜ`
+                    }
+                  </div>
+                )}
+              </CommandEmpty>
+              <CommandGroup>
+                {searchResults.map((person: Employee | Beneficiary) => (
+                  <CommandItem
+                    key={person.id}
+                    value={person.afm}
+                    onSelect={() => handleSelect(person)}
+                    className="flex items-center gap-3 p-3"
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                      {getIcon()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">
+                          {person.surname} {person.name}
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {person.afm}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {person.fathername && `Πατρώνυμο: ${person.fathername}`}
+                      </div>
+                      {!useEmployeeData && 'amount' in person && (
+                        <div className="text-xs text-green-600">
+                          Ποσό: €{person.amount}
+                        </div>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}

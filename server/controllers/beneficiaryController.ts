@@ -38,7 +38,45 @@ router.get('/by-unit/:unit', authenticateSession, async (req: AuthenticatedReque
   }
 });
 
-// Search beneficiaries by AFM
+// Search beneficiaries by AFM with optional type filter
+router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { afm, type } = req.query;
+    
+    if (!afm || typeof afm !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Το ΑΦΜ είναι υποχρεωτικό για την αναζήτηση'
+      });
+    }
+    
+    console.log(`[Beneficiaries] Searching beneficiaries by AFM: ${afm}${type ? ` and type: ${type}` : ''}`);
+    
+    let beneficiaries = await storage.searchBeneficiariesByAFM(afm);
+    
+    // Filter by type if specified
+    if (type && typeof type === 'string') {
+      beneficiaries = beneficiaries.filter((beneficiary: any) => 
+        beneficiary.type === type
+      );
+    }
+    
+    res.json({
+      success: true,
+      data: beneficiaries,
+      count: beneficiaries.length
+    });
+  } catch (error) {
+    console.error('[Beneficiaries] Error searching beneficiaries:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Σφάλμα κατά την αναζήτηση δικαιούχων',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Legacy endpoint for AFM search (backwards compatibility)
 router.get('/search/afm/:afm', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { afm } = req.params;
