@@ -345,7 +345,7 @@ export class DatabaseStorage implements IStorage {
       
       // Now get the paginated data with all columns
       const { data, error } = await query
-        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(offset, offset + limit - 1);
         
       if (error) {
@@ -649,8 +649,7 @@ export class DatabaseStorage implements IStorage {
       
       const { data, error } = await supabase
         .from('Beneficiary')
-        .select('*')
-        .order('id', { ascending: false });
+        .select('id, afm, first_name, last_name, father_name, type, monada, phone, address, iban, installments');
         
       if (error) {
         console.error('[Storage] Error fetching beneficiaries:', error);
