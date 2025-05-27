@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateSession } from '../authentication';
 import { BudgetService } from '../services/budgetService';
 import { storage } from '../storage';
 import { supabase } from '../config/db';

@@ -6,6 +6,7 @@ import { router as recipientsRouter } from './recipientsController';
 // statsController removed - functionality moved to dashboard
 import { router as usersRouter } from './usersController';
 import { router as projectRouter } from './projectController';
+import { router as beneficiaryRouter } from './beneficiaryController';
 
 const router = express.Router();
 
@@ -15,9 +16,9 @@ router.use('/budget', authenticateSession, budgetRouter);
 // Register the consolidated documents controller
 router.use('/documents', authenticateSession, documentsRouter);
 router.use('/recipients', authenticateSession, recipientsRouter);
-router.use('/stats', authenticateSession, statsRouter);
 router.use('/users', authenticateSession, usersRouter);
 router.use('/projects', authenticateSession, projectRouter);
+router.use('/beneficiaries', authenticateSession, beneficiaryRouter);
 
 // Healthcheck endpoint
 router.get('/health', (_req, res) => {
