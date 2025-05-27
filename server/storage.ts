@@ -645,7 +645,7 @@ export class DatabaseStorage implements IStorage {
   // Beneficiary management methods
   async getAllBeneficiaries(): Promise<Beneficiary[]> {
     try {
-      console.log('[Storage] Fetching all beneficiaries');
+      console.log('[Storage] Fetching all beneficiaries from your table structure');
       
       const { data, error } = await supabase
         .from('Beneficiary')
@@ -671,8 +671,7 @@ export class DatabaseStorage implements IStorage {
       const { data, error } = await supabase
         .from('Beneficiary')
         .select('*')
-        .eq('monada', unit)
-        .order('id', { ascending: false });
+        .eq('monada', unit);
         
       if (error) {
         console.error('[Storage] Error fetching beneficiaries by unit:', error);
