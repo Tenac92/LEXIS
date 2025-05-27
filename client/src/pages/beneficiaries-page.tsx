@@ -374,6 +374,118 @@ export default function BeneficiariesPage() {
     setDialogOpen(true);
   };
 
+  const handleExport = () => {
+    try {
+      const headers = [
+        'Α/Α', 'Επώνυμο', 'Όνομα', 'Πατρώνυμο', 'ΑΦΜ', 'Περιφέρεια', 
+        'Άδεια', 'Ποσό', 'Δόση', 'Τύπος', 'Ημερομηνία', 'Μονάδα', 
+        'Επώνυμο Απογραφής 1', 'Όνομα Απογραφής 1', 'Επώνυμο Απογραφής 2', 
+        'Όνομα Απογραφής 2', 'Αριθμός Φακέλου', 'Ελεύθερο Κείμενο'
+      ];
+      
+      const csvContent = [
+        headers.join(','),
+        ...beneficiaries.map(b => [
+          b.aa || '', b.surname || '', b.name || '', b.fathername || '',
+          b.afm || '', b.region || '', b.adeia || '', b.amount || '',
+          b.installment || '', b.type || '', b.date || '', b.monada || '',
+          b.cengsur1 || '', b.cengname1 || '', b.cengsur2 || '', 
+          b.cengname2 || '', b.onlinefoldernumber || '', b.freetext || ''
+        ].join(','))
+      ].join('\n');
+
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `δικαιούχοι_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Επιτυχία",
+        description: `Εξήχθησαν ${beneficiaries.length} δικαιούχοι`,
+      });
+    } catch (error) {
+      toast({
+        title: "Σφάλμα",
+        description: "Δεν ήταν δυνατή η εξαγωγή των δεδομένων",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast({
+          title: "Σφάλμα",
+          description: "Το αρχείο πρέπει να περιέχει τουλάχιστον μία γραμμή δεδομένων",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const dataLines = lines.slice(1);
+      let imported = 0;
+      
+      for (const line of dataLines) {
+        const values = line.split(',').map(v => v.trim());
+        if (values.length >= 4) {
+          try {
+            await apiRequest('/api/beneficiaries', {
+              method: 'POST',
+              body: JSON.stringify({
+                aa: values[0] ? parseInt(values[0]) : undefined,
+                surname: values[1] || '',
+                name: values[2] || '',
+                fathername: values[3] || '',
+                afm: values[4] ? parseInt(values[4]) : undefined,
+                region: values[5] || '',
+                adeia: values[6] ? parseInt(values[6]) : undefined,
+                amount: values[7] || '',
+                installment: values[8] || '',
+                type: values[9] || '',
+                date: values[10] || '',
+                monada: values[11] || '',
+                cengsur1: values[12] || '',
+                cengname1: values[13] || '',
+                cengsur2: values[14] || '',
+                cengname2: values[15] || '',
+                onlinefoldernumber: values[16] || '',
+                freetext: values[17] || ''
+              }),
+            });
+            imported++;
+          } catch (error) {
+            console.error('Error importing row:', error);
+          }
+        }
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/beneficiaries'] });
+      
+      toast({
+        title: "Επιτυχία",
+        description: `Εισήχθησαν ${imported} δικαιούχοι από ${dataLines.length} γραμμές`,
+      });
+    } catch (error) {
+      toast({
+        title: "Σφάλμα",
+        description: "Δεν ήταν δυνατή η εισαγωγή των δεδομένων",
+        variant: "destructive",
+      });
+    }
+    
+    event.target.value = '';
+  };
+
   return (
     <>
       <Header />
