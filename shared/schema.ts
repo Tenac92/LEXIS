@@ -272,17 +272,17 @@ export const employees = pgTable("Employees", {
  * Contains beneficiary information for document generation and tracking
  */
 export const beneficiaries = pgTable("Beneficiary", {
-  id: bigint("id", { mode: "number" }).primaryKey(),
-  aa: bigint("a / a", { mode: "number" }), // Serial number
+  id: serial("id").primaryKey(),
+  aa: integer("a / a"), // Serial number
   region: text("region"),
-  adeia: bigint("adeia", { mode: "number" }), // License/permit number
+  adeia: integer("adeia"), // License/permit number
   surname: text("surname"),
   name: text("name"),
   fathername: text("fathername"),
   freetext: text("freetext"), // Additional free text
   amount: text("amount"), // Amount as text to preserve formatting
   installment: text("installment"), // Installment information
-  afm: bigint("afm", { mode: "number" }), // Tax ID (AFM)
+  afm: integer("afm"), // Tax ID (AFM)
   type: text("type"), // Beneficiary type
   date: text("date"), // Date as text
   monada: text("monada"), // Unit/Organization
@@ -291,6 +291,8 @@ export const beneficiaries = pgTable("Beneficiary", {
   cengsur2: text("cengsur2"), // Census surname 2
   cengname2: text("cengname2"), // Census name 2
   onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
 }, (table) => ({
   monadaReference: foreignKey({
     columns: [table.monada],
