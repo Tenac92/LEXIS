@@ -650,7 +650,7 @@ export class DatabaseStorage implements IStorage {
       const { data, error } = await supabase
         .from('Beneficiary')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('id', { ascending: false });
         
       if (error) {
         console.error('[Storage] Error fetching beneficiaries:', error);
@@ -673,7 +673,7 @@ export class DatabaseStorage implements IStorage {
         .from('Beneficiary')
         .select('*')
         .eq('monada', unit)
-        .order('created_at', { ascending: false });
+        .order('id', { ascending: false });
         
       if (error) {
         console.error('[Storage] Error fetching beneficiaries by unit:', error);
@@ -702,7 +702,7 @@ export class DatabaseStorage implements IStorage {
         .from('Beneficiary')
         .select('*')
         .eq('afm', searchNum)
-        .order('created_at', { ascending: false });
+        .order('id', { ascending: false });
         
       if (error) {
         console.error('[Storage] Error searching beneficiaries by AFM:', error);
