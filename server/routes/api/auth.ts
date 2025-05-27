@@ -11,8 +11,8 @@ import {
   sessionMiddleware,
   AuthenticatedRequest,
   authenticateUser
-} from '../../auth';
-import { authLimiter } from "../authentication"
+} from '../../authentication';
+import { authLimiter } from "../../authentication"
 import { supabase } from '../../config/db';
 import bcrypt from 'bcrypt';
 import { User, insertUserSchema } from '@shared/schema';

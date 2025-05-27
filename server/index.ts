@@ -211,8 +211,7 @@ async function startServer() {
       app.use(errorHandler);
       console.log('[Startup] Enhanced Supabase error handler applied');
       
-      // Legacy error handling middleware as fallback
-      app.use(errorHandler);
+      // Error handling is already applied above
 
       // Create WebSocket server with error handling
       try {
