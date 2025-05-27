@@ -645,22 +645,17 @@ export class DatabaseStorage implements IStorage {
   // Beneficiary management methods
   async getAllBeneficiaries(): Promise<Beneficiary[]> {
     try {
-      console.log('[Storage] Fetching all beneficiaries with basic query');
+      console.log('[Storage] Fetching all beneficiaries');
       
-      // Use the direct Supabase connection to bypass any schema issues
-      const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/Beneficiary?select=*`, {
-        headers: {
-          'apikey': process.env.SUPABASE_ANON_KEY || '',
-          'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY || ''}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const { data, error } = await supabase
+        .from('Beneficiary')
+        .select('*');
+        
+      if (error) {
+        console.error('[Storage] Error fetching beneficiaries:', error);
+        throw error;
       }
       
-      const data = await response.json();
       console.log(`[Storage] Successfully fetched ${data?.length || 0} beneficiaries`);
       return data || [];
     } catch (error) {

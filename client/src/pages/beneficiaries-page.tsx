@@ -16,6 +16,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Beneficiary, InsertBeneficiary } from "@shared/schema";
+import { Header } from "@/components/header";
 
 // Form validation schema
 const beneficiaryFormSchema = z.object({
@@ -374,7 +375,9 @@ export default function BeneficiariesPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <>
+      <Header />
+      <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Διαχείριση Δικαιούχων</h1>
@@ -544,5 +547,6 @@ export default function BeneficiariesPage() {
         onOpenChange={setDialogOpen}
       />
     </div>
+    </>
   );
 }
