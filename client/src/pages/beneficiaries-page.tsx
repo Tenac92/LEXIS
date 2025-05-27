@@ -386,11 +386,26 @@ export default function BeneficiariesPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
+          <input
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            onChange={handleImport}
+            className="hidden"
+            id="import-file"
+          />
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => document.getElementById('import-file')?.click()}
+          >
             <Upload className="h-4 w-4 mr-2" />
             Εισαγωγή
           </Button>
-          <Button variant="outline" size="sm">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleExport}
+          >
             <Download className="h-4 w-4 mr-2" />
             Εξαγωγή
           </Button>
@@ -484,19 +499,26 @@ export default function BeneficiariesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Α/Α</TableHead>
                     <TableHead>Επώνυμο</TableHead>
                     <TableHead>Όνομα</TableHead>
                     <TableHead>Πατρώνυμο</TableHead>
                     <TableHead>ΑΦΜ</TableHead>
+                    <TableHead>Περιφέρεια</TableHead>
+                    <TableHead>Άδεια</TableHead>
                     <TableHead>Ποσό</TableHead>
                     <TableHead>Δόση</TableHead>
-                    <TableHead>Περιφέρεια</TableHead>
+                    <TableHead>Τύπος</TableHead>
+                    <TableHead>Ημ/νία</TableHead>
+                    <TableHead>Μονάδα</TableHead>
+                    <TableHead>Φάκελος</TableHead>
                     <TableHead>Ενέργειες</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredBeneficiaries.map((beneficiary) => (
                     <TableRow key={beneficiary.id}>
+                      <TableCell>{beneficiary.aa || "-"}</TableCell>
                       <TableCell className="font-medium">{beneficiary.surname || "-"}</TableCell>
                       <TableCell>{beneficiary.name || "-"}</TableCell>
                       <TableCell>{beneficiary.fathername || "-"}</TableCell>
@@ -505,13 +527,22 @@ export default function BeneficiariesPage() {
                           <Badge variant="outline">{beneficiary.afm}</Badge>
                         ) : "-"}
                       </TableCell>
+                      <TableCell>{beneficiary.region || "-"}</TableCell>
+                      <TableCell>{beneficiary.adeia || "-"}</TableCell>
                       <TableCell>
                         {beneficiary.amount ? (
                           <Badge variant="secondary">{beneficiary.amount}€</Badge>
                         ) : "-"}
                       </TableCell>
                       <TableCell>{beneficiary.installment || "-"}</TableCell>
-                      <TableCell>{beneficiary.region || "-"}</TableCell>
+                      <TableCell>
+                        {beneficiary.type ? (
+                          <Badge variant="outline">{beneficiary.type}</Badge>
+                        ) : "-"}
+                      </TableCell>
+                      <TableCell>{beneficiary.date || "-"}</TableCell>
+                      <TableCell className="text-sm">{beneficiary.monada || "-"}</TableCell>
+                      <TableCell>{beneficiary.onlinefoldernumber || "-"}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
                           <Button
