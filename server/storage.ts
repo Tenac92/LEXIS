@@ -32,6 +32,15 @@ export interface IStorage {
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee>;
   deleteEmployee(id: number): Promise<void>;
+
+  // Beneficiary management operations
+  getAllBeneficiaries(): Promise<Beneficiary[]>;
+  getBeneficiariesByUnit(unit: string): Promise<Beneficiary[]>;
+  searchBeneficiariesByAFM(afm: string): Promise<Beneficiary[]>;
+  getBeneficiaryById(id: number): Promise<Beneficiary | null>;
+  createBeneficiary(beneficiary: InsertBeneficiary): Promise<Beneficiary>;
+  updateBeneficiary(id: number, beneficiary: Partial<InsertBeneficiary>): Promise<Beneficiary>;
+  deleteBeneficiary(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -629,6 +638,183 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Successfully deleted employee ${id}`);
     } catch (error) {
       console.error('[Storage] Error in deleteEmployee:', error);
+      throw error;
+    }
+  }
+
+  // Beneficiary management methods
+  async getAllBeneficiaries(): Promise<Beneficiary[]> {
+    try {
+      console.log('[Storage] Fetching all beneficiaries');
+      
+      const { data, error } = await supabase
+        .from('Beneficiary')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error('[Storage] Error fetching beneficiaries:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully fetched ${data?.length || 0} beneficiaries`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getAllBeneficiaries:', error);
+      throw error;
+    }
+  }
+
+  async getBeneficiariesByUnit(unit: string): Promise<Beneficiary[]> {
+    try {
+      console.log(`[Storage] Fetching beneficiaries for unit: ${unit}`);
+      
+      const { data, error } = await supabase
+        .from('Beneficiary')
+        .select('*')
+        .eq('monada', unit)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error('[Storage] Error fetching beneficiaries by unit:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully fetched ${data?.length || 0} beneficiaries for unit: ${unit}`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getBeneficiariesByUnit:', error);
+      throw error;
+    }
+  }
+
+  async searchBeneficiariesByAFM(afm: string): Promise<Beneficiary[]> {
+    try {
+      console.log(`[Storage] Searching beneficiaries by AFM: ${afm}`);
+      
+      const searchNum = parseInt(afm);
+      if (isNaN(searchNum)) {
+        return [];
+      }
+      
+      // For exact AFM match first, then partial matches
+      const { data, error } = await supabase
+        .from('Beneficiary')
+        .select('*')
+        .eq('afm', searchNum)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error('[Storage] Error searching beneficiaries by AFM:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Found ${data?.length || 0} beneficiaries with AFM: ${afm}`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in searchBeneficiariesByAFM:', error);
+      throw error;
+    }
+  }
+
+  async getBeneficiaryById(id: number): Promise<Beneficiary | null> {
+    try {
+      console.log(`[Storage] Fetching beneficiary by ID: ${id}`);
+      
+      const { data, error } = await supabase
+        .from('Beneficiary')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log(`[Storage] Beneficiary with ID ${id} not found`);
+          return null;
+        }
+        console.error('[Storage] Error fetching beneficiary by ID:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully fetched beneficiary:`, data);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in getBeneficiaryById:', error);
+      throw error;
+    }
+  }
+
+  async createBeneficiary(beneficiary: InsertBeneficiary): Promise<Beneficiary> {
+    try {
+      console.log('[Storage] Creating new beneficiary:', beneficiary);
+      
+      const { data, error } = await supabase
+        .from('Beneficiary')
+        .insert({
+          ...beneficiary,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error creating beneficiary:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully created beneficiary:', data);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in createBeneficiary:', error);
+      throw error;
+    }
+  }
+
+  async updateBeneficiary(id: number, beneficiary: Partial<InsertBeneficiary>): Promise<Beneficiary> {
+    try {
+      console.log(`[Storage] Updating beneficiary ${id}:`, beneficiary);
+      
+      const { data, error } = await supabase
+        .from('Beneficiary')
+        .update({
+          ...beneficiary,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error updating beneficiary:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully updated beneficiary:', data);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in updateBeneficiary:', error);
+      throw error;
+    }
+  }
+
+  async deleteBeneficiary(id: number): Promise<void> {
+    try {
+      console.log(`[Storage] Deleting beneficiary ${id}`);
+      
+      const { error } = await supabase
+        .from('Beneficiary')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.error('[Storage] Error deleting beneficiary:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully deleted beneficiary ${id}`);
+    } catch (error) {
+      console.error('[Storage] Error in deleteBeneficiary:', error);
       throw error;
     }
   }

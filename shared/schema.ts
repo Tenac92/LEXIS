@@ -267,6 +267,39 @@ export const employees = pgTable("Employees", {
   }),
 }));
 
+/**
+ * Beneficiary Table (Recipients)
+ * Contains beneficiary information for document generation and tracking
+ */
+export const beneficiaries = pgTable("Beneficiary", {
+  id: serial("id").primaryKey(),
+  aa: integer("a / a"), // Serial number
+  region: text("region"),
+  adeia: integer("adeia"), // License/permit number
+  surname: text("surname"),
+  name: text("name"),
+  fathername: text("fathername"),
+  freetext: text("freetext"), // Additional free text
+  amount: text("amount"), // Amount as text to preserve formatting
+  installment: text("installment"), // Installment information
+  afm: integer("afm").unique(), // Tax ID (AFM)
+  type: text("type"), // Beneficiary type
+  date: text("date"), // Date as text
+  monada: text("monada"), // Unit/Organization
+  cengsur1: text("cengsur1"), // Census surname 1
+  cengname1: text("cengname1"), // Census name 1
+  cengsur2: text("cengsur2"), // Census surname 2
+  cengname2: text("cengname2"), // Census name 2
+  onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+}, (table) => ({
+  monadaReference: foreignKey({
+    columns: [table.monada],
+    foreignColumns: [monada.unit],
+  }),
+}));
+
 // ==============================================================
 // 2. Table Definitions above, Schema Helpers below
 // ==============================================================
@@ -324,6 +357,8 @@ export const insertBudgetNotificationSchema =
 
 export const insertEmployeeSchema = createInsertSchema(employees);
 
+export const insertBeneficiarySchema = createInsertSchema(beneficiaries);
+
 // Budget validation schema for validating budget changes
 export const budgetValidationSchema = z.object({
   mis: z.union([z.string().min(1, "Κωδικός MIS απαιτείται"), z.number().int()]),
@@ -346,6 +381,7 @@ export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
 export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
+export type Beneficiary = typeof beneficiaries.$inferSelect;
 
 // ==============================================================
 // 4. Entity Types above, Insert Types below
@@ -363,6 +399,7 @@ export type InsertBudgetNotification = z.infer<
   typeof insertBudgetNotificationSchema
 >;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type InsertBeneficiary = z.infer<typeof insertBeneficiarySchema>;
 export type Recipient = z.infer<typeof recipientSchema>;
 
 // ==============================================================
@@ -457,4 +494,5 @@ export type Database = {
   monada: Monada;
   projects: Project;
   employees: Employee;
+  beneficiaries: Beneficiary;
 };

@@ -3,7 +3,7 @@ import { supabase } from "../config/db";
 import * as XLSX from 'xlsx';
 import { Project, projectHelpers } from "@shared/models/project";
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/authMiddleware';
+import { authenticateSession } from '../authentication';
 import { storage } from '../storage';
 import { AuthenticatedRequest } from '../authentication';
 
