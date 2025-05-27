@@ -152,26 +152,31 @@ export function Header() {
               </Link>
             )}
 
-            <Link href="/employees">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
-              >
-                <Users className="h-4 w-4" />
-                Υπάλληλοι
-              </Button>
-            </Link>
-            <Link href="/beneficiaries">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
-              >
-                <Users className="h-4 w-4" />
-                Δικαιούχοι
-              </Button>
-            </Link>
+            {(isAdmin || isManager) && (
+              <Link href="/employees">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
+                >
+                  <Users className="h-4 w-4" />
+                  Υπάλληλοι
+                </Button>
+              </Link>
+            )}
+
+            {isRegularUser && (
+              <Link href="/beneficiaries">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
+                >
+                  <Users className="h-4 w-4" />
+                  Δικαιούχοι
+                </Button>
+              </Link>
+            )}
 
             {isAdmin && (
               <>
@@ -250,18 +255,22 @@ export function Header() {
                       Έργα
                     </Button>
                   </Link>
-                  <Link href="/employees">
-                    <Button variant="ghost" className="w-full justify-start">
-                      <Users className="h-4 w-4 mr-2" />
-                      Υπάλληλοι
-                    </Button>
-                  </Link>
-                  <Link href="/beneficiaries">
-                    <Button variant="ghost" className="w-full justify-start">
-                      <Users className="h-4 w-4 mr-2" />
-                      Δικαιούχοι
-                    </Button>
-                  </Link>
+                  {(isAdmin || isManager) && (
+                    <Link href="/employees">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <Users className="h-4 w-4 mr-2" />
+                        Υπάλληλοι
+                      </Button>
+                    </Link>
+                  )}
+                  {isRegularUser && (
+                    <Link href="/beneficiaries">
+                      <Button variant="ghost" className="w-full justify-start">
+                        <Users className="h-4 w-4 mr-2" />
+                        Δικαιούχοι
+                      </Button>
+                    </Link>
+                  )}
                   {(isAdmin || isManager) && (
                     <Link href="/budget-history">
                       <Button variant="ghost" className="w-full justify-start">

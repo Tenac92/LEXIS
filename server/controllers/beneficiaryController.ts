@@ -256,3 +256,4 @@ router.post('/bulk-import', authenticateSession, async (req: AuthenticatedReques
 });
 
 export default router;
+export { router };
