@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { documentExportRouter } from './document-export';
-import { authenticateSession } from '../middleware/auth';
+import { authenticateSession } from "../authentication"
 import budgetRouter from './budget';
 import templateController from '../controllers/templateController';
 

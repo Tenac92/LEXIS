@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authenticateToken, AuthenticatedRequest } from '../authentication';
+import { authenticateSession, AuthenticatedRequest } from '../authentication';
 import { User } from '@shared/schema';
 import { supabase } from '../config/db';
 import { storage } from '../storage';
@@ -66,7 +66,7 @@ const upload = multer({
 });
 
 // Route to upload Excel file and update budget data
-router.post('/', authenticateToken, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/', authenticateSession, upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
   // Check if user is admin
   if (req.user?.role !== 'admin') {
     return res.status(403).json({

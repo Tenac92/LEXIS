@@ -23,7 +23,7 @@ import healthRouter from "./routes/health"; // Import our new enhanced health ch
 import sdegdaefkDiagnosticRouter from "./routes/sdegdaefk-diagnostic"; // Import the sdegdaefk.gr diagnostic router
 import { registerAdminRoutes } from "./routes/admin"; // Import admin routes for quarter transitions
 import documentsBrowserHandler from "./middleware/sdegdaefk/documentsBrowserHandler"; // Import browser request handler for /documents
-import authBrowserHandler from "./middleware/sdegdaefk/authBrowserHandler"; // Import browser request handler for /auth
+import authBrowserHandler from "./middleware/sdegdaefk/authBrowserHandler"
 // Note: We now use the consolidated documentsController instead of multiple document route files
 import { log } from "./vite";
 import { supabase } from "./config/db"; // Main supabase client

@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { authenticateToken } from "../authentication";
+import { authenticateSession } from "../authentication";
 import { storage } from "../storage";
 
 export const router = Router();
 
-router.get("/", authenticateToken, async (req, res) => {
+router.get("/", authenticateSession, async (req, res) => {
   try {
     // Get user's allowed units from their profile
     const userUnits = await storage.getUserUnits(req.user!.id);

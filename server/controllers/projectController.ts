@@ -502,7 +502,7 @@ router.get('/export', exportProjectsXLSX);
 router.get('/export/xlsx', exportProjectsXLSX);
 
 // Update a project by MIS
-router.patch('/:mis', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis } = req.params;
     const updateData = req.body;
@@ -596,7 +596,7 @@ router.patch('/:mis', authenticateToken, async (req: AuthenticatedRequest, res: 
 });
 
 // Get a project by MIS - placed last to avoid route conflicts
-router.get('/:mis', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis } = req.params;
     console.log(`[Projects] Fetching project with MIS: ${mis}`);

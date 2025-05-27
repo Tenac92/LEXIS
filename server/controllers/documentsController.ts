@@ -2,9 +2,9 @@ import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
 import type { GeneratedDocument } from "@shared/schema";
 import type { User } from '@shared/schema';
-import type { AuthenticatedRequest } from '../middleware/auth';
+import type { AuthenticatedRequest } from "../authentication"
 import { authenticateSession } from '../auth';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateSession } from "../authentication"
 import { DocumentManager } from '../utils/DocumentManager';
 import { DocumentFormatter } from '../utils/DocumentFormatter';
 import { broadcastDocumentUpdate } from '../services/websocketService';

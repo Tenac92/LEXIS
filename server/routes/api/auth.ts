@@ -12,7 +12,7 @@ import {
   AuthenticatedRequest,
   authenticateUser
 } from '../../auth';
-import { authLimiter } from '../../middleware/auth';
+import { authLimiter } from "../authentication"
 import { supabase } from '../../config/db';
 import bcrypt from 'bcrypt';
 import { User, insertUserSchema } from '@shared/schema';
