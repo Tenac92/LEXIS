@@ -38,6 +38,7 @@ const beneficiaryFormSchema = z.object({
   cengsur2: z.string().optional(),
   cengname2: z.string().optional(),
   onlinefoldernumber: z.string().optional(),
+  project: z.number().optional(),
 });
 
 type BeneficiaryFormData = z.infer<typeof beneficiaryFormSchema>;
@@ -51,6 +52,12 @@ interface BeneficiaryDialogProps {
 function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Fetch projects for dropdown
+  const { data: projects = [] } = useQuery({
+    queryKey: ["/api/projects"],
+    enabled: open, // Only fetch when dialog is open
+  });
   
   const form = useForm<BeneficiaryFormData>({
     resolver: zodResolver(beneficiaryFormSchema),
@@ -73,6 +80,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
       cengsur2: beneficiary.cengsur2 || "",
       cengname2: beneficiary.cengname2 || "",
       onlinefoldernumber: beneficiary.onlinefoldernumber || "",
+      project: beneficiary.project || undefined,
     } : {
       surname: "",
       name: "",
@@ -272,6 +280,34 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                     <FormControl>
                       <Input {...field} placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="project"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Έργο</FormLabel>
+                    <Select 
+                      onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
+                      value={field.value?.toString() || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Επιλέξτε έργο" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {projects?.map((project: any) => (
+                          <SelectItem key={project.mis} value={project.mis.toString()}>
+                            {project.mis} - {project.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

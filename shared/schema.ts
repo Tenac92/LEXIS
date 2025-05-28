@@ -291,12 +291,17 @@ export const beneficiaries = pgTable("Beneficiary", {
   cengsur2: text("cengsur2"), // Census surname 2
   cengname2: text("cengname2"), // Census name 2
   onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
+  project: integer("project"), // Project reference
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at"),
 }, (table) => ({
   monadaReference: foreignKey({
     columns: [table.monada],
     foreignColumns: [monada.unit],
+  }),
+  projectReference: foreignKey({
+    columns: [table.project],
+    foreignColumns: [projects.mis],
   }),
 }));
 
