@@ -320,10 +320,17 @@ router.post('/bulk-update', async (req: Request, res: Response) => {
 // Get projects by unit
 router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
   try {
-    const { unitName } = req.params;
+    let { unitName } = req.params;
     
     if (!unitName) {
       return res.status(400).json({ message: 'Unit name is required' });
+    }
+    
+    // Decode URL-encoded Greek characters
+    try {
+      unitName = decodeURIComponent(unitName);
+    } catch (decodeError) {
+      console.log(`[Projects] Unit name decode error, using original: ${unitName}`);
     }
     
     console.log(`[Projects] Fetching projects for unit: ${unitName}`);
