@@ -19,6 +19,7 @@ import templatePreviewRouter from "./routes/template-preview";
 // import authRouter from "./routes/auth"; // Commented out - auth handled in authentication.ts
 import budgetUploadRouter from "./routes/budget-upload"; // Import the budget upload router
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
+import notificationsRouter from "./routes/api/notifications"; // Import budget notifications router
 import healthcheckRouter from "./routes/healthcheck"; // Import the original healthcheck router
 import healthRouter from "./routes/health"; // Import our new enhanced health check router
 import sdegdaefkDiagnosticRouter from "./routes/sdegdaefk-diagnostic"; // Import the sdegdaefk.gr diagnostic router
@@ -1083,6 +1084,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Use authentication for other units routes
     app.use('/api/units', authenticateSession, unitsRouter);
     log('[Routes] Units routes registered');
+    
+    // Budget notifications routes
+    log('[Routes] Registering budget notifications routes...');
+    app.use('/api/notifications', authenticateSession, notificationsRouter);
+    log('[Routes] Budget notifications routes registered');
     
     // Attachments routes
     log('[Routes] Registering attachments routes...');

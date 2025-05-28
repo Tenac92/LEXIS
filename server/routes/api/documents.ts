@@ -15,6 +15,7 @@ import {
   generatedDocuments
 } from '@shared/schema';
 import { BudgetService } from '../../services/budgetService';
+import { validateBudgetAllocation } from '../../services/budgetNotificationService';
 import { DocumentManager } from '../../utils/DocumentManager';
 import { createWebSocketServer } from '../../websocket';
 import { eq } from 'drizzle-orm';
