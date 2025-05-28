@@ -731,9 +731,12 @@ export function CreateDocumentDialog({
     if (!open) {
       console.log("[CreateDocument] Starting fresh document creation");
       
-      // Reset form to default values for new document
+      // Don't reset the unit if user has one assigned - preserve auto-selection
+      const defaultUnit = user?.units && user.units.length > 0 ? user.units[0] : "";
+      
+      // Reset form to default values for new document, but preserve unit
       form.reset({
-        unit: "",
+        unit: defaultUnit,
         project_id: "",
         region: "",
         expenditure_type: "",
@@ -742,9 +745,9 @@ export function CreateDocumentDialog({
         selectedAttachments: []
       });
       
-      // Reset context state
+      // Reset context state with preserved unit
       updateFormData({
-        unit: "",
+        unit: defaultUnit,
         project_id: "",
         region: "",
         expenditure_type: "",
@@ -753,6 +756,10 @@ export function CreateDocumentDialog({
         selectedAttachments: []
       });
       setCurrentStep(0);
+      
+      if (defaultUnit) {
+        console.log("[CreateDocument] Preserved user unit during reset:", defaultUnit);
+      }
     }
     
     // Dialog initialization - form and units data will be refreshed
@@ -2391,16 +2398,7 @@ export function CreateDocumentDialog({
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue 
-                              placeholder={
-                                field.value ? 
-                                (unitsLoading ? "Φόρτωση..." : 
-                                  (Array.isArray(units) && units.length > 0 
-                                    ? (units.find((u: any) => u.id === field.value)?.name || 
-                                       (user?.units?.length === 1 ? user.units[0] : field.value))
-                                    : (user?.units?.length === 1 ? user.units[0] : field.value))
-                                ) : 
-                                "Επιλέξτε μονάδα"
-                              } 
+                              placeholder="Επιλέξτε μονάδα" 
                             />
                           </SelectTrigger>
                         </FormControl>
