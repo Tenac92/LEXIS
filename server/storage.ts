@@ -646,33 +646,45 @@ export class DatabaseStorage implements IStorage {
 
   async getBeneficiariesByUnit(unit: string): Promise<Beneficiary[]> {
     try {
-      console.log(`[Storage] Fetching beneficiaries for unit: ${unit}`);
+      console.log(`[Storage] Fetching ALL beneficiaries for unit: ${unit} using pagination`);
       
-      // First, let's check the total count for this unit
-      const { count, error: countError } = await supabase
-        .from('Beneficiary')
-        .select('*', { count: 'exact', head: true })
-        .eq('monada', unit);
+      let allBeneficiaries: Beneficiary[] = [];
+      let fromIndex = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+      
+      while (hasMore) {
+        console.log(`[Storage] Fetching batch ${Math.floor(fromIndex / batchSize) + 1}, starting from index ${fromIndex}`);
         
-      if (countError) {
-        console.error('[Storage] Error counting beneficiaries:', countError);
-      } else {
-        console.log(`[Storage] Total beneficiaries in unit ${unit}: ${count}`);
+        const { data, error } = await supabase
+          .from('Beneficiary')
+          .select('*')
+          .eq('monada', unit)
+          .range(fromIndex, fromIndex + batchSize - 1);
+          
+        if (error) {
+          console.error('[Storage] Error fetching beneficiaries batch:', error);
+          throw error;
+        }
+        
+        const batchData = data || [];
+        allBeneficiaries.push(...batchData);
+        
+        console.log(`[Storage] Fetched ${batchData.length} beneficiaries in this batch. Total so far: ${allBeneficiaries.length}`);
+        
+        // If we got less than the batch size, we've reached the end
+        hasMore = batchData.length === batchSize;
+        fromIndex += batchSize;
+        
+        // Safety break to prevent infinite loops
+        if (fromIndex > 50000) {
+          console.warn('[Storage] Safety break activated - stopping at 50,000 records');
+          break;
+        }
       }
       
-      // Now fetch with no explicit limit to see Supabase's actual behavior
-      const { data, error } = await supabase
-        .from('Beneficiary')
-        .select('*')
-        .eq('monada', unit);
-        
-      if (error) {
-        console.error('[Storage] Error fetching beneficiaries by unit:', error);
-        throw error;
-      }
-      
-      console.log(`[Storage] Successfully fetched ${data?.length || 0} beneficiaries for unit: ${unit} (Expected: ${count})`);
-      return data || [];
+      console.log(`[Storage] FINAL: Successfully fetched ${allBeneficiaries.length} beneficiaries for unit: ${unit}`);
+      return allBeneficiaries;
     } catch (error) {
       console.error('[Storage] Error in getBeneficiariesByUnit:', error);
       throw error;
