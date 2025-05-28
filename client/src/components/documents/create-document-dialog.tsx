@@ -1962,7 +1962,9 @@ export function CreateDocumentDialog({
   };
 
   const removeRecipient = (index: number) => {
+    console.log("[RemoveRecipient] Removing recipient at index:", index);
     const currentRecipients = form.watch("recipients") || [];
+    console.log("[RemoveRecipient] Current recipients before removal:", currentRecipients.length);
     form.setValue(
       "recipients",
       currentRecipients.filter((_, i) => i !== index),
@@ -2615,8 +2617,11 @@ export function CreateDocumentDialog({
                               expenditureType={form.getValues("expenditure_type") || ""}
                               onSelectPerson={(personData) => {
                                 if (personData) {
+                                  console.log("[AFMAutocomplete] Selection made for index:", index, "personData:", personData);
                                   // Auto-fill all recipient fields from employee/beneficiary data
                                   const currentRecipients = form.getValues("recipients");
+                                  console.log("[AFMAutocomplete] Current recipients before update:", currentRecipients.length);
+                                  
                                   // Get installment and amount from beneficiary data
                                   const installmentValue = (personData as any).installment || "";
                                   const amountValue = parseFloat((personData as any).amount || "0") || 0;
@@ -2632,6 +2637,9 @@ export function CreateDocumentDialog({
                                     installments: installmentValue ? [installmentValue] : ["ΕΦΑΠΑΞ"],
                                     installmentAmounts: installmentValue && amountValue ? { [installmentValue]: amountValue } : { "ΕΦΑΠΑΞ": amountValue }
                                   };
+                                  
+                                  console.log("[AFMAutocomplete] Updated recipient:", currentRecipients[index]);
+                                  console.log("[AFMAutocomplete] Setting recipients to:", currentRecipients.length, "items");
                                   form.setValue("recipients", [...currentRecipients]);
                                 }
                               }}
