@@ -1,0 +1,87 @@
+client:535 WebSocket connection to 'wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/' failed: 
+setupWebSocket @ client:535
+client:535 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.
+    at setupWebSocket (client:535:19)
+    at fallback (client:508:16)
+    at WebSocket.<anonymous> (client:551:7)
+chunk-RPCDYKBN.js?v=85986215:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+SessionInit.tsx:26 [SessionInit] Using existing client session ID: session_1748424381661_mofxs97n
+/api/auth/me:1 
+        
+        
+       Failed to load resource: the server responded with a status of 401 (Unauthorized)
+auth-page.tsx:38 Υποβολή φόρμας σύνδεσης με δεδομένα: Object
+use-auth.tsx:28 Attempting login with: dkaravias@civilprotection.gr
+use-auth.tsx:53 Login successful: Object
+use-auth.tsx:81 Login mutation succeeded, updating cache with user: Object
+use-auth.tsx:90 Processed user for cache: Object
+create-document-dialog.tsx:2836 [CreateDocument] Auto-selected the only available unit: ΔΑΕΦΚ-ΚΕ
+create-document-dialog.tsx:2863 [Budget Debug] budgetData state: Object
+use-websocket-updates.ts:427 WebSocket connection to 'wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws?t=1748424413617' failed: WebSocket is closed before the connection is established.
+(ανώνυμες) @ use-websocket-updates.ts:427
+create-document-dialog.tsx:2836 [CreateDocument] Auto-selected the only available unit: ΔΑΕΦΚ-ΚΕ
+create-document-dialog.tsx:2863 [Budget Debug] budgetData state: Object
+use-websocket-updates.ts:251 [WebSocket] Connection error: Event
+ws.onerror @ use-websocket-updates.ts:251
+use-websocket-updates.ts:301 [WebSocket] Abnormal closure - connection dropped
+shouldAttemptReconnect @ use-websocket-updates.ts:301
+use-auth.tsx:161 ME endpoint response: Object
+/api/unit-projects/%CE%94%CE%91%CE%95%CE%A6%CE%9A-%CE%9A%CE%95?t=1748424413627:1 
+        
+        
+       Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+queryClient.ts:120 [API] Request failed: Error: Failed to fetch projects
+    at apiRequest (queryClient.ts:104:27)
+    at async queryFn (create-document-dialog.tsx:1418:26)
+apiRequest @ queryClient.ts:120
+queryClient.ts:121 [API] Error details: Object
+apiRequest @ queryClient.ts:121
+create-document-dialog.tsx:1510 [Projects] Projects fetch error: Error: Failed to fetch projects
+    at apiRequest (queryClient.ts:104:27)
+    at async queryFn (create-document-dialog.tsx:1418:26)
+queryFn @ create-document-dialog.tsx:1510
+use-auth.tsx:161 ME endpoint response: Object
+/api/documents/user:1 
+        
+        
+       Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+queryClient.ts:242 [Query] Request failed: Error: Σφάλμα HTTP! κατάσταση: 500
+    at queryClient.ts:227:29
+(ανώνυμες) @ queryClient.ts:242
+queryClient.ts:243 [Query] Error details: Object
+(ανώνυμες) @ queryClient.ts:243
+create-document-dialog.tsx:614 [CreateDocument] Processing units data: [{"id":"ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΚΗΣ ΕΝΟΤΗΤΑΣ ΗΡΑΚΛΕΙΟΥ"},{"id":"ΓΔΑΕΦΚ","name":"ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"},{"id":"ΔΑΕΦΚ-ΑΚ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΚΡΗΤΗΣ"},{"id":"ΔΑΕΦΚ-ΒΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΟΥ ΕΛΛΑΔΟΣ"},{"id":"ΤΑΕΦΚ-ΔΑ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ"},{"id":"ΤΑΕΦΚ-ΑΑ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ"},{"id":"ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΣ ΧΑΛΚΙΔΙΚΗΣ"},{"id":"ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΣ ΘΕΣΣΑΛΙΑΣ"},{"id":"ΤΑΕΦΚ ΧΑΝΙΩΝ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΝΟΜΟΥ ΧΑΝΙΩΝ"},{"id":"ΔΑΕΦΚ-ΚΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ"},{"id":"ΔΑΕΦΚ-ΔΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ"}]
+use-auth.tsx:161 ME endpoint response: Object
+use-auth.tsx:161 ME endpoint response: Object
+use-auth.tsx:161 ME endpoint response: Object
+/api/documents/user:1 
+        
+        
+       Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+queryClient.ts:242 [Query] Request failed: Error: Σφάλμα HTTP! κατάσταση: 500
+    at queryClient.ts:227:29
+(ανώνυμες) @ queryClient.ts:242
+queryClient.ts:243 [Query] Error details: Object
+(ανώνυμες) @ queryClient.ts:243
+use-auth.tsx:161 ME endpoint response: Object
+/api/documents/user:1 
+        
+        
+       Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+queryClient.ts:242 [Query] Request failed: Error: Σφάλμα HTTP! κατάσταση: 500
+    at queryClient.ts:227:29
+(ανώνυμες) @ queryClient.ts:242
+queryClient.ts:243 [Query] Error details: Object
+(ανώνυμες) @ queryClient.ts:243
+create-document-dialog.tsx:732 [CreateDocument] Starting fresh document creation
+use-auth.tsx:282 [Auth] Manually refreshing user session
+create-document-dialog.tsx:873 [CreateDocument] Auto-selected the only available unit: ΔΑΕΦΚ-ΚΕ
+chunk-4DURXE5Y.js?v=85986215:1398 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(ανώνυμες) @ chunk-4DURXE5Y.js?v=85986215:1398
+Εμφάνιση 1 ακόμη πλαισίου
+Εμφάνιση λιγότερων
+use-auth.tsx:161 ME endpoint response: Object
+create-document-dialog.tsx:614 [CreateDocument] Processing units data: [{"id":"ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΚΗΣ ΕΝΟΤΗΤΑΣ ΗΡΑΚΛΕΙΟΥ"},{"id":"ΓΔΑΕΦΚ","name":"ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"},{"id":"ΔΑΕΦΚ-ΑΚ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΚΡΗΤΗΣ"},{"id":"ΔΑΕΦΚ-ΒΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΟΥ ΕΛΛΑΔΟΣ"},{"id":"ΤΑΕΦΚ-ΔΑ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ"},{"id":"ΤΑΕΦΚ-ΑΑ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ"},{"id":"ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΣ ΧΑΛΚΙΔΙΚΗΣ"},{"id":"ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΣ ΘΕΣΣΑΛΙΑΣ"},{"id":"ΤΑΕΦΚ ΧΑΝΙΩΝ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΝΟΜΟΥ ΧΑΝΙΩΝ"},{"id":"ΔΑΕΦΚ-ΚΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ"},{"id":"ΔΑΕΦΚ-ΔΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ"}]
+create-document-dialog.tsx:2217 [CreateDocument] Moving to next step from: 0
+create-document-dialog.tsx:2863 [Budget Debug] budgetData state: Object
+create-document-dialog.tsx:614 [CreateDocument] Processing units data: [{"id":"ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΚΗΣ ΕΝΟΤΗΤΑΣ ΗΡΑΚΛΕΙΟΥ"},{"id":"ΓΔΑΕΦΚ","name":"ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"},{"id":"ΔΑΕΦΚ-ΑΚ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΚΡΗΤΗΣ"},{"id":"ΔΑΕΦΚ-ΒΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΟΥ ΕΛΛΑΔΟΣ"},{"id":"ΤΑΕΦΚ-ΔΑ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ"},{"id":"ΤΑΕΦΚ-ΑΑ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ"},{"id":"ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΣ ΧΑΛΚΙΔΙΚΗΣ"},{"id":"ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΣ ΘΕΣΣΑΛΙΑΣ"},{"id":"ΤΑΕΦΚ ΧΑΝΙΩΝ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΝΟΜΟΥ ΧΑΝΙΩΝ"},{"id":"ΔΑΕΦΚ-ΚΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ"},{"id":"ΔΑΕΦΚ-ΔΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ"}]

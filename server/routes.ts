@@ -400,30 +400,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[UnitProjects] Fetching projects for unit: ${unitName}`);
         
-        // Get all projects and filter in JavaScript to avoid JSONB issues
-        const { data: allProjects, error: fallbackError } = await supabase
-          .from('Projects')
-          .select('*')
-          .limit(1000);
+        try {
+          // Get all projects safely - no JSONB operations
+          const { data: allProjects, error: queryError } = await supabase
+            .from('Projects')
+            .select('id, mis, na853, title, budget_na853, implementing_agency, status')
+            .limit(1000);
+            
+          if (queryError) {
+            console.error(`[UnitProjects] Query failed:`, queryError);
+            return res.status(500).json({
+              message: 'Database query failed',
+              error: queryError.message
+            });
+          }
           
-        if (fallbackError) {
+          console.log(`[UnitProjects] Retrieved ${allProjects?.length || 0} total projects from database`);
+          
+          // Filter projects using authentic data for your specific unit
+          const filteredProjects = allProjects?.filter(project => {
+            const agency = project.implementing_agency;
+            try {
+              if (Array.isArray(agency)) {
+                return agency.some(a => String(a).includes(unitName));
+              }
+              if (typeof agency === 'string') {
+                return agency.includes(unitName);
+              }
+              if (agency && typeof agency === 'object') {
+                const agencyStr = JSON.stringify(agency);
+                return agencyStr.includes(unitName);
+              }
+            } catch (filterError) {
+              console.log(`[UnitProjects] Filter error for project ${project.id}:`, filterError);
+            }
+            return false;
+          }) || [];
+          
+          console.log(`[UnitProjects] After filtering: found ${filteredProjects.length} projects for unit ${unitName}`);
+          
+          return res.json(filteredProjects);
+        } catch (dbError) {
+          console.error(`[UnitProjects] Database error:`, dbError);
           return res.status(500).json({
-            message: 'Failed to fetch projects',
-            error: fallbackError.message
+            message: 'Database operation failed',
+            error: dbError instanceof Error ? dbError.message : 'Database error'
           });
         }
-        
-        // Filter in JavaScript using authentic data
-        const filteredProjects = allProjects?.filter(project => {
-          const agency = project.implementing_agency;
-          if (Array.isArray(agency)) {
-            return agency.some(a => a.includes(unitName));
-          }
-          if (typeof agency === 'string') {
-            return agency.includes(unitName);
-          }
-          return false;
-        }) || [];
         
         console.log(`[UnitProjects] SUCCESS: Found ${filteredProjects.length} projects for unit: ${unitName}`);
         res.json(filteredProjects);
@@ -450,12 +473,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[Projects-Priority] Fetching projects for unit: ${unitName}`);
         
-        // Direct database query using text search to avoid JSON parsing errors
-        const { data, error } = await supabase
+        // Get all projects and filter in JavaScript to avoid JSONB issues
+        const { data: allProjects, error } = await supabase
           .from('Projects')
           .select('*')
-          .ilike('implementing_agency', `%${unitName}%`);
-        
+          .limit(1000);
+          
         if (error) {
           console.error(`[Projects-Priority] Database error:`, error);
           return res.status(500).json({
@@ -463,6 +486,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             error: error.message
           });
         }
+        
+        // Filter projects by unit in JavaScript using authentic data
+        const data = allProjects?.filter(project => {
+          const agency = project.implementing_agency;
+          if (Array.isArray(agency)) {
+            return agency.some(a => a.includes(unitName));
+          }
+          if (typeof agency === 'string') {
+            return agency.includes(unitName);
+          }
+          return false;
+        }) || [];
         
         console.log(`[Projects-Priority] Found ${data?.length || 0} projects for unit: ${unitName}`);
         res.json(data || []);
@@ -721,7 +756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { data, error } = await supabase
           .from('Projects')
           .select('*')
-          .ilike('implementing_agency', `%${unitName}%`);
+          .limit(1000);
         
         if (error) {
           console.error(`[Projects] Database error:`, error);
