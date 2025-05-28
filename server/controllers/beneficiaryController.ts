@@ -83,6 +83,12 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     }
     
     console.log(`[Beneficiaries] SECURITY: Returning ${allBeneficiaries.length} beneficiaries from ${userUnits.length} authorized units only`);
+    
+    // Prevent caching to ensure new pagination code runs
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     res.json(allBeneficiaries);
   } catch (error) {
     console.error('[Beneficiaries] Error fetching beneficiaries:', error);
