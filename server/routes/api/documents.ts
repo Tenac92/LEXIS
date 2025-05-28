@@ -273,11 +273,15 @@ router.patch('/:id', async (req: Request, res: Response) => {
     const documentId = req.params.id;
     const updates = req.body;
     
-    // Validate document exists
-    const [document] = await db
-      .select()
-      .from(generatedDocuments)
-      .where(eq(generatedDocuments.id, parseInt(documentId)));
+    // Validate document exists using Supabase
+    const { data: documents, error } = await supabase
+      .from('generated_documents')
+      .select('*')
+      .eq('id', parseInt(documentId))
+      .limit(1);
+    
+    if (error) throw error;
+    const document = documents?.[0];
     
     if (!document) {
       return res.status(404).json({ message: 'Document not found' });
