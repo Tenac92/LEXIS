@@ -5,7 +5,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { db, supabase } from '../../data';
+import { supabase } from '../../config/db';
 import { log } from '../../vite';
 import { AuthenticatedRequest } from '../../authentication';
 import { 
@@ -97,7 +97,9 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
       });
     }
     
-    // Fetch user's documents safely
+    // Fetch user's documents safely with better error handling
+    log(`[Documents] Fetching documents for user ID: ${userId}`, 'debug');
+    
     const { data, error } = await supabase
       .from('generated_documents')
       .select('id, title, status, created_at')

@@ -1,0 +1,31 @@
+[vite] connecting...
+DOMException {stack: "Error: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.↵    at…"}
+
+[SessionInit] Using existing client session ID: session_1748406838023_annvnvtq
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[CreateDocument] Auto-selected the only available unit: ΔΑΕΦΚ-ΚΕ
+[Budget Debug] budgetData state: 
+Object {available: false, currentStep: 0, projectId: "", currentAmount: 0}
+[Query] Request failed: 
+Error {queryInfo: {…}, originalError: Error, isQueryError: true}
+
+[Query] Error details: 
+Object {message: "Σφάλμα HTTP! κατάσταση: 500", queryInfo: {…}, stack: "Error: Σφάλμα HTTP! κατάσταση: 500↵    at…"}
+
+[CreateDocument] Processing units data: [{"id":"ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΚΗΣ ΕΝΟΤΗΤΑΣ ΗΡΑΚΛΕΙΟΥ"},{"id":"ΓΔΑΕΦΚ","name":"ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"},{"id":"ΔΑΕΦΚ-ΑΚ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΚΡΗΤΗΣ"},{"id":"ΔΑΕΦΚ-ΒΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΟΥ ΕΛΛΑΔΟΣ"},{"id":"ΤΑΕΦΚ-ΔΑ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ"},{"id":"ΤΑΕΦΚ-ΑΑ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ"},{"id":"ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΣ ΧΑΛΚΙΔΙΚΗΣ"},{"id":"ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΠΕΡΙΦΕΡΕΙΑΣ ΘΕΣΣΑΛΙΑΣ"},{"id":"ΤΑΕΦΚ ΧΑΝΙΩΝ","name":"ΤΟΜΕΑΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΝΟΜΟΥ ΧΑΝΙΩΝ"},{"id":"ΔΑΕΦΚ-ΚΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ"},{"id":"ΔΑΕΦΚ-ΔΕ","name":"ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ"}]
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[Query] Request failed: 
+Error {queryInfo: {…}, originalError: Error, isQueryError: true}
+
+[Query] Error details: 
+Object {message: "Σφάλμα HTTP! κατάσταση: 500", queryInfo: {…}, stack: "Error: Σφάλμα HTTP! κατάσταση: 500↵    at…"}
+
+[Query] Request failed: 
+Error {queryInfo: {…}, originalError: Error, isQueryError: true}
+
+[Query] Error details: 
+Object {message: "Σφάλμα HTTP! κατάσταση: 500", queryInfo: {…}, stack: "Error: Σφάλμα HTTP! κατάσταση: 500↵    at…"}
