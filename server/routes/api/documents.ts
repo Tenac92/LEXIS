@@ -146,13 +146,14 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const documentId = req.params.id;
     
-    // Fetch document data
-    const [document] = await db
-      .select()
-      .from(generatedDocuments)
-      .where(eq(generatedDocuments.id, parseInt(documentId)));
+    // Fetch document data using Supabase
+    const { data: document, error } = await supabase
+      .from('generated_documents')
+      .select('*')
+      .eq('id', parseInt(documentId))
+      .single();
     
-    if (!document) {
+    if (error || !document) {
       return res.status(404).json({ message: 'Document not found' });
     }
     
@@ -333,11 +334,12 @@ router.get('/:id/export', async (req: Request, res: Response) => {
   try {
     const documentId = req.params.id;
     
-    // Fetch document data
-    const [document] = await db
-      .select()
-      .from(generatedDocuments)
-      .where(eq(generatedDocuments.id, parseInt(documentId)));
+    // Fetch document data using Supabase
+    const { data: document, error } = await supabase
+      .from('generated_documents')
+      .select('*')
+      .eq('id', parseInt(documentId))
+      .single();
     
     if (!document) {
       return res.status(404).json({ message: 'Document not found' });
