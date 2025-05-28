@@ -142,6 +142,21 @@ export default function UsersPage() {
     },
   });
 
+  // Helper function to convert unit abbreviations to full names for display
+  const getDisplayUnits = (userUnits: string[] | undefined) => {
+    if (!userUnits || !units) return [];
+    
+    return userUnits.map(unitId => {
+      // First check if it's already a full name
+      const unitByName = units.find(u => u.name === unitId);
+      if (unitByName) return unitId;
+      
+      // Otherwise, find by abbreviation (id)
+      const unitById = units.find(u => u.id === unitId);
+      return unitById ? unitById.name : unitId;
+    });
+  };
+
   const deleteMutation = useMutation({
     mutationFn: async (userId: number) => {
       console.log("[Users] Attempting to delete user with ID:", userId);
@@ -277,16 +292,16 @@ export default function UsersPage() {
   });
 
   const onSubmit = (data: UserFormData) => {
-    // Convert unit IDs to unit names for the backend
+    // Convert unit IDs to unit abbreviations for storage in the database
     const modifiedData = {
       ...data,
       units: data.units?.map((unitId) => {
         const unit = units.find(u => u.id === unitId);
-        return unit ? unit.name : unitId;
+        return unit ? unit.id : unitId; // Store abbreviation (id) instead of full name
       })
     };
     
-    console.log('Submitting user data:', modifiedData);
+    console.log('Submitting user data with abbreviations:', modifiedData);
     
     if (selectedUser && editUserDialogOpen) {
       // Update existing user
@@ -401,7 +416,7 @@ export default function UsersPage() {
                     <TableCell>
                       <span className="capitalize">{user.role}</span>
                     </TableCell>
-                    <TableCell>{user.units?.join(", ") || "-"}</TableCell>
+                    <TableCell>{getDisplayUnits(user.units).join(", ") || "-"}</TableCell>
                     <TableCell>{user.telephone || "-"}</TableCell>
                     <TableCell>{user.department || "-"}</TableCell>
                     <TableCell className="text-right flex justify-end space-x-1">
