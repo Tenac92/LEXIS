@@ -823,81 +823,22 @@ export function CreateDocumentDialog({
   });
   
   useEffect(() => {
-    // Skip if no user data or if unit initialization already completed
-    if (!user || unitInitializationRef.current.isCompleted) return;
+    // Simple, stable unit auto-selection
+    if (!user || !open) return;
     
-    // Only proceed during form reset (initialization phase)
-    // AND when we have user units available 
-    // AND when there's no unit already in form or context
-    if (formReset && 
-        user?.units && 
-        Array.isArray(user.units) && 
-        user.units.length > 0 && 
-        !formData.unit && 
-        !form.getValues().unit &&
-        unitInitializationRef.current.attemptCount < 3) { // Safety limit on retry attempts
+    // Only set default unit if no unit is currently selected
+    const currentUnit = form.getValues().unit;
+    if (!currentUnit && user?.units && user.units.length > 0) {
+      const defaultUnit = user.units[0];
+      console.log("[CreateDocument] Auto-selected the only available unit:", defaultUnit);
       
-      // Track this attempt
-      unitInitializationRef.current.attemptCount++;
-      
-      // Set flag to block sync operations during this critical section
-      isUpdatingFromContext.current = true;
-      
-      // Create a stable reference to the default unit
-      const defaultUnit = user?.units?.[0] || "";
-      unitInitializationRef.current.defaultUnit = defaultUnit;
-      
-      // Use a synchronized, delayed approach
-      const timer = setTimeout(() => {
-        try {
-          // Double-check again if form/context still has no unit (prevent race conditions)
-          const currentUnit = form.getValues().unit;
-          if (!currentUnit && !formData.unit) {
-            // Only log on first attempt
-            if (unitInitializationRef.current.attemptCount === 1) {
-              // Setting default unit from previous selection
-            }
-            
-            // ATOMIC OPERATION: Set unit value in an optimized way
-            form.setValue("unit", defaultUnit, { 
-              shouldDirty: false, // Don't mark as dirty (cleaner form state)
-              shouldTouch: false, // Don't mark as touched (prevents validation)
-              shouldValidate: false // Skip validation to reduce render cycles
-            });
-            
-            // Mark initialization as complete to prevent further attempts
-            unitInitializationRef.current.isCompleted = true;
-          }
-        } catch (err) {
-          console.error("[CreateDocument] Error setting default unit:", err);
-        } finally {
-          // Always reset flags properly, even if an error occurs
-          setFormReset(false);
-          
-          // Delay re-enabling context sync slightly to prevent race conditions
-          setTimeout(() => {
-            isUpdatingFromContext.current = false;
-          }, 100);
-        }
-      }, 350); // Slightly longer delay to ensure all async operations complete
-      
-      return () => clearTimeout(timer);
-    } else if (formReset && unitInitializationRef.current.attemptCount >= 3) {
-      // If we've tried multiple times, just reset the flag and move on
-      console.warn("[CreateDocument] Unable to set default unit after multiple attempts");
-      setFormReset(false);
-      isUpdatingFromContext.current = false;
-    } else if (formReset) {
-      // Just reset the flag without changing the unit if we already have data
-      // or if unit initialization has completed
-      setFormReset(false);
-      
-      // Wait a bit before re-enabling context sync
-      setTimeout(() => {
-        isUpdatingFromContext.current = false;
-      }, 100);
+      form.setValue("unit", defaultUnit, { 
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: false
+      });
     }
-  }, [formReset, user, form, formData.unit]);
+  }, [user, form, open]);
 
   // Function to handle dialog closing with multiple fallback mechanisms
   const closeDialogCompletely = useCallback(() => {

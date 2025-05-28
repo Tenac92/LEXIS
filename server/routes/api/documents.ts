@@ -88,11 +88,20 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
       });
     }
     
+    // Ensure user ID is a valid number
+    const userId = Number(req.user.id);
+    if (isNaN(userId)) {
+      log(`[Documents] Invalid user ID: ${req.user.id}`, 'error');
+      return res.status(400).json({
+        message: 'Μη έγκυρο αναγνωριστικό χρήστη'
+      });
+    }
+    
     // Fetch user's documents safely
     const { data, error } = await supabase
       .from('generated_documents')
       .select('id, title, status, created_at')
-      .eq('generated_by', req.user.id)
+      .eq('generated_by', userId)
       .order('created_at', { ascending: false })
       .limit(10);
     
