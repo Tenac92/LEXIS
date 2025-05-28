@@ -869,29 +869,55 @@ export function CreateDocumentDialog({
     defaultUnit: '',
   });
   
-  // Fixed unit auto-selection with proper dependency management
-  const hasAutoSelectedUnit = useRef(false);
+  // Enhanced unit auto-selection with proper persistence
+  const unitAutoSelectionRef = useRef<{
+    hasSelected: boolean;
+    selectedUnit: string;
+  }>({ hasSelected: false, selectedUnit: "" });
   
   useEffect(() => {
-    // Simple, stable unit auto-selection 
-    if (!user || !open || hasAutoSelectedUnit.current) return;
+    // Ensure unit auto-selection happens at the right time and persists
+    if (!user || !open) return;
     
-    // Only set default unit if no unit is currently selected
     const currentUnit = form.getValues().unit;
-    if (!currentUnit && user?.units && user.units.length > 0) {
-      const defaultUnit = user.units[0];
-      console.log("[CreateDocument] Auto-selected user's unit:", defaultUnit);
+    const userUnit = user?.units?.[0];
+    
+    // Auto-select if no unit is selected but user has a unit assigned
+    if (!currentUnit && userUnit && !unitAutoSelectionRef.current.hasSelected) {
+      console.log("[CreateDocument] Auto-selected user's unit:", userUnit);
       
-      // Set the unit in the form
-      form.setValue("unit", defaultUnit);
-      hasAutoSelectedUnit.current = true;
+      // Set in form with immediate effect
+      form.setValue("unit", userUnit, { shouldValidate: false });
+      
+      // Track selection to prevent overrides
+      unitAutoSelectionRef.current = {
+        hasSelected: true,
+        selectedUnit: userUnit
+      };
+      
+      // Force the form to maintain this value
+      setTimeout(() => {
+        const currentValue = form.getValues().unit;
+        if (!currentValue || currentValue !== userUnit) {
+          form.setValue("unit", userUnit, { shouldValidate: false });
+          console.log("[CreateDocument] Re-enforced unit selection:", userUnit);
+        }
+      }, 500);
     }
-  }, [user, open, form]); // Restore proper dependencies but use ref to prevent duplicate selections
+    
+    // Re-enforce selection if it was cleared but should be maintained
+    if (unitAutoSelectionRef.current.hasSelected && 
+        unitAutoSelectionRef.current.selectedUnit && 
+        !currentUnit) {
+      form.setValue("unit", unitAutoSelectionRef.current.selectedUnit, { shouldValidate: false });
+      console.log("[CreateDocument] Restored cleared unit:", unitAutoSelectionRef.current.selectedUnit);
+    }
+  }, [user, open, form]);
   
-  // Reset the auto-selection flag when dialog closes
+  // Reset selection tracking when dialog closes
   useEffect(() => {
     if (!open) {
-      hasAutoSelectedUnit.current = false;
+      unitAutoSelectionRef.current = { hasSelected: false, selectedUnit: "" };
     }
   }, [open]);
 
