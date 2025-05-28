@@ -862,9 +862,12 @@ export function CreateDocumentDialog({
     defaultUnit: '',
   });
   
+  // Fixed unit auto-selection with proper dependency management
+  const hasAutoSelectedUnit = useRef(false);
+  
   useEffect(() => {
-    // Simple, stable unit auto-selection with proper form and context sync
-    if (!user || !open) return;
+    // Simple, stable unit auto-selection 
+    if (!user || !open || hasAutoSelectedUnit.current) return;
     
     // Only set default unit if no unit is currently selected
     const currentUnit = form.getValues().unit;
@@ -872,22 +875,18 @@ export function CreateDocumentDialog({
       const defaultUnit = user.units[0];
       console.log("[CreateDocument] Auto-selected user's unit:", defaultUnit);
       
-      // Set the unit in the form with proper validation and state management
-      form.setValue("unit", defaultUnit, { 
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true
-      });
-      
-      // Also update the form context to ensure consistency
-      setTimeout(() => {
-        updateFormData(prevData => ({
-          ...prevData,
-          unit: defaultUnit
-        }));
-      }, 100);
+      // Set the unit in the form
+      form.setValue("unit", defaultUnit);
+      hasAutoSelectedUnit.current = true;
     }
-  }, [user, form, open, updateFormData]);
+  }, [user, open, form]); // Restore proper dependencies but use ref to prevent duplicate selections
+  
+  // Reset the auto-selection flag when dialog closes
+  useEffect(() => {
+    if (!open) {
+      hasAutoSelectedUnit.current = false;
+    }
+  }, [open]);
 
   // Function to handle dialog closing with multiple fallback mechanisms
   const closeDialogCompletely = useCallback(() => {
