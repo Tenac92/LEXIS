@@ -721,6 +721,32 @@ export function CreateDocumentDialog({
       return;
     }
     
+    // FRESH START: Clear previous document state when opening for new document
+    console.log("[CreateDocument] Starting fresh document creation");
+    
+    // Reset form to default values for new document
+    form.reset({
+      unit: "",
+      project_id: "",
+      region: "",
+      expenditure_type: "",
+      recipients: [],
+      status: "draft",
+      selectedAttachments: []
+    });
+    
+    // Reset context state
+    updateFormData({
+      unit: "",
+      project_id: "",
+      region: "",
+      expenditure_type: "",
+      recipients: [],
+      status: "draft",
+      selectedAttachments: []
+    });
+    setCurrentStep(0);
+    
     // Dialog initialization - form and units data will be refreshed
     
     // ANTI-FLICKER: Capture initial state before any operations
@@ -2004,7 +2030,7 @@ export function CreateDocumentDialog({
     const currentUnit = form.getValues("unit");
     if (currentUnit) return; // Don't override existing selection
     
-    // Auto-select unit based on available options
+    // Auto-select unit based on available options (stabilized to prevent infinite loops)
     if (units?.length === 1) {
       console.log("[CreateDocument] Auto-selected the only available unit:", units[0].id);
       form.setValue("unit", units[0].id);
@@ -2017,7 +2043,7 @@ export function CreateDocumentDialog({
         form.setValue("unit", matchingUnit.id);
       }
     }
-  }, [units, user?.units, form, open]);
+  }, [units?.length, user?.units?.[0], open]); // Stabilized dependencies
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
     queryKey: ["regions", selectedProjectId],
