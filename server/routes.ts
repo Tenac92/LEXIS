@@ -400,22 +400,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[UnitProjects] Fetching projects for unit: ${unitName}`);
         
-        // Raw SQL query to handle JSONB array search properly
-        const { data, error } = await supabase
-          .from('Projects')
-          .select('*')
-          .filter('implementing_agency', 'cs', `{"${unitName}"}`);
+        // Use raw SQL to bypass Supabase query builder JSONB issues
+        const { data: projects, error } = await supabase.rpc('get_projects_for_unit', {
+          unit_filter: unitName
+        });
         
         if (error) {
           console.error(`[UnitProjects] Database error:`, error);
-          return res.status(500).json({
-            message: 'Failed to fetch projects',
-            error: error.message
-          });
+          // Fallback to simple query without JSONB filtering
+          const { data: allProjects, error: fallbackError } = await supabase
+            .from('Projects')
+            .select('*')
+            .limit(1000);
+            
+          if (fallbackError) {
+            return res.status(500).json({
+              message: 'Failed to fetch projects',
+              error: fallbackError.message
+            });
+          }
+          
+          // Filter in JavaScript
+          const filteredProjects = allProjects?.filter(project => {
+            const agency = project.implementing_agency;
+            if (Array.isArray(agency)) {
+              return agency.some(a => a.includes(unitName));
+            }
+            if (typeof agency === 'string') {
+              return agency.includes(unitName);
+            }
+            return false;
+          }) || [];
+          
+          console.log(`[UnitProjects] SUCCESS: Found ${filteredProjects.length} projects for unit: ${unitName}`);
+          return res.json(filteredProjects);
         }
         
-        console.log(`[UnitProjects] SUCCESS: Found ${data?.length || 0} projects for unit: ${unitName}`);
-        res.json(data || []);
+        console.log(`[UnitProjects] SUCCESS: Found ${projects?.length || 0} projects for unit: ${unitName}`);
+        res.json(projects || []);
       } catch (error) {
         console.error('[UnitProjects] Error:', error);
         res.status(500).json({
