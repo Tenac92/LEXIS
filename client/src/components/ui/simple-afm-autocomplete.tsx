@@ -95,7 +95,11 @@ export function SimpleAFMAutocomplete({
                 <div
                   key={person.id}
                   className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                  onMouseDown={() => handleSelect(person)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelect(person);
+                  }}
                 >
                   <div className="font-medium">
                     {person.surname} {person.name}
