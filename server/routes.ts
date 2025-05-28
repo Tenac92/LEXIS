@@ -403,7 +403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get authentic project data using correct table and column names
         const { data: allProjects, error: queryError } = await supabase
           .from('Projects')
-          .select('mis, project_title, implementing_agency, expenditure_type, na853, na271, e069, status')
+          .select('mis, event_description, implementing_agency, expenditure_type, na853, na271, e069, status')
           .limit(1000);
           
         if (queryError) {
