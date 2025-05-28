@@ -400,44 +400,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[UnitProjects] Fetching projects for unit: ${unitName}`);
         
-        // Use raw SQL to bypass Supabase query builder JSONB issues
-        const { data: projects, error } = await supabase.rpc('get_projects_for_unit', {
-          unit_filter: unitName
-        });
-        
-        if (error) {
-          console.error(`[UnitProjects] Database error:`, error);
-          // Fallback to simple query without JSONB filtering
-          const { data: allProjects, error: fallbackError } = await supabase
-            .from('Projects')
-            .select('*')
-            .limit(1000);
-            
-          if (fallbackError) {
-            return res.status(500).json({
-              message: 'Failed to fetch projects',
-              error: fallbackError.message
-            });
-          }
+        // Get all projects and filter in JavaScript to avoid JSONB issues
+        const { data: allProjects, error: fallbackError } = await supabase
+          .from('Projects')
+          .select('*')
+          .limit(1000);
           
-          // Filter in JavaScript
-          const filteredProjects = allProjects?.filter(project => {
-            const agency = project.implementing_agency;
-            if (Array.isArray(agency)) {
-              return agency.some(a => a.includes(unitName));
-            }
-            if (typeof agency === 'string') {
-              return agency.includes(unitName);
-            }
-            return false;
-          }) || [];
-          
-          console.log(`[UnitProjects] SUCCESS: Found ${filteredProjects.length} projects for unit: ${unitName}`);
-          return res.json(filteredProjects);
+        if (fallbackError) {
+          return res.status(500).json({
+            message: 'Failed to fetch projects',
+            error: fallbackError.message
+          });
         }
         
-        console.log(`[UnitProjects] SUCCESS: Found ${projects?.length || 0} projects for unit: ${unitName}`);
-        res.json(projects || []);
+        // Filter in JavaScript using authentic data
+        const filteredProjects = allProjects?.filter(project => {
+          const agency = project.implementing_agency;
+          if (Array.isArray(agency)) {
+            return agency.some(a => a.includes(unitName));
+          }
+          if (typeof agency === 'string') {
+            return agency.includes(unitName);
+          }
+          return false;
+        }) || [];
+        
+        console.log(`[UnitProjects] SUCCESS: Found ${filteredProjects.length} projects for unit: ${unitName}`);
+        res.json(filteredProjects);
       } catch (error) {
         console.error('[UnitProjects] Error:', error);
         res.status(500).json({
