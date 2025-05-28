@@ -3,21 +3,54 @@ import { storage } from '../storage';
 import { authenticateSession, AuthenticatedRequest } from '../authentication';
 import { insertBeneficiarySchema, type Beneficiary, type InsertBeneficiary } from '@shared/schema';
 import { z } from 'zod';
+import { supabase } from '../config/db';
 
 export const router = Router();
+
+// Helper function to get unit abbreviation from full unit name
+async function getUnitAbbreviation(userFullUnitName: string): Promise<string> {
+  try {
+    // Find the unit abbreviation from the Monada table
+    const { data: monadaData, error: monadaError } = await supabase
+      .from('Monada')
+      .select('unit, unit_name')
+      .not('unit_name', 'is', null);
+    
+    if (monadaError) {
+      console.error('[Beneficiaries] Error fetching Monada data:', monadaError);
+      throw new Error('Failed to fetch unit mapping');
+    }
+    
+    // Find matching unit by comparing with unit_name.name
+    for (const monada of monadaData || []) {
+      if (monada.unit_name && typeof monada.unit_name === 'object' && monada.unit_name.name === userFullUnitName) {
+        return monada.unit;
+      }
+    }
+    
+    // If no match found, return the original name
+    return userFullUnitName;
+  } catch (error) {
+    console.error('[Beneficiaries] Error in getUnitAbbreviation:', error);
+    return userFullUnitName; // fallback
+  }
+}
 
 // Get beneficiaries filtered by user's unit
 router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Get user's unit for filtering
-    const userUnit = req.user?.units?.[0]; // Get first unit from user's units array
-    if (!userUnit) {
+    const userFullUnitName = req.user?.units?.[0]; // Get first unit from user's units array
+    if (!userFullUnitName) {
       return res.status(403).json({
         message: 'Δεν βρέθηκε μονάδα για τον χρήστη'
       });
     }
     
-    console.log(`[Beneficiaries] Fetching beneficiaries for unit: ${userUnit}`);
+    // Get the abbreviated unit code using the helper function
+    const userUnit = await getUnitAbbreviation(userFullUnitName);
+    
+    console.log(`[Beneficiaries] Fetching beneficiaries for unit: ${userUnit} (mapped from: ${userFullUnitName})`);
     const beneficiaries = await storage.getBeneficiariesByUnit(userUnit);
     console.log(`[Beneficiaries] Found ${beneficiaries.length} beneficiaries for unit ${userUnit}`);
     res.json(beneficiaries);
@@ -60,11 +93,24 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
     }
 
     // Get user's unit for filtering
-    const userUnit = req.user?.units?.[0]; // Get first unit from user's units array
-    if (!userUnit) {
+    const userFullUnitName = req.user?.units?.[0]; // Get first unit from user's units array
+    if (!userFullUnitName) {
       return res.status(403).json({
         success: false,
         message: 'Δεν βρέθηκε μονάδα για τον χρήστη'
+      });
+    }
+    
+    // Get the abbreviated unit code using the helper function
+    const userUnit = await getUnitAbbreviation(userFullUnitName);
+    
+    console.log(`[Beneficiaries] User full unit name: "${userFullUnitName}"`);
+    console.log(`[Beneficiaries] Mapped to abbreviated unit: "${userUnit}"`);
+    
+    if (!userUnit) {
+      return res.status(403).json({
+        success: false,
+        message: 'Δεν βρέθηκε αντιστοίχιση μονάδας για τον χρήστη'
       });
     }
     
