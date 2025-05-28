@@ -1412,8 +1412,8 @@ export function CreateDocumentDialog({
       }
 
       try {
-        // Fetching projects for the selected unit with cache-busting
-        const url = `/api/unit-projects/${encodeURIComponent(selectedUnit)}?t=${Date.now()}`;
+        // Fetching projects for the selected unit using working endpoint
+        const url = `/api/projects-working/${encodeURIComponent(selectedUnit)}?t=${Date.now()}`;
         
         const response = await apiRequest<any>(url);
 

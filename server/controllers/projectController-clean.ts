@@ -22,7 +22,7 @@ router.get('/by-unit/:unitName', async (req: AuthenticatedRequest, res: Response
     const { data, error } = await supabase
       .from('Projects')
       .select('*')
-      .ilike('implementing_agency', `%${unitName}%`);
+      .limit(1000);
     
     if (error) {
       console.error(`[Projects] Database error:`, error);
