@@ -6,11 +6,20 @@ import { z } from 'zod';
 
 export const router = Router();
 
-// Get all beneficiaries
+// Get beneficiaries filtered by user's unit
 router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    console.log('[Beneficiaries] Fetching all beneficiaries');
-    const beneficiaries = await storage.getAllBeneficiaries();
+    // Get user's unit for filtering
+    const userUnit = req.user?.units?.[0]; // Get first unit from user's units array
+    if (!userUnit) {
+      return res.status(403).json({
+        message: 'Δεν βρέθηκε μονάδα για τον χρήστη'
+      });
+    }
+    
+    console.log(`[Beneficiaries] Fetching beneficiaries for unit: ${userUnit}`);
+    const beneficiaries = await storage.getBeneficiariesByUnit(userUnit);
+    console.log(`[Beneficiaries] Found ${beneficiaries.length} beneficiaries for unit ${userUnit}`);
     res.json(beneficiaries);
   } catch (error) {
     console.error('[Beneficiaries] Error fetching beneficiaries:', error);
@@ -38,7 +47,7 @@ router.get('/by-unit/:unit', authenticateSession, async (req: AuthenticatedReque
   }
 });
 
-// Search beneficiaries by AFM with optional type filter
+// Search beneficiaries by AFM with optional type filter and unit restriction
 router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { afm, type } = req.query;
@@ -49,10 +58,24 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
         message: 'Το ΑΦΜ είναι υποχρεωτικό για την αναζήτηση'
       });
     }
+
+    // Get user's unit for filtering
+    const userUnit = req.user?.units?.[0]; // Get first unit from user's units array
+    if (!userUnit) {
+      return res.status(403).json({
+        success: false,
+        message: 'Δεν βρέθηκε μονάδα για τον χρήστη'
+      });
+    }
     
-    console.log(`[Beneficiaries] Searching beneficiaries by AFM: ${afm}${type ? ` and type: ${type}` : ''}`);
+    console.log(`[Beneficiaries] Searching beneficiaries by AFM: ${afm}${type ? ` and type: ${type}` : ''} for unit: ${userUnit}`);
     
     let beneficiaries = await storage.searchBeneficiariesByAFM(afm);
+    
+    // Filter by user's unit (monada field must match user's unit)
+    beneficiaries = beneficiaries.filter((beneficiary: any) => 
+      beneficiary.monada === userUnit
+    );
     
     // Filter by type if specified
     if (type && typeof type === 'string') {
@@ -60,6 +83,8 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
         beneficiary.type === type
       );
     }
+    
+    console.log(`[Beneficiaries] Found ${beneficiaries.length} beneficiaries matching criteria for unit ${userUnit}`);
     
     res.json({
       success: true,
