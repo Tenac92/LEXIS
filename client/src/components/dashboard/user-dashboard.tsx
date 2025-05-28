@@ -41,10 +41,12 @@ export function UserDashboard() {
   // State for user's documents filtered by unit
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
 
+  // Get unit-specific dashboard stats for ΔΑΕΦΚ-ΚΕ
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
-    queryKey: ["/api/dashboard/stats"],
+    queryKey: ["/api/dashboard/stats", user?.units?.[0]],
     retry: 2,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    enabled: !!user?.units?.[0] // Only fetch when user has units
   });
   
   // Query for user's recent documents with safe fallback

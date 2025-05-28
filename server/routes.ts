@@ -972,6 +972,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Handle documents routes with proper authentication
     app.use('/api/documents', authenticateSession, documentsRouter);
     log('[Routes] Document routes setup complete');
+
+    // Dashboard API routes with unit-based filtering
+    const dashboardRouter = await import('./routes/api/dashboard');
+    app.use('/api/dashboard', authenticateSession, dashboardRouter.default);
+    log('[Routes] Dashboard routes setup complete');
     
     // Import test controller
 //     const { 
