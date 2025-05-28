@@ -652,7 +652,7 @@ export class DatabaseStorage implements IStorage {
         .from('Beneficiary')
         .select('*')
         .eq('monada', unit)
-        .limit(2000); // Override default 1000 limit to get all beneficiaries
+        .range(0, 2999); // Use range instead of limit to get up to 3000 beneficiaries
         
       if (error) {
         console.error('[Storage] Error fetching beneficiaries by unit:', error);
