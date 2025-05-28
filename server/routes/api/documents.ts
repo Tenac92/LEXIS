@@ -7,7 +7,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { db, supabase } from '../../data';
 import { log } from '../../vite';
-import { AuthenticatedRequest } from '../../auth';
+import { AuthenticatedRequest } from '../../authentication';
 import { 
   User, 
   insertGeneratedDocumentSchema, 

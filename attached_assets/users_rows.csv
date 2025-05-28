@@ -1,0 +1,9 @@
+id,name,email,role,password,units,telephone,department,descr
+49,KONSTANTINOS KYRIAKOU,kkiriakou92@gmail.com,admin,$2b$10$PYu9ij.V07n2wyXRHeRCZ.zMrY6SxnnrORpO96UUQBt0M1me/W0jC,"[""ΔΑΕΦΚ-ΚΕ""]",,,
+65,test,test@test.gr,user,$2b$10$MC02QUWWvld/6EMXE.82.OB2S16zu6b4knEWZ0NKvnomEkjClsXb6,"[""ΔΑΕΦΚ-ΚΕ""]",1212,ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.),
+75,Νικόλαος Αποστόλου,napostolou@civilprotection.gr,admin,$2b$10$gt6iWiShWL31dEo4NtM1GORMA9tBFNn5IajSKQ49XqWguoalD0PjO,"[""ΔΑΕΦΚ-ΚΕ""]",0,ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.),
+76,Ιωάννης Αβραμόπουλος,iavramopoulos@civilprotection.gr,manager,$2b$10$eA7.rdxiw0n8XTEsieZUweD2qIOQpuMPSnIXCMeYe2lmksknhQXd6,"[""ΔΑΕΦΚ-ΚΕ""]",0,ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.),
+79,Δημήτριος Καραβίας,dkaravias@civilprotection.gr,user,$2b$10$LJmtODzUKekcWGlU4waCkuuD/NBcEtbbVSzCSL0/CJX3V9KpLusVy,"[""ΔΑΕΦΚ-ΚΕ""]",2131331391,ΤΜΗΜΑ ΕΠΟΠΤΕΙΑΣ ΚΑΙ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"ΠΕ ΜΗΧΑΝΙΚΩΝ "
+80,Νικόλαος Βεστάρχης,nvestarchis@civilprotection.gr,user,$2b$10$yskS.TlYSzEkLWzmUX5OQeLcRDz/lO7RcpBSMqFIOU6c5mG2J26mi,"[""ΔΑΕΦΚ-ΚΕ""]",2131331388,ΤΜΗΜΑ ΕΠΟΠΤΕΙΑΣ ΚΑΙ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,ΠΕ ΜΗΧΑΝΙΚΩΝ
+82,Κ Κυριακού,kkyriakou@civilprotection.gr,user,$2b$10$xhN/hdXQds86z1WXALE6CuQH0tcDwKYJN3TIU.L.qScEpvQZ1cIxW,"[""ΔΑΕΦΚ-ΚΕ""]",,,ΠΕ ΜΗΧΑΝΙΚΩΝ
+83,Στεφανία Ανδριοπούλου,sandriopoulou@civilprotection.gr,user,$2b$10$kecNgK2d5dElXjHIoGyvb.pJh0Fvwyh0mpIq6E8pSXwUZc/8Kr5By,"[""ΔΑΕΦΚ-ΔΕ""]",2610589115,,
