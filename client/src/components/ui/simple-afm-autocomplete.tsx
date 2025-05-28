@@ -29,24 +29,24 @@ export function SimpleAFMAutocomplete({
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
     queryKey: ['/api/employees/search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) return [];
+      if (!searchTerm || searchTerm.length < 6) return [];
       const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
       const data = await response.json();
       return data.success ? data.data : [];
     },
-    enabled: useEmployeeData && searchTerm.length >= 2,
+    enabled: useEmployeeData && searchTerm.length >= 6,
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/beneficiaries/search', searchTerm, expenditureType],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) return [];
+      if (!searchTerm || searchTerm.length < 6) return [];
       const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}&type=${encodeURIComponent(expenditureType)}`);
       const data = await response.json();
       return data.success ? data.data : [];
     },
-    enabled: !useEmployeeData && searchTerm.length >= 2,
+    enabled: !useEmployeeData && searchTerm.length >= 6,
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;
