@@ -25,16 +25,14 @@ export interface IStorage {
     }
   }>;
   
-  // Employee management operations
-  getAllEmployees(): Promise<Employee[]>;
+  // Employee management operations - SECURITY: Unit-based access only
   getEmployeesByUnit(unit: string): Promise<Employee[]>;
   searchEmployeesByAFM(afm: string): Promise<Employee[]>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee>;
   deleteEmployee(id: number): Promise<void>;
 
-  // Beneficiary management operations
-  getAllBeneficiaries(): Promise<Beneficiary[]>;
+  // Beneficiary management operations - SECURITY: Unit-based access only
   getBeneficiariesByUnit(unit: string): Promise<Beneficiary[]>;
   searchBeneficiariesByAFM(afm: string): Promise<Beneficiary[]>;
   getBeneficiaryById(id: number): Promise<Beneficiary | null>;
@@ -643,27 +641,8 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  // Beneficiary management methods
-  async getAllBeneficiaries(): Promise<Beneficiary[]> {
-    try {
-      console.log('[Storage] Fetching all beneficiaries from your table structure');
-      
-      const { data, error } = await supabase
-        .from('Beneficiary')
-        .select('*');
-        
-      if (error) {
-        console.error('[Storage] Error fetching beneficiaries:', error);
-        throw error;
-      }
-      
-      console.log(`[Storage] Successfully fetched ${data?.length || 0} beneficiaries`);
-      return data || [];
-    } catch (error) {
-      console.error('[Storage] Error in getAllBeneficiaries:', error);
-      throw error;
-    }
-  }
+  // Beneficiary management methods - SECURITY: Removed getAllBeneficiaries to prevent unauthorized access
+  // All beneficiary access must go through unit-based filtering
 
   async getBeneficiariesByUnit(unit: string): Promise<Beneficiary[]> {
     try {
