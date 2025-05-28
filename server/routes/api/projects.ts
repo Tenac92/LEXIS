@@ -68,23 +68,36 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
   try {
-    const unitName = req.params.unitName;
+    let { unitName } = req.params;
+
+    // Decode URL-encoded Greek characters
+    try {
+      unitName = decodeURIComponent(unitName);
+    } catch (decodeError) {
+      log(`[Projects] Unit name decode error, using original: ${unitName}`, 'warn');
+    }
 
     log(`[Projects] Fetching projects for unit: ${unitName}`, 'info');
+    log(`[Projects] Unit name after decoding: "${unitName}" (length: ${unitName.length})`, 'info');
 
-    // Query projects that have the unit in implementing_agency
+    // Use text search instead of JSON parsing to avoid database errors
+    // Search for the unit name within the implementing_agency field as text
     const { data, error } = await supabase
       .from('Projects')
       .select('*')
-      .contains('implementing_agency', [unitName]);
+      .ilike('implementing_agency', `%${unitName}%`);
+
+    log(`[Projects] Query executed, error:`, error);
+    log(`[Projects] Query result count:`, data?.length || 0);
 
     if (error) {
+      log(`[Projects] Database error:`, error, 'error');
       throw error;
     }
 
     log(`[Projects] Found ${data?.length || 0} projects for unit: ${unitName}`, 'info');
 
-    res.status(200).json(data);
+    res.status(200).json(data || []);
   } catch (error) {
     log(`[Projects] Error fetching projects by unit: ${error}`, 'error');
     res.status(500).json({
