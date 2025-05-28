@@ -18,6 +18,7 @@ import { BudgetService } from '../../services/budgetService';
 import { DocumentManager } from '../../utils/DocumentManager';
 import { createWebSocketServer } from '../../websocket';
 import { eq } from 'drizzle-orm';
+import { enforceUnitAccess, filterByUserUnits, getUnitAbbreviation } from '../../middleware/unitAccessControl';
 
 // Document manager instance
 const documentManager = new DocumentManager();
@@ -29,7 +30,7 @@ const router = Router();
  * Get all documents with optional filtering
  * GET /api/documents
  */
-router.get('/', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/', enforceUnitAccess, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const {
       unit,
@@ -45,18 +46,25 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
     // Build filters based on query parameters
     const filters: Record<string, any> = {};
     
-    if (unit) filters.unit = unit;
     if (status) filters.status = status;
     
-    // User role-based filtering
+    // User role-based filtering - enforce unit access control
     if (req.user?.role !== 'admin') {
       // Regular users can only see documents from their units
-      if (!req.user?.units || req.user.units.length === 0) {
-        return res.status(403).json({ message: 'No units assigned to user' });
+      const userUnits = req.user?.units || [];
+      if (userUnits.length === 0) {
+        return res.status(403).json({ message: 'Δεν έχετε εκχωρημένες μονάδες' });
       }
       
-      // Apply unit filtering based on user's assigned units
-      filters.unit = req.user.units;
+      // Filter by user's units - if specific unit requested, validate it's in user's units
+      if (unit && typeof unit === 'string' && userUnits.includes(unit)) {
+        filters.unit = [unit];
+      } else {
+        filters.unit = userUnits;
+      }
+    } else {
+      // Admins can see all units, but if unit specified, filter by it
+      if (unit) filters.unit = [unit];
     }
     
     log(`[Documents] Fetching documents with filters: ${JSON.stringify(filters)}`, 'db');
@@ -88,30 +96,45 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
       });
     }
     
-    // Ensure user ID is a valid number
-    const userId = Number(req.user.id);
-    if (isNaN(userId)) {
+    // Ensure user ID is a valid number - handle both string and number types
+    let userId: number;
+    if (typeof req.user.id === 'string') {
+      userId = parseInt(req.user.id, 10);
+    } else {
+      userId = req.user.id;
+    }
+    
+    if (isNaN(userId) || userId <= 0) {
       log(`[Documents] Invalid user ID: ${req.user.id}`, 'error');
       return res.status(400).json({
         message: 'Μη έγκυρο αναγνωριστικό χρήστη'
       });
     }
     
-    // Fetch user's documents safely with better error handling
-    log(`[Documents] Fetching documents for user ID: ${userId}`, 'debug');
+    // Get user's units for additional filtering
+    const userUnits = req.user.units || [];
+    if (userUnits.length === 0) {
+      log(`[Documents] User ${userId} has no assigned units`, 'warn');
+      return res.status(200).json([]);
+    }
+    
+    // Fetch user's documents with unit-based filtering
+    log(`[Documents] Fetching documents for user ID: ${userId}, units: ${userUnits.join(', ')}`, 'debug');
     
     const { data, error } = await supabase
       .from('generated_documents')
-      .select('id, title, status, created_at')
+      .select('id, title, status, created_at, unit')
       .eq('generated_by', userId)
+      .in('unit', userUnits)  // Only show documents from user's assigned units
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(50);
     
     if (error) {
-      log(`[Documents] Error fetching user documents: ${error}`, 'error');
+      log(`[Documents] Error fetching user documents: ${JSON.stringify(error)}`, 'error');
       throw error;
     }
     
+    log(`[Documents] Found ${data?.length || 0} documents for user ${userId}`, 'debug');
     return res.status(200).json(data || []);
     
   } catch (error) {

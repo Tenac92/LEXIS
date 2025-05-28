@@ -62,10 +62,11 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Getting projects for unit: ${unit}`);
       
-      // First, fetch all projects
+      // Fetch projects filtered by implementing_agency matching the unit
       const { data, error } = await supabase
         .from('Projects')
-        .select('*');
+        .select('*')
+        .eq('implementing_agency', unit);
 
       if (error) throw error;
       

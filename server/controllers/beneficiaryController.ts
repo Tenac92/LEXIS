@@ -54,21 +54,38 @@ async function getUnitAbbreviation(userUnitName: string): Promise<string> {
 // Get beneficiaries filtered by user's unit
 router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // Get user's unit for filtering
-    const userFullUnitName = req.user?.units?.[0]; // Get first unit from user's units array
-    if (!userFullUnitName) {
+    // Enforce unit access control
+    if (!req.user) {
+      return res.status(401).json({
+        message: 'Μη εξουσιοδοτημένη πρόσβαση'
+      });
+    }
+
+    // Admins can see all beneficiaries, regular users only from their units
+    if (req.user.role === 'admin') {
+      const beneficiaries = await storage.getAllBeneficiaries();
+      return res.json(beneficiaries);
+    }
+
+    // Get user's units for filtering
+    const userUnits = req.user.units || [];
+    if (userUnits.length === 0) {
       return res.status(403).json({
-        message: 'Δεν βρέθηκε μονάδα για τον χρήστη'
+        message: 'Δεν έχετε εκχωρημένες μονάδες'
       });
     }
     
-    // Get the abbreviated unit code using the helper function
-    const userUnit = await getUnitAbbreviation(userFullUnitName);
+    // Get beneficiaries for all user's units
+    const allBeneficiaries = [];
+    for (const fullUnitName of userUnits) {
+      const userUnit = await getUnitAbbreviation(fullUnitName);
+      console.log(`[Beneficiaries] Fetching beneficiaries for unit: ${userUnit} (mapped from: ${fullUnitName})`);
+      const unitBeneficiaries = await storage.getBeneficiariesByUnit(userUnit);
+      allBeneficiaries.push(...unitBeneficiaries);
+    }
     
-    console.log(`[Beneficiaries] Fetching beneficiaries for unit: ${userUnit} (mapped from: ${userFullUnitName})`);
-    const beneficiaries = await storage.getBeneficiariesByUnit(userUnit);
-    console.log(`[Beneficiaries] Found ${beneficiaries.length} beneficiaries for unit ${userUnit}`);
-    res.json(beneficiaries);
+    console.log(`[Beneficiaries] Found ${allBeneficiaries.length} beneficiaries across ${userUnits.length} units`);
+    res.json(allBeneficiaries);
   } catch (error) {
     console.error('[Beneficiaries] Error fetching beneficiaries:', error);
     res.status(500).json({ 
