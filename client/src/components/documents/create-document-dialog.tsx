@@ -710,6 +710,12 @@ export function CreateDocumentDialog({
   });
 
   const handleDialogOpen = useCallback(async () => {
+    // CRITICAL: Block dialog reinitialization during autocomplete operations
+    if (isAutocompletingRef.current) {
+      console.log("[CreateDocument] Blocked dialog reinitialization during autocomplete");
+      return;
+    }
+    
     // Prevent duplicate initializations
     if (dialogInitializationRef.current.isInitializing) {
       return;
@@ -879,6 +885,9 @@ export function CreateDocumentDialog({
   
   // Flag to prevent circular updates
   const isUpdatingFromContext = useRef(false);
+  
+  // Flag to completely prevent dialog resets during autocomplete
+  const isAutocompletingRef = useRef(false);
   
   // Memoized form state to prevent unnecessary re-renders
   const currentFormState = useMemo(() => {
@@ -2626,7 +2635,8 @@ export function CreateDocumentDialog({
                                 if (personData) {
                                   console.log("[AFMAutocomplete] Selection made for index:", index, "personData:", personData);
                                   
-                                  // PREVENT DIALOG RESET: Block all form reinitialization during autocomplete
+                                  // COMPLETELY BLOCK DIALOG RESETS DURING AUTOCOMPLETE
+                                  isAutocompletingRef.current = true;
                                   dialogInitializationRef.current.isInitializing = false;
                                   isUpdatingFromContext.current = true;
                                   
@@ -2651,10 +2661,11 @@ export function CreateDocumentDialog({
                                   // Use setValue without triggering form resets
                                   form.setValue("recipients", currentRecipients, { shouldDirty: false, shouldTouch: false });
                                   
-                                  // Re-enable updates after a delay
+                                  // Re-enable updates after autocomplete completes
                                   setTimeout(() => {
                                     isUpdatingFromContext.current = false;
-                                  }, 100);
+                                    isAutocompletingRef.current = false;
+                                  }, 500);
                                   
                                   console.log("[AFMAutocomplete] Successfully updated all fields for recipient", index);
                                 }
