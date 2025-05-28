@@ -385,6 +385,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Dashboard routes
     app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
+    
+    // DEDICATED PROJECT ENDPOINT - completely separate path to avoid conflicts
+    app.get('/api/unit-projects/:unitName', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        let { unitName } = req.params;
+        
+        // Decode URL-encoded Greek characters
+        try {
+          unitName = decodeURIComponent(unitName);
+        } catch (decodeError) {
+          console.log(`[UnitProjects] URL decode failed, using original: ${unitName}`);
+        }
+        
+        console.log(`[UnitProjects] Fetching projects for unit: ${unitName}`);
+        
+        // Direct database query using text search
+        const { data, error } = await supabase
+          .from('Projects')
+          .select('*')
+          .ilike('implementing_agency', `%${unitName}%`);
+        
+        if (error) {
+          console.error(`[UnitProjects] Database error:`, error);
+          return res.status(500).json({
+            message: 'Failed to fetch projects',
+            error: error.message
+          });
+        }
+        
+        console.log(`[UnitProjects] SUCCESS: Found ${data?.length || 0} projects for unit: ${unitName}`);
+        res.json(data || []);
+      } catch (error) {
+        console.error('[UnitProjects] Error:', error);
+        res.status(500).json({
+          message: 'Failed to fetch projects',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // PRIORITY PROJECT ROUTE - must come first to avoid conflicts
+    app.get('/api/projects/by-unit/:unitName', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        let { unitName } = req.params;
+        
+        // Decode URL-encoded Greek characters
+        try {
+          unitName = decodeURIComponent(unitName);
+        } catch (decodeError) {
+          console.log(`[Projects-Priority] URL decode failed, using original: ${unitName}`);
+        }
+        
+        console.log(`[Projects-Priority] Fetching projects for unit: ${unitName}`);
+        
+        // Direct database query using text search to avoid JSON parsing errors
+        const { data, error } = await supabase
+          .from('Projects')
+          .select('*')
+          .ilike('implementing_agency', `%${unitName}%`);
+        
+        if (error) {
+          console.error(`[Projects-Priority] Database error:`, error);
+          return res.status(500).json({
+            message: 'Failed to fetch projects by unit',
+            error: error.message
+          });
+        }
+        
+        console.log(`[Projects-Priority] Found ${data?.length || 0} projects for unit: ${unitName}`);
+        res.json(data || []);
+      } catch (error) {
+        console.error('[Projects-Priority] Error fetching projects by unit:', error);
+        res.status(500).json({
+          message: 'Failed to fetch projects by unit',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
 
     // Project catalog routes - maintaining both /catalog and /projects endpoints for backwards compatibility
     

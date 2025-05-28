@@ -1413,7 +1413,7 @@ export function CreateDocumentDialog({
 
       try {
         // Fetching projects for the selected unit with cache-busting
-        const url = `/api/projects/by-unit/${encodeURIComponent(selectedUnit)}?t=${Date.now()}`;
+        const url = `/api/unit-projects/${encodeURIComponent(selectedUnit)}?t=${Date.now()}`;
         
         const response = await apiRequest<any>(url);
 
