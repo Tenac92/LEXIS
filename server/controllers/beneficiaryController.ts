@@ -72,10 +72,17 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
     
     let beneficiaries = await storage.searchBeneficiariesByAFM(afm);
     
+    console.log(`[Beneficiaries] Raw search returned ${beneficiaries.length} beneficiaries`);
+    console.log(`[Beneficiaries] Sample beneficiary monada values:`, beneficiaries.slice(0, 3).map(b => ({ id: b.id, monada: b.monada })));
+    
     // Filter by user's unit (monada field must match user's unit)
-    beneficiaries = beneficiaries.filter((beneficiary: any) => 
-      beneficiary.monada === userUnit
-    );
+    beneficiaries = beneficiaries.filter((beneficiary: any) => {
+      const matches = beneficiary.monada === userUnit;
+      if (!matches) {
+        console.log(`[Beneficiaries] Filtering out beneficiary ${beneficiary.id}: monada "${beneficiary.monada}" != user unit "${userUnit}"`);
+      }
+      return matches;
+    });
     
     // Filter by type if specified
     if (type && typeof type === 'string') {
