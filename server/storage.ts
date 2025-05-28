@@ -648,18 +648,30 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Fetching beneficiaries for unit: ${unit}`);
       
+      // First, let's check the total count for this unit
+      const { count, error: countError } = await supabase
+        .from('Beneficiary')
+        .select('*', { count: 'exact', head: true })
+        .eq('monada', unit);
+        
+      if (countError) {
+        console.error('[Storage] Error counting beneficiaries:', countError);
+      } else {
+        console.log(`[Storage] Total beneficiaries in unit ${unit}: ${count}`);
+      }
+      
+      // Now fetch with no explicit limit to see Supabase's actual behavior
       const { data, error } = await supabase
         .from('Beneficiary')
         .select('*')
-        .eq('monada', unit)
-        .range(0, 2999); // Use range instead of limit to get up to 3000 beneficiaries
+        .eq('monada', unit);
         
       if (error) {
         console.error('[Storage] Error fetching beneficiaries by unit:', error);
         throw error;
       }
       
-      console.log(`[Storage] Successfully fetched ${data?.length || 0} beneficiaries for unit: ${unit}`);
+      console.log(`[Storage] Successfully fetched ${data?.length || 0} beneficiaries for unit: ${unit} (Expected: ${count})`);
       return data || [];
     } catch (error) {
       console.error('[Storage] Error in getBeneficiariesByUnit:', error);
