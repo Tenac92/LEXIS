@@ -402,8 +402,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Get authentic project data safely without any JSONB operations
         const { data: allProjects, error: queryError } = await supabase
-          .from('Projects')
-          .select('id, mis, na853, title, budget_na853, implementing_agency, status')
+          .from('Project')
+          .select('*')
           .limit(1000);
           
         if (queryError) {
