@@ -61,12 +61,11 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Getting projects for unit: ${unit}`);
       console.log(`[Storage] Unit search pattern: %${unit}%`);
       
-      // Use text search instead of JSON parsing to avoid database errors
-      // Search for the unit name within the implementing_agency field as text
+      // Use JSONB array contains to search properly
       const { data, error } = await supabase
         .from('Projects')
         .select('*')
-        .ilike('implementing_agency', `%${unit}%`);
+        .filter('implementing_agency', 'cs', `{"${unit}"}`);
 
       console.log(`[Storage] Query executed, error:`, error);
       console.log(`[Storage] Query result count:`, data?.length || 0);

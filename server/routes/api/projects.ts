@@ -80,12 +80,11 @@ router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
     log(`[Projects] Fetching projects for unit: ${unitName}`, 'info');
     log(`[Projects] Unit name after decoding: "${unitName}" (length: ${unitName.length})`, 'info');
 
-    // Use text search instead of JSON parsing to avoid database errors
-    // Search for the unit name within the implementing_agency field as text
+    // Use JSONB array contains to search properly
     const { data, error } = await supabase
       .from('Projects')
       .select('*')
-      .ilike('implementing_agency', `%${unitName}%`);
+      .filter('implementing_agency', 'cs', `{"${unitName}"}`);
 
     log(`[Projects] Query executed, error:`, error);
     log(`[Projects] Query result count:`, data?.length || 0);

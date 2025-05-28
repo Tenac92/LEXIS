@@ -400,11 +400,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[UnitProjects] Fetching projects for unit: ${unitName}`);
         
-        // Direct database query using text search
+        // Raw SQL query to handle JSONB array search properly
         const { data, error } = await supabase
           .from('Projects')
           .select('*')
-          .ilike('implementing_agency', `%${unitName}%`);
+          .filter('implementing_agency', 'cs', `{"${unitName}"}`);
         
         if (error) {
           console.error(`[UnitProjects] Database error:`, error);
