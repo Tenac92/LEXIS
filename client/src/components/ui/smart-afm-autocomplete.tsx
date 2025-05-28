@@ -34,6 +34,7 @@ interface SmartAFMAutocompleteProps {
   disabled?: boolean;
   className?: string;
   value?: string;
+  onChange?: (value: string) => void;
 }
 
 export function SmartAFMAutocomplete({
@@ -42,7 +43,8 @@ export function SmartAFMAutocomplete({
   placeholder = "Αναζήτηση με ΑΦΜ...",
   disabled = false,
   className,
-  value = ""
+  value = "",
+  onChange
 }: SmartAFMAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
@@ -135,6 +137,9 @@ export function SmartAFMAutocomplete({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setSearchTerm(newValue);
+    
+    // Notify parent component of value change for form state management
+    onChange?.(newValue);
     
     // Clear selection if user is typing
     if (newValue !== selectedValue) {
