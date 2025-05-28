@@ -644,83 +644,102 @@ export default function BeneficiariesPage() {
               {searchTerm ? "Δεν βρέθηκαν δικαιούχοι με αυτά τα κριτήρια" : "Δεν υπάρχουν δικαιούχοι"}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Α/Α</TableHead>
-                    <TableHead>Επώνυμο</TableHead>
-                    <TableHead>Όνομα</TableHead>
-                    <TableHead>Πατρώνυμο</TableHead>
-                    <TableHead>ΑΦΜ</TableHead>
-                    <TableHead>Περιφέρεια</TableHead>
-                    <TableHead>Άδεια</TableHead>
-                    <TableHead>Ποσό</TableHead>
-                    <TableHead>Δόση</TableHead>
-                    <TableHead>Τύπος</TableHead>
-                    <TableHead>Ημ/νία</TableHead>
-                    <TableHead>Μονάδα</TableHead>
-                    <TableHead>Έργο</TableHead>
-                    <TableHead>Φάκελος</TableHead>
-                    <TableHead>Ενέργειες</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBeneficiaries.map((beneficiary) => (
-                    <TableRow key={beneficiary.id}>
-                      <TableCell>{beneficiary.aa || "-"}</TableCell>
-                      <TableCell className="font-medium">{beneficiary.surname || "-"}</TableCell>
-                      <TableCell>{beneficiary.name || "-"}</TableCell>
-                      <TableCell>{beneficiary.fathername || "-"}</TableCell>
-                      <TableCell>
-                        {beneficiary.afm ? (
-                          <Badge variant="outline">{beneficiary.afm}</Badge>
-                        ) : "-"}
-                      </TableCell>
-                      <TableCell>{beneficiary.region || "-"}</TableCell>
-                      <TableCell>{beneficiary.adeia || "-"}</TableCell>
-                      <TableCell>
-                        {beneficiary.amount ? (
-                          <Badge variant="secondary">{beneficiary.amount}€</Badge>
-                        ) : "-"}
-                      </TableCell>
-                      <TableCell>{beneficiary.installment || "-"}</TableCell>
-                      <TableCell>
-                        {beneficiary.type ? (
-                          <Badge variant="outline">{beneficiary.type}</Badge>
-                        ) : "-"}
-                      </TableCell>
-                      <TableCell>{beneficiary.date || "-"}</TableCell>
-                      <TableCell className="text-sm">{beneficiary.monada || "-"}</TableCell>
-                      <TableCell>
-                        {beneficiary.project ? (
-                          <Badge variant="outline">{beneficiary.project}</Badge>
-                        ) : "-"}
-                      </TableCell>
-                      <TableCell>{beneficiary.onlinefoldernumber || "-"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(beneficiary)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(beneficiary)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+            <div className="grid gap-4">
+              {filteredBeneficiaries.map((beneficiary) => (
+                <Card key={beneficiary.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Primary Info */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-sm text-muted-foreground">Στοιχεία</span>
+                          </div>
+                          <div>
+                            <p className="font-semibold">{beneficiary.surname} {beneficiary.name}</p>
+                            <p className="text-sm text-muted-foreground">Πατρώνυμο: {beneficiary.fathername || "-"}</p>
+                            {beneficiary.afm && (
+                              <Badge variant="outline" className="mt-1">ΑΦΜ: {beneficiary.afm}</Badge>
+                            )}
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+
+                        {/* Financial Info */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm text-muted-foreground">Οικονομικά</span>
+                          </div>
+                          <div className="space-y-1">
+                            {beneficiary.amount && (
+                              <Badge variant="secondary" className="mr-2">{beneficiary.amount}€</Badge>
+                            )}
+                            {beneficiary.installment && (
+                              <Badge variant="outline">{beneficiary.installment}</Badge>
+                            )}
+                            {beneficiary.type && (
+                              <div><Badge variant="outline">{beneficiary.type}</Badge></div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Administrative Info */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm text-muted-foreground">Διοικητικά</span>
+                          </div>
+                          <div className="space-y-1 text-sm">
+                            {beneficiary.aa && <p>Α/Α: {beneficiary.aa}</p>}
+                            {beneficiary.region && <p>Περιφέρεια: {beneficiary.region}</p>}
+                            {beneficiary.adeia && <p>Άδεια: {beneficiary.adeia}</p>}
+                            {beneficiary.date && <p>Ημερομηνία: {beneficiary.date}</p>}
+                            {beneficiary.monada && <p>Μονάδα: {beneficiary.monada}</p>}
+                            {beneficiary.project && <p>Έργο: <Badge variant="outline">{beneficiary.project}</Badge></p>}
+                            {beneficiary.onlinefoldernumber && <p>Φάκελος: {beneficiary.onlinefoldernumber}</p>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex flex-col gap-2 ml-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(beneficiary)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(beneficiary)}
+                          disabled={deleteMutation.isPending}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Additional Details - Hidden by default, can be expanded */}
+                    {(beneficiary.cengsur1 || beneficiary.cengname1 || beneficiary.cengsur2 || beneficiary.cengname2 || beneficiary.freetext) && (
+                      <div className="mt-4 pt-4 border-t border-muted">
+                        <details className="text-sm">
+                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                            Πρόσθετες Πληροφορίες
+                          </summary>
+                          <div className="mt-2 space-y-1">
+                            {beneficiary.cengsur1 && <p>Απογραφή 1: {beneficiary.cengsur1} {beneficiary.cengname1}</p>}
+                            {beneficiary.cengsur2 && <p>Απογραφή 2: {beneficiary.cengsur2} {beneficiary.cengname2}</p>}
+                            {beneficiary.freetext && <p>Σημειώσεις: {beneficiary.freetext}</p>}
+                          </div>
+                        </details>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </CardContent>
