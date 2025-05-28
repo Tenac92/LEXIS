@@ -51,40 +51,38 @@ async function getUnitAbbreviation(userUnitName: string): Promise<string> {
   }
 }
 
-// Get beneficiaries filtered by user's unit
+// Get beneficiaries filtered by user's unit - CRITICAL SECURITY: Only show data for assigned units
 router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // Enforce unit access control
+    // SECURITY CHECK: Enforce unit access control
     if (!req.user) {
+      console.log('[Beneficiaries] SECURITY: Unauthorized access attempt');
       return res.status(401).json({
         message: 'Μη εξουσιοδοτημένη πρόσβαση'
       });
     }
 
-    // Admins can see all beneficiaries, regular users only from their units
-    if (req.user.role === 'admin') {
-      const beneficiaries = await storage.getAllBeneficiaries();
-      return res.json(beneficiaries);
-    }
+    console.log(`[Beneficiaries] SECURITY: User ${req.user.id} (${req.user.role}) requesting beneficiaries for units: ${req.user.units?.join(', ') || 'NONE'}`);
 
-    // Get user's units for filtering
+    // SECURITY: Get user's units for filtering - NO EXCEPTION FOR ANY ROLE
     const userUnits = req.user.units || [];
     if (userUnits.length === 0) {
+      console.log('[Beneficiaries] SECURITY: User has no assigned units - blocking access');
       return res.status(403).json({
         message: 'Δεν έχετε εκχωρημένες μονάδες'
       });
     }
     
-    // Get beneficiaries for all user's units
+    // SECURITY: Get beneficiaries ONLY for user's assigned units
     const allBeneficiaries = [];
     for (const fullUnitName of userUnits) {
       const userUnit = await getUnitAbbreviation(fullUnitName);
-      console.log(`[Beneficiaries] Fetching beneficiaries for unit: ${userUnit} (mapped from: ${fullUnitName})`);
+      console.log(`[Beneficiaries] SECURITY: Fetching beneficiaries ONLY for authorized unit: ${userUnit} (mapped from: ${fullUnitName})`);
       const unitBeneficiaries = await storage.getBeneficiariesByUnit(userUnit);
       allBeneficiaries.push(...unitBeneficiaries);
     }
     
-    console.log(`[Beneficiaries] Found ${allBeneficiaries.length} beneficiaries across ${userUnits.length} units`);
+    console.log(`[Beneficiaries] SECURITY: Returning ${allBeneficiaries.length} beneficiaries from ${userUnits.length} authorized units only`);
     res.json(allBeneficiaries);
   } catch (error) {
     console.error('[Beneficiaries] Error fetching beneficiaries:', error);
