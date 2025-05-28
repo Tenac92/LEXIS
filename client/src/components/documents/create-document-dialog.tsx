@@ -2624,7 +2624,6 @@ export function CreateDocumentDialog({
                                     fathername: personData.fathername || "",
                                     afm: String(personData.afm || ""),
                                     secondary_text: (personData as any).freetext || (personData as any).attribute || "",
-                                    installments: (personData as any).installment || "",
                                     amount: (personData as any).amount || "",
                                   };
                                   form.setValue("recipients", [...currentRecipients]);
