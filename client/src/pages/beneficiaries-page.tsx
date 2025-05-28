@@ -454,24 +454,25 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                   name="project"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Έργο</FormLabel>
-                      <Select 
-                        onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
-                        value={field.value?.toString() || ""}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Επιλέξτε έργο" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {projects?.map((project: any) => (
-                            <SelectItem key={project.mis} value={project.mis.toString()}>
-                              {project.mis} - {project.title?.substring(0, 50) || 'Χωρίς τίτλο'}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Έργο (MIS Κωδικός)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            {...field}
+                            type="number"
+                            placeholder="π.χ. 5222792"
+                            value={field.value || ''}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            className="pr-10"
+                          />
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
+                            MIS
+                          </div>
+                        </div>
+                      </FormControl>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Εισάγετε τον κωδικό MIS του έργου (π.χ. 5222792)
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
