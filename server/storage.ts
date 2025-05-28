@@ -60,11 +60,10 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Getting projects for unit: ${unit}`);
       
-      // Fetch projects filtered by implementing_agency matching the unit
+      // Fetch all projects first since implementing_agency is a JSON field that can't be directly queried
       const { data, error } = await supabase
         .from('Projects')
-        .select('*')
-        .eq('implementing_agency', unit);
+        .select('*');
 
       if (error) throw error;
       
