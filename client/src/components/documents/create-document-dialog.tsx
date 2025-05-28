@@ -2590,6 +2590,11 @@ export function CreateDocumentDialog({
                           <div className="md:col-span-2 md:row-span-1">
                             <SimpleAFMAutocomplete
                               expenditureType={form.getValues("expenditure_type") || ""}
+                              value={form.watch(`recipients.${index}.afm`) || ""}
+                              onChange={(value) => {
+                                // Update the AFM field in the form when user types
+                                form.setValue(`recipients.${index}.afm`, value);
+                              }}
                               onSelectPerson={(personData) => {
                                 if (personData) {
                                   console.log("[AFMAutocomplete] Selection made for index:", index, "personData:", personData);
