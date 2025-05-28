@@ -2622,14 +2622,16 @@ export function CreateDocumentDialog({
                                     installmentAmounts: installmentValue && amountValue ? { [installmentValue]: amountValue } : { "ΕΦΑΠΑΞ": amountValue }
                                   };
                                   
-                                  // Use setValue without triggering form resets
-                                  form.setValue("recipients", currentRecipients, { shouldDirty: false, shouldTouch: false });
+                                  // Use setValue and trigger validation to ensure form recognizes the changes
+                                  form.setValue("recipients", currentRecipients, { shouldDirty: true, shouldValidate: true });
                                   
-                                  // Re-enable updates after autocomplete completes
-                                  setTimeout(() => {
+                                  // Trigger form validation after autocomplete to ensure save button works
+                                  setTimeout(async () => {
+                                    await form.trigger(`recipients.${index}`);
+                                    await form.trigger("recipients");
                                     isUpdatingFromContext.current = false;
                                     isAutocompletingRef.current = false;
-                                  }, 500);
+                                  }, 200);
                                   
                                   console.log("[AFMAutocomplete] Successfully updated all fields for recipient", index);
                                 }
