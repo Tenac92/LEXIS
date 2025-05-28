@@ -8,9 +8,22 @@ import { supabase } from '../config/db';
 export const router = Router();
 
 // Helper function to get unit abbreviation from full unit name
-async function getUnitAbbreviation(userFullUnitName: string): Promise<string> {
+async function getUnitAbbreviation(userUnitName: string): Promise<string> {
   try {
-    // Find the unit abbreviation from the Monada table
+    // First check if it's already an abbreviation by checking if it exists in Monada.unit
+    const { data: existingUnit, error: existingError } = await supabase
+      .from('Monada')
+      .select('unit')
+      .eq('unit', userUnitName)
+      .single();
+    
+    if (!existingError && existingUnit) {
+      // It's already an abbreviation, return as-is
+      console.log(`[Beneficiaries] Unit "${userUnitName}" is already an abbreviation`);
+      return userUnitName;
+    }
+    
+    // If not found as abbreviation, try to find it as a full name
     const { data: monadaData, error: monadaError } = await supabase
       .from('Monada')
       .select('unit, unit_name')
@@ -23,16 +36,18 @@ async function getUnitAbbreviation(userFullUnitName: string): Promise<string> {
     
     // Find matching unit by comparing with unit_name.name
     for (const monada of monadaData || []) {
-      if (monada.unit_name && typeof monada.unit_name === 'object' && monada.unit_name.name === userFullUnitName) {
+      if (monada.unit_name && typeof monada.unit_name === 'object' && monada.unit_name.name === userUnitName) {
+        console.log(`[Beneficiaries] Mapped full name "${userUnitName}" to abbreviation "${monada.unit}"`);
         return monada.unit;
       }
     }
     
-    // If no match found, return the original name
-    return userFullUnitName;
+    // If no match found, return the original name (fallback)
+    console.log(`[Beneficiaries] No mapping found for "${userUnitName}", using as-is`);
+    return userUnitName;
   } catch (error) {
     console.error('[Beneficiaries] Error in getUnitAbbreviation:', error);
-    return userFullUnitName; // fallback
+    return userUnitName; // fallback
   }
 }
 
