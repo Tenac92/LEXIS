@@ -5,10 +5,14 @@ export async function getDashboardStats(req: Request, res: Response) {
   try {
     console.log('[Dashboard] Starting to fetch dashboard statistics...');
 
-    // Get document counts with single query
+    // Get document counts filtered by user's unit - SECURITY CRITICAL
+    const userUnits = (req as any).user?.units || [];
+    const primaryUnit = userUnits[0] || 'ΔΑΕΦΚ-ΚΕ';
+    
     const { data: documentsData, error: documentsError } = await supabase
       .from('generated_documents')
-      .select('status')
+      .select('status, unit')
+      .eq('unit', primaryUnit) // Only show documents from user's authorized unit
       .order('created_at', { ascending: false });
 
     if (documentsError) {
