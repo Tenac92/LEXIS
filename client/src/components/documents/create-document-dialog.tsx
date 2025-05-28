@@ -2205,135 +2205,59 @@ export function CreateDocumentDialog({
 
   const handleNext = async () => {
     try {
-      let fieldsToValidate: Array<keyof CreateDocumentForm> = [];
-
-      form.clearErrors();
-
+      // SIMPLIFIED: Basic validation only - allow more flexible navigation
+      console.log("[CreateDocument] Moving to next step from:", currentStep);
+      
+      // Save current form state before proceeding
+      const formValues = form.getValues();
+      updateFormData({
+        unit: formValues.unit,
+        project_id: formValues.project_id,
+        region: formValues.region,
+        expenditure_type: formValues.expenditure_type,
+        recipients: formValues.recipients,
+        status: formValues.status,
+        selectedAttachments: formValues.selectedAttachments
+      });
+      
+      // Simple step validation
       switch (currentStep) {
         case 0:
-          fieldsToValidate = ["unit"];
+          if (!formValues.unit) {
+            toast({
+              title: "Επιλέξτε Μονάδα",
+              description: "Παρακαλώ επιλέξτε μονάδα για να συνεχίσετε",
+              variant: "destructive",
+            });
+            return;
+          }
           break;
         case 1:
-          fieldsToValidate = ["project_id", "expenditure_type"];
+          if (!formValues.project_id || !formValues.expenditure_type) {
+            toast({
+              title: "Συμπληρώστε Στοιχεία Έργου",
+              description: "Παρακαλώ επιλέξτε έργο και τύπο δαπάνης",
+              variant: "destructive",
+            });
+            return;
+          }
           break;
         case 2:
-          fieldsToValidate = ["recipients"];
-          const recipients = form.getValues("recipients");
-
-          if (!recipients || recipients.length === 0) {
+          if (!formValues.recipients || formValues.recipients.length === 0) {
             toast({
-              title: "Σφάλμα Επικύρωσης",
+              title: "Προσθέστε Δικαιούχους",
               description: "Παρακαλώ προσθέστε τουλάχιστον έναν δικαιούχο",
               variant: "destructive",
             });
             return;
           }
-
-          const invalidRecipient = recipients.find(
-            (r) =>
-              !r.firstname?.trim() ||
-              !r.lastname?.trim() ||
-              !r.afm?.trim() ||
-              typeof r.amount !== "number" ||
-              !r.amount ||
-              !r.installments ||
-              r.installments.length === 0,
-          );
-
-          if (invalidRecipient) {
-            toast({
-              title: "Σφάλμα Επικύρωσης",
-              description:
-                "Παρακαλώ συμπληρώστε όλα τα πεδία για κάθε δικαιούχο",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          // Check that all installments have corresponding amount values
-          const recipientWithoutInstallmentAmounts = recipients.find((r) => {
-            if (!r.installmentAmounts) return true;
-
-            // For each installment, make sure there's a corresponding amount value
-            return r.installments.some((installment) => {
-              return (
-                !r.installmentAmounts ||
-                !(installment in r.installmentAmounts) ||
-                typeof r.installmentAmounts[installment] !== "number" ||
-                r.installmentAmounts[installment] <= 0
-              );
-            });
-          });
-
-          if (recipientWithoutInstallmentAmounts) {
-            toast({
-              title: "Σφάλμα Επικύρωσης",
-              description: "Παρακαλώ συμπληρώστε ποσό για κάθε επιλεγμένη δόση",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          // For recipients with multiple installments, validate that each installment has a non-zero amount
-          const recipientWithZeroInstallmentAmount = recipients.find((r) => {
-            if (r.installments.length <= 1) return false;
-
-            return r.installments.some((installment) => {
-              return (
-                !r.installmentAmounts ||
-                !(installment in r.installmentAmounts) ||
-                r.installmentAmounts[installment] <= 0
-              );
-            });
-          });
-
-          if (recipientWithZeroInstallmentAmount) {
-            toast({
-              title: "Σφάλμα Επικύρωσης",
-              description:
-                "Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο του μηδενός",
-              variant: "destructive",
-            });
-            return;
-          }
-          break;
-        case 3:
           break;
       }
-
-      const isValid = await form.trigger(fieldsToValidate);
-
-      if (isValid) {
-        // CRITICAL FIX: Explicitly save all form data to context before changing steps
-        // This prevents the unit selection from resetting when moving between steps
-        const formValues = form.getValues();
-        updateFormData({
-          unit: formValues.unit,
-          project_id: formValues.project_id,
-          region: formValues.region,
-          expenditure_type: formValues.expenditure_type,
-          recipients: formValues.recipients,
-          status: formValues.status,
-          selectedAttachments: formValues.selectedAttachments
-        });
-        
-        console.log("[CreateDocument] Saved form state to context before step change");
-        setDirection(1);
-        setCurrentStep(Math.min(currentStep + 1, 3));
-      } else {
-        const errors = form.formState.errors;
-        const errorFields = Object.keys(errors);
-        const errorMessage =
-          errorFields.length > 0
-            ? `Παρακαλώ ελέγξτε τα πεδία: ${errorFields.join(", ")}`
-            : "Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία";
-
-        toast({
-          title: "Σφάλμα Επικύρωσης",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      }
+      
+      // Move to next step
+      setDirection(1);
+      setCurrentStep(Math.min(currentStep + 1, 3));
+      
     } catch (error) {
       console.error("Navigation error:", error);
       toast({
@@ -2372,8 +2296,9 @@ export function CreateDocumentDialog({
   };
 
   const handlePrevious = () => {
-    // CRITICAL FIX: Also save form state when going back
-    // This ensures unit selection persistence when navigating between steps
+    console.log("[CreateDocument] Moving to previous step from:", currentStep);
+    
+    // Save form state when going back
     const formValues = form.getValues();
     updateFormData({
       unit: formValues.unit,
@@ -2385,7 +2310,7 @@ export function CreateDocumentDialog({
       selectedAttachments: formValues.selectedAttachments
     });
     
-    console.log("[CreateDocument] Saved form state before going to previous step");
+    // Simple step transition
     setDirection(-1);
     setCurrentStep(Math.max(currentStep - 1, 0));
   };
