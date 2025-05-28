@@ -2626,19 +2626,35 @@ export function CreateDocumentDialog({
                                 if (personData) {
                                   console.log("[AFMAutocomplete] Selection made for index:", index, "personData:", personData);
                                   
+                                  // PREVENT DIALOG RESET: Block all form reinitialization during autocomplete
+                                  dialogInitializationRef.current.isInitializing = false;
+                                  isUpdatingFromContext.current = true;
+                                  
                                   // Get installment and amount from beneficiary data
                                   const installmentValue = (personData as any).installment || "";
                                   const amountValue = parseFloat((personData as any).amount || "0") || 0;
                                   
-                                  // Update individual fields to avoid triggering dialog reset
-                                  form.setValue(`recipients.${index}.firstname`, personData.name || "");
-                                  form.setValue(`recipients.${index}.lastname`, personData.surname || "");
-                                  form.setValue(`recipients.${index}.fathername`, personData.fathername || "");
-                                  form.setValue(`recipients.${index}.afm`, String(personData.afm || ""));
-                                  form.setValue(`recipients.${index}.secondary_text`, (personData as any).freetext || (personData as any).attribute || "");
-                                  form.setValue(`recipients.${index}.amount`, amountValue);
-                                  form.setValue(`recipients.${index}.installments`, installmentValue ? [installmentValue] : ["ΕΦΑΠΑΞ"]);
-                                  form.setValue(`recipients.${index}.installmentAmounts`, installmentValue && amountValue ? { [installmentValue]: amountValue } : { "ΕΦΑΠΑΞ": amountValue });
+                                  // Update the recipient data directly in the current form state
+                                  const currentRecipients = form.getValues("recipients");
+                                  currentRecipients[index] = {
+                                    ...currentRecipients[index],
+                                    firstname: personData.name || "",
+                                    lastname: personData.surname || "",
+                                    fathername: personData.fathername || "",
+                                    afm: String(personData.afm || ""),
+                                    secondary_text: (personData as any).freetext || (personData as any).attribute || "",
+                                    amount: amountValue,
+                                    installments: installmentValue ? [installmentValue] : ["ΕΦΑΠΑΞ"],
+                                    installmentAmounts: installmentValue && amountValue ? { [installmentValue]: amountValue } : { "ΕΦΑΠΑΞ": amountValue }
+                                  };
+                                  
+                                  // Use setValue without triggering form resets
+                                  form.setValue("recipients", currentRecipients, { shouldDirty: false, shouldTouch: false });
+                                  
+                                  // Re-enable updates after a delay
+                                  setTimeout(() => {
+                                    isUpdatingFromContext.current = false;
+                                  }, 100);
                                   
                                   console.log("[AFMAutocomplete] Successfully updated all fields for recipient", index);
                                 }
