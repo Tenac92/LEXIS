@@ -654,13 +654,13 @@ export default function BeneficiariesPage() {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium text-sm text-muted-foreground">Στοιχεία</span>
+                            <span className="font-medium text-base text-muted-foreground">Στοιχεία</span>
                           </div>
                           <div>
-                            <p className="font-semibold">{beneficiary.surname} {beneficiary.name}</p>
-                            <p className="text-sm text-muted-foreground">Πατρώνυμο: {beneficiary.fathername || "-"}</p>
+                            <p className="font-semibold text-lg">{beneficiary.surname} {beneficiary.name}</p>
+                            <p className="text-base text-muted-foreground">Πατρώνυμο: {beneficiary.fathername || "-"}</p>
                             {beneficiary.afm && (
-                              <Badge variant="outline" className="mt-1">ΑΦΜ: {beneficiary.afm}</Badge>
+                              <Badge variant="outline" className="mt-1 text-sm">ΑΦΜ: {beneficiary.afm}</Badge>
                             )}
                           </div>
                         </div>
@@ -668,17 +668,17 @@ export default function BeneficiariesPage() {
                         {/* Financial Info */}
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm text-muted-foreground">Οικονομικά</span>
+                            <span className="font-medium text-base text-muted-foreground">Οικονομικά</span>
                           </div>
                           <div className="space-y-1">
                             {beneficiary.amount && (
-                              <Badge variant="secondary" className="mr-2">{beneficiary.amount}€</Badge>
+                              <Badge variant="secondary" className="mr-2 text-sm">{beneficiary.amount}€</Badge>
                             )}
                             {beneficiary.installment && (
-                              <Badge variant="outline">{beneficiary.installment}</Badge>
+                              <Badge variant="outline" className="text-sm">{beneficiary.installment}</Badge>
                             )}
                             {beneficiary.type && (
-                              <div><Badge variant="outline">{beneficiary.type}</Badge></div>
+                              <div><Badge variant="outline" className="text-sm">{beneficiary.type}</Badge></div>
                             )}
                           </div>
                         </div>
@@ -686,15 +686,15 @@ export default function BeneficiariesPage() {
                         {/* Administrative Info */}
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm text-muted-foreground">Διοικητικά</span>
+                            <span className="font-medium text-base text-muted-foreground">Διοικητικά</span>
                           </div>
-                          <div className="space-y-1 text-sm">
+                          <div className="space-y-1 text-base">
                             {beneficiary.aa && <p>Α/Α: {beneficiary.aa}</p>}
                             {beneficiary.region && <p>Περιφέρεια: {beneficiary.region}</p>}
                             {beneficiary.adeia && <p>Άδεια: {beneficiary.adeia}</p>}
                             {beneficiary.date && <p>Ημερομηνία: {beneficiary.date}</p>}
                             {beneficiary.monada && <p>Μονάδα: {beneficiary.monada}</p>}
-                            {beneficiary.project && <p>Έργο: <Badge variant="outline">{beneficiary.project}</Badge></p>}
+                            {beneficiary.project && <p>Έργο: <Badge variant="outline" className="text-sm">{beneficiary.project}</Badge></p>}
                             {beneficiary.onlinefoldernumber && <p>Φάκελος: {beneficiary.onlinefoldernumber}</p>}
                           </div>
                         </div>
@@ -725,13 +725,13 @@ export default function BeneficiariesPage() {
                     {/* Additional Details - Hidden by default, can be expanded */}
                     {(beneficiary.cengsur1 || beneficiary.cengname1 || beneficiary.cengsur2 || beneficiary.cengname2 || beneficiary.freetext) && (
                       <div className="mt-4 pt-4 border-t border-muted">
-                        <details className="text-sm">
-                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                        <details className="text-base">
+                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground font-medium">
                             Πρόσθετες Πληροφορίες
                           </summary>
                           <div className="mt-2 space-y-1">
-                            {beneficiary.cengsur1 && <p>Απογραφή 1: {beneficiary.cengsur1} {beneficiary.cengname1}</p>}
-                            {beneficiary.cengsur2 && <p>Απογραφή 2: {beneficiary.cengsur2} {beneficiary.cengname2}</p>}
+                            {beneficiary.cengsur1 && <p>ΜΗΧΑΝΙΚΌΣ 1: {beneficiary.cengsur1} {beneficiary.cengname1}</p>}
+                            {beneficiary.cengsur2 && <p>ΜΗΧΑΝΙΚΌΣ 2: {beneficiary.cengsur2} {beneficiary.cengname2}</p>}
                             {beneficiary.freetext && <p>Σημειώσεις: {beneficiary.freetext}</p>}
                           </div>
                         </details>
