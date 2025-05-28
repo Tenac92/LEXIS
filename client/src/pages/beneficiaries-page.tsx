@@ -55,7 +55,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
   
   // Fetch projects for dropdown
   const { data: projects = [] } = useQuery({
-    queryKey: ["/api/projects"],
+    queryKey: ["/api/projects/all"],
     enabled: open, // Only fetch when dialog is open
   });
   
@@ -414,7 +414,7 @@ export default function BeneficiariesPage() {
     try {
       const headers = [
         'Α/Α', 'Επώνυμο', 'Όνομα', 'Πατρώνυμο', 'ΑΦΜ', 'Περιφέρεια', 
-        'Άδεια', 'Ποσό', 'Δόση', 'Τύπος', 'Ημερομηνία', 'Μονάδα', 
+        'Άδεια', 'Ποσό', 'Δόση', 'Τύπος', 'Ημερομηνία', 'Μονάδα', 'Έργο',
         'Επώνυμο Απογραφής 1', 'Όνομα Απογραφής 1', 'Επώνυμο Απογραφής 2', 
         'Όνομα Απογραφής 2', 'Αριθμός Φακέλου', 'Ελεύθερο Κείμενο'
       ];
@@ -425,7 +425,7 @@ export default function BeneficiariesPage() {
           b.aa || '', b.surname || '', b.name || '', b.fathername || '',
           b.afm || '', b.region || '', b.adeia || '', b.amount || '',
           b.installment || '', b.type || '', b.date || '', b.monada || '',
-          b.cengsur1 || '', b.cengname1 || '', b.cengsur2 || '', 
+          b.project || '', b.cengsur1 || '', b.cengname1 || '', b.cengsur2 || '', 
           b.cengname2 || '', b.onlinefoldernumber || '', b.freetext || ''
         ].join(','))
       ].join('\n');
@@ -490,12 +490,13 @@ export default function BeneficiariesPage() {
                 type: values[9] || '',
                 date: values[10] || '',
                 monada: values[11] || '',
-                cengsur1: values[12] || '',
-                cengname1: values[13] || '',
-                cengsur2: values[14] || '',
-                cengname2: values[15] || '',
-                onlinefoldernumber: values[16] || '',
-                freetext: values[17] || ''
+                project: values[12] ? parseInt(values[12]) : undefined,
+                cengsur1: values[13] || '',
+                cengname1: values[14] || '',
+                cengsur2: values[15] || '',
+                cengname2: values[16] || '',
+                onlinefoldernumber: values[17] || '',
+                freetext: values[18] || ''
               }),
             });
             imported++;
@@ -659,6 +660,7 @@ export default function BeneficiariesPage() {
                     <TableHead>Τύπος</TableHead>
                     <TableHead>Ημ/νία</TableHead>
                     <TableHead>Μονάδα</TableHead>
+                    <TableHead>Έργο</TableHead>
                     <TableHead>Φάκελος</TableHead>
                     <TableHead>Ενέργειες</TableHead>
                   </TableRow>
@@ -690,6 +692,11 @@ export default function BeneficiariesPage() {
                       </TableCell>
                       <TableCell>{beneficiary.date || "-"}</TableCell>
                       <TableCell className="text-sm">{beneficiary.monada || "-"}</TableCell>
+                      <TableCell>
+                        {beneficiary.project ? (
+                          <Badge variant="outline">{beneficiary.project}</Badge>
+                        ) : "-"}
+                      </TableCell>
                       <TableCell>{beneficiary.onlinefoldernumber || "-"}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
