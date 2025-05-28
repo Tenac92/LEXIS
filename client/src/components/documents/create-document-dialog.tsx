@@ -716,36 +716,44 @@ export function CreateDocumentDialog({
       return;
     }
     
+    // CRITICAL: Block reinitialization if dialog is already open and in use
+    if (open && currentStep > 0) {
+      console.log("[CreateDocument] Blocked reinitialization - dialog already in use at step:", currentStep);
+      return;
+    }
+    
     // Prevent duplicate initializations
     if (dialogInitializationRef.current.isInitializing) {
       return;
     }
     
-    // FRESH START: Clear previous document state when opening for new document
-    console.log("[CreateDocument] Starting fresh document creation");
-    
-    // Reset form to default values for new document
-    form.reset({
-      unit: "",
-      project_id: "",
-      region: "",
-      expenditure_type: "",
-      recipients: [],
-      status: "draft",
-      selectedAttachments: []
-    });
-    
-    // Reset context state
-    updateFormData({
-      unit: "",
-      project_id: "",
-      region: "",
-      expenditure_type: "",
-      recipients: [],
-      status: "draft",
-      selectedAttachments: []
-    });
-    setCurrentStep(0);
+    // Only reset for truly new documents (when dialog first opens)
+    if (!open) {
+      console.log("[CreateDocument] Starting fresh document creation");
+      
+      // Reset form to default values for new document
+      form.reset({
+        unit: "",
+        project_id: "",
+        region: "",
+        expenditure_type: "",
+        recipients: [],
+        status: "draft",
+        selectedAttachments: []
+      });
+      
+      // Reset context state
+      updateFormData({
+        unit: "",
+        project_id: "",
+        region: "",
+        expenditure_type: "",
+        recipients: [],
+        status: "draft",
+        selectedAttachments: []
+      });
+      setCurrentStep(0);
+    }
     
     // Dialog initialization - form and units data will be refreshed
     
@@ -839,12 +847,12 @@ export function CreateDocumentDialog({
     }
   }, [form, formData, queryClient, refreshUser, savedStep, toast, currentStep]);
   
-  // Effect to handle dialog open state
+  // Effect to handle dialog open state - FIXED: Remove handleDialogOpen from dependencies to prevent infinite loop
   useEffect(() => {
-    if (open) {
+    if (open && !dialogInitializationRef.current.isInitializing) {
       handleDialogOpen();
     }
-  }, [open, handleDialogOpen]);
+  }, [open]); // Removed handleDialogOpen from dependencies
 
   // CRITICAL FIX: Completely redesigned unit default-setting mechanism
   // Uses a separate reference to track unit initialization to prevent duplicate operations
