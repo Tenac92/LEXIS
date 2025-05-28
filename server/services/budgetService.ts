@@ -141,7 +141,7 @@ export class BudgetService {
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
             .select('id, mis')
-            .eq('budget_na853', mis) // Look up by budget_na853 field (this is the correct field name)
+            .eq('na853', mis) // Look up by na853 field (this is the correct field name)
             .single();
           
           if (projectError && projectError.code !== 'PGRST116') {
