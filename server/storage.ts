@@ -651,7 +651,8 @@ export class DatabaseStorage implements IStorage {
       const { data, error } = await supabase
         .from('Beneficiary')
         .select('*')
-        .eq('monada', unit);
+        .eq('monada', unit)
+        .limit(2000); // Override default 1000 limit to get all beneficiaries
         
       if (error) {
         console.error('[Storage] Error fetching beneficiaries by unit:', error);
