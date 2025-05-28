@@ -614,6 +614,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
+    // CLEAN PROJECT ROUTES - direct implementation to fix loading issues
+    app.get('/api/projects/by-unit/:unitName', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        let { unitName } = req.params;
+        
+        // Decode URL-encoded Greek characters
+        try {
+          unitName = decodeURIComponent(unitName);
+        } catch (decodeError) {
+          console.log(`[Projects] URL decode failed, using original: ${unitName}`);
+        }
+        
+        console.log(`[Projects] Fetching projects for unit: ${unitName}`);
+        
+        // Direct database query using text search to avoid JSON parsing errors
+        const { data, error } = await supabase
+          .from('Projects')
+          .select('*')
+          .ilike('implementing_agency', `%${unitName}%`);
+        
+        if (error) {
+          console.error(`[Projects] Database error:`, error);
+          return res.status(500).json({
+            message: 'Failed to fetch projects by unit',
+            error: error.message
+          });
+        }
+        
+        console.log(`[Projects] Found ${data?.length || 0} projects for unit: ${unitName}`);
+        res.json(data || []);
+      } catch (error) {
+        console.error('[Projects] Error fetching projects by unit:', error);
+        res.status(500).json({
+          message: 'Failed to fetch projects by unit',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
     // Use authentication for all other project routes
     app.use('/api/projects', authenticateSession, projectRouter);
     app.use('/api/catalog', authenticateSession, projectRouter);
