@@ -48,7 +48,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { AFMInputWithAutoFill } from "@/components/afm-autocomplete-field";
+import { SmartAFMAutocomplete } from "@/components/ui/smart-afm-autocomplete";
 import {
   Command,
   CommandEmpty,
@@ -2668,26 +2668,21 @@ export function CreateDocumentDialog({
                             autoComplete="off"
                           />
 
-                          {/* ΑΦΜ με αυτόματη συμπλήρωση */}
+                          {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
                           <div className="md:col-span-2 md:row-span-1">
-                            <AFMInputWithAutoFill
-                              value={recipient.afm || ""}
-                              onChange={(value) => {
-                                const currentRecipients = form.getValues("recipients");
-                                currentRecipients[index].afm = value;
-                                form.setValue("recipients", [...currentRecipients]);
-                              }}
-                              onAutoFill={(employeeData) => {
-                                if (employeeData) {
-                                  // Auto-fill all recipient fields from employee data
+                            <SmartAFMAutocomplete
+                              expenditureType={form.getValues("expenditure_type") || ""}
+                              onSelectPerson={(personData) => {
+                                if (personData) {
+                                  // Auto-fill all recipient fields from employee/beneficiary data
                                   const currentRecipients = form.getValues("recipients");
                                   currentRecipients[index] = {
                                     ...currentRecipients[index],
-                                    firstname: employeeData.firstname,
-                                    lastname: employeeData.lastname,
-                                    fathername: employeeData.fathername,
-                                    afm: employeeData.afm,
-                                    secondary_text: employeeData.secondary_text,
+                                    firstname: personData.name || personData.firstname || "",
+                                    lastname: personData.surname || personData.lastname || "",
+                                    fathername: personData.fathername || "",
+                                    afm: String(personData.afm || ""),
+                                    secondary_text: personData.attribute || personData.secondary_text || "",
                                   };
                                   form.setValue("recipients", [...currentRecipients]);
                                 }
