@@ -1989,19 +1989,26 @@ export function CreateDocumentDialog({
   }, [selectedProjectId, projects, form]);
 
   useEffect(() => {
+    // Only auto-select unit if the dialog is open and no unit is already selected
+    if (!open) return;
+    
+    const currentUnit = form.getValues("unit");
+    if (currentUnit) return; // Don't override existing selection
+    
     // Auto-select unit based on available options
     if (units?.length === 1) {
-      // If only one unit option exists, select it automatically
+      console.log("[CreateDocument] Auto-selected the only available unit:", units[0].id);
       form.setValue("unit", units[0].id);
     } else if (user?.units?.length === 1 && units?.length > 0) {
       // If user has only one assigned unit, find its matching unit object and select it
       const userUnit = user?.units?.[0] || "";
       const matchingUnit = units.find((unit) => unit.id === userUnit);
       if (matchingUnit) {
+        console.log("[CreateDocument] Auto-selected user's unit:", matchingUnit.id);
         form.setValue("unit", matchingUnit.id);
       }
     }
-  }, [units, user?.units, form]);
+  }, [units, user?.units, form, open]);
 
   const { data: regions = [], isLoading: regionsLoading } = useQuery({
     queryKey: ["regions", selectedProjectId],
@@ -2618,29 +2625,22 @@ export function CreateDocumentDialog({
                               onSelectPerson={(personData) => {
                                 if (personData) {
                                   console.log("[AFMAutocomplete] Selection made for index:", index, "personData:", personData);
-                                  // Auto-fill all recipient fields from employee/beneficiary data
-                                  const currentRecipients = form.getValues("recipients");
-                                  console.log("[AFMAutocomplete] Current recipients before update:", currentRecipients.length);
                                   
                                   // Get installment and amount from beneficiary data
                                   const installmentValue = (personData as any).installment || "";
                                   const amountValue = parseFloat((personData as any).amount || "0") || 0;
                                   
-                                  currentRecipients[index] = {
-                                    ...currentRecipients[index],
-                                    firstname: personData.name || "",
-                                    lastname: personData.surname || "",
-                                    fathername: personData.fathername || "",
-                                    afm: String(personData.afm || ""),
-                                    secondary_text: (personData as any).freetext || (personData as any).attribute || "",
-                                    amount: amountValue,
-                                    installments: installmentValue ? [installmentValue] : ["ΕΦΑΠΑΞ"],
-                                    installmentAmounts: installmentValue && amountValue ? { [installmentValue]: amountValue } : { "ΕΦΑΠΑΞ": amountValue }
-                                  };
+                                  // Update individual fields to avoid triggering dialog reset
+                                  form.setValue(`recipients.${index}.firstname`, personData.name || "");
+                                  form.setValue(`recipients.${index}.lastname`, personData.surname || "");
+                                  form.setValue(`recipients.${index}.fathername`, personData.fathername || "");
+                                  form.setValue(`recipients.${index}.afm`, String(personData.afm || ""));
+                                  form.setValue(`recipients.${index}.secondary_text`, (personData as any).freetext || (personData as any).attribute || "");
+                                  form.setValue(`recipients.${index}.amount`, amountValue);
+                                  form.setValue(`recipients.${index}.installments`, installmentValue ? [installmentValue] : ["ΕΦΑΠΑΞ"]);
+                                  form.setValue(`recipients.${index}.installmentAmounts`, installmentValue && amountValue ? { [installmentValue]: amountValue } : { "ΕΦΑΠΑΞ": amountValue });
                                   
-                                  console.log("[AFMAutocomplete] Updated recipient:", currentRecipients[index]);
-                                  console.log("[AFMAutocomplete] Setting recipients to:", currentRecipients.length, "items");
-                                  form.setValue("recipients", [...currentRecipients]);
+                                  console.log("[AFMAutocomplete] Successfully updated all fields for recipient", index);
                                 }
                               }}
                               placeholder="ΑΦΜ"
