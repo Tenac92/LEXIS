@@ -170,7 +170,7 @@ export class BudgetService {
       
       // Try to get budget data with the determined MIS value
       const { data: budgetData, error } = await supabase
-        .from('budget_na853_split')
+        .from('na853_split')
         .select('*')
         .eq('mis', misToSearch)
         .single();
@@ -390,7 +390,7 @@ export class BudgetService {
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
             .select('id, mis')
-            .eq('budget_na853', mis)
+            .eq('na853', mis)
             .single();
           
           if (projectError && projectError.code !== 'PGRST116') {
@@ -425,7 +425,7 @@ export class BudgetService {
       
       // Try to get current budget data with the determined MIS value
       let { data: budgetData, error } = await supabase
-        .from('budget_na853_split')
+        .from('na853_split')
         .select('*')
         .eq('mis', misToSearch)
         .single();
@@ -439,7 +439,7 @@ export class BudgetService {
           
           // Try original MIS as fallback
           const fallbackResult = await supabase
-            .from('budget_na853_split')
+            .from('na853_split')
             .select('*')
             .eq('mis', mis)
             .single();
@@ -572,9 +572,9 @@ export class BudgetService {
         try {
           // Try to find budget directly using na853 field
           const { data: directNa853Data, error: directNa853Error } = await supabase
-            .from('budget_na853_split')
+            .from('na853_split')
             .select('*')
-            .eq('budget_na853', mis)
+            .eq('na853', mis)
             .single();
             
           if (!directNa853Error && directNa853Data) {
@@ -650,7 +650,7 @@ export class BudgetService {
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
             .select('id, mis')
-            .eq('budget_na853', mis)
+            .eq('na853', mis)
             .single();
           
           if (projectError && projectError.code !== 'PGRST116') {
@@ -692,9 +692,9 @@ export class BudgetService {
       try {
         // For numeric MIS, query directly against the integer column
         if (numericalMis !== null) {
-          console.log(`[BudgetService] Querying budget_na853_split with numeric MIS: ${numericalMis}`);
+          console.log(`[BudgetService] Querying na853_split with numeric MIS: ${numericalMis}`);
           const result = await supabase
-            .from('budget_na853_split')
+            .from('na853_split')
             .select('*')
             .eq('mis', numericalMis) // Use the number directly for integer column
             .single();
@@ -707,14 +707,14 @@ export class BudgetService {
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
             .select('id, mis')
-            .eq('budget_na853', mis)
+            .eq('na853', mis)
             .single();
           
           if (!projectError && projectData?.mis) {
             // Found the project, use its numeric MIS
             console.log(`[BudgetService] Found project with MIS: ${projectData.mis}, using for budget query`);
             const result = await supabase
-              .from('budget_na853_split')
+              .from('na853_split')
               .select('*')
               .eq('mis', projectData.mis) // Use the MIS from the project
               .single();
@@ -725,7 +725,7 @@ export class BudgetService {
             // Last resort: try direct query with original value
             console.log(`[BudgetService] No project found, trying direct budget query with: ${misToSearch}`);
             const result = await supabase
-              .from('budget_na853_split')
+              .from('na853_split')
               .select('*')
               .eq('mis', misToSearch)
               .single();
@@ -887,7 +887,7 @@ export class BudgetService {
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
             .select('id, mis')
-            .eq('budget_na853', mis)
+            .eq('na853', mis)
             .single();
           
           if (projectError && projectError.code !== 'PGRST116') {
@@ -933,7 +933,7 @@ export class BudgetService {
         if (numericalMis !== null) {
           console.log(`[BudgetService] Update - Querying budget with numeric MIS: ${numericalMis}`);
           const result = await supabase
-            .from('budget_na853_split')
+            .from('na853_split')
             .select('*')
             .eq('mis', numericalMis) // Use the number directly for integer column
             .single();
@@ -944,7 +944,7 @@ export class BudgetService {
           // Try direct query with original value (last resort)
           console.log(`[BudgetService] Update - Trying direct budget query with: ${misToSearch}`);
           const result = await supabase
-            .from('budget_na853_split')
+            .from('na853_split')
             .select('*')
             .eq('mis', misToSearch)
             .single();
@@ -985,7 +985,7 @@ export class BudgetService {
       
       // Update the budget
       const { error: updateError } = await supabase
-        .from('budget_na853_split')
+        .from('na853_split')
         .update({ 
           user_view: newUserView,
           last_quarter_check: `q${Math.ceil((new Date().getMonth() + 1) / 3)}`, // Update current quarter
@@ -1098,7 +1098,7 @@ export class BudgetService {
       
       // Update the sum field in the database
       const { error } = await supabase
-        .from('budget_na853_split')
+        .from('na853_split')
         .update({ sum: sumFieldData })
         .eq('mis', mis);
       
