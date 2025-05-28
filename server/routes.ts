@@ -400,10 +400,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[ProjectsWorking] Fetching authentic projects for unit: ${unitName}`);
         
-        // Get authentic project data safely without any JSONB operations
+        // Get authentic project data using correct table and column names
         const { data: allProjects, error: queryError } = await supabase
-          .from('Project')
-          .select('*')
+          .from('Projects')
+          .select('mis, project_title, implementing_agency, expenditure_type, na853, na271, e069, status')
           .limit(1000);
           
         if (queryError) {
@@ -431,7 +431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return agencyStr.includes(unitName);
             }
           } catch (filterError) {
-            console.log(`[ProjectsWorking] Filter error for project ${project.id}:`, filterError);
+            console.log(`[ProjectsWorking] Filter error for project ${project.mis}:`, filterError);
           }
           return false;
         }) || [];
