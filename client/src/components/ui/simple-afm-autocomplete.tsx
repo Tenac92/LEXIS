@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ interface SimpleAFMAutocompleteProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  value?: string;
+  onChange?: (value: string) => void;
 }
 
 export function SimpleAFMAutocomplete({
@@ -17,10 +19,19 @@ export function SimpleAFMAutocomplete({
   onSelectPerson,
   placeholder = "ΑΦΜ",
   disabled = false,
-  className
+  className,
+  value = "",
+  onChange
 }: SimpleAFMAutocompleteProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
+  
+  // Update search term when value prop changes
+  useEffect(() => {
+    if (value !== searchTerm) {
+      setSearchTerm(value);
+    }
+  }, [value]);
   
   // Determine if we should use employee or beneficiary data
   const useEmployeeData = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ";
@@ -62,6 +73,9 @@ export function SimpleAFMAutocomplete({
     const value = e.target.value;
     setSearchTerm(value);
     setShowDropdown(value.length >= 2);
+    
+    // Notify parent component when user types
+    onChange?.(value);
   };
 
   return (
