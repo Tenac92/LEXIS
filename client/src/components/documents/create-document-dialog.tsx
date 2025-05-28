@@ -2617,6 +2617,10 @@ export function CreateDocumentDialog({
                                 if (personData) {
                                   // Auto-fill all recipient fields from employee/beneficiary data
                                   const currentRecipients = form.getValues("recipients");
+                                  // Get installment and amount from beneficiary data
+                                  const installmentValue = (personData as any).installment || "";
+                                  const amountValue = parseFloat((personData as any).amount || "0") || 0;
+                                  
                                   currentRecipients[index] = {
                                     ...currentRecipients[index],
                                     firstname: personData.name || "",
@@ -2624,7 +2628,9 @@ export function CreateDocumentDialog({
                                     fathername: personData.fathername || "",
                                     afm: String(personData.afm || ""),
                                     secondary_text: (personData as any).freetext || (personData as any).attribute || "",
-                                    amount: (personData as any).amount || "",
+                                    amount: amountValue,
+                                    installments: installmentValue ? [installmentValue] : ["ΕΦΑΠΑΞ"],
+                                    installmentAmounts: installmentValue && amountValue ? { [installmentValue]: amountValue } : { "ΕΦΑΠΑΞ": amountValue }
                                   };
                                   form.setValue("recipients", [...currentRecipients]);
                                 }
