@@ -59,6 +59,7 @@ export class DatabaseStorage implements IStorage {
   async getProjectsByUnit(unit: string): Promise<Project[]> {
     try {
       console.log(`[Storage] Getting projects for unit: ${unit}`);
+      console.log(`[Storage] Unit search pattern: %${unit}%`);
       
       // Use text search instead of JSON parsing to avoid database errors
       // Search for the unit name within the implementing_agency field as text
@@ -67,7 +68,13 @@ export class DatabaseStorage implements IStorage {
         .select('*')
         .ilike('implementing_agency', `%${unit}%`);
 
-      if (error) throw error;
+      console.log(`[Storage] Query executed, error:`, error);
+      console.log(`[Storage] Query result count:`, data?.length || 0);
+      
+      if (error) {
+        console.error(`[Storage] Database error:`, error);
+        throw error;
+      }
       
       // The database query already filtered by unit using text search
       // Just return the results with basic validation

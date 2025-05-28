@@ -334,9 +334,11 @@ router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
     }
     
     console.log(`[Projects] Fetching projects for unit: ${unitName}`);
+    console.log(`[Projects] Unit name after decoding: "${unitName}" (length: ${unitName.length})`);
     
     // Use the storage method which correctly handles filtering by implementing_agency
     const projects = await storage.getProjectsByUnit(unitName);
+    console.log(`[Projects] Storage returned ${projects?.length || 0} projects`);
     
     if (!projects || projects.length === 0) {
       console.log(`[Projects] No projects found for unit: ${unitName}`);
