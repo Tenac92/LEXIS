@@ -53,10 +53,16 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Fetch projects for dropdown
+  // Fetch user's projects for dropdown
+  const { data: userResponse } = useQuery({
+    queryKey: ["/api/auth/me"],
+  });
+  
+  const userUnits = userResponse?.user?.units?.[0];
+  
   const { data: projects = [] } = useQuery({
-    queryKey: ["/api/projects/all"],
-    enabled: open, // Only fetch when dialog is open
+    queryKey: ["/api/projects-working", userUnits],
+    enabled: open && !!userUnits, // Only fetch when dialog is open and user units available
   });
   
   const form = useForm<BeneficiaryFormData>({
@@ -138,8 +144,11 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Personal Information Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Προσωπικά Στοιχεία</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="surname"
@@ -285,33 +294,269 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="project"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Έργο</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
-                      value={field.value?.toString() || ""}
-                    >
+              </div>
+            </div>
+
+            {/* Financial Information Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Οικονομικά Στοιχεία</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ποσό</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Επιλέξτε έργο" />
-                        </SelectTrigger>
+                        <Input {...field} placeholder="π.χ. 10.286.06" />
                       </FormControl>
-                      <SelectContent>
-                        {projects?.map((project: any) => (
-                          <SelectItem key={project.mis} value={project.mis.toString()}>
-                            {project.mis} - {project.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="installment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Δόση</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε δόση" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ΕΦΑΠΑΞ">ΕΦΑΠΑΞ</SelectItem>
+                          <SelectItem value="Α">Α΄ ΔΟΣΗ</SelectItem>
+                          <SelectItem value="Β">Β΄ ΔΟΣΗ</SelectItem>
+                          <SelectItem value="Γ">Γ΄ ΔΟΣΗ</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Τύπος</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε τύπο" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ΔΚΑ ΕΠΙΣΚΕΥΗ">ΔΚΑ ΕΠΙΣΚΕΥΗ</SelectItem>
+                          <SelectItem value="ΔΚΑ ΑΠΟΚΑΤΑΣΤΑΣΗ">ΔΚΑ ΑΠΟΚΑΤΑΣΤΑΣΗ</SelectItem>
+                          <SelectItem value="ΣΤΕΓΑΣΤΙΚΗ ΣΥΝΔΡΟΜΗ">ΣΤΕΓΑΣΤΙΚΗ ΣΥΝΔΡΟΜΗ</SelectItem>
+                          <SelectItem value="ΕΠΙΧΕΙΡΗΜΑΤΙΚΗ ΣΥΝΔΡΟΜΗ">ΕΠΙΧΕΙΡΗΜΑΤΙΚΗ ΣΥΝΔΡΟΜΗ</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Administrative Information Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Διοικητικά Στοιχεία</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="aa"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Α/Α</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number"
+                          placeholder="1"
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="adeia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Άδεια</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number"
+                          placeholder="Αριθμός άδειας"
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ημερομηνία</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="ΗΗ.ΜΜ.ΕΕΕΕ" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="region"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Περιφέρεια</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Περιφέρεια" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="monada"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Μονάδα</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Μονάδα" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="project"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Έργο</FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)} 
+                        value={field.value?.toString() || ""}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε έργο" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {projects?.map((project: any) => (
+                            <SelectItem key={project.mis} value={project.mis.toString()}>
+                              {project.mis} - {project.title?.substring(0, 50) || 'Χωρίς τίτλο'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="onlinefoldernumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Αριθμός Φακέλου</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Αριθμός online φακέλου" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Engineers Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Στοιχεία Μηχανικών</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">ΜΗΧΑΝΙΚΌΣ 1</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                      control={form.control}
+                      name="cengsur1"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input {...field} placeholder="Επώνυμο" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cengname1"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input {...field} placeholder="Όνομα" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">ΜΗΧΑΝΙΚΌΣ 2</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                      control={form.control}
+                      name="cengsur2"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input {...field} placeholder="Επώνυμο" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cengname2"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input {...field} placeholder="Όνομα" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <FormField
@@ -678,7 +923,7 @@ export default function BeneficiariesPage() {
                               <Badge variant="outline" className="text-sm">{beneficiary.installment}</Badge>
                             )}
                             {beneficiary.type && (
-                              <div><Badge variant="outline" className="text-sm">{beneficiary.type}</Badge></div>
+                              <Badge variant="outline" className="text-sm block">{beneficiary.type}</Badge>
                             )}
                           </div>
                         </div>
