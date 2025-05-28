@@ -48,7 +48,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AnimatePresence, motion } from "framer-motion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { SmartAFMAutocomplete } from "@/components/ui/smart-afm-autocomplete";
+import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
 import {
   Command,
   CommandEmpty,
@@ -2670,7 +2670,7 @@ export function CreateDocumentDialog({
 
                           {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
                           <div className="md:col-span-2 md:row-span-1">
-                            <SmartAFMAutocomplete
+                            <SimpleAFMAutocomplete
                               expenditureType={form.getValues("expenditure_type") || ""}
                               onSelectPerson={(personData) => {
                                 if (personData) {
@@ -2678,11 +2678,11 @@ export function CreateDocumentDialog({
                                   const currentRecipients = form.getValues("recipients");
                                   currentRecipients[index] = {
                                     ...currentRecipients[index],
-                                    firstname: personData.name || personData.firstname || "",
-                                    lastname: personData.surname || personData.lastname || "",
+                                    firstname: personData.name || "",
+                                    lastname: personData.surname || "",
                                     fathername: personData.fathername || "",
                                     afm: String(personData.afm || ""),
-                                    secondary_text: personData.attribute || personData.secondary_text || "",
+                                    secondary_text: (personData as any).attribute || "",
                                   };
                                   form.setValue("recipients", [...currentRecipients]);
                                 }

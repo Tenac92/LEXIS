@@ -99,59 +99,55 @@ export function SmartAFMAutocomplete({
   };
 
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      {/* Info badge showing current mode */}
-      <div className="flex items-center gap-2">
-        <Badge variant={useEmployeeData ? "default" : "secondary"} className="text-xs">
-          {getIcon()}
-          <span className="ml-1">
-            {useEmployeeData ? "Υπάλληλοι" : "Δικαιούχοι"}
-          </span>
-        </Badge>
-        <span className="text-xs text-muted-foreground">
-          {expenditureType}
-        </span>
-      </div>
-
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="justify-between"
-            disabled={disabled}
-          >
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">
-                {getDisplayText()}
-              </span>
+    <div className={cn("relative", className)}>
+      <Input
+        type="text"
+        placeholder={placeholder}
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        disabled={disabled}
+        className="w-full"
+        onFocus={() => setOpen(true)}
+      />
+      
+      {/* Dropdown results - only show when there are results */}
+      {open && searchTerm.length >= 2 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-3">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              <span className="ml-2 text-sm">Αναζήτηση...</span>
             </div>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80 p-0">
-          <Command>
-            <CommandInput
-              placeholder={`Εισάγετε ΑΦΜ για αναζήτηση...`}
-              value={searchTerm}
-              onValueChange={setSearchTerm}
-            />
-            <CommandList>
-              <CommandEmpty>
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    <span className="ml-2 text-sm">Αναζήτηση...</span>
+          ) : searchResults.length === 0 ? (
+            </div>
+          ) : (
+            <div>
+              {searchResults.map((person: Employee | Beneficiary) => (
+                <div
+                  key={person.id}
+                  className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                  onClick={() => handleSelect(person)}
+                >
+                  <div className="font-medium">
+                    {(person as Employee).surname || (person as Beneficiary).surname} {(person as Employee).name || (person as Beneficiary).name}
                   </div>
-                ) : searchTerm.length < 2 ? (
-                  <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                    Εισάγετε τουλάχιστον 2 χαρακτήρες
+                  <div className="text-sm text-gray-500">
+                    ΑΦΜ: {person.afm}
                   </div>
-                ) : (
-                  <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                    {useEmployeeData 
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Click outside to close */}
+      {open && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setOpen(false)}
+        />
+      )} 
                       ? "Δεν βρέθηκε υπάλληλος με αυτό το ΑΦΜ"
                       : `Δεν βρέθηκε δικαιούχος τύπου "${expenditureType}" με αυτό το ΑΦΜ`
                     }
