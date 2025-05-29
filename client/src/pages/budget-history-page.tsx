@@ -46,6 +46,31 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 
+// Hook to fetch users from the same unit for the creator filter
+const useUnitUsers = (userUnits: string[] | undefined) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['unitUsers', userUnits],
+    queryFn: async () => {
+      if (!userUnits || userUnits.length === 0) return [];
+      try {
+        const response = await fetch('/api/users/matching-units');
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.filter((user: any) => 
+          user.units && user.units.some((unit: string) => userUnits.includes(unit))
+        );
+      } catch (error) {
+        console.error('Error fetching unit users:', error);
+        return [];
+      }
+    },
+    enabled: !!userUnits && userUnits.length > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  return { unitUsers: data || [], isLoadingUsers: isLoading };
+};
+
 // Hook για να ελέγχει αν ένα έγγραφο έχει protocol_number_input
 const useDocumentProtocolNumber = (documentId: number | null) => {
   const { data, isLoading } = useQuery({
@@ -158,6 +183,9 @@ export default function BudgetHistoryPage() {
 
   const isManager = user?.role === 'manager';
   const isAdmin = user?.role === 'admin';
+
+  // Fetch users from the same unit for the creator dropdown
+  const { unitUsers, isLoadingUsers } = useUnitUsers(user?.units);
 
   // Reset to page 1 when filters change
   const applyMisFilter = () => {
@@ -762,11 +790,27 @@ export default function BudgetHistoryPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Δημιουργήθηκε από</label>
-                      <Input
-                        placeholder="Όνομα χρήστη..."
-                        value={creatorFilter}
-                        onChange={(e) => setCreatorFilter(e.target.value)}
-                      />
+                      <Select value={creatorFilter} onValueChange={setCreatorFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={isLoadingUsers ? "Φόρτωση χρηστών..." : "Επιλέξτε χρήστη"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Όλοι οι χρήστες</SelectItem>
+                          {unitUsers.map((user: any) => (
+                            <SelectItem key={user.id} value={user.name}>
+                              <div className="flex items-center gap-2">
+                                <UserIcon className="h-3 w-3 text-gray-500" />
+                                {user.name}
+                                {user.role === 'manager' && (
+                                  <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                    Διαχειριστής
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Αποτελέσματα ανά σελίδα</label>
