@@ -50,10 +50,25 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
     const projectCount = projectsData?.length || 0;
 
     // Get authentic document counts from the database for the user's unit
-    const { data: documentsData } = await supabase
-      .from('Documents')
+    const { data: documentsData, error: documentsError } = await supabase
+      .from('generated_documents')
       .select('id, status, unit')
       .eq('unit', primaryUnit);
+
+    // Debug logging to understand what's happening
+    console.log(`[Dashboard] Querying documents for unit: ${primaryUnit}`);
+    console.log(`[Dashboard] Documents found: ${documentsData?.length || 0}`);
+    console.log(`[Dashboard] Documents data sample:`, documentsData?.slice(0, 3));
+    if (documentsError) {
+      console.log(`[Dashboard] Documents query error:`, documentsError);
+    }
+    
+    // Also check if there are any documents in the table at all
+    const { data: allDocsData } = await supabase
+      .from('generated_documents')
+      .select('unit')
+      .limit(5);
+    console.log(`[Dashboard] Sample units in generated_documents:`, allDocsData?.map(d => d.unit));
 
     const totalDocuments = documentsData?.length || 0;
     const completedDocuments = documentsData?.filter(doc => doc.status === 'completed').length || 0;
