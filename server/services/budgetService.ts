@@ -170,7 +170,7 @@ export class BudgetService {
       
       // Try to get budget data with the determined MIS value
       const { data: budgetData, error } = await supabase
-        .from('budget_budget_na853_split')
+        .from('budget_na853_split')
         .select('*')
         .eq('mis', misToSearch)
         .single();
@@ -425,7 +425,7 @@ export class BudgetService {
       
       // Try to get current budget data with the determined MIS value
       let { data: budgetData, error } = await supabase
-        .from('budget_budget_na853_split')
+        .from('budget_na853_split')
         .select('*')
         .eq('mis', misToSearch)
         .single();
