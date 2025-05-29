@@ -78,19 +78,23 @@ export function SessionKeeper() {
       clearInterval(activityCheckRef.current);
     }
     
-    // Check for user activity and refresh session if active
+    // Check for user activity and refresh session if active (less frequently during logout)
     activityCheckRef.current = setInterval(() => {
       const now = Date.now();
       const timeSinceLastActivity = now - lastActivityRef.current;
       
+      // Only refresh if user exists and has been active recently
       if (auth.user && timeSinceLastActivity < ACTIVITY_TIMEOUT) {
-        // User has been active recently, refresh session
+        // Use debounced refresh to prevent excessive calls during logout
         console.log('[SessionKeeper] User active, refreshing session');
         auth.refreshUser().catch((err) => {
-          console.error('[SessionKeeper] Error refreshing session after activity', err);
+          // Suppress errors during logout process
+          if (auth.user) {
+            console.error('[SessionKeeper] Error refreshing session after activity', err);
+          }
         });
       }
-    }, ACTIVITY_TIMEOUT);
+    }, ACTIVITY_TIMEOUT * 2); // Reduce frequency to half
     
     // Cleanup
     return () => {

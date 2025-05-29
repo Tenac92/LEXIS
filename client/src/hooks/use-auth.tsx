@@ -127,14 +127,16 @@ function useLogoutMutation() {
       }
     },
     onSuccess: () => {
-      // Clear all cached data immediately
-      queryClient.clear();
+      // Immediately clear user data for faster UI response
       queryClient.setQueryData(["/api/auth/me"], null);
       
-      // Use faster navigation instead of full page reload
-      if (window.location.pathname !== '/auth') {
-        window.location.replace('/auth');
-      }
+      // Clear cache in background to avoid blocking UI
+      setTimeout(() => {
+        queryClient.clear();
+      }, 50);
+      
+      // Navigate immediately without waiting
+      window.location.replace('/auth');
       
       toast({
         title: "Logged out",

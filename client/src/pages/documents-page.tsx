@@ -77,16 +77,6 @@ export default function DocumentsPage() {
     }
   }, [location, setLocation]);
 
-  // Ensure unit filter defaults to user's unit when authentication completes
-  useEffect(() => {
-    if (user?.units?.[0] && !filters.unit) {
-      setFilters(prev => ({
-        ...prev,
-        unit: user.units[0]
-      }));
-    }
-  }, [user?.units, filters.unit]);
-
   // Initialize both main filters and advanced filters states
   const [filters, setFilters] = useState<Filters>({
     unit: user?.units?.[0] || '',
@@ -99,6 +89,16 @@ export default function DocumentsPage() {
     recipient: '',
     afm: ''
   });
+
+  // Ensure unit filter defaults to user's unit when authentication completes
+  useEffect(() => {
+    if (user?.units?.[0] && !filters.unit) {
+      setFilters(prev => ({
+        ...prev,
+        unit: user.units[0]
+      }));
+    }
+  }, [user?.units, filters.unit]);
   
   // For advanced filters, we'll keep a separate state that doesn't trigger refresh
   const [advancedFilters, setAdvancedFilters] = useState({
