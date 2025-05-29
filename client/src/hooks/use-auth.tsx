@@ -127,10 +127,19 @@ function useLogoutMutation() {
       }
     },
     onSuccess: () => {
+      // Clear all cached data immediately
+      queryClient.clear();
       queryClient.setQueryData(["/api/auth/me"], null);
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      // Force reload after successful logout to clear any cached state
-      window.location.href = '/';
+      
+      // Use faster navigation instead of full page reload
+      if (window.location.pathname !== '/auth') {
+        window.location.replace('/auth');
+      }
+      
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
     },
     onError: (error: Error) => {
       toast({
