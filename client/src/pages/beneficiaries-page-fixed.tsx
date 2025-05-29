@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { Header } from "@/components/header";
 
 const beneficiarySchema = z.object({
   // Personal Information (required)
@@ -654,7 +655,9 @@ export default function BeneficiariesPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Δικαιούχοι</h1>
@@ -823,6 +826,7 @@ export default function BeneficiariesPage() {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
       />
+      </div>
     </div>
   );
 }
