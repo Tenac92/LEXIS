@@ -943,7 +943,9 @@ export default function BeneficiariesPage() {
                           </div>
                           <div className="space-y-1">
                             {beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object' ? (
-                              Object.entries(beneficiary.oikonomika as Record<string, any>).map(([paymentType, records]) => (
+                              Object.entries(beneficiary.oikonomika as Record<string, any>).map(([paymentType, records]) => {
+                                console.log('Displaying financial data:', { paymentType, records, beneficiaryId: beneficiary.id });
+                                return (
                                 <div key={paymentType} className="space-y-1">
                                   <Badge variant="secondary" className="text-sm font-medium">{paymentType}</Badge>
                                   {Array.isArray(records) && records.map((record: any, index: number) => (
@@ -970,9 +972,10 @@ export default function BeneficiariesPage() {
                                     </div>
                                   ))}
                                 </div>
-                              ))
+                                );
+                              })
                             ) : (
-                              <p className="text-sm text-muted-foreground">Δεν υπάρχουν οικονομικά στοιχεία</p>
+                              <div className="text-sm text-muted-foreground">Δεν υπάρχουν οικονομικά στοιχεία</div>
                             )}
                           </div>
                         </div>
