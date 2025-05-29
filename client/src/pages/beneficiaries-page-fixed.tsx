@@ -693,42 +693,45 @@ export default function BeneficiariesPage() {
                         return <div className="text-sm text-gray-500 italic">Δεν υπάρχουν οικονομικά στοιχεία</div>;
                       }
                       
-                      return Object.entries(oikonomika).map(([paymentType, payments]: [string, any]) => {
-                        console.log('Debug - Payment type:', paymentType, 'Payments:', payments);
+                      return Object.entries(oikonomika).map(([paymentType, installments]: [string, any]) => {
+                        console.log('Debug - Payment type:', paymentType, 'Installments:', installments);
                         return (
                           <div key={paymentType} className="mb-3 p-3 bg-white rounded-md border">
                             <div className="text-sm font-semibold text-blue-700 mb-2">{paymentType}</div>
-                            {Array.isArray(payments) && payments.map((payment: any, index: number) => {
-                              console.log('Debug - Individual payment:', payment);
-                              const amount = payment.amount || 'Δεν έχει οριστεί';
-                              const installment = Array.isArray(payment.installment) 
-                                ? payment.installment[0] 
-                                : payment.installment || 'Δεν έχει οριστεί';
+                            {Object.entries(installments).map(([installmentType, details]: [string, any]) => {
+                              console.log('Debug - Installment type:', installmentType, 'Details:', details);
+                              const amount = details.amount || 'Δεν έχει οριστεί';
+                              const status = details.status || null;
+                              const protocol = details.protocol || details.protocol_number || null;
                               
                               return (
-                                <div key={index} className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span className="font-medium text-gray-600">Ποσό:</span>
-                                    <span className="text-green-700 font-bold text-lg">
-                                      €{amount}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
+                                <div key={installmentType} className="space-y-2 text-sm border-l-4 border-blue-200 pl-3 mb-3">
+                                  <div className="flex justify-between items-center">
                                     <span className="font-medium text-gray-600">Δόση:</span>
-                                    <span className="text-blue-700 font-medium">
-                                      {installment}
+                                    <span className="text-blue-700 font-bold text-base bg-blue-50 px-2 py-1 rounded">
+                                      {installmentType}
                                     </span>
                                   </div>
-                                  {payment.status && (
-                                    <div className="flex justify-between">
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium text-gray-600">Ποσό:</span>
+                                    <span className="text-green-700 font-bold text-xl">
+                                      €{amount.toLocaleString('el-GR')}
+                                    </span>
+                                  </div>
+                                  {status && (
+                                    <div className="flex justify-between items-center">
                                       <span className="font-medium text-gray-600">Κατάσταση:</span>
-                                      <span className="text-orange-600">{payment.status}</span>
+                                      <span className="text-orange-600 bg-orange-50 px-2 py-1 rounded text-xs uppercase">
+                                        {status}
+                                      </span>
                                     </div>
                                   )}
-                                  {payment.protocol_number && (
-                                    <div className="flex justify-between">
+                                  {protocol && (
+                                    <div className="flex justify-between items-center">
                                       <span className="font-medium text-gray-600">Πρωτόκολλο:</span>
-                                      <span className="text-purple-600">{payment.protocol_number}</span>
+                                      <span className="text-purple-600 font-mono text-sm bg-purple-50 px-2 py-1 rounded">
+                                        {protocol}
+                                      </span>
                                     </div>
                                   )}
                                 </div>
