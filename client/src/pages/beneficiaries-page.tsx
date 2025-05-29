@@ -669,12 +669,14 @@ export default function BeneficiariesPage() {
             const expenditureTypes = Object.keys(b.oikonomika);
             if (expenditureTypes.length > 0) {
               type = expenditureTypes[0];
-              const payments = (b.oikonomika as any)[type];
-              if (Array.isArray(payments) && payments.length > 0) {
-                const firstPayment = payments[0];
-                amount = firstPayment.amount || '';
-                if (Array.isArray(firstPayment.installment) && firstPayment.installment.length > 0) {
-                  installment = firstPayment.installment.join(', ');
+              const installments = (b.oikonomika as any)[type];
+              if (installments && typeof installments === 'object') {
+                const installmentKeys = Object.keys(installments);
+                if (installmentKeys.length > 0) {
+                  const firstInstallment = installmentKeys[0];
+                  const record = installments[firstInstallment];
+                  amount = record.amount || '';
+                  installment = firstInstallment;
                 }
               }
             }
@@ -850,10 +852,13 @@ export default function BeneficiariesPage() {
                 if (b.oikonomika && typeof b.oikonomika === 'object') {
                   const expenditureTypes = Object.keys(b.oikonomika);
                   return expenditureTypes.some(type => {
-                    const payments = b.oikonomika[type];
-                    return Array.isArray(payments) && payments.some(payment => 
-                      payment.amount && parseFloat(payment.amount.replace(',', '.')) > 0
-                    );
+                    const installments = (b.oikonomika as any)[type];
+                    if (installments && typeof installments === 'object') {
+                      return Object.values(installments).some((record: any) => 
+                        record.amount && parseFloat(record.amount.toString()) > 0
+                      );
+                    }
+                    return false;
                   });
                 }
                 return false;
@@ -943,22 +948,20 @@ export default function BeneficiariesPage() {
                           </div>
                           <div className="space-y-1">
                             {beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object' ? (
-                              Object.entries(beneficiary.oikonomika as Record<string, any>).map(([paymentType, records]) => {
-                                console.log('Displaying financial data:', { paymentType, records, beneficiaryId: beneficiary.id });
+                              Object.entries(beneficiary.oikonomika as Record<string, any>).map(([paymentType, installments]) => {
+                                console.log('Displaying financial data:', { paymentType, installments, beneficiaryId: beneficiary.id });
                                 return (
                                 <div key={paymentType} className="space-y-1">
                                   <Badge variant="secondary" className="text-sm font-medium">{paymentType}</Badge>
-                                  {Array.isArray(records) && records.map((record: any, index: number) => (
-                                    <div key={index} className="ml-2 space-y-1">
+                                  {typeof installments === 'object' && installments && Object.entries(installments).map(([installment, record]: [string, any]) => (
+                                    <div key={installment} className="ml-2 space-y-1">
                                       <div className="flex gap-1 flex-wrap">
                                         <Badge variant="outline" className="text-xs">{record.amount}€</Badge>
-                                        {Array.isArray(record.installment) && record.installment.map((inst: string) => (
-                                          <Badge key={inst} variant="outline" className="text-xs">{inst}</Badge>
-                                        ))}
+                                        <Badge variant="outline" className="text-xs">{installment}</Badge>
                                       </div>
                                       <div className="flex gap-1 flex-wrap">
-                                        {record.protocol_number && (
-                                          <Badge variant="default" className="text-xs">Πρωτ.: {record.protocol_number}</Badge>
+                                        {record.protocol && (
+                                          <Badge variant="default" className="text-xs">Πρωτ.: {record.protocol}</Badge>
                                         )}
                                         {record.status && (
                                           <Badge 
