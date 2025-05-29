@@ -2636,9 +2636,68 @@ export function CreateDocumentDialog({
                                   dialogInitializationRef.current.isInitializing = false;
                                   isUpdatingFromContext.current = true;
                                   
-                                  // Get installment and amount from beneficiary data
-                                  const installmentValue = (personData as any).installment || "";
-                                  const amountValue = parseFloat((personData as any).amount || "0") || 0;
+                                  // Extract data from the new JSONB oikonomika structure
+                                  let installmentsList: string[] = ["ΕΦΑΠΑΞ"];
+                                  let installmentAmounts: Record<string, number> = { "ΕΦΑΠΑΞ": 0 };
+                                  let totalAmount = 0;
+                                  
+                                  // Check if this is a beneficiary with the new JSONB structure
+                                  const beneficiaryData = personData as any;
+                                  if (beneficiaryData.oikonomika && typeof beneficiaryData.oikonomika === 'object') {
+                                    console.log("[AFMAutocomplete] Extracting from JSONB oikonomika:", beneficiaryData.oikonomika);
+                                    
+                                    // Get the current expenditure type to match against oikonomika keys
+                                    const currentExpenditureType = form.getValues("expenditure_type");
+                                    
+                                    // Find matching expenditure type in oikonomika
+                                    for (const [expType, paymentsList] of Object.entries(beneficiaryData.oikonomika)) {
+                                      if (Array.isArray(paymentsList) && paymentsList.length > 0) {
+                                        // For now, take the first available payment (we can enhance this later)
+                                        const firstPayment = paymentsList[0];
+                                        
+                                        if (firstPayment && typeof firstPayment === 'object') {
+                                          // Extract amount (remove commas and convert to number)
+                                          const amountStr = String(firstPayment.amount || "0").replace(/[,.]/g, "");
+                                          const amount = parseFloat(amountStr) || 0;
+                                          
+                                          // Extract installments
+                                          const installments = firstPayment.installment || ["ΕΦΑΠΑΞ"];
+                                          
+                                          if (Array.isArray(installments) && installments.length > 0) {
+                                            installmentsList = installments;
+                                            totalAmount = amount;
+                                            
+                                            // Create installment amounts object
+                                            installmentAmounts = {};
+                                            if (installments.length === 1) {
+                                              // Single installment gets the full amount
+                                              installmentAmounts[installments[0]] = amount;
+                                            } else {
+                                              // Multiple installments split the amount equally
+                                              const amountPerInstallment = amount / installments.length;
+                                              installments.forEach(inst => {
+                                                installmentAmounts[inst] = amountPerInstallment;
+                                              });
+                                            }
+                                            
+                                            console.log("[AFMAutocomplete] Extracted installments:", installmentsList, "amounts:", installmentAmounts);
+                                            break; // Use the first matching entry
+                                          }
+                                        }
+                                      }
+                                    }
+                                  } 
+                                  // Fallback to old structure for employees
+                                  else {
+                                    const installmentValue = beneficiaryData.installment || "";
+                                    const amountValue = parseFloat(beneficiaryData.amount || "0") || 0;
+                                    
+                                    if (installmentValue && amountValue) {
+                                      installmentsList = [installmentValue];
+                                      installmentAmounts = { [installmentValue]: amountValue };
+                                      totalAmount = amountValue;
+                                    }
+                                  }
                                   
                                   // Update the recipient data directly in the current form state
                                   const currentRecipients = form.getValues("recipients");
@@ -2649,9 +2708,9 @@ export function CreateDocumentDialog({
                                     fathername: personData.fathername || "",
                                     afm: String(personData.afm || ""),
                                     secondary_text: (personData as any).freetext || (personData as any).attribute || "",
-                                    amount: amountValue,
-                                    installments: installmentValue ? [installmentValue] : ["ΕΦΑΠΑΞ"],
-                                    installmentAmounts: installmentValue && amountValue ? { [installmentValue]: amountValue } : { "ΕΦΑΠΑΞ": amountValue }
+                                    amount: totalAmount,
+                                    installments: installmentsList,
+                                    installmentAmounts: installmentAmounts
                                   };
                                   
                                   // Use setValue and trigger validation to ensure form recognizes the changes
@@ -2665,7 +2724,11 @@ export function CreateDocumentDialog({
                                     isAutocompletingRef.current = false;
                                   }, 200);
                                   
-                                  console.log("[AFMAutocomplete] Successfully updated all fields for recipient", index);
+                                  console.log("[AFMAutocomplete] Successfully updated all fields for recipient", index, "with data:", {
+                                    amount: totalAmount,
+                                    installments: installmentsList,
+                                    installmentAmounts: installmentAmounts
+                                  });
                                 }
                               }}
                               placeholder="ΑΦΜ"
