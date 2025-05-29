@@ -115,37 +115,20 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
     // Check if the request path is in the public routes list
     const isPublicRoute = PUBLIC_ROUTES.some(route => req.path.startsWith(route));
     
-    console.log('[Auth] Checking session:', { 
-      hasSession: !!req.session,
-      hasUser: !!req.session?.user,
-      sessionID: req.sessionID,
-      cookies: req.headers.cookie,
-      ip: req.ip,
-      protocol: req.protocol,
-      secure: req.secure,
-      path: req.path,
-      isPublicRoute
-    });
+    // Security: Minimal authentication logging
 
     // Skip authentication for public routes
     if (isPublicRoute) {
-      console.log('[Auth] Skipping authentication for public route:', req.path);
       return next();
     }
     
     // Explicitly handle the units endpoint separately since it's causing issues
     if (req.path === '/api/users/units') {
-      console.log('[Auth] Skipping authentication for units endpoint');
       return next();
     }
 
     if (!req.session?.user?.id) {
-      console.log('[Auth] No valid user in session:', {
-        sessionExists: !!req.session,
-        userExists: !!req.session?.user,
-        sessionID: req.sessionID,
-        headers: req.headers
-      });
+      // Security: Minimal logging without sensitive data
       
       // Create an error object with status code to be handled by our error middleware
       const authError = new Error('Authentication required');

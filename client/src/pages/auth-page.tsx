@@ -35,7 +35,7 @@ export default function AuthPage() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    console.log('Υποβολή φόρμας σύνδεσης με δεδομένα:', data);
+    // Security: Never log sensitive form data
     loginMutation.mutate(data);
   };
 

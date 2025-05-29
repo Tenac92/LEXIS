@@ -159,9 +159,7 @@ async function startServer() {
       
       if (path.startsWith('/api')) {
         log(`[Request] ${method} ${path} from ${ip}`);
-        if (path !== '/api/auth/me') { // Don't log auth check details
-          console.log('[Request] Headers:', req.headers);
-        }
+        // Security: Never log request headers in production (contains cookies, tokens, etc.)
       }
 
       // Capture response information for better debugging

@@ -25,7 +25,7 @@ function useLoginMutation() {
   return useMutation({
     mutationFn: async (credentials: LoginCredentials) => {
       try {
-        console.log('Attempting login with:', credentials.email);
+        // Security: No sensitive logging in production
 
         const response = await fetch('/api/auth/login', {  
           method: 'POST',
@@ -78,7 +78,7 @@ function useLoginMutation() {
       }
     },
     onSuccess: (user) => {
-      console.log('Login mutation succeeded, updating cache with user:', user);
+      // Security: No sensitive logging in production
       // Ensure the user object has all required fields for display
       const processedUser = {
         id: user.id,
@@ -87,7 +87,6 @@ function useLoginMutation() {
         role: user.role,
         units: user.units || []
       };
-      console.log('Processed user for cache:', processedUser);
       
       // Update the cache with the processed user
       queryClient.setQueryData(["/api/auth/me"], processedUser);
