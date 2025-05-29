@@ -67,8 +67,8 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
   const userUnits = (userResponse as any)?.authenticated ? (userResponse as any).user?.units?.[0] : undefined;
   
   const { data: projects = [] } = useQuery({
-    queryKey: ["/api/projects-working", userUnits],
-    queryFn: () => fetch(`/api/projects-working/${encodeURIComponent(userUnits)}`).then(res => res.json()),
+    queryKey: ["/api/unit-projects", userUnits],
+    queryFn: () => fetch(`/api/unit-projects/${encodeURIComponent(userUnits)}`).then(res => res.json()),
     enabled: open && !!userUnits, // Only fetch when dialog is open and user units available
   });
   
@@ -321,10 +321,11 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                           <SelectValue placeholder="Επιλέξτε τύπο" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ">ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ</SelectItem>
+                          <SelectItem value="ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ">ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ</SelectItem>
                           <SelectItem value="ΔΚΑ ΕΠΙΣΚΕΥΗ">ΔΚΑ ΕΠΙΣΚΕΥΗ</SelectItem>
-                          <SelectItem value="ΔΚΑ ΑΠΟΚΑΤΑΣΤΑΣΗ">ΔΚΑ ΑΠΟΚΑΤΑΣΤΑΣΗ</SelectItem>
-                          <SelectItem value="ΣΤΕΓΑΣΤΙΚΗ ΣΥΝΔΡΟΜΗ">ΣΤΕΓΑΣΤΙΚΗ ΣΥΝΔΡΟΜΗ</SelectItem>
-                          <SelectItem value="ΕΠΙΧΕΙΡΗΜΑΤΙΚΗ ΣΥΝΔΡΟΜΗ">ΕΠΙΧΕΙΡΗΜΑΤΙΚΗ ΣΥΝΔΡΟΜΗ</SelectItem>
+                          <SelectItem value="ΔΚΑ ΕΝΟΙΚΙΟ">ΔΚΑ ΕΝΟΙΚΙΟ</SelectItem>
+                          <SelectItem value="ΔΚΑ ΕΠΙΧΕΙΡΗΣΕΙΣ">ΔΚΑ ΕΠΙΧΕΙΡΗΣΕΙΣ</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
