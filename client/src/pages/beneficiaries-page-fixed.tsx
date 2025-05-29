@@ -586,6 +586,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
                     </FormItem>
                   )}
                 />
+                </div>
               </div>
             </div>
 
