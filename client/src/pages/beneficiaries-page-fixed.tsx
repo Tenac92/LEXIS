@@ -13,6 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 const beneficiarySchema = z.object({
   name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
@@ -561,6 +562,7 @@ export default function BeneficiariesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
+  const { user } = useAuth();
 
   const { data: beneficiaries = [], isLoading } = useQuery({
     queryKey: ['/api/beneficiaries'],
@@ -569,7 +571,7 @@ export default function BeneficiariesPage() {
   const filteredBeneficiaries = beneficiaries.filter((beneficiary: Beneficiary) =>
     beneficiary.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     beneficiary.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    beneficiary.afm?.includes(searchTerm)
+    String(beneficiary.afm || '').includes(searchTerm)
   );
 
   const handleEdit = (beneficiary: Beneficiary) => {
@@ -591,7 +593,14 @@ export default function BeneficiariesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Δικαιούχοι</h1>
-          <p className="text-muted-foreground">Διαχείριση δικαιούχων και στοιχείων πληρωμών</p>
+          <p className="text-muted-foreground">
+            Διαχείριση δικαιούχων και στοιχείων πληρωμών
+            {user?.units?.[0] && (
+              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm font-medium">
+                Μονάδα: {user.units[0]}
+              </span>
+            )}
+          </p>
         </div>
         <Button onClick={handleNew}>
           <Plus className="h-4 w-4 mr-2" />
@@ -649,16 +658,26 @@ export default function BeneficiariesPage() {
                   <h4 className="text-sm font-semibold text-orange-800 mb-2">Οικονομικά Στοιχεία</h4>
                   {(() => {
                     try {
-                      const oikonomika = typeof beneficiary.oikonomika === 'string' 
-                        ? JSON.parse(beneficiary.oikonomika) 
-                        : beneficiary.oikonomika;
+                      let oikonomika = beneficiary.oikonomika;
+                      
+                      // Handle different data formats
+                      if (typeof oikonomika === 'string') {
+                        // Remove any escape characters and parse
+                        oikonomika = oikonomika.replace(/\\/g, '');
+                        oikonomika = JSON.parse(oikonomika);
+                      }
+                      
+                      if (!oikonomika || typeof oikonomika !== 'object') {
+                        return <div className="text-xs text-orange-600">Δεν υπάρχουν οικονομικά στοιχεία</div>;
+                      }
                       
                       return Object.entries(oikonomika).map(([paymentType, payments]: [string, any]) => (
                         <div key={paymentType} className="mb-2">
                           <div className="text-sm font-medium text-orange-700">{paymentType}</div>
-                          {payments.map((payment: any, index: number) => (
+                          {Array.isArray(payments) && payments.map((payment: any, index: number) => (
                             <div key={index} className="text-xs text-orange-600 ml-2">
-                              • Ποσό: {payment.amount} | Δόση: {payment.installment?.[0] || 'Δεν έχει οριστεί'}
+                              • Ποσό: {payment.amount || 'Δεν έχει οριστεί'} 
+                              | Δόση: {payment.installment?.[0] || payment.installment || 'Δεν έχει οριστεί'}
                               {payment.status && ` | Κατάσταση: ${payment.status}`}
                               {payment.protocol_number && ` | Πρωτόκολλο: ${payment.protocol_number}`}
                             </div>
@@ -666,7 +685,8 @@ export default function BeneficiariesPage() {
                         </div>
                       ));
                     } catch (e) {
-                      return <div className="text-xs text-orange-600">Δεν ήταν δυνατή η ανάγνωση των οικονομικών στοιχείων</div>;
+                      console.error('Error parsing oikonomika:', e, beneficiary.oikonomika);
+                      return <div className="text-xs text-orange-600">Σφάλμα ανάγνωσης: {String(e)}</div>;
                     }
                   })()}
                 </div>
