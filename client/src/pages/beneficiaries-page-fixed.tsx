@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, User, FileText, Search } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -46,7 +46,15 @@ interface Beneficiary {
   project?: number;
   date?: string;
   onlinefoldernumber?: string;
+  adeia?: string;
+  region?: string;
+  freetext?: string;
+  cengsur1?: string;
+  cengname1?: string;
+  cengsur2?: string;
+  cengname2?: string;
   installments?: any;
+  oikonomika?: any;
 }
 
 interface Project {
@@ -70,13 +78,13 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
   const form = useForm<BeneficiaryFormData>({
     resolver: zodResolver(beneficiarySchema),
     defaultValues: {
-      name: beneficiary?.name || "",
-      surname: beneficiary?.surname || "",
-      fathername: beneficiary?.fathername || "",
-      afm: beneficiary?.afm || "",
-      project: beneficiary?.project || undefined,
-      date: beneficiary?.date || "",
-      onlinefoldernumber: beneficiary?.onlinefoldernumber || "",
+      name: "",
+      surname: "",
+      fathername: "",
+      afm: "",
+      project: undefined,
+      date: "",
+      onlinefoldernumber: "",
       adeia: "",
       region: "",
       freetext: "",
@@ -89,6 +97,51 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
       installment: "",
     },
   });
+
+  // Reset form when beneficiary data changes
+  useEffect(() => {
+    if (beneficiary) {
+      form.reset({
+        name: beneficiary.name || "",
+        surname: beneficiary.surname || "",
+        fathername: beneficiary.fathername || "",
+        afm: beneficiary.afm || "",
+        project: beneficiary.project || undefined,
+        date: beneficiary.date || "",
+        onlinefoldernumber: beneficiary.onlinefoldernumber || "",
+        adeia: beneficiary.adeia || "",
+        region: beneficiary.region || "",
+        freetext: beneficiary.freetext || "",
+        cengsur1: beneficiary.cengsur1 || "",
+        cengname1: beneficiary.cengname1 || "",
+        cengsur2: beneficiary.cengsur2 || "",
+        cengname2: beneficiary.cengname2 || "",
+        paymentType: "",
+        amount: "",
+        installment: "",
+      });
+    } else {
+      form.reset({
+        name: "",
+        surname: "",
+        fathername: "",
+        afm: "",
+        project: undefined,
+        date: "",
+        onlinefoldernumber: "",
+        adeia: "",
+        region: "",
+        freetext: "",
+        cengsur1: "",
+        cengname1: "",
+        cengsur2: "",
+        cengname2: "",
+        paymentType: "",
+        amount: "",
+        installment: "",
+      });
+    }
+  }, [beneficiary, form]);
 
   const { data: projects = [] } = useQuery({
     queryKey: ['/api/projects'],
