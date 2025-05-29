@@ -216,7 +216,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {beneficiary ? "Επεξεργασία Δικαιούχου" : "Νέος Δικαιούχος"}
@@ -629,6 +629,8 @@ export default function BeneficiariesPage() {
                   </CardTitle>
                   <CardDescription>
                     ΑΦΜ: {beneficiary.afm} • Μονάδα: {beneficiary.unit}
+                    {beneficiary.onlinefoldernumber && ` • Φάκελος: ${beneficiary.onlinefoldernumber}`}
+                    {beneficiary.adeia && ` • Άδεια: ${beneficiary.adeia}`}
                   </CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => handleEdit(beneficiary)}>
@@ -649,6 +651,19 @@ export default function BeneficiariesPage() {
                 )}
                 {beneficiary.region && (
                   <Badge variant="outline">Περιοχή: {beneficiary.region}</Badge>
+                )}
+                {(beneficiary.cengsur1 || beneficiary.cengname1) && (
+                  <Badge variant="secondary">
+                    Μηχανικός 1: {beneficiary.cengsur1} {beneficiary.cengname1}
+                  </Badge>
+                )}
+                {(beneficiary.cengsur2 || beneficiary.cengname2) && (
+                  <Badge variant="secondary">
+                    Μηχανικός 2: {beneficiary.cengsur2} {beneficiary.cengname2}
+                  </Badge>
+                )}
+                {beneficiary.freetext && (
+                  <Badge variant="outline">Σημειώσεις: {beneficiary.freetext.substring(0, 50)}...</Badge>
                 )}
               </div>
               
