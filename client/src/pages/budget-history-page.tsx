@@ -939,7 +939,6 @@ export default function BudgetHistoryPage() {
                       </div>
                     </Card>
                   )}
-                <>
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
