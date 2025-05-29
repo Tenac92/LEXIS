@@ -203,122 +203,91 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Όνομα *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Όνομα" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Όνομα *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Όνομα δικαιούχου" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="fathername"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Πατρώνυμο *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Πατρώνυμο" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="lastname"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Επώνυμο *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Επώνυμο δικαιούχου" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="afm"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ΑΦΜ *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        type="number"
-                        placeholder="123456789"
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="fathername"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Πατρώνυμο</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Πατρώνυμο" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="region"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Περιφέρεια</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Περιφέρεια" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="afm"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ΑΦΜ *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="123456789" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="monada"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Μονάδα</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Κωδικός μονάδας" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ημερομηνία Αίτησης</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ημερομηνία</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="date" placeholder="YYYY-MM-DD" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="onlinefoldernumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Αριθμός Online Φακέλου</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Αριθμός φακέλου" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ημερομηνία</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="ΗΗ/ΜΜ/ΕΕΕΕ" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="onlinefoldernumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Αριθμός Φακέλου</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Αριθμός φακέλου" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               </div>
             </div>
