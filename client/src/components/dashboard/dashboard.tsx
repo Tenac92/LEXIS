@@ -47,10 +47,38 @@ export function Dashboard() {
     refetchOnWindowFocus: false
   });
   
-  // Query for user's recent documents with safe fallback
+  // Query for recent documents from the main documents endpoint with user filter
   const { data: userDocs = [], isLoading: isLoadingUserDocs } = useQuery<DocumentItem[]>({
-    queryKey: ["/api/documents/user"],
-    retry: 2,
+    queryKey: ["/api/documents", { user: "current", limit: 5 }],
+    queryFn: async () => {
+      try {
+        if (!user?.id) return [];
+        
+        const queryParams = new URLSearchParams();
+        queryParams.append('generated_by', user.id.toString());
+        queryParams.append('limit', '5');
+        
+        const response = await fetch(`/api/documents?${queryParams.toString()}`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          console.warn('[Dashboard] Failed to fetch user documents');
+          return [];
+        }
+        
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.warn('[Dashboard] Error fetching user documents:', error);
+        return [];
+      }
+    },
+    retry: 1,
     refetchOnWindowFocus: false
   });
 

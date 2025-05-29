@@ -106,12 +106,23 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
     
     log(`[Documents] Fetching documents for user ${req.user.id}, authorized units: ${userUnits.join(', ')}`, 'debug');
     
+    // Ensure user ID is properly converted to integer
+    const userId = parseInt(String(req.user.id));
+    if (isNaN(userId)) {
+      log(`[Documents] Invalid user ID: ${req.user.id} (type: ${typeof req.user.id})`, 'error');
+      return res.status(400).json({ 
+        message: 'Μη έγκυρος αναγνωριστικός χρήστη.' 
+      });
+    }
+    
+    log(`[Documents] Converted user ID to: ${userId}`, 'debug');
+
     // Fetch real documents from database with proper user/unit filtering
     const { data: documents, error } = await supabase
       .from('generated_documents')
       .select('*')
       .in('unit', userUnits)
-      .eq('generated_by', req.user.id)
+      .eq('generated_by', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
