@@ -39,6 +39,7 @@ export interface IStorage {
   createBeneficiary(beneficiary: InsertBeneficiary): Promise<Beneficiary>;
   updateBeneficiary(id: number, beneficiary: Partial<InsertBeneficiary>): Promise<Beneficiary>;
   deleteBeneficiary(id: number): Promise<void>;
+  updateBeneficiaryInstallmentStatus(afm: string, paymentType: string, installment: string, status: string, protocolNumber?: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -764,6 +765,74 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Successfully deleted beneficiary ${id}`);
     } catch (error) {
       console.error('[Storage] Error in deleteBeneficiary:', error);
+      throw error;
+    }
+  }
+
+  async updateBeneficiaryInstallmentStatus(afm: string, paymentType: string, installment: string, status: string, protocolNumber?: string): Promise<void> {
+    try {
+      console.log(`[Storage] Updating beneficiary installment status for AFM: ${afm}, Type: ${paymentType}, Installment: ${installment}, Status: ${status}`);
+      
+      // First, get the beneficiary by AFM
+      const { data: beneficiary, error: fetchError } = await supabase
+        .from('Beneficiary')
+        .select('id, oikonomika')
+        .eq('afm', afm)
+        .single();
+        
+      if (fetchError || !beneficiary) {
+        console.error('[Storage] Error fetching beneficiary for status update:', fetchError);
+        throw new Error(`Beneficiary with AFM ${afm} not found`);
+      }
+      
+      // Parse the oikonomika JSONB field
+      let oikonomika = beneficiary.oikonomika || {};
+      if (typeof oikonomika === 'string') {
+        oikonomika = JSON.parse(oikonomika);
+      }
+      
+      // Ensure the payment type array exists
+      if (!oikonomika[paymentType]) {
+        oikonomika[paymentType] = [];
+      }
+      
+      // Find and update the specific installment
+      let found = false;
+      for (let record of oikonomika[paymentType]) {
+        if (record.installment === installment) {
+          record.status = status;
+          if (protocolNumber) {
+            record.protocol_number = protocolNumber;
+          }
+          record.updated_at = new Date().toISOString();
+          found = true;
+          console.log(`[Storage] Updated existing installment record: ${JSON.stringify(record)}`);
+          break;
+        }
+      }
+      
+      // If installment not found, this shouldn't happen in normal flow but we'll log it
+      if (!found) {
+        console.warn(`[Storage] Installment ${installment} not found for payment type ${paymentType}, but continuing...`);
+      }
+      
+      // Update the beneficiary record
+      const { error: updateError } = await supabase
+        .from('Beneficiary')
+        .update({
+          oikonomika: oikonomika,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', beneficiary.id);
+        
+      if (updateError) {
+        console.error('[Storage] Error updating beneficiary installment status:', updateError);
+        throw updateError;
+      }
+      
+      console.log(`[Storage] Successfully updated beneficiary ${afm} installment ${installment} status to ${status}`);
+    } catch (error) {
+      console.error('[Storage] Error in updateBeneficiaryInstallmentStatus:', error);
       throw error;
     }
   }

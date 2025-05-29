@@ -18,6 +18,7 @@ import beneficiariesRouter from "./controllers/beneficiaryController";
 import templatePreviewRouter from "./routes/template-preview";
 // import authRouter from "./routes/auth"; // Commented out - auth handled in authentication.ts
 import budgetUploadRouter from "./routes/budget-upload"; // Import the budget upload router
+import { storage } from "./storage"; // Import storage for beneficiary status updates
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
 import notificationsRouter from "./routes/api/notifications"; // Import budget notifications router
 import healthcheckRouter from "./routes/healthcheck"; // Import the original healthcheck router
@@ -314,6 +315,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         console.log('[DIRECT_ROUTE_V2] Document created successfully with ID:', data.id);
+        
+        // Update beneficiary installment status to "διαβιβαστηκε" for each recipient
+        try {
+          for (const recipient of formattedRecipients) {
+            // For each installment in the recipient's installments array
+            if (recipient.installments && Array.isArray(recipient.installments)) {
+              for (const installment of recipient.installments) {
+                await storage.updateBeneficiaryInstallmentStatus(
+                  recipient.afm,
+                  expenditure_type,
+                  installment,
+                  'διαβιβαστηκε',
+                  data.id.toString() // Use document ID as protocol number
+                );
+                console.log(`[DIRECT_ROUTE_V2] Updated beneficiary ${recipient.afm} installment ${installment} status to διαβιβαστηκε`);
+              }
+            }
+          }
+        } catch (statusUpdateError) {
+          console.error('[DIRECT_ROUTE_V2] Error updating beneficiary status (document still created):', statusUpdateError);
+          // Continue without failing - document is created but status may not be updated
+        }
         
         // Update the budget to reflect the document creation
         try {
