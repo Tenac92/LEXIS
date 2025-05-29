@@ -277,15 +277,19 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
+    // Convert full unit names to abbreviated codes for storage
+    const unitCodes = validUnits.map(unit => unit.unit);
+    console.log('[Users] Converting unit names to codes:', { originalUnits: units, unitCodes });
+    
     // Create user - department is optional
-    console.log('[Users] Creating new user:', { email, name, role, units, department });
+    console.log('[Users] Creating new user:', { email, name, role, units: unitCodes, department });
     
     const userData = {
       email,
       name,
       role,
       password: hashedPassword,
-      units,
+      units: unitCodes, // Store abbreviated codes instead of full names
       telephone: telephone || null
     };
     
