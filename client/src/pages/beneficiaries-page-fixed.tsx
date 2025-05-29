@@ -667,41 +667,69 @@ export default function BeneficiariesPage() {
                 )}
               </div>
               
-              {/* Financial Information Display */}
+              {/* Enhanced Financial Information Display */}
               {beneficiary.oikonomika && (
-                <div className="mt-3 p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
-                  <h4 className="text-sm font-semibold text-orange-800 mb-2">Οικονομικά Στοιχεία</h4>
+                <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="h-4 w-4 text-green-600" />
+                    <h4 className="text-sm font-semibold text-green-800">Οικονομικά Στοιχεία</h4>
+                  </div>
                   {(() => {
                     try {
                       let oikonomika = beneficiary.oikonomika;
                       
                       // Handle different data formats
                       if (typeof oikonomika === 'string') {
-                        // Remove any escape characters and parse
+                        // Clean and parse JSON
                         oikonomika = oikonomika.replace(/\\/g, '');
                         oikonomika = JSON.parse(oikonomika);
                       }
                       
                       if (!oikonomika || typeof oikonomika !== 'object') {
-                        return <div className="text-xs text-orange-600">Δεν υπάρχουν οικονομικά στοιχεία</div>;
+                        return <div className="text-sm text-gray-500 italic">Δεν υπάρχουν οικονομικά στοιχεία</div>;
                       }
                       
                       return Object.entries(oikonomika).map(([paymentType, payments]: [string, any]) => (
-                        <div key={paymentType} className="mb-2">
-                          <div className="text-sm font-medium text-orange-700">{paymentType}</div>
+                        <div key={paymentType} className="mb-3 p-3 bg-white rounded-md border">
+                          <div className="text-sm font-semibold text-blue-700 mb-2">{paymentType}</div>
                           {Array.isArray(payments) && payments.map((payment: any, index: number) => (
-                            <div key={index} className="text-xs text-orange-600 ml-2">
-                              • Ποσό: {payment.amount || 'Δεν έχει οριστεί'} 
-                              | Δόση: {payment.installment?.[0] || payment.installment || 'Δεν έχει οριστεί'}
-                              {payment.status && ` | Κατάσταση: ${payment.status}`}
-                              {payment.protocol_number && ` | Πρωτόκολλο: ${payment.protocol_number}`}
+                            <div key={index} className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="font-medium text-gray-600">Ποσό:</span>
+                                <span className="ml-2 text-green-700 font-bold">
+                                  {payment.amount ? `€${payment.amount}` : 'Δεν έχει οριστεί'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-600">Δόση:</span>
+                                <span className="ml-2 text-blue-700 font-medium">
+                                  {payment.installment?.[0] || payment.installment || 'Δεν έχει οριστεί'}
+                                </span>
+                              </div>
+                              {payment.status && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Κατάσταση:</span>
+                                  <span className="ml-2 text-orange-600">{payment.status}</span>
+                                </div>
+                              )}
+                              {payment.protocol_number && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Πρωτόκολλο:</span>
+                                  <span className="ml-2 text-purple-600">{payment.protocol_number}</span>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
                       ));
                     } catch (e) {
                       console.error('Error parsing oikonomika:', e, beneficiary.oikonomika);
-                      return <div className="text-xs text-orange-600">Σφάλμα ανάγνωσης: {String(e)}</div>;
+                      return (
+                        <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                          <strong>Σφάλμα ανάγνωσης οικονομικών στοιχείων:</strong>
+                          <div className="mt-1 text-xs">Παρακαλώ ελέγξτε τη μορφή των δεδομένων</div>
+                        </div>
+                      );
                     }
                   })()}
                 </div>
