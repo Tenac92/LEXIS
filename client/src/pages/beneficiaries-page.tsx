@@ -181,28 +181,13 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Personal Information Section */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <User className="h-5 w-5 text-blue-600" />
                 <h3 className="text-lg font-semibold text-foreground">Προσωπικά Στοιχεία</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg">
-              <FormField
-                control={form.control}
-                name="surname"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Επώνυμο *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Επώνυμο" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -220,7 +205,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
 
                 <FormField
                   control={form.control}
-                  name="lastname"
+                  name="surname"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Επώνυμο *</FormLabel>
@@ -287,8 +272,6 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                     </FormItem>
                   )}
                 />
-              </div>
-
               </div>
             </div>
 
@@ -386,106 +369,15 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
               </div>
             </div>
 
-            {/* Administrative Information Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-orange-600" />
-                <h3 className="text-lg font-semibold text-foreground">Διοικητικά Στοιχεία</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="aa"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Α/Α</FormLabel>
-                      <FormControl>
-                        <Input 
-                          {...field} 
-                          type="number"
-                          placeholder="1"
-                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="adeia"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Άδεια</FormLabel>
-                      <FormControl>
-                        <Input 
-                          {...field} 
-                          type="number"
-                          placeholder="Αριθμός άδειας"
-                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ημερομηνία Αίτησης</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="ΗΗ.ΜΜ.ΕΕΕΕ" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="region"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Περιφέρεια</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Περιφέρεια" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="onlinefoldernumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Αριθμός Online Φακέλου</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Αριθμός online φακέλου" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+            <div className="flex justify-end pt-4">
+              <Button type="submit">
+                {beneficiary ? "Ενημέρωση" : "Δημιουργία"}
+              </Button>
             </div>
-
-            {/* Engineers Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Στοιχεία Μηχανικών</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">ΜΗΧΑΝΙΚΌΣ 1</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <FormField
-                      control={form.control}
-                      name="cengsur1"
-                      render={({ field }) => (
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
                         <FormItem>
                           <FormControl>
                             <Input {...field} placeholder="Επώνυμο" />
