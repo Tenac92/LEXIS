@@ -47,18 +47,14 @@ export function Dashboard() {
     refetchOnWindowFocus: false
   });
   
-  // Query for recent documents from the main documents endpoint with user filter
+  // Query for recent documents from the main documents endpoint
   const { data: userDocs = [], isLoading: isLoadingUserDocs } = useQuery<DocumentItem[]>({
-    queryKey: ["/api/documents", { user: "current", limit: 5 }],
+    queryKey: ["/api/documents", "recent"],
     queryFn: async () => {
       try {
-        if (!user?.id) return [];
+        if (!user?.units || user.units.length === 0) return [];
         
-        const queryParams = new URLSearchParams();
-        queryParams.append('generated_by', user.id.toString());
-        queryParams.append('limit', '5');
-        
-        const response = await fetch(`/api/documents?${queryParams.toString()}`, {
+        const response = await fetch(`/api/documents?unit=${user.units[0]}&limit=5`, {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -67,19 +63,20 @@ export function Dashboard() {
         });
         
         if (!response.ok) {
-          console.warn('[Dashboard] Failed to fetch user documents');
+          console.warn('[Dashboard] Failed to fetch recent documents');
           return [];
         }
         
         const data = await response.json();
-        return Array.isArray(data) ? data : [];
+        return Array.isArray(data) ? data.slice(0, 5) : [];
       } catch (error) {
-        console.warn('[Dashboard] Error fetching user documents:', error);
+        console.warn('[Dashboard] Error fetching recent documents:', error);
         return [];
       }
     },
     retry: 1,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
+    enabled: !!user?.units && user.units.length > 0
   });
 
   // Make sure userDocs is always an array
