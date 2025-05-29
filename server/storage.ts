@@ -698,11 +698,23 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('[Storage] Creating new beneficiary:', beneficiary);
       
-      // Let the database handle ID generation automatically
+      // Get max ID and use a safe manual ID approach
+      const { data: maxData } = await supabase
+        .from('Beneficiary')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1)
+        .single();
+        
+      // Always use manual ID to avoid sequence conflicts - use high range
+      const safeId = (maxData?.id || 0) + Math.floor(Math.random() * 1000) + 10000;
+      console.log('[Storage] Using safe manual ID:', safeId);
+      
       const { data, error } = await supabase
         .from('Beneficiary')
         .insert({
           ...beneficiary,
+          id: safeId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -711,6 +723,32 @@ export class DatabaseStorage implements IStorage {
         
       if (error) {
         console.error('[Storage] Error creating beneficiary:', error);
+        
+        // If still conflict, try with a much higher ID
+        if (error.code === '23505' && error.message.includes('duplicate key')) {
+          console.log('[Storage] ID conflict detected, using higher ID');
+          const higherId = (maxData?.id || 0) + Math.floor(Math.random() * 10000) + 50000;
+          
+          const { data: retryData, error: retryError } = await supabase
+            .from('Beneficiary')
+            .insert({
+              ...beneficiary,
+              id: higherId,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+            
+          if (retryError) {
+            console.error('[Storage] High ID creation also failed:', retryError);
+            throw retryError;
+          }
+          
+          console.log('[Storage] Successfully created beneficiary with high ID:', retryData.id);
+          return retryData;
+        }
+        
         throw error;
       }
       
