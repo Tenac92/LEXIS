@@ -2656,8 +2656,19 @@ export function CreateDocumentDialog({
                                         const firstPayment = paymentsList[0];
                                         
                                         if (firstPayment && typeof firstPayment === 'object') {
-                                          // Extract amount (remove commas and convert to number)
-                                          const amountStr = String(firstPayment.amount || "0").replace(/[,.]/g, "");
+                                          // Extract amount (handle Greek number formatting: 9.766.00 = 9766.00)
+                                          let amountStr = String(firstPayment.amount || "0");
+                                          
+                                          // Check if this is Greek formatting (periods as thousands separators)
+                                          if (amountStr.includes('.') && amountStr.split('.').length === 3) {
+                                            // Format: 9.766.00 -> remove first period, keep decimal point
+                                            const parts = amountStr.split('.');
+                                            amountStr = parts[0] + parts[1] + '.' + parts[2];
+                                          } else if (amountStr.includes(',')) {
+                                            // Handle comma as decimal separator: 9766,00 -> 9766.00
+                                            amountStr = amountStr.replace(',', '.');
+                                          }
+                                          
                                           const amount = parseFloat(amountStr) || 0;
                                           
                                           // Extract installments
