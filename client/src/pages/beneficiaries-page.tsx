@@ -378,10 +378,8 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
         </Form>
       </DialogContent>
     </Dialog>
-                        <FormItem>
-                          <FormControl>
-                            <Input {...field} placeholder="Επώνυμο" />
-                          </FormControl>
+  );
+}
                           <FormMessage />
                         </FormItem>
                       )}

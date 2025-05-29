@@ -12,7 +12,7 @@ import ProjectDetailsPage from "@/pages/projects/[mis]";
 import EditProjectPage from "@/pages/projects/[mis]/edit";
 import UsersPage from "@/pages/users";
 import EmployeesPage from "@/pages/employees";
-import BeneficiariesPage from "@/pages/beneficiaries-page";
+import BeneficiariesPage from "@/pages/beneficiaries-page-fixed";
 import BudgetHistoryPage from "@/pages/budget-history-page";
 import NotificationsPage from "@/pages/NotificationsPage";
 import AdminNotificationsPage from "@/pages/AdminNotificationsPage";

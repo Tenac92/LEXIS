@@ -1,0 +1,365 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, User, FileText, Search } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+
+const beneficiarySchema = z.object({
+  name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
+  surname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
+  fathername: z.string().optional(),
+  afm: z.string().min(1, "Το ΑΦΜ είναι υποχρεωτικό"),
+  project: z.number().optional(),
+  date: z.string().optional(),
+  onlinefoldernumber: z.string().optional(),
+});
+
+type BeneficiaryFormData = z.infer<typeof beneficiarySchema>;
+
+interface Beneficiary {
+  id: number;
+  name: string;
+  surname: string;
+  fathername?: string;
+  afm: string;
+  unit: string;
+  project?: number;
+  date?: string;
+  onlinefoldernumber?: string;
+  installments?: any;
+}
+
+interface Project {
+  id: string;
+  mis: string;
+  project_title: string;
+  event_description: string;
+  expenditure_type: string[];
+  region: string;
+  implementing_agency: string[];
+}
+
+function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
+  beneficiary?: Beneficiary;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const form = useForm<BeneficiaryFormData>({
+    resolver: zodResolver(beneficiarySchema),
+    defaultValues: {
+      name: beneficiary?.name || "",
+      surname: beneficiary?.surname || "",
+      fathername: beneficiary?.fathername || "",
+      afm: beneficiary?.afm || "",
+      project: beneficiary?.project || undefined,
+      date: beneficiary?.date || "",
+      onlinefoldernumber: beneficiary?.onlinefoldernumber || "",
+    },
+  });
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ['/api/projects'],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data: BeneficiaryFormData) => {
+      const url = beneficiary ? `/api/beneficiaries/${beneficiary.id}` : '/api/beneficiaries';
+      const method = beneficiary ? 'PATCH' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save beneficiary');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/beneficiaries'] });
+      toast({
+        title: "Επιτυχία",
+        description: beneficiary ? "Τα στοιχεία ενημερώθηκαν" : "Νέος δικαιούχος δημιουργήθηκε",
+      });
+      onOpenChange(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({
+        title: "Σφάλμα",
+        description: "Κάτι πήγε στραβά. Παρακαλώ δοκιμάστε ξανά.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: BeneficiaryFormData) => {
+    mutation.mutate(data);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {beneficiary ? "Επεξεργασία Δικαιούχου" : "Νέος Δικαιούχος"}
+          </DialogTitle>
+          <DialogDescription>
+            {beneficiary ? "Ενημερώστε τα στοιχεία του δικαιούχου" : "Εισάγετε τα στοιχεία του νέου δικαιούχου"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold">Προσωπικά Στοιχεία</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Όνομα *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Όνομα δικαιούχου" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="surname"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Επώνυμο *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Επώνυμο δικαιούχου" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="fathername"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Πατρώνυμο</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Πατρώνυμο" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="afm"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ΑΦΜ *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="123456789" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ημερομηνία Αίτησης</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="onlinefoldernumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Αριθμός Φακέλου</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Αριθμός φακέλου" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Project Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-green-600" />
+                <h3 className="text-lg font-semibold">Στοιχεία Έργου</h3>
+              </div>
+              <FormField
+                control={form.control}
+                name="project"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Έργο</FormLabel>
+                    <Select 
+                      onValueChange={(value) => field.onChange(Number(value))} 
+                      value={field.value?.toString() || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Επιλέξτε έργο..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(projects as Project[]).map((project) => (
+                          <SelectItem key={project.mis} value={project.mis}>
+                            {project.mis} - {project.project_title?.slice(0, 60) || project.event_description?.slice(0, 60) || 'Χωρίς τίτλο'}...
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? "Αποθήκευση..." : beneficiary ? "Ενημέρωση" : "Δημιουργία"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default function BeneficiariesPage() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | undefined>();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const { data: beneficiaries = [], isLoading } = useQuery({
+    queryKey: ['/api/beneficiaries'],
+  });
+
+  const filteredBeneficiaries = beneficiaries.filter((beneficiary: Beneficiary) =>
+    beneficiary.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    beneficiary.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    beneficiary.afm?.includes(searchTerm)
+  );
+
+  const handleEdit = (beneficiary: Beneficiary) => {
+    setSelectedBeneficiary(beneficiary);
+    setIsDialogOpen(true);
+  };
+
+  const handleNew = () => {
+    setSelectedBeneficiary(undefined);
+    setIsDialogOpen(true);
+  };
+
+  if (isLoading) {
+    return <div className="flex justify-center p-8">Φόρτωση...</div>;
+  }
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Δικαιούχοι</h1>
+          <p className="text-muted-foreground">Διαχείριση δικαιούχων και στοιχείων πληρωμών</p>
+        </div>
+        <Button onClick={handleNew}>
+          <Plus className="h-4 w-4 mr-2" />
+          Νέος Δικαιούχος
+        </Button>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Search className="h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Αναζήτηση δικαιούχου..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+      </div>
+
+      <div className="grid gap-4">
+        {filteredBeneficiaries.map((beneficiary: Beneficiary) => (
+          <Card key={beneficiary.id} className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-lg">
+                    {beneficiary.name} {beneficiary.surname}
+                  </CardTitle>
+                  <CardDescription>
+                    ΑΦΜ: {beneficiary.afm} • Μονάδα: {beneficiary.unit}
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => handleEdit(beneficiary)}>
+                  Επεξεργασία
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {beneficiary.fathername && (
+                  <Badge variant="secondary">Πατρώνυμο: {beneficiary.fathername}</Badge>
+                )}
+                {beneficiary.project && (
+                  <Badge variant="outline">Έργο: {beneficiary.project}</Badge>
+                )}
+                {beneficiary.date && (
+                  <Badge variant="outline">Ημερομηνία: {beneficiary.date}</Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <BeneficiaryDialog
+        beneficiary={selectedBeneficiary}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+      />
+    </div>
+  );
+}
