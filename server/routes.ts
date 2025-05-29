@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 // Import directly from centralized authentication
 import { authenticateSession, User, AuthenticatedRequest } from "./authentication";
 import apiRouter from "./controllers";
-import { getDashboardStats } from "./controllers/dashboard";
+
 // Import the budgetController for the getBudgetByMis function
 import { getBudgetByMis } from './controllers/budgetController';
 // Import the budget router with validation endpoints from routes/budget.ts
@@ -509,8 +509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use('/api/users', authenticateSession, usersRouter);
     log('[Routes] Users routes setup complete');
 
-    // Dashboard routes
-    app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
+    // Dashboard routes are handled by the dashboard router below
     
     // WORKING PROJECT ENDPOINT - authentic data without JSONB issues
     app.get('/api/projects-working/:unitName', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {

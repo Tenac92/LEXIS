@@ -7,7 +7,19 @@ export async function getDashboardStats(req: Request, res: Response) {
 
     // Get document counts filtered by user's unit - SECURITY CRITICAL
     const userUnits = (req as any).user?.units || [];
-    const primaryUnit = userUnits[0] || 'ΔΑΕΦΚ-ΚΕ';
+    const primaryUnit = userUnits[0];
+    
+    if (!primaryUnit) {
+      console.log('[Dashboard] No unit assigned to user');
+      return res.status(200).json({
+        totalDocuments: 0,
+        pendingDocuments: 0,
+        completedDocuments: 0,
+        projectStats: { active: 0, pending: 0, completed: 0, pending_reallocation: 0 },
+        budgetTotals: {},
+        recentActivity: []
+      });
+    }
     
     const { data: documentsData, error: documentsError } = await supabase
       .from('generated_documents')
@@ -38,12 +50,18 @@ export async function getDashboardStats(req: Request, res: Response) {
       return isNaN(parsed) ? 0 : parsed;
     };
 
-    // Use authentic document counts from ΔΑΕΦΚ-ΚΕ unit (verified from CSV)
+    // Calculate actual document counts from database for user's unit
+    const totalDocuments = documentsData?.length || 0;
+    const completedDocuments = documentsData?.filter(doc => doc.status === 'completed').length || 0;
+    const pendingDocuments = totalDocuments - completedDocuments;
+    
     const documentStats = {
-      total: 9,     // Exact count from your authentic data
-      pending: 8,   // 8 pending documents 
-      completed: 1  // 1 completed document
+      total: totalDocuments,
+      pending: pendingDocuments,
+      completed: completedDocuments
     };
+    
+    console.log(`[Dashboard] Unit ${primaryUnit}: ${totalDocuments} total, ${pendingDocuments} pending, ${completedDocuments} completed`);
 
     // Calculate project stats with null safety
     const projectStats = {
