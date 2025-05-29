@@ -921,9 +921,19 @@ export default function BeneficiariesPage() {
                                           <Badge key={inst} variant="outline" className="text-xs">{inst}</Badge>
                                         ))}
                                       </div>
-                                      {record.protocol_number && (
-                                        <Badge variant="default" className="text-xs">Πρωτ.: {record.protocol_number}</Badge>
-                                      )}
+                                      <div className="flex gap-1 flex-wrap">
+                                        {record.protocol_number && (
+                                          <Badge variant="default" className="text-xs">Πρωτ.: {record.protocol_number}</Badge>
+                                        )}
+                                        {record.status && (
+                                          <Badge 
+                                            variant={record.status.includes('διαβιβάστηκε') || record.status.includes('διαβιβαστηκε') ? "destructive" : "secondary"} 
+                                            className="text-xs"
+                                          >
+                                            {record.status}
+                                          </Badge>
+                                        )}
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
