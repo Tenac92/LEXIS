@@ -50,10 +50,10 @@ export function SimpleAFMAutocomplete({
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
-    queryKey: ['/api/beneficiaries/search', searchTerm, expenditureType],
+    queryKey: ['/api/beneficiaries/search', searchTerm],
     queryFn: async () => {
       if (!searchTerm || searchTerm.length < 6) return [];
-      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}&type=${encodeURIComponent(expenditureType)}`);
+      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}`);
       const data = await response.json();
       return data.success ? data.data : [];
     },
