@@ -628,7 +628,7 @@ export default function BeneficiariesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 mb-3">
                 {beneficiary.fathername && (
                   <Badge variant="secondary">Πατρώνυμο: {beneficiary.fathername}</Badge>
                 )}
@@ -638,7 +638,39 @@ export default function BeneficiariesPage() {
                 {beneficiary.date && (
                   <Badge variant="outline">Ημερομηνία: {beneficiary.date}</Badge>
                 )}
+                {beneficiary.region && (
+                  <Badge variant="outline">Περιοχή: {beneficiary.region}</Badge>
+                )}
               </div>
+              
+              {/* Financial Information Display */}
+              {beneficiary.oikonomika && (
+                <div className="mt-3 p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
+                  <h4 className="text-sm font-semibold text-orange-800 mb-2">Οικονομικά Στοιχεία</h4>
+                  {(() => {
+                    try {
+                      const oikonomika = typeof beneficiary.oikonomika === 'string' 
+                        ? JSON.parse(beneficiary.oikonomika) 
+                        : beneficiary.oikonomika;
+                      
+                      return Object.entries(oikonomika).map(([paymentType, payments]: [string, any]) => (
+                        <div key={paymentType} className="mb-2">
+                          <div className="text-sm font-medium text-orange-700">{paymentType}</div>
+                          {payments.map((payment: any, index: number) => (
+                            <div key={index} className="text-xs text-orange-600 ml-2">
+                              • Ποσό: {payment.amount} | Δόση: {payment.installment?.[0] || 'Δεν έχει οριστεί'}
+                              {payment.status && ` | Κατάσταση: ${payment.status}`}
+                              {payment.protocol_number && ` | Πρωτόκολλο: ${payment.protocol_number}`}
+                            </div>
+                          ))}
+                        </div>
+                      ));
+                    } catch (e) {
+                      return <div className="text-xs text-orange-600">Δεν ήταν δυνατή η ανάγνωση των οικονομικών στοιχείων</div>;
+                    }
+                  })()}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
