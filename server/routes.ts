@@ -388,29 +388,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.log(`[DIRECT_ROUTE_V2] Updated existing beneficiary with AFM: ${recipient.afm}`);
               }
             } else {
-              // Create new beneficiary - let database auto-generate ID
-              const beneficiaryInsertData = {
-                surname: recipient.lastname,
-                name: recipient.firstname,
-                fathername: recipient.fathername || null,
-                afm: parseInt(recipient.afm),
-                monada: unit,
-                project: parseInt(req.body.project_mis || project_id),
-                oikonomika: oikonomika,
-                freetext: recipient.secondary_text || null,
-                date: new Date().toISOString().split('T')[0], // Current date as YYYY-MM-DD
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              };
-              
-              const { error: insertError } = await supabase
-                .from('Beneficiary')
-                .insert([beneficiaryInsertData]);
+              // Create new beneficiary using storage layer
+              try {
+                const beneficiaryData = {
+                  surname: recipient.lastname,
+                  name: recipient.firstname,
+                  fathername: recipient.fathername || '',
+                  afm: parseInt(recipient.afm),
+                  monada: unit,
+                  project: parseInt(req.body.project_mis || project_id),
+                  oikonomika: oikonomika,
+                  freetext: recipient.secondary_text || '',
+                  date: new Date().toISOString().split('T')[0]
+                };
                 
-              if (insertError) {
-                console.error(`[DIRECT_ROUTE_V2] Error creating beneficiary ${recipient.afm}:`, insertError);
-              } else {
-                console.log(`[DIRECT_ROUTE_V2] Created new beneficiary with AFM: ${recipient.afm}`);
+                const createdBeneficiary = await storage.createBeneficiary(beneficiaryData);
+                console.log(`[DIRECT_ROUTE_V2] Created new beneficiary with AFM: ${recipient.afm} using storage layer`);
+              } catch (storageError) {
+                console.error(`[DIRECT_ROUTE_V2] Error creating beneficiary ${recipient.afm} via storage:`, storageError);
+                
+                // Fallback: skip beneficiary creation but continue with document processing
+                console.log(`[DIRECT_ROUTE_V2] Skipping beneficiary creation for AFM: ${recipient.afm} due to error`);
               }
             }
           }
