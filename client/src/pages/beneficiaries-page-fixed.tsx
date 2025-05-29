@@ -676,58 +676,73 @@ export default function BeneficiariesPage() {
                   </div>
                   {(() => {
                     try {
+                      console.log('Debug - Raw oikonomika data:', beneficiary.oikonomika);
                       let oikonomika = beneficiary.oikonomika;
                       
                       // Handle different data formats
                       if (typeof oikonomika === 'string') {
-                        // Clean and parse JSON
-                        oikonomika = oikonomika.replace(/\\/g, '');
+                        // Clean and parse JSON - handle escaped quotes properly
+                        oikonomika = oikonomika.replace(/\\"/g, '"');
+                        console.log('Debug - Cleaned string:', oikonomika);
                         oikonomika = JSON.parse(oikonomika);
                       }
+                      
+                      console.log('Debug - Parsed oikonomika:', oikonomika);
                       
                       if (!oikonomika || typeof oikonomika !== 'object') {
                         return <div className="text-sm text-gray-500 italic">Δεν υπάρχουν οικονομικά στοιχεία</div>;
                       }
                       
-                      return Object.entries(oikonomika).map(([paymentType, payments]: [string, any]) => (
-                        <div key={paymentType} className="mb-3 p-3 bg-white rounded-md border">
-                          <div className="text-sm font-semibold text-blue-700 mb-2">{paymentType}</div>
-                          {Array.isArray(payments) && payments.map((payment: any, index: number) => (
-                            <div key={index} className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="font-medium text-gray-600">Ποσό:</span>
-                                <span className="ml-2 text-green-700 font-bold">
-                                  {payment.amount ? `€${payment.amount}` : 'Δεν έχει οριστεί'}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-600">Δόση:</span>
-                                <span className="ml-2 text-blue-700 font-medium">
-                                  {payment.installment?.[0] || payment.installment || 'Δεν έχει οριστεί'}
-                                </span>
-                              </div>
-                              {payment.status && (
-                                <div>
-                                  <span className="font-medium text-gray-600">Κατάσταση:</span>
-                                  <span className="ml-2 text-orange-600">{payment.status}</span>
+                      return Object.entries(oikonomika).map(([paymentType, payments]: [string, any]) => {
+                        console.log('Debug - Payment type:', paymentType, 'Payments:', payments);
+                        return (
+                          <div key={paymentType} className="mb-3 p-3 bg-white rounded-md border">
+                            <div className="text-sm font-semibold text-blue-700 mb-2">{paymentType}</div>
+                            {Array.isArray(payments) && payments.map((payment: any, index: number) => {
+                              console.log('Debug - Individual payment:', payment);
+                              const amount = payment.amount || 'Δεν έχει οριστεί';
+                              const installment = Array.isArray(payment.installment) 
+                                ? payment.installment[0] 
+                                : payment.installment || 'Δεν έχει οριστεί';
+                              
+                              return (
+                                <div key={index} className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-600">Ποσό:</span>
+                                    <span className="text-green-700 font-bold text-lg">
+                                      €{amount}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-600">Δόση:</span>
+                                    <span className="text-blue-700 font-medium">
+                                      {installment}
+                                    </span>
+                                  </div>
+                                  {payment.status && (
+                                    <div className="flex justify-between">
+                                      <span className="font-medium text-gray-600">Κατάσταση:</span>
+                                      <span className="text-orange-600">{payment.status}</span>
+                                    </div>
+                                  )}
+                                  {payment.protocol_number && (
+                                    <div className="flex justify-between">
+                                      <span className="font-medium text-gray-600">Πρωτόκολλο:</span>
+                                      <span className="text-purple-600">{payment.protocol_number}</span>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              {payment.protocol_number && (
-                                <div>
-                                  <span className="font-medium text-gray-600">Πρωτόκολλο:</span>
-                                  <span className="ml-2 text-purple-600">{payment.protocol_number}</span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ));
+                              );
+                            })}
+                          </div>
+                        );
+                      });
                     } catch (e) {
                       console.error('Error parsing oikonomika:', e, beneficiary.oikonomika);
                       return (
                         <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                          <strong>Σφάλμα ανάγνωσης οικονομικών στοιχείων:</strong>
-                          <div className="mt-1 text-xs">Παρακαλώ ελέγξτε τη μορφή των δεδομένων</div>
+                          <strong>Σφάλμα ανάγνωσης:</strong> {String(e)}
+                          <div className="mt-1 text-xs">Raw data: {String(beneficiary.oikonomika)}</div>
                         </div>
                       );
                     }
