@@ -942,45 +942,58 @@ export default function BeneficiariesPage() {
                         </div>
 
                         {/* Financial Info */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-base text-muted-foreground">Οικονομικά</span>
-                          </div>
-                          <div className="space-y-1">
-                            {beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object' ? (
-                              Object.entries(beneficiary.oikonomika as Record<string, any>).map(([paymentType, installments]) => {
-                                console.log('Displaying financial data:', { paymentType, installments, beneficiaryId: beneficiary.id });
-                                return (
-                                <div key={paymentType} className="space-y-1">
-                                  <Badge variant="secondary" className="text-sm font-medium">{paymentType}</Badge>
-                                  {typeof installments === 'object' && installments && Object.entries(installments).map(([installment, record]: [string, any]) => (
-                                    <div key={installment} className="ml-2 space-y-1">
-                                      <div className="flex gap-1 flex-wrap">
-                                        <Badge variant="outline" className="text-xs">{record.amount}€</Badge>
-                                        <Badge variant="outline" className="text-xs">{installment}</Badge>
-                                      </div>
-                                      <div className="flex gap-1 flex-wrap">
-                                        {record.protocol && (
-                                          <Badge variant="default" className="text-xs">Πρωτ.: {record.protocol}</Badge>
-                                        )}
-                                        {record.status && (
-                                          <Badge 
-                                            variant={record.status.includes('διαβιβάστηκε') || record.status.includes('διαβιβαστηκε') ? "destructive" : "secondary"} 
-                                            className="text-xs"
-                                          >
-                                            {record.status}
-                                          </Badge>
-                                        )}
-                                      </div>
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                            Οικονομικά Στοιχεία
+                          </h4>
+                          {beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object' ? (
+                            <div className="space-y-3">
+                              {Object.entries(beneficiary.oikonomika as Record<string, any>).map(([paymentType, installments]) => (
+                                <div key={paymentType} className="bg-muted/30 rounded-lg p-3 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Badge variant="secondary" className="text-xs font-medium px-2 py-1">
+                                      {paymentType}
+                                    </Badge>
+                                  </div>
+                                  {typeof installments === 'object' && installments && (
+                                    <div className="space-y-2">
+                                      {Object.entries(installments).map(([installment, record]: [string, any]) => (
+                                        <div key={installment} className="bg-background rounded border p-2 space-y-2">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex gap-2">
+                                              <Badge variant="outline" className="text-xs font-mono">
+                                                {installment}
+                                              </Badge>
+                                              <Badge variant="outline" className="text-xs font-medium">
+                                                {record.amount}€
+                                              </Badge>
+                                            </div>
+                                            {record.status && (
+                                              <Badge 
+                                                variant={record.status.includes('διαβιβάστηκε') || record.status.includes('διαβιβαστηκε') ? "destructive" : "default"} 
+                                                className="text-xs"
+                                              >
+                                                {record.status}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          {record.protocol && (
+                                            <div className="text-xs text-muted-foreground">
+                                              Πρωτόκολλο: {record.protocol}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
                                     </div>
-                                  ))}
+                                  )}
                                 </div>
-                                );
-                              })
-                            ) : (
-                              <div className="text-sm text-muted-foreground">Δεν υπάρχουν οικονομικά στοιχεία</div>
-                            )}
-                          </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground italic">
+                              Δεν υπάρχουν οικονομικά στοιχεία
+                            </div>
+                          )}
                         </div>
 
                         {/* Administrative Info */}
