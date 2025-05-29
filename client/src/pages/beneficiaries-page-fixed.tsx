@@ -626,6 +626,11 @@ export default function BeneficiariesPage() {
                 <div>
                   <CardTitle className="text-lg">
                     {beneficiary.name} {beneficiary.surname}
+                    {beneficiary.fathername && (
+                      <span className="text-base font-normal text-gray-700 ml-1">
+                        ΤΟΥ {beneficiary.fathername}
+                      </span>
+                    )}
                   </CardTitle>
                   <CardDescription>
                     ΑΦΜ: {beneficiary.afm} • Μονάδα: {beneficiary.unit}
@@ -639,40 +644,33 @@ export default function BeneficiariesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {beneficiary.fathername && (
-                  <Badge variant="secondary">Πατρώνυμο: {beneficiary.fathername}</Badge>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600 mb-4">
                 {beneficiary.project && (
-                  <Badge variant="outline">Έργο: {beneficiary.project}</Badge>
+                  <div><span className="font-medium">Έργο:</span> {beneficiary.project}</div>
                 )}
                 {beneficiary.date && (
-                  <Badge variant="outline">Ημερομηνία: {beneficiary.date}</Badge>
+                  <div><span className="font-medium">Ημερομηνία:</span> {beneficiary.date}</div>
                 )}
                 {beneficiary.region && (
-                  <Badge variant="outline">Περιοχή: {beneficiary.region}</Badge>
+                  <div><span className="font-medium">Περιοχή:</span> {beneficiary.region}</div>
                 )}
                 {(beneficiary.cengsur1 || beneficiary.cengname1) && (
-                  <Badge variant="secondary">
-                    Μηχανικός 1: {beneficiary.cengsur1} {beneficiary.cengname1}
-                  </Badge>
+                  <div><span className="font-medium">Μηχανικός 1:</span> {beneficiary.cengsur1} {beneficiary.cengname1}</div>
                 )}
                 {(beneficiary.cengsur2 || beneficiary.cengname2) && (
-                  <Badge variant="secondary">
-                    Μηχανικός 2: {beneficiary.cengsur2} {beneficiary.cengname2}
-                  </Badge>
+                  <div><span className="font-medium">Μηχανικός 2:</span> {beneficiary.cengsur2} {beneficiary.cengname2}</div>
                 )}
                 {beneficiary.freetext && (
-                  <Badge variant="outline">Σημειώσεις: {beneficiary.freetext.substring(0, 50)}...</Badge>
+                  <div className="md:col-span-2"><span className="font-medium">Σημειώσεις:</span> {beneficiary.freetext}</div>
                 )}
               </div>
               
-              {/* Enhanced Financial Information Display */}
+              {/* Financial Information Display */}
               {beneficiary.oikonomika && (
-                <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
                   <div className="flex items-center gap-2 mb-3">
-                    <FileText className="h-4 w-4 text-green-600" />
-                    <h4 className="text-sm font-semibold text-green-800">Οικονομικά Στοιχεία</h4>
+                    <FileText className="h-4 w-4 text-gray-600" />
+                    <h4 className="text-sm font-semibold text-gray-800">Οικονομικά Στοιχεία</h4>
                   </div>
                   {(() => {
                     try {
@@ -696,8 +694,8 @@ export default function BeneficiariesPage() {
                       return Object.entries(oikonomika).map(([paymentType, installments]: [string, any]) => {
                         console.log('Debug - Payment type:', paymentType, 'Installments:', installments);
                         return (
-                          <div key={paymentType} className="mb-3 p-3 bg-white rounded-md border">
-                            <div className="text-sm font-semibold text-blue-700 mb-2">{paymentType}</div>
+                          <div key={paymentType} className="mb-4">
+                            <div className="text-sm font-semibold text-gray-800 mb-3 pb-1 border-b border-gray-200">{paymentType}</div>
                             {Object.entries(installments).map(([installmentType, details]: [string, any]) => {
                               console.log('Debug - Installment type:', installmentType, 'Details:', details);
                               const amount = details.amount || 'Δεν έχει οριστεί';
@@ -705,31 +703,29 @@ export default function BeneficiariesPage() {
                               const protocol = details.protocol || details.protocol_number || null;
                               
                               return (
-                                <div key={installmentType} className="space-y-2 text-sm border-l-4 border-blue-200 pl-3 mb-3">
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-medium text-gray-600">Δόση:</span>
-                                    <span className="text-blue-700 font-bold text-base bg-blue-50 px-2 py-1 rounded">
-                                      {installmentType}
-                                    </span>
+                                <div key={installmentType} className="grid grid-cols-2 gap-4 py-2 text-sm border-l-2 border-gray-300 pl-3 mb-2">
+                                  <div>
+                                    <span className="text-gray-600">Δόση:</span>
+                                    <span className="ml-2 font-semibold text-gray-900">{installmentType}</span>
                                   </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-medium text-gray-600">Ποσό:</span>
-                                    <span className="text-green-700 font-bold text-xl">
+                                  <div>
+                                    <span className="text-gray-600">Ποσό:</span>
+                                    <span className="ml-2 font-bold text-lg text-gray-900">
                                       €{amount.toLocaleString('el-GR')}
                                     </span>
                                   </div>
                                   {status && (
-                                    <div className="flex justify-between items-center">
-                                      <span className="font-medium text-gray-600">Κατάσταση:</span>
-                                      <span className="text-orange-600 bg-orange-50 px-2 py-1 rounded text-xs uppercase">
+                                    <div>
+                                      <span className="text-gray-600">Κατάσταση:</span>
+                                      <span className="ml-2 text-gray-700 bg-gray-100 px-2 py-1 rounded text-xs">
                                         {status}
                                       </span>
                                     </div>
                                   )}
                                   {protocol && (
-                                    <div className="flex justify-between items-center">
-                                      <span className="font-medium text-gray-600">Πρωτόκολλο:</span>
-                                      <span className="text-purple-600 font-mono text-sm bg-purple-50 px-2 py-1 rounded">
+                                    <div>
+                                      <span className="text-gray-600">Πρωτόκολλο:</span>
+                                      <span className="ml-2 text-gray-800 font-mono text-sm">
                                         {protocol}
                                       </span>
                                     </div>
