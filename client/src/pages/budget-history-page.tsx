@@ -148,14 +148,40 @@ export default function BudgetHistoryPage() {
   const [changeType, setChangeType] = useState<string>('all');
   const [misFilter, setMisFilter] = useState<string>('');
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
+  const [dateFilter, setDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
+  const [creatorFilter, setCreatorFilter] = useState<string>('');
 
-  // Used to submit MIS filter
+  // Used to submit filters
   const [appliedMisFilter, setAppliedMisFilter] = useState<string>('');
+  const [appliedDateFilter, setAppliedDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
+  const [appliedCreatorFilter, setAppliedCreatorFilter] = useState<string>('');
+
+  const isManager = user?.role === 'manager';
+  const isAdmin = user?.role === 'admin';
 
   // Reset to page 1 when filters change
   const applyMisFilter = () => {
     setPage(1);
     setAppliedMisFilter(misFilter);
+  };
+
+  // Apply all filters
+  const applyAllFilters = () => {
+    setPage(1);
+    setAppliedMisFilter(misFilter);
+    setAppliedDateFilter(dateFilter);
+    setAppliedCreatorFilter(creatorFilter);
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setPage(1);
+    setMisFilter('');
+    setDateFilter({ from: '', to: '' });
+    setCreatorFilter('');
+    setAppliedMisFilter('');
+    setAppliedDateFilter({ from: '', to: '' });
+    setAppliedCreatorFilter('');
   };
 
   // Reset page when change type changes
@@ -172,7 +198,7 @@ export default function BudgetHistoryPage() {
   };
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/budget/history', page, limit, changeType, appliedMisFilter],
+    queryKey: ['/api/budget/history', page, limit, changeType, appliedMisFilter, appliedDateFilter, appliedCreatorFilter],
     queryFn: async () => {
       let url = `/api/budget/history?page=${page}&limit=${limit}`;
       
@@ -182,6 +208,18 @@ export default function BudgetHistoryPage() {
       
       if (appliedMisFilter) {
         url += `&mis=${appliedMisFilter}`;
+      }
+      
+      if (appliedDateFilter.from) {
+        url += `&date_from=${appliedDateFilter.from}`;
+      }
+      
+      if (appliedDateFilter.to) {
+        url += `&date_to=${appliedDateFilter.to}`;
+      }
+      
+      if (appliedCreatorFilter) {
+        url += `&creator=${appliedCreatorFilter}`;
       }
       
       const res = await fetch(url);
@@ -646,60 +684,165 @@ export default function BudgetHistoryPage() {
       <div className="container mx-auto px-4 pt-6 pb-8">
         <Card className="bg-card">
           <div className="p-4">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-              <div>
-                <h1 className="text-2xl font-bold">Ιστορικό Προϋπολογισμού</h1>
-                <p className="text-muted-foreground">Παρακολούθηση όλων των αλλαγών προϋπολογισμού με λεπτομερείς πληροφορίες</p>
-              </div>
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Φίλτρο με MIS..."
-                    value={misFilter}
-                    onChange={(e) => setMisFilter(e.target.value)}
-                    className="w-[180px]"
-                  />
-                  <Button onClick={applyMisFilter} size="icon" variant="outline">
-                    <Search className="h-4 w-4" />
-                  </Button>
+            <div className="flex flex-col gap-6 mb-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold">Ιστορικό Προϋπολογισμού</h1>
+                  <p className="text-muted-foreground">
+                    Παρακολούθηση όλων των αλλαγών προϋπολογισμού με λεπτομερείς πληροφορίες
+                    {(isManager || isAdmin) && (
+                      <span className="ml-2 text-blue-600 font-medium">
+                        • Διαχειριστικό περιβάλλον
+                      </span>
+                    )}
+                  </p>
                 </div>
-                <Select
-                  value={changeType}
-                  onValueChange={handleChangeTypeChange}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Φίλτρο ανά τύπο" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Όλες οι αλλαγές</SelectItem>
-                    <SelectItem value="document_creation">Δημιουργία Εγγράφου</SelectItem>
-                    <SelectItem value="manual_adjustment">Χειροκίνητη Προσαρμογή</SelectItem>
-                    <SelectItem value="notification_created">Δημιουργία Ειδοποίησης</SelectItem>
-                    <SelectItem value="import">Εισαγωγή</SelectItem>
-                    <SelectItem value="error">Σφάλμα</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={limit.toString()}
-                  onValueChange={(value) => {
-                    setPage(1);
-                    setLimit(parseInt(value));
-                  }}
-                >
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Εγγραφές ανά σελίδα" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5 ανά σελίδα</SelectItem>
-                    <SelectItem value="10">10 ανά σελίδα</SelectItem>
-                    <SelectItem value="20">20 ανά σελίδα</SelectItem>
-                    <SelectItem value="50">50 ανά σελίδα</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" onClick={() => refetch()} size="icon" title="Ανανέωση">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => refetch()} size="sm" title="Ανανέωση">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Ανανέωση
+                  </Button>
+                  {(isManager || isAdmin) && (
+                    <Button variant="outline" onClick={clearAllFilters} size="sm">
+                      Καθαρισμός Φίλτρων
+                    </Button>
+                  )}
+                </div>
               </div>
+
+              {/* Enhanced Filters Section for Managers */}
+              {(isManager || isAdmin) && (
+                <Card className="p-4 bg-blue-50/50 border-blue-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Search className="h-4 w-4 text-blue-600" />
+                    <h3 className="font-medium text-blue-900">Προηγμένα Φίλτρα Αναζήτησης</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">MIS Έργου</label>
+                      <Input
+                        placeholder="π.χ. 5174085"
+                        value={misFilter}
+                        onChange={(e) => setMisFilter(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Τύπος Αλλαγής</label>
+                      <Select value={changeType} onValueChange={handleChangeTypeChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Επιλέξτε τύπο" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Όλες οι αλλαγές</SelectItem>
+                          <SelectItem value="document_created">Δημιουργία Εγγράφου</SelectItem>
+                          <SelectItem value="manual_adjustment">Χειροκίνητη Προσαρμογή</SelectItem>
+                          <SelectItem value="notification_created">Δημιουργία Ειδοποίησης</SelectItem>
+                          <SelectItem value="import">Εισαγωγή δεδομένων</SelectItem>
+                          <SelectItem value="error">Σφάλματα</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Από Ημερομηνία</label>
+                      <Input
+                        type="date"
+                        value={dateFilter.from}
+                        onChange={(e) => setDateFilter(prev => ({ ...prev, from: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Έως Ημερομηνία</label>
+                      <Input
+                        type="date"
+                        value={dateFilter.to}
+                        onChange={(e) => setDateFilter(prev => ({ ...prev, to: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Δημιουργήθηκε από</label>
+                      <Input
+                        placeholder="Όνομα χρήστη..."
+                        value={creatorFilter}
+                        onChange={(e) => setCreatorFilter(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Αποτελέσματα ανά σελίδα</label>
+                      <Select
+                        value={limit.toString()}
+                        onValueChange={(value) => {
+                          setPage(1);
+                          setLimit(parseInt(value));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="5">5 εγγραφές</SelectItem>
+                          <SelectItem value="10">10 εγγραφές</SelectItem>
+                          <SelectItem value="20">20 εγγραφές</SelectItem>
+                          <SelectItem value="50">50 εγγραφές</SelectItem>
+                          <SelectItem value="100">100 εγγραφές</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <Button onClick={applyAllFilters} className="flex-1">
+                        <Search className="h-4 w-4 mr-2" />
+                        Εφαρμογή Φίλτρων
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Simple filters for regular users */}
+              {!isManager && !isAdmin && (
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Φίλτρο με MIS..."
+                      value={misFilter}
+                      onChange={(e) => setMisFilter(e.target.value)}
+                      className="w-[180px]"
+                    />
+                    <Button onClick={applyMisFilter} size="icon" variant="outline">
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Select value={changeType} onValueChange={handleChangeTypeChange}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Φίλτρο ανά τύπο" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Όλες οι αλλαγές</SelectItem>
+                      <SelectItem value="document_created">Δημιουργία Εγγράφου</SelectItem>
+                      <SelectItem value="manual_adjustment">Χειροκίνητη Προσαρμογή</SelectItem>
+                      <SelectItem value="import">Εισαγωγή</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={limit.toString()}
+                    onValueChange={(value) => {
+                      setPage(1);
+                      setLimit(parseInt(value));
+                    }}
+                  >
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Εγγραφές ανά σελίδα" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 ανά σελίδα</SelectItem>
+                      <SelectItem value="10">10 ανά σελίδα</SelectItem>
+                      <SelectItem value="20">20 ανά σελίδα</SelectItem>
+                      <SelectItem value="50">50 ανά σελίδα</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="relative">
@@ -716,6 +859,86 @@ export default function BudgetHistoryPage() {
                   Δεν βρέθηκαν εγγραφές ιστορικού προϋπολογισμού
                 </div>
               ) : (
+                <>
+                  {/* Summary Statistics for Managers */}
+                  {(isManager || isAdmin) && (
+                    <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+                      <div className="p-4">
+                        <h3 className="text-lg font-semibold text-blue-900 mb-4">Στατιστικά Περιόδου</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          {(() => {
+                            const totalEntries = history.length;
+                            const documentCreations = history.filter(h => h.change_type === 'document_created').length;
+                            const manualAdjustments = history.filter(h => h.change_type === 'manual_adjustment').length;
+                            const imports = history.filter(h => h.change_type === 'import').length;
+                            
+                            const totalBudgetChange = history.reduce((sum, entry) => {
+                              const prev = parseFloat(entry.previous_amount || '0');
+                              const curr = parseFloat(entry.new_amount || '0');
+                              return sum + (curr - prev);
+                            }, 0);
+
+                            return (
+                              <>
+                                <div className="text-center p-3 bg-white rounded-lg border">
+                                  <div className="text-2xl font-bold text-blue-600">{totalEntries}</div>
+                                  <div className="text-sm text-gray-600">Συνολικές Αλλαγές</div>
+                                </div>
+                                <div className="text-center p-3 bg-white rounded-lg border">
+                                  <div className="text-2xl font-bold text-green-600">{documentCreations}</div>
+                                  <div className="text-sm text-gray-600">Δημιουργίες Εγγράφων</div>
+                                </div>
+                                <div className="text-center p-3 bg-white rounded-lg border">
+                                  <div className="text-2xl font-bold text-orange-600">{manualAdjustments}</div>
+                                  <div className="text-sm text-gray-600">Χειροκίνητες Προσαρμογές</div>
+                                </div>
+                                <div className="text-center p-3 bg-white rounded-lg border">
+                                  <div className={`text-2xl font-bold ${totalBudgetChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {formatCurrency(totalBudgetChange)}
+                                  </div>
+                                  <div className="text-sm text-gray-600">Συνολική Μεταβολή</div>
+                                </div>
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* Recent Activity Summary for Managers */}
+                  {(isManager || isAdmin) && history.length > 0 && (
+                    <Card className="mb-6 bg-yellow-50/50 border-yellow-200">
+                      <div className="p-4">
+                        <h3 className="text-lg font-semibold text-yellow-900 mb-3">Πρόσφατη Δραστηριότητα</h3>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {history.slice(0, 5).map((entry) => {
+                            const change = parseFloat(entry.new_amount || '0') - parseFloat(entry.previous_amount || '0');
+                            return (
+                              <div key={entry.id} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-gray-500">
+                                    {entry.created_at ? format(new Date(entry.created_at), 'dd/MM HH:mm') : 'N/A'}
+                                  </span>
+                                  <span className="font-medium">MIS {entry.mis}</span>
+                                  <span className={`px-2 py-1 rounded text-xs ${
+                                    change > 0 ? 'bg-green-100 text-green-700' : 
+                                    change < 0 ? 'bg-red-100 text-red-700' : 
+                                    'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {change > 0 ? '+' : ''}{formatCurrency(change)}
+                                  </span>
+                                </div>
+                                <div className="text-gray-600">
+                                  {entry.created_by || 'Σύστημα'}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </Card>
+                  )}
                 <>
                   <div className="overflow-x-auto">
                     <Table>
