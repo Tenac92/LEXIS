@@ -77,9 +77,19 @@ export default function DocumentsPage() {
     }
   }, [location, setLocation]);
 
+  // Ensure unit filter defaults to user's unit when authentication completes
+  useEffect(() => {
+    if (user?.units?.[0] && !filters.unit) {
+      setFilters(prev => ({
+        ...prev,
+        unit: user.units[0]
+      }));
+    }
+  }, [user?.units, filters.unit]);
+
   // Initialize both main filters and advanced filters states
   const [filters, setFilters] = useState<Filters>({
-    unit: user?.units?.[0] || 'all',
+    unit: user?.units?.[0] || '',
     status: 'pending',
     user: 'all',
     dateFrom: '',
@@ -145,8 +155,22 @@ export default function DocumentsPage() {
         // Build query parameters for the API request
         const queryParams = new URLSearchParams();
         
-        if (filters.unit && filters.unit !== 'all') {
-          queryParams.append('unit', filters.unit);
+        // Always enforce unit filter - users can only see their assigned units
+        if (filters.unit) {
+          // Verify the selected unit is in user's authorized units
+          if (user?.units?.includes(filters.unit)) {
+            queryParams.append('unit', filters.unit);
+          } else {
+            // If unauthorized unit, default to first authorized unit
+            if (user?.units?.[0]) {
+              queryParams.append('unit', user.units[0]);
+            }
+          }
+        } else {
+          // If no unit selected, default to first authorized unit
+          if (user?.units?.[0]) {
+            queryParams.append('unit', user.units[0]);
+          }
         }
         
         if (filters.status !== 'all') {
@@ -249,7 +273,6 @@ export default function DocumentsPage() {
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem key="all-units" value="all">Όλες οι Μονάδες</SelectItem>
                     {user?.units?.map((unit: string) => (
                       <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                     ))}
