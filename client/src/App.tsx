@@ -35,6 +35,7 @@ function Router(): JSX.Element {
     <PageTransition>
       <Switch>
         <ProtectedRoute path="/" component={HomePage} />
+        <ProtectedRoute path="/documents/new" component={DocumentsPage} />
         <ProtectedRoute path="/documents" component={DocumentsPage} />
         <ProtectedRoute path="/templates" component={TemplatesPage} />
         <ProtectedRoute path="/projects/bulk-update" component={BulkUpdatePage} />
@@ -46,6 +47,7 @@ function Router(): JSX.Element {
         <ProtectedRoute path="/employees" component={EmployeesPage} />
         <ProtectedRoute path="/beneficiaries" component={BeneficiariesPage} />
         <ProtectedRoute path="/budget-history" component={BudgetHistoryPage} />
+        <ProtectedRoute path="/budget/history" component={BudgetHistoryPage} />
         <ProtectedRoute path="/notifications" component={NotificationsPage} />
         <ProtectedRoute path="/admin/notifications" component={AdminNotificationsPage} />
         <ProtectedRoute path="/admin/budget-upload" component={AdminBudgetUploadPage} />

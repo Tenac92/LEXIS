@@ -16,7 +16,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileText, Filter, RefreshCcw, LayoutGrid, List } from "lucide-react";
 import { DocumentCard } from "@/components/documents/document-card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +25,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
+import { CreateDocumentDialog } from "@/components/documents/create-document-dialog";
 // Removed direct Supabase import
 import type { GeneratedDocument } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -52,8 +54,10 @@ export default function DocumentsPage() {
   const { user } = useAuth() as { user: User };
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedDocument, setSelectedDocument] = useState<GeneratedDocument | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [modalState, setModalState] = useState<{
     view: boolean;
     edit: boolean;
@@ -63,6 +67,15 @@ export default function DocumentsPage() {
     edit: false,
     delete: false,
   });
+
+  // Check if URL is /documents/new and open create dialog
+  useEffect(() => {
+    if (location === '/documents/new') {
+      setShowCreateDialog(true);
+      // Change URL to /documents without triggering a reload
+      setLocation('/documents', { replace: true });
+    }
+  }, [location, setLocation]);
 
   // Initialize both main filters and advanced filters states
   const [filters, setFilters] = useState<Filters>({
@@ -472,6 +485,12 @@ export default function DocumentsPage() {
         onDelete={() => {
           queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
         }}
+      />
+
+      <CreateDocumentDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
       />
 
       {user && <FAB />}
