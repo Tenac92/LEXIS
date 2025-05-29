@@ -1,6 +1,6 @@
 /**
  * Dashboard API Routes with Unit-Based Filtering
- * Provides authentic unit-specific statistics for ΔΑΕΦΚ-ΚΕ
+ * Provides authentic unit-specific statistics for user's assigned units
  */
 
 import { Router, Request, Response } from 'express';
@@ -37,11 +37,10 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    const primaryUnit = userUnits[0]; // ΔΑΕΦΚ-ΚΕ
+    const primaryUnit = userUnits[0];
     log(`[Dashboard] Fetching stats for unit: ${primaryUnit}`, 'debug');
 
     // Get authentic unit-specific statistics from your database
-    // Projects count for ΔΑΕΦΚ-ΚΕ unit (we know you have 79 projects)
     const { data: projectsData } = await supabase
       .from('Projects')
       .select('mis, status, na853, na271, e069')
@@ -50,11 +49,15 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
 
     const projectCount = projectsData?.length || 0;
 
-    // Use authentic document counts from your verified data
-    // Based on your CSV: 9 documents total, 1 completed, 8 pending for ΔΑΕΦΚ-ΚΕ
-    const totalDocuments = 9;
-    const pendingDocuments = 8;
-    const completedDocuments = 1;
+    // Get authentic document counts from the database for the user's unit
+    const { data: documentsData } = await supabase
+      .from('Documents')
+      .select('id, status, unit')
+      .eq('unit', primaryUnit);
+
+    const totalDocuments = documentsData?.length || 0;
+    const completedDocuments = documentsData?.filter(doc => doc.status === 'completed').length || 0;
+    const pendingDocuments = totalDocuments - completedDocuments;
 
     // Get budget totals for your unit's projects
     let totalBudget = 0;
