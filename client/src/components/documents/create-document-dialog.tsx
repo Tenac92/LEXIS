@@ -2688,7 +2688,43 @@ export function CreateDocumentDialog({
                                     // Find matching expenditure type in oikonomika
                                     for (const [expType, paymentsList] of Object.entries(beneficiaryData.oikonomika)) {
                                       if (Array.isArray(paymentsList) && paymentsList.length > 0) {
-                                        // For now, take the first available payment (we can enhance this later)
+                                        // CHECK FOR CONFLICTS: Look for already processed installments
+                                        const processedInstallments: string[] = [];
+                                        for (const payment of paymentsList) {
+                                          if (payment && typeof payment === 'object') {
+                                            const status = payment.status;
+                                            const installments = payment.installment || [];
+                                            
+                                            // Check if marked as processed (διαβιβάστηκε with or without accent)
+                                            if (status && (status.includes('διαβιβάστηκε') || status.includes('διαβιβαστηκε'))) {
+                                              if (Array.isArray(installments)) {
+                                                processedInstallments.push(...installments);
+                                              }
+                                            }
+                                          }
+                                        }
+                                        
+                                        // Show warning if any installments are already processed
+                                        if (processedInstallments.length > 0) {
+                                          toast({
+                                            title: "Προειδοποίηση Δόσης",
+                                            description: `Οι δόσεις ${processedInstallments.join(", ")} έχουν ήδη διαβιβαστεί για αυτόν τον δικαιούχο. Παρακαλώ επιλέξτε άλλη δόση.`,
+                                            variant: "destructive",
+                                          });
+                                        }
+                                        
+                                        // Suggest next available installment if A is processed
+                                        let suggestedInstallment = "Α";
+                                        if (processedInstallments.includes("Α")) {
+                                          suggestedInstallment = "Β";
+                                        }
+                                        if (processedInstallments.includes("Β")) {
+                                          suggestedInstallment = "Γ";
+                                        }
+                                        
+                                        console.log("[SmartInstallment] Processed installments:", processedInstallments, "Suggesting:", suggestedInstallment);
+                                        
+                                        // Use the suggested installment instead of blindly taking the first payment
                                         const firstPayment = paymentsList[0];
                                         
                                         if (firstPayment && typeof firstPayment === 'object') {
@@ -2918,7 +2954,7 @@ export function CreateDocumentDialog({
                   <Button
                     type="button"
                     onClick={() => form.handleSubmit(handleSubmit)()}
-                    disabled={loading || !form.formState.isValid}
+                    disabled={loading || recipients.length === 0}
                   >
                     {loading ? (
                       <>
