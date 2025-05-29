@@ -168,13 +168,20 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
     
     // Filter by expenditure type if specified - check inside oikonomika JSONB
     if (type && typeof type === 'string') {
+      console.log(`[Beneficiaries] Filtering by expenditure type: "${type}"`);
       beneficiaries = beneficiaries.filter((beneficiary: any) => {
+        console.log(`[Beneficiaries] Checking beneficiary ${beneficiary.id} oikonomika:`, beneficiary.oikonomika);
+        
         if (!beneficiary.oikonomika || typeof beneficiary.oikonomika !== 'object') {
+          console.log(`[Beneficiaries] Beneficiary ${beneficiary.id} has no valid oikonomika data`);
           return false; // No financial data means no matching type
         }
         
         // Check if the specified expenditure type exists in oikonomika
-        return beneficiary.oikonomika.hasOwnProperty(type);
+        const hasType = beneficiary.oikonomika.hasOwnProperty(type);
+        console.log(`[Beneficiaries] Beneficiary ${beneficiary.id} has expenditure type "${type}": ${hasType}`);
+        console.log(`[Beneficiaries] Available types in oikonomika:`, Object.keys(beneficiary.oikonomika));
+        return hasType;
       });
     }
     
