@@ -106,32 +106,37 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
     
     log(`[Documents] Fetching documents for user ${req.user.id}, authorized units: ${userUnits.join(', ')}`, 'debug');
     
-    // For now, return unit-filtered authentic documents
-    // This ensures user only sees data from their ΔΑΕΦΚ-ΚΕ unit
-    const unitFilteredDocuments = [
-      {
-        id: 1,
-        title: "Έγγραφο Αποκατάστασης Ζημιών 2021 - Φωκίδα",
-        status: "completed", 
-        created_at: "2024-01-15T10:30:00Z",
-        unit: "ΔΑΕΦΚ-ΚΕ"
-      },
-      {
-        id: 2, 
-        title: "Έγγραφο Αποκατάστασης Πυρκαγιάς 2022 - Λέσβος",
-        status: "pending",
-        created_at: "2024-02-20T14:15:00Z", 
-        unit: "ΔΑΕΦΚ-ΚΕ"
-      }
-    ];
+    // Fetch real documents from database with proper user/unit filtering
+    const { data: documents, error } = await supabase
+      .from('generated_documents')
+      .select('*')
+      .in('unit', userUnits)
+      .eq('generated_by', req.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      log(`[Documents] Database error: ${error.message}`, 'error');
+      return res.status(500).json({ 
+        message: 'Error fetching documents',
+        error: error.message 
+      });
+    }
+
+    // Format documents for frontend
+    const formattedDocuments = documents?.map(doc => ({
+      id: doc.id,
+      title: doc.title || `Έγγραφο ${doc.id}`,
+      status: doc.status,
+      created_at: doc.created_at,
+      updated_at: doc.updated_at,
+      unit: doc.unit,
+      total_amount: doc.total_amount,
+      expenditure_type: doc.expenditure_type,
+      recipients: doc.recipients
+    })) || [];
     
-    // Filter to only show documents from user's authorized units
-    const authorizedDocuments = unitFilteredDocuments.filter(doc => 
-      userUnits.includes(doc.unit)
-    );
-    
-    log(`[Documents] SECURITY: Returning ${authorizedDocuments.length} documents from authorized units only`, 'info');
-    return res.status(200).json(authorizedDocuments);
+    log(`[Documents] SECURITY: Returning ${formattedDocuments.length} documents from authorized units only`, 'info');
+    return res.status(200).json(formattedDocuments);
     
   } catch (error) {
     log(`[Documents] Error: ${error}`, 'error');
