@@ -10,47 +10,7 @@ import { AuthenticatedRequest } from '../../authentication';
 
 const router = Router();
 
-/**
- * Get recent activity for a specific unit from actual document data
- */
-async function getRecentActivity(unit: string) {
-  try {
-    const { data: recentDocs } = await supabase
-      .from('generated_documents')
-      .select('id, created_at, mis, project_na853, status, generated_by')
-      .eq('unit', unit)
-      .order('created_at', { ascending: false })
-      .limit(5);
 
-    if (!recentDocs || recentDocs.length === 0) {
-      return [];
-    }
-
-    // Get user names for the generated_by IDs
-    const userIds = [...new Set(recentDocs.map(doc => doc.generated_by).filter(Boolean))];
-    const { data: users } = await supabase
-      .from('users')
-      .select('id, name')
-      .in('id', userIds);
-
-    const userMap = users?.reduce((acc, user) => {
-      acc[user.id] = user.name;
-      return acc;
-    }, {} as Record<number, string>) || {};
-
-    return recentDocs.map((doc, index) => ({
-      id: index + 1,
-      type: 'document_created',
-      description: `Δημιουργήθηκε έγγραφο για ${unit}`,
-      date: doc.created_at,
-      createdBy: userMap[doc.generated_by] || 'Σύστημα',
-      mis: doc.mis
-    }));
-  } catch (error) {
-    log(`[Dashboard] Error fetching recent activity: ${error}`, 'error');
-    return [];
-  }
-}
 
 /**
  * Get dashboard statistics filtered by user's unit
@@ -137,25 +97,27 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
       }
     }
 
-    // Get recent activity from actual documents
-    let recentActivity = [];
+    // Get recent activity from your authentic documents
+    const recentActivity: any[] = [];
     try {
       const { data: recentDocs } = await supabase
         .from('generated_documents')
-        .select('id, created_at, mis, status')
+        .select('id, created_at, mis, status, project_na853')
         .eq('unit', primaryUnit)
         .order('created_at', { ascending: false })
         .limit(5);
 
       if (recentDocs && recentDocs.length > 0) {
-        recentActivity = recentDocs.map((doc, index) => ({
-          id: index + 1,
-          type: 'document_created',
-          description: `Δημιουργήθηκε έγγραφο ${doc.status} για ${primaryUnit}`,
-          date: doc.created_at || new Date().toISOString(),
-          createdBy: req.user.name,
-          mis: doc.mis
-        }));
+        recentDocs.forEach((doc, index) => {
+          recentActivity.push({
+            id: index + 1,
+            type: 'document_created',
+            description: `Δημιουργήθηκε έγγραφο ${doc.status || 'pending'} για ${primaryUnit}`,
+            date: doc.created_at || new Date().toISOString(),
+            createdBy: req.user?.name || 'Σύστημα',
+            mis: doc.mis || 'Μη διαθέσιμο'
+          });
+        });
       }
     } catch (error) {
       log(`[Dashboard] Error fetching recent activity: ${error}`, 'error');
