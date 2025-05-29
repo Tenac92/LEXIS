@@ -1978,8 +1978,14 @@ export function CreateDocumentDialog({
           description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
         });
 
-        // No longer reset form - data is preserved in context
-        // Just close the dialog and the data will persist in our context
+        // Reset recipient list after successful document creation
+        form.setValue("recipients", []);
+        
+        // Update context to clear recipients  
+        updateFormData({
+          ...formData,
+          recipients: []
+        });
         
         // Force close the dialog
         onClose();
