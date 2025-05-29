@@ -70,17 +70,28 @@ export function SimpleAFMAutocomplete({
     }
 
     const expenditureData = beneficiary.oikonomika[expenditureType];
-    if (!expenditureData || !Array.isArray(expenditureData)) {
+    if (!expenditureData || typeof expenditureData !== 'object') {
       return 'Α'; // Default to first installment if no data for this expenditure type
     }
 
     // Check which installments are already "διαβιβάστηκε"
     const completedInstallments = new Set();
-    expenditureData.forEach((record: any) => {
-      if (record.status === 'διαβιβάστηκε' || record.status === 'διαβιβαστηκε') {
-        completedInstallments.add(record.installment);
-      }
-    });
+    
+    // Handle both array and object formats
+    if (Array.isArray(expenditureData)) {
+      expenditureData.forEach((record: any) => {
+        if (record.status === 'διαβιβάστηκε' || record.status === 'διαβιβαστηκε') {
+          completedInstallments.add(record.installment);
+        }
+      });
+    } else {
+      // Handle object format like: { "Α": { "status": "διαβιβάστηκε", ... }, "Β": {...} }
+      Object.entries(expenditureData).forEach(([installment, record]: [string, any]) => {
+        if (record && (record.status === 'διαβιβάστηκε' || record.status === 'διαβιβαστηκε')) {
+          completedInstallments.add(installment);
+        }
+      });
+    }
 
     // Return next available installment in sequence
     const installmentSequence = ['Α', 'Β', 'Γ', 'Δ', 'Ε'];

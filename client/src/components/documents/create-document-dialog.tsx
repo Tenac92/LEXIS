@@ -1136,6 +1136,22 @@ export function CreateDocumentDialog({
       : ALL_INSTALLMENTS;
   };
 
+  // Helper function to check if an installment is already processed
+  const checkInstallmentConflict = (beneficiary: any, expenditureType: string, installment: string) => {
+    if (!beneficiary?.oikonomika || !expenditureType || !installment) return false;
+    
+    const expenditureData = beneficiary.oikonomika[expenditureType];
+    if (!expenditureData || typeof expenditureData !== 'object') return false;
+    
+    // Handle object format like: { "Α": { "status": "διαβιβάστηκε", ... } }
+    if (expenditureData[installment]) {
+      const record = expenditureData[installment];
+      return record.status === 'διαβιβάστηκε' || record.status === 'διαβιβαστηκε';
+    }
+    
+    return false;
+  };
+
   // Helper function to check if installments are in sequence
   const areInstallmentsInSequence = (installments: string[]) => {
     if (installments.length <= 1) return true;
@@ -1179,6 +1195,20 @@ export function CreateDocumentDialog({
 
     // Control function to toggle an installment selection - simplified version
     const handleInstallmentToggle = (installment: string) => {
+      // Check if this installment conflicts with existing beneficiary data
+      const expenditureType = form.watch("expenditure_type");
+      if (currentRecipient && 'oikonomika' in currentRecipient && expenditureType) {
+        const hasConflict = checkInstallmentConflict(currentRecipient, expenditureType, installment);
+        if (hasConflict) {
+          toast({
+            title: "Προειδοποίηση",
+            description: `Η δόση ${installment} για τον τύπο δαπάνης "${expenditureType}" έχει ήδη διαβιβαστεί για αυτόν τον δικαιούχο.`,
+            variant: "destructive",
+          });
+          return; // Prevent selection of conflicting installment
+        }
+      }
+      
       // Toggling installment selection
       
       // Create a copy of current installments
