@@ -270,6 +270,7 @@ export const employees = pgTable("Employees", {
 /**
  * Beneficiary Table (Recipients)
  * Contains beneficiary information for document generation and tracking
+ * Updated structure with JSONB oikonomika field for multiple payment tracking
  */
 export const beneficiaries = pgTable("Beneficiary", {
   id: serial("id").primaryKey(),
@@ -280,18 +281,16 @@ export const beneficiaries = pgTable("Beneficiary", {
   name: text("name"),
   fathername: text("fathername"),
   freetext: text("freetext"), // Additional free text
-  amount: text("amount"), // Amount as text to preserve formatting
-  installment: text("installment"), // Installment information
   afm: integer("afm"), // Tax ID (AFM)
-  type: text("type"), // Beneficiary type
   date: text("date"), // Date as text
   monada: text("monada"), // Unit/Organization
-  cengsur1: text("cengsur1"), // Census surname 1
-  cengname1: text("cengname1"), // Census name 1
-  cengsur2: text("cengsur2"), // Census surname 2
-  cengname2: text("cengname2"), // Census name 2
+  cengsur1: text("cengsur1"), // Engineer 1 surname
+  cengname1: text("cengname1"), // Engineer 1 name
+  cengsur2: text("cengsur2"), // Engineer 2 surname
+  cengname2: text("cengname2"), // Engineer 2 name
   onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
-  project: integer("project"), // Project reference
+  project: integer("project"), // Project reference (MIS code)
+  oikonomika: jsonb("oikonomika"), // Financial data - stores multiple payment records
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at"),
 }, (table) => ({
@@ -412,6 +411,19 @@ export type Recipient = z.infer<typeof recipientSchema>;
 // ==============================================================
 
 // Custom types for specific UI and business logic needs
+
+// Financial payment record structure for beneficiaries
+export interface BeneficiaryPaymentRecord {
+  amount: string;
+  status: string | null;
+  installment: string[];
+  protocol_number: string | null;
+}
+
+// Complete financial data structure for beneficiaries
+export interface BeneficiaryOikonomika {
+  [paymentType: string]: BeneficiaryPaymentRecord[];
+}
 
 // Unit name structure
 export interface MonadaUnitName {

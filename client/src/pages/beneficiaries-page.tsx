@@ -300,57 +300,19 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
             {/* Financial Information Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-foreground border-b pb-2">Οικονομικά Στοιχεία</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ποσό</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="π.χ. 10.286.06" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="installment"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Δόση</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Επιλέξτε δόση" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="ΕΦΑΠΑΞ">ΕΦΑΠΑΞ</SelectItem>
-                          <SelectItem value="Α">Α΄ ΔΟΣΗ</SelectItem>
-                          <SelectItem value="Β">Β΄ ΔΟΣΗ</SelectItem>
-                          <SelectItem value="Γ">Γ΄ ΔΟΣΗ</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Τύπος</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Επιλέξτε τύπο" />
-                          </SelectTrigger>
-                        </FormControl>
+              <div className="space-y-4">
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Προσθέστε πληρωμές για αυτόν τον δικαιούχο. Μπορεί να έχει πολλαπλούς τύπους πληρωμών και δόσεις.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Τύπος Πληρωμής</label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Επιλέξτε τύπο" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="ΔΚΑ ΕΠΙΣΚΕΥΗ">ΔΚΑ ΕΠΙΣΚΕΥΗ</SelectItem>
                           <SelectItem value="ΔΚΑ ΑΠΟΚΑΤΑΣΤΑΣΗ">ΔΚΑ ΑΠΟΚΑΤΑΣΤΑΣΗ</SelectItem>
@@ -358,10 +320,40 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                           <SelectItem value="ΕΠΙΧΕΙΡΗΜΑΤΙΚΗ ΣΥΝΔΡΟΜΗ">ΕΠΙΧΕΙΡΗΜΑΤΙΚΗ ΣΥΝΔΡΟΜΗ</SelectItem>
                         </SelectContent>
                       </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Ποσό</label>
+                      <Input placeholder="π.χ. 10.286.06" />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Δόση</label>
+                      <Select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Επιλέξτε δόση" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ΕΦΑΠΑΞ">ΕΦΑΠΑΞ</SelectItem>
+                          <SelectItem value="Α">Α΄ ΔΟΣΗ</SelectItem>
+                          <SelectItem value="Β">Β΄ ΔΟΣΗ</SelectItem>
+                          <SelectItem value="Γ">Γ΄ ΔΟΣΗ</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <Button type="button" variant="outline" size="sm">
+                      + Προσθήκη Πληρωμής
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="text-xs text-muted-foreground">
+                  Μετά την αποθήκευση, τα οικονομικά στοιχεία θα αποθηκευτούν στη νέα δομή JSONB.
+                  Η κατάσταση και ο αριθμός πρωτοκόλλου θα ενημερώνονται αυτόματα από τα παραγόμενα έγγραφα.
+                </div>
               </div>
             </div>
 
@@ -917,14 +909,27 @@ export default function BeneficiariesPage() {
                             <span className="font-medium text-base text-muted-foreground">Οικονομικά</span>
                           </div>
                           <div className="space-y-1">
-                            {beneficiary.amount && (
-                              <Badge variant="secondary" className="mr-2 text-sm">{beneficiary.amount}€</Badge>
-                            )}
-                            {beneficiary.installment && (
-                              <Badge variant="outline" className="text-sm">{beneficiary.installment}</Badge>
-                            )}
-                            {beneficiary.type && (
-                              <Badge variant="outline" className="text-sm block">{beneficiary.type}</Badge>
+                            {beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object' ? (
+                              Object.entries(beneficiary.oikonomika as Record<string, any>).map(([paymentType, records]) => (
+                                <div key={paymentType} className="space-y-1">
+                                  <Badge variant="secondary" className="text-sm font-medium">{paymentType}</Badge>
+                                  {Array.isArray(records) && records.map((record: any, index: number) => (
+                                    <div key={index} className="ml-2 space-y-1">
+                                      <div className="flex gap-1 flex-wrap">
+                                        <Badge variant="outline" className="text-xs">{record.amount}€</Badge>
+                                        {Array.isArray(record.installment) && record.installment.map((inst: string) => (
+                                          <Badge key={inst} variant="outline" className="text-xs">{inst}</Badge>
+                                        ))}
+                                      </div>
+                                      {record.protocol_number && (
+                                        <Badge variant="default" className="text-xs">Πρωτ.: {record.protocol_number}</Badge>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-sm text-muted-foreground">Δεν υπάρχουν οικονομικά στοιχεία</p>
                             )}
                           </div>
                         </div>
