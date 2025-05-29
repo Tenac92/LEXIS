@@ -157,14 +157,26 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
     console.log(`[Beneficiaries] Raw search returned ${beneficiaries.length} beneficiaries`);
     console.log(`[Beneficiaries] Sample beneficiary monada values:`, beneficiaries.slice(0, 3).map(b => ({ id: b.id, monada: b.monada })));
     
-    // Filter by user's unit (monada field must match user's unit)
-    beneficiaries = beneficiaries.filter((beneficiary: any) => {
-      const matches = beneficiary.monada === userUnit;
-      if (!matches) {
-        console.log(`[Beneficiaries] Filtering out beneficiary ${beneficiary.id}: monada "${beneficiary.monada}" != user unit "${userUnit}"`);
-      }
-      return matches;
-    });
+    // Allow cross-unit AFM searches for document creation, but log the cross-unit access
+    const includeFinancial = req.query.includeFinancial === 'true';
+    if (includeFinancial) {
+      // When including financial data (for document creation), allow cross-unit access
+      console.log(`[Beneficiaries] Cross-unit AFM search enabled - showing all matching beneficiaries`);
+      beneficiaries.forEach((beneficiary: any) => {
+        if (beneficiary.monada !== userUnit) {
+          console.log(`[Beneficiaries] Cross-unit access: beneficiary ${beneficiary.id} (${beneficiary.monada}) visible to user in ${userUnit}`);
+        }
+      });
+    } else {
+      // For regular searches, maintain unit filtering
+      beneficiaries = beneficiaries.filter((beneficiary: any) => {
+        const matches = beneficiary.monada === userUnit;
+        if (!matches) {
+          console.log(`[Beneficiaries] Filtering out beneficiary ${beneficiary.id}: monada "${beneficiary.monada}" != user unit "${userUnit}"`);
+        }
+        return matches;
+      });
+    }
     
     // Note: Removed expenditure type filtering to allow beneficiaries to be used across different expenditure types
     // The same beneficiary can now be selected for any expenditure type, regardless of their previous payment history
