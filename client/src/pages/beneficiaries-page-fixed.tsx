@@ -16,20 +16,31 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
 const beneficiarySchema = z.object({
+  // Personal Information (required)
   name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
   surname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
-  fathername: z.string().optional(),
-  afm: z.string().min(1, "Το ΑΦΜ είναι υποχρεωτικό"),
-  project: z.number().optional(),
-  date: z.string().optional(),
-  onlinefoldernumber: z.string().optional(),
-  adeia: z.string().optional(),
+  fathername: z.string().min(1, "Το πατρώνυμο είναι υποχρεωτικό"),
+  afm: z.string().min(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία").max(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
+  
+  // Administrative Information (optional)
+  aa: z.number().optional(),
   region: z.string().optional(),
+  adeia: z.number().optional(),
+  date: z.string().optional(),
+  monada: z.string().optional(),
+  onlinefoldernumber: z.string().optional(),
   freetext: z.string().optional(),
+  
+  // Project Information
+  project: z.number().optional(),
+  
+  // Engineers Information (optional)
   cengsur1: z.string().optional(),
   cengname1: z.string().optional(),
   cengsur2: z.string().optional(),
   cengname2: z.string().optional(),
+  
+  // Financial Information (for new payments)
   paymentType: z.string().optional(),
   amount: z.string().optional(),
   installment: z.string().optional(),
@@ -83,12 +94,14 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
       surname: "",
       fathername: "",
       afm: "",
-      project: undefined,
-      date: "",
-      onlinefoldernumber: "",
-      adeia: "",
+      aa: undefined,
       region: "",
+      adeia: undefined,
+      date: "",
+      monada: "",
+      onlinefoldernumber: "",
       freetext: "",
+      project: undefined,
       cengsur1: "",
       cengname1: "",
       cengsur2: "",
@@ -457,10 +470,61 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
             {/* Financial Information */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-orange-600" />
-                <h3 className="text-lg font-semibold">Οικονομικά Στοιχεία</h3>
+                <FileText className="h-5 w-5 text-gray-600" />
+                <h3 className="text-lg font-semibold text-gray-800">Οικονομικά Στοιχεία</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Display existing financial data if editing */}
+              {beneficiary?.oikonomika && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg border">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-3">Υπάρχοντα Οικονομικά Στοιχεία:</h4>
+                  {(() => {
+                    try {
+                      let oikonomika = beneficiary.oikonomika;
+                      if (typeof oikonomika === 'string') {
+                        oikonomika = oikonomika.replace(/\\"/g, '"');
+                        oikonomika = JSON.parse(oikonomika);
+                      }
+                      
+                      return Object.entries(oikonomika).map(([paymentType, installments]: [string, any]) => (
+                        <div key={paymentType} className="mb-4">
+                          <div className="text-sm font-semibold text-gray-800 mb-2 pb-1 border-b border-gray-200">{paymentType}</div>
+                          {Object.entries(installments).map(([installmentType, details]: [string, any]) => (
+                            <div key={installmentType} className="grid grid-cols-2 gap-4 py-2 text-sm border-l-2 border-gray-300 pl-3 mb-2">
+                              <div>
+                                <span className="text-gray-600">Δόση:</span>
+                                <span className="ml-2 font-semibold">{installmentType}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-600">Ποσό:</span>
+                                <span className="ml-2 font-bold text-lg">€{details.amount}</span>
+                              </div>
+                              {details.status && (
+                                <div>
+                                  <span className="text-gray-600">Κατάσταση:</span>
+                                  <span className="ml-2 text-gray-700 bg-gray-100 px-2 py-1 rounded text-xs">{details.status}</span>
+                                </div>
+                              )}
+                              {details.protocol && (
+                                <div>
+                                  <span className="text-gray-600">Πρωτόκολλο:</span>
+                                  <span className="ml-2 font-mono text-sm">{details.protocol}</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ));
+                    } catch (e) {
+                      return <div className="text-sm text-red-600">Σφάλμα ανάγνωσης οικονομικών στοιχείων</div>;
+                    }
+                  })()}
+                </div>
+              )}
+
+              <div className="p-4 border border-dashed border-gray-300 rounded-lg">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Προσθήκη Νέου Οικονομικού Στοιχείου:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="paymentType"
