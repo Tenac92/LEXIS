@@ -53,7 +53,7 @@ export function SimpleAFMAutocomplete({
     queryKey: ['/api/beneficiaries/search', searchTerm],
     queryFn: async () => {
       if (!searchTerm || searchTerm.length < 6) return [];
-      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}`);
+      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}&includeFinancial=true`);
       const data = await response.json();
       return data.success ? data.data : [];
     },
