@@ -353,7 +353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Default single installment
               installmentData['ΕΦΑΠΑΞ'] = {
                 amount: recipient.amount,
-                status: 'διαβιβαστηκε',
+                status: 'διαβιβάστηκε',
                 protocol: data.id.toString(),
                 date: new Date().toISOString()
               };
@@ -418,7 +418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Continue without failing - document is created but beneficiaries may not be updated
         }
         
-        // Update beneficiary installment status to "διαβιβαστηκε" for each recipient (legacy system)
+        // Update beneficiary installment status to "διαβιβάστηκε" for each recipient (legacy system)
         try {
           for (const recipient of formattedRecipients) {
             // For each installment in the recipient's installments array
@@ -428,10 +428,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   recipient.afm,
                   expenditure_type,
                   installment,
-                  'διαβιβαστηκε',
+                  'διαβιβάστηκε',
                   data.id.toString() // Use document ID as protocol number
                 );
-                console.log(`[DIRECT_ROUTE_V2] Updated beneficiary ${recipient.afm} installment ${installment} status to διαβιβαστηκε`);
+                console.log(`[DIRECT_ROUTE_V2] Updated beneficiary ${recipient.afm} installment ${installment} status to διαβιβάστηκε`);
               }
             }
           }
