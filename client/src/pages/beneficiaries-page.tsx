@@ -66,10 +66,29 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
   
   const userUnits = (userResponse as any)?.authenticated ? (userResponse as any).user?.units?.[0] : undefined;
   
+  // Projects query - similar to create document dialog
   const { data: projects = [] } = useQuery({
-    queryKey: ["/api/unit-projects", userUnits],
-    queryFn: () => fetch(`/api/unit-projects/${encodeURIComponent(userUnits)}`).then(res => res.json()),
-    enabled: open && !!userUnits, // Only fetch when dialog is open and user units available
+    queryKey: ["/api/projects", userUnits],
+    queryFn: async () => {
+      const response = await fetch("/api/projects");
+      if (!response.ok) {
+        throw new Error("Failed to fetch projects");
+      }
+      const allProjects = await response.json();
+      
+      // Filter projects by user's unit, similar to create document dialog logic
+      return allProjects.filter((project: any) => {
+        const agency = project.implementing_agency;
+        if (Array.isArray(agency)) {
+          return agency.some((a: any) => String(a).includes(userUnits));
+        }
+        if (typeof agency === 'string') {
+          return agency.includes(userUnits);
+        }
+        return false;
+      });
+    },
+    enabled: open && !!userUnits,
   });
   
   const form = useForm<BeneficiaryFormData>({
@@ -386,8 +405,8 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                         </FormControl>
                         <SelectContent>
                           {(projects as any[]).map((project: any) => (
-                            <SelectItem key={project.mis} value={project.mis.toString()}>
-                              {project.mis} - {project.name}
+                            <SelectItem key={project.mis || project.id} value={(project.mis || project.id).toString()}>
+                              {project.mis || project.id} - {project.event_description || project.name || project.title}
                             </SelectItem>
                           ))}
                         </SelectContent>
