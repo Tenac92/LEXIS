@@ -198,7 +198,7 @@ export default function BudgetHistoryPage() {
     setPage(1);
     setAppliedMisFilter(misFilter);
     setAppliedDateFilter(dateFilter);
-    setAppliedCreatorFilter(creatorFilter);
+    setAppliedCreatorFilter(creatorFilter === 'all' ? '' : creatorFilter);
   };
 
   // Clear all filters
@@ -206,7 +206,7 @@ export default function BudgetHistoryPage() {
     setPage(1);
     setMisFilter('');
     setDateFilter({ from: '', to: '' });
-    setCreatorFilter('');
+    setCreatorFilter('all');
     setAppliedMisFilter('');
     setAppliedDateFilter({ from: '', to: '' });
     setAppliedCreatorFilter('');
@@ -795,7 +795,7 @@ export default function BudgetHistoryPage() {
                           <SelectValue placeholder={isLoadingUsers ? "Φόρτωση χρηστών..." : "Επιλέξτε χρήστη"} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Όλοι οι χρήστες</SelectItem>
+                          <SelectItem value="all">Όλοι οι χρήστες</SelectItem>
                           {unitUsers.map((user: any) => (
                             <SelectItem key={user.id} value={user.name}>
                               <div className="flex items-center gap-2">

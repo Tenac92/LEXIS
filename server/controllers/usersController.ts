@@ -465,11 +465,11 @@ router.get('/matching-units', authenticateSession, async (req: AuthenticatedRequ
     }
 
     console.log('[Users] Fetching users with matching units for units:', req.user.units);
+    // Get all users except the current user
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, email, name, units')
+      .select('id, email, name, units, role')
       .neq('id', req.user.id)  
-      .filter('units', 'cs', `{${req.user.units.join(',')}}`)  
       .order('name');
 
     if (error) {
@@ -479,7 +479,8 @@ router.get('/matching-units', authenticateSession, async (req: AuthenticatedRequ
 
     // Filter users to only include those that have at least one matching unit
     const filteredUsers = users?.filter(user => {
-      return user.units?.some(unit => req.user?.units.includes(unit));
+      if (!user.units || !Array.isArray(user.units) || !req.user?.units) return false;
+      return user.units.some((unit: string) => req.user.units!.includes(unit));
     }) || [];
 
     console.log('[Users] Found matching users:', filteredUsers.length);
