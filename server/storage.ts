@@ -630,19 +630,19 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      // Filter to show only beneficiaries with installments that have no status (available for processing)
+      // Filter to show beneficiaries with available installments (exclude only those with "διαβιβαστηκε" status)
       const filteredData = (data || []).filter(beneficiary => {
         if (!beneficiary.oikonomika || typeof beneficiary.oikonomika !== 'object') {
           return true; // Include if no financial data (can add new payments)
         }
         
-        // Check all payment types and their records to see if any installment is available
+        // Check if there are any installments available (not "διαβιβαστηκε")
         let hasAvailableInstallment = false;
         for (const [paymentType, records] of Object.entries(beneficiary.oikonomika as Record<string, any>)) {
           if (Array.isArray(records)) {
             for (const record of records) {
-              // Include if installment has no status or null status (available for processing)
-              if (!record.status || record.status === null) {
+              // Include if installment doesn't have "διαβιβαστηκε" status
+              if (record.status !== 'διαβιβαστηκε') {
                 hasAvailableInstallment = true;
                 break;
               }
@@ -652,7 +652,7 @@ export class DatabaseStorage implements IStorage {
         }
         
         if (!hasAvailableInstallment) {
-          console.log(`[Storage] Excluding beneficiary ${beneficiary.id} - all installments already processed`);
+          console.log(`[Storage] Excluding beneficiary ${beneficiary.id} - all installments have διαβιβαστηκε status`);
         }
         
         return hasAvailableInstallment;
