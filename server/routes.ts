@@ -388,13 +388,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.log(`[DIRECT_ROUTE_V2] Updated existing beneficiary with AFM: ${recipient.afm}`);
               }
             } else {
-              // Create new beneficiary
+              // Create new beneficiary - let database auto-generate ID
+              const beneficiaryInsertData = {
+                surname: recipient.lastname,
+                name: recipient.firstname,
+                fathername: recipient.fathername || null,
+                afm: parseInt(recipient.afm),
+                monada: unit,
+                project: parseInt(req.body.project_mis || project_id),
+                oikonomika: oikonomika,
+                freetext: recipient.secondary_text || null,
+                date: new Date().toISOString().split('T')[0], // Current date as YYYY-MM-DD
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              
               const { error: insertError } = await supabase
                 .from('Beneficiary')
-                .insert([{
-                  ...beneficiaryData,
-                  created_at: new Date().toISOString()
-                }]);
+                .insert([beneficiaryInsertData]);
                 
               if (insertError) {
                 console.error(`[DIRECT_ROUTE_V2] Error creating beneficiary ${recipient.afm}:`, insertError);
@@ -405,6 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (beneficiaryError) {
           console.error('[DIRECT_ROUTE_V2] Error processing beneficiaries (document still created):', beneficiaryError);
+          console.error('[DIRECT_ROUTE_V2] Beneficiary error stack:', beneficiaryError instanceof Error ? beneficiaryError.stack : 'No stack trace');
           // Continue without failing - document is created but beneficiaries may not be updated
         }
         
