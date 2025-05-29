@@ -179,18 +179,13 @@ async function startServer() {
       next();
     });
 
-    console.log('[Startup] Request logging middleware configured');
-    
     // Apply sdegdaefk.gr specific handlers
     app.use(sdegdaefkRootHandler);
-    console.log('[Startup] sdegdaefk.gr root path handler applied');
     
     // Pre-handle sdegdaefk.gr document requests to prevent database errors 
     app.use(documentsPreHandler);
-    console.log('[Startup] sdegdaefk.gr documents pre-handler applied for DB error prevention');
 
-    // No need to call setupAuth - authentication is now handled by middleware and routes
-    console.log('[Startup] Authentication setup: using session middleware and auth routes');
+    // Authentication is handled by middleware and routes
 
     // Register API routes with enhanced error handling
     try {
