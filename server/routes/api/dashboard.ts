@@ -97,22 +97,24 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
       }
     }
 
-    // Get recent activity from your authentic documents
+    // Get recent activity from your authentic documents with protocol numbers
     const recentActivity: any[] = [];
     try {
       const { data: recentDocs } = await supabase
         .from('generated_documents')
-        .select('id, created_at, mis, status, project_na853')
+        .select('id, created_at, mis, status, project_na853, protocol_number_input')
         .eq('unit', primaryUnit)
         .order('created_at', { ascending: false })
         .limit(5);
 
       if (recentDocs && recentDocs.length > 0) {
         recentDocs.forEach((doc, index) => {
+          const docNumber = `DOC-${doc.id}`;
+          const protocolNumber = doc.protocol_number_input || 'Εκκρεμεί';
           recentActivity.push({
             id: index + 1,
             type: 'document_created',
-            description: `Δημιουργήθηκε έγγραφο ${doc.status || 'pending'} για ${primaryUnit}`,
+            description: `Έγγραφο ${docNumber} (Πρωτ: ${protocolNumber}) - ${doc.status || 'pending'}`,
             date: doc.created_at || new Date().toISOString(),
             createdBy: req.user?.name || 'Σύστημα',
             mis: doc.mis || 'Μη διαθέσιμο'
