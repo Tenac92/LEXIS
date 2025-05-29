@@ -343,8 +343,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                           <SelectItem value="ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ">ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ</SelectItem>
                           <SelectItem value="ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ">ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ</SelectItem>
                           <SelectItem value="ΔΚΑ ΕΠΙΣΚΕΥΗ">ΔΚΑ ΕΠΙΣΚΕΥΗ</SelectItem>
-                          <SelectItem value="ΔΚΑ ΕΝΟΙΚΙΟ">ΔΚΑ ΕΝΟΙΚΙΟ</SelectItem>
-                          <SelectItem value="ΔΚΑ ΕΠΙΧΕΙΡΗΣΕΙΣ">ΔΚΑ ΕΠΙΧΕΙΡΗΣΕΙΣ</SelectItem>
+                          <SelectItem value="ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ">ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -468,7 +467,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                   name="date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ημερομηνία</FormLabel>
+                      <FormLabel>Ημερομηνία Αίτησης</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="ΗΗ.ΜΜ.ΕΕΕΕ" />
                       </FormControl>
@@ -493,53 +492,10 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
 
                 <FormField
                   control={form.control}
-                  name="monada"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Μονάδα</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Μονάδα" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="project"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Έργο (MIS Κωδικός)</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input 
-                            {...field}
-                            type="number"
-                            placeholder="π.χ. 5222792"
-                            value={field.value || ''}
-                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                            className="pr-10"
-                          />
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
-                            MIS
-                          </div>
-                        </div>
-                      </FormControl>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Εισάγετε τον κωδικό MIS του έργου (π.χ. 5222792)
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="onlinefoldernumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Αριθμός Φακέλου</FormLabel>
+                      <FormLabel>Αριθμός Online Φακέλου</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Αριθμός online φακέλου" />
                       </FormControl>
