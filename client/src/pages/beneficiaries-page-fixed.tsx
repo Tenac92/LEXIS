@@ -22,6 +22,9 @@ const beneficiarySchema = z.object({
   project: z.number().optional(),
   date: z.string().optional(),
   onlinefoldernumber: z.string().optional(),
+  paymentType: z.string().optional(),
+  amount: z.string().optional(),
+  installment: z.string().optional(),
 });
 
 type BeneficiaryFormData = z.infer<typeof beneficiarySchema>;
@@ -67,6 +70,9 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
       project: beneficiary?.project || undefined,
       date: beneficiary?.date || "",
       onlinefoldernumber: beneficiary?.onlinefoldernumber || "",
+      paymentType: "",
+      amount: "",
+      installment: "",
     },
   });
 
@@ -254,6 +260,77 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Financial Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-orange-600" />
+                <h3 className="text-lg font-semibold">Οικονομικά Στοιχεία</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="paymentType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Τύπος Πληρωμής</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε τύπο" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ">ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ</SelectItem>
+                          <SelectItem value="ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ">ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ</SelectItem>
+                          <SelectItem value="ΔΚΑ ΕΠΙΣΚΕΥΗ">ΔΚΑ ΕΠΙΣΚΕΥΗ</SelectItem>
+                          <SelectItem value="ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ">ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ποσό (€)</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" step="0.01" placeholder="π.χ. 10286.06" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="installment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Δόση</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε δόση" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ΕΦΑΠΑΞ">ΕΦΑΠΑΞ</SelectItem>
+                          <SelectItem value="Α">Α΄ ΔΟΣΗ</SelectItem>
+                          <SelectItem value="Β">Β΄ ΔΟΣΗ</SelectItem>
+                          <SelectItem value="Γ">Γ΄ ΔΟΣΗ</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             <div className="flex justify-end pt-4">
