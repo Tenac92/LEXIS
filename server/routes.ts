@@ -344,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const amount = recipient.installmentAmounts?.[installment] || recipient.amount;
                 installmentData[installment] = {
                   amount: amount,
-                  status: 'διαβιβαστηκε',
+                  status: 'διαβιβάστηκε',
                   protocol: data.id.toString(),
                   date: new Date().toISOString()
                 };

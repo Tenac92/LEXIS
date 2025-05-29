@@ -631,36 +631,9 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      // Filter to show beneficiaries with available installments (exclude only those with "διαβιβαστηκε" status)
-      const filteredData = (data || []).filter(beneficiary => {
-        if (!beneficiary.oikonomika || typeof beneficiary.oikonomika !== 'object') {
-          return true; // Include if no financial data (can add new payments)
-        }
-        
-        // Check if there are any installments available (not "διαβιβαστηκε")
-        let hasAvailableInstallment = false;
-        for (const [paymentType, records] of Object.entries(beneficiary.oikonomika as Record<string, any>)) {
-          if (Array.isArray(records)) {
-            for (const record of records) {
-              // Include if installment doesn't have "διαβιβαστηκε" status
-              if (record.status !== 'διαβιβαστηκε') {
-                hasAvailableInstallment = true;
-                break;
-              }
-            }
-          }
-          if (hasAvailableInstallment) break;
-        }
-        
-        if (!hasAvailableInstallment) {
-          console.log(`[Storage] Excluding beneficiary ${beneficiary.id} - all installments have διαβιβαστηκε status`);
-        }
-        
-        return hasAvailableInstallment;
-      });
-      
-      console.log(`[Storage] Found ${data?.length || 0} beneficiaries with AFM: ${afm}, filtered to ${filteredData.length} (excluding διαβιβαστηκε)`);
-      return filteredData;
+      // Return all beneficiaries - let the frontend determine available installments
+      console.log(`[Storage] Found ${data?.length || 0} beneficiaries with AFM: ${afm}`);
+      return data || [];
     } catch (error) {
       console.error('[Storage] Error in searchBeneficiariesByAFM:', error);
       throw error;

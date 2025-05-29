@@ -45,7 +45,7 @@ export function SimpleAFMAutocomplete({
       const data = await response.json();
       return data.success ? data.data : [];
     },
-    enabled: useEmployeeData && searchTerm.length >= 6,
+    enabled: useEmployeeData && searchTerm.length === 9,
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
@@ -57,25 +57,70 @@ export function SimpleAFMAutocomplete({
       const data = await response.json();
       return data.success ? data.data : [];
     },
-    enabled: !useEmployeeData && searchTerm.length >= 6,
+    enabled: !useEmployeeData && searchTerm.length === 9,
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;
   const searchResults = useEmployeeData ? employees : beneficiaries;
 
+  // Helper function to determine next available installment
+  const getNextAvailableInstallment = useCallback((beneficiary: any, expenditureType: string) => {
+    if (!beneficiary.oikonomika || typeof beneficiary.oikonomika !== 'object') {
+      return 'Α'; // Default to first installment if no financial data
+    }
+
+    const expenditureData = beneficiary.oikonomika[expenditureType];
+    if (!expenditureData || !Array.isArray(expenditureData)) {
+      return 'Α'; // Default to first installment if no data for this expenditure type
+    }
+
+    // Check which installments are already "διαβιβάστηκε"
+    const completedInstallments = new Set();
+    expenditureData.forEach((record: any) => {
+      if (record.status === 'διαβιβάστηκε' || record.status === 'διαβιβαστηκε') {
+        completedInstallments.add(record.installment);
+      }
+    });
+
+    // Return next available installment in sequence
+    const installmentSequence = ['Α', 'Β', 'Γ', 'Δ', 'Ε'];
+    for (const installment of installmentSequence) {
+      if (!completedInstallments.has(installment)) {
+        return installment;
+      }
+    }
+
+    return 'Α'; // Fallback to first installment
+  }, []);
+
   const handleSelect = useCallback((person: Employee | Beneficiary) => {
-    onSelectPerson(person);
+    // For beneficiaries, add smart installment selection
+    if (!useEmployeeData && 'oikonomika' in person) {
+      const nextInstallment = getNextAvailableInstallment(person, expenditureType);
+      const enhancedPerson = {
+        ...person,
+        suggestedInstallment: nextInstallment
+      };
+      onSelectPerson(enhancedPerson);
+    } else {
+      onSelectPerson(person);
+    }
+    
     setShowDropdown(false);
     setSearchTerm(String(person.afm || ""));
-  }, [onSelectPerson]);
+  }, [onSelectPerson, useEmployeeData, expenditureType, getNextAvailableInstallment]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setSearchTerm(value);
-    setShowDropdown(value.length >= 2);
+    
+    // Only allow numeric input and limit to 9 digits
+    const numericValue = value.replace(/\D/g, '').slice(0, 9);
+    
+    setSearchTerm(numericValue);
+    setShowDropdown(numericValue.length === 9);
     
     // Notify parent component when user types
-    onChange?.(value);
+    onChange?.(numericValue);
   };
 
   return (
