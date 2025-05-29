@@ -38,7 +38,7 @@ async function importDocuments() {
         id: parseInt(record.id),
         created_at: record.created_at,
         generated_by: record.generated_by ? parseInt(record.generated_by) : null,
-        recipients: record.recipients,
+        recipients: record.recipients ? JSON.parse(record.recipients) : [],
         protocol_date: record.protocol_date || null,
         total_amount: record.total_amount ? parseFloat(record.total_amount) : null,
         document_date: record.document_date || null,
@@ -55,7 +55,7 @@ async function importDocuments() {
         comments: record.comments || null,
         original_document_id: record.original_document_id ? parseInt(record.original_document_id) : null,
         updated_by: record.updated_by ? parseInt(record.updated_by) : null,
-        attachments: record.attachments,
+        attachments: record.attachments ? JSON.parse(record.attachments) : [],
         updated_at: record.updated_at,
         region: record.region || null
       };
