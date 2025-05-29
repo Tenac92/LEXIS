@@ -199,81 +199,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     retry: false,
-    refetchOnWindowFocus: true, // Now will refresh when window gets focus
-    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes (300,000ms)
-    staleTime: 60 * 1000, // Consider data stale after 1 minute
+    refetchOnWindowFocus: false, // Disable auto-refresh on focus for faster startup
+    refetchInterval: false, // Disable automatic refresh interval for now
+    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes instead of 1
   });
 
-  // Effect to refresh session when user interacts with the page
+  // Simplified session management for faster startup
   useEffect(() => {
-    let inactivityTimer: number | undefined;
-    let lastActivity = Date.now();
-    let sessionRefreshTimer: number | undefined;
-    
-    // Keep track of user activity
-    const resetTimer = () => {
-      // Update last activity timestamp
-      lastActivity = Date.now();
+    // Only for authenticated users, set up minimal session monitoring
+    if (user) {
+      let inactivityTimer: number | undefined;
       
-      // Clear existing timeout
-      clearTimeout(inactivityTimer);
-      
-      // Log activity for debugging (occasionally)
-      if (Math.random() > 0.95) {
-        console.log("[SessionKeeper] User active, refreshing session");
-      }
-      
-      // Set a new timer for 5 minutes
-      inactivityTimer = window.setTimeout(() => {
-        // After 5 minutes of inactivity, check session
-        refetch();
-      }, 5 * 60 * 1000);
-    };
-    
-    // Set up a regular session refresh interval (every 4 minutes)
-    // This ensures the session stays active during form interactions
-    const startSessionKeepAlive = () => {
-      // Clear any existing timer
-      clearTimeout(sessionRefreshTimer);
-      
-      // Set up periodic session refresh
-      sessionRefreshTimer = window.setInterval(() => {
-        // Only refresh if the user has been active in the last 10 minutes
-        if (Date.now() - lastActivity < 10 * 60 * 1000) {
-          fetch('/api/auth/me', { credentials: 'include' })
-            .then(response => {
-              if (response.ok) {
-                // Session is valid, no further action needed
-                return response.json();
-              }
-              return null;
-            })
-            .catch(error => {
-              console.warn("[SessionKeeper] Session check error:", error);
-            });
+      const checkSession = () => {
+        // Only check if user is still active
+        if (document.visibilityState === 'visible') {
+          refetch();
         }
-      }, 4 * 60 * 1000); // Every 4 minutes
-    };
-    
-    // Add event listeners for user activity
-    const activityEvents = ['mousedown', 'keypress', 'scroll', 'touchstart'];
-    activityEvents.forEach(event => {
-      window.addEventListener(event, resetTimer);
-    });
-    
-    // Initialize timers
-    resetTimer();
-    startSessionKeepAlive();
-    
-    // Cleanup
-    return () => {
-      clearTimeout(inactivityTimer);
-      clearInterval(sessionRefreshTimer);
+      };
+      
+      // Set up a single inactivity timer (10 minutes)
+      const resetTimer = () => {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = window.setTimeout(checkSession, 10 * 60 * 1000);
+      };
+      
+      // Listen for user activity (reduced event set)
+      const activityEvents = ['mousedown', 'keypress'];
       activityEvents.forEach(event => {
-        window.removeEventListener(event, resetTimer);
+        window.addEventListener(event, resetTimer);
       });
-    };
-  }, [refetch]);
+      
+      resetTimer();
+      
+      // Cleanup
+      return () => {
+        clearTimeout(inactivityTimer);
+        activityEvents.forEach(event => {
+          window.removeEventListener(event, resetTimer);
+        });
+      };
+    }
+  }, [user, refetch]);
 
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
