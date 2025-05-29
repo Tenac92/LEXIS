@@ -630,24 +630,32 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      // Filter out beneficiaries with "διαβιβαστηκε" status in any installment
+      // Filter to show only beneficiaries with installments that have no status (available for processing)
       const filteredData = (data || []).filter(beneficiary => {
         if (!beneficiary.oikonomika || typeof beneficiary.oikonomika !== 'object') {
-          return true; // Include if no financial data
+          return true; // Include if no financial data (can add new payments)
         }
         
-        // Check all payment types and their records
+        // Check all payment types and their records to see if any installment is available
+        let hasAvailableInstallment = false;
         for (const [paymentType, records] of Object.entries(beneficiary.oikonomika as Record<string, any>)) {
           if (Array.isArray(records)) {
             for (const record of records) {
-              if (record.status === 'διαβιβαστηκε') {
-                console.log(`[Storage] Excluding beneficiary ${beneficiary.id} - has διαβιβαστηκε status`);
-                return false; // Exclude if any installment is already submitted
+              // Include if installment has no status or null status (available for processing)
+              if (!record.status || record.status === null) {
+                hasAvailableInstallment = true;
+                break;
               }
             }
           }
+          if (hasAvailableInstallment) break;
         }
-        return true; // Include if no διαβιβαστηκε status found
+        
+        if (!hasAvailableInstallment) {
+          console.log(`[Storage] Excluding beneficiary ${beneficiary.id} - all installments already processed`);
+        }
+        
+        return hasAvailableInstallment;
       });
       
       console.log(`[Storage] Found ${data?.length || 0} beneficiaries with AFM: ${afm}, filtered to ${filteredData.length} (excluding διαβιβαστηκε)`);
