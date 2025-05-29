@@ -75,10 +75,10 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
       name: beneficiary.name || "",
       fathername: beneficiary.fathername || "",
       freetext: beneficiary.freetext || "",
-      amount: beneficiary.amount || "",
-      installment: beneficiary.installment || "",
+      amount: "",
+      installment: "",
       afm: beneficiary.afm || undefined,
-      type: beneficiary.type || "",
+      type: "",
       date: beneficiary.date || "",
       monada: beneficiary.monada || "",
       cengsur1: beneficiary.cengsur1 || "",
@@ -659,13 +659,35 @@ export default function BeneficiariesPage() {
       
       const csvContent = [
         headers.join(','),
-        ...beneficiaries.map(b => [
-          b.aa || '', b.surname || '', b.name || '', b.fathername || '',
-          b.afm || '', b.region || '', b.adeia || '', b.amount || '',
-          b.installment || '', b.type || '', b.date || '', b.monada || '',
-          b.project || '', b.cengsur1 || '', b.cengname1 || '', b.cengsur2 || '', 
-          b.cengname2 || '', b.onlinefoldernumber || '', b.freetext || ''
-        ].join(','))
+        ...beneficiaries.map(b => {
+          // Extract financial data from oikonomika JSONB field
+          let amount = '';
+          let installment = '';
+          let type = '';
+          
+          if (b.oikonomika && typeof b.oikonomika === 'object') {
+            const expenditureTypes = Object.keys(b.oikonomika);
+            if (expenditureTypes.length > 0) {
+              type = expenditureTypes[0];
+              const payments = (b.oikonomika as any)[type];
+              if (Array.isArray(payments) && payments.length > 0) {
+                const firstPayment = payments[0];
+                amount = firstPayment.amount || '';
+                if (Array.isArray(firstPayment.installment) && firstPayment.installment.length > 0) {
+                  installment = firstPayment.installment.join(', ');
+                }
+              }
+            }
+          }
+          
+          return [
+            b.aa || '', b.surname || '', b.name || '', b.fathername || '',
+            b.afm || '', b.region || '', b.adeia || '', amount,
+            installment, type, b.date || '', b.monada || '',
+            b.project || '', b.cengsur1 || '', b.cengname1 || '', b.cengsur2 || '', 
+            b.cengname2 || '', b.onlinefoldernumber || '', b.freetext || ''
+          ].join(',');
+        })
       ].join('\n');
 
       const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -824,7 +846,18 @@ export default function BeneficiariesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {beneficiaries.filter(b => b.amount && parseFloat(b.amount) > 0).length}
+              {beneficiaries.filter(b => {
+                if (b.oikonomika && typeof b.oikonomika === 'object') {
+                  const expenditureTypes = Object.keys(b.oikonomika);
+                  return expenditureTypes.some(type => {
+                    const payments = b.oikonomika[type];
+                    return Array.isArray(payments) && payments.some(payment => 
+                      payment.amount && parseFloat(payment.amount.replace(',', '.')) > 0
+                    );
+                  });
+                }
+                return false;
+              }).length}
             </div>
             <p className="text-xs text-muted-foreground">
               Δικαιούχοι με καθορισμένο ποσό
