@@ -101,6 +101,32 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
   // Reset form when beneficiary data changes
   useEffect(() => {
     if (beneficiary) {
+      // Extract financial data from oikonomika JSON
+      let paymentType = "";
+      let amount = "";
+      let installment = "";
+      
+      if (beneficiary.oikonomika) {
+        try {
+          const oikonomika = typeof beneficiary.oikonomika === 'string' 
+            ? JSON.parse(beneficiary.oikonomika) 
+            : beneficiary.oikonomika;
+          
+          // Get the first payment type and its details
+          const firstPaymentType = Object.keys(oikonomika)[0];
+          if (firstPaymentType) {
+            paymentType = firstPaymentType;
+            const paymentDetails = oikonomika[firstPaymentType][0];
+            if (paymentDetails) {
+              amount = paymentDetails.amount || "";
+              installment = paymentDetails.installment?.[0] || "";
+            }
+          }
+        } catch (e) {
+          console.log("Could not parse oikonomika data:", e);
+        }
+      }
+      
       form.reset({
         name: beneficiary.name || "",
         surname: beneficiary.surname || "",
@@ -116,9 +142,9 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
         cengname1: beneficiary.cengname1 || "",
         cengsur2: beneficiary.cengsur2 || "",
         cengname2: beneficiary.cengname2 || "",
-        paymentType: "",
-        amount: "",
-        installment: "",
+        paymentType: paymentType,
+        amount: amount,
+        installment: installment,
       });
     } else {
       form.reset({
