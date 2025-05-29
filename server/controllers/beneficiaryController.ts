@@ -166,11 +166,16 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
       return matches;
     });
     
-    // Filter by type if specified
+    // Filter by expenditure type if specified - check inside oikonomika JSONB
     if (type && typeof type === 'string') {
-      beneficiaries = beneficiaries.filter((beneficiary: any) => 
-        beneficiary.type === type
-      );
+      beneficiaries = beneficiaries.filter((beneficiary: any) => {
+        if (!beneficiary.oikonomika || typeof beneficiary.oikonomika !== 'object') {
+          return false; // No financial data means no matching type
+        }
+        
+        // Check if the specified expenditure type exists in oikonomika
+        return beneficiary.oikonomika.hasOwnProperty(type);
+      });
     }
     
     console.log(`[Beneficiaries] Found ${beneficiaries.length} beneficiaries matching criteria for unit ${userUnit}`);
