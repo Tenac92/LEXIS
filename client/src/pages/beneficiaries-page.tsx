@@ -68,6 +68,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
   
   const { data: projects = [] } = useQuery({
     queryKey: ["/api/projects-working", userUnits],
+    queryFn: () => fetch(`/api/projects-working/${encodeURIComponent(userUnits)}`).then(res => res.json()),
     enabled: open && !!userUnits, // Only fetch when dialog is open and user units available
   });
   
@@ -383,7 +384,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {projects.map((project: any) => (
+                          {(projects as any[]).map((project: any) => (
                             <SelectItem key={project.mis} value={project.mis.toString()}>
                               {project.mis} - {project.name}
                             </SelectItem>
