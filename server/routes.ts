@@ -337,12 +337,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Prepare oikonomika data for this expenditure type
             const oikonomika = existingBeneficiary?.oikonomika || {};
             
-            // Create installment data for this expenditure type
-            const installmentData: any = {};
+            // Get existing installment data for this expenditure type or create empty object
+            const existingInstallmentData = oikonomika[expenditure_type] || {};
+            
+            // Create new installment data for this expenditure type
+            const newInstallmentData: any = {};
             if (recipient.installments && Array.isArray(recipient.installments)) {
               recipient.installments.forEach((installment: string) => {
                 const amount = recipient.installmentAmounts?.[installment] || recipient.amount;
-                installmentData[installment] = {
+                newInstallmentData[installment] = {
                   amount: amount,
                   status: 'διαβιβάστηκε',
                   protocol: data.id.toString(),
@@ -351,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             } else {
               // Default single installment
-              installmentData['ΕΦΑΠΑΞ'] = {
+              newInstallmentData['ΕΦΑΠΑΞ'] = {
                 amount: recipient.amount,
                 status: 'διαβιβάστηκε',
                 protocol: data.id.toString(),
@@ -359,8 +362,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             }
             
-            // Update oikonomika with this expenditure type data
-            oikonomika[expenditure_type] = installmentData;
+            // Merge existing installments with new ones (preserving existing data)
+            oikonomika[expenditure_type] = { ...existingInstallmentData, ...newInstallmentData };
             
             const beneficiaryData = {
               surname: recipient.lastname,
