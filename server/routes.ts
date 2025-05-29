@@ -316,7 +316,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log('[DIRECT_ROUTE_V2] Document created successfully with ID:', data.id);
         
-        // Update beneficiary installment status to "διαβιβαστηκε" for each recipient
+        // Create or update beneficiaries in the Beneficiary table
+        try {
+          for (const recipient of formattedRecipients) {
+            console.log(`[DIRECT_ROUTE_V2] Processing beneficiary for AFM: ${recipient.afm}`);
+            
+            // Check if beneficiary exists with this AFM
+            const { data: existingBeneficiary, error: searchError } = await supabase
+              .from('Beneficiary')
+              .select('*')
+              .eq('afm', parseInt(recipient.afm))
+              .single();
+              
+            if (searchError && searchError.code !== 'PGRST116') { // PGRST116 is "not found" error
+              console.error(`[DIRECT_ROUTE_V2] Error searching for beneficiary with AFM ${recipient.afm}:`, searchError);
+              continue; // Skip this recipient on search error
+            }
+            
+            // Prepare oikonomika data for this expenditure type
+            const oikonomika = existingBeneficiary?.oikonomika || {};
+            
+            // Create installment data for this expenditure type
+            const installmentData: any = {};
+            if (recipient.installments && Array.isArray(recipient.installments)) {
+              recipient.installments.forEach((installment: string) => {
+                const amount = recipient.installmentAmounts?.[installment] || recipient.amount;
+                installmentData[installment] = {
+                  amount: amount,
+                  status: 'διαβιβαστηκε',
+                  protocol: data.id.toString(),
+                  date: new Date().toISOString()
+                };
+              });
+            } else {
+              // Default single installment
+              installmentData['ΕΦΑΠΑΞ'] = {
+                amount: recipient.amount,
+                status: 'διαβιβαστηκε',
+                protocol: data.id.toString(),
+                date: new Date().toISOString()
+              };
+            }
+            
+            // Update oikonomika with this expenditure type data
+            oikonomika[expenditure_type] = installmentData;
+            
+            const beneficiaryData = {
+              surname: recipient.lastname,
+              name: recipient.firstname,
+              fathername: recipient.fathername || null,
+              afm: parseInt(recipient.afm),
+              monada: unit,
+              project: parseInt(req.body.project_mis || project_id),
+              oikonomika: oikonomika,
+              freetext: recipient.secondary_text || null,
+              date: new Date().toISOString().split('T')[0], // Current date as YYYY-MM-DD
+              updated_at: new Date().toISOString()
+            };
+            
+            if (existingBeneficiary) {
+              // Update existing beneficiary
+              const { error: updateError } = await supabase
+                .from('Beneficiary')
+                .update(beneficiaryData)
+                .eq('id', existingBeneficiary.id);
+                
+              if (updateError) {
+                console.error(`[DIRECT_ROUTE_V2] Error updating beneficiary ${recipient.afm}:`, updateError);
+              } else {
+                console.log(`[DIRECT_ROUTE_V2] Updated existing beneficiary with AFM: ${recipient.afm}`);
+              }
+            } else {
+              // Create new beneficiary
+              const { error: insertError } = await supabase
+                .from('Beneficiary')
+                .insert([{
+                  ...beneficiaryData,
+                  created_at: new Date().toISOString()
+                }]);
+                
+              if (insertError) {
+                console.error(`[DIRECT_ROUTE_V2] Error creating beneficiary ${recipient.afm}:`, insertError);
+              } else {
+                console.log(`[DIRECT_ROUTE_V2] Created new beneficiary with AFM: ${recipient.afm}`);
+              }
+            }
+          }
+        } catch (beneficiaryError) {
+          console.error('[DIRECT_ROUTE_V2] Error processing beneficiaries (document still created):', beneficiaryError);
+          // Continue without failing - document is created but beneficiaries may not be updated
+        }
+        
+        // Update beneficiary installment status to "διαβιβαστηκε" for each recipient (legacy system)
         try {
           for (const recipient of formattedRecipients) {
             // For each installment in the recipient's installments array
