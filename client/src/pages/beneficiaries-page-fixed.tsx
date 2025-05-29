@@ -22,6 +22,13 @@ const beneficiarySchema = z.object({
   project: z.number().optional(),
   date: z.string().optional(),
   onlinefoldernumber: z.string().optional(),
+  adeia: z.string().optional(),
+  region: z.string().optional(),
+  freetext: z.string().optional(),
+  cengsur1: z.string().optional(),
+  cengname1: z.string().optional(),
+  cengsur2: z.string().optional(),
+  cengname2: z.string().optional(),
   paymentType: z.string().optional(),
   amount: z.string().optional(),
   installment: z.string().optional(),
@@ -70,6 +77,13 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
       project: beneficiary?.project || undefined,
       date: beneficiary?.date || "",
       onlinefoldernumber: beneficiary?.onlinefoldernumber || "",
+      adeia: "",
+      region: "",
+      freetext: "",
+      cengsur1: "",
+      cengname1: "",
+      cengsur2: "",
+      cengname2: "",
       paymentType: "",
       amount: "",
       installment: "",
@@ -224,6 +238,104 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="adeia"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Άδεια</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Αριθμός άδειας" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="region"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Περιοχή</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="π.χ. ΛΑΡΙΣΑ" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* Engineers Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-purple-600" />
+                <h3 className="text-lg font-semibold">Στοιχεία Μηχανικών</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">ΜΗΧΑΝΙΚΟΣ 1</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="cengsur1"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input {...field} placeholder="Επώνυμο μηχανικού 1" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cengname1"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input {...field} placeholder="Όνομα μηχανικού 1" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">ΜΗΧΑΝΙΚΟΣ 2</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="cengsur2"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input {...field} placeholder="Επώνυμο μηχανικού 2" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cengname2"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input {...field} placeholder="Όνομα μηχανικού 2" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -331,6 +443,27 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
                   )}
                 />
               </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="freetext"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ελεύθερο Κείμενο</FormLabel>
+                    <FormControl>
+                      <textarea 
+                        {...field} 
+                        placeholder="Προαιρετικό ελεύθερο κείμενο..." 
+                        className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
             <div className="flex justify-end pt-4">
