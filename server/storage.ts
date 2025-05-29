@@ -698,10 +698,25 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('[Storage] Creating new beneficiary:', beneficiary);
       
+      // Get max ID and use a high starting point to avoid conflicts
+      const { data: maxIdData } = await supabase
+        .from('Beneficiary')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1)
+        .single();
+        
+      // Start from a high base (10000) to avoid conflicts with existing data
+      const baseId = Math.max((maxIdData?.id || 0) + 1, 10000);
+      const nextId = baseId + Math.floor(Math.random() * 1000);
+      
+      console.log('[Storage] Using high-base ID for beneficiary:', nextId);
+      
       const { data, error } = await supabase
         .from('Beneficiary')
         .insert({
           ...beneficiary,
+          id: nextId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -713,7 +728,7 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      console.log('[Storage] Successfully created beneficiary:', data);
+      console.log('[Storage] Successfully created beneficiary with ID:', data.id);
       return data;
     } catch (error) {
       console.error('[Storage] Error in createBeneficiary:', error);
