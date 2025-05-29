@@ -18,27 +18,33 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Beneficiary, InsertBeneficiary } from "@shared/schema";
 import { Header } from "@/components/header";
 
-// Form validation schema
+// Form validation schema - updated for better UX
 const beneficiaryFormSchema = z.object({
-  aa: z.number().optional(),
-  region: z.string().optional(),
-  adeia: z.number().optional(),
+  // Personal Information (required)
   surname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
   name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
   fathername: z.string().min(1, "Το πατρώνυμο είναι υποχρεωτικό"),
-  freetext: z.string().optional(),
-  amount: z.string().optional(),
-  installment: z.string().optional(),
   afm: z.number().min(100000000, "Το ΑΦΜ πρέπει να έχει 9 ψηφία").max(999999999, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
-  type: z.string().optional(),
+  
+  // Project Information (required)
+  project: z.number().min(1, "Επιλέξτε έργο"),
+  
+  // Administrative Information (optional)
+  aa: z.number().optional(),
+  region: z.string().optional(),
+  adeia: z.number().optional(),
   date: z.string().optional(),
   monada: z.string().optional(),
+  onlinefoldernumber: z.string().optional(),
+  
+  // Engineers Information (optional)
   cengsur1: z.string().optional(),
   cengname1: z.string().optional(),
   cengsur2: z.string().optional(),
   cengname2: z.string().optional(),
-  onlinefoldernumber: z.string().optional(),
-  project: z.number().optional(),
+  
+  // Additional Information (optional)
+  freetext: z.string().optional(),
 });
 
 type BeneficiaryFormData = z.infer<typeof beneficiaryFormSchema>;
@@ -58,7 +64,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
     queryKey: ["/api/auth/me"],
   });
   
-  const userUnits = userResponse?.user?.units?.[0];
+  const userUnits = (userResponse as any)?.authenticated ? (userResponse as any).user?.units?.[0] : undefined;
   
   const { data: projects = [] } = useQuery({
     queryKey: ["/api/projects-working", userUnits],
@@ -68,30 +74,41 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
   const form = useForm<BeneficiaryFormData>({
     resolver: zodResolver(beneficiaryFormSchema),
     defaultValues: beneficiary ? {
-      aa: beneficiary.aa || undefined,
-      region: beneficiary.region || "",
-      adeia: beneficiary.adeia || undefined,
+      // Personal Information
       surname: beneficiary.surname || "",
       name: beneficiary.name || "",
       fathername: beneficiary.fathername || "",
-      freetext: beneficiary.freetext || "",
-      amount: "",
-      installment: "",
       afm: beneficiary.afm || undefined,
-      type: "",
+      
+      // Project Information
+      project: beneficiary.project || undefined,
+      
+      // Administrative Information
+      aa: beneficiary.aa || undefined,
+      region: beneficiary.region || "",
+      adeia: beneficiary.adeia || undefined,
       date: beneficiary.date || "",
-      monada: beneficiary.monada || "",
+      monada: beneficiary.monada || userUnits || "",
+      onlinefoldernumber: beneficiary.onlinefoldernumber || "",
+      
+      // Engineers Information
       cengsur1: beneficiary.cengsur1 || "",
       cengname1: beneficiary.cengname1 || "",
       cengsur2: beneficiary.cengsur2 || "",
       cengname2: beneficiary.cengname2 || "",
-      onlinefoldernumber: beneficiary.onlinefoldernumber || "",
-      project: beneficiary.project || undefined,
+      
+      // Additional Information
+      freetext: beneficiary.freetext || "",
     } : {
+      // Default values for new beneficiary
       surname: "",
       name: "",
       fathername: "",
       afm: undefined,
+      project: undefined,
+      monada: userUnits || "",
+      region: "",
+      date: new Date().toISOString().split('T')[0], // Today's date in YYYY-MM-DD format
     },
   });
 
@@ -144,11 +161,14 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             {/* Personal Information Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Προσωπικά Στοιχεία</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-foreground">Προσωπικά Στοιχεία</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg">
               <FormField
                 control={form.control}
                 name="surname"
@@ -240,12 +260,12 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
 
               <FormField
                 control={form.control}
-                name="amount"
+                name="date"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ποσό</FormLabel>
+                    <FormLabel>Ημερομηνία</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="0.00" />
+                      <Input {...field} type="date" placeholder="YYYY-MM-DD" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -254,26 +274,12 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
 
               <FormField
                 control={form.control}
-                name="installment"
+                name="onlinefoldernumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Δόση</FormLabel>
+                    <FormLabel>Αριθμός Online Φακέλου</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="ΕΦΑΠΑΞ" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Τύπος</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Τύπος δικαιούχου" />
+                      <Input {...field} placeholder="Αριθμός φακέλου" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
