@@ -204,7 +204,7 @@ export class DocumentFormatter {
                   "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
                 ),
                 this.createBoldParagraph("ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ."),
-                this.createBoldParagraph(documentData.unit),
+                this.createBoldParagraph(unitDetails?.unit_name?.name || unitDetails?.name || ""),
                 this.createBoldParagraph(userInfo.department),
                 this.createBlankLine(10),
                 this.createContactDetail("Ταχ. Δ/νση", address.address),
