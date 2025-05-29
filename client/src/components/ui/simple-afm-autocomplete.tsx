@@ -40,24 +40,26 @@ export function SimpleAFMAutocomplete({
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
     queryKey: ['/api/employees/search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 6) return [];
+      if (!searchTerm || searchTerm.length < 2) return [];
       const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
       const data = await response.json();
+      console.log(`[SimpleAFM] Employee search results for "${searchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: useEmployeeData && searchTerm.length === 9,
+    enabled: useEmployeeData && searchTerm.length >= 2,
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/beneficiaries/search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 6) return [];
+      if (!searchTerm || searchTerm.length < 2) return [];
       const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}&includeFinancial=true`);
       const data = await response.json();
+      console.log(`[SimpleAFM] Beneficiary search results for "${searchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: !useEmployeeData && searchTerm.length === 9,
+    enabled: !useEmployeeData && searchTerm.length >= 2,
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;
@@ -128,7 +130,7 @@ export function SimpleAFMAutocomplete({
     const numericValue = value.replace(/\D/g, '').slice(0, 9);
     
     setSearchTerm(numericValue);
-    setShowDropdown(numericValue.length === 9);
+    setShowDropdown(numericValue.length >= 2);
     
     // Notify parent component when user types
     onChange?.(numericValue);
