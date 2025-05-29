@@ -317,6 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('[DIRECT_ROUTE_V2] Document created successfully with ID:', data.id);
         
         // Create or update beneficiaries in the Beneficiary table
+        console.log('[DIRECT_ROUTE_V2] Starting beneficiary processing for recipients:', formattedRecipients.length);
         try {
           for (const recipient of formattedRecipients) {
             console.log(`[DIRECT_ROUTE_V2] Processing beneficiary for AFM: ${recipient.afm}`);
