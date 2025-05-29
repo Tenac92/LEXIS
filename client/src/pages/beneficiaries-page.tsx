@@ -363,9 +363,46 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
               </div>
             </div>
 
+            {/* Project Selection Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-green-600" />
+                <h3 className="text-lg font-semibold text-foreground">Στοιχεία Έργου</h3>
+              </div>
+              <div className="p-4 bg-green-50 rounded-lg">
+                <FormField
+                  control={form.control}
+                  name="project"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Έργο *</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε έργο" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {projects.map((project: any) => (
+                            <SelectItem key={project.mis} value={project.mis.toString()}>
+                              {project.mis} - {project.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
             {/* Administrative Information Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground border-b pb-2">Διοικητικά Στοιχεία</h3>
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-orange-600" />
+                <h3 className="text-lg font-semibold text-foreground">Διοικητικά Στοιχεία</h3>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
