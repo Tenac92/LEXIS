@@ -240,24 +240,12 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setIsFlipped(!isFlipped);
-                    }}
-                    className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-colors"
-                    title="Περισσότερα στοιχεία"
-                  >
-                    <Info className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
                       setShowDetails(true);
                     }}
                     className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                     title="Λεπτομέρειες"
                   >
-                    <FileText className="w-4 h-4" />
+                    <Info className="w-4 h-4" />
                   </Button>
                   {isAdmin && (
                     <Button
