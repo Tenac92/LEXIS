@@ -111,7 +111,7 @@ export class DocumentShared {
       logger.debug(`Fetching unit details for: ${unit}`);
       
       const { data, error } = await supabase
-        .from("Units")
+        .from("Monada")
         .select("*")
         .eq("unit", unit)
         .maybeSingle();
@@ -121,7 +121,48 @@ export class DocumentShared {
         return null;
       }
 
-      return data as UnitDetails;
+      if (!data) {
+        // Try to find by unit_name if not found by unit code
+        const { data: allUnits, error: fetchError } = await supabase
+          .from("Monada")
+          .select("*");
+
+        if (!fetchError && allUnits) {
+          const foundUnit = allUnits.find(
+            (unitData) =>
+              unitData.unit_name &&
+              typeof unitData.unit_name === "object" &&
+              unitData.unit_name.name === unit
+          );
+          
+          if (foundUnit) {
+            return {
+              unit: foundUnit.unit,
+              unit_name: foundUnit.unit_name,
+              address: foundUnit.address || {
+                address: "Κηφισίας 124 & Ιατρίδου 2",
+                tk: "11526",
+                region: "Αθήνα",
+              },
+              email: foundUnit.email || "",
+              parts: foundUnit.parts || {},
+            } as UnitDetails;
+          }
+        }
+        return null;
+      }
+
+      return {
+        unit: data.unit,
+        unit_name: data.unit_name,
+        address: data.address || {
+          address: "Κηφισίας 124 & Ιατρίδου 2",
+          tk: "11526",
+          region: "Αθήνα",
+        },
+        email: data.email || "",
+        parts: data.parts || {},
+      } as UnitDetails;
     } catch (error) {
       logger.error("Error in getUnitDetails:", error);
       return null;
@@ -417,18 +458,54 @@ export class DocumentShared {
   public static createDocumentSubject(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Paragraph[] {
+  ): (Table | Paragraph)[] {
+    const subjectText = [
+      {
+        text: "ΘΕΜΑ:",
+        bold: true,
+        italics: true,
+      },
+      {
+        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "Μονάδα"}`,
+        italics: true,
+      },
+    ];
+
     return [
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `ΘΕΜΑ: Αίτημα για την πληρωμή ${documentData.expenditure_type} που έχουν εγκριθεί από τη ${documentData.unit}`,
-            bold: true,
-            size: this.DEFAULT_FONT_SIZE,
-            font: this.DEFAULT_FONT,
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 4 },
+          bottom: { style: BorderStyle.SINGLE, size: 4 },
+          left: { style: BorderStyle.SINGLE, size: 4 },
+          right: { style: BorderStyle.SINGLE, size: 4 },
+          insideHorizontal: { style: BorderStyle.NONE },
+          insideVertical: { style: BorderStyle.NONE },
+        },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                children: [
+                  new Paragraph({
+                    children: subjectText.map(
+                      (textObj) =>
+                        new TextRun({
+                          text: textObj.text,
+                          bold: textObj.bold || false,
+                          italics: textObj.italics || false,
+                          size: this.DEFAULT_FONT_SIZE,
+                          font: this.DEFAULT_FONT,
+                        }),
+                    ),
+                    spacing: { before: 240, after: 240 },
+                  }),
+                ],
+              }),
+            ],
           }),
         ],
-        spacing: { before: 480, after: 480 },
       }),
     ];
   }
