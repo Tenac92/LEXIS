@@ -82,6 +82,7 @@ interface Project {
   expenditure_type: string[];
   region: string;
   implementing_agency: string[];
+  budget_na853?: string;
 }
 
 function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
@@ -89,6 +90,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const [projectSearchTerm, setProjectSearchTerm] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -232,6 +234,17 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
     if (!user?.units?.[0]) return true; // Show all if no unit specified
     const userUnit = user.units[0];
     return project.implementing_agency?.includes(userUnit);
+  });
+
+  // Filter projects by search term
+  const filteredProjects = projects.filter(project => {
+    if (!projectSearchTerm) return true;
+    const searchLower = projectSearchTerm.toLowerCase();
+    return (
+      project.mis?.toLowerCase().includes(searchLower) ||
+      project.project_title?.toLowerCase().includes(searchLower) ||
+      project.event_description?.toLowerCase().includes(searchLower)
+    );
   });
 
   const mutation = useMutation({
@@ -521,21 +534,13 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
                       <SelectContent>
                         <div className="p-2">
                           <Input 
-                            placeholder="Αναζήτηση με MIS κωδικό..."
-                            onChange={(e) => {
-                              const searchValue = e.target.value.toLowerCase();
-                              const matchingProject = projects.find(project => 
-                                project.mis?.toLowerCase().includes(searchValue) ||
-                                project.event_description?.toLowerCase().includes(searchValue)
-                              );
-                              if (matchingProject && searchValue.length > 2) {
-                                field.onChange(Number(matchingProject.mis));
-                              }
-                            }}
+                            placeholder="Αναζήτηση με κωδικό ή περιγραφή..."
+                            value={projectSearchTerm}
+                            onChange={(e) => setProjectSearchTerm(e.target.value)}
                             className="mb-2"
                           />
                         </div>
-                        {projects
+                        {filteredProjects
                           .sort((a, b) => {
                             const aMis = Number(a.mis) || 0;
                             const bMis = Number(b.mis) || 0;
