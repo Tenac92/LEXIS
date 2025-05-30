@@ -402,9 +402,9 @@ export default function BeneficiariesPage() {
             </div>
           );
         })}
-            </div>
+      </div>
 
-            {/* Results */}
+            {/* Results - Remove duplicate as this is already handled above */}
             {isLoading ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {[...Array(6)].map((_, i) => (
