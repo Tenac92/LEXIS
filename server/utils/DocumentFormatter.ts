@@ -21,12 +21,10 @@ import {
 import { supabase } from "../config/db";
 import * as fs from "fs";
 import * as path from "path";
-import { format } from "date-fns";
-import { after } from "node:test";
 
-import { createLogger } from './logger';
+import { createLogger } from "./logger";
 
-const logger = createLogger('DocumentFormatter');
+const logger = createLogger("DocumentFormatter");
 
 interface UserDetails {
   name: string;
@@ -88,12 +86,7 @@ interface DocumentData {
 }
 
 export class DocumentFormatter {
-  private static readonly DEFAULT_FONT_SIZE = 22;
-  private static readonly DEFAULT_ADDRESS = {
-    address: "Κηφισίας 124 & Ιατρίδου 2",
-    tk: "11526",
-    region: "Αθήνα",
-  };
+  private static readonly DEFAULT_FONT_SIZE = 20;
   private static readonly DEFAULT_FONT = "Calibri";
   private static readonly DEFAULT_MARGINS = {
     top: 0,
@@ -150,7 +143,7 @@ export class DocumentFormatter {
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      columnWidths: [55, 45],
+      columnWidths: [60, 40],
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -169,7 +162,7 @@ export class DocumentFormatter {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 50, type: WidthType.PERCENTAGE },
+              width: { size: 60, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -204,7 +197,9 @@ export class DocumentFormatter {
                   "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
                 ),
                 this.createBoldParagraph("ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ."),
-                this.createBoldParagraph(unitDetails?.unit_name?.name || unitDetails?.name || ""),
+                this.createBoldParagraph(
+                  unitDetails?.unit_name?.name || unitDetails?.name || "",
+                ),
                 this.createBoldParagraph(userInfo.department),
                 this.createBlankLine(10),
                 this.createContactDetail("Ταχ. Δ/νση", address.address),
@@ -219,7 +214,7 @@ export class DocumentFormatter {
               ],
             }),
             new TableCell({
-              width: { size: 50, type: WidthType.PERCENTAGE },
+              width: { size: 40, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -233,39 +228,6 @@ export class DocumentFormatter {
                 right: 0,
               },
               children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: `${address.region}: ${
-                        documentData.protocol_date
-                          ? format(
-                              new Date(documentData.protocol_date),
-                              "dd/MM/yyyy",
-                            )
-                          : "........................"
-                      }`,
-                    }),
-                  ],
-                  alignment: AlignmentType.RIGHT,
-                  spacing: { before: 240 },
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: `Αρ. Πρωτ.: ${
-                        documentData.protocol_number_input ||
-                        documentData.protocol_number ||
-                        "......................"
-                      }`,
-                      bold: true,
-                    }),
-                  ],
-                  alignment: AlignmentType.RIGHT,
-                }),
-                new Paragraph({
-                  text: "",
-                  spacing: { before: 240 },
-                }),
                 new Table({
                   width: { size: 100, type: WidthType.PERCENTAGE },
                   borders: {
@@ -307,19 +269,28 @@ export class DocumentFormatter {
                             new Paragraph({
                               text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
                               spacing: { before: 2000 },
-                              alignment: AlignmentType.JUSTIFIED,
+                              alignment: AlignmentType.LEFT,
                             }),
                             new Paragraph({
                               text: "Διεύθυνση Οικονομικής Διαχείρισης",
-                              alignment: AlignmentType.JUSTIFIED,
+                              alignment: AlignmentType.LEFT,
                             }),
                             new Paragraph({
                               text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-                              alignment: AlignmentType.JUSTIFIED,
+                              alignment: AlignmentType.LEFT,
                             }),
                             new Paragraph({
                               text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-                              alignment: AlignmentType.JUSTIFIED,
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Δημοκρίτου 2",
+
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "151 23 Μαρούσι",
+                              alignment: AlignmentType.LEFT,
                             }),
                           ],
                         }),
@@ -478,7 +449,9 @@ export class DocumentFormatter {
       }
 
       // Strategy 1: First try with na853 as this appears to be the right column based on schema
-      logger.debug(`[DocumentFormatter] Trying NA853 lookup with value: ${mis}`);
+      logger.debug(
+        `[DocumentFormatter] Trying NA853 lookup with value: ${mis}`,
+      );
       const na853Result = await supabase
         .from("Projects")
         .select("project_title, mis, na853, budget_na853")
@@ -675,10 +648,14 @@ export class DocumentFormatter {
         return mis;
       }
 
-      logger.debug(`[DocumentFormatter] Fetching project NA853 for MIS: ${mis}`);
+      logger.debug(
+        `[DocumentFormatter] Fetching project NA853 for MIS: ${mis}`,
+      );
 
       // Strategy 1: Try na853 field first
-      logger.debug(`[DocumentFormatter] Trying NA853 lookup with value: ${mis}`);
+      logger.debug(
+        `[DocumentFormatter] Trying NA853 lookup with value: ${mis}`,
+      );
       const na853Result = await supabase
         .from("Projects")
         .select("na853, budget_na853")
@@ -877,7 +854,9 @@ export class DocumentFormatter {
                       },
                       children: [
                         new Paragraph({
-                          children: [new TextRun({ text: "Ο ΣΥΝΤΑΞΑΣ", bold: true })],
+                          children: [
+                            new TextRun({ text: "Ο ΣΥΝΤΑΞΑΣ", bold: true }),
+                          ],
                           alignment: AlignmentType.CENTER,
                           spacing: { before: 400, after: 400 },
                         }),
@@ -887,7 +866,12 @@ export class DocumentFormatter {
                           spacing: { after: 200 },
                         }),
                         new Paragraph({
-                          children: [new TextRun({ text: userInfo.descr || "", bold: true })],
+                          children: [
+                            new TextRun({
+                              text: userInfo.descr || "",
+                              bold: true,
+                            }),
+                          ],
                           alignment: AlignmentType.CENTER,
                         }),
                       ],
@@ -1476,15 +1460,16 @@ export class DocumentFormatter {
     // Process each recipient
     recipients.forEach((recipient, index) => {
       // Ensure all recipient properties exist and handle undefined/null values safely
-      const firstname = recipient.firstname || '';
-      const lastname = recipient.lastname || '';
-      const fathername = recipient.fathername || '';
-      
+      const firstname = recipient.firstname || "";
+      const lastname = recipient.lastname || "";
+      const fathername = recipient.fathername || "";
+
       // Check if fathername exists and is not empty
-      const fullName = !fathername || fathername.trim() === ""
-        ? `${lastname} ${firstname}`.trim()
-        : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
-      const afm = recipient.afm || '';
+      const fullName =
+        !fathername || fathername.trim() === ""
+          ? `${lastname} ${firstname}`.trim()
+          : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
+      const afm = recipient.afm || "";
       const rowNumber = (index + 1).toString() + ".";
       let installments: string[] = [];
       if (
