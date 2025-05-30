@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Edit, Trash2, Download, Upload, User, FileText, Building, UserCheck, RotateCcw, Info } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Upload, User, FileText, Building, UserCheck, RotateCcw, Info, Users } from "lucide-react";
+import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,28 +176,33 @@ export default function BeneficiariesPage() {
   );
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Διαχείριση Δικαιούχων</h1>
-          <p className="text-gray-600 mt-2">Προβολή και διαχείριση όλων των δικαιούχων</p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Αναζήτηση δικαιούχων..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
-            />
-          </div>
-          <Button onClick={handleNew}>
-            <Plus className="w-4 h-4 mr-2" />
-            Νέος Δικαιούχος
-          </Button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="container mx-auto px-4 pt-6 pb-8">
+        <Card className="bg-card">
+          <div className="p-4">
+            {/* Header with Actions */}
+            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0 mb-6">
+              <h1 className="text-2xl font-bold text-foreground">Δικαιούχοι</h1>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handleNew}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Νέος Δικαιούχος
+                </Button>
+              </div>
+            </div>
+
+            {/* Search Filter */}
+            <div className="grid grid-cols-1 gap-4 mb-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Αναζήτηση</label>
+                <Input
+                  placeholder="Αναζήτηση κατά όνομα, επώνυμο, ΑΦΜ, περιοχή..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredBeneficiaries.map((beneficiary) => {
@@ -396,17 +402,167 @@ export default function BeneficiariesPage() {
             </div>
           );
         })}
-      </div>
+            </div>
 
-      {filteredBeneficiaries.length === 0 && (
-        <div className="text-center py-12">
-          <User className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Δεν βρέθηκαν δικαιούχοι</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {searchTerm ? 'Δοκιμάστε διαφορετικούς όρους αναζήτησης' : 'Ξεκινήστε προσθέτοντας έναν νέο δικαιούχο'}
-          </p>
-        </div>
-      )}
+            {/* Results */}
+            {isLoading ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : filteredBeneficiaries.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredBeneficiaries.map((beneficiary) => {
+                  const isFlipped = flippedCards.has(beneficiary.id);
+                  
+                  const handleCardClick = (e: React.MouseEvent) => {
+                    if (!(e.target as HTMLElement).closest('button')) {
+                      toggleCardFlip(beneficiary.id);
+                    }
+                  };
+
+                  return (
+                    <div key={beneficiary.id} className="flip-card" onClick={handleCardClick}>
+                      <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
+                        {/* Front of card */}
+                        <div className="flip-card-front">
+                          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
+                          <div className="p-6">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="space-y-2 flex-1">
+                                <h3 className="text-xl font-bold text-gray-900 leading-tight">
+                                  {beneficiary.surname} {beneficiary.name}
+                                  {beneficiary.fathername && (
+                                    <span className="text-sm font-normal text-gray-600 italic ml-2">
+                                      του {beneficiary.fathername}
+                                    </span>
+                                  )}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-3">
+                                  <div className="inline-flex items-center px-3 py-1.5 rounded-lg text-base font-mono font-semibold bg-blue-100 text-blue-900 border border-blue-200 select-all cursor-copy">
+                                    ΑΦΜ: {beneficiary.afm}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleShowDetails(beneficiary)}
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                  title="Λεπτομέρειες"
+                                >
+                                  <Info className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEdit(beneficiary)}
+                                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                  title="Επεξεργασία"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDelete(beneficiary)}
+                                  className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                  title="Διαγραφή"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-2 text-sm mb-6">
+                              {beneficiary.project && (
+                                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                                  <span className="text-xs text-gray-600">Έργο (MIS)</span>
+                                  <span className="text-gray-900 font-mono">{beneficiary.project}</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Financial Status Summary */}
+                            {beneficiary.oikonomika && (
+                              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <h4 className="text-sm font-medium text-blue-800 mb-2">Οικονομικά Στοιχεία</h4>
+                                {/* Financial data content would go here */}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Back of card with detailed information */}
+                        <div className="flip-card-back">
+                          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
+                          <div className="p-6 h-full overflow-y-auto">
+                            <div className="space-y-4">
+                              <div className="text-center border-b border-blue-200 pb-3 mb-4">
+                                <h4 className="text-lg font-semibold text-blue-900">Λεπτομέρειες</h4>
+                                <p className="text-sm text-blue-700">{beneficiary.surname} {beneficiary.name}</p>
+                              </div>
+                              
+                              {beneficiary.region && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-blue-700 font-medium">Περιοχή:</span>
+                                  <span className="text-blue-900">{beneficiary.region}</span>
+                                </div>
+                              )}
+                              {beneficiary.monada && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-blue-700 font-medium">Μονάδα:</span>
+                                  <span className="text-blue-900">{beneficiary.monada}</span>
+                                </div>
+                              )}
+                              {beneficiary.adeia && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-blue-700 font-medium">Άδεια:</span>
+                                  <span className="text-blue-900">{beneficiary.adeia}</span>
+                                </div>
+                              )}
+                              {beneficiary.cengsur1 && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-blue-700 font-medium">Μηχανικός 1:</span>
+                                  <span className="text-blue-900">{beneficiary.cengsur1} {beneficiary.cengname1}</span>
+                                </div>
+                              )}
+                              {beneficiary.cengsur2 && (
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-blue-700 font-medium">Μηχανικός 2:</span>
+                                  <span className="text-blue-900">{beneficiary.cengsur2} {beneficiary.cengname2}</span>
+                                </div>
+                              )}
+                              {beneficiary.freetext && (
+                                <div className="space-y-1">
+                                  <span className="text-blue-700 font-medium text-sm">Ελεύθερο Κείμενο:</span>
+                                  <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
+                                    {beneficiary.freetext}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-lg border-2 border-dashed border-muted p-8 text-center">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Users className="h-8 w-8" />
+                  <p>Δεν βρέθηκαν δικαιούχοι</p>
+                  {searchTerm && <p className="text-sm">Δοκιμάστε διαφορετικούς όρους αναζήτησης</p>}
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
 
       {/* Details Modal */}
       <BeneficiaryDetailsModal

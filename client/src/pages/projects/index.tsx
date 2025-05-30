@@ -13,7 +13,8 @@ import {
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { useToast } from "@/hooks/use-toast";
 import { type Project } from "@shared/schema";
-import { Plus, FileUp, Download, LayoutGrid, LayoutList, Upload } from "lucide-react";
+import { Plus, FileUp, Download, LayoutGrid, LayoutList, Upload, FolderOpen } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRef } from "react";
@@ -113,101 +114,112 @@ export default function ProjectsPage() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container mx-auto px-4 py-6">
-        <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-          <h1 className="text-3xl font-bold">Projects</h1>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setView(view === "grid" ? "list" : "grid")}
-            >
-              {view === "grid" ? (
-                <><LayoutList className="mr-2 h-4 w-4" /> List View</>
-              ) : (
-                <><LayoutGrid className="mr-2 h-4 w-4" /> Grid View</>
-              )}
-            </Button>
-            
-            {/* Only admin can create new projects */}
-            {isAdmin && (
-              <Link href="/projects/new">
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Project
+      <div className="container mx-auto px-4 pt-6 pb-8">
+        <Card className="bg-card">
+          <div className="p-4">
+            {/* Header with Actions */}
+            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0 mb-6">
+              <h1 className="text-2xl font-bold text-foreground">Έργα</h1>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setView(view === "grid" ? "list" : "grid")}
+                >
+                  {view === "grid" ? (
+                    <><LayoutList className="mr-2 h-4 w-4" /> Λίστα</>
+                  ) : (
+                    <><LayoutGrid className="mr-2 h-4 w-4" /> Κάρτες</>
+                  )}
                 </Button>
-              </Link>
-            )}
-            
-            {/* Only admin can upload budget data */}
-            {isAdmin && (
-              <Link href="/admin/budget-upload">
-                <Button variant="outline">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Budget Data
-                </Button>
-              </Link>
-            )}
-            
-            {/* Both admin and manager can export projects */}
-            {canExport && (
-              <Button variant="secondary" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-8 space-y-4">
-          <div className="flex flex-col gap-4 md:flex-row">
-            <Input
-              placeholder="Search by MIS, description, region..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="md:w-96"
-            />
-            <Select
-              value={status}
-              onValueChange={setStatus}
-            >
-              <SelectTrigger className="md:w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="pending_reallocation">Pending Reallocation</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {isLoading ? (
-            <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-              {[...Array(6)].map((_, i) => (
-                <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-gray-100 animate-pulse" />
-              ))}
+                
+                {isAdmin && (
+                  <Link href="/projects/new">
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Νέο Έργο
+                    </Button>
+                  </Link>
+                )}
+                
+                {isAdmin && (
+                  <Link href="/admin/budget-upload">
+                    <Button variant="outline">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Μεταφόρτωση Προϋπολογισμού
+                    </Button>
+                  </Link>
+                )}
+                
+                {canExport && (
+                  <Button variant="secondary" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Εξαγωγή
+                  </Button>
+                )}
+              </div>
             </div>
-          ) : filteredProjects?.length ? (
-            <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-              {filteredProjects.map((project) => (
-                <ProjectCard
-                  key={`${project.id}-${project.mis}`}
-                  project={project}
-                  view={view}
-                  isAdmin={isAdmin}
+
+            {/* Filters */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Αναζήτηση</label>
+                <Input
+                  placeholder="Αναζήτηση κατά MIS, περιγραφή, περιοχή..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
-              ))}
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Κατάσταση</label>
+                <Select
+                  value={status}
+                  onValueChange={setStatus}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Επιλέξτε κατάσταση" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Όλες οι Καταστάσεις</SelectItem>
+                    <SelectItem value="active">Ενεργό</SelectItem>
+                    <SelectItem value="pending">Σε Εκκρεμότητα</SelectItem>
+                    <SelectItem value="pending_reallocation">Εκκρεμής Αναδιανομή</SelectItem>
+                    <SelectItem value="completed">Ολοκληρωμένο</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          ) : (
-            <div className="rounded-lg border-2 border-dashed p-8 text-center">
-              <p className="text-muted-foreground">No projects found</p>
-            </div>
-          )}
-        </div>
-      </main>
+
+            {/* Results */}
+            {isLoading ? (
+              <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+                {[...Array(6)].map((_, i) => (
+                  <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : filteredProjects?.length ? (
+              <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+                {filteredProjects.map((project) => (
+                  <ProjectCard
+                    key={`${project.id}-${project.mis}`}
+                    project={project}
+                    view={view}
+                    isAdmin={isAdmin}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border-2 border-dashed border-muted p-8 text-center">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <FolderOpen className="h-8 w-8" />
+                  <p>Δεν βρέθηκαν έργα</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
