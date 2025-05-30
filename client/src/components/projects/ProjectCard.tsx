@@ -169,6 +169,20 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
     }
   };
 
+  const getProjectTitle = (project: Project) => {
+    // Try multiple possible title fields in order of preference
+    const projectData = project as any;
+    
+    // Check for common title fields
+    if (projectData.title && projectData.title.trim()) return projectData.title.trim();
+    if (projectData.project_title && projectData.project_title.trim()) return projectData.project_title.trim();
+    if (projectData.event_description && projectData.event_description.trim()) return projectData.event_description.trim();
+    if (projectData.name && projectData.name.trim()) return projectData.name.trim();
+    
+    // Fallback to showing MIS code with a label
+    return `Έργο MIS: ${project.mis}`;
+  };
+
   const getRegionText = (project: Project) => {
     if (!project.region) return '';
     
@@ -241,7 +255,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
           <CardContent className="p-6 flex-1">
             <div className="flex items-start justify-between gap-2">
               <h3 className="line-clamp-2 text-lg font-bold">
-                {project.title || "Έργο Χωρίς Τίτλο"}
+                {getProjectTitle(project)}
               </h3>
               <Badge variant="secondary" className={getStatusColor(project.status || '')}>
                 {getStatusText(project.status || '')}
@@ -279,7 +293,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
               <div className="flex items-start justify-between mb-4">
                 <div className="space-y-2 flex-1">
                   <h3 className="text-xl font-bold text-gray-900 leading-tight line-clamp-2">
-                    {project.title || "Έργο Χωρίς Τίτλο"}
+                    {getProjectTitle(project)}
                   </h3>
                   <Badge variant="secondary" className={getStatusColor(project.status || '')}>
                     {getStatusText(project.status || '')}

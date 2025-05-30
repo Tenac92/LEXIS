@@ -130,7 +130,14 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
               <div className="space-y-1 md:col-span-2 lg:col-span-3">
                 <label className="text-sm font-medium text-green-700">Τίτλος Έργου</label>
                 <p className="text-green-900 font-semibold bg-white px-3 py-2 rounded border">
-                  {project.title || "Έργο Χωρίς Τίτλο"}
+                  {(() => {
+                    const projectData = project as any;
+                    return projectData.title?.trim() || 
+                           projectData.project_title?.trim() || 
+                           projectData.event_description?.trim() || 
+                           projectData.name?.trim() ||
+                           `Έργο MIS: ${project.mis}`;
+                  })()}
                 </p>
               </div>
               
