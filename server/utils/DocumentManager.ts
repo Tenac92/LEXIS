@@ -363,20 +363,18 @@ export class DocumentManager {
         throw new Error(`Invalid document ID: ${documentId}`);
       }
       
+      // First get the document without the problematic join
       const { data, error } = await supabase
         .from('generated_documents')
-        .select(`
-          *,
-          recipients,
-          project:mis (
-            na853,
-            title
-          )
-        `)
+        .select('*')
         .eq('id', numericId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        logger.error('[DocumentManager] Database error in fetchDocumentFields:', error);
+        throw error;
+      }
+      
       return data;
     } catch (error) {
       logger.error('Fetch document fields error:', error);
