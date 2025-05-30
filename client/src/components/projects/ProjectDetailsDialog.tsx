@@ -59,15 +59,45 @@ const formatCurrency = (amount: number): string => {
 const getRegionText = (project: Project) => {
   if (!project.region) return "Δ/Υ";
   
+  // Handle string regions
   if (typeof project.region === 'string') {
     return project.region;
   }
   
+  // Handle array regions
   if (Array.isArray(project.region)) {
     return project.region.join(', ');
   }
   
-  return String(project.region);
+  // Handle object regions - try to extract meaningful text
+  if (typeof project.region === 'object') {
+    try {
+      // If it's an object with name or title properties
+      const obj = project.region as any;
+      if (obj.name) return obj.name;
+      if (obj.title) return obj.title;
+      if (obj.region) return obj.region;
+      
+      // If it has keys, try to join their values
+      const keys = Object.keys(obj);
+      if (keys.length > 0) {
+        const values = keys.map(key => obj[key]).filter(val => val && typeof val === 'string');
+        if (values.length > 0) {
+          return values.join(', ');
+        }
+      }
+      
+      // Last resort - convert to JSON string and clean it up
+      const jsonStr = JSON.stringify(obj);
+      if (jsonStr !== '{}' && jsonStr !== 'null') {
+        return jsonStr.replace(/[{}"\[\]]/g, '').replace(/,/g, ', ');
+      }
+    } catch (e) {
+      console.warn('Error parsing region object:', e);
+    }
+  }
+  
+  return "Δ/Υ";
 };
 
 export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDetailsDialogProps) {

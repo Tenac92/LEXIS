@@ -171,12 +171,63 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
 
   const getRegionText = (project: Project) => {
     if (!project.region) return '';
-    const regionData = project.region as { region: string[], municipality: string[], regional_unit: string[] };
-    const parts = [];
-    if (regionData.region?.length) parts.push(regionData.region[0]);
-    if (regionData.regional_unit?.length) parts.push(regionData.regional_unit[0]);
-    if (regionData.municipality?.length) parts.push(regionData.municipality[0]);
-    return parts.join(' / ');
+    
+    // Handle string regions
+    if (typeof project.region === 'string') {
+      return project.region;
+    }
+    
+    // Handle array regions
+    if (Array.isArray(project.region)) {
+      return project.region.join(', ');
+    }
+    
+    // Handle object regions - try to extract meaningful text
+    if (typeof project.region === 'object') {
+      try {
+        // If it's an object with structured region data
+        const obj = project.region as any;
+        
+        // Try structured region data first
+        if (obj.region || obj.municipality || obj.regional_unit) {
+          const parts = [];
+          if (obj.region?.length) {
+            parts.push(Array.isArray(obj.region) ? obj.region[0] : obj.region);
+          }
+          if (obj.regional_unit?.length) {
+            parts.push(Array.isArray(obj.regional_unit) ? obj.regional_unit[0] : obj.regional_unit);
+          }
+          if (obj.municipality?.length) {
+            parts.push(Array.isArray(obj.municipality) ? obj.municipality[0] : obj.municipality);
+          }
+          if (parts.length > 0) return parts.join(' / ');
+        }
+        
+        // Try other common properties
+        if (obj.name) return obj.name;
+        if (obj.title) return obj.title;
+        
+        // If it has keys, try to join their values
+        const keys = Object.keys(obj);
+        if (keys.length > 0) {
+          const values = keys.map(key => {
+            const val = obj[key];
+            if (Array.isArray(val) && val.length > 0) {
+              return val[0];
+            }
+            return val;
+          }).filter(val => val && typeof val === 'string');
+          
+          if (values.length > 0) {
+            return values.join(', ');
+          }
+        }
+      } catch (e) {
+        console.warn('Error parsing region object:', e);
+      }
+    }
+    
+    return '';
   };
 
   if (view === "list") {
