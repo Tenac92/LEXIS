@@ -166,11 +166,18 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const documentId = req.params.id;
     
+    // Validate document ID before parsing
+    const parsedId = parseInt(documentId);
+    if (isNaN(parsedId)) {
+      console.error(`Error fetching document: Invalid document ID: ${documentId}`);
+      return res.status(400).json({ message: 'Invalid document ID' });
+    }
+    
     // Fetch document data using Supabase
     const { data: document, error } = await supabase
       .from('generated_documents')
       .select('*')
-      .eq('id', parseInt(documentId))
+      .eq('id', parsedId)
       .single();
     
     if (error || !document) {
