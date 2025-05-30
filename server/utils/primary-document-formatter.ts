@@ -937,7 +937,18 @@ export class PrimaryDocumentFormatter {
     const leftColumnParagraphs: Paragraph[] = [];
 
     leftColumnParagraphs.push(
-      DocumentShared.createBoldUnderlinedParagraph("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)"),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
+            bold: true,
+            underline: {},
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 240 },
+      }),
     );
 
     for (let i = 0; i < attachments.length; i++) {
@@ -957,7 +968,18 @@ export class PrimaryDocumentFormatter {
     }
 
     leftColumnParagraphs.push(
-      DocumentShared.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΚΟΙΝΟΠΟΙΗΣΗ",
+            bold: true,
+            underline: {},
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 240 },
+      }),
     );
 
     const notifications = [
@@ -983,7 +1005,18 @@ export class PrimaryDocumentFormatter {
     }
 
     leftColumnParagraphs.push(
-      DocumentShared.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
+            bold: true,
+            underline: {},
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 240 },
+      }),
     );
 
     leftColumnParagraphs.push(
@@ -1144,11 +1177,8 @@ export class PrimaryDocumentFormatter {
             ...this.createMainContent(enrichedDocumentData, unitDetails),
             this.createPaymentTable(documentData.recipients || []),
             this.createNote(),
-            ...this.createClosingContent(),
-            ...this.createAttachmentsSection(),
-            ...this.createDistributionSections(),
-            ...this.createFooter(enrichedDocumentData, unitDetails),
-          ].flat(),
+            this.createFooter(enrichedDocumentData, unitDetails),
+          ],
         },
       ];
 
