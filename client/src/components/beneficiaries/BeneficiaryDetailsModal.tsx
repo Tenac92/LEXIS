@@ -135,8 +135,8 @@ export function BeneficiaryDetailsModal({
                 <p className="text-gray-900 font-mono">{beneficiary.onlinefoldernumber || 'Δ/Υ'}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700">Έργο:</label>
-                <p className="text-gray-900">{beneficiary.project || 'Δ/Υ'}</p>
+                <label className="text-sm font-medium text-gray-700">Έργο (MIS):</label>
+                <p className="text-gray-900 font-mono">{beneficiary.project || 'Δ/Υ'}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">Α/Α:</label>
@@ -155,6 +155,47 @@ export function BeneficiaryDetailsModal({
             </div>
           </div>
 
+          {/* Engineering Information */}
+          {(beneficiary.cengsur1 || beneficiary.cengsur2) && (
+            <div className="bg-orange-50 p-6 rounded-lg border border-orange-200">
+              <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
+                <Building2 className="w-5 h-5" />
+                Στοιχεία Μηχανικών
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {beneficiary.cengsur1 && (
+                  <div className="bg-white p-4 rounded border border-orange-200">
+                    <label className="text-sm font-medium text-orange-800">Μηχανικός 1:</label>
+                    <p className="text-orange-900 font-medium">
+                      {beneficiary.cengsur1} {beneficiary.cengname1}
+                    </p>
+                  </div>
+                )}
+                {beneficiary.cengsur2 && (
+                  <div className="bg-white p-4 rounded border border-orange-200">
+                    <label className="text-sm font-medium text-orange-800">Μηχανικός 2:</label>
+                    <p className="text-orange-900 font-medium">
+                      {beneficiary.cengsur2} {beneficiary.cengname2}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Free Text */}
+          {beneficiary.freetext && (
+            <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
+              <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Ελεύθερο Κείμενο
+              </h3>
+              <div className="bg-white p-4 rounded border border-purple-200">
+                <p className="text-purple-900 whitespace-pre-wrap">{beneficiary.freetext}</p>
+              </div>
+            </div>
+          )}
+
           {/* Financial Information */}
           {financialData && (
             <div className="bg-green-50 p-6 rounded-lg border border-green-200">
@@ -163,44 +204,65 @@ export function BeneficiaryDetailsModal({
                 Οικονομικά Στοιχεία
               </h3>
               <div className="space-y-4">
-                {Object.entries(financialData).map(([key, value]: [string, any]) => (
-                  <div key={key} className="bg-white p-4 rounded border border-green-200">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-medium text-green-900">Τύπος Δαπάνης: {key}</h4>
-                      <Badge className={getFinancialStatusColor(value.status || 'pending')}>
-                        {value.status === 'paid' ? 'Πληρωμένο' :
-                         value.status === 'submitted' ? 'Υποβλημένο' :
-                         value.status === 'pending' ? 'Εκκρεμείς' : 'Άγνωστο'}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span className="text-green-700 font-medium">Ποσό: </span>
-                        <span className="text-green-900 font-mono">
-                          {formatCurrency(value.amount || 0)}
-                        </span>
+                {Object.entries(financialData).map(([paymentType, paymentData]: [string, any]) => (
+                  <div key={paymentType} className="bg-white p-4 rounded border border-green-200">
+                    <h4 className="font-medium text-green-900 mb-3">Τύπος Δαπάνης: {paymentType}</h4>
+                    
+                    {typeof paymentData === 'object' && paymentData !== null ? (
+                      <div className="space-y-3">
+                        {Object.entries(paymentData).map(([installment, installmentData]: [string, any]) => (
+                          <div key={installment} className="bg-green-25 p-3 rounded border border-green-100">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="font-medium text-green-800">Δόση: {installment}</span>
+                              {installmentData && typeof installmentData === 'object' && installmentData.status && (
+                                <Badge className={getFinancialStatusColor(installmentData.status)}>
+                                  {installmentData.status === 'paid' ? 'Πληρωμένο' :
+                                   installmentData.status === 'submitted' ? 'Υποβλημένο' :
+                                   installmentData.status === 'pending' ? 'Εκκρεμές' : 
+                                   installmentData.status || 'Εκκρεμές'}
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {installmentData && typeof installmentData === 'object' ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                {installmentData.amount && (
+                                  <div>
+                                    <span className="text-green-700 font-medium">Ποσό: </span>
+                                    <span className="text-green-900 font-mono">
+                                      {formatCurrency(installmentData.amount)}
+                                    </span>
+                                  </div>
+                                )}
+                                {installmentData.protocol && (
+                                  <div>
+                                    <span className="text-green-700 font-medium">Αρ. Πρωτοκόλλου: </span>
+                                    <span className="text-green-900 font-mono">{installmentData.protocol}</span>
+                                  </div>
+                                )}
+                                {installmentData.date && (
+                                  <div>
+                                    <span className="text-green-700 font-medium">Ημερομηνία: </span>
+                                    <span className="text-green-900">
+                                      {installmentData.date === null ? 'Δ/Υ' : 
+                                       new Date(installmentData.date).toLocaleDateString('el-GR')}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-sm text-green-700">
+                                Τιμή: {String(installmentData)}
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                      {value.installment && (
-                        <div>
-                          <span className="text-green-700 font-medium">Δόση: </span>
-                          <span className="text-green-900">{value.installment}</span>
-                        </div>
-                      )}
-                      {value.protocol_number && (
-                        <div>
-                          <span className="text-green-700 font-medium">Αρ. Πρωτοκόλλου: </span>
-                          <span className="text-green-900 font-mono">{value.protocol_number}</span>
-                        </div>
-                      )}
-                      {value.date && (
-                        <div>
-                          <span className="text-green-700 font-medium">Ημερομηνία: </span>
-                          <span className="text-green-900">
-                            {new Date(value.date).toLocaleDateString('el-GR')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    ) : (
+                      <div className="text-sm text-green-700">
+                        Τιμή: {String(paymentData)}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
