@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Edit, Trash2, Download, Upload, User, FileText, Building, UserCheck } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Upload, User, FileText, Building, UserCheck, RotateCcw, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +44,7 @@ export default function BeneficiariesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | undefined>();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -137,6 +138,18 @@ export default function BeneficiariesPage() {
     setDialogOpen(true);
   };
 
+  const toggleCardFlip = (beneficiaryId: number) => {
+    setFlippedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(beneficiaryId)) {
+        newSet.delete(beneficiaryId);
+      } else {
+        newSet.add(beneficiaryId);
+      }
+      return newSet;
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
@@ -197,8 +210,13 @@ export default function BeneficiariesPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredBeneficiaries.map((beneficiary) => (
-              <Card key={beneficiary.id} className="hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-blue-300 relative overflow-hidden">
+            {filteredBeneficiaries.map((beneficiary) => {
+              const isFlipped = flippedCards.has(beneficiary.id);
+              return (
+                <div key={beneficiary.id} className="flip-card">
+                  <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
+                    {/* Front of card */}
+                    <div className="flip-card-front">{/* Original card content will go here */}
                 <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
                 <CardHeader className="pb-4 pl-6">
                   <div className="flex items-start justify-between">
