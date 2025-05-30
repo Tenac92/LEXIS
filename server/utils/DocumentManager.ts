@@ -19,11 +19,9 @@ interface DocumentFilters {
 
 export class DocumentManager {
   private cache: Map<string, any>;
-  private formatter: DocumentFormatter;
 
   constructor() {
     this.cache = new Map();
-    this.formatter = new DocumentFormatter();
   }
 
   async loadDocuments(filters: DocumentFilters = {}) {
@@ -336,7 +334,7 @@ export class DocumentManager {
 
       try {
         // Format document using DocumentFormatter
-        const docxBuffer = await this.formatter.formatOrthiEpanalipsi({
+        const docxBuffer = await DocumentFormatter.formatOrthiEpanalipsi({
           ...documentToUpdate,
           id: documentId,
           originalDocument: existingDoc
