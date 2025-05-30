@@ -222,6 +222,42 @@ export class PrimaryDocumentFormatter {
     });
   }
 
+  private static createDateAndProtocol(documentData: DocumentData): Paragraph[] {
+    const today = new Date();
+    const formattedDate = DocumentShared.formatDate(today);
+
+    return [
+      DocumentShared.createBlankLine(600),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Αθήνα, ${formattedDate}`,
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.RIGHT,
+        spacing: { after: 240 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Αριθμ. Πρωτ.: ",
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+          new TextRun({
+            text: documentData.protocol_number || documentData.protocol_number_input || "",
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 480 },
+      }),
+    ];
+  }
+
   private static createDocumentSubject(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
@@ -365,7 +401,200 @@ export class PrimaryDocumentFormatter {
               }),
             ],
           }),
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 15, type: WidthType.PERCENTAGE },
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: "ΑΛΕ: ", bold: true, size: DocumentShared.DEFAULT_FONT_SIZE }),
+                    ],
+                  }),
+                ],
+                borders: {
+                  top: { style: BorderStyle.NONE },
+                  bottom: { style: BorderStyle.NONE },
+                  left: { style: BorderStyle.NONE },
+                  right: { style: BorderStyle.NONE },
+                },
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
+                        size: DocumentShared.DEFAULT_FONT_SIZE,
+                      }),
+                    ],
+                  }),
+                ],
+                borders: {
+                  top: { style: BorderStyle.NONE },
+                  bottom: { style: BorderStyle.NONE },
+                  left: { style: BorderStyle.NONE },
+                  right: { style: BorderStyle.NONE },
+                },
+              }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 15, type: WidthType.PERCENTAGE },
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true, size: DocumentShared.DEFAULT_FONT_SIZE }),
+                    ],
+                  }),
+                ],
+                borders: {
+                  top: { style: BorderStyle.NONE },
+                  bottom: { style: BorderStyle.NONE },
+                  left: { style: BorderStyle.NONE },
+                  right: { style: BorderStyle.NONE },
+                },
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+                        size: DocumentShared.DEFAULT_FONT_SIZE,
+                      }),
+                    ],
+                  }),
+                ],
+                borders: {
+                  top: { style: BorderStyle.NONE },
+                  bottom: { style: BorderStyle.NONE },
+                  left: { style: BorderStyle.NONE },
+                  right: { style: BorderStyle.NONE },
+                },
+              }),
+            ],
+          }),
         ],
+      }),
+      DocumentShared.createBlankLine(14),
+    ];
+  }
+
+  private static createClosingContent(): Paragraph[] {
+    return [
+      DocumentShared.createBlankLine(14),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 480 },
+      }),
+    ];
+  }
+
+  private static createAttachmentsSection(): Paragraph[] {
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
+            bold: true,
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 240 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "1. Οι εκδοθείσες εγκρίσεις ΣΣ",
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 480 },
+      }),
+    ];
+  }
+
+  private static createDistributionSections(): Paragraph[] {
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΚΟΙΝΟΠΟΙΗΣΗ",
+            bold: true,
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 240 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "1. Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "2. Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "3. Γ.Δ.Α.Ε.Φ.Κ.",
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 240 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
+            bold: true,
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 240 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "1. Χρονολογικό Αρχείο",
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 480 },
       }),
     ];
   }
@@ -706,7 +935,7 @@ export class PrimaryDocumentFormatter {
                   children: [
                     new TextRun({
                       text: managerInfo?.name || "",
-                      size: 18,
+                      size: DocumentShared.DEFAULT_FONT_SIZE,
                       font: DocumentShared.DEFAULT_FONT,
                     }),
                   ],
@@ -760,10 +989,13 @@ export class PrimaryDocumentFormatter {
           },
           children: [
             await this.createDocumentHeader(enrichedDocumentData, unitDetails),
+            ...this.createDateAndProtocol(enrichedDocumentData),
             ...this.createDocumentSubject(enrichedDocumentData, unitDetails),
             ...this.createMainContent(enrichedDocumentData, unitDetails),
             this.createPaymentTable(documentData.recipients || []),
-            this.createNote(),
+            ...this.createClosingContent(),
+            ...this.createAttachmentsSection(),
+            ...this.createDistributionSections(),
             this.createFooter(enrichedDocumentData, unitDetails),
           ],
         },
