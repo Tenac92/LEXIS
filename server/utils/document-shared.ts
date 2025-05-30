@@ -189,6 +189,341 @@ export class DocumentShared {
     }
   }
 
+  public static async createDocumentHeader(
+    documentData: DocumentData,
+    unitDetails: UnitDetails | null | undefined,
+  ): Promise<Table> {
+    if (!documentData) {
+      throw new Error("Document data is required");
+    }
+    const logoBuffer = await this.getLogoImageData();
+
+    // Extract user information with fallbacks
+    const userInfo = {
+      name: documentData.generated_by?.name || documentData.user_name || "",
+      department:
+        documentData.generated_by?.department || documentData.department || "",
+      // Handle telephone as number by converting to string
+      contact_number:
+        (documentData.generated_by?.telephone !== undefined
+          ? String(documentData.generated_by?.telephone)
+          : null) ||
+        documentData.generated_by?.contact_number ||
+        (documentData.contact_number !== undefined
+          ? String(documentData.contact_number)
+          : ""),
+    };
+
+    // Use unitDetails.address if available
+    const address = unitDetails?.address || {
+      address: "Κηφισίας 124 & Ιατρίδου 2",
+      tk: "11526",
+      region: "Αθήνα",
+    };
+
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [55, 45],
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      margins: {
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              margins: {
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+              },
+              children: [
+                new Paragraph({
+                  children: [
+                    new ImageRun({
+                      data: logoBuffer,
+                      transformation: {
+                        width: 40,
+                        height: 40,
+                      },
+                      type: "png",
+                    }),
+                  ],
+                  spacing: { after: 120 },
+                }),
+                this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+                this.createBoldParagraph(
+                  "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ",
+                ),
+                this.createBoldParagraph(
+                  "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
+                ),
+                this.createBoldParagraph("ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ."),
+                this.createBoldParagraph(documentData.unit),
+                this.createBoldParagraph(userInfo.department),
+                this.createBlankLine(10),
+                this.createContactDetail("Ταχ. Δ/νση", address.address),
+                this.createContactDetail(
+                  "Ταχ. Κώδικας",
+                  `${address.tk}, ${address.region}`,
+                ),
+                this.createContactDetail("Πληροφορίες", userInfo.name),
+                this.createContactDetail("Τηλέφωνο", userInfo.contact_number),
+                this.createContactDetail("Email", unitDetails?.email || ""),
+                this.createBlankLine(10),
+              ],
+            }),
+            new TableCell({
+              width: { size: 50, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              margins: {
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+              },
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `${address.region}: ${
+                        documentData.protocol_date
+                          ? this.formatDate(documentData.protocol_date)
+                          : "........................"
+                      }`,
+                    }),
+                  ],
+                  alignment: AlignmentType.RIGHT,
+                  spacing: { before: 240 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Αρ. Πρωτ.: ${
+                        documentData.protocol_number_input ||
+                        documentData.protocol_number ||
+                        "......................"
+                      }`,
+                      bold: true,
+                    }),
+                  ],
+                  alignment: AlignmentType.RIGHT,
+                }),
+                new Paragraph({
+                  text: "",
+                  spacing: { before: 240 },
+                }),
+                new Table({
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  borders: {
+                    top: { style: BorderStyle.NONE },
+                    bottom: { style: BorderStyle.NONE },
+                    left: { style: BorderStyle.NONE },
+                    right: { style: BorderStyle.NONE },
+                    insideHorizontal: { style: BorderStyle.NONE },
+                    insideVertical: { style: BorderStyle.NONE },
+                  },
+                  rows: [
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          width: { size: 8, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          children: [
+                            new Paragraph({
+                              text: "ΠΡΟΣ:",
+                              spacing: { before: 2000 },
+                              alignment: AlignmentType.LEFT,
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          width: { size: 92, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          children: [
+                            new Paragraph({
+                              text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                              spacing: { before: 2000 },
+                              alignment: AlignmentType.JUSTIFIED,
+                            }),
+                            new Paragraph({
+                              text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                              alignment: AlignmentType.JUSTIFIED,
+                            }),
+                            new Paragraph({
+                              text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                              alignment: AlignmentType.JUSTIFIED,
+                            }),
+                            new Paragraph({
+                              text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                              alignment: AlignmentType.JUSTIFIED,
+                            }),
+                          ],
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  public static createDateAndProtocol(documentData: DocumentData): Paragraph[] {
+    return [
+      new Paragraph({
+        text: "",
+        spacing: { before: 480, after: 240 },
+      }),
+    ];
+  }
+
+  public static createDocumentSubject(
+    documentData: DocumentData,
+    unitDetails: UnitDetails | null | undefined,
+  ): Paragraph[] {
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `ΘΕΜΑ: Αίτημα για την πληρωμή ${documentData.expenditure_type} που έχουν εγκριθεί από τη ${documentData.unit}`,
+            bold: true,
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { before: 480, after: 480 },
+      }),
+    ];
+  }
+
+  public static createMainContent(
+    documentData: DocumentData,
+    unitDetails: UnitDetails | null | undefined,
+  ): Paragraph[] {
+    return [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε, συμπληρώθηκε και ισχύει.",
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 480 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από τη ${documentData.unit}, σύμφωνα με τα παρακάτω στοιχεία.`,
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 480 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΑΡ. ΕΡΓΟΥ: ",
+            bold: true,
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 120 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 240 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΑΛΕ: ",
+            bold: true,
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 120 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 240 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΤΟΜΕΑΣ: ",
+            bold: true,
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 120 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 480 },
+      }),
+    ];
+  }
+
   public static async getProjectNA853(mis: string): Promise<string | null> {
     try {
       if (!mis) {
