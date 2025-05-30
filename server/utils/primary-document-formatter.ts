@@ -446,7 +446,7 @@ export class PrimaryDocumentFormatter {
                 new TextRun({
                   text: "ΠΟΣΟ (€)",
                   bold: true,
-                  size: 18,
+                  size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
                 }),
               ],
@@ -476,7 +476,7 @@ export class PrimaryDocumentFormatter {
                 children: [
                   new TextRun({
                     text: (index + 1).toString(),
-                    size: 18,
+                    size: DocumentShared.DEFAULT_FONT_SIZE,
                     font: DocumentShared.DEFAULT_FONT,
                   }),
                 ],
@@ -497,7 +497,7 @@ export class PrimaryDocumentFormatter {
                 children: [
                   new TextRun({
                     text: `${recipient.lastname || ""} ${recipient.firstname || ""} ${recipient.fathername || ""}`.trim(),
-                    size: 18,
+                    size: DocumentShared.DEFAULT_FONT_SIZE,
                     font: DocumentShared.DEFAULT_FONT,
                   }),
                 ],
@@ -518,7 +518,7 @@ export class PrimaryDocumentFormatter {
                 children: [
                   new TextRun({
                     text: recipient.afm || "",
-                    size: 18,
+                    size: DocumentShared.DEFAULT_FONT_SIZE,
                     font: DocumentShared.DEFAULT_FONT,
                   }),
                 ],
@@ -539,7 +539,7 @@ export class PrimaryDocumentFormatter {
                 children: [
                   new TextRun({
                     text: formattedAmount,
-                    size: 18,
+                    size: DocumentShared.DEFAULT_FONT_SIZE,
                     font: DocumentShared.DEFAULT_FONT,
                   }),
                 ],
@@ -583,7 +583,7 @@ export class PrimaryDocumentFormatter {
                 new TextRun({
                   text: `ΣΥΝΟΛΟ: ${DocumentShared.formatCurrency(totalAmount)}`,
                   bold: true,
-                  size: 18,
+                  size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
                 }),
               ],
@@ -620,7 +620,7 @@ export class PrimaryDocumentFormatter {
       children: [
         new TextRun({
           text: "Σημείωση: Τα δικαιολογητικά της δαπάνης διατηρούνται στην αρμόδια υπηρεσία.",
-          size: 16,
+          size: DocumentShared.DEFAULT_FONT_SIZE,
           font: DocumentShared.DEFAULT_FONT,
           italics: true,
         }),
@@ -663,7 +663,7 @@ export class PrimaryDocumentFormatter {
                     new TextRun({
                       text: "Ο/Η Υπάλληλος",
                       bold: true,
-                      size: 18,
+                      size: DocumentShared.DEFAULT_FONT_SIZE,
                       font: DocumentShared.DEFAULT_FONT,
                     }),
                   ],
@@ -674,7 +674,7 @@ export class PrimaryDocumentFormatter {
                   children: [
                     new TextRun({
                       text: userInfo.name,
-                      size: 18,
+                      size: DocumentShared.DEFAULT_FONT_SIZE,
                       font: DocumentShared.DEFAULT_FONT,
                     }),
                   ],
@@ -695,7 +695,7 @@ export class PrimaryDocumentFormatter {
                     new TextRun({
                       text: managerInfo?.title || "Ο/Η Προϊστάμενος/η",
                       bold: true,
-                      size: 18,
+                      size: DocumentShared.DEFAULT_FONT_SIZE,
                       font: DocumentShared.DEFAULT_FONT,
                     }),
                   ],
