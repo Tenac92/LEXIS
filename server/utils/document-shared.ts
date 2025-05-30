@@ -513,7 +513,7 @@ export class DocumentShared {
   public static createMainContent(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Paragraph[] {
+  ): (Paragraph | Table)[] {
     return [
       new Paragraph({
         children: [
@@ -535,68 +535,116 @@ export class DocumentShared {
         ],
         spacing: { after: 480 },
       }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΑΡ. ΕΡΓΟΥ: ",
-            bold: true,
-            size: this.DEFAULT_FONT_SIZE,
-            font: this.DEFAULT_FONT,
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.NONE },
+          bottom: { style: BorderStyle.NONE },
+          left: { style: BorderStyle.NONE },
+          right: { style: BorderStyle.NONE },
+          insideHorizontal: { style: BorderStyle.NONE },
+          insideVertical: { style: BorderStyle.NONE },
+        },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 15, type: WidthType.PERCENTAGE },
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ 
+                        text: "ΑΡ. ΕΡΓΟΥ: ", 
+                        bold: true,
+                        size: this.DEFAULT_FONT_SIZE,
+                        font: this.DEFAULT_FONT,
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
+                        size: this.DEFAULT_FONT_SIZE,
+                        font: this.DEFAULT_FONT,
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ 
+                        text: "ΑΛΕ: ", 
+                        bold: true,
+                        size: this.DEFAULT_FONT_SIZE,
+                        font: this.DEFAULT_FONT,
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
+                        size: this.DEFAULT_FONT_SIZE,
+                        font: this.DEFAULT_FONT,
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ 
+                        text: "ΤΟΜΕΑΣ: ", 
+                        bold: true,
+                        size: this.DEFAULT_FONT_SIZE,
+                        font: this.DEFAULT_FONT,
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+                        size: this.DEFAULT_FONT_SIZE,
+                        font: this.DEFAULT_FONT,
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            ],
           }),
         ],
-        spacing: { after: 120 },
       }),
       new Paragraph({
-        children: [
-          new TextRun({
-            text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
-            size: this.DEFAULT_FONT_SIZE,
-            font: this.DEFAULT_FONT,
-          }),
-        ],
-        spacing: { after: 240 },
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΑΛΕ: ",
-            bold: true,
-            size: this.DEFAULT_FONT_SIZE,
-            font: this.DEFAULT_FONT,
-          }),
-        ],
-        spacing: { after: 120 },
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
-            size: this.DEFAULT_FONT_SIZE,
-            font: this.DEFAULT_FONT,
-          }),
-        ],
-        spacing: { after: 240 },
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΤΟΜΕΑΣ: ",
-            bold: true,
-            size: this.DEFAULT_FONT_SIZE,
-            font: this.DEFAULT_FONT,
-          }),
-        ],
-        spacing: { after: 120 },
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
-            size: this.DEFAULT_FONT_SIZE,
-            font: this.DEFAULT_FONT,
-          }),
-        ],
-        spacing: { after: 480 },
+        children: [new TextRun({ text: "" })],
+        spacing: { before: 480, after: 480 },
       }),
     ];
   }
