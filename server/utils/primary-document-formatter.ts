@@ -44,17 +44,25 @@ export class PrimaryDocumentFormatter {
     });
   }
 
-  private static createTableCell(text: string, alignment: string, columnSpan?: number): TableCell {
-    const alignmentType = alignment === "center" ? AlignmentType.CENTER : 
-                         alignment === "right" ? AlignmentType.RIGHT : AlignmentType.LEFT;
-    
+  private static createTableCell(
+    text: string,
+    alignment: string,
+    columnSpan?: number,
+  ): TableCell {
+    const alignmentType =
+      alignment === "center"
+        ? AlignmentType.CENTER
+        : alignment === "right"
+          ? AlignmentType.RIGHT
+          : AlignmentType.LEFT;
+
     return new TableCell({
       children: [
         new Paragraph({
           children: [
             new TextRun({
               text: text,
-              size: DocumentShared.DEFAULT_FONT_SIZE,
+              size: DocumentShared.DEFAULT_FONT_SIZE - 2,
               font: DocumentShared.DEFAULT_FONT,
             }),
           ],
@@ -88,22 +96,26 @@ export class PrimaryDocumentFormatter {
         children: [
           this.createHeaderCell("Α.Α.", "auto"),
           this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
-          this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
-          this.createHeaderCell("ΔΟΣΗ", "auto"),
           this.createHeaderCell("ΑΦΜ", "auto"),
+          this.createHeaderCell("ΔΟΣΗ", "auto"),
+          this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
         ],
       }),
     ];
 
     // Process each recipient
     recipients.forEach((recipient, index) => {
-      const fullName = `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
+      const fullName =
+        `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
       const afm = recipient.afm;
       const rowNumber = (index + 1).toString() + ".";
 
       // Determine installments
       let installments: string[] = [];
-      if (Array.isArray(recipient.installments) && recipient.installments.length > 0) {
+      if (
+        Array.isArray(recipient.installments) &&
+        recipient.installments.length > 0
+      ) {
         installments = recipient.installments;
       } else if (recipient.installment) {
         installments = [recipient.installment.toString()];
@@ -125,6 +137,9 @@ export class PrimaryDocumentFormatter {
             children: [
               this.createTableCell(rowNumber, "center"),
               this.createTableCell(fullName, "center"),
+              this.createTableCell(afm, "center"),
+              this.createTableCell(installment, "center"),
+
               this.createTableCell(
                 amount.toLocaleString("el-GR", {
                   minimumFractionDigits: 2,
@@ -132,8 +147,6 @@ export class PrimaryDocumentFormatter {
                 }),
                 "center",
               ),
-              this.createTableCell(installment, "center"),
-              this.createTableCell(afm, "center"),
             ],
           }),
         );
@@ -141,21 +154,25 @@ export class PrimaryDocumentFormatter {
     });
 
     // Calculate total amount
-    const totalAmount = recipients.reduce((sum, recipient) => sum + recipient.amount, 0);
-    
+    const totalAmount = recipients.reduce(
+      (sum, recipient) => sum + recipient.amount,
+      0,
+    );
+
     rows.push(
       new TableRow({
         height: { value: 360, rule: HeightRule.EXACT },
         children: [
+          this.createTableCell("", "center", 1),
+          this.createTableCell("", "center", 1),
           this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
           this.createTableCell(
             totalAmount.toLocaleString("el-GR", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             }) + " €",
-            "right",
+            "center",
           ),
-          this.createTableCell("", "center", 2),
         ],
       }),
     );
@@ -172,11 +189,11 @@ export class PrimaryDocumentFormatter {
       children: [
         new TextRun({
           text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
-          size: DocumentShared.DEFAULT_FONT_SIZE,
+          size: DocumentShared.DEFAULT_FONT_SIZE - 2,
           font: DocumentShared.DEFAULT_FONT,
         }),
       ],
-      spacing: { before: 480, after: 480 },
+      spacing: { before: 120, after: 0 },
     });
   }
 
@@ -198,11 +215,11 @@ export class PrimaryDocumentFormatter {
             text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
             bold: true,
             underline: {},
-            size: DocumentShared.DEFAULT_FONT_SIZE,
+            size: DocumentShared.DEFAULT_FONT_SIZE - 4,
             font: DocumentShared.DEFAULT_FONT,
           }),
         ],
-        spacing: { after: 240 },
+        spacing: { after: 120 },
       }),
     );
 
@@ -212,7 +229,7 @@ export class PrimaryDocumentFormatter {
           children: [
             new TextRun({
               text: `${i + 1}. ${attachments[i]}`,
-              size: DocumentShared.DEFAULT_FONT_SIZE,
+              size: DocumentShared.DEFAULT_FONT_SIZE - 4,
               font: DocumentShared.DEFAULT_FONT,
             }),
           ],
@@ -229,11 +246,11 @@ export class PrimaryDocumentFormatter {
             text: "ΚΟΙΝΟΠΟΙΗΣΗ",
             bold: true,
             underline: {},
-            size: DocumentShared.DEFAULT_FONT_SIZE,
+            size: DocumentShared.DEFAULT_FONT_SIZE - 4,
             font: DocumentShared.DEFAULT_FONT,
           }),
         ],
-        spacing: { after: 240 },
+        spacing: { after: 120 },
       }),
     );
 
@@ -249,7 +266,7 @@ export class PrimaryDocumentFormatter {
           children: [
             new TextRun({
               text: `${i + 1}. ${notifications[i]}`,
-              size: DocumentShared.DEFAULT_FONT_SIZE,
+              size: DocumentShared.DEFAULT_FONT_SIZE - 4,
               font: DocumentShared.DEFAULT_FONT,
             }),
           ],
@@ -266,11 +283,11 @@ export class PrimaryDocumentFormatter {
             text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
             bold: true,
             underline: {},
-            size: DocumentShared.DEFAULT_FONT_SIZE,
+            size: DocumentShared.DEFAULT_FONT_SIZE - 4,
             font: DocumentShared.DEFAULT_FONT,
           }),
         ],
-        spacing: { after: 240 },
+        spacing: { after: 120 },
       }),
     );
 
@@ -279,7 +296,7 @@ export class PrimaryDocumentFormatter {
         children: [
           new TextRun({
             text: "1. Χρονολογικό Αρχείο",
-            size: DocumentShared.DEFAULT_FONT_SIZE,
+            size: DocumentShared.DEFAULT_FONT_SIZE - 4,
             font: DocumentShared.DEFAULT_FONT,
           }),
         ],
@@ -322,8 +339,8 @@ export class PrimaryDocumentFormatter {
       }),
     );
 
-    rightColumnParagraphs.push(DocumentShared.createBlankLine(480));
-    rightColumnParagraphs.push(DocumentShared.createBlankLine(480));
+    rightColumnParagraphs.push(DocumentShared.createBlankLine(120));
+    rightColumnParagraphs.push(DocumentShared.createBlankLine(120));
 
     rightColumnParagraphs.push(
       new Paragraph({
@@ -393,15 +410,22 @@ export class PrimaryDocumentFormatter {
     });
   }
 
-  public static async generateDocument(documentData: DocumentData): Promise<Buffer> {
+  public static async generateDocument(
+    documentData: DocumentData,
+  ): Promise<Buffer> {
     try {
       logger.debug("Generating primary document for:", documentData);
 
-      const unitDetails = await DocumentShared.getUnitDetails(documentData.unit);
+      const unitDetails = await DocumentShared.getUnitDetails(
+        documentData.unit,
+      );
       logger.debug("Unit details:", unitDetails);
 
       // Get project title and NA853 code from database
-      const projectMis = documentData.project_na853 || (documentData as any).mis?.toString() || "";
+      const projectMis =
+        documentData.project_na853 ||
+        (documentData as any).mis?.toString() ||
+        "";
       const projectTitle = await DocumentShared.getProjectTitle(projectMis);
       const projectNA853 = await DocumentShared.getProjectNA853(projectMis);
       logger.debug(`Project title for MIS ${projectMis}:`, projectTitle);
@@ -423,10 +447,19 @@ export class PrimaryDocumentFormatter {
             },
           },
           children: [
-            await DocumentShared.createDocumentHeader(enrichedDocumentData, unitDetails),
+            await DocumentShared.createDocumentHeader(
+              enrichedDocumentData,
+              unitDetails,
+            ),
             ...DocumentShared.createDateAndProtocol(enrichedDocumentData),
-            ...DocumentShared.createDocumentSubject(enrichedDocumentData, unitDetails),
-            ...DocumentShared.createMainContent(enrichedDocumentData, unitDetails),
+            ...DocumentShared.createDocumentSubject(
+              enrichedDocumentData,
+              unitDetails,
+            ),
+            ...DocumentShared.createMainContent(
+              enrichedDocumentData,
+              unitDetails,
+            ),
             this.createPaymentTable(documentData.recipients || []),
             this.createNote(),
             this.createFooter(enrichedDocumentData, unitDetails),

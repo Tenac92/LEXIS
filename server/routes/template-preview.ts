@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import { TemplateManager } from '../utils/TemplateManager';
 
 const router = Router();
 
@@ -11,15 +10,12 @@ router.post('/preview', async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Template ID is required' });
     }
 
-    const buffer = await TemplateManager.generatePreview(
+    // Template functionality disabled - returning 501
+    return res.status(501).json({ 
+      message: 'Template preview functionality is not implemented',
       templateId,
-      previewData || {},
-      { watermark: true }
-    );
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename=template-preview.docx`);
-    res.send(buffer);
+      previewData 
+    });
   } catch (error) {
     console.error('Template preview error:', error);
     res.status(500).json({
