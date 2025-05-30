@@ -1,0 +1,222 @@
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 7400, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 2048.59, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 6145.78, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 8050, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+ΔΚΑ ΕΠΙΣΚΕΥΗ: Object
+[[Prototype]]: Object
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 1500, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 1660.08, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 1106.74, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 1660.08, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 7099.4, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 9905, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 4475.63, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 3128.16, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 1806.42, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {Α: {…}}
+Debug - Installment type: Α Details: 
+Object {date: null, amount: 11671.12, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 2219.28, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 11039, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 10496.08, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 12114.76, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 1586, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 5600, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 1120, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 11852.33, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 3858.75, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 3858.75, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 10080, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 7000, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Payment type: ΔΚΑ ΕΠΙΣΚΕΥΗ Installments: 
+Object {ΕΦΑΠΑΞ: {…}}
+Debug - Installment type: ΕΦΑΠΑΞ Details: 
+Object {date: null, amount: 6580, status: null, protocol: null}
+Debug - Raw oikonomika data: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}
+Debug - Parsed oikonomika: 
+Object {ΔΚΑ ΕΠΙΣΚΕΥΗ: {…}}

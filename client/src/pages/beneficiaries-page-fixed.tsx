@@ -742,30 +742,26 @@ export default function BeneficiariesPage() {
                   </div>
                   {(() => {
                     try {
-                      console.log('Debug - Raw oikonomika data:', beneficiary.oikonomika);
                       let oikonomika = beneficiary.oikonomika;
                       
                       // Handle different data formats
                       if (typeof oikonomika === 'string') {
                         // Clean and parse JSON - handle escaped quotes properly
                         oikonomika = oikonomika.replace(/\\"/g, '"');
-                        console.log('Debug - Cleaned string:', oikonomika);
                         oikonomika = JSON.parse(oikonomika);
                       }
-                      
-                      console.log('Debug - Parsed oikonomika:', oikonomika);
                       
                       if (!oikonomika || typeof oikonomika !== 'object') {
                         return <div className="text-sm text-gray-500 italic">Δεν υπάρχουν οικονομικά στοιχεία</div>;
                       }
                       
                       return Object.entries(oikonomika).map(([paymentType, installments]: [string, any]) => {
-                        console.log('Debug - Payment type:', paymentType, 'Installments:', installments);
+
                         return (
                           <div key={paymentType} className="mb-4">
                             <div className="text-sm font-semibold text-gray-800 mb-3 pb-1 border-b border-gray-200">{paymentType}</div>
                             {Object.entries(installments).map(([installmentType, details]: [string, any]) => {
-                              console.log('Debug - Installment type:', installmentType, 'Details:', details);
+
                               const amount = details.amount || 'Δεν έχει οριστεί';
                               const status = details.status || null;
                               const protocol = details.protocol || details.protocol_number || null;
