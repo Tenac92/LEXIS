@@ -29,6 +29,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 interface DocumentCardProps {
   document: GeneratedDocument;
+  view?: "grid" | "list";
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;

@@ -261,6 +261,35 @@ export default function DocumentsPage() {
       <div className="container mx-auto px-4 pt-6 pb-8">
         <Card className="bg-card">
           <div className="p-4">
+            {/* Header with Actions */}
+            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0 mb-6">
+              <h1 className="text-2xl font-bold text-foreground">Έγγραφα</h1>
+              <div className="flex flex-wrap gap-2">
+                <div className="flex border rounded-lg overflow-hidden">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    className="rounded-none"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                    className="rounded-none"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </div>
+                <Button onClick={() => setShowCreateDialog(true)}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Νέο Έγγραφο
+                </Button>
+              </div>
+            </div>
+
             {/* Basic Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
@@ -455,30 +484,42 @@ export default function DocumentsPage() {
             </div>
           </div>
 
-          {/* Documents Grid */}
-          <div className={`grid ${viewMode === 'grid' ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1'} gap-6 p-6`}>
-            {documents?.map((doc) => (
-              <DocumentCard
-                key={doc.id}
-                document={doc}
-                onView={() => {
-                  setSelectedDocument(doc);
-                  setModalState(prev => ({ ...prev, view: true }));
-                }}
-                onEdit={() => {
-                  setSelectedDocument(doc);
-                  setModalState(prev => ({ ...prev, edit: true }));
-                }}
-                onDelete={() => {
-                  setSelectedDocument(doc);
-                  setModalState(prev => ({ ...prev, delete: true }));
-                }}
-              />
-            ))}
-            {(!documents || documents.length === 0) && (
-              <div className="col-span-full flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mb-4" />
-                <p>Δεν βρέθηκαν έγγραφα</p>
+          {/* Documents */}
+          <div className="p-6">
+            {isLoading ? (
+              <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+                {[...Array(6)].map((_, i) => (
+                  <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : documents?.length ? (
+              <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+                {documents.map((doc) => (
+                  <DocumentCard
+                    key={doc.id}
+                    document={doc}
+                    view={viewMode}
+                    onView={() => {
+                      setSelectedDocument(doc);
+                      setModalState(prev => ({ ...prev, view: true }));
+                    }}
+                    onEdit={() => {
+                      setSelectedDocument(doc);
+                      setModalState(prev => ({ ...prev, edit: true }));
+                    }}
+                    onDelete={() => {
+                      setSelectedDocument(doc);
+                      setModalState(prev => ({ ...prev, delete: true }));
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border-2 border-dashed border-muted p-8 text-center">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <FileText className="h-8 w-8" />
+                  <p>Δεν βρέθηκαν έγγραφα</p>
+                </div>
               </div>
             )}
           </div>
