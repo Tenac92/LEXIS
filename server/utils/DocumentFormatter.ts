@@ -37,6 +37,7 @@ interface UserDetails {
 
 interface UnitDetails {
   unit: string;
+  name?: string; // Add direct name property
   unit_name?: {
     name: string;
     prop: string;
@@ -46,7 +47,7 @@ interface UnitDetails {
     order: string;
     title: string;
     degree: string;
-    prepose?: string; // Set as optional if needed
+    prepose?: string;
   };
   email?: string;
   address?: {
@@ -773,11 +774,15 @@ export class DocumentFormatter {
 
       // Calculate total amount from recipients
       const totalAmount = (documentData.recipients || []).reduce((sum, r) => {
-        const amount =
-          typeof r.amount === "number"
-            ? r.amount
-            : parseFloat(String(r.amount) || "0");
-        return sum + (isNaN(amount) ? 0 : amount);
+        // Safely parse amount, ensuring we never get NaN
+        let amount = 0;
+        if (typeof r.amount === "number" && !isNaN(r.amount)) {
+          amount = r.amount;
+        } else if (r.amount !== null && r.amount !== undefined) {
+          const parsed = parseFloat(String(r.amount));
+          amount = isNaN(parsed) ? 0 : parsed;
+        }
+        return sum + amount;
       }, 0);
 
       // Format total amount with 2 decimal places
@@ -1393,11 +1398,15 @@ export class DocumentFormatter {
 
     // Calculate total amount
     const totalAmount = recipients.reduce((sum, r) => {
-      const amount =
-        typeof r.amount === "number"
-          ? r.amount
-          : parseFloat(String(r.amount) || "0");
-      return sum + (isNaN(amount) ? 0 : amount);
+      // Safely parse amount, ensuring we never get NaN
+      let amount = 0;
+      if (typeof r.amount === "number" && !isNaN(r.amount)) {
+        amount = r.amount;
+      } else if (r.amount !== null && r.amount !== undefined) {
+        const parsed = parseFloat(String(r.amount));
+        amount = isNaN(parsed) ? 0 : parsed;
+      }
+      return sum + amount;
     }, 0);
 
     // Add total row to the table, formatting to match primary document
