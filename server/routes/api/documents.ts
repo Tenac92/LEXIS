@@ -107,15 +107,17 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
     log(`[Documents] Fetching documents for user ${req.user.id}, authorized units: ${userUnits.join(', ')}`, 'debug');
     
     // Ensure user ID is properly converted to integer
-    const userId = parseInt(String(req.user.id));
-    if (isNaN(userId)) {
+    const userId = req.user.id;
+    if (!userId || (typeof userId === 'string' && isNaN(parseInt(userId))) || (typeof userId === 'number' && isNaN(userId))) {
       log(`[Documents] Invalid user ID: ${req.user.id} (type: ${typeof req.user.id})`, 'error');
       return res.status(400).json({ 
         message: 'Μη έγκυρος αναγνωριστικός χρήστη.' 
       });
     }
     
-    log(`[Documents] Converted user ID to: ${userId}`, 'debug');
+    const numericUserId = typeof userId === 'string' ? parseInt(userId) : userId;
+    
+    log(`[Documents] Converted user ID to: ${numericUserId}`, 'debug');
     
     // For now, return recent documents from the user's units instead of by user ID
     // This avoids the database constraint issue while providing real data
@@ -244,9 +246,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
     if (!validationResult.canCreate) {
       return res.status(403).json({
         message: validationResult.message || 'Budget validation failed',
-        status: validationResult.status,
-        requiresNotification: validationResult.requiresNotification,
-        notificationType: validationResult.notificationType
+        status: validationResult.status
       });
     }
     
