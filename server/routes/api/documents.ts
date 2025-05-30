@@ -184,8 +184,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Document not found' });
     }
     
-    // Fetch document fields including recipients
-    const documentData = await documentManager.fetchDocumentFields(documentId);
+    // Fetch document fields including recipients - use parsed numeric ID
+    const documentData = await documentManager.fetchDocumentFields(parsedId.toString());
     
     res.status(200).json(documentData);
   } catch (error) {

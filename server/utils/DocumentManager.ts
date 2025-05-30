@@ -357,6 +357,12 @@ export class DocumentManager {
 
   async fetchDocumentFields(documentId: string) {
     try {
+      // Ensure documentId is a valid number before querying
+      const numericId = parseInt(documentId);
+      if (isNaN(numericId)) {
+        throw new Error(`Invalid document ID: ${documentId}`);
+      }
+      
       const { data, error } = await supabase
         .from('generated_documents')
         .select(`
@@ -367,7 +373,7 @@ export class DocumentManager {
             title
           )
         `)
-        .eq('id', documentId)
+        .eq('id', numericId)
         .single();
 
       if (error) throw error;

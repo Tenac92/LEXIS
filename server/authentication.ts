@@ -664,79 +664,62 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Get current user route with enhanced error handling and session refresh
-  app.get("/api/auth/me", (req: AuthenticatedRequest, res, next) => {
-    // Special handling for /api/auth/me to be more lenient
+  // Get current user route - simplified to avoid authentication middleware conflicts
+  app.get("/api/auth/me", (req: AuthenticatedRequest, res) => {
     try {
+      // Check if user has a valid session without throwing errors
       if (!req.session?.user?.id) {
-        return res.status(401).json({
+        return res.status(200).json({
           authenticated: false,
-          message: 'Authentication required'
+          message: 'No active session'
         });
       }
       
-      // Valid session found - touch/refresh the session
+      const sessionUser = req.session.user;
+      
+      // Validate session user data
+      if (!sessionUser.email || !sessionUser.role) {
+        return res.status(200).json({
+          authenticated: false,
+          message: 'Invalid session data'
+        });
+      }
+      
+      // Touch the session to keep it active
       req.session.touch();
       
-      // Continue with regular authentication
-      authenticateSession(req, res, (err) => {
-        if (err) {
-          // Only for /api/auth/me, we return a structured response for auth errors
-          return res.status(401).json({
-            authenticated: false,
-            message: err instanceof Error ? err.message : 'Authentication required'
-          });
-        }
-        next();
-      });
-    } catch (error) {
-      return res.status(401).json({
-        authenticated: false,
-        message: error instanceof Error ? error.message : 'Authentication error'
-      });
-    }
-  }, (req: AuthenticatedRequest, res, next) => {
-    try {
-      if (!req.user) {
-        console.log('[Auth] No user found in authenticated request');
-        // Create an error object with status code to be handled by our error middleware
-        const authError = new Error('Authentication required');
-        Object.defineProperty(authError, 'status', {
-          value: 401,
-          writable: true,
-          configurable: true
-        });
-        throw authError;
-      }
-
       console.log('[Auth] Returning current user:', { 
-        id: req.user?.id,
-        name: req.user?.name,
-        email: req.user?.email,
-        role: req.user?.role,
-        units: req.user?.units,
-        department: req.user?.department,
-        sessionID: req.sessionID,
-        ip: req.ip
+        id: sessionUser.id,
+        name: sessionUser.name,
+        email: sessionUser.email,
+        role: sessionUser.role,
+        units: sessionUser.units,
+        sessionID: req.sessionID
       });
       
-      // Create a clean user object with only the expected fields
-      // This should match the User interface in client/src/lib/types.ts
+      // Create a clean user response
       const userResponse = {
-        id: req.user.id,
-        name: req.user.name,
-        email: req.user.email,
-        role: req.user.role,
-        units: req.user.units || []
+        id: sessionUser.id,
+        name: sessionUser.name || '',
+        email: sessionUser.email,
+        role: sessionUser.role,
+        units: sessionUser.units || [],
+        department: sessionUser.department,
+        telephone: sessionUser.telephone,
+        descr: sessionUser.descr
       };
       
-      // Send as a direct user object for consistency with the login endpoint
-      res.json({
+      return res.status(200).json({
         authenticated: true,
         user: userResponse
       });
+      
     } catch (error) {
-      next(error); // Pass errors to the error middleware
+      console.error('[Auth] Error in /api/auth/me:', error);
+      return res.status(200).json({
+        authenticated: false,
+        message: 'Session error'
+      });
     }
   });
 
