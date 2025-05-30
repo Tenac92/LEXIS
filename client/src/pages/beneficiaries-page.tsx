@@ -236,9 +236,9 @@ export default function BeneficiariesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => toggleCardFlip(beneficiary.id)}
+                          onClick={() => handleShowDetails(beneficiary)}
                           className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                          title="Περισσότερα στοιχεία"
+                          title="Λεπτομέρειες"
                         >
                           <Info className="w-4 h-4" />
                         </Button>
