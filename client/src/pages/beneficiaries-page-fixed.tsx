@@ -220,9 +220,18 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
     }
   }, [beneficiary, form]);
 
-  const { data: projects = [] } = useQuery({
+  const { user } = useAuth();
+  
+  const { data: allProjects = [] } = useQuery({
     queryKey: ['/api/projects'],
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Filter projects by user's unit
+  const projects = (allProjects as Project[]).filter(project => {
+    if (!user?.units?.[0]) return true; // Show all if no unit specified
+    const userUnit = user.units[0];
+    return project.implementing_agency?.includes(userUnit);
   });
 
   const mutation = useMutation({
@@ -499,35 +508,40 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Επιλέξτε έργο...">
-                            {field.value && (projects as Project[]).find(p => p.mis === field.value) && (
-                              `${(projects as Project[]).find(p => p.mis === field.value)?.na853 || 'Χωρίς κωδικό'} - ${(projects as Project[]).find(p => p.mis === field.value)?.event_description?.slice(0, 50) || 'Χωρίς περιγραφή'}...`
-                            )}
+                            {field.value && (() => {
+                              const selectedProject = projects.find(p => Number(p.mis) === field.value);
+                              if (selectedProject) {
+                                return `MIS: ${selectedProject.mis} - ${selectedProject.event_description?.slice(0, 50) || selectedProject.project_title?.slice(0, 50) || 'Χωρίς περιγραφή'}...`;
+                              }
+                              return null;
+                            })()}
                           </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <div className="p-2">
                           <Input 
-                            placeholder="Αναζήτηση με κωδικό NA853..."
+                            placeholder="Αναζήτηση με MIS κωδικό..."
                             onChange={(e) => {
                               const searchValue = e.target.value.toLowerCase();
-                              const matchingProject = (projects as Project[]).find(project => 
-                                project.na853?.toLowerCase().includes(searchValue)
+                              const matchingProject = projects.find(project => 
+                                project.mis?.toLowerCase().includes(searchValue) ||
+                                project.event_description?.toLowerCase().includes(searchValue)
                               );
                               if (matchingProject && searchValue.length > 2) {
-                                field.onChange(matchingProject.mis);
+                                field.onChange(Number(matchingProject.mis));
                               }
                             }}
                             className="mb-2"
                           />
                         </div>
-                        {(projects as Project[])
-                          .sort((a, b) => (a.na853 || '').localeCompare(b.na853 || ''))
+                        {projects
+                          .sort((a, b) => Number(a.mis || 0) - Number(b.mis || 0))
                           .map((project) => (
-                          <SelectItem key={project.mis} value={String(project.mis)}>
+                          <SelectItem key={project.mis} value={project.mis}>
                             <div className="flex flex-col items-start">
                               <span className="font-semibold text-blue-600">
-                                {project.na853 || 'Χωρίς κωδικό'}
+                                MIS: {project.mis}
                               </span>
                               <span className="text-sm text-gray-600">
                                 {project.event_description?.slice(0, 80) || project.project_title?.slice(0, 80) || 'Χωρίς περιγραφή'}...
