@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Edit, Trash2, Download, Upload, User, FileText, Building, UserCheck, RotateCcw, Info } from "lucide-react";
+import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +40,8 @@ export default function BeneficiariesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | undefined>();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
+  const [detailsBeneficiary, setDetailsBeneficiary] = useState<Beneficiary | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -133,16 +135,9 @@ export default function BeneficiariesPage() {
     setDialogOpen(true);
   };
 
-  const toggleCardFlip = (beneficiaryId: number) => {
-    setFlippedCards(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(beneficiaryId)) {
-        newSet.delete(beneficiaryId);
-      } else {
-        newSet.add(beneficiaryId);
-      }
-      return newSet;
-    });
+  const handleShowDetails = (beneficiary: Beneficiary) => {
+    setDetailsBeneficiary(beneficiary);
+    setDetailsModalOpen(true);
   };
 
   if (isLoading) {
