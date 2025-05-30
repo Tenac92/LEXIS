@@ -307,9 +307,7 @@ export class DocumentFormatter {
     });
   }
 
-  /**
-   * Generate the first (primary) document
-   */
+
   public static async generateDocument(
     documentData: DocumentData,
   ): Promise<Buffer> {
@@ -1020,7 +1018,7 @@ export class DocumentFormatter {
         italics: true,
       },
       {
-        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "Μονάδα"}`,
+        text: ` Αίτημα για την πληρωμή ${documentData.expenditure_type}  που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "Μονάδα"}`,
         italics: true,
       },
     ];
@@ -1093,6 +1091,7 @@ export class DocumentFormatter {
         children: [
           new TextRun({
             text: `Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "Μονάδα"}, σύμφωνα με τα παρακάτω στοιχεία.`,
+            size: DocumentFormatter.DEFAULT_FONT_SIZE - 2,
           }),
         ],
       }),
@@ -1161,7 +1160,7 @@ export class DocumentFormatter {
               new TableCell({
                 children: [
                   new Paragraph({
-                    children: [new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true })],
+                    children: [new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true, size: DocumentFormatter.DEFAULT_FONT_SIZE - 2})],
                   }),
                 ],
               }),
@@ -1170,7 +1169,7 @@ export class DocumentFormatter {
                   new Paragraph({
                     children: [
                       new TextRun({
-                        text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+                        text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",size: DocumentFormatter.DEFAULT_FONT_SIZE - 2
                       }),
                     ],
                   }),
