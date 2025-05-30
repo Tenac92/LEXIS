@@ -170,16 +170,20 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   };
 
   const getProjectTitle = (project: Project) => {
-    // Try multiple possible title fields in order of preference
+    // Display event_description as the primary title for project cards
     const projectData = project as any;
     
-    // Check for common title fields
+    // Use event_description as the main display field
+    if (projectData.event_description && projectData.event_description.trim()) {
+      return projectData.event_description.trim();
+    }
+    
+    // Fallback to other title fields if event_description is not available
     if (projectData.title && projectData.title.trim()) return projectData.title.trim();
     if (projectData.project_title && projectData.project_title.trim()) return projectData.project_title.trim();
-    if (projectData.event_description && projectData.event_description.trim()) return projectData.event_description.trim();
     if (projectData.name && projectData.name.trim()) return projectData.name.trim();
     
-    // Fallback to showing MIS code with a label
+    // Final fallback to showing MIS code with a label
     return `Έργο MIS: ${project.mis}`;
   };
 

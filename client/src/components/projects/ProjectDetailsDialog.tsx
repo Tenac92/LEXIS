@@ -127,16 +127,27 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Event Description */}
+              <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                <label className="text-sm font-medium text-green-700">Περιγραφή Συμβάντος</label>
+                <p className="text-green-900 font-semibold bg-white px-3 py-2 rounded border">
+                  {(() => {
+                    const projectData = project as any;
+                    return projectData.event_description?.trim() || 'Δεν υπάρχει περιγραφή συμβάντος';
+                  })()}
+                </p>
+              </div>
+
+              {/* Project Title */}
               <div className="space-y-1 md:col-span-2 lg:col-span-3">
                 <label className="text-sm font-medium text-green-700">Τίτλος Έργου</label>
                 <p className="text-green-900 font-semibold bg-white px-3 py-2 rounded border">
                   {(() => {
                     const projectData = project as any;
-                    return projectData.title?.trim() || 
-                           projectData.project_title?.trim() || 
-                           projectData.event_description?.trim() || 
+                    return projectData.project_title?.trim() || 
+                           projectData.title?.trim() || 
                            projectData.name?.trim() ||
-                           `Έργο MIS: ${project.mis}`;
+                           'Δεν υπάρχει τίτλος έργου';
                   })()}
                 </p>
               </div>
