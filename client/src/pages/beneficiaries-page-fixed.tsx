@@ -536,7 +536,11 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
                           />
                         </div>
                         {projects
-                          .sort((a, b) => Number(a.mis || 0) - Number(b.mis || 0))
+                          .sort((a, b) => {
+                            const aMis = Number(a.mis) || 0;
+                            const bMis = Number(b.mis) || 0;
+                            return aMis - bMis;
+                          })
                           .map((project) => (
                           <SelectItem key={project.mis} value={project.mis}>
                             <div className="flex flex-col items-start">
