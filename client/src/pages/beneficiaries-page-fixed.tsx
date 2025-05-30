@@ -182,7 +182,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
         name: beneficiary.name || "",
         surname: beneficiary.surname || "",
         fathername: beneficiary.fathername || "",
-        afm: beneficiary.afm || "",
+        afm: beneficiary.afm ? String(beneficiary.afm) : "",
         project: beneficiary.project || undefined,
         date: beneficiary.date || "",
         onlinefoldernumber: beneficiary.onlinefoldernumber || "",
