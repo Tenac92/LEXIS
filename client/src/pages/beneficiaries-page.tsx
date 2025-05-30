@@ -5,32 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import type { Beneficiary, InsertBeneficiary } from "@shared/schema";
-import { Header } from "@/components/header";
+import type { Beneficiary } from "@/../../shared/schema";
 
-// Form validation schema
 const beneficiaryFormSchema = z.object({
   surname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
   name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
-  fathername: z.string().min(1, "Το πατρώνυμο είναι υποχρεωτικό"),
-  afm: z.number().min(100000000, "Το ΑΦΜ πρέπει να έχει 9 ψηφία").max(999999999, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
-  project: z.number().min(1, "Επιλέξτε έργο"),
-  aa: z.number().optional(),
+  fathername: z.string().min(1, "Το όνομα πατρός είναι υποχρεωτικό"),
+  afm: z.string().min(9, "Το ΑΦΜ πρέπει να έχει τουλάχιστον 9 ψηφία"),
+  project: z.string().optional(),
   region: z.string().optional(),
-  adeia: z.number().optional(),
-  date: z.string().optional(),
+  registryNumber: z.string().optional(),
   monada: z.string().optional(),
-  onlinefoldernumber: z.string().optional(),
+  adeia: z.string().optional(),
+  online_folder_number: z.string().optional(),
   cengsur1: z.string().optional(),
   cengname1: z.string().optional(),
   cengsur2: z.string().optional(),
@@ -65,12 +60,12 @@ export default function BeneficiariesPage() {
       return apiRequest(url, {
         method,
         body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" },
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
       setDialogOpen(false);
+      setSelectedBeneficiary(undefined);
       toast({
         title: "Επιτυχία!",
         description: selectedBeneficiary 
@@ -153,7 +148,6 @@ export default function BeneficiariesPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
-        <Header />
         <div className="text-center">Φόρτωση...</div>
       </div>
     );
@@ -162,7 +156,6 @@ export default function BeneficiariesPage() {
   if (error) {
     return (
       <div className="container mx-auto py-8">
-        <Header />
         <div className="text-center text-red-500">Σφάλμα φόρτωσης δεδομένων</div>
       </div>
     );
@@ -170,235 +163,270 @@ export default function BeneficiariesPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <Header />
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Διαχείριση Δικαιούχων
-          </CardTitle>
-          <CardDescription>
-            Διαχειριστείτε τους δικαιούχους των έργων
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
-              <Search className="w-4 h-4" />
-              <Input
-                placeholder="Αναζήτηση δικαιούχων..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64"
-              />
-            </div>
-            
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={handleNew}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Νέος Δικαιούχος
-                </Button>
-              </DialogTrigger>
-              <BeneficiaryDialog
-                beneficiary={selectedBeneficiary}
-                onOpenChange={setDialogOpen}
-                mutation={mutation}
-              />
-            </Dialog>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Διαχείριση Δικαιούχων</h1>
+          <p className="text-gray-600 mt-2">Προβολή και διαχείριση όλων των δικαιούχων</p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Αναζήτηση δικαιούχων..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-64"
+            />
           </div>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleNew} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Νέος Δικαιούχος
+              </Button>
+            </DialogTrigger>
+            <BeneficiaryDialog
+              beneficiary={selectedBeneficiary}
+              onOpenChange={setDialogOpen}
+              mutation={mutation}
+            />
+          </Dialog>
+        </div>
+      </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredBeneficiaries.map((beneficiary) => {
-              const isFlipped = flippedCards.has(beneficiary.id);
-              return (
-                <div key={beneficiary.id} className="flip-card">
-                  <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
-                    {/* Front of card */}
-                    <div className="flip-card-front">{/* Original card content will go here */}
-                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
-                <CardHeader className="pb-4 pl-6">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <CardTitle className="text-xl font-bold text-gray-900 leading-tight">
-                        {beneficiary.surname} {beneficiary.name}
-                        {beneficiary.fathername && (
-                          <span className="text-sm font-normal text-gray-600 italic ml-2">
-                            του {beneficiary.fathername}
-                          </span>
-                        )}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-3">
-                        <div className="inline-flex items-center px-3 py-1.5 rounded-lg text-base font-mono font-semibold bg-blue-100 text-blue-900 border border-blue-200 select-all cursor-copy">
-                          ΑΦΜ: {beneficiary.afm}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {filteredBeneficiaries.map((beneficiary) => {
+          const isFlipped = flippedCards.has(beneficiary.id);
+          return (
+            <div key={beneficiary.id} className="flip-card">
+              <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
+                {/* Front of card */}
+                <div className="flip-card-front">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="space-y-2">
+                        <h3 className="text-xl font-bold text-gray-900 leading-tight">
+                          {beneficiary.surname} {beneficiary.name}
+                          {beneficiary.fathername && (
+                            <span className="text-sm font-normal text-gray-600 italic ml-2">
+                              του {beneficiary.fathername}
+                            </span>
+                          )}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-3">
+                          <div className="inline-flex items-center px-3 py-1.5 rounded-lg text-base font-mono font-semibold bg-blue-100 text-blue-900 border border-blue-200 select-all cursor-copy">
+                            ΑΦΜ: {beneficiary.afm}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleCardFlip(beneficiary.id)}
+                          className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                          title="Περισσότερα στοιχεία"
+                        >
+                          <Info className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(beneficiary)}
+                          className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                          title="Επεξεργασία"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(beneficiary)}
+                          className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          title="Διαγραφή"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(beneficiary)}
-                        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                        title="Επεξεργασία"
+                    
+                    <div className="grid grid-cols-2 gap-2 text-sm mb-6">
+                      {beneficiary.region && (
+                        <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Περιφέρεια</span>
+                          <span className="text-gray-900 font-medium">{beneficiary.region}</span>
+                        </div>
+                      )}
+                      {beneficiary.project && (
+                        <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Έργο (MIS)</span>
+                          <span className="text-gray-900 font-mono">{beneficiary.project}</span>
+                        </div>
+                      )}
+                      {beneficiary.monada && (
+                        <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Μονάδα</span>
+                          <span className="text-gray-900">{beneficiary.monada}</span>
+                        </div>
+                      )}
+                      {beneficiary.adeia && (
+                        <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Άδεια</span>
+                          <span className="text-gray-900">{beneficiary.adeia}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-center">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => toggleCardFlip(beneficiary.id)}
+                        className="text-purple-600 border-purple-200 hover:bg-purple-50"
                       >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(beneficiary)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
-                        title="Διαγραφή"
-                      >
-                        <Trash2 className="w-4 h-4" />
+                        <Info className="w-4 h-4 mr-2" />
+                        Περισσότερα στοιχεία
                       </Button>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="pt-0 pl-6 space-y-4">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {beneficiary.region && (
-                      <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                        <span className="text-xs text-gray-600">Περιφέρεια</span>
-                        <span className="text-gray-900 font-medium">{beneficiary.region}</span>
+                </div>
+
+                {/* Back of card */}
+                <div className="flip-card-back bg-purple-50">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-500 to-purple-600"></div>
+                  <div className="p-6 h-full overflow-y-auto">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="space-y-1">
+                        <h3 className="text-lg font-bold text-purple-900">
+                          Λεπτομέρειες Δικαιούχου
+                        </h3>
+                        <p className="text-purple-700 text-sm">
+                          {beneficiary.surname} {beneficiary.name}
+                        </p>
                       </div>
-                    )}
-                    {beneficiary.project && (
-                      <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                        <span className="text-xs text-gray-600">Έργο (MIS)</span>
-                        <span className="text-gray-900 font-mono">{beneficiary.project}</span>
-                      </div>
-                    )}
-                    {beneficiary.monada && (
-                      <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                        <span className="text-xs text-gray-600">Μονάδα</span>
-                        <span className="text-gray-900">{beneficiary.monada}</span>
-                      </div>
-                    )}
-                    {beneficiary.adeia && (
-                      <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                        <span className="text-xs text-gray-600">Άδεια</span>
-                        <span className="text-gray-900">{beneficiary.adeia}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object' && Object.keys(beneficiary.oikonomika).length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span className="font-semibold text-gray-800 text-sm">Οικονομικά Στοιχεία</span>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleCardFlip(beneficiary.id)}
+                        className="h-8 w-8 p-0 hover:bg-purple-100 hover:text-purple-600 transition-colors"
+                        title="Επιστροφή"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-4">
                       <div className="space-y-2">
-                        {(() => {
-                          try {
-                            const oikonomika = beneficiary.oikonomika as Record<string, any>;
-                            
-                            // Helper function to get status-based colors
-                            const getStatusColors = (status: string | null) => {
-                              if (!status || status === null) {
-                                return {
-                                  bg: 'bg-yellow-50',
-                                  border: 'border-yellow-200',
-                                  typeColor: 'text-yellow-800',
-                                  installmentColor: 'text-yellow-700',
-                                  amountBg: 'bg-yellow-100',
-                                  amountColor: 'text-yellow-900'
-                                };
-                              }
-                              if (status === 'διαβιβάστηκε') {
-                                return {
-                                  bg: 'bg-blue-50',
-                                  border: 'border-blue-200',
-                                  typeColor: 'text-blue-800',
-                                  installmentColor: 'text-blue-700',
-                                  amountBg: 'bg-blue-100',
-                                  amountColor: 'text-blue-900'
-                                };
-                              }
-                              if (status === 'πληρώθηκε') {
-                                return {
-                                  bg: 'bg-green-50',
-                                  border: 'border-green-200',
-                                  typeColor: 'text-green-800',
-                                  installmentColor: 'text-green-700',
-                                  amountBg: 'bg-green-100',
-                                  amountColor: 'text-green-900'
-                                };
-                              }
-                              // Default for unknown status
-                              return {
-                                bg: 'bg-gray-50',
-                                border: 'border-gray-200',
-                                typeColor: 'text-gray-800',
-                                installmentColor: 'text-gray-700',
-                                amountBg: 'bg-gray-100',
-                                amountColor: 'text-gray-900'
-                              };
-                            };
-
-                            return Object.entries(oikonomika).map(([type, data]) => {
-                              // Get the dominant status for this type
-                              let dominantStatus = null;
-                              if (data && typeof data === 'object') {
-                                const statuses = Object.values(data as Record<string, any>).map(d => (d as any)?.status);
-                                if (statuses.some(s => s === 'πληρώθηκε')) dominantStatus = 'πληρώθηκε';
-                                else if (statuses.some(s => s === 'διαβιβάστηκε')) dominantStatus = 'διαβιβάστηκε';
-                                else dominantStatus = null;
-                              }
-                              
-                              const colors = getStatusColors(dominantStatus);
-                              
-                              return (
-                                <div key={type} className={`${colors.bg} p-3 rounded-lg border ${colors.border}`}>
-                                  <div className={`font-semibold ${colors.typeColor} text-sm mb-2`}>{type}</div>
-                                  {data && typeof data === 'object' && Object.entries(data as Record<string, any>).map(([installment, details]) => {
-                                    const installmentColors = getStatusColors((details as any)?.status);
-                                    return (
-                                      <div key={installment} className="flex justify-between items-center text-sm mb-1">
-                                        <span className={`${installmentColors.installmentColor} font-medium`}>{installment}</span>
-                                        <div className="flex items-center gap-2">
-                                          <span className={`${installmentColors.amountBg} ${installmentColors.amountColor} px-2 py-1 rounded border font-mono text-xs`}>
-                                            {(details as any)?.amount ? `€${(details as any).amount}` : '-'}
-                                          </span>
-                                          {(details as any)?.status && (
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${installmentColors.amountBg} ${installmentColors.amountColor}`}>
-                                              {(details as any).status}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              );
-                            });
-                          } catch (e) {
-                            return <div className="text-sm text-gray-500 bg-gray-100 p-2 rounded">Σφάλμα ανάγνωσης οικονομικών στοιχείων</div>;
-                          }
-                        })()}
+                        {beneficiary.registryNumber && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-purple-700 font-medium">Αρ. Μητρώου:</span>
+                            <span className="text-purple-900">{beneficiary.registryNumber}</span>
+                          </div>
+                        )}
+                        {beneficiary.online_folder_number && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-purple-700 font-medium">Αρ. Online Φακέλου:</span>
+                            <span className="text-purple-900">{beneficiary.online_folder_number}</span>
+                          </div>
+                        )}
+                        {beneficiary.cengsur1 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-purple-700 font-medium">Μηχανικός 1:</span>
+                            <span className="text-purple-900">{beneficiary.cengsur1} {beneficiary.cengname1}</span>
+                          </div>
+                        )}
+                        {beneficiary.cengsur2 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-purple-700 font-medium">Μηχανικός 2:</span>
+                            <span className="text-purple-900">{beneficiary.cengsur2} {beneficiary.cengname2}</span>
+                          </div>
+                        )}
+                        {beneficiary.freetext && (
+                          <div className="pt-2 border-t border-purple-200">
+                            <span className="text-purple-700 font-medium text-sm">Σχόλια:</span>
+                            <p className="text-purple-900 text-sm mt-1">{beneficiary.freetext}</p>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
 
-          {filteredBeneficiaries.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              Δεν βρέθηκαν δικαιούχοι
+                      {/* Financial Data */}
+                      {beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object' && Object.keys(beneficiary.oikonomika).length > 0 && (
+                        <div className="pt-4 border-t border-purple-200">
+                          <h4 className="font-semibold text-purple-800 text-sm mb-3 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            Οικονομικά Στοιχεία
+                          </h4>
+                          <div className="space-y-2">
+                            {(() => {
+                              try {
+                                const oikonomika = beneficiary.oikonomika as Record<string, any>;
+                                
+                                const getStatusColors = (status: string | null) => {
+                                  if (!status || status === null) {
+                                    return { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300' };
+                                  }
+                                  if (status === 'διαβιβάστηκε') {
+                                    return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-300' };
+                                  }
+                                  if (status === 'πληρώθηκε') {
+                                    return { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-300' };
+                                  }
+                                  return { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-300' };
+                                };
+
+                                return Object.entries(oikonomika).map(([type, data]) => (
+                                  <div key={type} className="bg-white p-2 rounded border border-purple-200">
+                                    <div className="font-medium text-purple-800 text-xs mb-1">{type}</div>
+                                    {data && typeof data === 'object' && Object.entries(data as Record<string, any>).map(([installment, details]) => {
+                                      const colors = getStatusColors((details as any)?.status);
+                                      return (
+                                        <div key={installment} className="flex justify-between items-center text-xs">
+                                          <span className="text-purple-700">{installment}</span>
+                                          <div className="flex items-center gap-1">
+                                            <span className={`${colors.bg} ${colors.text} px-1 py-0.5 rounded text-xs`}>
+                                              {(details as any)?.amount ? `€${(details as any).amount}` : '-'}
+                                            </span>
+                                            {(details as any)?.status && (
+                                              <span className={`px-1 py-0.5 rounded text-xs ${colors.bg} ${colors.text}`}>
+                                                {(details as any).status}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ));
+                              } catch (e) {
+                                return <div className="text-xs text-purple-600 bg-purple-100 p-2 rounded">Σφάλμα ανάγνωσης οικονομικών στοιχείων</div>;
+                              }
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          );
+        })}
+      </div>
+
+      {filteredBeneficiaries.length === 0 && (
+        <div className="text-center py-8">
+          <User className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Δεν βρέθηκαν δικαιούχοι</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Ξεκινήστε δημιουργώντας έναν νέο δικαιούχο.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
-// Beneficiary dialog component
 function BeneficiaryDialog({
   beneficiary,
   onOpenChange,
@@ -414,14 +442,13 @@ function BeneficiaryDialog({
       surname: beneficiary?.surname || "",
       name: beneficiary?.name || "",
       fathername: beneficiary?.fathername || "",
-      afm: beneficiary?.afm || 0,
-      project: beneficiary?.project || 0,
-      aa: beneficiary?.aa || undefined,
+      afm: beneficiary?.afm || "",
+      project: beneficiary?.project || "",
       region: beneficiary?.region || "",
-      adeia: beneficiary?.adeia || undefined,
-      date: beneficiary?.date || "",
+      registryNumber: beneficiary?.registryNumber || "",
       monada: beneficiary?.monada || "",
-      onlinefoldernumber: beneficiary?.onlinefoldernumber || "",
+      adeia: beneficiary?.adeia || "",
+      online_folder_number: beneficiary?.online_folder_number || "",
       cengsur1: beneficiary?.cengsur1 || "",
       cengname1: beneficiary?.cengname1 || "",
       cengsur2: beneficiary?.cengsur2 || "",
@@ -435,13 +462,15 @@ function BeneficiaryDialog({
   };
 
   return (
-    <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-      <DialogHeader className="pb-6">
-        <DialogTitle className="text-2xl font-bold text-gray-900">
+    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>
           {beneficiary ? "Επεξεργασία Δικαιούχου" : "Νέος Δικαιούχος"}
         </DialogTitle>
-        <DialogDescription className="text-gray-600">
-          Συμπληρώστε προσεκτικά όλα τα απαραίτητα στοιχεία του δικαιούχου
+        <DialogDescription>
+          {beneficiary
+            ? "Επεξεργαστείτε τα στοιχεία του δικαιούχου"
+            : "Συμπληρώστε τα στοιχεία για τον νέο δικαιούχο"}
         </DialogDescription>
       </DialogHeader>
 
@@ -450,8 +479,8 @@ function BeneficiaryDialog({
           {/* Personal Information Section */}
           <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
-              Προσωπικά Στοιχεία
+              <User className="w-5 h-5 text-gray-600" />
+              Προσωπικά Στοιχεία *
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
@@ -485,7 +514,7 @@ function BeneficiaryDialog({
                 name="fathername"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Πατρώνυμο *</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Όνομα Πατρός *</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="π.χ. Δημήτριος" className="bg-white" />
                     </FormControl>
@@ -502,7 +531,7 @@ function BeneficiaryDialog({
               <FileText className="w-5 h-5 text-blue-600" />
               Διοικητικά Στοιχεία
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="afm"
@@ -510,16 +539,9 @@ function BeneficiaryDialog({
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-gray-700">ΑΦΜ *</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        placeholder="123456789"
-                        className="bg-white font-mono"
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      />
+                      <Input {...field} placeholder="π.χ. 123456789" className="bg-white font-mono" />
                     </FormControl>
                     <FormMessage />
-                    <p className="text-xs text-gray-500">9 ψηφία χωρίς κενά</p>
                   </FormItem>
                 )}
               />
@@ -528,44 +550,27 @@ function BeneficiaryDialog({
                 name="project"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Έργο (MIS) *</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Κωδικός Έργου (MIS)</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        placeholder="5188985"
-                        className="bg-white font-mono"
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      />
+                      <Input {...field} placeholder="π.χ. 5188985" className="bg-white font-mono" />
                     </FormControl>
                     <FormMessage />
-                    <p className="text-xs text-gray-500">Κωδικός MIS του έργου</p>
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="aa"
+                name="registryNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Α/Α</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Αριθμός Μητρώου</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        placeholder="001"
-                        className="bg-white"
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                      />
+                      <Input {...field} placeholder="π.χ. 12345" className="bg-white" />
                     </FormControl>
                     <FormMessage />
-                    <p className="text-xs text-gray-500">Αριθμός μητρώου (προαιρετικό)</p>
                   </FormItem>
                 )}
               />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="region"
@@ -573,7 +578,7 @@ function BeneficiaryDialog({
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-gray-700">Περιφέρεια</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="π.χ. Αττικής" className="bg-white" />
+                      <Input {...field} placeholder="π.χ. ΤΡΙΚΑΛΑ" className="bg-white" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -584,28 +589,9 @@ function BeneficiaryDialog({
                 name="adeia"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Αριθμός Άδειας</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Άδεια</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        placeholder="12345"
-                        className="bg-white"
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Ημερομηνία</FormLabel>
-                    <FormControl>
-                      <Input {...field} type="date" className="bg-white" />
+                      <Input {...field} placeholder="π.χ. 1040" className="bg-white" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -631,21 +617,19 @@ function BeneficiaryDialog({
                       <Input {...field} placeholder="π.χ. ΔΑΕΦΚ-ΚΕ" className="bg-white" />
                     </FormControl>
                     <FormMessage />
-                    <p className="text-xs text-gray-500">Κωδικός οργανικής μονάδας</p>
                   </FormItem>
                 )}
               />
               <FormField
                 control={form.control}
-                name="onlinefoldernumber"
+                name="online_folder_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">Αριθμός Online Φακέλου</FormLabel>
+                    <FormLabel className="text-sm font-medium text-gray-700">Αρ. Online Φακέλου</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="ONL-2024-001234" className="bg-white" />
+                      <Input {...field} placeholder="π.χ. OF-2024-001" className="bg-white" />
                     </FormControl>
                     <FormMessage />
-                    <p className="text-xs text-gray-500">Κωδικός ηλεκτρονικού φακέλου</p>
                   </FormItem>
                 )}
               />
