@@ -1018,7 +1018,7 @@ export class DocumentFormatter {
         italics: true,
       },
       {
-        text: ` Αίτημα για την πληρωμή ${documentData.expenditure_type}  που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "Μονάδα"}`,
+        text: ` Αίτημα για την πληρωμή ${documentData.expenditure_type}  που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name || "Μονάδα"} ${unitDetails?.unit || "Μονάδα"}`,
         italics: true,
       },
     ];
@@ -1161,7 +1161,7 @@ export class DocumentFormatter {
                 children: [
                   new Paragraph({
                     children: [new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true, size: DocumentFormatter.DEFAULT_FONT_SIZE - 2})],
-                  }),
+                  })
                 ],
               }),
               new TableCell({
