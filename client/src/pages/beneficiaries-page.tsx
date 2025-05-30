@@ -380,27 +380,6 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: BeneficiaryDialo
     </Dialog>
   );
 }
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="cengname1"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input {...field} placeholder="Όνομα" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">ΜΗΧΑΝΙΚΌΣ 2</label>
                   <div className="grid grid-cols-2 gap-2">
                     <FormField
                       control={form.control}

@@ -12,7 +12,7 @@ import ProjectDetailsPage from "@/pages/projects/[mis]";
 import EditProjectPage from "@/pages/projects/[mis]/edit";
 import UsersPage from "@/pages/users";
 import EmployeesPage from "@/pages/employees";
-import BeneficiariesPage from "@/pages/beneficiaries-page-fixed";
+import BeneficiariesPage from "@/pages/beneficiaries-page";
 import BudgetHistoryPage from "@/pages/budget-history-page";
 import NotificationsPage from "@/pages/NotificationsPage";
 import AdminNotificationsPage from "@/pages/AdminNotificationsPage";
@@ -22,7 +22,7 @@ import QuarterManagementPage from "@/pages/admin/QuarterManagementPage";
 import { FC } from "react";
 import BulkUpdatePage from "@/pages/projects/bulk-update";
 import TemplatesPage from "@/pages/templates";
-import TestSecondaryText from "@/pages/test-secondary-text";
+
 import { ProtectedRoute } from "./lib/protected-route";
 import { PageTransition } from "@/components/ui/page-transition";
 import { SessionKeeper } from "@/components/auth/SessionKeeper";
@@ -52,7 +52,7 @@ function Router(): JSX.Element {
         <ProtectedRoute path="/admin/notifications" component={AdminNotificationsPage} />
         <ProtectedRoute path="/admin/budget-upload" component={AdminBudgetUploadPage} />
         <ProtectedRoute path="/admin/quarter-management" component={() => <QuarterManagementPage />} />
-        <Route path="/test/secondary-text" component={TestSecondaryText} />
+
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
       </Switch>
