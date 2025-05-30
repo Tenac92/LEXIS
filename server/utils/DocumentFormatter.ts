@@ -307,7 +307,6 @@ export class DocumentFormatter {
     });
   }
 
-
   public static async generateDocument(
     documentData: DocumentData,
   ): Promise<Buffer> {
@@ -1018,7 +1017,7 @@ export class DocumentFormatter {
         italics: true,
       },
       {
-        text: ` Αίτημα για την πληρωμή ${documentData.expenditure_type}  που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name || "Μονάδα"} ${unitDetails?.unit || "Μονάδα"}`,
+        text: ` Αίτημα για την πληρωμή ${documentData.expenditure_type}Σ  που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name || "Μονάδα"} (${unitDetails?.unit || "Μονάδα"})`,
         italics: true,
       },
     ];
@@ -1126,6 +1125,7 @@ export class DocumentFormatter {
                     children: [
                       new TextRun({
                         text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
+                        size:18,
                       }),
                     ],
                   }),
@@ -1138,7 +1138,7 @@ export class DocumentFormatter {
               new TableCell({
                 children: [
                   new Paragraph({
-                    children: [new TextRun({ text: "ΑΛΕ: ", bold: true })],
+                    children: [new TextRun({ text: "ΑΛΕ: ", bold: true,size:18,})],
                   }),
                 ],
               }),
@@ -1148,6 +1148,7 @@ export class DocumentFormatter {
                     children: [
                       new TextRun({
                         text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
+                        size:18,
                       }),
                     ],
                   }),
@@ -1160,8 +1161,14 @@ export class DocumentFormatter {
               new TableCell({
                 children: [
                   new Paragraph({
-                    children: [new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true, size: DocumentFormatter.DEFAULT_FONT_SIZE - 2})],
-                  })
+                    children: [
+                      new TextRun({
+                        text: "ΤΟΜΕΑΣ: ",
+                        bold: true,
+                        size: DocumentFormatter.DEFAULT_FONT_SIZE - 2,
+                      }),
+                    ],
+                  }),
                 ],
               }),
               new TableCell({
@@ -1169,7 +1176,8 @@ export class DocumentFormatter {
                   new Paragraph({
                     children: [
                       new TextRun({
-                        text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",size: DocumentFormatter.DEFAULT_FONT_SIZE - 2
+                        text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+                        size: DocumentFormatter.DEFAULT_FONT_SIZE - 2,
                       }),
                     ],
                   }),
@@ -1256,22 +1264,22 @@ export class DocumentFormatter {
           new TableRow({
             height: { value: 360, rule: HeightRule.ATLEAST },
             children: [
-              this.createTableCell(rowNumber, "center"),
+              this.createTableCell(rowNumber, "center",18),
               this.createTableCellWithSecondaryText(
                 fullName,
                 recipient.secondary_text,
                 "center",
               ),
+              this.createTableCell(afm, "center",18),
+              this.createTableCell(installment, "center",18,),
               this.createTableCell(
                 amount.toLocaleString("el-GR", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 }),
-                "center",
+                "center",18,
               ),
-              this.createTableCell(installment, "center"),
-              this.createTableCell(afm, "center"),
-              this.createTableCell(expenditureType, "center"), // Add expenditure type in the extra column
+              this.createTableCell(expenditureType, "center",18), // Add expenditure type in the extra column
             ],
           }),
         );
@@ -1413,7 +1421,8 @@ export class DocumentFormatter {
       new TableRow({
         height: { value: 360, rule: HeightRule.ATLEAST },
         children: [
-          this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
+          this.createTableCell("", "center",2),
+          this.createTableCell("ΣΥΝΟΛΟ:", "center", 2),
           this.createTableCell(
             totalAmount.toLocaleString("el-GR", {
               minimumFractionDigits: 2,
@@ -1458,9 +1467,9 @@ export class DocumentFormatter {
         children: [
           this.createHeaderCell("Α.Α.", "auto"),
           this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
-          this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
-          this.createHeaderCell("ΔΟΣΗ", "auto"),
           this.createHeaderCell("ΑΦΜ", "auto"),
+          this.createHeaderCell("ΔΟΣΗ", "auto"),
+          this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
         ],
       }),
     ];
@@ -1516,6 +1525,8 @@ export class DocumentFormatter {
                 recipient.secondary_text,
                 "center",
               ),
+              this.createTableCell(afm, "center"),
+              this.createTableCell(installment, "center"),
               this.createTableCell(
                 amount.toLocaleString("el-GR", {
                   minimumFractionDigits: 2,
@@ -1523,8 +1534,6 @@ export class DocumentFormatter {
                 }),
                 "center",
               ),
-              this.createTableCell(installment, "center"),
-              this.createTableCell(afm, "center"),
             ],
           }),
         );
@@ -1604,7 +1613,7 @@ export class DocumentFormatter {
                 }),
                 "center",
               ),
-              this.createTableCell(firstInstallment, "center"),
+              this.createTableCell(firstInstallment, "center",),
               afmCell,
             ],
           }),
@@ -1666,7 +1675,12 @@ export class DocumentFormatter {
 
   private static createNote(): Paragraph {
     return new Paragraph({
-      text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+      children: [
+        new TextRun({
+          text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+          size: DocumentFormatter.DEFAULT_FONT_SIZE - 2,
+        }),
+      ],
     });
   }
 
@@ -1682,14 +1696,20 @@ export class DocumentFormatter {
     // Create the left column content (attachments, notifications, etc.)
     const leftColumnParagraphs: Paragraph[] = [];
 
-    leftColumnParagraphs.push(
-      this.createBoldUnderlinedParagraph("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)"),
-    );
-
     for (let i = 0; i < attachments.length; i++) {
       leftColumnParagraphs.push(
+        this.createBoldUnderlinedParagraph(
+          "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
+        ),
+      );
+      leftColumnParagraphs.push(
         new Paragraph({
-          text: `${i + 1}. ${attachments[i]}`,
+          children: [
+            new TextRun({
+              text: `${i + 1}. ${attachments[i]}`,
+              size: 16,
+            }),
+          ],
           keepLines: false,
           indent: { left: 426 },
           style: "a6",
@@ -1710,7 +1730,12 @@ export class DocumentFormatter {
     for (let i = 0; i < notifications.length; i++) {
       leftColumnParagraphs.push(
         new Paragraph({
-          text: `${i + 1}. ${notifications[i]}`,
+          children: [
+            new TextRun({
+              text: `${i + 1}. ${notifications[i]}`,
+              size: 16,
+            }),
+          ],
           keepLines: false,
           indent: { left: 426 },
           style: "a6",
@@ -1724,7 +1749,12 @@ export class DocumentFormatter {
 
     leftColumnParagraphs.push(
       new Paragraph({
-        text: "1. Χρονολογικό Αρχείο",
+        children: [
+          new TextRun({
+            text: "1. Χρονολογικό Αρχείο",
+            size: 16,
+          }),
+        ],
         keepLines: false,
         indent: { left: 426 },
         style: "a6",
@@ -1889,6 +1919,7 @@ export class DocumentFormatter {
       children: [
         new TextRun({
           text,
+          size: 16,
           bold: true,
           underline: { type: "single" },
         }),
@@ -2051,6 +2082,7 @@ export class DocumentFormatter {
   private static createTableCell(
     text: string,
     alignment: "left" | "center" | "right",
+    size: number = this.DEFAULT_FONT_SIZE,
     colSpan?: number,
   ): TableCell {
     const alignmentMap = {
