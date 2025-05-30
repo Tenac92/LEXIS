@@ -12,7 +12,11 @@ import {
   ClipboardCheck,
   Users,
   History,
-  AlertCircle
+  AlertCircle,
+  Info,
+  RotateCcw,
+  Edit,
+  Trash2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
@@ -199,135 +203,272 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   const showOrthiEpanalipsiInfo = Boolean(docAny.is_correction) || Boolean(docAny.original_protocol_number);
 
   return (
-    <div className="flip-card" onClick={handleCardClick}>
-      <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
-        {/* Front of card */}
-        <Card className="flip-card-front p-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="text-lg font-semibold">
-                {doc.protocol_number_input && doc.protocol_date ? (
-                  `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString('el-GR')}`
-                ) : (
-                  `Έγγραφο #${doc.id}`
-                )}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Μονάδα: {doc.unit}
-              </p>
-            </div>
-            <Badge variant={statusDetails.variant}>
-              <statusDetails.icon className="h-3 w-3 mr-1" />
-              {statusDetails.label}
-            </Badge>
-          </div>
+    <>
+      <div className="flip-card">
+        <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
+          {/* Front of card */}
+          <div className="flip-card-front">
+            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-orange-500 to-orange-600"></div>
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="space-y-2 flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 leading-tight">
+                    {doc.protocol_number_input && doc.protocol_date ? (
+                      `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString('el-GR')}`
+                    ) : (
+                      `Έγγραφο #${doc.id}`
+                    )}
+                  </h3>
+                  <Badge variant={statusDetails.variant}>
+                    <statusDetails.icon className="h-3 w-3 mr-1" />
+                    {statusDetails.label}
+                  </Badge>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFlipped(!isFlipped);
+                    }}
+                    className="h-8 w-8 p-0 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                    title="Περισσότερα στοιχεία"
+                  >
+                    <Info className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                    className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                    title="Επεξεργασία"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                    title="Διαγραφή"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
 
-          {/* Orthi Epanalipsi Information */}
-          {showOrthiEpanalipsiInfo && (
-            <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-              <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                Ορθή Επανάληψη του εγγράφου με αρ. πρωτ. {docAny.original_protocol_number}
-                {docAny.original_protocol_date && ` (${new Date(docAny.original_protocol_date).toLocaleDateString('el-GR')})`}
-              </p>
-              {doc.comments && (
-                <p className="text-sm mt-1 text-red-700 dark:text-red-300">
-                  Λόγος διόρθωσης: {doc.comments}
-                </p>
+              {/* Orthi Epanalipsi Information */}
+              {showOrthiEpanalipsiInfo && (
+                <div className="mb-4 p-3 bg-red-100 rounded-lg border border-red-200">
+                  <p className="text-sm font-medium text-red-800">
+                    Ορθή Επανάληψη
+                  </p>
+                </div>
               )}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="space-y-1">
-              <span className="text-sm text-muted-foreground">Κωδικός MIS</span>
-              <p className="font-medium">{doc.project_id || (doc as any).mis || ''}</p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-sm text-muted-foreground">Κωδικός Έργου ΝΑ853</span>
-              <p className="font-medium">{projectNa853 || doc.project_na853 || ''}</p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-sm text-muted-foreground">Συνολικό Ποσό</span>
-              <p className="font-medium">
-                {parseFloat(doc.total_amount?.toString() || '0').toLocaleString('el-GR', {
-                  style: 'currency',
-                  currency: 'EUR',
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-sm text-muted-foreground">Τύπος</span>
-              <p className="font-medium">{doc.expenditure_type || '-'}</p>
+              
+              <div className="grid grid-cols-2 gap-2 text-sm mb-6">
+                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                  <span className="text-xs text-gray-600">Μονάδα</span>
+                  <span className="text-gray-900 font-medium">{doc.unit}</span>
+                </div>
+                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                  <span className="text-xs text-gray-600">Κωδικός MIS</span>
+                  <span className="text-gray-900 font-mono">{doc.project_id || (doc as any).mis || 'Δ/Υ'}</span>
+                </div>
+                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                  <span className="text-xs text-gray-600">Συνολικό Ποσό</span>
+                  <span className="text-gray-900 font-medium">
+                    {parseFloat(doc.total_amount?.toString() || '0').toLocaleString('el-GR', {
+                      style: 'currency',
+                      currency: 'EUR',
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}
+                  </span>
+                </div>
+                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                  <span className="text-xs text-gray-600">Δικαιούχοι</span>
+                  <span className="text-gray-900">{recipients?.length || 0}</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-center">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFlipped(true);
+                  }}
+                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                >
+                  <Info className="w-4 h-4 mr-2" />
+                  Περισσότερα στοιχεία
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            <Users className="h-4 w-4 mx-auto mb-1" />
-            Πατήστε για να δείτε {recipients?.length || 0} δικαιούχους
-          </div>
+          {/* Back of card */}
+          <div className="flip-card-back bg-orange-50">
+            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-orange-500 to-orange-600"></div>
+            <div className="p-6 h-full overflow-y-auto">
+              <div className="flex items-start justify-between mb-4">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold text-orange-900">
+                    Λεπτομέρειες Εγγράφου
+                  </h3>
+                  <p className="text-orange-700 text-sm">
+                    Έγγραφο #{doc.id}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFlipped(false);
+                  }}
+                  className="h-8 w-8 p-0 hover:bg-orange-100 hover:text-orange-600 transition-colors"
+                  title="Επιστροφή"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                {/* Document Details */}
+                <div className="space-y-2">
+                  {doc.protocol_number_input && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-orange-700 font-medium">Αρ. Πρωτοκόλλου:</span>
+                      <span className="text-orange-900">{doc.protocol_number_input}</span>
+                    </div>
+                  )}
+                  {doc.protocol_date && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-orange-700 font-medium">Ημερομηνία:</span>
+                      <span className="text-orange-900">{new Date(doc.protocol_date).toLocaleDateString('el-GR')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-orange-700 font-medium">Κωδικός ΝΑ853:</span>
+                    <span className="text-orange-900">{projectNa853 || doc.project_na853 || 'Δ/Υ'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-orange-700 font-medium">Τύπος Δαπάνης:</span>
+                    <span className="text-orange-900">{doc.expenditure_type || '-'}</span>
+                  </div>
+                </div>
 
-          <div className="absolute bottom-6 left-6 right-6">
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                }}
-                disabled={isLoading}
-              >
-                <FileEdit className="h-4 w-4 mr-2" />
-                Επεξεργασία
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleExport();
-                }}
-                disabled={isLoading}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Εξαγωγή (ZIP)
-              </Button>
+                {/* Orthi Epanalipsi Details */}
+                {showOrthiEpanalipsiInfo && (
+                  <div className="pt-2 border-t border-orange-200">
+                    <span className="text-orange-700 font-medium text-sm">Ορθή Επανάληψη:</span>
+                    <div className="mt-1 p-2 bg-red-100 rounded border border-red-200">
+                      <p className="text-sm text-red-800">
+                        Αρ. πρωτ.: {docAny.original_protocol_number}
+                        {docAny.original_protocol_date && ` (${new Date(docAny.original_protocol_date).toLocaleDateString('el-GR')})`}
+                      </p>
+                      {doc.comments && (
+                        <p className="text-sm mt-1 text-red-700">
+                          Λόγος: {doc.comments}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recipients Summary */}
+                <div className="pt-2 border-t border-orange-200">
+                  <span className="text-orange-700 font-medium text-sm">Δικαιούχοι ({recipients?.length || 0}):</span>
+                  <div className="mt-1 max-h-24 overflow-y-auto">
+                    {recipients?.slice(0, 3).map((recipient, index) => (
+                      <div key={index} className="text-sm text-orange-900">
+                        {recipient.lastname} {recipient.firstname}
+                      </div>
+                    ))}
+                    {recipients?.length > 3 && (
+                      <div className="text-sm text-orange-700">
+                        +{recipients.length - 3} περισσότεροι...
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="pt-4 border-t border-orange-200">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleExport();
+                      }}
+                      disabled={isLoading}
+                      className="flex-1"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Εξαγωγή
+                    </Button>
+                    {!docAny.is_correction && doc.protocol_number_input ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowCorrectionModal(true);
+                        }}
+                        disabled={isLoading}
+                        className="flex-1"
+                      >
+                        <History className="h-4 w-4 mr-2" />
+                        Ορθή Επανάληψη
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onView();
+                        }}
+                        disabled={isLoading || doc.status === 'approved'}
+                        className="flex-1"
+                      >
+                        <ClipboardCheck className="h-4 w-4 mr-2" />
+                        Πρωτόκολλο
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-            {!docAny.is_correction && doc.protocol_number_input ? (
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowCorrectionModal(true);
-                }}
-                disabled={isLoading}
-              >
-                <History className="h-4 w-4 mr-2" />
-                Ορθή Επανάληψη
-              </Button>
-            ) : (
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onView();
-                }}
-                disabled={isLoading || doc.status === 'approved'}
-              >
-                <ClipboardCheck className="h-4 w-4 mr-2" />
-                Προσθήκη Πρωτοκόλλου
-              </Button>
-            )}
           </div>
-        </Card>
+        </div>
+      </div>
+
+      <OrthiEpanalipsiModal 
+        open={showCorrectionModal}
+        onClose={() => setShowCorrectionModal(false)}
+        onSubmit={(correctionData) => {
+          console.log('Correction submitted:', correctionData);
+          // Handle the correction submission logic here
+          setShowCorrectionModal(false);
+        }}
+        originalProtocolNumber={doc.protocol_number_input || ''}
+        originalProtocolDate={doc.protocol_date || ''}
+      />
+    </>
+  );
 
         {/* Back of card */}
         <Card className="flip-card-back p-6">
