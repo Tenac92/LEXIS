@@ -26,7 +26,7 @@ const beneficiarySchema = z.object({
   // Administrative Information (optional)
   aa: z.number().optional(),
   region: z.string().optional(),
-  adeia: z.number().optional(),
+  adeia: z.string().optional(), // Changed to string and optional
   date: z.string().optional(),
   monada: z.string().optional(),
   onlinefoldernumber: z.string().optional(),
@@ -150,7 +150,7 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
         project: beneficiary.project || undefined,
         date: beneficiary.date || "",
         onlinefoldernumber: beneficiary.onlinefoldernumber || "",
-        adeia: beneficiary.adeia || "",
+        adeia: beneficiary.adeia ? String(beneficiary.adeia) : "",
         region: beneficiary.region || "",
         freetext: beneficiary.freetext || "",
         cengsur1: beneficiary.cengsur1 || "",
@@ -775,7 +775,7 @@ export default function BeneficiariesPage() {
                                   <div>
                                     <span className="text-gray-600">Ποσό:</span>
                                     <span className="ml-2 font-bold text-lg text-gray-900">
-                                      €{amount.toLocaleString('el-GR')}
+                                      €{typeof amount === 'number' ? amount.toLocaleString('el-GR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : amount}
                                     </span>
                                   </div>
                                   {status && (
