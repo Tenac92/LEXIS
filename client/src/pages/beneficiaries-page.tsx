@@ -232,14 +232,11 @@ export default function BeneficiariesPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleCardFlip(beneficiary.id);
-                          }}
+                          onClick={() => toggleCardFlip(beneficiary.id)}
                           className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                           title="Περισσότερα στοιχεία"
                         >
@@ -248,10 +245,7 @@ export default function BeneficiariesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(beneficiary);
-                          }}
+                          onClick={() => handleEdit(beneficiary)}
                           className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                           title="Επεξεργασία"
                         >
@@ -260,10 +254,7 @@ export default function BeneficiariesPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(beneficiary);
-                          }}
+                          onClick={() => handleDelete(beneficiary)}
                           className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
                           title="Διαγραφή"
                         >
@@ -311,14 +302,11 @@ export default function BeneficiariesPage() {
                       </div>
                     )}
                     
-                    <div className="flex items-center justify-center">
+                    <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleCardFlip(beneficiary.id);
-                        }}
+                        onClick={() => toggleCardFlip(beneficiary.id)}
                         className="text-blue-600 border-blue-200 hover:bg-blue-50"
                       >
                         <Info className="w-4 h-4 mr-2" />
@@ -344,10 +332,7 @@ export default function BeneficiariesPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleCardFlip(beneficiary.id);
-                        }}
+                        onClick={() => toggleCardFlip(beneficiary.id)}
                         className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-600 transition-colors"
                         title="Επιστροφή"
                       >
@@ -403,22 +388,7 @@ export default function BeneficiariesPage() {
                         )}
                       </div>
                       
-                      {beneficiary.oikonomika && (
-                        <div className="bg-white rounded-lg p-4 border border-blue-200">
-                          <h4 className="text-blue-900 font-semibold mb-3">Οικονομικά Στοιχεία</h4>
-                          <div className="space-y-2">
-                            {typeof beneficiary.oikonomika === 'object' && 
-                             Object.entries(beneficiary.oikonomika).map(([key, value]: [string, any]) => (
-                              <div key={key} className="flex justify-between text-sm">
-                                <span className="text-blue-700 font-medium">{key}:</span>
-                                <span className="text-blue-900">
-                                  {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+
                     </div>
                   </div>
                 </div>
