@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Edit, Trash2, Download, Upload, User, FileText, Building, UserCheck, RotateCcw, Info, Users } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Download, Upload, User, FileText, Building, UserCheck, RotateCcw, Info, Users, LayoutGrid, List } from "lucide-react";
 import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ export default function BeneficiariesPage() {
   const [detailsBeneficiary, setDetailsBeneficiary] = useState<Beneficiary | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -185,6 +186,24 @@ export default function BeneficiariesPage() {
             <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0 mb-6">
               <h1 className="text-2xl font-bold text-foreground">Δικαιούχοι</h1>
               <div className="flex flex-wrap gap-2">
+                <div className="flex border rounded-lg overflow-hidden">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    className="rounded-none"
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                    className="rounded-none"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </div>
                 <Button onClick={handleNew}>
                   <Plus className="w-4 h-4 mr-2" />
                   Νέος Δικαιούχος
@@ -404,16 +423,78 @@ export default function BeneficiariesPage() {
         })}
       </div>
 
-            {/* Results - Remove duplicate as this is already handled above */}
+            {/* Results */}
             {isLoading ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
                 {[...Array(6)].map((_, i) => (
                   <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-muted animate-pulse" />
                 ))}
               </div>
             ) : filteredBeneficiaries.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
                 {filteredBeneficiaries.map((beneficiary) => {
+                  if (viewMode === "list") {
+                    return (
+                      <Card 
+                        key={beneficiary.id}
+                        className="transition-shadow hover:shadow-lg flex cursor-pointer"
+                        onClick={() => handleShowDetails(beneficiary)}
+                      >
+                        <div className="p-6 flex-1">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="text-lg font-bold text-foreground">
+                                  {beneficiary.surname} {beneficiary.name}
+                                  {beneficiary.fathername && (
+                                    <span className="text-sm font-normal text-muted-foreground italic ml-2">
+                                      του {beneficiary.fathername}
+                                    </span>
+                                  )}
+                                </h3>
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                ΑΦΜ: {beneficiary.afm}
+                                {beneficiary.project && ` | Έργο: ${beneficiary.project}`}
+                                {beneficiary.region && ` | Περιοχή: ${beneficiary.region}`}
+                              </div>
+                            </div>
+                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleShowDetails(beneficiary)}
+                                className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                title="Λεπτομέρειες"
+                              >
+                                <Info className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(beneficiary)}
+                                className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                title="Επεξεργασία"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(beneficiary)}
+                                className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                title="Διαγραφή"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  }
+
+                  // Grid view - existing flip card implementation
                   const isFlipped = flippedCards.has(beneficiary.id);
                   
                   const handleCardClick = (e: React.MouseEvent) => {

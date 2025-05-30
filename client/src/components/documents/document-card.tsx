@@ -86,7 +86,7 @@ const getStatusDetails = (status: string, is_correction: boolean | null, protoco
   }
 };
 
-export function DocumentCard({ document: doc, onView, onEdit, onDelete }: DocumentCardProps) {
+export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onDelete }: DocumentCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
@@ -203,6 +203,78 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
 
   // Show orthi epanalipsi info when either condition is met
   const showOrthiEpanalipsiInfo = Boolean(docAny.is_correction) || Boolean(docAny.original_protocol_number);
+
+  if (view === "list") {
+    return (
+      <>
+        <Card 
+          className="transition-shadow hover:shadow-lg flex cursor-pointer"
+          onClick={() => setShowDetailsModal(true)}
+        >
+          <div className="p-6 flex-1">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h3 className="text-lg font-bold text-foreground">
+                    {doc.protocol_number_input && doc.protocol_date ? (
+                      `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString('el-GR')}`
+                    ) : (
+                      `Έγγραφο #${doc.id}`
+                    )}
+                  </h3>
+                  <Badge variant="secondary" className={statusDetails.bgColor}>
+                    {statusDetails.text}
+                  </Badge>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {recipients?.length > 0 && (
+                    <span>Δικαιούχοι: {recipients.length} | </span>
+                  )}
+                  Σύνολο: {doc.total_amount ? Number(doc.total_amount).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' }) : 'Δ/Υ'}
+                  {projectNa853 && ` | ${projectNa853}`}
+                </div>
+              </div>
+              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDetailsModal(true)}
+                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  title="Λεπτομέρειες"
+                >
+                  <Info className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onEdit}
+                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                  title="Επεξεργασία"
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onDelete}
+                  className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                  title="Διαγραφή"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+        
+        <DocumentDetailsModal 
+          document={doc}
+          open={showDetailsModal}
+          onOpenChange={setShowDetailsModal}
+        />
+      </>
+    );
+  }
 
   return (
     <>
