@@ -89,6 +89,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [projectNa853, setProjectNa853] = useState<string>(doc.project_na853 || '');
   const { toast } = useToast();
 
@@ -230,10 +231,10 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setIsFlipped(!isFlipped);
+                      setShowDetailsModal(true);
                     }}
                     className="h-8 w-8 p-0 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                    title="Περισσότερα στοιχεία"
+                    title="Λεπτομέρειες"
                   >
                     <Info className="w-4 h-4" />
                   </Button>
@@ -528,6 +529,12 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
         }}
         originalProtocolNumber={doc.protocol_number_input || ''}
         originalProtocolDate={doc.protocol_date || ''}
+      />
+
+      <DocumentDetailsModal
+        document={doc}
+        open={showDetailsModal}
+        onOpenChange={setShowDetailsModal}
       />
     </>
   );

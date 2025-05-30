@@ -185,39 +185,7 @@ export function DocumentDetailsModal({
             </div>
           </div>
 
-          {/* Correction Information */}
-          {document.is_correction && (
-            <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
-              <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center gap-2">
-                <FileEdit className="w-5 h-5" />
-                Στοιχεία Ορθής Επανάληψης
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {document.original_protocol_number && (
-                  <div>
-                    <label className="text-sm font-medium text-purple-800">Αρχικό Πρωτόκολλο:</label>
-                    <p className="text-purple-900 font-mono">{document.original_protocol_number}</p>
-                  </div>
-                )}
-                {document.original_protocol_date && (
-                  <div>
-                    <label className="text-sm font-medium text-purple-800">Αρχική Ημερομηνία:</label>
-                    <p className="text-purple-900">
-                      {new Date(document.original_protocol_date).toLocaleDateString('el-GR')}
-                    </p>
-                  </div>
-                )}
-                {document.comments && (
-                  <div className="md:col-span-2">
-                    <label className="text-sm font-medium text-purple-800">Σχόλια:</label>
-                    <p className="text-purple-900 bg-purple-100 p-2 rounded border">
-                      {document.comments}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+
 
           {/* Recipients Information */}
           {recipients.length > 0 && (
