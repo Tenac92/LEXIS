@@ -273,28 +273,10 @@ export default function BeneficiariesPage() {
                     </div>
                     
                 <div className="grid grid-cols-2 gap-2 text-sm mb-6">
-                  {beneficiary.region && (
-                    <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                      <span className="text-xs text-gray-600">Περιφέρεια</span>
-                      <span className="text-gray-900 font-medium">{beneficiary.region}</span>
-                    </div>
-                  )}
                   {beneficiary.project && (
                     <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
                       <span className="text-xs text-gray-600">Έργο (MIS)</span>
                       <span className="text-gray-900 font-mono">{beneficiary.project}</span>
-                    </div>
-                  )}
-                  {beneficiary.monada && (
-                    <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                      <span className="text-xs text-gray-600">Μονάδα</span>
-                      <span className="text-gray-900">{beneficiary.monada}</span>
-                    </div>
-                  )}
-                  {beneficiary.adeia && (
-                    <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                      <span className="text-xs text-gray-600">Άδεια</span>
-                      <span className="text-gray-900">{beneficiary.adeia}</span>
                     </div>
                   )}
                 </div>
@@ -303,8 +285,28 @@ export default function BeneficiariesPage() {
                     {beneficiary.oikonomika && (
                       <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                         <h4 className="text-sm font-medium text-blue-800 mb-2">Οικονομικά Στοιχεία</h4>
-                        <div className="text-xs text-blue-700">
-                          Διαθέσιμα στοιχεία για προβολή στην πίσω πλευρά
+                        <div className="space-y-1">
+                          {typeof beneficiary.oikonomika === 'object' && 
+                           Object.entries(beneficiary.oikonomika).map(([paymentType, data]: [string, any]) => (
+                            <div key={paymentType} className="text-xs">
+                              <span className="font-medium text-blue-800">{paymentType}:</span>
+                              {typeof data === 'object' && data !== null && (
+                                <div className="ml-2 space-y-0.5">
+                                  {Object.entries(data).map(([installment, info]: [string, any]) => (
+                                    <div key={installment} className="flex justify-between">
+                                      <span className="text-blue-700">{installment}:</span>
+                                      <span className="text-blue-900">
+                                        {typeof info === 'object' && info !== null ? 
+                                          `€${info.amount || 0} - ${info.status || 'Εκκρεμεί'}` :
+                                          String(info)
+                                        }
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -355,6 +357,24 @@ export default function BeneficiariesPage() {
                     
                     <div className="space-y-4">
                       <div className="space-y-2">
+                        {beneficiary.region && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-blue-700 font-medium">Περιφέρεια:</span>
+                            <span className="text-blue-900">{beneficiary.region}</span>
+                          </div>
+                        )}
+                        {beneficiary.monada && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-blue-700 font-medium">Μονάδα:</span>
+                            <span className="text-blue-900">{beneficiary.monada}</span>
+                          </div>
+                        )}
+                        {beneficiary.adeia && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-blue-700 font-medium">Άδεια:</span>
+                            <span className="text-blue-900">{beneficiary.adeia}</span>
+                          </div>
+                        )}
                         {beneficiary.onlinefoldernumber && (
                           <div className="flex justify-between text-sm">
                             <span className="text-blue-700 font-medium">Αρ. Online Φακέλου:</span>
