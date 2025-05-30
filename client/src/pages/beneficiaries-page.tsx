@@ -40,6 +40,7 @@ export default function BeneficiariesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailsBeneficiary, setDetailsBeneficiary] = useState<Beneficiary | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -140,6 +141,18 @@ export default function BeneficiariesPage() {
     setDetailsModalOpen(true);
   };
 
+  const toggleCardFlip = (beneficiaryId: number) => {
+    setFlippedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(beneficiaryId)) {
+        newSet.delete(beneficiaryId);
+      } else {
+        newSet.add(beneficiaryId);
+      }
+      return newSet;
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-8">
@@ -187,12 +200,12 @@ export default function BeneficiariesPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredBeneficiaries.map((beneficiary) => {
-          const [isFlipped, setIsFlipped] = useState(false);
+          const isFlipped = flippedCards.has(beneficiary.id);
           
           const handleCardClick = (e: React.MouseEvent) => {
             // Allow flipping anywhere on the card except buttons
             if (!(e.target as HTMLElement).closest('button')) {
-              setIsFlipped(!isFlipped);
+              toggleCardFlip(beneficiary.id);
             }
           };
 
@@ -225,7 +238,7 @@ export default function BeneficiariesPage() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setIsFlipped(!isFlipped);
+                            toggleCardFlip(beneficiary.id);
                           }}
                           className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                           title="Περισσότερα στοιχεία"
@@ -302,7 +315,7 @@ export default function BeneficiariesPage() {
                         size="sm" 
                         onClick={(e) => {
                           e.stopPropagation();
-                          setIsFlipped(true);
+                          toggleCardFlip(beneficiary.id);
                         }}
                         className="text-blue-600 border-blue-200 hover:bg-blue-50"
                       >
@@ -331,7 +344,7 @@ export default function BeneficiariesPage() {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setIsFlipped(false);
+                          toggleCardFlip(beneficiary.id);
                         }}
                         className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-600 transition-colors"
                         title="Επιστροφή"
