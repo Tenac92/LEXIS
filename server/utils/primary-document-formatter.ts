@@ -651,7 +651,7 @@ export class PrimaryDocumentFormatter {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "ΑΦΜ",
+                  text: "ΠΟΣΟ (€)",
                   bold: true,
                   size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
@@ -695,7 +695,7 @@ export class PrimaryDocumentFormatter {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "ΠΟΣΟ (€)",
+                  text: "ΑΦΜ",
                   bold: true,
                   size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
@@ -752,7 +752,7 @@ export class PrimaryDocumentFormatter {
                     font: DocumentShared.DEFAULT_FONT,
                   }),
                 ],
-                alignment: AlignmentType.LEFT,
+                alignment: AlignmentType.CENTER,
               }),
             ],
             verticalAlign: VerticalAlign.CENTER,
@@ -768,7 +768,7 @@ export class PrimaryDocumentFormatter {
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: recipient.afm || "",
+                    text: formattedAmount,
                     size: DocumentShared.DEFAULT_FONT_SIZE,
                     font: DocumentShared.DEFAULT_FONT,
                   }),
@@ -810,12 +810,12 @@ export class PrimaryDocumentFormatter {
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: formattedAmount,
+                    text: recipient.afm || "",
                     size: DocumentShared.DEFAULT_FONT_SIZE,
                     font: DocumentShared.DEFAULT_FONT,
                   }),
                 ],
-                alignment: AlignmentType.RIGHT,
+                alignment: AlignmentType.CENTER,
               }),
             ],
             verticalAlign: VerticalAlign.CENTER,
@@ -839,16 +839,6 @@ export class PrimaryDocumentFormatter {
     const totalRow = new TableRow({
       children: [
         new TableCell({
-          children: [new Paragraph({ text: "" })],
-          columnSpan: 4,
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 1 },
-            bottom: { style: BorderStyle.SINGLE, size: 1 },
-            left: { style: BorderStyle.SINGLE, size: 1 },
-            right: { style: BorderStyle.SINGLE, size: 1 },
-          },
-        }),
-        new TableCell({
           children: [
             new Paragraph({
               children: [
@@ -861,6 +851,18 @@ export class PrimaryDocumentFormatter {
               ],
               alignment: AlignmentType.RIGHT,
             }),
+          ],
+          columnSpan: 2,
+          verticalAlign: VerticalAlign.CENTER,
+          borders: {
+            top: { style: BorderStyle.SINGLE, size: 1 },
+            bottom: { style: BorderStyle.SINGLE, size: 1 },
+            left: { style: BorderStyle.SINGLE, size: 1 },
+            right: { style: BorderStyle.SINGLE, size: 1 },
+          },
+        }),
+        new TableCell({
+          children: [
             new Paragraph({
               children: [
                 new TextRun({
@@ -874,6 +876,16 @@ export class PrimaryDocumentFormatter {
             }),
           ],
           verticalAlign: VerticalAlign.CENTER,
+          borders: {
+            top: { style: BorderStyle.SINGLE, size: 1 },
+            bottom: { style: BorderStyle.SINGLE, size: 1 },
+            left: { style: BorderStyle.SINGLE, size: 1 },
+            right: { style: BorderStyle.SINGLE, size: 1 },
+          },
+        }),
+        new TableCell({
+          children: [new Paragraph({ text: "" })],
+          columnSpan: 2,
           borders: {
             top: { style: BorderStyle.SINGLE, size: 1 },
             bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -916,11 +928,83 @@ export class PrimaryDocumentFormatter {
   private static createFooter(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Paragraph[] {
-    const managerInfo = unitDetails?.manager;
+  ): Table {
+    const attachments = (documentData.attachments || [])
+      .map((item) => item.replace(/^\d+\-/, ""))
+      .filter(Boolean);
 
-    return [
-      DocumentShared.createBlankLine(480),
+    // Create the left column content (attachments, notifications, etc.)
+    const leftColumnParagraphs: Paragraph[] = [];
+
+    leftColumnParagraphs.push(
+      DocumentShared.createBoldUnderlinedParagraph("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)"),
+    );
+
+    for (let i = 0; i < attachments.length; i++) {
+      leftColumnParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${i + 1}. ${attachments[i]}`,
+              size: DocumentShared.DEFAULT_FONT_SIZE,
+              font: DocumentShared.DEFAULT_FONT,
+            }),
+          ],
+          indent: { left: 426 },
+          spacing: { after: 120 },
+        }),
+      );
+    }
+
+    leftColumnParagraphs.push(
+      DocumentShared.createBoldUnderlinedParagraph("ΚΟΙΝΟΠΟΙΗΣΗ"),
+    );
+
+    const notifications = [
+      "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+      "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+      "Γ.Δ.Α.Ε.Φ.Κ.",
+    ];
+
+    for (let i = 0; i < notifications.length; i++) {
+      leftColumnParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${i + 1}. ${notifications[i]}`,
+              size: DocumentShared.DEFAULT_FONT_SIZE,
+              font: DocumentShared.DEFAULT_FONT,
+            }),
+          ],
+          indent: { left: 426 },
+          spacing: { after: 120 },
+        }),
+      );
+    }
+
+    leftColumnParagraphs.push(
+      DocumentShared.createBoldUnderlinedParagraph("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ"),
+    );
+
+    leftColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "1. Χρονολογικό Αρχείο",
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        indent: { left: 426 },
+        spacing: { after: 120 },
+      }),
+    );
+
+    // Create the right column content (signature)
+    const managerInfo = unitDetails?.manager;
+    const rightColumnParagraphs: Paragraph[] = [];
+
+    rightColumnParagraphs.push(
       new Paragraph({
         children: [
           new TextRun({
@@ -933,6 +1017,9 @@ export class PrimaryDocumentFormatter {
         alignment: AlignmentType.CENTER,
         spacing: { after: 240 },
       }),
+    );
+
+    rightColumnParagraphs.push(
       new Paragraph({
         children: [
           new TextRun({
@@ -945,8 +1032,12 @@ export class PrimaryDocumentFormatter {
         alignment: AlignmentType.CENTER,
         spacing: { after: 480 },
       }),
-      DocumentShared.createBlankLine(480),
-      DocumentShared.createBlankLine(480),
+    );
+
+    rightColumnParagraphs.push(DocumentShared.createBlankLine(480));
+    rightColumnParagraphs.push(DocumentShared.createBlankLine(480));
+
+    rightColumnParagraphs.push(
       new Paragraph({
         children: [
           new TextRun({
@@ -959,6 +1050,9 @@ export class PrimaryDocumentFormatter {
         alignment: AlignmentType.CENTER,
         spacing: { after: 120 },
       }),
+    );
+
+    rightColumnParagraphs.push(
       new Paragraph({
         children: [
           new TextRun({
@@ -969,7 +1063,46 @@ export class PrimaryDocumentFormatter {
         ],
         alignment: AlignmentType.CENTER,
       }),
-    ];
+    );
+
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [50, 50],
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              children: leftColumnParagraphs,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              verticalAlign: VerticalAlign.TOP,
+            }),
+            new TableCell({
+              children: rightColumnParagraphs,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              verticalAlign: VerticalAlign.TOP,
+            }),
+          ],
+        }),
+      ],
+    });
   }
 
   public static async generateDocument(documentData: DocumentData): Promise<Buffer> {
@@ -1010,6 +1143,7 @@ export class PrimaryDocumentFormatter {
             ...this.createDocumentSubject(enrichedDocumentData, unitDetails),
             ...this.createMainContent(enrichedDocumentData, unitDetails),
             this.createPaymentTable(documentData.recipients || []),
+            this.createNote(),
             ...this.createClosingContent(),
             ...this.createAttachmentsSection(),
             ...this.createDistributionSections(),
