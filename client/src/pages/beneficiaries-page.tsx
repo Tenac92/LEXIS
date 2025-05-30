@@ -196,49 +196,77 @@ export default function BeneficiariesPage() {
             </Dialog>
           </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Επώνυμο</TableHead>
-                  <TableHead>Όνομα</TableHead>
-                  <TableHead>Πατρώνυμο</TableHead>
-                  <TableHead>ΑΦΜ</TableHead>
-                  <TableHead>Περιφέρεια</TableHead>
-                  <TableHead>Ενέργειες</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredBeneficiaries.map((beneficiary) => (
-                  <TableRow key={beneficiary.id}>
-                    <TableCell className="font-medium">{beneficiary.surname}</TableCell>
-                    <TableCell>{beneficiary.name}</TableCell>
-                    <TableCell>{beneficiary.fathername}</TableCell>
-                    <TableCell>{beneficiary.afm}</TableCell>
-                    <TableCell>{beneficiary.region || "-"}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(beneficiary)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(beneficiary)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredBeneficiaries.map((beneficiary) => (
+              <Card key={beneficiary.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg font-semibold text-gray-900">
+                        {beneficiary.surname} {beneficiary.name}
+                      </CardTitle>
+                      <CardDescription className="text-sm text-gray-600">
+                        <span className="font-medium">Πατρώνυμο:</span> {beneficiary.fathername}
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(beneficiary)}
+                        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                        title="Επεξεργασία"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(beneficiary)}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        title="Διαγραφή"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                      <span className="font-medium text-gray-700">ΑΦΜ:</span>
+                      <span className="font-mono text-gray-900 bg-white px-2 py-1 rounded border">
+                        {beneficiary.afm}
+                      </span>
+                    </div>
+                    {beneficiary.region && (
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-700">Περιφέρεια:</span>
+                        <span className="text-gray-900">{beneficiary.region}</span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    )}
+                    {beneficiary.project && (
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-700">Έργο:</span>
+                        <span className="text-gray-900">{beneficiary.project}</span>
+                      </div>
+                    )}
+                    {beneficiary.monada && (
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-700">Μονάδα:</span>
+                        <span className="text-gray-900">{beneficiary.monada}</span>
+                      </div>
+                    )}
+                    {beneficiary.adeia && (
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-700">Άδεια:</span>
+                        <span className="text-gray-900">{beneficiary.adeia}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {filteredBeneficiaries.length === 0 && (
