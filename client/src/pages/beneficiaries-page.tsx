@@ -263,6 +263,31 @@ export default function BeneficiariesPage() {
                         <span className="text-gray-900">{beneficiary.adeia}</span>
                       </div>
                     )}
+                    {beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object' && Object.keys(beneficiary.oikonomika).length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <span className="font-medium text-gray-700 text-xs">Οικονομικά Στοιχεία:</span>
+                        <div className="mt-2 space-y-1">
+                          {(() => {
+                            try {
+                              const oikonomika = beneficiary.oikonomika as Record<string, any>;
+                              return Object.entries(oikonomika).map(([type, data]) => (
+                                <div key={type} className="text-xs bg-blue-50 p-2 rounded">
+                                  <div className="font-medium text-blue-800">{type}</div>
+                                  {data && typeof data === 'object' && Object.entries(data as Record<string, any>).map(([installment, details]) => (
+                                    <div key={installment} className="flex justify-between text-blue-700">
+                                      <span>{installment}:</span>
+                                      <span>{(details as any)?.amount ? `€${(details as any).amount}` : '-'}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ));
+                            } catch (e) {
+                              return <div className="text-xs text-gray-500">Σφάλμα ανάγνωσης οικονομικών στοιχείων</div>;
+                            }
+                          })()}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -371,7 +396,7 @@ function BeneficiaryDialog({
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
               control={form.control}
               name="afm"
@@ -382,7 +407,7 @@ function BeneficiaryDialog({
                     <Input
                       {...field}
                       type="number"
-                      placeholder="ΑΦΜ"
+                      placeholder="ΑΦΜ (9 ψηφία)"
                       onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                     />
                   </FormControl>
@@ -395,12 +420,12 @@ function BeneficiaryDialog({
               name="project"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Έργο *</FormLabel>
+                  <FormLabel>Έργο (MIS) *</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       type="number"
-                      placeholder="Κωδικός Έργου"
+                      placeholder="Κωδικός MIS Έργου"
                       onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                     />
                   </FormControl>
@@ -408,7 +433,178 @@ function BeneficiaryDialog({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="aa"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Α/Α</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="number"
+                      placeholder="Αριθμός Μητρώου"
+                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="region"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Περιφέρεια</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="π.χ. Αττικής, Θεσσαλονίκης" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="adeia"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Αριθμός Άδειας</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="number"
+                      placeholder="Αριθμός άδειας"
+                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ημερομηνία</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="date" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="monada"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Μονάδα</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="π.χ. ΔΑΕΦΚ-ΚΕ" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="onlinefoldernumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Αριθμός Online Φακέλου</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Αριθμός ηλεκτρονικού φακέλου" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="text-sm font-medium text-gray-900 border-b pb-2">Στοιχεία Μηχανικών</h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <FormField
+                control={form.control}
+                name="cengsur1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Επώνυμο Μηχανικού 1</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Επώνυμο 1ου μηχανικού" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="cengname1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Όνομα Μηχανικού 1</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Όνομα 1ου μηχανικού" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="cengsur2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Επώνυμο Μηχανικού 2</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Επώνυμο 2ου μηχανικού" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="cengname2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Όνομα Μηχανικού 2</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Όνομα 2ου μηχανικού" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          <FormField
+            control={form.control}
+            name="freetext"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Επιπλέον Σχόλια</FormLabel>
+                <FormControl>
+                  <textarea
+                    {...field}
+                    className="w-full p-2 border border-gray-300 rounded-md resize-none"
+                    rows={3}
+                    placeholder="Οποιαδήποτε επιπλέον πληροφορία ή σχόλια..."
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div className="flex justify-end pt-4">
             <Button type="submit">
