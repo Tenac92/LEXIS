@@ -599,15 +599,155 @@ export class PrimaryDocumentFormatter {
     ];
   }
 
-  private static createPaymentTable(recipients: any[]): Table {
-    const headerRow = new TableRow({
+  private static createHeaderCell(text: string, width: string): TableCell {
+    return new TableCell({
       children: [
-        new TableCell({
+        new Paragraph({
           children: [
-            new Paragraph({
-              children: [
+            new TextRun({
+              text: text,
+              bold: true,
+              size: DocumentShared.DEFAULT_FONT_SIZE,
+              font: DocumentShared.DEFAULT_FONT,
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+        }),
+      ],
+      verticalAlign: VerticalAlign.CENTER,
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 1 },
+        bottom: { style: BorderStyle.SINGLE, size: 1 },
+        left: { style: BorderStyle.SINGLE, size: 1 },
+        right: { style: BorderStyle.SINGLE, size: 1 },
+      },
+    });
+  }
+
+  private static createTableCell(text: string, alignment: string, columnSpan?: number): TableCell {
+    const alignmentType = alignment === "center" ? AlignmentType.CENTER : 
+                         alignment === "right" ? AlignmentType.RIGHT : AlignmentType.LEFT;
+    
+    return new TableCell({
+      children: [
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: text,
+              size: DocumentShared.DEFAULT_FONT_SIZE,
+              font: DocumentShared.DEFAULT_FONT,
+            }),
+          ],
+          alignment: alignmentType,
+        }),
+      ],
+      verticalAlign: VerticalAlign.CENTER,
+      columnSpan: columnSpan,
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 1 },
+        bottom: { style: BorderStyle.SINGLE, size: 1 },
+        left: { style: BorderStyle.SINGLE, size: 1 },
+        right: { style: BorderStyle.SINGLE, size: 1 },
+      },
+    });
+  }
+
+  private static createPaymentTable(recipients: any[]): Table {
+    const tableBorders: ITableBordersOptions = {
+      top: { style: BorderStyle.SINGLE, size: 1 },
+      bottom: { style: BorderStyle.SINGLE, size: 1 },
+      left: { style: BorderStyle.SINGLE, size: 1 },
+      right: { style: BorderStyle.SINGLE, size: 1 },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+    };
+
+    const rows = [
+      new TableRow({
+        height: { value: 360, rule: HeightRule.EXACT },
+        children: [
+          this.createHeaderCell("Α.Α.", "auto"),
+          this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
+          this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
+          this.createHeaderCell("ΔΟΣΗ", "auto"),
+          this.createHeaderCell("ΑΦΜ", "auto"),
+        ],
+      }),
+    ];
+
+    // Process each recipient
+    recipients.forEach((recipient, index) => {
+      const fullName = `${recipient.lastname} ${recipient.firstname} ΤΟΥ ${recipient.fathername}`.trim();
+      const afm = recipient.afm;
+      const rowNumber = (index + 1).toString() + ".";
+
+      // Determine installments
+      let installments: string[] = [];
+      if (Array.isArray(recipient.installments) && recipient.installments.length > 0) {
+        installments = recipient.installments;
+      } else if (recipient.installment) {
+        installments = [recipient.installment.toString()];
+      } else {
+        installments = ["ΕΦΑΠΑΞ"];
+      }
+
+      // Get installment amounts if available
+      const installmentAmounts = recipient.installmentAmounts || {};
+
+      // If there's only one installment, create a simple row
+      if (installments.length === 1) {
+        const installment = installments[0];
+        const amount = installmentAmounts[installment] || recipient.amount;
+
+        rows.push(
+          new TableRow({
+            height: { value: 360, rule: HeightRule.EXACT },
+            children: [
+              this.createTableCell(rowNumber, "center"),
+              this.createTableCell(fullName, "center"),
+              this.createTableCell(
+                amount.toLocaleString("el-GR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }),
+                "center",
+              ),
+              this.createTableCell(installment, "center"),
+              this.createTableCell(afm, "center"),
+            ],
+          }),
+        );
+      }
+    });
+
+    // Calculate total amount
+    const totalAmount = recipients.reduce((sum, recipient) => sum + recipient.amount, 0);
+    
+    rows.push(
+      new TableRow({
+        height: { value: 360, rule: HeightRule.EXACT },
+        children: [
+          this.createTableCell("ΣΥΝΟΛΟ:", "right", 2),
+          this.createTableCell(
+            totalAmount.toLocaleString("el-GR", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }) + " €",
+            "right",
+          ),
+          this.createTableCell("", "center", 2),
+        ],
+      }),
+    );
+
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: tableBorders,
+      rows,
+    });
+  }
                 new TextRun({
-                  text: "Α/Α",
+                  text: "Α.Α.",
                   bold: true,
                   size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
