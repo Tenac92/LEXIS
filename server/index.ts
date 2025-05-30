@@ -6,7 +6,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { errorHandler } from "./middleware/errorHandler";
 import { securityHeaders } from "./middleware/securityHeaders";
 // Import sessionMiddleware from the new centralized authentication module
-import { sessionMiddleware } from './authentication';
+import { sessionMiddleware, setupAuth } from './authentication';
 import corsMiddleware from './middleware/corsMiddleware';
 import { geoIpRestriction } from './middleware/geoIpMiddleware';
 import sdegdaefkRootHandler from './middleware/sdegdaefk/rootHandler';
@@ -14,7 +14,6 @@ import { databaseErrorRecoveryMiddleware } from './middleware/databaseErrorRecov
 import documentsPreHandler from './middleware/sdegdaefk/documentsPreHandler';
 import { createWebSocketServer } from './websocket';
 import { supabase, testConnection, resetConnectionPoolIfNeeded } from './config/db';
-import { errorHandler } from './middleware/errorHandler';
 import { initializeScheduledTasks } from './services/schedulerService';
 
 // Enhanced error handlers
@@ -139,6 +138,10 @@ async function startServer() {
     // Session middleware must be applied before any routes
     app.use(sessionMiddleware);
     console.log('[Startup] Session middleware initialized');
+
+    // Setup authentication routes
+    await setupAuth(app);
+    console.log('[Startup] Authentication routes initialized');
 
     // Serve static files with proper security headers
     app.use(express.static(join(__dirname, '../client/public'), {
