@@ -198,23 +198,31 @@ export default function BeneficiariesPage() {
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredBeneficiaries.map((beneficiary) => (
-              <Card key={beneficiary.id} className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500">
-                <CardHeader className="pb-3">
+              <Card key={beneficiary.id} className="hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-blue-300 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
+                <CardHeader className="pb-4 pl-6">
                   <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <CardTitle className="text-lg font-semibold text-gray-900">
+                    <div className="space-y-2">
+                      <CardTitle className="text-xl font-bold text-gray-900 leading-tight">
                         {beneficiary.surname} {beneficiary.name}
                       </CardTitle>
-                      <CardDescription className="text-sm text-gray-600">
-                        <span className="font-medium">Πατρώνυμο:</span> {beneficiary.fathername}
-                      </CardDescription>
+                      {beneficiary.fathername && (
+                        <CardDescription className="text-sm text-gray-600 italic">
+                          {beneficiary.surname} του {beneficiary.fathername}
+                        </CardDescription>
+                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          ΑΦΜ: {beneficiary.afm}
+                        </div>
+                      </div>
                     </div>
                     <div className="flex gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEdit(beneficiary)}
-                        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+                        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                         title="Επεξεργασία"
                       >
                         <Edit className="w-4 h-4" />
@@ -223,7 +231,7 @@ export default function BeneficiariesPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(beneficiary)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
                         title="Διαγραφή"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -231,64 +239,64 @@ export default function BeneficiariesPage() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                      <span className="font-medium text-gray-700">ΑΦΜ:</span>
-                      <span className="font-mono text-gray-900 bg-white px-2 py-1 rounded border">
-                        {beneficiary.afm}
-                      </span>
-                    </div>
+                <CardContent className="pt-0 pl-6 space-y-4">
+                  <div className="grid grid-cols-1 gap-3 text-sm">
                     {beneficiary.region && (
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-gray-700">Περιφέρεια:</span>
-                        <span className="text-gray-900">{beneficiary.region}</span>
+                      <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                        <span className="font-medium text-gray-700">Περιφέρεια</span>
+                        <span className="text-gray-900 font-medium">{beneficiary.region}</span>
                       </div>
                     )}
                     {beneficiary.project && (
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-gray-700">Έργο:</span>
-                        <span className="text-gray-900">{beneficiary.project}</span>
+                      <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                        <span className="font-medium text-gray-700">Έργο (MIS)</span>
+                        <span className="text-gray-900 font-mono">{beneficiary.project}</span>
                       </div>
                     )}
                     {beneficiary.monada && (
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-gray-700">Μονάδα:</span>
+                      <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                        <span className="font-medium text-gray-700">Μονάδα</span>
                         <span className="text-gray-900">{beneficiary.monada}</span>
                       </div>
                     )}
                     {beneficiary.adeia && (
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-gray-700">Άδεια:</span>
+                      <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                        <span className="font-medium text-gray-700">Άδεια</span>
                         <span className="text-gray-900">{beneficiary.adeia}</span>
                       </div>
                     )}
-                    {beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object' && Object.keys(beneficiary.oikonomika).length > 0 && (
-                      <div className="mt-3 pt-3 border-t">
-                        <span className="font-medium text-gray-700 text-xs">Οικονομικά Στοιχεία:</span>
-                        <div className="mt-2 space-y-1">
-                          {(() => {
-                            try {
-                              const oikonomika = beneficiary.oikonomika as Record<string, any>;
-                              return Object.entries(oikonomika).map(([type, data]) => (
-                                <div key={type} className="text-xs bg-blue-50 p-2 rounded">
-                                  <div className="font-medium text-blue-800">{type}</div>
-                                  {data && typeof data === 'object' && Object.entries(data as Record<string, any>).map(([installment, details]) => (
-                                    <div key={installment} className="flex justify-between text-blue-700">
-                                      <span>{installment}:</span>
-                                      <span>{(details as any)?.amount ? `€${(details as any).amount}` : '-'}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ));
-                            } catch (e) {
-                              return <div className="text-xs text-gray-500">Σφάλμα ανάγνωσης οικονομικών στοιχείων</div>;
-                            }
-                          })()}
-                        </div>
-                      </div>
-                    )}
                   </div>
+                  
+                  {beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object' && Object.keys(beneficiary.oikonomika).length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="font-semibold text-gray-800 text-sm">Οικονομικά Στοιχεία</span>
+                      </div>
+                      <div className="space-y-2">
+                        {(() => {
+                          try {
+                            const oikonomika = beneficiary.oikonomika as Record<string, any>;
+                            return Object.entries(oikonomika).map(([type, data]) => (
+                              <div key={type} className="bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded-lg border border-green-200">
+                                <div className="font-semibold text-green-800 text-sm mb-2">{type}</div>
+                                {data && typeof data === 'object' && Object.entries(data as Record<string, any>).map(([installment, details]) => (
+                                  <div key={installment} className="flex justify-between items-center text-sm">
+                                    <span className="text-green-700 font-medium">{installment}</span>
+                                    <span className="bg-white px-2 py-1 rounded border text-green-800 font-mono">
+                                      {(details as any)?.amount ? `€${(details as any).amount}` : '-'}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            ));
+                          } catch (e) {
+                            return <div className="text-sm text-gray-500 bg-gray-100 p-2 rounded">Σφάλμα ανάγνωσης οικονομικών στοιχείων</div>;
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
