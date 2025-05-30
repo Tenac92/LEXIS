@@ -210,9 +210,16 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
     );
   }
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Allow flipping anywhere on the card except buttons
+    if (!(e.target as HTMLElement).closest('button')) {
+      setIsFlipped(!isFlipped);
+    }
+  };
+
   return (
     <>
-      <div className="flip-card">
+      <div className="flip-card" onClick={handleCardClick}>
         <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
           {/* Front of card */}
           <div className="flip-card-front">
@@ -231,7 +238,10 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setIsFlipped(!isFlipped)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFlipped(!isFlipped);
+                    }}
                     className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-colors"
                     title="Περισσότερα στοιχεία"
                   >
@@ -240,7 +250,10 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowDetails(true)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDetails(true);
+                    }}
                     className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                     title="Λεπτομέρειες"
                   >
@@ -250,7 +263,10 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setLocation(`/projects/${project.mis}/edit`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocation(`/projects/${project.mis}/edit`);
+                      }}
                       className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                       title="Επεξεργασία"
                     >
@@ -259,6 +275,22 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                   )}
                 </div>
               </div>
+
+              {/* Critical Information - Budget Status */}
+              {budgetData && (
+                <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-green-800">Διαθέσιμος Προϋπολ.:</span>
+                    <span className="text-green-900 font-mono">
+                      {formatCurrency(parseFloat(budgetData.available_budget?.toString() || '0'))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-sm font-medium text-green-800">Τρέχον Τρίμηνο:</span>
+                    <span className="text-green-900">{budgetData.current_quarter?.toUpperCase()}</span>
+                  </div>
+                </div>
+              )}
               
               <div className="grid grid-cols-2 gap-2 text-sm mb-6">
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
@@ -266,7 +298,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                   <span className="text-gray-900 font-mono">{project.mis || "Δ/Υ"}</span>
                 </div>
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                  <span className="text-xs text-gray-600">Προϋπολογισμός</span>
+                  <span className="text-xs text-gray-600">Προϋπολογισμός ΣΑ853</span>
                   <span className="text-gray-900 font-medium">{formatCurrency(Number(project.budget_na853))}</span>
                 </div>
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
@@ -274,8 +306,8 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                   <span className="text-gray-900">{new Date(project.created_at || '').toLocaleDateString('el-GR')}</span>
                 </div>
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                  <span className="text-xs text-gray-600">Περιφέρεια</span>
-                  <span className="text-gray-900">{getRegionText(project) || "Δ/Υ"}</span>
+                  <span className="text-xs text-gray-600">Κατάσταση</span>
+                  <span className="text-gray-900">{getStatusText(project.status || '')}</span>
                 </div>
               </div>
               
@@ -283,7 +315,10 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => setIsFlipped(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFlipped(true);
+                  }}
                   className="text-green-600 border-green-200 hover:bg-green-50"
                 >
                   <Info className="w-4 h-4 mr-2" />

@@ -129,9 +129,8 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
   }, [na853Data]);
 
   const handleCardClick = (e: React.MouseEvent) => {
-    if (!(e.target as HTMLElement).closest('button')) {
-      setIsFlipped(!isFlipped);
-    }
+    // Allow flipping anywhere on the card
+    setIsFlipped(!isFlipped);
   };
 
   const handleExport = async () => {
@@ -204,7 +203,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
 
   return (
     <>
-      <div className="flip-card">
+      <div className="flip-card" onClick={handleCardClick}>
         <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
           {/* Front of card */}
           <div className="flip-card-front">
@@ -264,11 +263,27 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                 </div>
               </div>
 
+              {/* Critical Information - Protocol and Status */}
+              {doc.protocol_number_input && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-blue-800">Αρ. Πρωτοκόλλου:</span>
+                    <span className="text-blue-900 font-mono">{doc.protocol_number_input}</span>
+                  </div>
+                  {doc.protocol_date && (
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-sm font-medium text-blue-800">Ημερομηνία:</span>
+                      <span className="text-blue-900">{new Date(doc.protocol_date).toLocaleDateString('el-GR')}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Orthi Epanalipsi Information */}
               {showOrthiEpanalipsiInfo && (
                 <div className="mb-4 p-3 bg-red-100 rounded-lg border border-red-200">
                   <p className="text-sm font-medium text-red-800">
-                    Ορθή Επανάληψη
+                    Ορθή Επανάληψη του εγγράφου {docAny.original_protocol_number}
                   </p>
                 </div>
               )}
@@ -298,6 +313,52 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                   <span className="text-gray-900">{recipients?.length || 0}</span>
                 </div>
               </div>
+
+              {/* Action Buttons - Critical for workflow */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleExport();
+                  }}
+                  disabled={isLoading}
+                  className="flex-1"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Εξαγωγή
+                </Button>
+                {!docAny.is_correction && doc.protocol_number_input ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCorrectionModal(true);
+                    }}
+                    disabled={isLoading}
+                    className="flex-1"
+                  >
+                    <History className="h-4 w-4 mr-2" />
+                    Ορθή Επανάληψη
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onView();
+                    }}
+                    disabled={isLoading || doc.status === 'approved'}
+                    className="flex-1"
+                  >
+                    <ClipboardCheck className="h-4 w-4 mr-2" />
+                    Πρωτόκολλο
+                  </Button>
+                )}
+              </div>
               
               <div className="flex items-center justify-center">
                 <Button 
@@ -310,7 +371,7 @@ export function DocumentCard({ document: doc, onView, onEdit, onDelete }: Docume
                   className="text-orange-600 border-orange-200 hover:bg-orange-50"
                 >
                   <Info className="w-4 h-4 mr-2" />
-                  Περισσότερα στοιχεία
+                  Δείτε δικαιούχους
                 </Button>
               </div>
             </div>
