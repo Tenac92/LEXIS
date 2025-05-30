@@ -27,7 +27,7 @@ import { UserDetails, UnitDetails, DocumentData } from "./document-types";
 const logger = createLogger("DocumentShared");
 
 export class DocumentShared {
-  public static readonly DEFAULT_FONT_SIZE = 20;
+  public static readonly DEFAULT_FONT_SIZE = 22;
   public static readonly DEFAULT_FONT = "Calibri";
   public static readonly DEFAULT_MARGINS = {
     top: 0,

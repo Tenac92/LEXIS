@@ -225,59 +225,62 @@ export class PrimaryDocumentFormatter {
   private static createDocumentSubject(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Paragraph[] {
-    const today = new Date();
-    const formattedDate = DocumentShared.formatDate(today);
+  ): (Table | Paragraph)[] {
+    const subjectText = [
+      {
+        text: "ΘΕΜΑ:",
+        bold: true,
+        italics: true,
+      },
+      {
+        text: ` Διαβιβαστικό αιτήματος για την πληρωμή Δ.Κ.Α. που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "Μονάδα"}`,
+        italics: true,
+      },
+    ];
 
     return [
-      DocumentShared.createBlankLine(600),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `Αθήνα, ${formattedDate}`,
-            bold: false,
-            size: 20,
-            font: DocumentShared.DEFAULT_FONT,
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 4 },
+          bottom: { style: BorderStyle.SINGLE, size: 4 },
+          left: { style: BorderStyle.SINGLE, size: 4 },
+          right: { style: BorderStyle.SINGLE, size: 4 },
+        },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: subjectText.map(
+                      (segment) =>
+                        new TextRun({
+                          text: segment.text,
+                          bold: segment.bold,
+                          italics: segment.italics,
+                          size: DocumentShared.DEFAULT_FONT_SIZE,
+                        })
+                    ),
+                    alignment: AlignmentType.JUSTIFIED,
+                  }),
+                ],
+                borders: {
+                  top: { style: BorderStyle.NONE },
+                  bottom: { style: BorderStyle.NONE },
+                  left: { style: BorderStyle.NONE },
+                  right: { style: BorderStyle.NONE },
+                },
+                margins: {
+                  top: 200,
+                  bottom: 200,
+                  left: 200,
+                  right: 200,
+                },
+              }),
+            ],
           }),
         ],
-        alignment: AlignmentType.RIGHT,
-        spacing: { after: 480 },
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "Αριθμ. Πρωτ.: ",
-            bold: false,
-            size: 20,
-            font: DocumentShared.DEFAULT_FONT,
-          }),
-          new TextRun({
-            text: documentData.protocol_number || documentData.protocol_number_input || "",
-            bold: false,
-            size: 20,
-            font: DocumentShared.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 480 },
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΘΕΜΑ: ",
-            bold: true,
-            size: 20,
-            font: DocumentShared.DEFAULT_FONT,
-          }),
-          new TextRun({
-            text: "«Αίτημα για έκδοση ΠΔΕ»",
-            bold: false,
-            size: 20,
-            font: DocumentShared.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 600 },
       }),
     ];
   }
@@ -285,31 +288,85 @@ export class PrimaryDocumentFormatter {
   private static createMainContent(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Paragraph[] {
+  ): (Paragraph | Table)[] {
+    const unitName = unitDetails?.unit_name?.name || documentData.unit;
+    const unitProp = unitDetails?.unit_name?.prop || "τη";
     return [
+      DocumentShared.createBlankLine(8),
       new Paragraph({
         children: [
           new TextRun({
-            text: "Παρακαλούμε για την έκδοση ΠΔΕ ",
-            size: 20,
-            font: DocumentShared.DEFAULT_FONT,
-          }),
-          new TextRun({
-            text: documentData.expenditure_type || "",
-            bold: true,
-            size: 20,
-            font: DocumentShared.DEFAULT_FONT,
-          }),
-          new TextRun({
-            text: " σύμφωνα με τα συνημμένα δικαιολογητικά.",
-            size: 20,
+            text: "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε, συμπληρώθηκε και ισχύει.",
+            size: DocumentShared.DEFAULT_FONT_SIZE - 2,
             font: DocumentShared.DEFAULT_FONT,
           }),
         ],
         alignment: AlignmentType.JUSTIFIED,
-        spacing: { after: 480 },
       }),
-      DocumentShared.createBlankLine(480),
+      DocumentShared.createBlankLine(14),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Αιτούμαστε την πληρωμή των κρατικών αρωγών που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "Μονάδα"}, σύμφωνα με τα παρακάτω στοιχεία.`,
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.JUSTIFIED,
+      }),
+      DocumentShared.createBlankLine(14),
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        columnWidths: [20, 80],
+        borders: {
+          top: { style: BorderStyle.NONE },
+          bottom: { style: BorderStyle.NONE },
+          left: { style: BorderStyle.NONE },
+          right: { style: BorderStyle.NONE },
+          insideHorizontal: { style: BorderStyle.NONE },
+          insideVertical: { style: BorderStyle.NONE },
+        },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 15, type: WidthType.PERCENTAGE },
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: "ΑΡ. ΕΡΓΟΥ: ", bold: true, size: DocumentShared.DEFAULT_FONT_SIZE }),
+                    ],
+                  }),
+                ],
+                borders: {
+                  top: { style: BorderStyle.NONE },
+                  bottom: { style: BorderStyle.NONE },
+                  left: { style: BorderStyle.NONE },
+                  right: { style: BorderStyle.NONE },
+                },
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
+                        size: DocumentShared.DEFAULT_FONT_SIZE,
+                      }),
+                    ],
+                  }),
+                ],
+                borders: {
+                  top: { style: BorderStyle.NONE },
+                  bottom: { style: BorderStyle.NONE },
+                  left: { style: BorderStyle.NONE },
+                  right: { style: BorderStyle.NONE },
+                },
+              }),
+            ],
+          }),
+        ],
+      }),
     ];
   }
 
@@ -323,7 +380,7 @@ export class PrimaryDocumentFormatter {
                 new TextRun({
                   text: "Α/Α",
                   bold: true,
-                  size: 18,
+                  size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
                 }),
               ],
@@ -345,7 +402,7 @@ export class PrimaryDocumentFormatter {
                 new TextRun({
                   text: "ΕΠΩΝΥΜΟ ΟΝΟΜΑ ΠΑΤΡΩΝΥΜΟ",
                   bold: true,
-                  size: 18,
+                  size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
                 }),
               ],
@@ -367,7 +424,7 @@ export class PrimaryDocumentFormatter {
                 new TextRun({
                   text: "Α.Φ.Μ.",
                   bold: true,
-                  size: 18,
+                  size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
                 }),
               ],
