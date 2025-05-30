@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
 import { Header } from "@/components/header";
 
 const beneficiarySchema = z.object({
@@ -126,18 +127,50 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
       
       if (beneficiary.oikonomika) {
         try {
-          const oikonomika = typeof beneficiary.oikonomika === 'string' 
-            ? JSON.parse(beneficiary.oikonomika) 
-            : beneficiary.oikonomika;
+          let oikonomika = beneficiary.oikonomika;
+          
+          // Handle different data formats and clean escaped JSON
+          if (typeof oikonomika === 'string') {
+            oikonomika = oikonomika.replace(/\\"/g, '"');
+            oikonomika = JSON.parse(oikonomika);
+          }
           
           // Get the first payment type and its details
           const firstPaymentType = Object.keys(oikonomika)[0];
           if (firstPaymentType) {
             paymentType = firstPaymentType;
-            const paymentDetails = oikonomika[firstPaymentType][0];
-            if (paymentDetails) {
-              amount = paymentDetails.amount || "";
-              installment = paymentDetails.installment?.[0] || "";
+            const installmentData = oikonomika[firstPaymentType];
+            
+            // Handle different installment data structures
+            if (installmentData) {
+              const firstInstallmentKey = Object.keys(installmentData)[0];
+              const paymentDetails = installmentData[firstInstallmentKey];
+              
+              if (paymentDetails) {
+                // Extract amount and format it for European display
+                let rawAmount = paymentDetails.amount || "";
+                if (rawAmount && typeof rawAmount === 'string') {
+                  // Convert from database format to European display format
+                  const numAmount = parseFloat(rawAmount);
+                  if (!isNaN(numAmount)) {
+                    amount = numAmount.toLocaleString('el-GR', { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    });
+                  } else {
+                    amount = rawAmount;
+                  }
+                } else {
+                  amount = rawAmount;
+                }
+                
+                // Extract installment
+                if (paymentDetails.installment && Array.isArray(paymentDetails.installment)) {
+                  installment = paymentDetails.installment[0] || firstInstallmentKey;
+                } else {
+                  installment = firstInstallmentKey;
+                }
+              }
             }
           }
         } catch (e) {
@@ -194,26 +227,25 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
 
   const mutation = useMutation({
     mutationFn: async (data: BeneficiaryFormData) => {
-      const url = beneficiary ? `/api/beneficiaries/${beneficiary.id}` : '/api/beneficiaries';
-      const method = beneficiary ? 'PATCH' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to save beneficiary');
+      if (beneficiary) {
+        // Update existing beneficiary
+        return apiRequest(`/api/beneficiaries/${beneficiary.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(data),
+        });
+      } else {
+        // Create new beneficiary
+        return apiRequest('/api/beneficiaries', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
       }
-      
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/beneficiaries'] });
       toast({
         title: "Επιτυχία",
-        description: beneficiary ? "Τα στοιχεία ενημερώθηκαν" : "Νέος δικαιούχος δημιουργήθηκε",
+        description: beneficiary ? "Τα στοιχεία ενημερώθηκαν επιτυχώς" : "Νέος δικαιούχος δημιουργήθηκε επιτυχώς",
       });
       onOpenChange(false);
       form.reset();
@@ -301,7 +333,16 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
                     <FormItem>
                       <FormLabel>ΑΦΜ *</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="123456789" />
+                        <Input 
+                          {...field} 
+                          placeholder="123456789"
+                          maxLength={9}
+                          onChange={(e) => {
+                            // Only allow digits and limit to 9 characters
+                            const value = e.target.value.replace(/\D/g, '').slice(0, 9);
+                            field.onChange(value);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
