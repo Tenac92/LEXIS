@@ -205,14 +205,14 @@ export default function BeneficiariesPage() {
                     <div className="space-y-2">
                       <CardTitle className="text-xl font-bold text-gray-900 leading-tight">
                         {beneficiary.surname} {beneficiary.name}
+                        {beneficiary.fathername && (
+                          <span className="text-sm font-normal text-gray-600 italic ml-2">
+                            του {beneficiary.fathername}
+                          </span>
+                        )}
                       </CardTitle>
-                      {beneficiary.fathername && (
-                        <CardDescription className="text-sm text-gray-600 italic">
-                          {beneficiary.surname} του {beneficiary.fathername}
-                        </CardDescription>
-                      )}
-                      <div className="flex items-center gap-2 mt-2">
-                        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <div className="flex items-center gap-2 mt-3">
+                        <div className="inline-flex items-center px-3 py-1.5 rounded-lg text-base font-mono font-semibold bg-blue-100 text-blue-900 border border-blue-200 select-all cursor-copy">
                           ΑΦΜ: {beneficiary.afm}
                         </div>
                       </div>
@@ -240,28 +240,28 @@ export default function BeneficiariesPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0 pl-6 space-y-4">
-                  <div className="grid grid-cols-1 gap-3 text-sm">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
                     {beneficiary.region && (
-                      <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                        <span className="font-medium text-gray-700">Περιφέρεια</span>
+                      <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                        <span className="text-xs text-gray-600">Περιφέρεια</span>
                         <span className="text-gray-900 font-medium">{beneficiary.region}</span>
                       </div>
                     )}
                     {beneficiary.project && (
-                      <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                        <span className="font-medium text-gray-700">Έργο (MIS)</span>
+                      <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                        <span className="text-xs text-gray-600">Έργο (MIS)</span>
                         <span className="text-gray-900 font-mono">{beneficiary.project}</span>
                       </div>
                     )}
                     {beneficiary.monada && (
-                      <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                        <span className="font-medium text-gray-700">Μονάδα</span>
+                      <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                        <span className="text-xs text-gray-600">Μονάδα</span>
                         <span className="text-gray-900">{beneficiary.monada}</span>
                       </div>
                     )}
                     {beneficiary.adeia && (
-                      <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                        <span className="font-medium text-gray-700">Άδεια</span>
+                      <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                        <span className="text-xs text-gray-600">Άδεια</span>
                         <span className="text-gray-900">{beneficiary.adeia}</span>
                       </div>
                     )}
@@ -277,19 +277,86 @@ export default function BeneficiariesPage() {
                         {(() => {
                           try {
                             const oikonomika = beneficiary.oikonomika as Record<string, any>;
-                            return Object.entries(oikonomika).map(([type, data]) => (
-                              <div key={type} className="bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded-lg border border-green-200">
-                                <div className="font-semibold text-green-800 text-sm mb-2">{type}</div>
-                                {data && typeof data === 'object' && Object.entries(data as Record<string, any>).map(([installment, details]) => (
-                                  <div key={installment} className="flex justify-between items-center text-sm">
-                                    <span className="text-green-700 font-medium">{installment}</span>
-                                    <span className="bg-white px-2 py-1 rounded border text-green-800 font-mono">
-                                      {(details as any)?.amount ? `€${(details as any).amount}` : '-'}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            ));
+                            
+                            // Helper function to get status-based colors
+                            const getStatusColors = (status: string | null) => {
+                              if (!status || status === null) {
+                                return {
+                                  bg: 'bg-yellow-50',
+                                  border: 'border-yellow-200',
+                                  typeColor: 'text-yellow-800',
+                                  installmentColor: 'text-yellow-700',
+                                  amountBg: 'bg-yellow-100',
+                                  amountColor: 'text-yellow-900'
+                                };
+                              }
+                              if (status === 'διαβιβάστηκε') {
+                                return {
+                                  bg: 'bg-blue-50',
+                                  border: 'border-blue-200',
+                                  typeColor: 'text-blue-800',
+                                  installmentColor: 'text-blue-700',
+                                  amountBg: 'bg-blue-100',
+                                  amountColor: 'text-blue-900'
+                                };
+                              }
+                              if (status === 'πληρώθηκε') {
+                                return {
+                                  bg: 'bg-green-50',
+                                  border: 'border-green-200',
+                                  typeColor: 'text-green-800',
+                                  installmentColor: 'text-green-700',
+                                  amountBg: 'bg-green-100',
+                                  amountColor: 'text-green-900'
+                                };
+                              }
+                              // Default for unknown status
+                              return {
+                                bg: 'bg-gray-50',
+                                border: 'border-gray-200',
+                                typeColor: 'text-gray-800',
+                                installmentColor: 'text-gray-700',
+                                amountBg: 'bg-gray-100',
+                                amountColor: 'text-gray-900'
+                              };
+                            };
+
+                            return Object.entries(oikonomika).map(([type, data]) => {
+                              // Get the dominant status for this type
+                              let dominantStatus = null;
+                              if (data && typeof data === 'object') {
+                                const statuses = Object.values(data as Record<string, any>).map(d => (d as any)?.status);
+                                if (statuses.some(s => s === 'πληρώθηκε')) dominantStatus = 'πληρώθηκε';
+                                else if (statuses.some(s => s === 'διαβιβάστηκε')) dominantStatus = 'διαβιβάστηκε';
+                                else dominantStatus = null;
+                              }
+                              
+                              const colors = getStatusColors(dominantStatus);
+                              
+                              return (
+                                <div key={type} className={`${colors.bg} p-3 rounded-lg border ${colors.border}`}>
+                                  <div className={`font-semibold ${colors.typeColor} text-sm mb-2`}>{type}</div>
+                                  {data && typeof data === 'object' && Object.entries(data as Record<string, any>).map(([installment, details]) => {
+                                    const installmentColors = getStatusColors((details as any)?.status);
+                                    return (
+                                      <div key={installment} className="flex justify-between items-center text-sm mb-1">
+                                        <span className={`${installmentColors.installmentColor} font-medium`}>{installment}</span>
+                                        <div className="flex items-center gap-2">
+                                          <span className={`${installmentColors.amountBg} ${installmentColors.amountColor} px-2 py-1 rounded border font-mono text-xs`}>
+                                            {(details as any)?.amount ? `€${(details as any).amount}` : '-'}
+                                          </span>
+                                          {(details as any)?.status && (
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${installmentColors.amountBg} ${installmentColors.amountColor}`}>
+                                              {(details as any).status}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            });
                           } catch (e) {
                             return <div className="text-sm text-gray-500 bg-gray-100 p-2 rounded">Σφάλμα ανάγνωσης οικονομικών στοιχείων</div>;
                           }
