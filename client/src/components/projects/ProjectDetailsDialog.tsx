@@ -1,8 +1,6 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Calendar, MapPin, Building2, FileText, BriefcaseBusiness, Target, Clock, Euro, Hash } from "lucide-react";
+import { Calendar, MapPin, Building2, BriefcaseBusiness, Target, Euro, Hash } from "lucide-react";
 import { type Project } from "@shared/schema";
 
 interface ProjectDetailsDialogProps {
@@ -11,66 +9,80 @@ interface ProjectDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const getStatusColor = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'ενεργό':
+    case 'active':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'ολοκληρωμένο':
+    case 'completed':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'σε εξέλιξη':
+    case 'in_progress':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    case 'αναστολή':
+    case 'suspended':
+      return 'bg-red-100 text-red-800 border-red-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+};
+
+const getStatusText = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'ενεργό':
+    case 'active':
+      return 'Ενεργό';
+    case 'ολοκληρωμένο':
+    case 'completed':
+      return 'Ολοκληρωμένο';
+    case 'σε εξέλιξη':
+    case 'in_progress':
+      return 'Σε Εξέλιξη';
+    case 'αναστολή':
+    case 'suspended':
+      return 'Αναστολή';
+    default:
+      return status || 'Άγνωστο';
+  }
+};
+
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('el-GR', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+
+const getRegionText = (project: Project) => {
+  if (!project.region) return "Δ/Υ";
+  
+  if (typeof project.region === 'string') {
+    return project.region;
+  }
+  
+  if (Array.isArray(project.region)) {
+    return project.region.join(', ');
+  }
+  
+  return String(project.region);
+};
+
 export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDetailsDialogProps) {
-  const formatCurrency = (amount: number | null) => {
-    if (!amount) return '€0,00';
-    return new Intl.NumberFormat("el-GR", {
-      style: "currency",
-      currency: "EUR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "pending_reallocation":
-        return "bg-purple-100 text-purple-800";
-      case "completed":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Αναμονή Χρηματοδότησης";
-      case "pending_reallocation":
-        return "Αναμονή Ανακατανομής";
-      case "active":
-        return "Ενεργό";
-      case "completed":
-        return "Ολοκληρωμένο";
-      default:
-        return status;
-    }
-  };
-
-  const getRegionText = (project: Project) => {
-    if (!project.region) return '';
-    const regionData = project.region as { region: string[], municipality: string[], regional_unit: string[] };
-    const parts = [];
-    if (regionData.region?.length) parts.push(regionData.region[0]);
-    if (regionData.regional_unit?.length) parts.push(regionData.regional_unit[0]);
-    if (regionData.municipality?.length) parts.push(regionData.municipality[0]);
-    return parts.join(' / ');
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Στοιχεία Έργου</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-2xl font-bold text-gray-900">
+            Στοιχεία Έργου
+          </DialogTitle>
+          <DialogDescription className="text-gray-600">
             Πλήρη στοιχεία και πληροφορίες για το επιλεγμένο έργο
           </DialogDescription>
         </DialogHeader>
+
         <div className="space-y-6">
           {/* Project Information */}
           <div className="bg-green-50 p-6 rounded-lg border border-green-200">
@@ -104,7 +116,7 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
                 <label className="text-sm font-medium text-green-700">Περιφέρεια</label>
                 <p className="text-green-900 bg-white px-3 py-2 rounded border flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-green-600" />
-                  {project.region || "Δ/Υ"}
+                  {getRegionText(project)}
                 </p>
               </div>
               
