@@ -634,7 +634,7 @@ export default function BeneficiariesPage() {
     queryKey: ['/api/beneficiaries'],
   });
 
-  const filteredBeneficiaries = beneficiaries.filter((beneficiary: Beneficiary) =>
+  const filteredBeneficiaries = (beneficiaries as Beneficiary[] || []).filter((beneficiary: Beneficiary) =>
     beneficiary.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     beneficiary.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     String(beneficiary.afm || '').includes(searchTerm)
