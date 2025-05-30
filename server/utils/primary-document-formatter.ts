@@ -629,7 +629,7 @@ export class PrimaryDocumentFormatter {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "ΕΠΩΝΥΜΟ ΟΝΟΜΑ ΠΑΤΡΩΝΥΜΟ",
+                  text: "ΟΝΟΜΑΤΕΠΩΝΥΜΟ",
                   bold: true,
                   size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
@@ -651,7 +651,29 @@ export class PrimaryDocumentFormatter {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "Α.Φ.Μ.",
+                  text: "ΑΦΜ",
+                  bold: true,
+                  size: DocumentShared.DEFAULT_FONT_SIZE,
+                  font: DocumentShared.DEFAULT_FONT,
+                }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+          ],
+          verticalAlign: VerticalAlign.CENTER,
+          borders: {
+            top: { style: BorderStyle.SINGLE, size: 1 },
+            bottom: { style: BorderStyle.SINGLE, size: 1 },
+            left: { style: BorderStyle.SINGLE, size: 1 },
+            right: { style: BorderStyle.SINGLE, size: 1 },
+          },
+        }),
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "ΔΟΣΗ",
                   bold: true,
                   size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
@@ -704,7 +726,7 @@ export class PrimaryDocumentFormatter {
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: (index + 1).toString(),
+                    text: (index + 1).toString() + ".",
                     size: DocumentShared.DEFAULT_FONT_SIZE,
                     font: DocumentShared.DEFAULT_FONT,
                   }),
@@ -725,7 +747,7 @@ export class PrimaryDocumentFormatter {
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: `${recipient.lastname || ""} ${recipient.firstname || ""} ${recipient.fathername || ""}`.trim(),
+                    text: `${recipient.lastname || ""} ${recipient.firstname || ""} ΤΟΥ ${recipient.fathername || ""}`.trim(),
                     size: DocumentShared.DEFAULT_FONT_SIZE,
                     font: DocumentShared.DEFAULT_FONT,
                   }),
@@ -747,6 +769,27 @@ export class PrimaryDocumentFormatter {
                 children: [
                   new TextRun({
                     text: recipient.afm || "",
+                    size: DocumentShared.DEFAULT_FONT_SIZE,
+                    font: DocumentShared.DEFAULT_FONT,
+                  }),
+                ],
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+            verticalAlign: VerticalAlign.CENTER,
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.SINGLE, size: 1 },
+              right: { style: BorderStyle.SINGLE, size: 1 },
+            },
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: recipient.installment?.toString() || "Α",
                     size: DocumentShared.DEFAULT_FONT_SIZE,
                     font: DocumentShared.DEFAULT_FONT,
                   }),
@@ -797,7 +840,7 @@ export class PrimaryDocumentFormatter {
       children: [
         new TableCell({
           children: [new Paragraph({ text: "" })],
-          columnSpan: 3,
+          columnSpan: 4,
           borders: {
             top: { style: BorderStyle.SINGLE, size: 1 },
             bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -810,7 +853,18 @@ export class PrimaryDocumentFormatter {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `ΣΥΝΟΛΟ: ${DocumentShared.formatCurrency(totalAmount)}`,
+                  text: "ΣΥΝΟΛΟ:",
+                  bold: true,
+                  size: DocumentShared.DEFAULT_FONT_SIZE,
+                  font: DocumentShared.DEFAULT_FONT,
+                }),
+              ],
+              alignment: AlignmentType.RIGHT,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${DocumentShared.formatCurrency(totalAmount)} €`,
                   bold: true,
                   size: DocumentShared.DEFAULT_FONT_SIZE,
                   font: DocumentShared.DEFAULT_FONT,
@@ -862,97 +916,60 @@ export class PrimaryDocumentFormatter {
   private static createFooter(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
-  ): Table {
-    const userInfo = {
-      name: documentData.generated_by?.name || documentData.user_name || "",
-      department:
-        documentData.generated_by?.department || documentData.department || "",
-    };
-
+  ): Paragraph[] {
     const managerInfo = unitDetails?.manager;
 
-    return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      columnWidths: [50, 50],
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
-      rows: [
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "Ο/Η Υπάλληλος",
-                      bold: true,
-                      size: DocumentShared.DEFAULT_FONT_SIZE,
-                      font: DocumentShared.DEFAULT_FONT,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                  spacing: { after: 960 },
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: userInfo.name,
-                      size: DocumentShared.DEFAULT_FONT_SIZE,
-                      font: DocumentShared.DEFAULT_FONT,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-              ],
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-            }),
-            new TableCell({
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: managerInfo?.title || "Ο/Η Προϊστάμενος/η",
-                      bold: true,
-                      size: DocumentShared.DEFAULT_FONT_SIZE,
-                      font: DocumentShared.DEFAULT_FONT,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                  spacing: { after: 960 },
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: managerInfo?.name || "",
-                      size: DocumentShared.DEFAULT_FONT_SIZE,
-                      font: DocumentShared.DEFAULT_FONT,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-              ],
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-            }),
-          ],
-        }),
-      ],
-    });
+    return [
+      DocumentShared.createBlankLine(480),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
+            bold: true,
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 240 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: managerInfo?.title || "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+            bold: true,
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 480 },
+      }),
+      DocumentShared.createBlankLine(480),
+      DocumentShared.createBlankLine(480),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: managerInfo?.name || "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
+            bold: true,
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 120 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: managerInfo?.degree || "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β.",
+            size: DocumentShared.DEFAULT_FONT_SIZE,
+            font: DocumentShared.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+      }),
+    ];
   }
 
   public static async generateDocument(documentData: DocumentData): Promise<Buffer> {
@@ -996,8 +1013,8 @@ export class PrimaryDocumentFormatter {
             ...this.createClosingContent(),
             ...this.createAttachmentsSection(),
             ...this.createDistributionSections(),
-            this.createFooter(enrichedDocumentData, unitDetails),
-          ],
+            ...this.createFooter(enrichedDocumentData, unitDetails),
+          ].flat(),
         },
       ];
 
