@@ -490,18 +490,49 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
                   <FormItem>
                     <FormLabel>Έργο</FormLabel>
                     <Select 
-                      onValueChange={(value) => field.onChange(Number(value))} 
-                      value={field.value?.toString() || ""}
+                      onValueChange={(value) => {
+                        const numValue = Number(value);
+                        field.onChange(numValue);
+                      }} 
+                      value={field.value ? String(field.value) : ""}
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Επιλέξτε έργο..." />
+                          <SelectValue placeholder="Επιλέξτε έργο...">
+                            {field.value && (projects as Project[]).find(p => p.mis === field.value) && (
+                              `${(projects as Project[]).find(p => p.mis === field.value)?.na853 || 'Χωρίς κωδικό'} - ${(projects as Project[]).find(p => p.mis === field.value)?.event_description?.slice(0, 50) || 'Χωρίς περιγραφή'}...`
+                            )}
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(projects as Project[]).map((project) => (
-                          <SelectItem key={project.mis} value={project.mis}>
-                            {project.mis} - {project.project_title?.slice(0, 60) || project.event_description?.slice(0, 60) || 'Χωρίς τίτλο'}...
+                        <div className="p-2">
+                          <Input 
+                            placeholder="Αναζήτηση με κωδικό NA853..."
+                            onChange={(e) => {
+                              const searchValue = e.target.value.toLowerCase();
+                              const matchingProject = (projects as Project[]).find(project => 
+                                project.na853?.toLowerCase().includes(searchValue)
+                              );
+                              if (matchingProject && searchValue.length > 2) {
+                                field.onChange(matchingProject.mis);
+                              }
+                            }}
+                            className="mb-2"
+                          />
+                        </div>
+                        {(projects as Project[])
+                          .sort((a, b) => (a.na853 || '').localeCompare(b.na853 || ''))
+                          .map((project) => (
+                          <SelectItem key={project.mis} value={String(project.mis)}>
+                            <div className="flex flex-col items-start">
+                              <span className="font-semibold text-blue-600">
+                                {project.na853 || 'Χωρίς κωδικό'}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                {project.event_description?.slice(0, 80) || project.project_title?.slice(0, 80) || 'Χωρίς περιγραφή'}...
+                              </span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
