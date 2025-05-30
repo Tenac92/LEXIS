@@ -1,6 +1,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -85,6 +86,9 @@ export function BeneficiaryDetailsModal({
               <X className="w-4 h-4" />
             </Button>
           </div>
+          <DialogDescription className="text-gray-600">
+            Πλήρη στοιχεία και πληροφορίες για τον επιλεγμένο δικαιούχο
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
