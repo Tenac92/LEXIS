@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, MapPin, Building2, FileText, BriefcaseBusiness, Target, Clock } from "lucide-react";
+import { Calendar, MapPin, Building2, FileText, BriefcaseBusiness, Target, Clock, Euro, Hash } from "lucide-react";
 import { type Project } from "@shared/schema";
 
 interface ProjectDetailsDialogProps {
@@ -71,187 +71,115 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
             Πλήρη στοιχεία και πληροφορίες για το επιλεγμένο έργο
           </DialogDescription>
         </DialogHeader>
-        <div className="py-6">
-          <div className="flex items-center justify-between mb-6">
-            <Badge variant="secondary" className={getStatusColor(project.status || '')}>
-              {getStatusText(project.status || '')}
-            </Badge>
-          </div>
-
-          <h1 className="text-2xl font-bold mb-4">
-            {project.event_description || project.project_title || "Έργο Χωρίς Τίτλο"}
-          </h1>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            {/* Project Metadata */}
-            <div className="space-y-4">
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Calendar className="mr-2 h-4 w-4" />
-                Δημιουργήθηκε: {new Date(project.created_at || '').toLocaleDateString('el-GR')}
+        <div className="space-y-6">
+          {/* Project Information */}
+          <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-green-900 flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                Στοιχεία Έργου
+              </h3>
+              <Badge variant="secondary" className={getStatusColor(project.status || '')}>
+                {getStatusText(project.status || '')}
+              </Badge>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                <label className="text-sm font-medium text-green-700">Τίτλος Έργου</label>
+                <p className="text-green-900 font-semibold bg-white px-3 py-2 rounded border">
+                  {project.title || "Έργο Χωρίς Τίτλο"}
+                </p>
               </div>
-
-              {project.region && (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  {getRegionText(project)}
-                </div>
-              )}
-
+              
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-green-700">Κωδικός MIS</label>
+                <p className="text-green-900 bg-white px-3 py-2 rounded border font-mono flex items-center gap-2">
+                  <Hash className="w-4 h-4 text-green-600" />
+                  {project.mis}
+                </p>
+              </div>
+              
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-green-700">Περιφέρεια</label>
+                <p className="text-green-900 bg-white px-3 py-2 rounded border flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-green-600" />
+                  {project.region || "Δ/Υ"}
+                </p>
+              </div>
+              
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-green-700">Ημερομηνία Δημιουργίας</label>
+                <p className="text-green-900 bg-white px-3 py-2 rounded border flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-green-600" />
+                  {project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : 'Δ/Υ'}
+                </p>
+              </div>
+              
               {project.implementing_agency && (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Building2 className="mr-2 h-4 w-4" />
-                  Φορέας Υλοποίησης: {Array.isArray(project.implementing_agency) 
-                    ? project.implementing_agency.join(', ')
-                    : project.implementing_agency}
-                </div>
-              )}
-
-              {project.event_type && (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Target className="mr-2 h-4 w-4" />
-                  Τύπος Συμβάντος: {Array.isArray(project.event_type) 
-                    ? project.event_type.join(', ')
-                    : project.event_type}
-                </div>
-              )}
-
-              {project.event_year && (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Clock className="mr-2 h-4 w-4" />
-                  Έτος Συμβάντος: {Array.isArray(project.event_year) 
-                    ? project.event_year.join(', ')
-                    : project.event_year}
-                </div>
-              )}
-            </div>
-
-            {/* Budget Information */}
-            <div className="space-y-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <h3 className="font-semibold mb-4">Οικονομικά Στοιχεία</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-muted-foreground">Προϋπολογισμός ΣΑ853:</span>
-                      <span className="font-medium">{formatCurrency(Number(project.budget_na853))}</span>
-                    </div>
-                    {project.budget_na271 && (
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <span className="text-muted-foreground">Προϋπολογισμός ΣΑ271:</span>
-                        <span className="font-medium">{formatCurrency(Number(project.budget_na271))}</span>
-                      </div>
-                    )}
-                    {project.budget_e069 && (
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <span className="text-muted-foreground">Προϋπολογισμός Ε069:</span>
-                        <span className="font-medium">{formatCurrency(Number(project.budget_e069))}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Project Identifiers */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm text-gray-500 mb-1">Κωδικός MIS</h3>
-              <p className="font-medium">{project.mis || "Δ/Υ"}</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm text-gray-500 mb-1">Κωδικός ΣΑ853</h3>
-              <p className="font-medium">{project.na853 || "Δ/Υ"}</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-sm text-gray-500 mb-1">Κωδικός Ε069</h3>
-              <p className="font-medium">{project.e069 || "Δ/Υ"}</p>
-            </div>
-          </div>
-
-          {/* Related Documents Section */}
-          <div className="mt-6 space-y-4">
-            <h3 className="font-semibold text-lg">Σχετικά Έγγραφα</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {project.kya && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium">ΚΥΑ</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {Array.isArray(project.kya) ? project.kya.join(', ') : project.kya}
-                  </p>
-                </div>
-              )}
-
-              {project.fek && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium">ΦΕΚ</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {Array.isArray(project.fek) ? project.fek.join(', ') : project.fek}
-                  </p>
-                </div>
-              )}
-
-              {project.ada && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="h-4 w-4" />
-                    <span className="font-medium">ΑΔΑ</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {Array.isArray(project.ada) ? project.ada.join(', ') : project.ada}
+                <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                  <label className="text-sm font-medium text-green-700">Φορέας Υλοποίησης</label>
+                  <p className="text-green-900 bg-white px-3 py-2 rounded border flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-green-600" />
+                    {Array.isArray(project.implementing_agency) ? project.implementing_agency.join(', ') : project.implementing_agency}
                   </p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Additional Documents */}
-          <div className="mt-6 space-y-4">
-            <h3 className="font-semibold text-lg">Πρόσθετα Έγγραφα</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {project.budget_decision && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <BriefcaseBusiness className="h-4 w-4" />
-                    <span className="font-medium">Αποφάσεις Προϋπολογισμού</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {Array.isArray(project.budget_decision) ? project.budget_decision.join(', ') : project.budget_decision}
+          {/* Budget Information */}
+          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
+              <Euro className="w-5 h-5" />
+              Προϋπολογισμός
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {project.budget_na853 && (
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-blue-700">ΝΑ853</label>
+                  <p className="text-blue-900 bg-white px-3 py-2 rounded border font-semibold">
+                    {formatCurrency(parseFloat(project.budget_na853))}
                   </p>
                 </div>
               )}
-
-              {project.funding_decision && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <BriefcaseBusiness className="h-4 w-4" />
-                    <span className="font-medium">Αποφάσεις Χρηματοδότησης</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {Array.isArray(project.funding_decision) ? project.funding_decision.join(', ') : project.funding_decision}
+              
+              {project.budget_na271 && (
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-blue-700">ΝΑ271</label>
+                  <p className="text-blue-900 bg-white px-3 py-2 rounded border font-semibold">
+                    {formatCurrency(parseFloat(project.budget_na271))}
                   </p>
                 </div>
               )}
-
-              {project.allocation_decision && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <BriefcaseBusiness className="h-4 w-4" />
-                    <span className="font-medium">Αποφάσεις Κατανομής</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {Array.isArray(project.allocation_decision) ? project.allocation_decision.join(', ') : project.allocation_decision}
+              
+              {project.budget_e069 && (
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-blue-700">Ε069</label>
+                  <p className="text-blue-900 bg-white px-3 py-2 rounded border font-semibold">
+                    {formatCurrency(parseFloat(project.budget_e069))}
                   </p>
                 </div>
               )}
             </div>
           </div>
+
+          {/* Expenditure Types */}
+          {project.expenditure_type && project.expenditure_type.length > 0 && (
+            <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
+              <h3 className="text-lg font-semibold text-purple-900 mb-4 flex items-center gap-2">
+                <BriefcaseBusiness className="w-5 h-5" />
+                Τύποι Δαπανών ({project.expenditure_type.length})
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {project.expenditure_type.map((type, index) => (
+                  <span key={index} className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm border border-purple-300">
+                    {type}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -73,19 +73,9 @@ export function BeneficiaryDetailsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              Λεπτομέρειες Δικαιούχου
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="h-8 w-8 p-0"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-2xl font-bold text-gray-900">
+            Λεπτομέρειες Δικαιούχου
+          </DialogTitle>
           <DialogDescription className="text-gray-600">
             Πλήρη στοιχεία και πληροφορίες για τον επιλεγμένο δικαιούχο
           </DialogDescription>
