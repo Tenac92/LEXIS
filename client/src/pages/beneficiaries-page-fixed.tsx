@@ -21,7 +21,10 @@ const beneficiarySchema = z.object({
   name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
   surname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
   fathername: z.string().min(1, "Το πατρώνυμο είναι υποχρεωτικό"),
-  afm: z.string().min(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία").max(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
+  afm: z.string()
+    .min(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία")
+    .max(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία")
+    .regex(/^\d{9}$/, "Το ΑΦΜ πρέπει να περιέχει μόνο ψηφία"),
   
   // Administrative Information (optional)
   aa: z.number().optional(),
@@ -557,7 +560,18 @@ function BeneficiaryDialog({ beneficiary, open, onOpenChange }: {
                     <FormItem>
                       <FormLabel>Ποσό (€)</FormLabel>
                       <FormControl>
-                        <Input {...field} type="number" step="0.01" placeholder="π.χ. 10286.06" />
+                        <Input 
+                          {...field} 
+                          type="text" 
+                          placeholder="π.χ. 10.286,06"
+                          onChange={(e) => {
+                            // Allow European decimal formatting (commas and periods)
+                            const value = e.target.value;
+                            if (value === '' || /^[\d\.,]+$/.test(value)) {
+                              field.onChange(value);
+                            }
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

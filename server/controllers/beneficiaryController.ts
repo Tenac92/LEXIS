@@ -245,9 +245,52 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
   try {
     console.log('[Beneficiaries] Creating new beneficiary:', req.body);
     
+    // Transform data for proper validation
+    const transformedData = {
+      ...req.body,
+      // Convert AFM from string to integer for database storage
+      afm: req.body.afm ? parseInt(req.body.afm) : undefined,
+      // Handle adeia field - convert to integer if provided
+      adeia: req.body.adeia && req.body.adeia !== '' ? parseInt(req.body.adeia) : undefined,
+      // Set unit from user's authenticated units
+      monada: req.user?.units?.[0] || req.body.monada
+    };
+
+    // If we have financial data, structure it properly for the oikonomika field
+    if (req.body.paymentType && req.body.amount && req.body.installment) {
+      // Parse European decimal format (e.g., "10.286,06" -> 10286.06)
+      let parsedAmount = req.body.amount;
+      if (typeof parsedAmount === 'string') {
+        // Handle European format: remove dots (thousands separators) and replace comma with decimal point
+        if (parsedAmount.includes('.') && parsedAmount.includes(',')) {
+          parsedAmount = parsedAmount.replace(/\./g, '').replace(',', '.');
+        } else if (parsedAmount.includes(',') && !parsedAmount.includes('.')) {
+          parsedAmount = parsedAmount.replace(',', '.');
+        }
+        parsedAmount = parseFloat(parsedAmount).toString();
+      }
+
+      transformedData.oikonomika = {
+        [req.body.paymentType]: {
+          [req.body.installment]: {
+            amount: parsedAmount,
+            status: null,
+            installment: [req.body.installment],
+            protocol_number: null
+          }
+        }
+      };
+    }
+
+    // Remove the temporary fields that are not part of the schema
+    delete transformedData.paymentType;
+    delete transformedData.amount;
+    delete transformedData.installment;
+    
     // Validate request body
-    const validationResult = insertBeneficiarySchema.safeParse(req.body);
+    const validationResult = insertBeneficiarySchema.safeParse(transformedData);
     if (!validationResult.success) {
+      console.log('[Beneficiaries] Validation errors:', validationResult.error.issues);
       return res.status(400).json({ 
         message: 'Invalid beneficiary data',
         errors: validationResult.error.issues
