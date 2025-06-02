@@ -60,14 +60,8 @@ export class DocumentGenerator {
       
       // Create document sections
       const children: any[] = [
-        // Header
-        ...this.createHeader(unitDetails),
-        
-        // Contact information
-        ...this.createContactInfo(documentData),
-        
-        // Recipient section
-        ...this.createRecipientSection(),
+        // Header with two-column layout (includes contact info and recipient section)
+        await this.createDocumentHeader(documentData, unitDetails),
         
         // Subject
         this.createSubject(documentData),
@@ -888,5 +882,278 @@ export class DocumentGenerator {
     );
     
     return distributionParagraphs;
+  }
+
+  /**
+   * Create document header with two-column layout (matches template exactly)
+   */
+  private static async createDocumentHeader(
+    documentData: DocumentData,
+    unitDetails: UnitDetails | null | undefined,
+  ): Promise<Table> {
+    if (!documentData) {
+      throw new Error("Document data is required");
+    }
+
+    // Extract user information with fallbacks
+    const userInfo = {
+      name: documentData.generated_by?.name || documentData.user_name || "",
+      department: documentData.generated_by?.department || documentData.department || "",
+      contact_number: documentData.generated_by?.telephone?.toString() || documentData.contact_number?.toString() || "",
+    };
+
+    // Use unitDetails.address if available
+    const address = unitDetails?.address || {
+      address: "Δημοκρίτου 2",
+      tk: "11523",
+      region: "Μαρούσι",
+    };
+
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [60, 40],
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 60, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ",
+                      bold: true,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ",
+                      bold: true,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
+                      bold: true,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ.",
+                      bold: true,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
+                      bold: true,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΤΜΗΜΑ ΕΠΟΠΤΕΙΑΣ ΚΑΙ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ",
+                      bold: true,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 240 },
+                }),
+                // Contact information
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Ταχ. Δ/νση: ${address.address}`,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Ταχ. Κώδικας: ${address.tk}, ${address.region}`,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Πληροφορίες: ${userInfo.name}`,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Τηλέφωνο: ${userInfo.contact_number}`,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Email: daefkke@civilprotection.gr",
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 360 },
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 40, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΠΡΟΣ:",
+                      bold: true,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { before: 2000, after: 120 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 60 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 60 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 60 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 60 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Δημοκρίτου 2",
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 60 },
+                }),
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "151 23 Μαρούσι",
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 240 },
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
   }
 }
