@@ -23,12 +23,31 @@ import { createLogger } from "./logger";
 
 const logger = createLogger("DocumentUtilities");
 
-// Expenditure type configurations - centralized constant for document generation
+// =============================================================================
+// TYPES AND INTERFACES
+// =============================================================================
+
 export interface ExpenditureConfig {
   documentTitle: string;
   columns: string[];
   mainText: string;
 }
+
+export interface UnitDetails {
+  unit: string;
+  name: string;
+  unit_name?: { prop: string };
+  manager?: {
+    name: string;
+    order: string;
+    title: string;
+    degree: string;
+  };
+}
+
+// =============================================================================
+// EXPENDITURE CONFIGURATIONS
+// =============================================================================
 
 export const EXPENDITURE_CONFIGS: Record<string, ExpenditureConfig> = {
   "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ": {
@@ -58,7 +77,12 @@ export const EXPENDITURE_CONFIGS: Record<string, ExpenditureConfig> = {
   }
 };
 
+// =============================================================================
+// DOCUMENT UTILITIES CLASS
+// =============================================================================
+
 export class DocumentUtilities {
+  // Document constants
   public static readonly DEFAULT_FONT_SIZE = 22;
   public static readonly DEFAULT_FONT = "Calibri";
   public static readonly DEFAULT_MARGINS = {
@@ -68,6 +92,10 @@ export class DocumentUtilities {
     left: 720,   // 0.5 inch left margin
   };
   public static readonly DOCUMENT_MARGINS = this.DEFAULT_MARGINS;
+
+  // =============================================================================
+  // ASSET MANAGEMENT
+  // =============================================================================
 
   /**
    * Get the logo image data for documents
@@ -81,6 +109,10 @@ export class DocumentUtilities {
     );
     return fs.promises.readFile(logoPath);
   }
+
+  // =============================================================================
+  // PARAGRAPH CREATION UTILITIES
+  // =============================================================================
 
   /**
    * Create a bold paragraph with specified text
@@ -109,6 +141,91 @@ export class DocumentUtilities {
       spacing: { after: spacing },
     });
   }
+
+  /**
+   * Create a centered paragraph with specified text and styling
+   */
+  public static createCenteredParagraph(
+    text: string,
+    options: {
+      bold?: boolean;
+      underline?: boolean;
+      size?: number;
+      spacing?: number;
+    } = {}
+  ): Paragraph {
+    const {
+      bold = false,
+      underline = false,
+      size = this.DEFAULT_FONT_SIZE,
+      spacing = 120
+    } = options;
+
+    return new Paragraph({
+      children: [
+        new TextRun({
+          text,
+          bold,
+          underline: underline ? {} : undefined,
+          size,
+          font: this.DEFAULT_FONT,
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: spacing },
+    });
+  }
+
+  /**
+   * Create a contact detail paragraph
+   */
+  public static createContactDetail(label: string, value: string): Paragraph {
+    return new Paragraph({
+      children: [
+        new TextRun({
+          text: `${label}: `,
+          bold: true,
+          size: this.DEFAULT_FONT_SIZE,
+          font: this.DEFAULT_FONT,
+        }),
+        new TextRun({
+          text: value,
+          size: this.DEFAULT_FONT_SIZE,
+          font: this.DEFAULT_FONT,
+        }),
+      ],
+      spacing: { after: 120 },
+    });
+  }
+
+  /**
+   * Create notification list paragraphs
+   */
+  public static createNotificationList(notifications: string[]): Paragraph[] {
+    const paragraphs: Paragraph[] = [];
+
+    for (let i = 0; i < notifications.length; i++) {
+      paragraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${i + 1}. ${notifications[i]}`,
+              size: this.DEFAULT_FONT_SIZE - 4,
+              font: this.DEFAULT_FONT,
+            }),
+          ],
+          indent: { left: 426 },
+          spacing: { after: 120 },
+        }),
+      );
+    }
+
+    return paragraphs;
+  }
+
+  // =============================================================================
+  // SIGNATURE AND AUTHORIZATION
+  // =============================================================================
 
   /**
    * Create manager signature paragraphs for document signatures
@@ -180,61 +297,11 @@ export class DocumentUtilities {
     return rightColumnParagraphs;
   }
 
-  /**
-   * Create a contact detail paragraph
-   */
-  public static createContactDetail(label: string, value: string): Paragraph {
-    return new Paragraph({
-      children: [
-        new TextRun({
-          text: `${label}: `,
-          bold: true,
-          size: this.DEFAULT_FONT_SIZE,
-          font: this.DEFAULT_FONT,
-        }),
-        new TextRun({
-          text: value,
-          size: this.DEFAULT_FONT_SIZE,
-          font: this.DEFAULT_FONT,
-        }),
-      ],
-      spacing: { after: 120 },
-    });
-  }
 
-  /**
-   * Create a centered paragraph with specified text and styling
-   */
-  public static createCenteredParagraph(
-    text: string,
-    options: {
-      bold?: boolean;
-      underline?: boolean;
-      size?: number;
-      spacing?: number;
-    } = {}
-  ): Paragraph {
-    const {
-      bold = false,
-      underline = false,
-      size = this.DEFAULT_FONT_SIZE,
-      spacing = 120
-    } = options;
 
-    return new Paragraph({
-      children: [
-        new TextRun({
-          text,
-          bold,
-          underline: underline ? {} : undefined,
-          size,
-          font: this.DEFAULT_FONT,
-        }),
-      ],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: spacing },
-    });
-  }
+  // =============================================================================
+  // TABLE CREATION UTILITIES
+  // =============================================================================
 
   /**
    * Create a table with no borders
@@ -282,35 +349,14 @@ export class DocumentUtilities {
     });
   }
 
-  /**
-   * Create notification list paragraphs
-   */
-  public static createNotificationList(notifications: string[]): Paragraph[] {
-    const paragraphs: Paragraph[] = [];
-
-    for (let i = 0; i < notifications.length; i++) {
-      paragraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: `${i + 1}. ${notifications[i]}`,
-              size: this.DEFAULT_FONT_SIZE - 4,
-              font: this.DEFAULT_FONT,
-            }),
-          ],
-          indent: { left: 426 },
-          spacing: { after: 120 },
-        }),
-      );
-    }
-
-    return paragraphs;
-  }
+  // =============================================================================
+  // DATA FETCHING UTILITIES
+  // =============================================================================
 
   /**
    * Get unit details from the database or API
    */
-  public static async getUnitDetails(unit: string): Promise<any> {
+  public static async getUnitDetails(unit: string): Promise<UnitDetails> {
     try {
       logger.debug(`Fetching unit details for: ${unit}`);
       
@@ -383,6 +429,10 @@ export class DocumentUtilities {
       return `2024ΝΑ85300000`;
     }
   }
+
+  // =============================================================================
+  // FORMATTING AND CONFIGURATION UTILITIES
+  // =============================================================================
 
   /**
    * Format currency amount for Greek documents
