@@ -629,12 +629,110 @@ export class DocumentGenerator {
    * Create footer with signature
    */
   private static createFooter(documentData: DocumentData, unitDetails: UnitDetails | null): Table {
-    // Left column - empty for clean layout
-    const leftColumnParagraphs: Paragraph[] = [
+    // Left column - attachments, notifications, and internal distribution
+    const leftColumnParagraphs: Paragraph[] = [];
+
+    // Add ΣΥΝΗΜΜΕΝΑ section
+    leftColumnParagraphs.push(
       new Paragraph({
-        children: [new TextRun({ text: "" })],
+        children: [
+          new TextRun({
+            text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
+            bold: true,
+            underline: {},
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
       })
+    );
+
+    const attachments = (documentData.attachments || [])
+      .map((item) => item.replace(/^\d+\-/, ""))
+      .filter(Boolean);
+
+    for (let i = 0; i < attachments.length; i++) {
+      leftColumnParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${i + 1}. ${attachments[i]}`,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              font: DocumentUtilities.DEFAULT_FONT,
+            }),
+          ],
+          indent: { left: 426 },
+        })
+      );
+    }
+
+    leftColumnParagraphs.push(new Paragraph({ children: [new TextRun({ text: "" })] }));
+
+    // Add ΚΟΙΝΟΠΟΙΗΣΗ section
+    leftColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΚΟΙΝΟΠΟΙΗΣΗ",
+            bold: true,
+            underline: {},
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+      })
+    );
+
+    const notifications = [
+      "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+      "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+      "Γ.Δ.Α.Ε.Φ.Κ.",
     ];
+
+    for (let i = 0; i < notifications.length; i++) {
+      leftColumnParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${i + 1}. ${notifications[i]}`,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              font: DocumentUtilities.DEFAULT_FONT,
+            }),
+          ],
+          indent: { left: 426 },
+        })
+      );
+    }
+
+    leftColumnParagraphs.push(new Paragraph({ children: [new TextRun({ text: "" })] }));
+
+    // Add ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ section
+    leftColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
+            bold: true,
+            underline: {},
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+      })
+    );
+
+    leftColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "1. Χρονολογικό Αρχείο",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        indent: { left: 426 },
+      })
+    );
 
     // Right column - only signature
     const rightColumnParagraphs: Paragraph[] = [];
