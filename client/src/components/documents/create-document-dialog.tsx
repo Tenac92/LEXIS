@@ -30,6 +30,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1432,19 +1433,17 @@ export function CreateDocumentDialog({
                     {installment}
                   </div>
                   <div className="relative flex-1">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={installmentAmounts[installment] || 0}
-                      onChange={(e) =>
+                    <NumberInput
+                      value={installmentAmounts[installment] || ''}
+                      onChange={(formatted, numeric) =>
                         handleInstallmentAmountChange(
                           installment,
-                          parseFloat(e.target.value) || 0,
+                          numeric || 0,
                         )
                       }
                       className="pr-5 h-8 text-sm"
                       placeholder="Ποσό"
+                      decimals={2}
                     />
                     <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
                       €

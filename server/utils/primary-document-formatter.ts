@@ -313,7 +313,7 @@ export class PrimaryDocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
+            text: managerInfo?.order || "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
             bold: true,
             size: DocumentShared.DEFAULT_FONT_SIZE,
             font: DocumentShared.DEFAULT_FONT,
