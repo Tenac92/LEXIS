@@ -17,42 +17,11 @@ import {
   HeightRule,
   VerticalAlign
 } from "docx";
-import { DocumentUtilities } from "./document-utilities";
+import { DocumentUtilities, EXPENDITURE_CONFIGS, ExpenditureConfig } from "./document-utilities";
 import { DocumentData, UnitDetails } from "./document-types";
 import { createLogger } from "./logger";
 
 const logger = createLogger("DocumentGenerator");
-
-// Expenditure type configurations
-const EXPENDITURE_CONFIGS = {
-  "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ": {
-    documentTitle: ": Διαβιβαστικό Απόφασης για την πληρωμή επιδοτήσεων ενοικίου/συγκατοίκησης που έχουν εγκριθεί από ",
-    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΜΗΝΕΣ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε για την πληρωμή των αναγνωρισμένων δικαιούχων επιδότησης ενοικίου/συγκατοίκησης στην"
-  },
-  "ΕΚΤΟΣ ΕΔΡΑΣ": {
-    documentTitle: "ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ ΑΠΟΖΗΜΙΩΣΗΣ ΕΚΤΟΣ ΕΔΡΑΣ",
-    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΗΜΕΡΕΣ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την αποζημίωση εκτός έδρας για τους κατωτέρω υπαλλήλους:"
-  },
-  "ΔΚΑ ΕΠΙΣΚΕΥΗ": {
-    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Επισκευής που έχουν εγκριθεί από ",
-    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
-  },
-  "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ": {
-    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Ανακατασκευής που έχουν εγκριθεί από",
-    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
-  },
-  "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ": {
-    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Αυτοστέγασης που έχουν εγκριθεί από",
-    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
-  }
-};
-
-const config = EXPENDITURE_CONFIGS[expenditureType] || {};
 
 export class DocumentGenerator {
   
@@ -271,8 +240,8 @@ export class DocumentGenerator {
     unitDetails: UnitDetails | null | undefined,
   ): Table {
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const config = EXPENDITURE_CONFIGS[expenditureType] || {};
-    const documentTitle = config.documentTitle || "";
+    const config = EXPENDITURE_CONFIGS[expenditureType] || { documentTitle: "", columns: [], mainText: "" };
+    const documentTitle = config.documentTitle;
     const subjectText = [
       {
         text: "ΘΕΜΑ:",
@@ -372,8 +341,8 @@ export class DocumentGenerator {
     
     // Main request text based on expenditure type
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const config = EXPENDITURE_CONFIGS[expenditureType] || {};
-    const mainText = config.mainText || "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την παρακάτω δαπάνη για τους κατωτέρω δικαιούχους:";
+    const config = EXPENDITURE_CONFIGS[expenditureType] || { documentTitle: "", columns: [], mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την παρακάτω δαπάνη για τους κατωτέρω δικαιούχους:" };
+    const mainText = config.mainText;
     
     contentParagraphs.push(
       new Paragraph({

@@ -23,6 +23,41 @@ import { createLogger } from "./logger";
 
 const logger = createLogger("DocumentUtilities");
 
+// Expenditure type configurations - centralized constant for document generation
+export interface ExpenditureConfig {
+  documentTitle: string;
+  columns: string[];
+  mainText: string;
+}
+
+export const EXPENDITURE_CONFIGS: Record<string, ExpenditureConfig> = {
+  "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ": {
+    documentTitle: ": Διαβιβαστικό Απόφασης για την πληρωμή επιδοτήσεων ενοικίου/συγκατοίκησης που έχουν εγκριθεί από ",
+    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΜΗΝΕΣ", "ΠΟΣΟ (€)"],
+    mainText: "Παρακαλούμε για την πληρωμή των αναγνωρισμένων δικαιούχων επιδότησης ενοικίου/συγκατοίκησης στην"
+  },
+  "ΕΚΤΟΣ ΕΔΡΑΣ": {
+    documentTitle: "ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ ΑΠΟΖΗΜΙΩΣΗΣ ΕΚΤΟΣ ΕΔΡΑΣ",
+    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΗΜΕΡΕΣ", "ΠΟΣΟ (€)"],
+    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την αποζημίωση εκτός έδρας για τους κατωτέρω υπαλλήλους:"
+  },
+  "ΔΚΑ ΕΠΙΣΚΕΥΗ": {
+    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Επισκευής που έχουν εγκριθεί από ",
+    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
+    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
+  },
+  "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ": {
+    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Ανακατασκευής που έχουν εγκριθεί από",
+    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
+    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
+  },
+  "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ": {
+    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Αυτοστέγασης που έχουν εγκριθεί από",
+    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
+    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
+  }
+};
+
 export class DocumentUtilities {
   public static readonly DEFAULT_FONT_SIZE = 22;
   public static readonly DEFAULT_FONT = "Calibri";
