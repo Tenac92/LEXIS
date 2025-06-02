@@ -83,7 +83,7 @@ export class PrimaryDocumentFormatter {
     });
   }
 
-  private static createPaymentTable(recipients: any[]): Table {
+  private static createPaymentTable(recipients: any[], expenditureType: string): Table {
     const tableBorders: ITableBordersOptions = {
       top: { style: BorderStyle.SINGLE, size: 1 },
       bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -93,16 +93,13 @@ export class PrimaryDocumentFormatter {
       insideVertical: { style: BorderStyle.SINGLE, size: 1 },
     };
 
+    // Get column headers based on expenditure type
+    const columns = ExpenditureTypeHandler.getPaymentTableColumns(expenditureType);
+    
     const rows = [
       new TableRow({
         height: { value: 360, rule: HeightRule.EXACT },
-        children: [
-          this.createHeaderCell("Α.Α.", "auto"),
-          this.createHeaderCell("ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "auto"),
-          this.createHeaderCell("ΑΦΜ", "auto"),
-          this.createHeaderCell("ΔΟΣΗ", "auto"),
-          this.createHeaderCell("ΠΟΣΟ (€)", "auto"),
-        ],
+        children: columns.map(column => this.createHeaderCell(column, "auto")),
       }),
     ];
 
@@ -142,7 +139,6 @@ export class PrimaryDocumentFormatter {
               this.createTableCell(fullName, "center"),
               this.createTableCell(afm, "center"),
               this.createTableCell(installment, "center"),
-
               this.createTableCell(
                 amount.toLocaleString("el-GR", {
                   minimumFractionDigits: 2,
@@ -187,17 +183,8 @@ export class PrimaryDocumentFormatter {
     });
   }
 
-  private static createNote(): Paragraph {
-    return new Paragraph({
-      children: [
-        new TextRun({
-          text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
-          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-          font: DocumentUtilities.DEFAULT_FONT,
-        }),
-      ],
-      spacing: { before: 120, after: 0 },
-    });
+  private static createNote(expenditureType: string): Paragraph {
+    return ExpenditureTypeHandler.createNoteForExpenditureType(expenditureType);
   }
 
   private static createFooter(
@@ -218,8 +205,8 @@ export class PrimaryDocumentFormatter {
             text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
             bold: true,
             underline: {},
-            size: DocumentShared.DEFAULT_FONT_SIZE - 4,
-            font: DocumentShared.DEFAULT_FONT,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
+            font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
         spacing: { after: 120 },
@@ -232,8 +219,8 @@ export class PrimaryDocumentFormatter {
           children: [
             new TextRun({
               text: `${i + 1}. ${attachments[i]}`,
-              size: DocumentShared.DEFAULT_FONT_SIZE - 4,
-              font: DocumentShared.DEFAULT_FONT,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
+              font: DocumentUtilities.DEFAULT_FONT,
             }),
           ],
           indent: { left: 426 },
@@ -249,8 +236,8 @@ export class PrimaryDocumentFormatter {
             text: "ΚΟΙΝΟΠΟΙΗΣΗ",
             bold: true,
             underline: {},
-            size: DocumentShared.DEFAULT_FONT_SIZE - 4,
-            font: DocumentShared.DEFAULT_FONT,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
+            font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
         spacing: { after: 120 },
@@ -269,8 +256,8 @@ export class PrimaryDocumentFormatter {
           children: [
             new TextRun({
               text: `${i + 1}. ${notifications[i]}`,
-              size: DocumentShared.DEFAULT_FONT_SIZE - 4,
-              font: DocumentShared.DEFAULT_FONT,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
+              font: DocumentUtilities.DEFAULT_FONT,
             }),
           ],
           indent: { left: 426 },
@@ -286,8 +273,8 @@ export class PrimaryDocumentFormatter {
             text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
             bold: true,
             underline: {},
-            size: DocumentShared.DEFAULT_FONT_SIZE - 4,
-            font: DocumentShared.DEFAULT_FONT,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
+            font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
         spacing: { after: 120 },
@@ -299,8 +286,8 @@ export class PrimaryDocumentFormatter {
         children: [
           new TextRun({
             text: "1. Χρονολογικό Αρχείο",
-            size: DocumentShared.DEFAULT_FONT_SIZE - 4,
-            font: DocumentShared.DEFAULT_FONT,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
+            font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
         indent: { left: 426 },
@@ -358,7 +345,7 @@ export class PrimaryDocumentFormatter {
     try {
       logger.debug("Generating primary document for:", documentData);
 
-      const unitDetails = await DocumentShared.getUnitDetails(
+      const unitDetails = await DocumentUtilities.getUnitDetails(
         documentData.unit,
       );
       logger.debug("Unit details:", unitDetails);
@@ -368,8 +355,8 @@ export class PrimaryDocumentFormatter {
         documentData.project_na853 ||
         (documentData as any).mis?.toString() ||
         "";
-      const projectTitle = await DocumentShared.getProjectTitle(projectMis);
-      const projectNA853 = await DocumentShared.getProjectNA853(projectMis);
+      const projectTitle = await DocumentUtilities.getProjectTitle(projectMis);
+      const projectNA853 = await DocumentUtilities.getProjectNA853(projectMis);
       logger.debug(`Project title for MIS ${projectMis}:`, projectTitle);
       logger.debug(`Project NA853 for MIS ${projectMis}:`, projectNA853);
 
@@ -384,25 +371,25 @@ export class PrimaryDocumentFormatter {
           properties: {
             page: {
               size: { width: 11906, height: 16838 },
-              margins: DocumentShared.DOCUMENT_MARGINS,
+              margins: DocumentUtilities.DOCUMENT_MARGINS,
               orientation: PageOrientation.PORTRAIT,
             },
           },
           children: [
-            await DocumentShared.createDocumentHeader(
+            await DocumentUtilities.createDocumentHeader(
               enrichedDocumentData,
               unitDetails,
             ),
-            ...DocumentShared.createDateAndProtocol(enrichedDocumentData),
-            ...DocumentShared.createDocumentSubject(
+            ...DocumentUtilities.createDateAndProtocol(enrichedDocumentData),
+            ...DocumentUtilities.createDocumentSubject(
               enrichedDocumentData,
               unitDetails,
             ),
-            ...DocumentShared.createMainContent(
+            ...DocumentUtilities.createMainContent(
               enrichedDocumentData,
               unitDetails,
             ),
-            this.createPaymentTable(documentData.recipients || []),
+            this.createPaymentTable(documentData.recipients || [], documentData.expenditure_type),
             this.createNote(),
             this.createFooter(enrichedDocumentData, unitDetails),
           ],
@@ -415,8 +402,8 @@ export class PrimaryDocumentFormatter {
           default: {
             document: {
               run: {
-                font: DocumentShared.DEFAULT_FONT,
-                size: DocumentShared.DEFAULT_FONT_SIZE,
+                font: DocumentUtilities.DEFAULT_FONT,
+                size: DocumentUtilities.DEFAULT_FONT_SIZE,
               },
             },
           },
