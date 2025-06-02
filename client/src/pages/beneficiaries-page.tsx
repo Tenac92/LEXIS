@@ -1,25 +1,58 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit, Trash2, Info, Users, LayoutGrid, List, User, FileText, Building } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Info,
+  Users,
+  LayoutGrid,
+  List,
+  User,
+  FileText,
+  Building,
+} from "lucide-react";
 import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import type { Beneficiary } from "@/shared/schema";
 
 const beneficiaryFormSchema = z.object({
   surname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
   name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
   fathername: z.string().min(1, "Το πατρώνυμο είναι υποχρεωτικό"),
-  afm: z.string().min(9, "Το ΑΦΜ πρέπει να είναι 9 ψηφία").max(9, "Το ΑΦΜ πρέπει να είναι 9 ψηφία"),
+  afm: z
+    .string()
+    .min(9, "Το ΑΦΜ πρέπει να είναι 9 ψηφία")
+    .max(9, "Το ΑΦΜ πρέπει να είναι 9 ψηφία"),
   project: z.string().optional(),
   region: z.string().optional(),
   monada: z.string().optional(),
@@ -35,19 +68,26 @@ type BeneficiaryFormData = z.infer<typeof beneficiaryFormSchema>;
 
 export default function BeneficiariesPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | undefined>();
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState<
+    Beneficiary | undefined
+  >();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [detailsBeneficiary, setDetailsBeneficiary] = useState<Beneficiary | null>(null);
+  const [detailsBeneficiary, setDetailsBeneficiary] =
+    useState<Beneficiary | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
+  const [itemsPerPage] = useState(60);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch beneficiaries
-  const { data: beneficiaries = [], isLoading, error } = useQuery({
+  const {
+    data: beneficiaries = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["/api/beneficiaries"],
   });
 
@@ -132,7 +172,11 @@ export default function BeneficiariesPage() {
   };
 
   const handleDelete = (beneficiary: Beneficiary) => {
-    if (confirm(`Είστε σίγουροι ότι θέλετε να διαγράψετε τον δικαιούχο ${beneficiary.name} ${beneficiary.surname};`)) {
+    if (
+      confirm(
+        `Είστε σίγουροι ότι θέλετε να διαγράψετε τον δικαιούχο ${beneficiary.name} ${beneficiary.surname};`,
+      )
+    ) {
       deleteMutation.mutate(beneficiary.id);
     }
   };
@@ -148,7 +192,7 @@ export default function BeneficiariesPage() {
   };
 
   const toggleCardFlip = (beneficiaryId: number) => {
-    setFlippedCards(prev => {
+    setFlippedCards((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(beneficiaryId)) {
         newSet.delete(beneficiaryId);
@@ -161,15 +205,22 @@ export default function BeneficiariesPage() {
 
   // Compute values after all hooks
   const filteredBeneficiaries = beneficiaries.filter((beneficiary) =>
-    [beneficiary.name, beneficiary.surname, beneficiary.afm?.toString(), beneficiary.region]
-      .some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase()))
+    [
+      beneficiary.name,
+      beneficiary.surname,
+      beneficiary.afm?.toString(),
+      beneficiary.region,
+    ].some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   // Pagination logic
   const totalPages = Math.ceil(filteredBeneficiaries.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedBeneficiaries = filteredBeneficiaries.slice(startIndex, endIndex);
+  const paginatedBeneficiaries = filteredBeneficiaries.slice(
+    startIndex,
+    endIndex,
+  );
 
   // Handle loading and error states
   if (isLoading) {
@@ -194,7 +245,9 @@ export default function BeneficiariesPage() {
         <div className="container mx-auto px-4 pt-6 pb-8">
           <Card className="bg-card">
             <div className="p-4">
-              <div className="text-center text-red-500">Σφάλμα φόρτωσης δεδομένων</div>
+              <div className="text-center text-red-500">
+                Σφάλμα φόρτωσης δεδομένων
+              </div>
             </div>
           </Card>
         </div>
@@ -215,12 +268,18 @@ export default function BeneficiariesPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                  onClick={() =>
+                    setViewMode(viewMode === "grid" ? "list" : "grid")
+                  }
                 >
                   {viewMode === "grid" ? (
-                    <><List className="mr-2 h-4 w-4" /> Λίστα</>
+                    <>
+                      <List className="mr-2 h-4 w-4" /> Λίστα
+                    </>
                   ) : (
-                    <><LayoutGrid className="mr-2 h-4 w-4" /> Κάρτες</>
+                    <>
+                      <LayoutGrid className="mr-2 h-4 w-4" /> Κάρτες
+                    </>
                   )}
                 </Button>
                 <Button onClick={handleNew}>
@@ -233,7 +292,9 @@ export default function BeneficiariesPage() {
             {/* Search Filter */}
             <div className="grid grid-cols-1 gap-4 mb-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Αναζήτηση</label>
+                <label className="text-sm font-medium text-foreground">
+                  Αναζήτηση
+                </label>
                 <Input
                   placeholder="Αναζήτηση κατά όνομα, επώνυμο, ΑΦΜ, περιοχή..."
                   value={searchTerm}
@@ -244,18 +305,33 @@ export default function BeneficiariesPage() {
 
             {/* Results */}
             {isLoading ? (
-              <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+                    : "space-y-4"
+                }
+              >
                 {[...Array(6)].map((_, i) => (
-                  <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-muted animate-pulse" />
+                  <div
+                    key={`skeleton-${i}`}
+                    className="h-48 rounded-lg bg-muted animate-pulse"
+                  />
                 ))}
               </div>
             ) : filteredBeneficiaries.length > 0 ? (
               <>
-                <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+                <div
+                  className={
+                    viewMode === "grid"
+                      ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+                      : "space-y-4"
+                  }
+                >
                   {paginatedBeneficiaries.map((beneficiary) => {
                     if (viewMode === "list") {
                       return (
-                        <Card 
+                        <Card
                           key={beneficiary.id}
                           className="transition-shadow hover:shadow-lg flex cursor-pointer"
                           onClick={() => handleShowDetails(beneficiary)}
@@ -303,8 +379,8 @@ export default function BeneficiariesPage() {
                                 </div>
                               </div>
                               <div className="flex flex-col gap-2">
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   variant="outline"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -313,8 +389,8 @@ export default function BeneficiariesPage() {
                                 >
                                   <Info className="w-4 h-4" />
                                 </Button>
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   variant="outline"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -323,8 +399,8 @@ export default function BeneficiariesPage() {
                                 >
                                   <Edit className="w-4 h-4" />
                                 </Button>
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   variant="outline"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -342,17 +418,23 @@ export default function BeneficiariesPage() {
 
                     // Grid view (flip cards matching other pages)
                     const isFlipped = flippedCards.has(beneficiary.id);
-                    
+
                     const handleCardClick = (e: React.MouseEvent) => {
                       // Allow flipping anywhere on the card except buttons
-                      if (!(e.target as HTMLElement).closest('button')) {
+                      if (!(e.target as HTMLElement).closest("button")) {
                         toggleCardFlip(beneficiary.id);
                       }
                     };
 
                     return (
-                      <div key={beneficiary.id} className="flip-card" onClick={handleCardClick}>
-                        <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
+                      <div
+                        key={beneficiary.id}
+                        className="flip-card"
+                        onClick={handleCardClick}
+                      >
+                        <div
+                          className={`flip-card-inner ${isFlipped ? "rotate-y-180" : ""}`}
+                        >
                           {/* Front of card */}
                           <div className="flip-card-front">
                             <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
@@ -373,11 +455,16 @@ export default function BeneficiariesPage() {
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                <div
+                                  className="flex gap-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => handleShowDetails(beneficiary)}
+                                    onClick={() =>
+                                      handleShowDetails(beneficiary)
+                                    }
                                     className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                                     title="Λεπτομέρειες"
                                   >
@@ -403,56 +490,94 @@ export default function BeneficiariesPage() {
                                   </Button>
                                 </div>
                               </div>
-                              
+
                               <div className="grid grid-cols-2 gap-2 text-sm mb-6">
                                 {beneficiary.project && (
                                   <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                                    <span className="text-xs text-gray-600">Έργο (MIS)</span>
-                                    <span className="text-gray-900 font-mono">{beneficiary.project}</span>
+                                    <span className="text-xs text-gray-600">
+                                      Έργο (MIS)
+                                    </span>
+                                    <span className="text-gray-900 font-mono">
+                                      {beneficiary.project}
+                                    </span>
                                   </div>
                                 )}
                                 {beneficiary.region && (
                                   <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                                    <span className="text-xs text-gray-600">Περιοχή</span>
-                                    <span className="text-gray-900">{beneficiary.region}</span>
+                                    <span className="text-xs text-gray-600">
+                                      Περιοχή
+                                    </span>
+                                    <span className="text-gray-900">
+                                      {beneficiary.region}
+                                    </span>
                                   </div>
                                 )}
                               </div>
-                              
+
                               {/* Financial Status Summary */}
                               {(beneficiary as any).oikonomika && (
                                 <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                  <h4 className="text-sm font-medium text-blue-800 mb-2">Οικονομικά Στοιχεία</h4>
+                                  <h4 className="text-sm font-medium text-blue-800 mb-2">
+                                    Οικονομικά Στοιχεία
+                                  </h4>
                                   <div className="space-y-1">
-                                    {typeof (beneficiary as any).oikonomika === 'object' && 
-                                     Object.entries((beneficiary as any).oikonomika).map(([paymentType, data]: [string, any]) => (
-                                      <div key={paymentType} className="text-xs">
-                                        <span className="font-medium text-blue-800">{paymentType}:</span>
-                                        {typeof data === 'object' && data !== null && (
-                                          <div className="ml-2 space-y-0.5">
-                                            {Object.entries(data).map(([installment, info]: [string, any]) => (
-                                              <div key={installment} className="flex justify-between">
-                                                <span className="text-blue-700">{installment}:</span>
-                                                <span className="text-blue-900">
-                                                  {typeof info === 'object' && info !== null ? 
-                                                    `€${info.amount || 0} - ${info.status || 'Εκκρεμεί'}` :
-                                                    String(info)
-                                                  }
-                                                </span>
-                                              </div>
-                                            ))}
+                                    {typeof (beneficiary as any).oikonomika ===
+                                      "object" &&
+                                      Object.entries(
+                                        (beneficiary as any).oikonomika,
+                                      ).map(
+                                        ([paymentType, data]: [
+                                          string,
+                                          any,
+                                        ]) => (
+                                          <div
+                                            key={paymentType}
+                                            className="text-xs"
+                                          >
+                                            <span className="font-medium text-blue-800">
+                                              {paymentType}:
+                                            </span>
+                                            {typeof data === "object" &&
+                                              data !== null && (
+                                                <div className="ml-2 space-y-0.5">
+                                                  {Object.entries(data).map(
+                                                    ([installment, info]: [
+                                                      string,
+                                                      any,
+                                                    ]) => (
+                                                      <div
+                                                        key={installment}
+                                                        className="flex justify-between"
+                                                      >
+                                                        <span className="text-blue-700">
+                                                          {installment}:
+                                                        </span>
+                                                        <span className="text-blue-900">
+                                                          {typeof info ===
+                                                            "object" &&
+                                                          info !== null
+                                                            ? `€${info.amount || 0} - ${info.status || "Εκκρεμεί"}`
+                                                            : String(info)}
+                                                        </span>
+                                                      </div>
+                                                    ),
+                                                  )}
+                                                </div>
+                                              )}
                                           </div>
-                                        )}
-                                      </div>
-                                    ))}
+                                        ),
+                                      )}
                                   </div>
                                 </div>
                               )}
-                              
-                              <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
+
+                              <div
+                                className="flex items-center justify-center"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Button
+                                  variant="outline"
+                                  size="sm"
                                   onClick={() => toggleCardFlip(beneficiary.id)}
                                   className="text-blue-600 border-blue-200 hover:bg-blue-50"
                                 >
@@ -477,11 +602,13 @@ export default function BeneficiariesPage() {
                                   </div>
                                 </div>
                               </div>
-                              
+
                               <div className="space-y-3">
                                 {beneficiary.adeia && (
                                   <div className="space-y-1">
-                                    <span className="text-blue-700 font-medium text-sm">Άδεια:</span>
+                                    <span className="text-blue-700 font-medium text-sm">
+                                      Άδεια:
+                                    </span>
                                     <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
                                       {beneficiary.adeia}
                                     </p>
@@ -489,23 +616,31 @@ export default function BeneficiariesPage() {
                                 )}
                                 {beneficiary.cengsur1 && (
                                   <div className="space-y-1">
-                                    <span className="text-blue-700 font-medium text-sm">Μηχανικός 1:</span>
+                                    <span className="text-blue-700 font-medium text-sm">
+                                      Μηχανικός 1:
+                                    </span>
                                     <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
-                                      {beneficiary.cengsur1} {beneficiary.cengname1}
+                                      {beneficiary.cengsur1}{" "}
+                                      {beneficiary.cengname1}
                                     </p>
                                   </div>
                                 )}
                                 {beneficiary.cengsur2 && (
                                   <div className="space-y-1">
-                                    <span className="text-blue-700 font-medium text-sm">Μηχανικός 2:</span>
+                                    <span className="text-blue-700 font-medium text-sm">
+                                      Μηχανικός 2:
+                                    </span>
                                     <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
-                                      {beneficiary.cengsur2} {beneficiary.cengname2}
+                                      {beneficiary.cengsur2}{" "}
+                                      {beneficiary.cengname2}
                                     </p>
                                   </div>
                                 )}
                                 {beneficiary.freetext && (
                                   <div className="space-y-1">
-                                    <span className="text-blue-700 font-medium text-sm">Ελεύθερο Κείμενο:</span>
+                                    <span className="text-blue-700 font-medium text-sm">
+                                      Ελεύθερο Κείμενο:
+                                    </span>
                                     <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
                                       {beneficiary.freetext}
                                     </p>
@@ -519,18 +654,22 @@ export default function BeneficiariesPage() {
                     );
                   })}
                 </div>
-                
+
                 {/* Pagination Controls */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6 pt-4 border-t">
                     <div className="text-sm text-muted-foreground">
-                      Εμφάνιση {startIndex + 1}-{Math.min(endIndex, filteredBeneficiaries.length)} από {filteredBeneficiaries.length} δικαιούχους
+                      Εμφάνιση {startIndex + 1}-
+                      {Math.min(endIndex, filteredBeneficiaries.length)} από{" "}
+                      {filteredBeneficiaries.length} δικαιούχους
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(1, prev - 1))
+                        }
                         disabled={currentPage === 1}
                       >
                         Προηγούμενη
@@ -541,7 +680,11 @@ export default function BeneficiariesPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(totalPages, prev + 1),
+                          )
+                        }
                         disabled={currentPage === totalPages}
                       >
                         Επόμενη
@@ -555,7 +698,11 @@ export default function BeneficiariesPage() {
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <Users className="h-8 w-8" />
                   <p>Δεν βρέθηκαν δικαιούχοι</p>
-                  {searchTerm && <p className="text-sm">Δοκιμάστε διαφορετικούς όρους αναζήτησης</p>}
+                  {searchTerm && (
+                    <p className="text-sm">
+                      Δοκιμάστε διαφορετικούς όρους αναζήτησης
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -575,7 +722,9 @@ export default function BeneficiariesPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {selectedBeneficiary ? "Επεξεργασία Δικαιούχου" : "Νέος Δικαιούχος"}
+              {selectedBeneficiary
+                ? "Επεξεργασία Δικαιούχου"
+                : "Νέος Δικαιούχος"}
             </DialogTitle>
           </DialogHeader>
           <BeneficiaryForm
@@ -594,10 +743,10 @@ export default function BeneficiariesPage() {
   );
 }
 
-function BeneficiaryForm({ 
-  beneficiary, 
-  onSubmit 
-}: { 
+function BeneficiaryForm({
+  beneficiary,
+  onSubmit,
+}: {
   beneficiary?: Beneficiary;
   onSubmit: (data: BeneficiaryFormData) => void;
 }) {
@@ -729,7 +878,7 @@ function BeneficiaryForm({
             )}
           />
         </div>
-        
+
         <FormField
           control={form.control}
           name="freetext"
@@ -743,7 +892,7 @@ function BeneficiaryForm({
             </FormItem>
           )}
         />
-        
+
         <div className="flex justify-end gap-2">
           <Button type="submit">
             {beneficiary ? "Ενημέρωση" : "Δημιουργία"}

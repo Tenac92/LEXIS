@@ -18,7 +18,7 @@ import {
   Edit,
   Trash2,
   Building,
-  TrendingUp
+  TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
@@ -48,67 +48,79 @@ interface Recipient {
   installmentAmounts?: Record<string, number>;
 }
 
-const getStatusDetails = (status: string, is_correction: boolean | null, protocol_number_input: string | null) => {
+const getStatusDetails = (
+  status: string,
+  is_correction: boolean | null,
+  protocol_number_input: string | null,
+) => {
   // First check if this is an orthi epanalipsi and doesn't have a protocol number yet
   if (protocol_number_input) {
     return {
       label: "Ολοκληρωμένο",
       variant: "default" as const,
-      icon: CheckCircle
+      icon: CheckCircle,
     };
   }
   if (is_correction && !protocol_number_input) {
     return {
       label: "Ορθή Επανάληψη",
       variant: "destructive" as const,
-      icon: AlertCircle
+      icon: AlertCircle,
     };
   }
 
   // Then check other statuses
   switch (status) {
-    case 'completed':
+    case "completed":
       return {
         label: "Ολοκληρωμένο",
         variant: "default" as const,
-        icon: CheckCircle
+        icon: CheckCircle,
       };
-    case 'pending':
+    case "pending":
       return {
         label: "Σε εκκρεμότητα",
         variant: "secondary" as const,
-        icon: Clock
+        icon: Clock,
       };
     default:
       return {
         label: "Σε εκκρεμότητα",
         variant: "secondary" as const,
-        icon: Clock
+        icon: Clock,
       };
   }
 };
 
-export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onDelete }: DocumentCardProps) {
+export function DocumentCard({
+  document: doc,
+  view = "grid",
+  onView,
+  onEdit,
+  onDelete,
+}: DocumentCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [projectNa853, setProjectNa853] = useState<string>(doc.project_na853 || '');
+  const [projectNa853, setProjectNa853] = useState<string>(
+    doc.project_na853 || "",
+  );
   const { toast } = useToast();
 
   // Get the MIS code from the document
-  const mis = doc.project_id || (doc as any).mis || '';
+  const mis = doc.project_id || (doc as any).mis || "";
 
   // Fetch project NA853 data from our special endpoint
   const { data: na853Data } = useQuery<any>({
-    queryKey: ['/api/document-na853', mis],
+    queryKey: ["/api/document-na853", mis],
     queryFn: async () => {
       if (!mis) return null;
       try {
-        console.log('Fetching NA853 for MIS:', mis);
+        console.log("Fetching NA853 for MIS:", mis);
         return await apiRequest(`/api/document-na853/${mis}`);
       } catch (error) {
-        console.error('Failed to fetch NA853 data:', error);
+        console.error("Failed to fetch NA853 data:", error);
         return null;
       }
     },
@@ -119,16 +131,16 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
   useEffect(() => {
     if (na853Data) {
       // Add debug log to see the structure of the response
-      console.log('NA853 data received:', na853Data);
-      
+      console.log("NA853 data received:", na853Data);
+
       try {
         // Our dedicated endpoint returns a simplified structure always containing na853
         if (na853Data && na853Data.na853) {
-          console.log('Found NA853 from dedicated endpoint:', na853Data.na853);
+          console.log("Found NA853 from dedicated endpoint:", na853Data.na853);
           setProjectNa853(na853Data.na853);
         }
       } catch (error) {
-        console.error('Error extracting NA853 from data:', error);
+        console.error("Error extracting NA853 from data:", error);
       }
     }
   }, [na853Data]);
@@ -142,33 +154,37 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
     try {
       setIsLoading(true);
       // Use the both format parameter to generate both documents in a ZIP file
-      const response = await fetch(`/api/documents/generated/${doc.id}/export?format=both`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/zip, application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      const response = await fetch(
+        `/api/documents/generated/${doc.id}/export?format=both`,
+        {
+          method: "GET",
+          headers: {
+            Accept:
+              "application/zip, application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Export failed:', errorText);
-        throw new Error('Failed to export document');
+        console.error("Export failed:", errorText);
+        throw new Error("Failed to export document");
       }
 
       // Get the content type to determine if it's a ZIP or single document
-      const contentType = response.headers.get('Content-Type');
+      const contentType = response.headers.get("Content-Type");
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      
+
       // Set appropriate filename based on content type
-      if (contentType && contentType.includes('application/zip')) {
+      if (contentType && contentType.includes("application/zip")) {
         link.download = `documents-${doc.id}.zip`;
       } else {
         link.download = `document-${doc.id}.docx`;
       }
-      
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -176,15 +192,15 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
 
       toast({
         description: "Τα έγγραφα εξήχθησαν επιτυχώς",
-        variant: "default"
+        variant: "default",
       });
     } catch (error) {
       toast({
         title: "Σφάλμα",
         description: "Αποτυχία εξαγωγής εγγράφων",
-        variant: "destructive"
+        variant: "destructive",
       });
-      console.error('Export error:', error);
+      console.error("Export error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -192,24 +208,29 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
 
   const recipients = doc.recipients as Recipient[];
   const docAny = doc as any; // Use type assertion to access potentially missing properties
-  const statusDetails = getStatusDetails(doc.status, docAny.is_correction, doc.protocol_number_input);
+  const statusDetails = getStatusDetails(
+    doc.status,
+    docAny.is_correction,
+    doc.protocol_number_input,
+  );
 
   // Debug log to check values
-  console.log('Document data:', {
+  console.log("Document data:", {
     id: doc.id,
     is_correction: docAny.is_correction,
     original_protocol_number: docAny.original_protocol_number,
     original_protocol_date: docAny.original_protocol_date,
-    comments: doc.comments
+    comments: doc.comments,
   });
 
   // Show orthi epanalipsi info when either condition is met
-  const showOrthiEpanalipsiInfo = Boolean(docAny.is_correction) || Boolean(docAny.original_protocol_number);
+  const showOrthiEpanalipsiInfo =
+    Boolean(docAny.is_correction) || Boolean(docAny.original_protocol_number);
 
   if (view === "list") {
     return (
       <>
-        <Card 
+        <Card
           className="transition-shadow hover:shadow-lg flex cursor-pointer"
           onClick={() => setShowDetailsModal(true)}
         >
@@ -218,11 +239,9 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <h3 className="text-lg font-bold text-foreground">
-                    {doc.protocol_number_input && doc.protocol_date ? (
-                      `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString('el-GR')}`
-                    ) : (
-                      `Έγγραφο #${doc.id}`
-                    )}
+                    {doc.protocol_number_input && doc.protocol_date
+                      ? `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString("el-GR")}`
+                      : `Έγγραφο #${doc.id}`}
                   </h3>
                   <Badge variant={statusDetails.variant as any}>
                     {statusDetails.label}
@@ -244,7 +263,15 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <DollarSign className="w-4 h-4" />
-                      <span>Σύνολο: {doc.total_amount ? Number(doc.total_amount).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' }) : 'Δ/Υ'}</span>
+                      <span>
+                        Σύνολο:{" "}
+                        {doc.total_amount
+                          ? Number(doc.total_amount).toLocaleString("el-GR", {
+                              style: "currency",
+                              currency: "EUR",
+                            })
+                          : "Δ/Υ"}
+                      </span>
                     </div>
                     {projectNa853 && (
                       <div className="flex items-center gap-2 text-muted-foreground">
@@ -256,8 +283,8 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -267,8 +294,8 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                   <Info className="w-4 h-4 mr-2" />
                   Λεπτομέρειες
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -302,7 +329,7 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                         e.stopPropagation();
                         onView();
                       }}
-                      disabled={isLoading || doc.status === 'approved'}
+                      disabled={isLoading || doc.status === "approved"}
                       className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600 transition-colors"
                       title="Πρωτόκολλο"
                     >
@@ -338,8 +365,8 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
             </div>
           </div>
         </Card>
-        
-        <DocumentDetailsModal 
+
+        <DocumentDetailsModal
           document={doc}
           open={showDetailsModal}
           onOpenChange={setShowDetailsModal}
@@ -351,7 +378,7 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
   return (
     <>
       <div className="flip-card" onClick={handleCardClick}>
-        <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
+        <div className={`flip-card-inner ${isFlipped ? "rotate-y-180" : ""}`}>
           {/* Front of card */}
           <div className="flip-card-front">
             <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-orange-500 to-orange-600"></div>
@@ -359,11 +386,9 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
               <div className="flex items-start justify-between mb-4">
                 <div className="space-y-2 flex-1">
                   <h3 className="text-xl font-bold text-gray-900 leading-tight">
-                    {doc.protocol_number_input && doc.protocol_date ? (
-                      `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString('el-GR')}`
-                    ) : (
-                      `Έγγραφο #${doc.id}`
-                    )}
+                    {doc.protocol_number_input && doc.protocol_date
+                      ? `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString("el-GR")}`
+                      : `Έγγραφο #${doc.id}`}
                   </h3>
                   <Badge variant={statusDetails.variant}>
                     <statusDetails.icon className="h-3 w-3 mr-1" />
@@ -414,13 +439,23 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
               {doc.protocol_number_input && (
                 <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-blue-800">Αρ. Πρωτοκόλλου:</span>
-                    <span className="text-blue-900 font-mono">{doc.protocol_number_input}</span>
+                    <span className="text-sm font-medium text-blue-800">
+                      Αρ. Πρωτοκόλλου:
+                    </span>
+                    <span className="text-blue-900 font-mono">
+                      {doc.protocol_number_input}
+                    </span>
                   </div>
                   {doc.protocol_date && (
                     <div className="flex justify-between items-center mt-1">
-                      <span className="text-sm font-medium text-blue-800">Ημερομηνία:</span>
-                      <span className="text-blue-900">{new Date(doc.protocol_date).toLocaleDateString('el-GR')}</span>
+                      <span className="text-sm font-medium text-blue-800">
+                        Ημερομηνία:
+                      </span>
+                      <span className="text-blue-900">
+                        {new Date(doc.protocol_date).toLocaleDateString(
+                          "el-GR",
+                        )}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -430,11 +465,12 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
               {showOrthiEpanalipsiInfo && (
                 <div className="mb-4 p-3 bg-red-100 rounded-lg border border-red-200">
                   <p className="text-sm font-medium text-red-800">
-                    Ορθή Επανάληψη του εγγράφου {docAny.original_protocol_number}
+                    Ορθή Επανάληψη του εγγράφου{" "}
+                    {docAny.original_protocol_number}
                   </p>
                 </div>
               )}
-              
+
               <div className="grid grid-cols-2 gap-2 text-sm mb-6">
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
                   <span className="text-xs text-gray-600">Μονάδα</span>
@@ -442,22 +478,28 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                 </div>
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
                   <span className="text-xs text-gray-600">Κωδικός MIS</span>
-                  <span className="text-gray-900 font-mono">{doc.project_id || (doc as any).mis || 'Δ/Υ'}</span>
+                  <span className="text-gray-900 font-mono">
+                    {doc.project_id || (doc as any).mis || "Δ/Υ"}
+                  </span>
                 </div>
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
                   <span className="text-xs text-gray-600">Συνολικό Ποσό</span>
                   <span className="text-gray-900 font-medium">
-                    {parseFloat(doc.total_amount?.toString() || '0').toLocaleString('el-GR', {
-                      style: 'currency',
-                      currency: 'EUR',
+                    {parseFloat(
+                      doc.total_amount?.toString() || "0",
+                    ).toLocaleString("el-GR", {
+                      style: "currency",
+                      currency: "EUR",
                       minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
+                      maximumFractionDigits: 2,
                     })}
                   </span>
                 </div>
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
                   <span className="text-xs text-gray-600">Δικαιούχοι</span>
-                  <span className="text-gray-900">{recipients?.length || 0}</span>
+                  <span className="text-gray-900">
+                    {recipients?.length || 0}
+                  </span>
                 </div>
               </div>
 
@@ -498,7 +540,7 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                       e.stopPropagation();
                       onView();
                     }}
-                    disabled={isLoading || doc.status === 'approved'}
+                    disabled={isLoading || doc.status === "approved"}
                     className="flex-1"
                   >
                     <ClipboardCheck className="h-4 w-4 mr-2" />
@@ -506,11 +548,11 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                   </Button>
                 )}
               </div>
-              
+
               <div className="flex items-center justify-center">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsFlipped(true);
@@ -533,9 +575,7 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                   <h3 className="text-lg font-bold text-orange-900">
                     Λεπτομέρειες Εγγράφου
                   </h3>
-                  <p className="text-orange-700 text-sm">
-                    Έγγραφο #{doc.id}
-                  </p>
+                  <p className="text-orange-700 text-sm">Έγγραφο #{doc.id}</p>
                 </div>
                 <Button
                   variant="ghost"
@@ -550,40 +590,61 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                   <RotateCcw className="w-4 h-4" />
                 </Button>
               </div>
-              
+
               <div className="space-y-4">
                 {/* Document Details */}
                 <div className="space-y-2">
                   {doc.protocol_number_input && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-orange-700 font-medium">Αρ. Πρωτοκόλλου:</span>
-                      <span className="text-orange-900">{doc.protocol_number_input}</span>
+                      <span className="text-orange-700 font-medium">
+                        Αρ. Πρωτοκόλλου:
+                      </span>
+                      <span className="text-orange-900">
+                        {doc.protocol_number_input}
+                      </span>
                     </div>
                   )}
                   {doc.protocol_date && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-orange-700 font-medium">Ημερομηνία:</span>
-                      <span className="text-orange-900">{new Date(doc.protocol_date).toLocaleDateString('el-GR')}</span>
+                      <span className="text-orange-700 font-medium">
+                        Ημερομηνία:
+                      </span>
+                      <span className="text-orange-900">
+                        {new Date(doc.protocol_date).toLocaleDateString(
+                          "el-GR",
+                        )}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
-                    <span className="text-orange-700 font-medium">Κωδικός ΝΑ853:</span>
-                    <span className="text-orange-900">{projectNa853 || doc.project_na853 || 'Δ/Υ'}</span>
+                    <span className="text-orange-700 font-medium">
+                      Κωδικός ΝΑ853:
+                    </span>
+                    <span className="text-orange-900">
+                      {projectNa853 || doc.project_na853 || "Δ/Υ"}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-orange-700 font-medium">Τύπος Δαπάνης:</span>
-                    <span className="text-orange-900">{doc.expenditure_type || '-'}</span>
+                    <span className="text-orange-700 font-medium">
+                      Τύπος Δαπάνης:
+                    </span>
+                    <span className="text-orange-900">
+                      {doc.expenditure_type || "-"}
+                    </span>
                   </div>
                 </div>
 
                 {/* Orthi Epanalipsi Details */}
                 {showOrthiEpanalipsiInfo && (
                   <div className="pt-2 border-t border-orange-200">
-                    <span className="text-orange-700 font-medium text-sm">Ορθή Επανάληψη:</span>
+                    <span className="text-orange-700 font-medium text-sm">
+                      Ορθή Επανάληψη:
+                    </span>
                     <div className="mt-1 p-2 bg-red-100 rounded border border-red-200">
                       <p className="text-sm text-red-800">
                         Αρ. πρωτ.: {docAny.original_protocol_number}
-                        {docAny.original_protocol_date && ` (${new Date(docAny.original_protocol_date).toLocaleDateString('el-GR')})`}
+                        {docAny.original_protocol_date &&
+                          ` (${new Date(docAny.original_protocol_date).toLocaleDateString("el-GR")})`}
                       </p>
                       {doc.comments && (
                         <p className="text-sm mt-1 text-red-700">
@@ -596,7 +657,9 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
 
                 {/* Recipients Summary */}
                 <div className="pt-2 border-t border-orange-200">
-                  <span className="text-orange-700 font-medium text-sm">Δικαιούχοι ({recipients?.length || 0}):</span>
+                  <span className="text-orange-700 font-medium text-sm">
+                    Δικαιούχοι ({recipients?.length || 0}):
+                  </span>
                   <div className="mt-1 max-h-24 overflow-y-auto">
                     {recipients?.slice(0, 3).map((recipient, index) => (
                       <div key={index} className="text-sm text-orange-900">
@@ -649,7 +712,7 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                           e.stopPropagation();
                           onView();
                         }}
-                        disabled={isLoading || doc.status === 'approved'}
+                        disabled={isLoading || doc.status === "approved"}
                         className="flex-1"
                       >
                         <ClipboardCheck className="h-4 w-4 mr-2" />
@@ -664,16 +727,16 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
         </div>
       </div>
 
-      <OrthiEpanalipsiModal 
+      <OrthiEpanalipsiModal
         open={showCorrectionModal}
         onClose={() => setShowCorrectionModal(false)}
         onSubmit={(correctionData) => {
-          console.log('Correction submitted:', correctionData);
+          console.log("Correction submitted:", correctionData);
           // Handle the correction submission logic here
           setShowCorrectionModal(false);
         }}
-        originalProtocolNumber={doc.protocol_number_input || ''}
-        originalProtocolDate={doc.protocol_date || ''}
+        originalProtocolNumber={doc.protocol_number_input || ""}
+        originalProtocolDate={doc.protocol_date || ""}
       />
 
       <DocumentDetailsModal
