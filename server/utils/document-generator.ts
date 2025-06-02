@@ -1031,7 +1031,12 @@ export class DocumentGenerator {
                           },
                           children: [
                             new Paragraph({
-                              text: "ΠΡΟΣ:",
+                              children: [
+                                new TextRun({
+                                  text: "ΠΡΟΣ:",
+                                  bold: true,
+                                }),
+                              ],
                               spacing: { before: 2000 },
                               alignment: AlignmentType.LEFT,
                             }),
@@ -1047,28 +1052,28 @@ export class DocumentGenerator {
                           },
                           children: [
                             new Paragraph({
-                              text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                              children: [new TextRun("Γενική Δ/νση Οικονομικών  Υπηρεσιών")],
                               spacing: { before: 2000 },
                               alignment: AlignmentType.LEFT,
                             }),
                             new Paragraph({
-                              text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                              children: [new TextRun("Διεύθυνση Οικονομικής Διαχείρισης")],
                               alignment: AlignmentType.LEFT,
                             }),
                             new Paragraph({
-                              text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                              children: [new TextRun("Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών")],
                               alignment: AlignmentType.LEFT,
                             }),
                             new Paragraph({
-                              text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                              children: [new TextRun("Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)")],
                               alignment: AlignmentType.LEFT,
                             }),
                             new Paragraph({
-                              text: "Δημοκρίτου 2",
+                              children: [new TextRun("Δημοκρίτου 2")],
                               alignment: AlignmentType.LEFT,
                             }),
                             new Paragraph({
-                              text: "151 23 Μαρούσι",
+                              children: [new TextRun("151 23 Μαρούσι")],
                               alignment: AlignmentType.LEFT,
                             }),
                           ],
@@ -1084,6 +1089,4 @@ export class DocumentGenerator {
       ],
     });
   }
-
-
 }
