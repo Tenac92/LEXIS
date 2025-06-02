@@ -240,7 +240,7 @@ export class DocumentGenerator {
     unitDetails: UnitDetails | null | undefined,
   ): Table {
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const config = EXPENDITURE_CONFIGS[expenditureType] || { documentTitle: "", columns: [], mainText: "" };
+    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     const documentTitle = config.documentTitle;
     const subjectText = [
       {
@@ -341,7 +341,7 @@ export class DocumentGenerator {
     
     // Main request text based on expenditure type
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const config = EXPENDITURE_CONFIGS[expenditureType] || { documentTitle: "", columns: [], mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την παρακάτω δαπάνη για τους κατωτέρω δικαιούχους:" };
+    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     const mainText = config.mainText;
     
     contentParagraphs.push(

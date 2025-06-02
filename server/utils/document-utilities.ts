@@ -401,4 +401,15 @@ export class DocumentUtilities {
       return `${amount.toFixed(2)} €`;
     }
   }
+
+  /**
+   * Get expenditure configuration by type - returns a typed configuration object
+   */
+  public static getExpenditureConfig(expenditureType: string): ExpenditureConfig {
+    return EXPENDITURE_CONFIGS[expenditureType] || {
+      documentTitle: "",
+      columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΠΟΣΟ (€)"],
+      mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την παρακάτω δαπάνη για τους κατωτέρω δικαιούχους:"
+    };
+  }
 }
