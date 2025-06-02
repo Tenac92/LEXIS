@@ -719,7 +719,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     
     // Generate secondary document
     const { SecondaryDocumentFormatter } = await import('../utils/secondary-document-formatter');
-    const secondaryBuffer = await SecondaryDocumentFormatter.generateDocument(documentData);
+    const secondaryBuffer = await SecondaryDocumentFormatter.generateSecondDocument(documentData);
     
     // Create a ZIP file containing both documents
     const zip = new JSZip();
