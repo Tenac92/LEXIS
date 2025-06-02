@@ -16,6 +16,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { useState, useEffect } from "react";
 import { FileText, Filter, RefreshCcw, LayoutGrid, List } from "lucide-react";
 import { DocumentCard } from "@/components/documents/document-card";
@@ -391,20 +392,18 @@ export default function DocumentsPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="text-xs text-muted-foreground">Από</label>
-                        <Input
-                          type="number"
+                        <NumberInput
                           placeholder="Ελάχιστο ποσό"
                           value={advancedFilters.amountFrom}
-                          onChange={(e) => setAdvancedFilterValues({ amountFrom: e.target.value })}
+                          onChange={(formatted, numeric) => setAdvancedFilterValues({ amountFrom: formatted })}
                         />
                       </div>
                       <div>
                         <label className="text-xs text-muted-foreground">Έως</label>
-                        <Input
-                          type="number"
+                        <NumberInput
                           placeholder="Μέγιστο ποσό"
                           value={advancedFilters.amountTo}
-                          onChange={(e) => setAdvancedFilterValues({ amountTo: e.target.value })}
+                          onChange={(formatted, numeric) => setAdvancedFilterValues({ amountTo: formatted })}
                         />
                       </div>
                     </div>

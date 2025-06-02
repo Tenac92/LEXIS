@@ -65,3 +65,68 @@ export function formatEuropeanCurrency(value: number | string | null | undefined
   const formatted = formatEuropeanNumber(value, 2);
   return `${formatted} ${currency}`;
 }
+
+/**
+ * Format number while typing (live formatting)
+ * Maintains cursor position and provides real-time European formatting
+ * @param value - The current input value
+ * @param decimals - Number of decimal places allowed (default: 2)
+ * @returns Formatted string that preserves typing flow
+ */
+export function formatNumberWhileTyping(value: string, decimals: number = 2): string {
+  if (!value || value === '') return '';
+  
+  // Remove all non-numeric characters except comma and dot
+  let cleanValue = value.replace(/[^\d,.]/g, '');
+  
+  // Handle multiple commas - keep only the last one
+  const commaIndex = cleanValue.lastIndexOf(',');
+  if (commaIndex !== -1) {
+    const beforeComma = cleanValue.substring(0, commaIndex).replace(/,/g, '');
+    const afterComma = cleanValue.substring(commaIndex + 1).replace(/[,.]/g, '');
+    cleanValue = beforeComma + ',' + afterComma.substring(0, decimals);
+  }
+  
+  // Split into integer and decimal parts
+  const parts = cleanValue.split(',');
+  let integerPart = parts[0] || '';
+  let decimalPart = parts[1] || '';
+  
+  // Format integer part with dots as thousand separators
+  if (integerPart.length > 0) {
+    // Remove existing dots
+    integerPart = integerPart.replace(/\./g, '');
+    // Add dots every 3 digits from right
+    integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  
+  // Combine parts
+  if (parts.length > 1) {
+    return integerPart + ',' + decimalPart;
+  }
+  
+  return integerPart;
+}
+
+/**
+ * Get cursor position after formatting
+ * Helps maintain cursor position when live formatting occurs
+ * @param originalValue - Value before formatting
+ * @param newValue - Value after formatting
+ * @param cursorPos - Original cursor position
+ * @returns New cursor position
+ */
+export function getCursorPositionAfterFormatting(
+  originalValue: string,
+  newValue: string,
+  cursorPos: number
+): number {
+  // Count dots added before cursor position
+  const beforeCursor = originalValue.substring(0, cursorPos);
+  const beforeCursorFormatted = newValue.substring(0, Math.min(cursorPos, newValue.length));
+  
+  const originalDots = (beforeCursor.match(/\./g) || []).length;
+  const newDots = (beforeCursorFormatted.match(/\./g) || []).length;
+  
+  return cursorPos + (newDots - originalDots);
+}
