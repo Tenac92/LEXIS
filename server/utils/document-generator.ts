@@ -64,7 +64,7 @@ export class DocumentGenerator {
         await this.createDocumentHeader(documentData, unitDetails),
         
         // Subject
-        this.createSubject(documentData),
+        this.createDocumentSubject(documentData, unitDetails),
         
         // Legal references
         ...DocumentGenerator.createLegalReferences(),
@@ -347,25 +347,68 @@ export class DocumentGenerator {
   }
 
   /**
-   * Create document subject
+   * Create document subject with bordered table
    */
-  private static createSubject(documentData: DocumentData): Paragraph {
-    const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    
-    const subjectText = `ΘΕΜΑ: Αίτημα για την πληρωμή ${expenditureType} που έχουν εγκριθεί από τη ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ (ΔΑΕΦΚ-ΚΕ)`;
-    
-    return new Paragraph({
-      children: [
-        new TextRun({
-          text: subjectText,
-          bold: true,
-          underline: {},
-          size: DocumentUtilities.DEFAULT_FONT_SIZE,
-          font: DocumentUtilities.DEFAULT_FONT,
+  private static createDocumentSubject(
+    documentData: DocumentData,
+    unitDetails: UnitDetails | null | undefined,
+  ): Table {
+    const subjectText = [
+      {
+        text: "ΘΕΜΑ:",
+        bold: true,
+        italics: true,
+      },
+      {
+        text: ` Αίτημα για την πληρωμή ${documentData.expenditure_type || "ΔΑΠΑΝΗ"} που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ (ΔΑΕΦΚ-ΚΕ)"}`,
+        italics: true,
+      },
+    ];
+
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 4 },
+        bottom: { style: BorderStyle.SINGLE, size: 4 },
+        left: { style: BorderStyle.SINGLE, size: 4 },
+        right: { style: BorderStyle.SINGLE, size: 4 },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 4 },
+                bottom: { style: BorderStyle.SINGLE, size: 4 },
+                left: { style: BorderStyle.SINGLE, size: 4 },
+                right: { style: BorderStyle.SINGLE, size: 4 },
+              },
+              margins: {
+                top: 50,
+                bottom: 50,
+                left: 50,
+                right: 50,
+              },
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              children: [
+                new Paragraph({
+                  children: subjectText.map(
+                    (part) =>
+                      new TextRun({
+                        text: part.text,
+                        bold: part.bold,
+                        italics: part.italics,
+                        size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                        font: DocumentUtilities.DEFAULT_FONT,
+                      }),
+                  ),
+                  spacing: { after: 240 },
+                }),
+              ],
+            }),
+          ],
         }),
       ],
-      alignment: AlignmentType.LEFT,
-      spacing: { after: 240 },
     });
   }
 
