@@ -629,145 +629,14 @@ export class DocumentGenerator {
    * Create footer with signature
    */
   private static createFooter(documentData: DocumentData, unitDetails: UnitDetails | null): Table {
-    const attachments = (documentData.attachments || [])
-      .map((item) => item.replace(/^\d+\-/, ""))
-      .filter(Boolean);
-
-    // Left column content (attachments, notifications, etc.)
-    const leftColumnParagraphs: Paragraph[] = [];
-
-    // Add ΕΓΚΡΙΣΗ section
-    leftColumnParagraphs.push(
+    // Left column - empty for clean layout
+    const leftColumnParagraphs: Paragraph[] = [
       new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΕΓΚΡΙΣΗ:",
-            bold: true,
-            underline: {},
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        spacing: { after: 120 },
+        children: [new TextRun({ text: "" })],
       })
-    );
-    
-    leftColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "Εγκρίνεται",
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        spacing: { after: 240 },
-      })
-    );
-
-    // Add ΣΥΝΗΜΜΕΝΑ section if attachments exist
-    if (attachments.length > 0) {
-      leftColumnParagraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
-              bold: true,
-              underline: {},
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              font: DocumentUtilities.DEFAULT_FONT,
-            }),
-          ],
-          spacing: { after: 120, before: 240 },
-        })
-      );
-
-      for (let i = 0; i < attachments.length; i++) {
-        leftColumnParagraphs.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: `${i + 1}. ${attachments[i]}`,
-                size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                font: DocumentUtilities.DEFAULT_FONT,
-              }),
-            ],
-            indent: { left: 426 },
-            spacing: { after: 120 },
-          })
-        );
-      }
-    }
-
-    // Add ΚΟΙΝΟΠΟΙΗΣΗ section
-    leftColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΚΟΙΝΟΠΟΙΗΣΗ",
-            bold: true,
-            underline: {},
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        spacing: { after: 120, before: 240 },
-      })
-    );
-
-    const notifications = [
-      "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
-      "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
-      "Γ.Δ.Α.Ε.Φ.Κ.",
     ];
 
-    for (let i = 0; i < notifications.length; i++) {
-      leftColumnParagraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: `${i + 1}. ${notifications[i]}`,
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              font: DocumentUtilities.DEFAULT_FONT,
-            }),
-          ],
-          indent: { left: 426 },
-          spacing: { after: 120 },
-        })
-      );
-    }
-
-    // Add ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ section
-    leftColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
-            bold: true,
-            underline: {},
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        spacing: { after: 120, before: 240 },
-      })
-    );
-
-    leftColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "1. Χρονολογικό Αρχείο",
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        indent: { left: 426 },
-        spacing: { after: 120 },
-      })
-    );
-
-    // Right column - signature section matching header format
+    // Right column - only signature
     const rightColumnParagraphs: Paragraph[] = [];
 
     rightColumnParagraphs.push(
@@ -781,7 +650,6 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { before: 480, after: 120 },
       })
     );
 
@@ -796,15 +664,12 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 240 },
       })
     );
 
-    // Signature space
     rightColumnParagraphs.push(
       new Paragraph({
         children: [new TextRun({ text: "" })],
-        spacing: { before: 160, after: 160 },
       })
     );
 
@@ -819,7 +684,6 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 120 },
       })
     );
 
@@ -836,7 +700,6 @@ export class DocumentGenerator {
       })
     );
 
-    // Create two-column table matching header format
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       columnWidths: [7000, 4000],
