@@ -15,8 +15,11 @@ import {
   PageOrientation,
 } from "docx";
 import { DocumentData, UnitDetails } from "./document-types";
-import { DocumentShared } from "./document-shared";
-import { logger } from "../utils/logger";
+import { DocumentUtilities } from "./document-utilities";
+import { ExpenditureTypeHandler } from "./expenditure-type-handler";
+import { createLogger } from "./logger";
+
+const logger = createLogger("PrimaryDocumentFormatter");
 
 export class PrimaryDocumentFormatter {
   private static createHeaderCell(text: string, width: string): TableCell {
@@ -27,8 +30,8 @@ export class PrimaryDocumentFormatter {
             new TextRun({
               text: text,
               bold: true,
-              size: DocumentShared.DEFAULT_FONT_SIZE,
-              font: DocumentShared.DEFAULT_FONT,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              font: DocumentUtilities.DEFAULT_FONT,
             }),
           ],
           alignment: AlignmentType.CENTER,
@@ -62,8 +65,8 @@ export class PrimaryDocumentFormatter {
           children: [
             new TextRun({
               text: text,
-              size: DocumentShared.DEFAULT_FONT_SIZE - 2,
-              font: DocumentShared.DEFAULT_FONT,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              font: DocumentUtilities.DEFAULT_FONT,
             }),
           ],
           alignment: alignmentType,
@@ -189,8 +192,8 @@ export class PrimaryDocumentFormatter {
       children: [
         new TextRun({
           text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
-          size: DocumentShared.DEFAULT_FONT_SIZE - 2,
-          font: DocumentShared.DEFAULT_FONT,
+          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+          font: DocumentUtilities.DEFAULT_FONT,
         }),
       ],
       spacing: { before: 120, after: 0 },
@@ -307,7 +310,7 @@ export class PrimaryDocumentFormatter {
 
     // Create the right column content (signature)
     const managerInfo = unitDetails?.manager;
-    const rightColumnParagraphs = DocumentShared.createManagerSignatureParagraphs(managerInfo);
+    const rightColumnParagraphs = DocumentUtilities.createManagerSignatureParagraphs(managerInfo);
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
