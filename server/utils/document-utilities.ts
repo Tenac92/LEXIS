@@ -443,12 +443,36 @@ export class DocumentUtilities {
 
   /**
    * Get expenditure configuration by type - returns a typed configuration object
+   * @param expenditureType The expenditure type to get configuration for
+   * @returns Configuration object with proper fallback
    */
   public static getExpenditureConfig(expenditureType: string): ExpenditureConfig {
+    // Log unknown expenditure types for debugging
+    if (expenditureType && !EXPENDITURE_CONFIGS[expenditureType]) {
+      logger.warn(`Unknown expenditure type: ${expenditureType}. Using default configuration.`);
+    }
+    
     return EXPENDITURE_CONFIGS[expenditureType] || {
-      documentTitle: "",
+      documentTitle: `Αίτημα πληρωμής δαπάνης τύπου: ${expenditureType}`,
       columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΠΟΣΟ (€)"],
       mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την παρακάτω δαπάνη για τους κατωτέρω δικαιούχους:"
     };
+  }
+
+  /**
+   * Get all available expenditure types
+   * @returns Array of available expenditure type keys
+   */
+  public static getAvailableExpenditureTypes(): string[] {
+    return Object.keys(EXPENDITURE_CONFIGS);
+  }
+
+  /**
+   * Validate if an expenditure type is supported
+   * @param expenditureType The expenditure type to validate
+   * @returns True if supported, false otherwise
+   */
+  public static isValidExpenditureType(expenditureType: string): boolean {
+    return expenditureType in EXPENDITURE_CONFIGS;
   }
 }
