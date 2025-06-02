@@ -20,6 +20,7 @@ import {
 import * as fs from "fs";
 import * as path from "path";
 import { createLogger } from "./logger";
+import { UnitDetails } from "./document-types";
 
 const logger = createLogger("DocumentUtilities");
 
@@ -31,18 +32,6 @@ export interface ExpenditureConfig {
   documentTitle: string;
   columns: string[];
   mainText: string;
-}
-
-export interface UnitDetails {
-  unit: string;
-  name: string;
-  unit_name?: { prop: string };
-  manager?: {
-    name: string;
-    order: string;
-    title: string;
-    degree: string;
-  };
 }
 
 // =============================================================================
