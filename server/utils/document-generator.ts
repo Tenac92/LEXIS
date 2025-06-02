@@ -269,7 +269,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 240 },
+        spacing: { after: 360 },
       })
     );
     
@@ -439,15 +439,16 @@ export class DocumentGenerator {
    * Create payment table with expenditure type specific columns
    */
   private static createPaymentTable(recipients: any[], expenditureType: string): Table {
-    const config = EXPENDITURE_CONFIGS[expenditureType] || {};
-    const columns = config.columns || ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"];
+    // Exact columns from template
+    const columns = ["Α.Α.", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "ΑΦΜ", "ΔΟΣΗ", "ΠΟΣΟ (€)"];
     const borderStyle = BorderStyle.SINGLE;
     
     const headerCells = columns.map(column => 
       new TableCell({
-        children: [DocumentUtilities.createCenteredParagraph(column, { bold: true, size: 20 })],
-        width: { size: 100 / columns.length, type: WidthType.PERCENTAGE },
-        shading: { fill: "E6E6E6" },
+        children: [DocumentUtilities.createCenteredParagraph(column, { 
+          bold: false, 
+          size: DocumentUtilities.DEFAULT_FONT_SIZE 
+        })],
         borders: {
           top: { style: borderStyle, size: 1 },
           bottom: { style: borderStyle, size: 1 },
@@ -459,10 +460,17 @@ export class DocumentGenerator {
 
     const rows = [new TableRow({ children: headerCells, tableHeader: true })];
 
+    let totalAmount = 0;
+
     recipients.forEach((recipient, index) => {
+      const amount = recipient.amount || 0;
+      totalAmount += amount;
+      
       const cells = [
         new TableCell({
-          children: [DocumentUtilities.createCenteredParagraph((index + 1).toString(), { size: 18 })],
+          children: [DocumentUtilities.createCenteredParagraph(`${index + 1}.`, { 
+            size: DocumentUtilities.DEFAULT_FONT_SIZE 
+          })],
           borders: {
             top: { style: borderStyle, size: 1 },
             bottom: { style: borderStyle, size: 1 },
@@ -472,7 +480,9 @@ export class DocumentGenerator {
         }),
         new TableCell({
           children: [DocumentUtilities.createCenteredParagraph(
-            `${recipient.firstname} ${recipient.lastname}`, { size: 18 }
+            `${recipient.firstname} ${recipient.lastname}`, { 
+              size: DocumentUtilities.DEFAULT_FONT_SIZE 
+            }
           )],
           borders: {
             top: { style: borderStyle, size: 1 },
@@ -482,7 +492,9 @@ export class DocumentGenerator {
           },
         }),
         new TableCell({
-          children: [DocumentUtilities.createCenteredParagraph(recipient.afm, { size: 18 })],
+          children: [DocumentUtilities.createCenteredParagraph(recipient.afm, { 
+            size: DocumentUtilities.DEFAULT_FONT_SIZE 
+          })],
           borders: {
             top: { style: borderStyle, size: 1 },
             bottom: { style: borderStyle, size: 1 },
@@ -492,7 +504,9 @@ export class DocumentGenerator {
         }),
         new TableCell({
           children: [DocumentUtilities.createCenteredParagraph(
-            recipient.installment?.toString() || "1", { size: 18 }
+            recipient.installment?.toString() || "Α", { 
+              size: DocumentUtilities.DEFAULT_FONT_SIZE 
+            }
           )],
           borders: {
             top: { style: borderStyle, size: 1 },
@@ -503,10 +517,9 @@ export class DocumentGenerator {
         }),
         new TableCell({
           children: [DocumentUtilities.createCenteredParagraph(
-            new Intl.NumberFormat('el-GR', { 
-              style: 'currency', 
-              currency: 'EUR' 
-            }).format(recipient.amount), { size: 18 }
+            DocumentUtilities.formatCurrency(amount), { 
+              size: DocumentUtilities.DEFAULT_FONT_SIZE 
+            }
           )],
           borders: {
             top: { style: borderStyle, size: 1 },
@@ -519,10 +532,42 @@ export class DocumentGenerator {
       rows.push(new TableRow({ children: cells }));
     });
 
+    // Add total row
+    const totalCells = [
+      new TableCell({
+        children: [new Paragraph({ text: "" })],
+        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+      }),
+      new TableCell({
+        children: [new Paragraph({ text: "" })],
+        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+      }),
+      new TableCell({
+        children: [new Paragraph({ text: "" })],
+        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+      }),
+      new TableCell({
+        children: [DocumentUtilities.createCenteredParagraph("ΣΥΝΟΛΟ:", { 
+          bold: true, 
+          size: DocumentUtilities.DEFAULT_FONT_SIZE 
+        })],
+        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+      }),
+      new TableCell({
+        children: [DocumentUtilities.createCenteredParagraph(
+          `${DocumentUtilities.formatCurrency(totalAmount)} €`, { 
+            bold: true, 
+            size: DocumentUtilities.DEFAULT_FONT_SIZE 
+          }
+        )],
+        borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+      }),
+    ];
+    rows.push(new TableRow({ children: totalCells }));
+
     return new Table({
       rows,
       width: { size: 100, type: WidthType.PERCENTAGE },
-      layout: "autofit",
     });
   }
 
