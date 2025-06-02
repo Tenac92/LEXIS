@@ -3,15 +3,13 @@ import { supabase } from "../config/db";
 import type { GeneratedDocument } from "@shared/schema";
 import type { User } from '@shared/schema';
 import type { AuthenticatedRequest } from "../authentication"
-import { authenticateSession } from '../auth';
 import { authenticateSession } from "../authentication"
-import { DocumentCore } from '../utils/document-core';
+import { DocumentGenerator } from '../utils/document-generator';
 import { broadcastDocumentUpdate } from '../services/websocketService';
 import JSZip from 'jszip';
 
 // Create the router
 export const router = Router();
-const documentManager = new DocumentManager();
 
 // Export the router as default
 export default router;

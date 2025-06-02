@@ -1,8 +1,6 @@
 /**
- * Document Core - Essential document generation functionality
- * 
- * This file contains the core document generation logic with expenditure type handling
- * for Greek government documents.
+ * Document Generator - Complete document generation functionality
+ * Single file for all Greek government document generation with expenditure type handling
  */
 
 import { 
@@ -19,13 +17,36 @@ import {
   HeightRule
 } from "docx";
 import { DocumentUtilities } from "./document-utilities";
-import { ExpenditureTypeHandler } from "./expenditure-type-handler";
 import { DocumentData, UnitDetails } from "./document-types";
 import { createLogger } from "./logger";
 
-const logger = createLogger("DocumentCore");
+const logger = createLogger("DocumentGenerator");
 
-export class DocumentCore {
+// Expenditure type configurations
+const EXPENDITURE_CONFIGS = {
+  "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ": {
+    documentTitle: "ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ ΕΠΙΔΟΤΗΣΗΣ ΕΝΟΙΚΙΟΥ",
+    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΜΗΝΕΣ", "ΠΟΣΟ (€)"],
+    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την επιδότηση ενοικίου για τους κατωτέρω δικαιούχους:"
+  },
+  "ΕΚΤΟΣ ΕΔΡΑΣ": {
+    documentTitle: "ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ ΑΠΟΖΗΜΙΩΣΗΣ ΕΚΤΟΣ ΕΔΡΑΣ",
+    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΗΜΕΡΕΣ", "ΠΟΣΟ (€)"],
+    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την αποζημίωση εκτός έδρας για τους κατωτέρω υπαλλήλους:"
+  },
+  "ΔΚΑ ΕΠΙΣΚΕΥΗ": {
+    documentTitle: "ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ ΔΟΣΗΣ ΔΑΝΕΙΟΥ",
+    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
+    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
+  },
+  "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ": {
+    documentTitle: "ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ ΔΟΣΗΣ ΔΑΝΕΙΟΥ",
+    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
+    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
+  }
+};
+
+export class DocumentGenerator {
   
   /**
    * Generate primary document
@@ -38,7 +59,7 @@ export class DocumentCore {
       const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
       
       // Create document sections
-      const children: Paragraph[] = [
+      const children: any[] = [
         // Header
         ...this.createHeader(unitDetails),
         
@@ -55,14 +76,11 @@ export class DocumentCore {
         this.createPaymentTable(documentData.recipients || [], documentData.expenditure_type),
         
         // Note
-        ExpenditureTypeHandler.createNoteForExpenditureType(documentData.expenditure_type),
+        this.createNote(),
         
-        // Special instructions
-        ...ExpenditureTypeHandler.createSpecialInstructions(documentData.expenditure_type),
+        // Footer
+        this.createFooter(documentData, unitDetails),
       ];
-
-      // Add footer
-      children.push(this.createFooter(documentData, unitDetails));
 
       const doc = new Document({
         sections: [{
@@ -149,7 +167,7 @@ export class DocumentCore {
    */
   private static createSubject(documentData: DocumentData): Paragraph {
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const config = ExpenditureTypeHandler.getExpenditureConfig(expenditureType);
+    const config = EXPENDITURE_CONFIGS[expenditureType] || {};
     
     const subjectText = `ΘΕΜΑ: ${config.documentTitle || `Αίτημα χορήγησης - ${expenditureType}`}`;
     
@@ -209,7 +227,8 @@ export class DocumentCore {
     
     // Main request text based on expenditure type
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const mainText = this.getMainContentText(expenditureType);
+    const config = EXPENDITURE_CONFIGS[expenditureType] || {};
+    const mainText = config.mainText || "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την παρακάτω δαπάνη για τους κατωτέρω δικαιούχους:";
     
     contentParagraphs.push(
       new Paragraph({
@@ -228,30 +247,11 @@ export class DocumentCore {
   }
 
   /**
-   * Get main content text based on expenditure type
-   */
-  private static getMainContentText(expenditureType: string): string {
-    switch (expenditureType) {
-      case "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ":
-        return "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την επιδότηση ενοικίου για τους κατωτέρω δικαιούχους:";
-      
-      case "ΕΚΤΟΣ ΕΔΡΑΣ":
-        return "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την αποζημίωση εκτός έδρας για τους κατωτέρω υπαλλήλους:";
-      
-      case "ΔΚΑ ΕΠΙΣΚΕΥΗ":
-      case "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ":
-        return "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:";
-      
-      default:
-        return "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την παρακάτω δαπάνη για τους κατωτέρω δικαιούχους:";
-    }
-  }
-
-  /**
-   * Create payment table
+   * Create payment table with expenditure type specific columns
    */
   private static createPaymentTable(recipients: any[], expenditureType: string): Table {
-    const columns = ExpenditureTypeHandler.getPaymentTableColumns(expenditureType);
+    const config = EXPENDITURE_CONFIGS[expenditureType] || {};
+    const columns = config.columns || ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"];
     const borderStyle = BorderStyle.SINGLE;
     
     const headerCells = columns.map(column => 
@@ -271,18 +271,62 @@ export class DocumentCore {
     const rows = [new TableRow({ children: headerCells, tableHeader: true })];
 
     recipients.forEach((recipient, index) => {
-      const rowData = ExpenditureTypeHandler.formatRecipientForTable(recipient, expenditureType);
-      const cells = rowData.map(cellData => 
+      const cells = [
         new TableCell({
-          children: [DocumentUtilities.createCenteredParagraph(cellData, { size: 18 })],
+          children: [DocumentUtilities.createCenteredParagraph((index + 1).toString(), { size: 18 })],
           borders: {
             top: { style: borderStyle, size: 1 },
             bottom: { style: borderStyle, size: 1 },
             left: { style: borderStyle, size: 1 },
             right: { style: borderStyle, size: 1 },
           },
-        })
-      );
+        }),
+        new TableCell({
+          children: [DocumentUtilities.createCenteredParagraph(
+            `${recipient.firstname} ${recipient.lastname}`, { size: 18 }
+          )],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }),
+        new TableCell({
+          children: [DocumentUtilities.createCenteredParagraph(recipient.afm, { size: 18 })],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }),
+        new TableCell({
+          children: [DocumentUtilities.createCenteredParagraph(
+            recipient.installment?.toString() || "1", { size: 18 }
+          )],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }),
+        new TableCell({
+          children: [DocumentUtilities.createCenteredParagraph(
+            new Intl.NumberFormat('el-GR', { 
+              style: 'currency', 
+              currency: 'EUR' 
+            }).format(recipient.amount), { size: 18 }
+          )],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }),
+      ];
       rows.push(new TableRow({ children: cells }));
     });
 
@@ -294,9 +338,25 @@ export class DocumentCore {
   }
 
   /**
+   * Create note paragraph
+   */
+  private static createNote(): Paragraph {
+    return new Paragraph({
+      children: [
+        new TextRun({
+          text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+          font: DocumentUtilities.DEFAULT_FONT,
+        }),
+      ],
+      spacing: { before: 120, after: 0 },
+    });
+  }
+
+  /**
    * Create footer with signature
    */
-  private static createFooter(documentData: DocumentData, unitDetails: UnitDetails | null): Paragraph {
+  private static createFooter(documentData: DocumentData, unitDetails: UnitDetails | null): Table {
     const leftColumnParagraphs: Paragraph[] = [];
     const rightColumnParagraphs = DocumentUtilities.createManagerSignatureParagraphs(unitDetails?.manager);
     
