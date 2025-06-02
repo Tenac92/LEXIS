@@ -496,7 +496,7 @@ export default function BeneficiariesPage() {
                                 )}
                                 {beneficiary.cengsur1 && (
                                   <div className="space-y-1">
-                                    <span className="text-blue-700 font-medium text-sm">Κέντρο Επιτώπου 1:</span>
+                                    <span className="text-blue-700 font-medium text-sm">Μηχανικός 1:</span>
                                     <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
                                       {beneficiary.cengsur1} {beneficiary.cengname1}
                                     </p>
@@ -504,7 +504,7 @@ export default function BeneficiariesPage() {
                                 )}
                                 {beneficiary.cengsur2 && (
                                   <div className="space-y-1">
-                                    <span className="text-blue-700 font-medium text-sm">Κέντρο Επιτώπου 2:</span>
+                                    <span className="text-blue-700 font-medium text-sm">Μηχανικός 2:</span>
                                     <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
                                       {beneficiary.cengsur2} {beneficiary.cengname2}
                                     </p>
