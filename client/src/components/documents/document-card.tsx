@@ -238,6 +238,41 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                 <Button
                   variant="ghost"
                   size="sm"
+                  onClick={() => {
+                    handleExport();
+                  }}
+                  disabled={isLoading}
+                  className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-colors"
+                  title="Εξαγωγή"
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
+                {!docAny.is_correction && doc.protocol_number_input ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCorrectionModal(true)}
+                    disabled={isLoading}
+                    className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600 transition-colors"
+                    title="Ορθή Επανάληψη"
+                  >
+                    <History className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onView}
+                    disabled={isLoading || doc.status === 'approved'}
+                    className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                    title="Πρωτόκολλο"
+                  >
+                    <ClipboardCheck className="w-4 h-4" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setShowDetailsModal(true)}
                   className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                   title="Λεπτομέρειες"
