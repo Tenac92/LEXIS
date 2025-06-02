@@ -16,6 +16,7 @@ import {
 } from "docx";
 import { DocumentData, UnitDetails } from "./document-types";
 import { DocumentUtilities } from "./document-utilities";
+import { DocumentContentBuilder } from "./document-content-builder";
 import { ExpenditureTypeHandler } from "./expenditure-type-handler";
 import { createLogger } from "./logger";
 

@@ -101,10 +101,19 @@ export class ExpenditureTypeHandler {
   public static createDocumentTitle(expenditureType: string): Paragraph {
     const config = this.getExpenditureConfig(expenditureType);
     
-    return DocumentUtilities.createCenteredParagraph(
-      config.documentTitle || `ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ - ${expenditureType}`,
-      { bold: true, underline: {}, size: 24, spacing: 240 }
-    );
+    return new Paragraph({
+      children: [
+        new TextRun({
+          text: config.documentTitle || `ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ - ${expenditureType}`,
+          bold: true,
+          underline: {},
+          size: 24,
+          font: DocumentUtilities.DEFAULT_FONT,
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 240 },
+    });
   }
 
   /**
@@ -148,7 +157,7 @@ export class ExpenditureTypeHandler {
             new TextRun({
               text: "ΕΙΔΙΚΕΣ ΟΔΗΓΙΕΣ:",
               bold: true,
-              underline: true,
+              underline: {},
               size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
               font: DocumentUtilities.DEFAULT_FONT,
             }),
