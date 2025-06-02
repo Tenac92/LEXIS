@@ -5,8 +5,7 @@ import type { User } from '@shared/schema';
 import type { AuthenticatedRequest } from "../authentication"
 import { authenticateSession } from '../auth';
 import { authenticateSession } from "../authentication"
-import { DocumentManager } from '../utils/DocumentManager';
-import { DocumentFormatter } from '../utils/DocumentFormatter';
+import { DocumentCore } from '../utils/document-core';
 import { broadcastDocumentUpdate } from '../services/websocketService';
 import JSZip from 'jszip';
 

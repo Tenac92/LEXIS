@@ -15,9 +15,7 @@ import {
   PageOrientation,
 } from "docx";
 import { DocumentData, UnitDetails } from "./document-types";
-import { DocumentUtilities } from "./document-utilities";
-import { DocumentContentBuilder } from "./document-content-builder";
-import { ExpenditureTypeHandler } from "./expenditure-type-handler";
+import { DocumentCore } from "./document-core";
 import { createLogger } from "./logger";
 
 const logger = createLogger("PrimaryDocumentFormatter");
@@ -356,8 +354,8 @@ export class PrimaryDocumentFormatter {
         documentData.project_na853 ||
         (documentData as any).mis?.toString() ||
         "";
-      const projectTitle = await DocumentUtilities.getProjectTitle(projectMis);
-      const projectNA853 = await DocumentUtilities.getProjectNA853(projectMis);
+      const projectTitle = `Έργο ${projectMis}`;
+      const projectNA853 = projectMis;
       logger.debug(`Project title for MIS ${projectMis}:`, projectTitle);
       logger.debug(`Project NA853 for MIS ${projectMis}:`, projectNA853);
 

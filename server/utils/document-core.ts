@@ -1,32 +1,103 @@
 /**
- * Document Content Builder - Creates structured document content sections
+ * Document Core - Essential document generation functionality
  * 
- * This module handles the creation of different document sections like headers,
- * subjects, main content, and footers with proper formatting and structure.
+ * This file contains the core document generation logic with expenditure type handling
+ * for Greek government documents.
  */
 
-import { Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle } from "docx";
+import { 
+  Document, 
+  Packer, 
+  Paragraph, 
+  TextRun, 
+  Table, 
+  TableRow, 
+  TableCell, 
+  AlignmentType, 
+  WidthType,
+  BorderStyle,
+  HeightRule
+} from "docx";
 import { DocumentUtilities } from "./document-utilities";
 import { ExpenditureTypeHandler } from "./expenditure-type-handler";
 import { DocumentData, UnitDetails } from "./document-types";
 import { createLogger } from "./logger";
 
-const logger = createLogger("DocumentContentBuilder");
+const logger = createLogger("DocumentCore");
 
-export class DocumentContentBuilder {
+export class DocumentCore {
   
   /**
-   * Create document header with logo and unit information
+   * Generate primary document
    */
-  public static async createDocumentHeader(
-    documentData: DocumentData,
-    unitDetails: UnitDetails | null
-  ): Promise<Paragraph[]> {
-    logger.debug("Creating document header");
-    
+  public static async generatePrimaryDocument(documentData: DocumentData): Promise<Buffer> {
+    try {
+      logger.debug("Generating primary document for:", documentData.id);
+      
+      // Get unit details
+      const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
+      
+      // Create document sections
+      const children: Paragraph[] = [
+        // Header
+        ...this.createHeader(unitDetails),
+        
+        // Date and protocol
+        this.createDateAndProtocol(documentData),
+        
+        // Subject
+        this.createSubject(documentData),
+        
+        // Main content
+        ...this.createMainContent(documentData),
+        
+        // Payment table
+        this.createPaymentTable(documentData.recipients || [], documentData.expenditure_type),
+        
+        // Note
+        ExpenditureTypeHandler.createNoteForExpenditureType(documentData.expenditure_type),
+        
+        // Special instructions
+        ...ExpenditureTypeHandler.createSpecialInstructions(documentData.expenditure_type),
+      ];
+
+      // Add footer
+      children.push(this.createFooter(documentData, unitDetails));
+
+      const doc = new Document({
+        sections: [{
+          properties: {
+            page: {
+              margin: DocumentUtilities.DOCUMENT_MARGINS,
+            },
+          },
+          children,
+        }],
+        styles: {
+          default: {
+            document: {
+              run: {
+                font: DocumentUtilities.DEFAULT_FONT,
+                size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              },
+            },
+          },
+        },
+      });
+
+      return await Packer.toBuffer(doc);
+    } catch (error) {
+      logger.error("Error generating primary document:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create document header
+   */
+  private static createHeader(unitDetails: UnitDetails | null): Paragraph[] {
     const headerParagraphs: Paragraph[] = [];
     
-    // Unit information
     if (unitDetails?.name) {
       headerParagraphs.push(
         DocumentUtilities.createCenteredParagraph(
@@ -36,7 +107,6 @@ export class DocumentContentBuilder {
       );
     }
     
-    // Department/Unit details
     if (unitDetails?.unit) {
       headerParagraphs.push(
         DocumentUtilities.createCenteredParagraph(
@@ -52,9 +122,7 @@ export class DocumentContentBuilder {
   /**
    * Create date and protocol section
    */
-  public static createDateAndProtocol(documentData: DocumentData): Paragraph {
-    logger.debug("Creating date and protocol section");
-    
+  private static createDateAndProtocol(documentData: DocumentData): Paragraph {
     const protocolText = documentData.protocol_number_input 
       ? `Αρ. Πρωτ.: ${documentData.protocol_number_input}`
       : "Αρ. Πρωτ.: ___________";
@@ -77,14 +145,9 @@ export class DocumentContentBuilder {
   }
 
   /**
-   * Create document subject line
+   * Create document subject
    */
-  public static createDocumentSubject(
-    documentData: DocumentData,
-    unitDetails: UnitDetails | null
-  ): Paragraph {
-    logger.debug("Creating document subject");
-    
+  private static createSubject(documentData: DocumentData): Paragraph {
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
     const config = ExpenditureTypeHandler.getExpenditureConfig(expenditureType);
     
@@ -108,12 +171,7 @@ export class DocumentContentBuilder {
   /**
    * Create main content section
    */
-  public static createMainContent(
-    documentData: DocumentData,
-    unitDetails: UnitDetails | null
-  ): Paragraph[] {
-    logger.debug("Creating main content section");
-    
+  private static createMainContent(documentData: DocumentData): Paragraph[] {
     const contentParagraphs: Paragraph[] = [];
     
     // Project information
@@ -149,7 +207,7 @@ export class DocumentContentBuilder {
       );
     }
     
-    // Main request text
+    // Main request text based on expenditure type
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
     const mainText = this.getMainContentText(expenditureType);
     
@@ -173,8 +231,6 @@ export class DocumentContentBuilder {
    * Get main content text based on expenditure type
    */
   private static getMainContentText(expenditureType: string): string {
-    const config = ExpenditureTypeHandler.getExpenditureConfig(expenditureType);
-    
     switch (expenditureType) {
       case "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ":
         return "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την επιδότηση ενοικίου για τους κατωτέρω δικαιούχους:";
@@ -192,36 +248,58 @@ export class DocumentContentBuilder {
   }
 
   /**
-   * Get project title from project data
+   * Create payment table
    */
-  public static getProjectTitle(projectMis: string): string {
-    // This would typically fetch from database
-    // For now, return a formatted title
-    return `Έργο ${projectMis}`;
-  }
-
-  /**
-   * Get project NA853 code
-   */
-  public static getProjectNA853(projectMis: string): string {
-    // This would typically fetch from database
-    // For now, return the MIS as NA853
-    return projectMis;
-  }
-
-  /**
-   * Create signature and approval section
-   */
-  public static createSignatureSection(
-    documentData: DocumentData,
-    unitDetails: UnitDetails | null
-  ): Table {
-    logger.debug("Creating signature section");
+  private static createPaymentTable(recipients: any[], expenditureType: string): Table {
+    const columns = ExpenditureTypeHandler.getPaymentTableColumns(expenditureType);
+    const borderStyle = BorderStyle.SINGLE;
     
+    const headerCells = columns.map(column => 
+      new TableCell({
+        children: [DocumentUtilities.createCenteredParagraph(column, { bold: true, size: 20 })],
+        width: { size: 100 / columns.length, type: WidthType.PERCENTAGE },
+        shading: { fill: "E6E6E6" },
+        borders: {
+          top: { style: borderStyle, size: 1 },
+          bottom: { style: borderStyle, size: 1 },
+          left: { style: borderStyle, size: 1 },
+          right: { style: borderStyle, size: 1 },
+        },
+      })
+    );
+
+    const rows = [new TableRow({ children: headerCells, tableHeader: true })];
+
+    recipients.forEach((recipient, index) => {
+      const rowData = ExpenditureTypeHandler.formatRecipientForTable(recipient, expenditureType);
+      const cells = rowData.map(cellData => 
+        new TableCell({
+          children: [DocumentUtilities.createCenteredParagraph(cellData, { size: 18 })],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        })
+      );
+      rows.push(new TableRow({ children: cells }));
+    });
+
+    return new Table({
+      rows,
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      layout: "autofit",
+    });
+  }
+
+  /**
+   * Create footer with signature
+   */
+  private static createFooter(documentData: DocumentData, unitDetails: UnitDetails | null): Paragraph {
     const leftColumnParagraphs: Paragraph[] = [];
     const rightColumnParagraphs = DocumentUtilities.createManagerSignatureParagraphs(unitDetails?.manager);
     
-    // Add approval text
     leftColumnParagraphs.push(
       new Paragraph({
         children: [
