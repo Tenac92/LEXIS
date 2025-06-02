@@ -69,6 +69,78 @@ export class DocumentShared {
     });
   }
 
+  /**
+   * Creates manager signature paragraphs for document signatures
+   * @param managerInfo Manager information from unit details
+   * @returns Array of paragraphs for the signature section
+   */
+  public static createManagerSignatureParagraphs(managerInfo?: any): Paragraph[] {
+    const rightColumnParagraphs: Paragraph[] = [];
+
+    rightColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: managerInfo?.order || "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
+            bold: true,
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 240 },
+      }),
+    );
+
+    rightColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: managerInfo?.title || "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+            bold: true,
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 480 },
+      }),
+    );
+
+    rightColumnParagraphs.push(this.createBlankLine(120));
+    rightColumnParagraphs.push(this.createBlankLine(120));
+
+    rightColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: managerInfo?.name || "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
+            bold: true,
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 120 },
+      }),
+    );
+
+    rightColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: managerInfo?.degree || "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β.",
+            size: this.DEFAULT_FONT_SIZE,
+            font: this.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+      }),
+    );
+
+    return rightColumnParagraphs;
+  }
+
   public static createContactDetail(label: string, value: string): Paragraph {
     return new Paragraph({
       children: [

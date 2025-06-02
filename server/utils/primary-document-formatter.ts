@@ -307,68 +307,7 @@ export class PrimaryDocumentFormatter {
 
     // Create the right column content (signature)
     const managerInfo = unitDetails?.manager;
-    const rightColumnParagraphs: Paragraph[] = [];
-
-    rightColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: managerInfo?.order || "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
-            bold: true,
-            size: DocumentShared.DEFAULT_FONT_SIZE,
-            font: DocumentShared.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 240 },
-      }),
-    );
-
-    rightColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: managerInfo?.title || "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
-            bold: true,
-            size: DocumentShared.DEFAULT_FONT_SIZE,
-            font: DocumentShared.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 480 },
-      }),
-    );
-
-    rightColumnParagraphs.push(DocumentShared.createBlankLine(120));
-    rightColumnParagraphs.push(DocumentShared.createBlankLine(120));
-
-    rightColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: managerInfo?.name || "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
-            bold: true,
-            size: DocumentShared.DEFAULT_FONT_SIZE,
-            font: DocumentShared.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 120 },
-      }),
-    );
-
-    rightColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: managerInfo?.degree || "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β.",
-            size: DocumentShared.DEFAULT_FONT_SIZE,
-            font: DocumentShared.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-      }),
-    );
+    const rightColumnParagraphs = DocumentShared.createManagerSignatureParagraphs(managerInfo);
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
