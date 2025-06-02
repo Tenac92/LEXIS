@@ -274,7 +274,28 @@ router.get('/', async (req: Request, res: Response) => {
       afm: req.query.afm as string
     };
 
-    const documents = await documentManager.loadDocuments(filters);
+    // Get documents from database directly
+    let query = supabase
+      .from('generated_documents')
+      .select('*');
+
+    // Apply filters only if they exist
+    if (filters.unit) {
+      query = query.eq('unit', filters.unit);
+    }
+    if (filters.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    const { data: documents, error } = await query;
+
+    if (error) {
+      console.error('Database error:', error);
+      return res.status(500).json({
+        message: 'Database query failed',
+        error: error.message
+      });
+    }
 
     return res.json(documents || []);
   } catch (error) {
@@ -681,7 +702,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
       console.log('[DocumentsController] Generating single document for export');
       
       // For regular documents, use the standard document generation
-      const primaryBuffer = await DocumentFormatter.generateDocument(documentData);
+      const primaryBuffer = await DocumentGenerator.generatePrimaryDocument(documentData);
       
       // Set response headers for DOCX file
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -694,10 +715,11 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     console.log('[DocumentsController] Generating both documents for ZIP export');
     
     // Generate primary document
-    const primaryBuffer = await DocumentFormatter.generateDocument(documentData);
+    const primaryBuffer = await DocumentGenerator.generatePrimaryDocument(documentData);
     
     // Generate secondary document
-    const secondaryBuffer = await DocumentFormatter.generateSecondDocument(documentData);
+    const { SecondaryDocumentFormatter } = await import('../utils/secondary-document-formatter');
+    const secondaryBuffer = await SecondaryDocumentFormatter.generateDocument(documentData);
     
     // Create a ZIP file containing both documents
     const zip = new JSZip();
