@@ -58,9 +58,11 @@ export class DocumentGenerator {
         // Final request
         DocumentGenerator.createFinalRequest(),
         
-        // Attachments section is included in the footer
+        // Attachments
+        ...DocumentGenerator.createAttachments(documentData),
         
-        // Distribution lists are included in the footer
+        // Distribution lists
+        ...DocumentGenerator.createDistributionLists(),
         
         // Footer
         this.createFooter(documentData, unitDetails),
@@ -248,7 +250,7 @@ export class DocumentGenerator {
         italics: true,
       },
       {
-        text: ` ${documentTitle} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit}`,
+        text: ` ${documentTitle} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name}`,
         italics: true,
       },
     ];
@@ -289,7 +291,7 @@ export class DocumentGenerator {
                         font: DocumentUtilities.DEFAULT_FONT,
                       }),
                   ),
-                  spacing: { after: 240 },
+                  spacing: { after: 0 },
                 }),
               ],
             }),
@@ -305,39 +307,7 @@ export class DocumentGenerator {
   private static createMainContent(documentData: DocumentData): Paragraph[] {
     const contentParagraphs: Paragraph[] = [];
     
-    // Project information
-    if (documentData.project_na853) {
-      contentParagraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: `Έργο: ${documentData.project_na853}`,
-              bold: true,
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              font: DocumentUtilities.DEFAULT_FONT,
-            }),
-          ],
-          spacing: { after: 0 },
-        })
-      );
-    }
-    
-    if (documentData.project_id) {
-      contentParagraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: `ΜΙΣ: ${documentData.project_id}`,
-              bold: true,
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              font: DocumentUtilities.DEFAULT_FONT,
-            }),
-          ],
-          spacing: { after: 0 },
-        })
-      );
-    }
-    
+
     // Main request text based on expenditure type
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
     const config = DocumentUtilities.getExpenditureConfig(expenditureType);
@@ -348,7 +318,7 @@ export class DocumentGenerator {
         children: [
           new TextRun({
             text: mainText,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE-2,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
@@ -564,7 +534,7 @@ export class DocumentGenerator {
             text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
             bold: true,
             underline: {},
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE-4,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
@@ -581,7 +551,7 @@ export class DocumentGenerator {
           children: [
             new TextRun({
               text: `${i + 1}. ${attachments[i]}`,
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE-4,
               font: DocumentUtilities.DEFAULT_FONT,
             }),
           ],
@@ -600,7 +570,7 @@ export class DocumentGenerator {
             text: "ΚΟΙΝΟΠΟΙΗΣΗ",
             bold: true,
             underline: {},
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE-4,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
@@ -619,7 +589,7 @@ export class DocumentGenerator {
           children: [
             new TextRun({
               text: `${i + 1}. ${notifications[i]}`,
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE-4,
               font: DocumentUtilities.DEFAULT_FONT,
             }),
           ],
@@ -638,7 +608,7 @@ export class DocumentGenerator {
             text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
             bold: true,
             underline: {},
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE-4,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
@@ -650,7 +620,7 @@ export class DocumentGenerator {
         children: [
           new TextRun({
             text: "1. Χρονολογικό Αρχείο",
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE-4,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
@@ -728,99 +698,98 @@ export class DocumentGenerator {
   }
 
   /**
-   * Create project information section
+   * Create project information section using table layout
    */
-  private static createProjectInfo(documentData: DocumentData): Paragraph[] {
-    const projectParagraphs: Paragraph[] = [];
-    
-    projectParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΑΡ. ΕΡΓΟΥ:",
-            bold: true,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
+  private static createProjectInfo(documentData: DocumentData): (Table | Paragraph)[] {
+    return [
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        columnWidths: [20, 80],
+        borders: {
+          top: { style: BorderStyle.NONE },
+          bottom: { style: BorderStyle.NONE },
+          left: { style: BorderStyle.NONE },
+          right: { style: BorderStyle.NONE },
+          insideHorizontal: { style: BorderStyle.NONE },
+          insideVertical: { style: BorderStyle.NONE },
+        },
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 15, type: WidthType.PERCENTAGE },
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({ text: "ΑΡ. ΕΡΓΟΥ: ", bold: true }),
+                    ],
+                  }),
+                ],
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: "ΑΛΕ: ", bold: true })],
+                  }),
+                ],
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            ],
+          }),
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: "ΤΟΜΕΑΣ: ", bold: true, size: DocumentUtilities.DEFAULT_FONT_SIZE - 2})],
+                  }),
+                ],
+              }),
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [
+                      new TextRun({
+                        text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+                        size: DocumentUtilities.DEFAULT_FONT_SIZE - 2
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+            ],
           }),
         ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      })
-    );
-    
-    projectParagraphs.push(
+      }),
       new Paragraph({
-        children: [
-          new TextRun({
-            text: `${documentData.project_na853 || '2024ΝΑ85300000'} της ΣΑΝΑ 853`,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      })
-    );
-    
-    projectParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΑΛΕ:",
-            bold: true,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      })
-    );
-    
-    projectParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      })
-    );
-    
-    projectParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΤΟΜΕΑΣ:",
-            bold: true,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      })
-    );
-    
-    projectParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      })
-    );
-    
-    return projectParagraphs;
+        children: [new TextRun({ text: "" })],
+      }),
+    ];
   }
 
   /**
@@ -898,7 +867,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 120 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -910,7 +879,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 120 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [

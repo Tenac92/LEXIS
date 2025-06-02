@@ -1,0 +1,92 @@
+  private static createProjectInfo(documentData: DocumentData): Paragraph[] {
+    const projectParagraphs: Paragraph[] = [];
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΑΡ. ΕΡΓΟΥ:",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 0 },
+      })
+    );
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `${documentData.project_na853 || '2024ΝΑ85300000'} της ΣΑΝΑ 853`,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 0 },
+      })
+    );
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΑΛΕ:",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE-2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 0 },
+      })
+    );
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE-2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 0 },
+      })
+    );
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΤΟΜΕΑΣ:",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE-2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 0 },
+      })
+    );
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE-2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 0 },
+      })
+    );
+    
+    return projectParagraphs;
+  }
