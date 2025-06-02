@@ -58,11 +58,7 @@ export class DocumentGenerator {
         // Final request
         DocumentGenerator.createFinalRequest(),
         
-        // Attachments
-        ...DocumentGenerator.createAttachments(documentData),
-        
-        // Distribution lists
-        ...DocumentGenerator.createDistributionLists(),
+        // Note: Attachments and distribution lists are handled in the footer
         
         // Footer
         this.createFooter(documentData, unitDetails),
