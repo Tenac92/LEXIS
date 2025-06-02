@@ -411,25 +411,61 @@ export default function BeneficiariesPage() {
                                 </div>
                               </div>
                               
-                              <div className="space-y-3">
-                                {beneficiary.region && (
-                                  <div className="flex items-center gap-2 text-gray-600">
-                                    <Building className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm">{beneficiary.region}</span>
-                                  </div>
-                                )}
+                              <div className="grid grid-cols-2 gap-2 text-sm mb-6">
                                 {beneficiary.project && (
-                                  <div className="flex items-center gap-2 text-gray-600">
-                                    <FileText className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm">{beneficiary.project}</span>
+                                  <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                                    <span className="text-xs text-gray-600">Έργο (MIS)</span>
+                                    <span className="text-gray-900 font-mono">{beneficiary.project}</span>
                                   </div>
                                 )}
-                                {beneficiary.monada && (
-                                  <div className="flex items-center gap-2 text-gray-600">
-                                    <Building className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm">{beneficiary.monada}</span>
+                                {beneficiary.region && (
+                                  <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
+                                    <span className="text-xs text-gray-600">Περιοχή</span>
+                                    <span className="text-gray-900">{beneficiary.region}</span>
                                   </div>
                                 )}
+                              </div>
+                              
+                              {/* Financial Status Summary */}
+                              {(beneficiary as any).oikonomika && (
+                                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                  <h4 className="text-sm font-medium text-blue-800 mb-2">Οικονομικά Στοιχεία</h4>
+                                  <div className="space-y-1">
+                                    {typeof (beneficiary as any).oikonomika === 'object' && 
+                                     Object.entries((beneficiary as any).oikonomika).map(([paymentType, data]: [string, any]) => (
+                                      <div key={paymentType} className="text-xs">
+                                        <span className="font-medium text-blue-800">{paymentType}:</span>
+                                        {typeof data === 'object' && data !== null && (
+                                          <div className="ml-2 space-y-0.5">
+                                            {Object.entries(data).map(([installment, info]: [string, any]) => (
+                                              <div key={installment} className="flex justify-between">
+                                                <span className="text-blue-700">{installment}:</span>
+                                                <span className="text-blue-900">
+                                                  {typeof info === 'object' && info !== null ? 
+                                                    `€${info.amount || 0} - ${info.status || 'Εκκρεμεί'}` :
+                                                    String(info)
+                                                  }
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => toggleCardFlip(beneficiary.id)}
+                                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                                >
+                                  <Info className="w-4 h-4 mr-2" />
+                                  Περισσότερα στοιχεία
+                                </Button>
                               </div>
                             </div>
                           </div>
