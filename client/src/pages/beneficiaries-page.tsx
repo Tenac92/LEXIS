@@ -556,7 +556,12 @@ export default function BeneficiariesPage() {
                                                           {typeof info ===
                                                             "object" &&
                                                           info !== null
-                                                            ? `€${info.amount || 0} - ${info.status || "Εκκρεμεί"}`
+                                                            ? `${new Intl.NumberFormat("el-GR", {
+                                                                style: "currency",
+                                                                currency: "EUR",
+                                                                minimumFractionDigits: 2,
+                                                                maximumFractionDigits: 2
+                                                              }).format(info.amount || 0)} - ${info.status || "Εκκρεμεί"}`
                                                             : String(info)}
                                                         </span>
                                                       </div>
