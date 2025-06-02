@@ -14,7 +14,8 @@ import {
   AlignmentType, 
   WidthType,
   BorderStyle,
-  HeightRule
+  HeightRule,
+  VerticalAlign
 } from "docx";
 import { DocumentUtilities } from "./document-utilities";
 import { DocumentData, UnitDetails } from "./document-types";
