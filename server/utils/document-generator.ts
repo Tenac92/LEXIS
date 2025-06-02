@@ -58,11 +58,9 @@ export class DocumentGenerator {
         // Final request
         DocumentGenerator.createFinalRequest(),
         
-        // Attachments
-        ...DocumentGenerator.createAttachments(documentData),
+        // Attachments section is included in the footer
         
-        // Distribution lists
-        ...DocumentGenerator.createDistributionLists(),
+        // Distribution lists are included in the footer
         
         // Footer
         this.createFooter(documentData, unitDetails),
@@ -319,7 +317,7 @@ export class DocumentGenerator {
               font: DocumentUtilities.DEFAULT_FONT,
             }),
           ],
-          spacing: { after: 120 },
+          spacing: { after: 0 },
         })
       );
     }
@@ -335,7 +333,7 @@ export class DocumentGenerator {
               font: DocumentUtilities.DEFAULT_FONT,
             }),
           ],
-          spacing: { after: 120 },
+          spacing: { after: 0 },
         })
       );
     }
@@ -354,7 +352,7 @@ export class DocumentGenerator {
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -722,7 +720,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.JUSTIFIED,
-        spacing: { after: 240 },
+        spacing: { after: 0 },
       })
     );
     
@@ -746,7 +744,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -760,7 +758,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -775,7 +773,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -789,7 +787,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -804,7 +802,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -818,7 +816,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 240 },
+        spacing: { after: 0 },
       })
     );
     
@@ -838,128 +836,8 @@ export class DocumentGenerator {
         }),
       ],
       alignment: AlignmentType.JUSTIFIED,
-      spacing: { after: 240 },
+      spacing: { after: 0 },
     });
-  }
-
-  /**
-   * Create attachments section
-   */
-  private static createAttachments(documentData: DocumentData): Paragraph[] {
-    const attachmentParagraphs: Paragraph[] = [];
-    
-    attachmentParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
-            bold: true,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
-      })
-    );
-    
-    const attachments = documentData.attachments || ["Οι εκδοθείσες εγκρίσεις ΣΣ"];
-    attachments.forEach((attachment, index) => {
-      attachmentParagraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: `${index + 1}. ${attachment}`,
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              font: DocumentUtilities.DEFAULT_FONT,
-            }),
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 120 },
-        })
-      );
-    });
-    
-    return attachmentParagraphs;
-  }
-
-  /**
-   * Create distribution lists section
-   */
-  private static createDistributionLists(): Paragraph[] {
-    const distributionParagraphs: Paragraph[] = [];
-    
-    distributionParagraphs.push(DocumentUtilities.createBlankLine(240));
-    
-    distributionParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΚΟΙΝΟΠΟΙΗΣΗ",
-            bold: true,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
-      })
-    );
-    
-    const distributionList = [
-      "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
-      "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
-      "Γ.Δ.Α.Ε.Φ.Κ."
-    ];
-    
-    distributionList.forEach((item, index) => {
-      distributionParagraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: `${index + 1}. ${item}`,
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              font: DocumentUtilities.DEFAULT_FONT,
-            }),
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 120 },
-        })
-      );
-    });
-    
-    distributionParagraphs.push(DocumentUtilities.createBlankLine(120));
-    
-    distributionParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
-            bold: true,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
-      })
-    );
-    
-    distributionParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "1. Χρονολογικό Αρχείο",
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 240 },
-      })
-    );
-    
-    return distributionParagraphs;
   }
 
   /**
@@ -1044,7 +922,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 120 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1056,7 +934,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 120 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1068,7 +946,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 120 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1080,7 +958,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 240 },
+                  spacing: { after: 120 },
                 }),
                 // Contact information
                 new Paragraph({
@@ -1092,7 +970,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 120 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1103,7 +981,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 120 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1114,7 +992,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 120 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1125,7 +1003,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 120 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1136,7 +1014,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 360 },
+                  spacing: { after: 120 },
                 }),
               ],
             }),
@@ -1181,7 +1059,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 60 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1192,7 +1070,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 60 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1225,7 +1103,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 120 },
+                  spacing: { after: 0 },
                 }),
               ],
             }),
