@@ -53,13 +53,13 @@ export class DocumentGenerator {
             new ImageRun({
               data: fs.readFileSync(path.join(__dirname, "ethnosimo22.png")),
               transformation: {
-                width: 100,
-                height: 100,
+                width: 50,
+                height: 50,
               },
             }),
           ],
           alignment: AlignmentType.LEFT,
-          spacing: { after: 400 },
+          spacing: { after: 200 },
         }),
 
         // Header with two-column layout (includes contact info and recipient section)
@@ -915,7 +915,7 @@ export class DocumentGenerator {
       children: [
         new TextRun({
           text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
-          size: DocumentUtilities.DEFAULT_FONT_SIZE,
+          size: DocumentUtilities.DEFAULT_FONT_SIZE-2,
           font: DocumentUtilities.DEFAULT_FONT,
         }),
       ],
@@ -1036,7 +1036,7 @@ export class DocumentGenerator {
                     new TextRun({
                       text: "ΠΡΟΣ:",
                       bold: true,
-                      size: 24,
+                      size: 20,
                     }),
                   ],
                   spacing: { before: 2000 },
@@ -1045,7 +1045,7 @@ export class DocumentGenerator {
                 new Paragraph({
                   children: [new TextRun({
                     text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
-                    size: 22,
+                    size: 20,
                   })],
                   spacing: { before: 200 },
                   alignment: AlignmentType.LEFT,
@@ -1053,14 +1053,14 @@ export class DocumentGenerator {
                 new Paragraph({
                   children: [new TextRun({
                     text: "Διεύθυνση Οικονομικής Διαχείρισης",
-                    size: 22,
+                    size: 20,
                   })],
                   alignment: AlignmentType.LEFT,
                 }),
                 new Paragraph({
                   children: [new TextRun({
                     text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-                    size: 22,
+                    size: 20,
                   })],
                   alignment: AlignmentType.LEFT,
                 }),
@@ -1074,14 +1074,14 @@ export class DocumentGenerator {
                 new Paragraph({
                   children: [new TextRun({
                     text: "Δημοκρίτου 2",
-                    size: 22,
+                    size: 20,
                   })],
                   alignment: AlignmentType.LEFT,
                 }),
                 new Paragraph({
                   children: [new TextRun({
                     text: "151 23 Μαρούσι",
-                    size: 22,
+                    size: 20,
                   })],
                   alignment: AlignmentType.LEFT,
                 }),

@@ -192,7 +192,7 @@ export class DocumentUtilities {
           font: this.DEFAULT_FONT,
         }),
       ],
-      spacing: { after: 120 },
+      spacing: { after: 0 },
     });
   }
 
