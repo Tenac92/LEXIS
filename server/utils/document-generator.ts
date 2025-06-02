@@ -63,20 +63,35 @@ export class DocumentGenerator {
         // Header
         ...this.createHeader(unitDetails),
         
-        // Date and protocol
-        this.createDateAndProtocol(documentData),
+        // Contact information
+        ...this.createContactInfo(documentData),
+        
+        // Recipient section
+        ...this.createRecipientSection(),
         
         // Subject
         this.createSubject(documentData),
         
-        // Main content
+        // Legal references
+        ...this.createLegalReferences(),
+        
+        // Main request text
         ...this.createMainContent(documentData),
+        
+        // Project information
+        ...this.createProjectInfo(documentData),
         
         // Payment table
         this.createPaymentTable(documentData.recipients || [], documentData.expenditure_type),
         
-        // Note
-        this.createNote(),
+        // Final request
+        this.createFinalRequest(),
+        
+        // Attachments
+        ...this.createAttachments(documentData),
+        
+        // Distribution lists
+        ...this.createDistributionLists(),
         
         // Footer
         this.createFooter(documentData, unitDetails),
@@ -111,30 +126,205 @@ export class DocumentGenerator {
   }
 
   /**
-   * Create document header
+   * Create document header with proper Greek government format
    */
   private static createHeader(unitDetails: UnitDetails | null): Paragraph[] {
     const headerParagraphs: Paragraph[] = [];
     
-    if (unitDetails?.name) {
-      headerParagraphs.push(
-        DocumentUtilities.createCenteredParagraph(
-          unitDetails.name,
-          { bold: true, size: 20, spacing: 120 }
-        )
-      );
-    }
+    // Greek Republic header
+    headerParagraphs.push(
+      DocumentUtilities.createCenteredParagraph(
+        "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ",
+        { bold: true, size: 24, spacing: 120 }
+      )
+    );
     
-    if (unitDetails?.unit) {
-      headerParagraphs.push(
-        DocumentUtilities.createCenteredParagraph(
-          unitDetails.unit,
-          { bold: true, size: 18, spacing: 240 }
-        )
-      );
-    }
+    headerParagraphs.push(DocumentUtilities.createBlankLine(120));
+    
+    // Ministry header
+    headerParagraphs.push(
+      DocumentUtilities.createCenteredParagraph(
+        "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ",
+        { bold: true, size: 22, spacing: 120 }
+      )
+    );
+    
+    headerParagraphs.push(DocumentUtilities.createBlankLine(120));
+    
+    // General Secretariat
+    headerParagraphs.push(
+      DocumentUtilities.createCenteredParagraph(
+        "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
+        { bold: true, size: 20, spacing: 120 }
+      )
+    );
+    
+    headerParagraphs.push(DocumentUtilities.createBlankLine(120));
+    
+    // General Directorate
+    headerParagraphs.push(
+      DocumentUtilities.createCenteredParagraph(
+        "ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ.",
+        { bold: true, size: 20, spacing: 120 }
+      )
+    );
+    
+    headerParagraphs.push(DocumentUtilities.createBlankLine(120));
+    
+    // Directorate
+    headerParagraphs.push(
+      DocumentUtilities.createCenteredParagraph(
+        "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
+        { bold: true, size: 18, spacing: 120 }
+      )
+    );
+    
+    headerParagraphs.push(DocumentUtilities.createBlankLine(120));
+    
+    // Department
+    headerParagraphs.push(
+      DocumentUtilities.createCenteredParagraph(
+        "ΤΜΗΜΑ ΕΠΟΠΤΕΙΑΣ ΚΑΙ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ",
+        { bold: true, size: 16, spacing: 240 }
+      )
+    );
     
     return headerParagraphs;
+  }
+
+  /**
+   * Create contact information section
+   */
+  private static createContactInfo(documentData: DocumentData): Paragraph[] {
+    const contactParagraphs: Paragraph[] = [];
+    
+    contactParagraphs.push(DocumentUtilities.createBlankLine(240));
+    
+    // Contact details
+    contactParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Ταχ. Δ/νση: Δημοκρίτου 2",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    contactParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Ταχ. Κώδικας: 11523, Μαρούσι",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    const contactPerson = documentData.generated_by?.name || documentData.user_name || "Υπάλληλος";
+    contactParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Πληροφορίες: ${contactPerson}`,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    const telephone = documentData.generated_by?.telephone || documentData.contact_number || "2131331391";
+    contactParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Τηλέφωνο: ${telephone}`,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    contactParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Email: daefkke@civilprotection.gr",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 240 },
+      })
+    );
+    
+    return contactParagraphs;
+  }
+
+  /**
+   * Create recipient section
+   */
+  private static createRecipientSection(): Paragraph[] {
+    const recipientParagraphs: Paragraph[] = [];
+    
+    recipientParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΠΡΟΣ:",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    const recipientLines = [
+      "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+      "Διεύθυνση Οικονομικής Διαχείρισης",
+      "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+      "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+      "Δημοκρίτου 2",
+      "151 23 Μαρούσι"
+    ];
+    
+    recipientLines.forEach(line => {
+      recipientParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: line,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              font: DocumentUtilities.DEFAULT_FONT,
+            }),
+          ],
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 60 },
+        })
+      );
+    });
+    
+    recipientParagraphs.push(DocumentUtilities.createBlankLine(240));
+    
+    return recipientParagraphs;
   }
 
   /**
@@ -167,9 +357,8 @@ export class DocumentGenerator {
    */
   private static createSubject(documentData: DocumentData): Paragraph {
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const config = EXPENDITURE_CONFIGS[expenditureType] || {};
     
-    const subjectText = `ΘΕΜΑ: ${config.documentTitle || `Αίτημα χορήγησης - ${expenditureType}`}`;
+    const subjectText = `ΘΕΜΑ: Αίτημα για την πληρωμή ${expenditureType} που έχουν εγκριθεί από τη ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ (ΔΑΕΦΚ-ΚΕ)`;
     
     return new Paragraph({
       children: [
