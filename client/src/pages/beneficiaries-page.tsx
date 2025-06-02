@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Edit, Trash2, Download, Upload, User, FileText, Building, UserCheck, RotateCcw, Info, Users, LayoutGrid, List } from "lucide-react";
 import { Header } from "@/components/header";
@@ -43,6 +43,8 @@ export default function BeneficiariesPage() {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(20); // Show 20 items per page
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -175,6 +177,17 @@ export default function BeneficiariesPage() {
     [beneficiary.name, beneficiary.surname, beneficiary.afm?.toString(), beneficiary.region]
       .some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredBeneficiaries.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedBeneficiaries = filteredBeneficiaries.slice(startIndex, endIndex);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -431,8 +444,9 @@ export default function BeneficiariesPage() {
                 ))}
               </div>
             ) : filteredBeneficiaries.length > 0 ? (
-              <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-                {filteredBeneficiaries.map((beneficiary) => {
+              <>
+                <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+                  {paginatedBeneficiaries.map((beneficiary) => {
                   if (viewMode === "list") {
                     return (
                       <Card 
@@ -631,7 +645,38 @@ export default function BeneficiariesPage() {
                     </div>
                   );
                 })}
-              </div>
+                </div>
+                
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Εμφάνιση {startIndex + 1}-{Math.min(endIndex, filteredBeneficiaries.length)} από {filteredBeneficiaries.length} δικαιούχους
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Προηγούμενη
+                      </Button>
+                      <span className="text-sm">
+                        Σελίδα {currentPage} από {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Επόμενη
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="rounded-lg border-2 border-dashed border-muted p-8 text-center">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
