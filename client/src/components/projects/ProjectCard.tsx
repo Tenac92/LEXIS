@@ -249,26 +249,95 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
   };
 
   if (view === "list") {
-    // Keep list view simple for now
     return (
       <>
         <Card 
           className="transition-shadow hover:shadow-lg flex cursor-pointer"
           onClick={() => setShowDetails(true)}
         >
-          <CardContent className="p-6 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="line-clamp-2 text-lg font-bold">
-                {getProjectTitle(project)}
-              </h3>
-              <Badge variant="secondary" className={getStatusColor(project.status || '')}>
-                {getStatusText(project.status || '')}
-              </Badge>
+          <div className="p-6 flex-1">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-lg font-bold text-foreground">
+                    {getProjectTitle(project)}
+                  </h3>
+                  <Badge variant="secondary" className={getStatusColor(project.status || '')}>
+                    {getStatusText(project.status || '')}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <FileText className="w-4 h-4" />
+                      <span>MIS: {project.mis || "Δ/Υ"}</span>
+                    </div>
+                    {getRegionText(project) && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Building className="w-4 h-4" />
+                        <span>{getRegionText(project)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <DollarSign className="w-4 h-4" />
+                      <span>Προϋπολογισμός: {formatCurrency(Number(project.budget_na853))}</span>
+                    </div>
+                    {budgetData && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <TrendingUp className="w-4 h-4" />
+                        <span>Διαθέσιμο: {formatCurrency(parseFloat(budgetData.available_budget?.toString() || '0'))}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDetails(true);
+                  }}
+                >
+                  <Info className="w-4 h-4 mr-2" />
+                  Λεπτομέρειες
+                </Button>
+                <div className="flex gap-1">
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocation(`/projects/${project.mis}/edit`);
+                      }}
+                      className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                      title="Επεξεργασία"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteMutation.mutate();
+                      }}
+                      className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                      title="Διαγραφή"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="mt-2 text-sm text-muted-foreground">
-              MIS: {project.mis || "Δ/Υ"} | Προϋπολογισμός: {formatCurrency(Number(project.budget_na853))}
-            </div>
-          </CardContent>
+          </div>
         </Card>
         <ProjectDetailsDialog 
           project={project}

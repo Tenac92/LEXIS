@@ -214,7 +214,7 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
           <div className="p-6 flex-1">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-2 mb-2">
                   <h3 className="text-lg font-bold text-foreground">
                     {doc.protocol_number_input && doc.protocol_date ? (
                       `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString('el-GR')}`
@@ -222,81 +222,116 @@ export function DocumentCard({ document: doc, view = "grid", onView, onEdit, onD
                       `Έγγραφο #${doc.id}`
                     )}
                   </h3>
-                  <Badge variant="secondary" className={statusDetails.bgColor}>
-                    {statusDetails.text}
+                  <Badge variant={statusDetails.variant as any}>
+                    {statusDetails.label}
                   </Badge>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {recipients?.length > 0 && (
-                    <span>Δικαιούχοι: {recipients.length} | </span>
-                  )}
-                  Σύνολο: {doc.total_amount ? Number(doc.total_amount).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' }) : 'Δ/Υ'}
-                  {projectNa853 && ` | ${projectNa853}`}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <FileText className="w-4 h-4" />
+                      <span>Μονάδα: {doc.unit}</span>
+                    </div>
+                    {recipients?.length > 0 && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <User className="w-4 h-4" />
+                        <span>Δικαιούχοι: {recipients.length}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <DollarSign className="w-4 h-4" />
+                      <span>Σύνολο: {doc.total_amount ? Number(doc.total_amount).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' }) : 'Δ/Υ'}</span>
+                    </div>
+                    {projectNa853 && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Building className="w-4 h-4" />
+                        <span>{projectNa853}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
+              <div className="flex flex-col gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDetailsModal(true);
+                  }}
+                >
+                  <Info className="w-4 h-4 mr-2" />
+                  Λεπτομέρειες
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
                     handleExport();
                   }}
                   disabled={isLoading}
-                  className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-colors"
-                  title="Εξαγωγή"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-4 h-4 mr-2" />
+                  Εξαγωγή
                 </Button>
-                {!docAny.is_correction && doc.protocol_number_input ? (
+                <div className="flex gap-1">
+                  {!docAny.is_correction && doc.protocol_number_input ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCorrectionModal(true);
+                      }}
+                      disabled={isLoading}
+                      className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600 transition-colors"
+                      title="Ορθή Επανάληψη"
+                    >
+                      <History className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onView();
+                      }}
+                      disabled={isLoading || doc.status === 'approved'}
+                      className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                      title="Πρωτόκολλο"
+                    >
+                      <ClipboardCheck className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowCorrectionModal(true)}
-                    disabled={isLoading}
-                    className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600 transition-colors"
-                    title="Ορθή Επανάληψη"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                    className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                    title="Επεξεργασία"
                   >
-                    <History className="w-4 h-4" />
+                    <Edit className="w-4 h-4" />
                   </Button>
-                ) : (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={onView}
-                    disabled={isLoading || doc.status === 'approved'}
-                    className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600 transition-colors"
-                    title="Πρωτόκολλο"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                    title="Διαγραφή"
                   >
-                    <ClipboardCheck className="w-4 h-4" />
+                    <Trash2 className="w-4 h-4" />
                   </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDetailsModal(true)}
-                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                  title="Λεπτομέρειες"
-                >
-                  <Info className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onEdit}
-                  className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                  title="Επεξεργασία"
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onDelete}
-                  className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
-                  title="Διαγραφή"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                </div>
               </div>
             </div>
           </div>
