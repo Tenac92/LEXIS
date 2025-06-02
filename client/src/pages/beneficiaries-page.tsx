@@ -347,7 +347,7 @@ export default function BeneficiariesPage() {
                       );
                     }
 
-                    // Grid view (simplified cards for better performance)
+                    // Grid view (flip cards matching other pages)
                     const isFlipped = flippedCards.has(beneficiary.id);
                     
                     const handleCardClick = (e: React.MouseEvent) => {
@@ -358,74 +358,135 @@ export default function BeneficiariesPage() {
                     };
 
                     return (
-                      <Card 
-                        key={beneficiary.id}
-                        className="transition-shadow hover:shadow-lg cursor-pointer"
-                        onClick={handleCardClick}
-                      >
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">
-                            {beneficiary.surname} {beneficiary.name}
-                          </CardTitle>
-                          {beneficiary.fathername && (
-                            <CardDescription>
-                              του {beneficiary.fathername}
-                            </CardDescription>
-                          )}
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4" />
-                              <span>ΑΦΜ: {beneficiary.afm}</span>
+                      <div key={beneficiary.id} className="flip-card" onClick={handleCardClick}>
+                        <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
+                          {/* Front of card */}
+                          <div className="flip-card-front">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
+                            <div className="p-6">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="space-y-2 flex-1">
+                                  <h3 className="text-xl font-bold text-gray-900 leading-tight">
+                                    {beneficiary.surname} {beneficiary.name}
+                                    {beneficiary.fathername && (
+                                      <span className="text-sm font-normal text-gray-600 italic ml-2">
+                                        του {beneficiary.fathername}
+                                      </span>
+                                    )}
+                                  </h3>
+                                  <div className="flex items-center gap-2 mt-3">
+                                    <div className="inline-flex items-center px-3 py-1.5 rounded-lg text-base font-mono font-semibold bg-blue-100 text-blue-900 border border-blue-200 select-all cursor-copy">
+                                      ΑΦΜ: {beneficiary.afm}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleShowDetails(beneficiary)}
+                                    className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                    title="Λεπτομέρειες"
+                                  >
+                                    <Info className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEdit(beneficiary)}
+                                    className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                                    title="Επεξεργασία"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDelete(beneficiary)}
+                                    className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                    title="Διαγραφή"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                {beneficiary.region && (
+                                  <div className="flex items-center gap-2 text-gray-600">
+                                    <Building className="w-4 h-4 text-gray-400" />
+                                    <span className="text-sm">{beneficiary.region}</span>
+                                  </div>
+                                )}
+                                {beneficiary.project && (
+                                  <div className="flex items-center gap-2 text-gray-600">
+                                    <FileText className="w-4 h-4 text-gray-400" />
+                                    <span className="text-sm">{beneficiary.project}</span>
+                                  </div>
+                                )}
+                                {beneficiary.monada && (
+                                  <div className="flex items-center gap-2 text-gray-600">
+                                    <Building className="w-4 h-4 text-gray-400" />
+                                    <span className="text-sm">{beneficiary.monada}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            {beneficiary.region && (
-                              <div className="flex items-center gap-2">
-                                <Building className="w-4 h-4" />
-                                <span>{beneficiary.region}</span>
-                              </div>
-                            )}
-                            {beneficiary.project && (
-                              <div className="flex items-center gap-2">
-                                <FileText className="w-4 h-4" />
-                                <span>{beneficiary.project}</span>
-                              </div>
-                            )}
                           </div>
-                          <div className="flex gap-2 mt-4">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleShowDetails(beneficiary);
-                              }}
-                            >
-                              <Info className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEdit(beneficiary);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(beneficiary);
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+
+                          {/* Back of card */}
+                          <div className="flip-card-back">
+                            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-500 to-green-600"></div>
+                            <div className="p-6">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="space-y-2 flex-1">
+                                  <h3 className="text-xl font-bold text-gray-900 leading-tight">
+                                    {beneficiary.surname} {beneficiary.name}
+                                  </h3>
+                                  <div className="text-sm text-gray-600">
+                                    Επιπλέον Στοιχεία
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                {beneficiary.adeia && (
+                                  <div className="space-y-1">
+                                    <span className="text-blue-700 font-medium text-sm">Άδεια:</span>
+                                    <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
+                                      {beneficiary.adeia}
+                                    </p>
+                                  </div>
+                                )}
+                                {beneficiary.cengsur1 && (
+                                  <div className="space-y-1">
+                                    <span className="text-blue-700 font-medium text-sm">Κέντρο Επιτώπου 1:</span>
+                                    <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
+                                      {beneficiary.cengsur1} {beneficiary.cengname1}
+                                    </p>
+                                  </div>
+                                )}
+                                {beneficiary.cengsur2 && (
+                                  <div className="space-y-1">
+                                    <span className="text-blue-700 font-medium text-sm">Κέντρο Επιτώπου 2:</span>
+                                    <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
+                                      {beneficiary.cengsur2} {beneficiary.cengname2}
+                                    </p>
+                                  </div>
+                                )}
+                                {beneficiary.freetext && (
+                                  <div className="space-y-1">
+                                    <span className="text-blue-700 font-medium text-sm">Ελεύθερο Κείμενο:</span>
+                                    <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
+                                      {beneficiary.freetext}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
