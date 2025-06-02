@@ -590,7 +590,7 @@ export default function BeneficiariesPage() {
 
                           {/* Back of card */}
                           <div className="flip-card-back">
-                            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-500 to-green-600"></div>
+                            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
                             <div className="p-6">
                               <div className="flex items-start justify-between mb-4">
                                 <div className="space-y-2 flex-1">

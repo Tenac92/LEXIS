@@ -1441,7 +1441,7 @@ export function CreateDocumentDialog({
                           numeric || 0,
                         )
                       }
-                      className="pr-5 h-8 text-sm"
+                      className="pr-6 h-8 text-sm"
                       placeholder="Ποσό"
                       decimals={2}
                     />
