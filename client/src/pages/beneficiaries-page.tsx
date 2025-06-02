@@ -42,7 +42,7 @@ export default function BeneficiariesPage() {
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(20);
+  const [itemsPerPage] = useState(50);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
