@@ -121,6 +121,11 @@ export default function BeneficiariesPage() {
     },
   });
 
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const handleEdit = (beneficiary: Beneficiary) => {
     setSelectedBeneficiary(beneficiary);
     setDialogOpen(true);
@@ -154,22 +159,7 @@ export default function BeneficiariesPage() {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="text-center">Φόρτωση...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container mx-auto py-8">
-        <div className="text-center text-red-500">Σφάλμα φόρτωσης δεδομένων</div>
-      </div>
-    );
-  }
-
+  // Compute values after all hooks
   const filteredBeneficiaries = beneficiaries.filter((beneficiary) =>
     [beneficiary.name, beneficiary.surname, beneficiary.afm?.toString(), beneficiary.region]
       .some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -181,10 +171,36 @@ export default function BeneficiariesPage() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedBeneficiaries = filteredBeneficiaries.slice(startIndex, endIndex);
 
-  // Reset to first page when search changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
+  // Handle loading and error states
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 pt-6 pb-8">
+          <Card className="bg-card">
+            <div className="p-4">
+              <div className="text-center">Φόρτωση...</div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 pt-6 pb-8">
+          <Card className="bg-card">
+            <div className="p-4">
+              <div className="text-center text-red-500">Σφάλμα φόρτωσης δεδομένων</div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
