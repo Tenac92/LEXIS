@@ -3,7 +3,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type Project } from "@shared/schema";
-import { Edit, Trash2, Calendar, MapPin, Building2, Coins, FileText, Info, RotateCcw } from "lucide-react";
+import { Edit, Trash2, Calendar, MapPin, Building2, Coins, FileText, Info, RotateCcw, Building, DollarSign, TrendingUp } from "lucide-react";
 import { useLocation } from "wouter";
 import {
   AlertDialog,

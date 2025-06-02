@@ -265,24 +265,17 @@ export default function DocumentsPage() {
             <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0 mb-6">
               <h1 className="text-2xl font-bold text-foreground">Έγγραφα</h1>
               <div className="flex flex-wrap gap-2">
-                <div className="flex border rounded-lg overflow-hidden">
-                  <Button
-                    variant={viewMode === "grid" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("grid")}
-                    className="rounded-none"
-                  >
-                    <LayoutGrid className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === "list" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("list")}
-                    className="rounded-none"
-                  >
-                    <List className="w-4 h-4" />
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                >
+                  {viewMode === "grid" ? (
+                    <><List className="mr-2 h-4 w-4" /> Λίστα</>
+                  ) : (
+                    <><LayoutGrid className="mr-2 h-4 w-4" /> Κάρτες</>
+                  )}
+                </Button>
                 <Button onClick={() => setShowCreateDialog(true)}>
                   <FileText className="w-4 h-4 mr-2" />
                   Νέο Έγγραφο

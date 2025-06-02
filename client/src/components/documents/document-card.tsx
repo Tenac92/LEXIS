@@ -16,7 +16,9 @@ import {
   Info,
   RotateCcw,
   Edit,
-  Trash2
+  Trash2,
+  Building,
+  TrendingUp
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
