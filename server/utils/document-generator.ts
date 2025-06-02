@@ -47,6 +47,21 @@ export class DocumentGenerator {
 
       // Create document sections
       const children: any[] = [
+        // Logo at the top of the document
+        new Paragraph({
+          children: [
+            new ImageRun({
+              data: fs.readFileSync(path.join(__dirname, "ethnosimo22.png")),
+              transformation: {
+                width: 100,
+                height: 100,
+              },
+            }),
+          ],
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 400 },
+        }),
+
         // Header with two-column layout (includes contact info and recipient section)
         await this.createDocumentHeader(documentData, unitDetails),
 
@@ -943,7 +958,7 @@ export class DocumentGenerator {
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      columnWidths: [15, 45, 40],
+      columnWidths: [60, 40],
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -961,34 +976,9 @@ export class DocumentGenerator {
       rows: [
         new TableRow({
           children: [
-            // Logo column
-            new TableCell({
-              width: { size: 15, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              verticalAlign: VerticalAlign.TOP,
-              children: [
-                new Paragraph({
-                  children: [
-                    new ImageRun({
-                      data: fs.readFileSync(path.join(__dirname, "ethnosimo22.png")),
-                      transformation: {
-                        width: 80,
-                        height: 80,
-                      },
-                    }),
-                  ],
-                  alignment: AlignmentType.LEFT,
-                }),
-              ],
-            }),
             // Ministry information column
             new TableCell({
-              width: { size: 45, type: WidthType.PERCENTAGE },
+              width: { size: 60, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },

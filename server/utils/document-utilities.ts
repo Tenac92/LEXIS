@@ -121,7 +121,7 @@ export class DocumentUtilities {
         new TextRun({
           text,
           bold: true,
-          size: 28, // Increased font size for header text
+          size: 20, // Increased font size for header text
           font: this.DEFAULT_FONT,
         }),
       ],
@@ -364,25 +364,25 @@ export class DocumentUtilities {
       const unitMappings: Record<string, { name: string; prop: string }> = {
         "ΔΑΕΦΚ-ΚΕ": {
           name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
-          prop: "τη"
+          prop: "τη",
         },
         "ΔΑΕΦΚ-ΒΕ": {
           name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΑΣ ΕΛΛΑΔΟΣ",
-          prop: "τη"
+          prop: "τη",
         },
         "ΔΑΕΦΚ-ΝΕ": {
           name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΝΟΤΙΑΣ ΕΛΛΑΔΟΣ",
-          prop: "τη"
+          prop: "τη",
         },
         "ΔΑΕΦΚ-ΑΜ": {
           name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΜΑΚΕΔΟΝΙΑΣ",
-          prop: "τη"
-        }
+          prop: "τη",
+        },
       };
 
-      const unitInfo = unitMappings[unit] || { 
-        name: unit, 
-        prop: "τη" 
+      const unitInfo = unitMappings[unit] || {
+        name: unit,
+        prop: "τη",
       };
 
       return {
