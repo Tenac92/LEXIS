@@ -1,6 +1,6 @@
-import { forwardRef, useRef, useEffect } from "react";
+import { forwardRef } from "react";
 import { Input } from "@/components/ui/input";
-import { formatNumberWhileTyping, getCursorPositionAfterFormatting, parseEuropeanNumber } from "@/lib/number-format";
+import { formatNumberWhileTyping, parseEuropeanNumber } from "@/lib/number-format";
 import { cn } from "@/lib/utils";
 
 export interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
@@ -12,8 +12,6 @@ export interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInp
 
 const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
   ({ className, value, onChange, decimals = 2, allowNegative = false, ...props }, ref) => {
-    const inputRef = useRef<HTMLInputElement>(null);
-    const cursorPositionRef = useRef<number>(0);
 
     // Convert numeric value to formatted string
     const getDisplayValue = (val: string | number | undefined): string => {
@@ -26,14 +24,7 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const input = e.target;
-      const newValue = input.value;
-      const cursorPosition = input.selectionStart || 0;
-      
-      // Store cursor position
-      if (cursorPositionRef.current !== null) {
-        cursorPositionRef.current = cursorPosition;
-      }
+      const newValue = e.target.value;
       
       // Handle negative sign
       let processedValue = newValue;
@@ -55,37 +46,12 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       onChange?.(finalValue, numericValue);
     };
 
-    // Restore cursor position after formatting
-    useEffect(() => {
-      if (inputRef.current && cursorPositionRef.current !== null) {
-        const input = inputRef.current;
-        const currentValue = input.value;
-        
-        // Calculate new cursor position
-        const newCursorPos = getCursorPositionAfterFormatting(
-          '', // We don't have the original value here, but the function handles it
-          currentValue,
-          cursorPositionRef.current
-        );
-        
-        // Set cursor position
-        input.setSelectionRange(newCursorPos, newCursorPos);
-      }
-    });
-
     const displayValue = getDisplayValue(value);
 
     return (
       <Input
         {...props}
-        ref={(node) => {
-          inputRef.current = node;
-          if (typeof ref === 'function') {
-            ref(node);
-          } else if (ref) {
-            ref.current = node;
-          }
-        }}
+        ref={ref}
         type="text"
         value={displayValue}
         onChange={handleInputChange}
