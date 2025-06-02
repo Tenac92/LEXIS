@@ -1,0 +1,164 @@
+ return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [60, 40],
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      margins: {
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 60, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              margins: {
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+              },
+              children: [
+                new Paragraph({
+                  children: [
+                    new ImageRun({
+                      data: logoBuffer,
+                      transformation: {
+                        width: 40,
+                        height: 40,
+                      },
+                      type: "png",
+                    }),
+                  ],
+                  spacing: { after: 120 },
+                }),
+                this.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+                this.createBoldParagraph(
+                  "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ",
+                ),
+                this.createBoldParagraph(
+                  "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
+                ),
+                this.createBoldParagraph("ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ."),
+                this.createBoldParagraph(
+                  unitDetails?.unit_name?.name || unitDetails?.name || "",
+                ),
+                this.createBoldParagraph(userInfo.department),
+                this.createBlankLine(10),
+                this.createContactDetail("Ταχ. Δ/νση", address.address),
+                this.createContactDetail(
+                  "Ταχ. Κώδικας",
+                  `${address.tk}, ${address.region}`,
+                ),
+                this.createContactDetail("Πληροφορίες", userInfo.name),
+                this.createContactDetail("Τηλέφωνο", userInfo.contact_number),
+                this.createContactDetail("Email", unitDetails?.email || ""),
+                this.createBlankLine(10),
+              ],
+            }),
+            new TableCell({
+              width: { size: 40, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              margins: {
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+              },
+              children: [
+                new Table({
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  borders: {
+                    top: { style: BorderStyle.NONE },
+                    bottom: { style: BorderStyle.NONE },
+                    left: { style: BorderStyle.NONE },
+                    right: { style: BorderStyle.NONE },
+                    insideHorizontal: { style: BorderStyle.NONE },
+                    insideVertical: { style: BorderStyle.NONE },
+                  },
+                  rows: [
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          width: { size: 8, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          children: [
+                            new Paragraph({
+                              text: "ΠΡΟΣ:",
+                              spacing: { before: 2000 },
+                              alignment: AlignmentType.LEFT,
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          width: { size: 92, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          children: [
+                            new Paragraph({
+                              text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                              spacing: { before: 2000 },
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Δημοκρίτου 2",
+
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "151 23 Μαρούσι",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                          ],
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
