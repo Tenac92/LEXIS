@@ -360,7 +360,40 @@ export class DocumentUtilities {
     try {
       logger.debug(`Fetching unit details for: ${unit}`);
 
-      // Map unit abbreviations to full names with proper Greek grammar
+      // Import database connection
+      const { supabase } = await import('../config/db');
+
+      // Try to fetch unit details from database
+      const { data: unitData, error: unitError } = await supabase
+        .from('Monada')
+        .select('*')
+        .eq('unit', unit)
+        .single();
+
+      if (unitData && !unitError) {
+        logger.debug(`Found unit details in database for: ${unit}`);
+        
+        // Extract manager information from database
+        const manager = unitData.manager || {};
+        
+        return {
+          unit,
+          name: unitData.unit_name?.name || unitData.unit_name || unit,
+          unit_name: unitData.unit_name || { name: unit, prop: "τη" },
+          manager: {
+            name: manager.name || "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
+            order: manager.order || "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
+            title: manager.title || "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+            degree: manager.degree || "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β.",
+          },
+          address: unitData.address,
+          email: unitData.email,
+        };
+      }
+
+      logger.warn(`Unit not found in database, using fallback for: ${unit}`);
+
+      // Fallback to static mappings if database lookup fails
       const unitMappings: Record<string, { name: string; prop: string }> = {
         "ΔΑΕΦΚ-ΚΕ": {
           name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
@@ -372,6 +405,10 @@ export class DocumentUtilities {
         },
         "ΔΑΕΦΚ-ΝΕ": {
           name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΝΟΤΙΑΣ ΕΛΛΑΔΟΣ",
+          prop: "τη",
+        },
+        "ΔΑΕΦΚ-ΔΕ": {
+          name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ",
           prop: "τη",
         },
         "ΔΑΕΦΚ-ΑΜ": {
@@ -399,6 +436,94 @@ export class DocumentUtilities {
     } catch (error) {
       logger.error("Error fetching unit details:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Get staff/employee details from the database for document generation
+   */
+  public static async getStaffByUnit(unit: string): Promise<any[]> {
+    try {
+      logger.debug(`Fetching staff details for unit: ${unit}`);
+
+      // Import database connection
+      const { supabase } = await import('../config/db');
+
+      // Fetch employees from database for the specific unit
+      const { data: employees, error } = await supabase
+        .from('Employees')
+        .select('*')
+        .eq('monada', unit);
+
+      if (error) {
+        logger.error("Error fetching staff from database:", error);
+        return [];
+      }
+
+      logger.debug(`Found ${employees?.length || 0} staff members for unit: ${unit}`);
+      return employees || [];
+    } catch (error) {
+      logger.error("Error fetching staff details:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Get beneficiaries by unit from the database for document generation
+   */
+  public static async getBeneficiariesByUnit(unit: string): Promise<any[]> {
+    try {
+      logger.debug(`Fetching beneficiaries for unit: ${unit}`);
+
+      // Import database connection
+      const { supabase } = await import('../config/db');
+
+      // Fetch beneficiaries from database for the specific unit
+      const { data: beneficiaries, error } = await supabase
+        .from('Beneficiaries')
+        .select('*')
+        .eq('monada', unit);
+
+      if (error) {
+        logger.error("Error fetching beneficiaries from database:", error);
+        return [];
+      }
+
+      logger.debug(`Found ${beneficiaries?.length || 0} beneficiaries for unit: ${unit}`);
+      return beneficiaries || [];
+    } catch (error) {
+      logger.error("Error fetching beneficiaries:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Get project details from the database for document generation
+   */
+  public static async getProjectDetails(mis: string): Promise<any | null> {
+    try {
+      logger.debug(`Fetching project details for MIS: ${mis}`);
+
+      // Import database connection
+      const { supabase } = await import('../config/db');
+
+      // Fetch project from database
+      const { data: project, error } = await supabase
+        .from('Projects')
+        .select('*')
+        .eq('mis', mis)
+        .single();
+
+      if (error) {
+        logger.error("Error fetching project from database:", error);
+        return null;
+      }
+
+      logger.debug(`Found project details for MIS: ${mis}`);
+      return project;
+    } catch (error) {
+      logger.error("Error fetching project details:", error);
+      return null;
     }
   }
 

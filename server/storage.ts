@@ -40,6 +40,11 @@ export interface IStorage {
   updateBeneficiary(id: number, beneficiary: Partial<InsertBeneficiary>): Promise<Beneficiary>;
   deleteBeneficiary(id: number): Promise<void>;
   updateBeneficiaryInstallmentStatus(afm: string, paymentType: string, installment: string, status: string, protocolNumber?: string): Promise<void>;
+
+  // Document generation data operations
+  getUnitDetails(unit: string): Promise<any>;
+  getStaffByUnit(unit: string): Promise<any[]>;
+  getProjectDetails(mis: string): Promise<any | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -807,6 +812,79 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Successfully updated beneficiary ${afm} installment ${installment} status to ${status}`);
     } catch (error) {
       console.error('[Storage] Error in updateBeneficiaryInstallmentStatus:', error);
+      throw error;
+    }
+  }
+
+  // Document generation data operations implementation
+  async getUnitDetails(unit: string): Promise<any> {
+    try {
+      console.log(`[Storage] Fetching unit details for: ${unit}`);
+      
+      const { data, error } = await supabase
+        .from('Monada')
+        .select('*')
+        .eq('unit', unit)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+        console.error('[Storage] Error fetching unit details:', error);
+        throw error;
+      }
+
+      console.log(`[Storage] Successfully fetched unit details for: ${unit}`);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in getUnitDetails:', error);
+      throw error;
+    }
+  }
+
+  async getStaffByUnit(unit: string): Promise<any[]> {
+    try {
+      console.log(`[Storage] Fetching staff for unit: ${unit}`);
+      
+      const { data, error } = await supabase
+        .from('Employees')
+        .select('*')
+        .eq('monada', unit);
+
+      if (error) {
+        console.error('[Storage] Error fetching staff by unit:', error);
+        throw error;
+      }
+
+      console.log(`[Storage] Successfully fetched ${data?.length || 0} staff members for unit: ${unit}`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getStaffByUnit:', error);
+      throw error;
+    }
+  }
+
+  async getProjectDetails(mis: string): Promise<any | null> {
+    try {
+      console.log(`[Storage] Fetching project details for MIS: ${mis}`);
+      
+      const { data, error } = await supabase
+        .from('Projects')
+        .select('*')
+        .eq('mis', mis)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+        console.error('[Storage] Error fetching project details:', error);
+        throw error;
+      }
+
+      if (data) {
+        console.log(`[Storage] Successfully fetched project details for MIS: ${mis}`);
+      } else {
+        console.log(`[Storage] No project found for MIS: ${mis}`);
+      }
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in getProjectDetails:', error);
       throw error;
     }
   }
