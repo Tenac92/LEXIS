@@ -470,17 +470,6 @@ export default function DocumentsPage() {
                 <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                 Ανανέωση
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setViewMode(prev => prev === 'grid' ? 'list' : 'grid')}
-                className="flex items-center gap-2"
-              >
-                {viewMode === 'grid' ? (
-                  <LayoutGrid className="h-4 w-4" />
-                ) : (
-                  <List className="h-4 w-4" />
-                )}
-              </Button>
             </div>
           </div>
 
