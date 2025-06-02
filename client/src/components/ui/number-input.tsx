@@ -42,9 +42,10 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       });
     };
 
-    // Clean input value - allow only digits, comma, and dots
+    // Clean input value - allow only digits and comma for decimals
     const cleanInput = (input: string): string => {
-      let cleaned = input.replace(/[^\d,.-]/g, '');
+      // Remove everything except digits and comma
+      let cleaned = input.replace(/[^\d,-]/g, '');
       
       // Handle negative sign
       if (!allowNegative) {
@@ -52,6 +53,9 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       } else if (cleaned.indexOf('-') > 0) {
         cleaned = cleaned.replace(/-/g, '');
       }
+      
+      // Remove any existing dots from input since we'll add them as formatters
+      cleaned = cleaned.replace(/\./g, '');
       
       return cleaned;
     };
@@ -75,22 +79,6 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       return true;
     };
 
-    // Add live thousand separators while typing
-    const addThousandSeparators = (value: string): string => {
-      // Split by comma to handle decimal part separately
-      const parts = value.split(',');
-      let integerPart = parts[0] || '';
-      const decimalPart = parts[1];
-      
-      // Add dots as thousand separators to integer part
-      if (integerPart.length > 3) {
-        integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      }
-      
-      // Combine parts
-      return decimalPart !== undefined ? `${integerPart},${decimalPart}` : integerPart;
-    };
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const rawValue = e.target.value;
       const cleanedValue = cleanInput(rawValue);
@@ -100,15 +88,33 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         return; // Don't update if invalid
       }
       
-      // Add live thousand separators while typing
-      const formattedValue = addThousandSeparators(cleanedValue);
-      setDisplayValue(formattedValue);
+      // For live formatting, we need to be careful with cursor position
+      // Only format if we're not in the middle of typing
+      let displayVal = cleanedValue;
       
-      // Parse numeric value for callback (use cleaned value without formatting)
+      // Add thousand separators only if the input doesn't end with comma
+      // This prevents formatting interference while typing decimals
+      if (!cleanedValue.endsWith(',')) {
+        const parts = cleanedValue.split(',');
+        let integerPart = parts[0] || '';
+        const decimalPart = parts[1];
+        
+        // Add dots as thousand separators to integer part
+        if (integerPart.length > 3) {
+          integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+        
+        // Combine parts
+        displayVal = decimalPart !== undefined ? `${integerPart},${decimalPart}` : integerPart;
+      }
+      
+      setDisplayValue(displayVal);
+      
+      // Parse numeric value for callback (use cleaned value without dots)
       const numericValue = parseEuropeanNumber(cleanedValue);
       
-      // Call onChange with formatted string and numeric value
-      onChange?.(formattedValue, numericValue);
+      // Call onChange with display value and numeric value
+      onChange?.(displayVal, numericValue);
     };
 
     const handleFocus = () => {
