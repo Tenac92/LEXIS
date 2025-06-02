@@ -1,0 +1,67 @@
+ rows: [
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          width: { size: 8, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          children: [
+                            new Paragraph({
+                              text: "ΠΡΟΣ:",
+                              spacing: { before: 2000 },
+                              alignment: AlignmentType.LEFT,
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          width: { size: 92, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          children: [
+                            new Paragraph({
+                              text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                              spacing: { before: 2000 },
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "Δημοκρίτου 2",
+
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              text: "151 23 Μαρούσι",
+                              alignment: AlignmentType.LEFT,
+                            }),
+                          ],
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  }

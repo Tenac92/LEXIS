@@ -43,6 +43,9 @@ export class DocumentGenerator {
         // Header with two-column layout (includes contact info and recipient section)
         await this.createDocumentHeader(documentData, unitDetails),
 
+        // Recipient section (ΠΡΟΣ)
+        this.createRecipientSection(),
+
         // Subject
         this.createDocumentSubject(documentData, unitDetails),
 
@@ -1170,6 +1173,81 @@ export class DocumentGenerator {
                   ],
                   alignment: AlignmentType.LEFT,
                   spacing: { after: 0 },
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  /**
+   * Create recipient section (ΠΡΟΣ) with specific formatting
+   */
+  private static createRecipientSection(): Table {
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { size: 8, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              children: [
+                new Paragraph({
+                  text: "ΠΡΟΣ:",
+                  spacing: { before: 2000 },
+                  alignment: AlignmentType.LEFT,
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { size: 92, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              children: [
+                new Paragraph({
+                  text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                  spacing: { before: 2000 },
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  text: "Δημοκρίτου 2",
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  text: "151 23 Μαρούσι",
+                  alignment: AlignmentType.LEFT,
                 }),
               ],
             }),
