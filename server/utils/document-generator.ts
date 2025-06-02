@@ -73,25 +73,25 @@ export class DocumentGenerator {
         this.createSubject(documentData),
         
         // Legal references
-        ...this.createLegalReferences(),
+        ...DocumentGenerator.createLegalReferences(),
         
         // Main request text
         ...this.createMainContent(documentData),
         
         // Project information
-        ...this.createProjectInfo(documentData),
+        ...DocumentGenerator.createProjectInfo(documentData),
         
         // Payment table
         this.createPaymentTable(documentData.recipients || [], documentData.expenditure_type),
         
         // Final request
-        this.createFinalRequest(),
+        DocumentGenerator.createFinalRequest(),
         
         // Attachments
-        ...this.createAttachments(documentData),
+        ...DocumentGenerator.createAttachments(documentData),
         
         // Distribution lists
-        ...this.createDistributionLists(),
+        ...DocumentGenerator.createDistributionLists(),
         
         // Footer
         this.createFooter(documentData, unitDetails),
@@ -585,5 +585,263 @@ export class DocumentGenerator {
         ],
       }),
     ], [50, 50]);
+  }
+
+  /**
+   * Create legal references section
+   */
+  private static createLegalReferences(): Paragraph[] {
+    const legalParagraphs: Paragraph[] = [];
+    
+    legalParagraphs.push(DocumentUtilities.createBlankLine(240));
+    
+    legalParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε.",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 240 },
+      })
+    );
+    
+    return legalParagraphs;
+  }
+
+  /**
+   * Create project information section
+   */
+  private static createProjectInfo(documentData: DocumentData): Paragraph[] {
+    const projectParagraphs: Paragraph[] = [];
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΑΡ. ΕΡΓΟΥ:",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `${documentData.project_na853 || '2024ΝΑ85300000'} της ΣΑΝΑ 853`,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΑΛΕ:",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΤΟΜΕΑΣ:",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    projectParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 240 },
+      })
+    );
+    
+    return projectParagraphs;
+  }
+
+  /**
+   * Create final request paragraph
+   */
+  private static createFinalRequest(): Paragraph {
+    return new Paragraph({
+      children: [
+        new TextRun({
+          text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+          size: DocumentUtilities.DEFAULT_FONT_SIZE,
+          font: DocumentUtilities.DEFAULT_FONT,
+        }),
+      ],
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { after: 240 },
+    });
+  }
+
+  /**
+   * Create attachments section
+   */
+  private static createAttachments(documentData: DocumentData): Paragraph[] {
+    const attachmentParagraphs: Paragraph[] = [];
+    
+    attachmentParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    const attachments = documentData.attachments || ["Οι εκδοθείσες εγκρίσεις ΣΣ"];
+    attachments.forEach((attachment, index) => {
+      attachmentParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${index + 1}. ${attachment}`,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              font: DocumentUtilities.DEFAULT_FONT,
+            }),
+          ],
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 120 },
+        })
+      );
+    });
+    
+    return attachmentParagraphs;
+  }
+
+  /**
+   * Create distribution lists section
+   */
+  private static createDistributionLists(): Paragraph[] {
+    const distributionParagraphs: Paragraph[] = [];
+    
+    distributionParagraphs.push(DocumentUtilities.createBlankLine(240));
+    
+    distributionParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΚΟΙΝΟΠΟΙΗΣΗ",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    const distributionList = [
+      "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+      "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+      "Γ.Δ.Α.Ε.Φ.Κ."
+    ];
+    
+    distributionList.forEach((item, index) => {
+      distributionParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${index + 1}. ${item}`,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              font: DocumentUtilities.DEFAULT_FONT,
+            }),
+          ],
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 120 },
+        })
+      );
+    });
+    
+    distributionParagraphs.push(DocumentUtilities.createBlankLine(120));
+    
+    distributionParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
+      })
+    );
+    
+    distributionParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "1. Χρονολογικό Αρχείο",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 240 },
+      })
+    );
+    
+    return distributionParagraphs;
   }
 }
