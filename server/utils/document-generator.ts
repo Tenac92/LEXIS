@@ -116,7 +116,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -130,7 +130,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -145,7 +145,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -160,7 +160,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -174,7 +174,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 360 },
+        spacing: { after: 120 },
       })
     );
     
@@ -198,7 +198,7 @@ export class DocumentGenerator {
           }),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       })
     );
     
@@ -222,7 +222,7 @@ export class DocumentGenerator {
             }),
           ],
           alignment: AlignmentType.LEFT,
-          spacing: { after: 60 },
+          spacing: { after: 0 },
         })
       );
     });
@@ -242,6 +242,7 @@ export class DocumentGenerator {
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
     const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     const documentTitle = config.documentTitle;
+    
     const subjectText = [
       {
         text: "ΘΕΜΑ:",
@@ -334,7 +335,7 @@ export class DocumentGenerator {
               font: DocumentUtilities.DEFAULT_FONT,
             }),
           ],
-          spacing: { after: 240 },
+          spacing: { after: 120 },
         })
       );
     }
@@ -353,7 +354,7 @@ export class DocumentGenerator {
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
-        spacing: { after: 240 },
+        spacing: { after: 120 },
       })
     );
     
@@ -546,7 +547,7 @@ export class DocumentGenerator {
           font: DocumentUtilities.DEFAULT_FONT,
         }),
       ],
-      spacing: { before: 120, after: 0 },
+      spacing: { before: 0, after: 0 },
     });
   }
 
@@ -659,69 +660,8 @@ export class DocumentGenerator {
       })
     );
 
-    // Right column - only signature
-    const rightColumnParagraphs: Paragraph[] = [];
-
-    rightColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: unitDetails?.manager?.order || "",
-            bold: true,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-      })
-    );
-
-    rightColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: unitDetails?.manager?.title || "",
-            bold: true,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-      })
-    );
-
-    rightColumnParagraphs.push(
-      new Paragraph({
-        children: [new TextRun({ text: "" })],
-      })
-    );
-
-    rightColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: unitDetails?.manager?.name || "",
-            bold: true,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-      })
-    );
-
-    rightColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: unitDetails?.manager?.degree || "",
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-      })
-    );
+    // Right column - use centralized signature utility
+    const rightColumnParagraphs = DocumentUtilities.createManagerSignatureParagraphs(unitDetails?.manager);
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -1230,7 +1170,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 60 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1263,7 +1203,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 60 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1274,7 +1214,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 60 },
+                  spacing: { after: 0 },
                 }),
                 new Paragraph({
                   children: [
@@ -1285,7 +1225,7 @@ export class DocumentGenerator {
                     }),
                   ],
                   alignment: AlignmentType.LEFT,
-                  spacing: { after: 240 },
+                  spacing: { after: 120 },
                 }),
               ],
             }),
