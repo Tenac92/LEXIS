@@ -27,10 +27,10 @@ export class DocumentUtilities {
   public static readonly DEFAULT_FONT_SIZE = 22;
   public static readonly DEFAULT_FONT = "Calibri";
   public static readonly DEFAULT_MARGINS = {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
+    top: 720,    // 0.5 inch top margin for Greek government documents
+    right: 720,  // 0.5 inch right margin
+    bottom: 720, // 0.5 inch bottom margin
+    left: 720,   // 0.5 inch left margin
   };
   public static readonly DOCUMENT_MARGINS = this.DEFAULT_MARGINS;
 
