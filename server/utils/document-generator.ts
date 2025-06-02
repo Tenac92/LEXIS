@@ -17,7 +17,7 @@ import {
   HeightRule,
   VerticalAlign
 } from "docx";
-import { DocumentUtilities, EXPENDITURE_CONFIGS, ExpenditureConfig } from "./document-utilities";
+import { DocumentUtilities } from "./document-utilities";
 import { DocumentData, UnitDetails } from "./document-types";
 import { createLogger } from "./logger";
 
@@ -364,8 +364,9 @@ export class DocumentGenerator {
    * Create payment table with expenditure type specific columns
    */
   private static createPaymentTable(recipients: any[], expenditureType: string): Table {
-    // Exact columns from template
-    const columns = ["Α.Α.", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "ΑΦΜ", "ΔΟΣΗ", "ΠΟΣΟ (€)"];
+    // Get columns from centralized configuration
+    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
+    const columns = config.columns;
     const borderStyle = BorderStyle.SINGLE;
     
     const headerCells = columns.map(column => 
@@ -391,6 +392,7 @@ export class DocumentGenerator {
       const amount = recipient.amount || 0;
       totalAmount += amount;
       
+      // Create standard cells for most expenditure types
       const cells = [
         new TableCell({
           children: [DocumentUtilities.createCenteredParagraph(`${index + 1}.`, { 
@@ -417,7 +419,7 @@ export class DocumentGenerator {
           },
         }),
         new TableCell({
-          children: [DocumentUtilities.createCenteredParagraph(recipient.afm, { 
+          children: [DocumentUtilities.createCenteredParagraph(recipient.afm || "", { 
             size: DocumentUtilities.DEFAULT_FONT_SIZE 
           })],
           borders: {
@@ -427,7 +429,40 @@ export class DocumentGenerator {
             right: { style: borderStyle, size: 1 },
           },
         }),
-        new TableCell({
+      ];
+
+      // Add expenditure-specific column based on type
+      if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
+        cells.push(new TableCell({
+          children: [DocumentUtilities.createCenteredParagraph(
+            recipient.days?.toString() || "1", { 
+              size: DocumentUtilities.DEFAULT_FONT_SIZE 
+            }
+          )],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }));
+      } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+        cells.push(new TableCell({
+          children: [DocumentUtilities.createCenteredParagraph(
+            recipient.months?.toString() || "1", { 
+              size: DocumentUtilities.DEFAULT_FONT_SIZE 
+            }
+          )],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }));
+      } else {
+        // Default to installment for ΔΚΑ types
+        cells.push(new TableCell({
           children: [DocumentUtilities.createCenteredParagraph(
             recipient.installment?.toString() || "Α", { 
               size: DocumentUtilities.DEFAULT_FONT_SIZE 
@@ -439,21 +474,24 @@ export class DocumentGenerator {
             left: { style: borderStyle, size: 1 },
             right: { style: borderStyle, size: 1 },
           },
-        }),
-        new TableCell({
-          children: [DocumentUtilities.createCenteredParagraph(
-            DocumentUtilities.formatCurrency(amount), { 
-              size: DocumentUtilities.DEFAULT_FONT_SIZE 
-            }
-          )],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        }),
-      ];
+        }));
+      }
+
+      // Add amount column
+      cells.push(new TableCell({
+        children: [DocumentUtilities.createCenteredParagraph(
+          DocumentUtilities.formatCurrency(amount), { 
+            size: DocumentUtilities.DEFAULT_FONT_SIZE 
+          }
+        )],
+        borders: {
+          top: { style: borderStyle, size: 1 },
+          bottom: { style: borderStyle, size: 1 },
+          left: { style: borderStyle, size: 1 },
+          right: { style: borderStyle, size: 1 },
+        },
+      }));
+
       rows.push(new TableRow({ children: cells }));
     });
 
