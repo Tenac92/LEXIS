@@ -26,9 +26,9 @@ const logger = createLogger("DocumentGenerator");
 // Expenditure type configurations
 const EXPENDITURE_CONFIGS = {
   "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ": {
-    documentTitle: "ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ ΕΠΙΔΟΤΗΣΗΣ ΕΝΟΙΚΙΟΥ",
+    documentTitle: ": Διαβιβαστικό Απόφασης για την πληρωμή επιδοτήσεων ενοικίου/συγκατοίκησης που έχουν εγκριθεί από ",
     columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΜΗΝΕΣ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την επιδότηση ενοικίου για τους κατωτέρω δικαιούχους:"
+    mainText: "Παρακαλούμε για την πληρωμή των αναγνωρισμένων δικαιούχων επιδότησης ενοικίου/συγκατοίκησης στην"
   },
   "ΕΚΤΟΣ ΕΔΡΑΣ": {
     documentTitle: "ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ ΑΠΟΖΗΜΙΩΣΗΣ ΕΚΤΟΣ ΕΔΡΑΣ",
@@ -36,16 +36,23 @@ const EXPENDITURE_CONFIGS = {
     mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την αποζημίωση εκτός έδρας για τους κατωτέρω υπαλλήλους:"
   },
   "ΔΚΑ ΕΠΙΣΚΕΥΗ": {
-    documentTitle: "ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ ΔΟΣΗΣ ΔΑΝΕΙΟΥ",
+    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Επισκευής που έχουν εγκριθεί από ",
+    columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
+    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
+  },
+  "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ": {
+    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Ανακατασκευής που έχουν εγκριθεί από",
     columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
     mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
   },
   "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ": {
-    documentTitle: "ΑΙΤΗΜΑ ΧΟΡΗΓΗΣΗΣ ΔΟΣΗΣ ΔΑΝΕΙΟΥ",
+    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Αυτοστέγασης που έχουν εγκριθεί από",
     columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
     mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
   }
 };
+
+const config = EXPENDITURE_CONFIGS[expenditureType] || {};
 
 export class DocumentGenerator {
   
@@ -120,72 +127,6 @@ export class DocumentGenerator {
     }
   }
 
-  /**
-   * Create document header with proper Greek government format
-   */
-  private static createHeader(unitDetails: UnitDetails | null): Paragraph[] {
-    const headerParagraphs: Paragraph[] = [];
-    
-    // Greek Republic header
-    headerParagraphs.push(
-      DocumentUtilities.createCenteredParagraph(
-        "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ",
-        { bold: true, size: 24, spacing: 120 }
-      )
-    );
-    
-    headerParagraphs.push(DocumentUtilities.createBlankLine(120));
-    
-    // Ministry header
-    headerParagraphs.push(
-      DocumentUtilities.createCenteredParagraph(
-        "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ",
-        { bold: true, size: 22, spacing: 120 }
-      )
-    );
-    
-    headerParagraphs.push(DocumentUtilities.createBlankLine(120));
-    
-    // General Secretariat
-    headerParagraphs.push(
-      DocumentUtilities.createCenteredParagraph(
-        "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
-        { bold: true, size: 20, spacing: 120 }
-      )
-    );
-    
-    headerParagraphs.push(DocumentUtilities.createBlankLine(120));
-    
-    // General Directorate
-    headerParagraphs.push(
-      DocumentUtilities.createCenteredParagraph(
-        "ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ.",
-        { bold: true, size: 20, spacing: 120 }
-      )
-    );
-    
-    headerParagraphs.push(DocumentUtilities.createBlankLine(120));
-    
-    // Directorate
-    headerParagraphs.push(
-      DocumentUtilities.createCenteredParagraph(
-        "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
-        { bold: true, size: 18, spacing: 120 }
-      )
-    );
-    
-    headerParagraphs.push(DocumentUtilities.createBlankLine(120));
-    
-    // Department
-    headerParagraphs.push(
-      DocumentUtilities.createCenteredParagraph(
-        "ΤΜΗΜΑ ΕΠΟΠΤΕΙΑΣ ΚΑΙ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ",
-        { bold: true, size: 16, spacing: 240 }
-      )
-    );
-    
-    return headerParagraphs;
-  }
 
   /**
    * Create contact information section
@@ -323,37 +264,15 @@ export class DocumentGenerator {
   }
 
   /**
-   * Create date and protocol section
-   */
-  private static createDateAndProtocol(documentData: DocumentData): Paragraph {
-    const protocolText = documentData.protocol_number_input 
-      ? `Αρ. Πρωτ.: ${documentData.protocol_number_input}`
-      : "Αρ. Πρωτ.: ___________";
-    
-    const dateText = documentData.protocol_date 
-      ? `Ημερομηνία: ${new Date(documentData.protocol_date).toLocaleDateString('el-GR')}`
-      : `Ημερομηνία: ${new Date().toLocaleDateString('el-GR')}`;
-    
-    return new Paragraph({
-      children: [
-        new TextRun({
-          text: `${protocolText}               ${dateText}`,
-          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-          font: DocumentUtilities.DEFAULT_FONT,
-        }),
-      ],
-      alignment: AlignmentType.RIGHT,
-      spacing: { after: 240 },
-    });
-  }
-
-  /**
    * Create document subject with bordered table
    */
   private static createDocumentSubject(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
   ): Table {
+    const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
+    const config = EXPENDITURE_CONFIGS[expenditureType] || {};
+    const documentTitle = config.documentTitle || "";
     const subjectText = [
       {
         text: "ΘΕΜΑ:",
@@ -361,11 +280,10 @@ export class DocumentGenerator {
         italics: true,
       },
       {
-        text: ` Αίτημα για την πληρωμή ${documentData.expenditure_type || "ΔΑΠΑΝΗ"} που έχουν εγκριθεί από ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit || "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ (ΔΑΕΦΚ-ΚΕ)"}`,
+        text: ` ${documentTitle} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit}`,
         italics: true,
       },
     ];
-
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
