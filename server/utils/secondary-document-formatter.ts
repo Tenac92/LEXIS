@@ -14,7 +14,7 @@ import {
   TableLayoutType,
 } from "docx";
 import { createLogger } from "./logger";
-import { DocumentShared } from "./document-shared";
+import { DocumentUtilities } from "./document-utilities";
 import { UserDetails, UnitDetails, DocumentData } from "./document-types";
 
 const logger = createLogger("SecondaryDocumentFormatter");
@@ -35,7 +35,7 @@ export class SecondaryDocumentFormatter {
             text: `ΕΡΓΟ: ${title}`,
             bold: true,
             size: 24,
-            font: DocumentShared.DEFAULT_FONT,
+            font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
         alignment: AlignmentType.CENTER,
@@ -47,7 +47,7 @@ export class SecondaryDocumentFormatter {
             text: `ΝΑ853: ${na853Code}`,
             bold: true,
             size: 20,
-            font: DocumentShared.DEFAULT_FONT,
+            font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
         alignment: AlignmentType.CENTER,
@@ -70,7 +70,7 @@ export class SecondaryDocumentFormatter {
                   text: "Α/Α",
                   bold: true,
                   size: 16,
-                  font: DocumentShared.DEFAULT_FONT,
+                  font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
               alignment: AlignmentType.CENTER,
@@ -93,7 +93,7 @@ export class SecondaryDocumentFormatter {
                   text: "ΕΠΩΝΥΜΟ ΟΝΟΜΑ ΠΑΤΡΩΝΥΜΟ",
                   bold: true,
                   size: 16,
-                  font: DocumentShared.DEFAULT_FONT,
+                  font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
               alignment: AlignmentType.CENTER,
@@ -116,7 +116,7 @@ export class SecondaryDocumentFormatter {
                   text: "Α.Φ.Μ.",
                   bold: true,
                   size: 16,
-                  font: DocumentShared.DEFAULT_FONT,
+                  font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
               alignment: AlignmentType.CENTER,
@@ -139,7 +139,7 @@ export class SecondaryDocumentFormatter {
                   text: "ΠΟΣΟ (€)",
                   bold: true,
                   size: 16,
-                  font: DocumentShared.DEFAULT_FONT,
+                  font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
               alignment: AlignmentType.CENTER,
@@ -162,7 +162,7 @@ export class SecondaryDocumentFormatter {
                   text: "ΠΡΑΞΗ",
                   bold: true,
                   size: 16,
-                  font: DocumentShared.DEFAULT_FONT,
+                  font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
               alignment: AlignmentType.CENTER,
@@ -182,7 +182,7 @@ export class SecondaryDocumentFormatter {
 
     const dataRows = recipients.map((recipient, index) => {
       const amount = typeof recipient.amount === "number" ? recipient.amount : 0;
-      const formattedAmount = DocumentShared.formatCurrency(amount);
+      const formattedAmount = DocumentUtilities.formatCurrency(amount);
 
       return new TableRow({
         children: [
@@ -193,7 +193,7 @@ export class SecondaryDocumentFormatter {
                   new TextRun({
                     text: (index + 1).toString(),
                     size: 14,
-                    font: DocumentShared.DEFAULT_FONT,
+                    font: DocumentUtilities.DEFAULT_FONT,
                   }),
                 ],
                 alignment: AlignmentType.CENTER,
@@ -214,7 +214,7 @@ export class SecondaryDocumentFormatter {
                   new TextRun({
                     text: `${recipient.lastname || ""} ${recipient.firstname || ""} ${recipient.fathername || ""}`.trim(),
                     size: 14,
-                    font: DocumentShared.DEFAULT_FONT,
+                    font: DocumentUtilities.DEFAULT_FONT,
                   }),
                 ],
                 alignment: AlignmentType.LEFT,
@@ -235,7 +235,7 @@ export class SecondaryDocumentFormatter {
                   new TextRun({
                     text: recipient.afm || "",
                     size: 14,
-                    font: DocumentShared.DEFAULT_FONT,
+                    font: DocumentUtilities.DEFAULT_FONT,
                   }),
                 ],
                 alignment: AlignmentType.CENTER,
@@ -256,7 +256,7 @@ export class SecondaryDocumentFormatter {
                   new TextRun({
                     text: formattedAmount,
                     size: 14,
-                    font: DocumentShared.DEFAULT_FONT,
+                    font: DocumentUtilities.DEFAULT_FONT,
                   }),
                 ],
                 alignment: AlignmentType.RIGHT,
@@ -277,7 +277,7 @@ export class SecondaryDocumentFormatter {
                   new TextRun({
                     text: recipient.secondary_text || expenditureType || "",
                     size: 14,
-                    font: DocumentShared.DEFAULT_FONT,
+                    font: DocumentUtilities.DEFAULT_FONT,
                   }),
                 ],
                 alignment: AlignmentType.LEFT,
@@ -318,10 +318,10 @@ export class SecondaryDocumentFormatter {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `ΣΥΝΟΛΟ: ${DocumentShared.formatCurrency(totalAmount)}`,
+                  text: `ΣΥΝΟΛΟ: ${DocumentUtilities.formatCurrency(totalAmount)}`,
                   bold: true,
                   size: 16,
-                  font: DocumentShared.DEFAULT_FONT,
+                  font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
               alignment: AlignmentType.RIGHT,
@@ -366,7 +366,7 @@ export class SecondaryDocumentFormatter {
         new TextRun({
           text: "Τα δικαιολογητικά της δαπάνης διατηρούνται στην αρμόδια υπηρεσία για διάστημα 10 ετών από την ημερομηνία εκκαθάρισης του δημόσιου λογαριασμού ή από την ημερομηνία λήξης του προγράμματος, εφόσον αυτή είναι μεταγενέστερη.",
           size: 16,
-          font: DocumentShared.DEFAULT_FONT,
+          font: DocumentUtilities.DEFAULT_FONT,
         }),
       ],
       alignment: AlignmentType.JUSTIFIED,
@@ -407,7 +407,7 @@ export class SecondaryDocumentFormatter {
                       text: "Ο/Η Υπάλληλος",
                       bold: true,
                       size: 18,
-                      font: DocumentShared.DEFAULT_FONT,
+                      font: DocumentUtilities.DEFAULT_FONT,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
@@ -418,7 +418,7 @@ export class SecondaryDocumentFormatter {
                     new TextRun({
                       text: userInfo.name,
                       size: 18,
-                      font: DocumentShared.DEFAULT_FONT,
+                      font: DocumentUtilities.DEFAULT_FONT,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
@@ -428,7 +428,7 @@ export class SecondaryDocumentFormatter {
                     new TextRun({
                       text: userInfo.department,
                       size: 16,
-                      font: DocumentShared.DEFAULT_FONT,
+                      font: DocumentUtilities.DEFAULT_FONT,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
@@ -450,7 +450,7 @@ export class SecondaryDocumentFormatter {
                       text: "Ο/Η Προϊστάμενος/η",
                       bold: true,
                       size: 18,
-                      font: DocumentShared.DEFAULT_FONT,
+                      font: DocumentUtilities.DEFAULT_FONT,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
@@ -461,7 +461,7 @@ export class SecondaryDocumentFormatter {
                     new TextRun({
                       text: "",
                       size: 18,
-                      font: DocumentShared.DEFAULT_FONT,
+                      font: DocumentUtilities.DEFAULT_FONT,
                     }),
                   ],
                   alignment: AlignmentType.CENTER,
@@ -484,7 +484,7 @@ export class SecondaryDocumentFormatter {
     try {
       logger.debug("Generating secondary document for:", documentData);
 
-      const unitDetails = await DocumentShared.getUnitDetails(documentData.unit);
+      const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
       logger.debug("Unit details:", unitDetails);
 
       // Get project title and NA853 code from database
@@ -494,8 +494,8 @@ export class SecondaryDocumentFormatter {
         "";
       logger.debug(`Secondary document - Finding project with MIS/NA853: ${projectMis}`);
 
-      const projectTitle = await DocumentShared.getProjectTitle(projectMis);
-      const projectNA853 = await DocumentShared.getProjectNA853(projectMis);
+      const projectTitle = await DocumentUtilities.getProjectTitle(projectMis);
+      const projectNA853 = await DocumentUtilities.getProjectNA853(projectMis);
       logger.debug(`Secondary document - Project title for MIS ${projectMis}:`, projectTitle);
       logger.debug(`Secondary document - Project NA853 for MIS ${projectMis}:`, projectNA853);
 
@@ -511,23 +511,23 @@ export class SecondaryDocumentFormatter {
         return sum + amount;
       }, 0);
 
-      const formattedTotal = DocumentShared.formatCurrency(totalAmount);
+      const formattedTotal = DocumentUtilities.formatCurrency(totalAmount);
 
       const sections = [
         {
           properties: {
             page: {
               size: { width: 16838, height: 11906 }, // Landscape orientation
-              margins: DocumentShared.DOCUMENT_MARGINS,
+              margins: DocumentUtilities.DOCUMENT_MARGINS,
               orientation: PageOrientation.LANDSCAPE,
             },
           },
           children: [
             ...this.createDocumentTitle(documentData, projectTitle, projectNA853),
             this.createRecipientsTable(documentData.recipients || [], documentData.expenditure_type),
-            DocumentShared.createBlankLine(480),
+            DocumentUtilities.createBlankLine(480),
             this.createRetentionText(),
-            DocumentShared.createBlankLine(480),
+            DocumentUtilities.createBlankLine(480),
             this.createSignatureSection(documentData),
           ],
         },
@@ -539,8 +539,8 @@ export class SecondaryDocumentFormatter {
           default: {
             document: {
               run: {
-                font: DocumentShared.DEFAULT_FONT,
-                size: DocumentShared.DEFAULT_FONT_SIZE,
+                font: DocumentUtilities.DEFAULT_FONT,
+                size: DocumentUtilities.DEFAULT_FONT_SIZE,
               },
             },
           },
