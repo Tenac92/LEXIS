@@ -53,13 +53,13 @@ export class DocumentGenerator {
             new ImageRun({
               data: fs.readFileSync(path.join(__dirname, "ethnosimo22.png")),
               transformation: {
-                width: 50,
-                height: 50,
+                width: 100,
+                height: 100,
               },
             }),
           ],
           alignment: AlignmentType.LEFT,
-          spacing: { after: 200 },
+          spacing: { after: 400 },
         }),
 
         // Header with two-column layout (includes contact info and recipient section)
@@ -915,7 +915,7 @@ export class DocumentGenerator {
       children: [
         new TextRun({
           text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
-          size: DocumentUtilities.DEFAULT_FONT_SIZE-2,
+          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
           font: DocumentUtilities.DEFAULT_FONT,
         }),
       ],
@@ -1005,14 +1005,26 @@ export class DocumentGenerator {
                 ),
                 DocumentUtilities.createBoldParagraph(userInfo.department),
                 DocumentUtilities.createBlankLine(10),
-                DocumentUtilities.createContactDetail("Ταχ. Δ/νση", address.address),
+                DocumentUtilities.createContactDetail(
+                  "Ταχ. Δ/νση",
+                  address.address,
+                ),
                 DocumentUtilities.createContactDetail(
                   "Ταχ. Κώδικας",
                   `${address.tk}, ${address.region}`,
                 ),
-                DocumentUtilities.createContactDetail("Πληροφορίες", userInfo.name),
-                DocumentUtilities.createContactDetail("Τηλέφωνο", userInfo.contact_number),
-                DocumentUtilities.createContactDetail("Email", unitDetails?.email || ""),
+                DocumentUtilities.createContactDetail(
+                  "Πληροφορίες",
+                  userInfo.name,
+                ),
+                DocumentUtilities.createContactDetail(
+                  "Τηλέφωνο",
+                  userInfo.contact_number,
+                ),
+                DocumentUtilities.createContactDetail(
+                  "Email",
+                  unitDetails?.email || "",
+                ),
                 DocumentUtilities.createBlankLine(10),
               ],
             }),
@@ -1043,46 +1055,58 @@ export class DocumentGenerator {
                   alignment: AlignmentType.LEFT,
                 }),
                 new Paragraph({
-                  children: [new TextRun({
-                    text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
-                    size: 20,
-                  })],
+                  children: [
+                    new TextRun({
+                      text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                      size: 20,
+                    }),
+                  ],
                   spacing: { before: 200 },
                   alignment: AlignmentType.LEFT,
                 }),
                 new Paragraph({
-                  children: [new TextRun({
-                    text: "Διεύθυνση Οικονομικής Διαχείρισης",
-                    size: 20,
-                  })],
+                  children: [
+                    new TextRun({
+                      text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                      size: 20,
+                    }),
+                  ],
                   alignment: AlignmentType.LEFT,
                 }),
                 new Paragraph({
-                  children: [new TextRun({
-                    text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-                    size: 20,
-                  })],
+                  children: [
+                    new TextRun({
+                      text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                      size: 20,
+                    }),
+                  ],
                   alignment: AlignmentType.LEFT,
                 }),
                 new Paragraph({
-                  children: [new TextRun({
-                    text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-                    size: 22,
-                  })],
+                  children: [
+                    new TextRun({
+                      text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                      size: 22,
+                    }),
+                  ],
                   alignment: AlignmentType.LEFT,
                 }),
                 new Paragraph({
-                  children: [new TextRun({
-                    text: "Δημοκρίτου 2",
-                    size: 20,
-                  })],
+                  children: [
+                    new TextRun({
+                      text: "Δημοκρίτου 2",
+                      size: 20,
+                    }),
+                  ],
                   alignment: AlignmentType.LEFT,
                 }),
                 new Paragraph({
-                  children: [new TextRun({
-                    text: "151 23 Μαρούσι",
-                    size: 20,
-                  })],
+                  children: [
+                    new TextRun({
+                      text: "151 23 Μαρούσι",
+                      size: 20,
+                    }),
+                  ],
                   alignment: AlignmentType.LEFT,
                 }),
               ],

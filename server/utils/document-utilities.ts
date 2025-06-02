@@ -126,7 +126,7 @@ export class DocumentUtilities {
         }),
       ],
       alignment: AlignmentType.LEFT,
-      spacing: { after: 60 },
+      spacing: { after: 0 },
     });
   }
 
