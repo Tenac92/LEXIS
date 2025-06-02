@@ -628,9 +628,14 @@ export class DocumentGenerator {
    * Create footer with signature
    */
   private static createFooter(documentData: DocumentData, unitDetails: UnitDetails | null): Table {
+    const attachments = (documentData.attachments || [])
+      .map((item) => item.replace(/^\d+\-/, ""))
+      .filter(Boolean);
+
+    // Left column content (attachments, notifications, etc.)
     const leftColumnParagraphs: Paragraph[] = [];
-    const rightColumnParagraphs = DocumentUtilities.createManagerSignatureParagraphs(unitDetails?.manager);
-    
+
+    // Add ΕΓΚΡΙΣΗ section
     leftColumnParagraphs.push(
       new Paragraph({
         children: [
@@ -658,15 +663,218 @@ export class DocumentGenerator {
         spacing: { after: 240 },
       })
     );
-    
-    return DocumentUtilities.createBorderlessTable([
-      new TableRow({
+
+    // Add ΣΥΝΗΜΜΕΝΑ section if attachments exist
+    if (attachments.length > 0) {
+      leftColumnParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
+              bold: true,
+              underline: {},
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              font: DocumentUtilities.DEFAULT_FONT,
+            }),
+          ],
+          spacing: { after: 120, before: 240 },
+        })
+      );
+
+      for (let i = 0; i < attachments.length; i++) {
+        leftColumnParagraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${i + 1}. ${attachments[i]}`,
+                size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                font: DocumentUtilities.DEFAULT_FONT,
+              }),
+            ],
+            indent: { left: 426 },
+            spacing: { after: 120 },
+          })
+        );
+      }
+    }
+
+    // Add ΚΟΙΝΟΠΟΙΗΣΗ section
+    leftColumnParagraphs.push(
+      new Paragraph({
         children: [
-          DocumentUtilities.createBorderlessCell(leftColumnParagraphs),
-          DocumentUtilities.createBorderlessCell(rightColumnParagraphs),
+          new TextRun({
+            text: "ΚΟΙΝΟΠΟΙΗΣΗ",
+            bold: true,
+            underline: {},
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
         ],
-      }),
-    ], [50, 50]);
+        spacing: { after: 120, before: 240 },
+      })
+    );
+
+    const notifications = [
+      "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+      "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+      "Γ.Δ.Α.Ε.Φ.Κ.",
+    ];
+
+    for (let i = 0; i < notifications.length; i++) {
+      leftColumnParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${i + 1}. ${notifications[i]}`,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              font: DocumentUtilities.DEFAULT_FONT,
+            }),
+          ],
+          indent: { left: 426 },
+          spacing: { after: 120 },
+        })
+      );
+    }
+
+    // Add ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ section
+    leftColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
+            bold: true,
+            underline: {},
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 120, before: 240 },
+      })
+    );
+
+    leftColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "1. Χρονολογικό Αρχείο",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        indent: { left: 426 },
+        spacing: { after: 120 },
+      })
+    );
+
+    // Right column - signature section matching header format
+    const rightColumnParagraphs: Paragraph[] = [];
+
+    rightColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: unitDetails?.manager?.order || "",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 480, after: 120 },
+      })
+    );
+
+    rightColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: unitDetails?.manager?.title || "",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 240 },
+      })
+    );
+
+    // Signature space
+    rightColumnParagraphs.push(
+      new Paragraph({
+        children: [new TextRun({ text: "" })],
+        spacing: { before: 160, after: 160 },
+      })
+    );
+
+    rightColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: unitDetails?.manager?.name || "",
+            bold: true,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 120 },
+      })
+    );
+
+    rightColumnParagraphs.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: unitDetails?.manager?.degree || "",
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+      })
+    );
+
+    // Create two-column table matching header format
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [7000, 4000],
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              children: leftColumnParagraphs,
+              verticalAlign: VerticalAlign.TOP,
+              margins: { right: 300 },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+            }),
+            new TableCell({
+              children: rightColumnParagraphs,
+              verticalAlign: VerticalAlign.TOP,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+            }),
+          ],
+        }),
+      ],
+    });
   }
 
   /**
