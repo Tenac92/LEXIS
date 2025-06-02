@@ -1,6 +1,6 @@
-import { forwardRef } from "react";
+import { forwardRef, useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { formatNumberWhileTyping, parseEuropeanNumber } from "@/lib/number-format";
+import { parseEuropeanNumber } from "@/lib/number-format";
 import { cn } from "@/lib/utils";
 
 export interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> {
@@ -12,49 +12,122 @@ export interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInp
 
 const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
   ({ className, value, onChange, decimals = 2, allowNegative = false, ...props }, ref) => {
+    const [displayValue, setDisplayValue] = useState('');
+    const [isFocused, setIsFocused] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    // Convert numeric value to formatted string
-    const getDisplayValue = (val: string | number | undefined): string => {
-      if (val === undefined || val === null || val === '') return '';
+    // Initialize display value when value prop changes
+    useEffect(() => {
+      if (!isFocused) {
+        const val = value;
+        if (val === undefined || val === null || val === '' || val === 0) {
+          setDisplayValue('');
+        } else {
+          // Convert numeric value to European format when not focused
+          const numValue = typeof val === 'number' ? val : parseFloat(String(val));
+          if (!isNaN(numValue) && numValue !== 0) {
+            setDisplayValue(formatForDisplay(numValue));
+          } else {
+            setDisplayValue('');
+          }
+        }
+      }
+    }, [value, isFocused]);
+
+    // Format number for display (European format)
+    const formatForDisplay = (num: number): string => {
+      return num.toLocaleString('el-GR', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: decimals
+      });
+    };
+
+    // Clean input value - allow only digits, comma, and dots
+    const cleanInput = (input: string): string => {
+      let cleaned = input.replace(/[^\d,.-]/g, '');
       
-      const strVal = String(val);
-      if (strVal === '0' || strVal === '0.00' || strVal === '0,00') return '';
+      // Handle negative sign
+      if (!allowNegative) {
+        cleaned = cleaned.replace(/-/g, '');
+      } else if (cleaned.indexOf('-') > 0) {
+        cleaned = cleaned.replace(/-/g, '');
+      }
       
-      return formatNumberWhileTyping(strVal, decimals);
+      return cleaned;
+    };
+
+    // Validate decimal input
+    const validateDecimalInput = (input: string): boolean => {
+      // Allow empty input
+      if (!input) return true;
+      
+      // Count commas (decimal separators)
+      const commaCount = (input.match(/,/g) || []).length;
+      if (commaCount > 1) return false;
+      
+      // Check decimal places
+      const commaIndex = input.indexOf(',');
+      if (commaIndex !== -1) {
+        const decimalPart = input.substring(commaIndex + 1);
+        if (decimalPart.length > decimals) return false;
+      }
+      
+      return true;
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
+      const rawValue = e.target.value;
+      const cleanedValue = cleanInput(rawValue);
       
-      // Handle negative sign
-      let processedValue = newValue;
-      const isNegative = processedValue.startsWith('-');
-      if (isNegative && allowNegative) {
-        processedValue = processedValue.substring(1);
-      } else if (isNegative && !allowNegative) {
-        processedValue = processedValue.substring(1);
+      // Validate the input
+      if (!validateDecimalInput(cleanedValue)) {
+        return; // Don't update if invalid
       }
       
-      // Format the value
-      const formattedValue = formatNumberWhileTyping(processedValue, decimals);
-      const finalValue = (isNegative && allowNegative) ? '-' + formattedValue : formattedValue;
+      setDisplayValue(cleanedValue);
       
       // Parse numeric value for callback
-      const numericValue = parseEuropeanNumber(finalValue);
+      const numericValue = parseEuropeanNumber(cleanedValue);
       
-      // Call onChange with both formatted string and numeric value
-      onChange?.(finalValue, numericValue);
+      // Call onChange with cleaned string and numeric value
+      onChange?.(cleanedValue, numericValue);
     };
 
-    const displayValue = getDisplayValue(value);
+    const handleFocus = () => {
+      setIsFocused(true);
+      // Convert to raw input format when focusing
+      if (displayValue && !displayValue.includes(',') && !displayValue.includes('.')) {
+        // If it's a formatted number, convert back to editable format
+        const numValue = parseEuropeanNumber(displayValue);
+        if (!isNaN(numValue) && numValue !== 0) {
+          const editableFormat = String(numValue).replace('.', ',');
+          setDisplayValue(editableFormat);
+        }
+      }
+    };
+
+    const handleBlur = () => {
+      setIsFocused(false);
+      // Format for display when losing focus
+      if (displayValue) {
+        const numValue = parseEuropeanNumber(displayValue);
+        if (!isNaN(numValue) && numValue !== 0) {
+          setDisplayValue(formatForDisplay(numValue));
+        } else if (numValue === 0) {
+          setDisplayValue('');
+        }
+      }
+    };
 
     return (
       <Input
         {...props}
-        ref={ref}
+        ref={ref || inputRef}
         type="text"
         value={displayValue}
         onChange={handleInputChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         className={cn(className)}
         inputMode="decimal"
         autoComplete="off"
