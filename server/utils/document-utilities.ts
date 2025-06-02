@@ -296,4 +296,74 @@ export class DocumentUtilities {
       throw error;
     }
   }
+
+  /**
+   * Get project title by MIS or NA853
+   */
+  public static async getProjectTitle(misOrNA853: string | number): Promise<string> {
+    try {
+      logger.debug(`Fetching project title for: ${misOrNA853}`);
+      
+      // Import storage to fetch project data
+      const { storage } = await import("../storage");
+      
+      // Try to fetch from projects by MIS first
+      if (typeof misOrNA853 === 'number' || !isNaN(Number(misOrNA853))) {
+        const projects = await storage.getProjectsByUnit(""); // Get all projects
+        const project = projects.find(p => p.mis === Number(misOrNA853));
+        if (project) {
+          return project.title || `Project ${misOrNA853}`;
+        }
+      }
+      
+      // If no project found, return a default title
+      return `Project ${misOrNA853}`;
+    } catch (error) {
+      logger.error("Error fetching project title:", error);
+      return `Project ${misOrNA853}`;
+    }
+  }
+
+  /**
+   * Get project NA853 by MIS
+   */
+  public static async getProjectNA853(mis: string | number): Promise<string> {
+    try {
+      logger.debug(`Fetching project NA853 for MIS: ${mis}`);
+      
+      // Import storage to fetch project data
+      const { storage } = await import("../storage");
+      
+      const projects = await storage.getProjectsByUnit(""); // Get all projects
+      const project = projects.find(p => p.mis === Number(mis));
+      
+      if (project && project.budget_na853) {
+        return project.budget_na853;
+      }
+      
+      // Return default if not found
+      return `2024ΝΑ85300000`;
+    } catch (error) {
+      logger.error("Error fetching project NA853:", error);
+      return `2024ΝΑ85300000`;
+    }
+  }
+
+  /**
+   * Format currency amount for Greek documents
+   */
+  public static formatCurrency(amount: number): string {
+    try {
+      // Format with Greek number formatting (comma as thousands separator, period as decimal)
+      return new Intl.NumberFormat('el-GR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(amount);
+    } catch (error) {
+      logger.error("Error formatting currency:", error);
+      return `${amount.toFixed(2)} €`;
+    }
+  }
 }
