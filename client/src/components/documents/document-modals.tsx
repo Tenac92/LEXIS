@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -844,13 +845,12 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                       />
 
                       {/* Ποσό */}
-                      <Input
-                        value={recipient.amount}
-                        type="number"
-                        onChange={(e) => handleRecipientChange(index, 'amount', e.target.value)}
+                      <NumberInput
+                        value={recipient.amount || ''}
+                        onChange={(formatted, numeric) => handleRecipientChange(index, 'amount', numeric)}
                         placeholder="Ποσό"
-                        step="0.01"
                         className="md:col-span-2 md:row-span-1"
+                        decimals={2}
                         required
                       />
 

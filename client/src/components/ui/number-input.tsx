@@ -18,7 +18,7 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       if (val === undefined || val === null || val === '') return '';
       
       const strVal = String(val);
-      if (strVal === '0') return '';
+      if (strVal === '0' || strVal === '0.00' || strVal === '0,00') return '';
       
       return formatNumberWhileTyping(strVal, decimals);
     };
