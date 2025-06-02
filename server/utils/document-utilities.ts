@@ -1,6 +1,6 @@
 /**
  * Document Utilities - Shared utilities for document generation
- * 
+ *
  * This module provides reusable components and utilities for creating
  * Word documents, including common elements like headers, signatures,
  * tables, and formatting functions.
@@ -40,30 +40,39 @@ export interface ExpenditureConfig {
 
 export const EXPENDITURE_CONFIGS: Record<string, ExpenditureConfig> = {
   "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ": {
-    documentTitle: "Διαβιβαστικό Απόφασης για την πληρωμή επιδοτήσεων ενοικίου/συγκατοίκησης που έχουν εγκριθεί από",
+    documentTitle:
+      "Διαβιβαστικό Απόφασης για την πληρωμή επιδοτήσεων ενοικίου/συγκατοίκησης που έχουν εγκριθεί από",
     columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΜΗΝΕΣ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε για την πληρωμή των αναγνωρισμένων δικαιούχων επιδότησης ενοικίου/συγκατοίκησης στην"
+    mainText:
+      "Παρακαλούμε για την πληρωμή των αναγνωρισμένων δικαιούχων επιδότησης ενοικίου/συγκατοίκησης στην",
   },
   "ΕΚΤΟΣ ΕΔΡΑΣ": {
     documentTitle: "Αίτημα χορήγησης αποζημίωσης εκτός έδρας",
     columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΗΜΕΡΕΣ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την αποζημίωση εκτός έδρας για τους κατωτέρω υπαλλήλους:"
+    mainText:
+      "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την αποζημίωση εκτός έδρας για τους κατωτέρω υπαλλήλους:",
   },
   "ΔΚΑ ΕΠΙΣΚΕΥΗ": {
-    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Επισκευής που έχουν εγκριθεί από",
+    documentTitle:
+      "Αίτημα για την πληρωμή Δ.Κ.Α Επισκευής που έχουν εγκριθεί από",
     columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
+    mainText:
+      "Αιτούμαστε την πληρωμή της κρατικης αρωγής  που έχει εγκριθεί από",
   },
   "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ": {
-    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Ανακατασκευής που έχουν εγκριθεί από",
+    documentTitle:
+      "Αίτημα για την πληρωμή Δ.Κ.Α Ανακατασκευής που έχουν εγκριθεί από",
     columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
+    mainText:
+      "Αιτούμαστε την πληρωμή της κρατικης αρωγής  που έχει εγκριθεί από ",
   },
   "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ": {
-    documentTitle: "Αίτημα για την πληρωμή Δ.Κ.Α Αυτοστέγασης που έχουν εγκριθεί από",
+    documentTitle:
+      "Αίτημα για την πληρωμή Δ.Κ.Α Αυτοστέγασης που έχουν εγκριθεί από",
     columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΔΟΣΗ", "ΠΟΣΟ (€)"],
-    mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε τη δόση του δανείου για τους κατωτέρω δικαιούχους:"
-  }
+    mainText:
+      "Αιτούμαστε την πληρωμή της κρατικης αρωγής  που έχει εγκριθεί από",
+  },
 };
 
 // =============================================================================
@@ -75,10 +84,10 @@ export class DocumentUtilities {
   public static readonly DEFAULT_FONT_SIZE = 22;
   public static readonly DEFAULT_FONT = "Calibri";
   public static readonly DEFAULT_MARGINS = {
-    top: 720,    // 0.5 inch top margin for Greek government documents
-    right: 720,  // 0.5 inch right margin
+    top: 720, // 0.5 inch top margin for Greek government documents
+    right: 720, // 0.5 inch right margin
     bottom: 720, // 0.5 inch bottom margin
-    left: 720,   // 0.5 inch left margin
+    left: 720, // 0.5 inch left margin
   };
   public static readonly DOCUMENT_MARGINS = this.DEFAULT_MARGINS;
 
@@ -141,13 +150,13 @@ export class DocumentUtilities {
       underline?: boolean;
       size?: number;
       spacing?: number;
-    } = {}
+    } = {},
   ): Paragraph {
     const {
       bold = false,
       underline = false,
       size = this.DEFAULT_FONT_SIZE,
-      spacing = 120
+      spacing = 120,
     } = options;
 
     return new Paragraph({
@@ -219,21 +228,25 @@ export class DocumentUtilities {
   /**
    * Create manager signature paragraphs for document signatures
    */
-  public static createManagerSignatureParagraphs(managerInfo?: any): Paragraph[] {
+  public static createManagerSignatureParagraphs(
+    managerInfo?: any,
+  ): Paragraph[] {
     const rightColumnParagraphs: Paragraph[] = [];
 
     rightColumnParagraphs.push(
       new Paragraph({
         children: [
           new TextRun({
-            text: managerInfo?.order || "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
+            text:
+              managerInfo?.order ||
+              "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
             bold: true,
             size: this.DEFAULT_FONT_SIZE,
             font: this.DEFAULT_FONT,
           }),
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 240 },
+        spacing: { after: 0 },
       }),
     );
 
@@ -248,7 +261,7 @@ export class DocumentUtilities {
           }),
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 480 },
+        spacing: { after: 120 },
       }),
     );
 
@@ -266,7 +279,7 @@ export class DocumentUtilities {
           }),
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 120 },
+        spacing: { after: 0 },
       }),
     );
 
@@ -286,8 +299,6 @@ export class DocumentUtilities {
     return rightColumnParagraphs;
   }
 
-
-
   // =============================================================================
   // TABLE CREATION UTILITIES
   // =============================================================================
@@ -297,7 +308,7 @@ export class DocumentUtilities {
    */
   public static createBorderlessTable(
     rows: TableRow[],
-    columnWidths?: number[]
+    columnWidths?: number[],
   ): Table {
     const tableOptions: any = {
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -324,7 +335,7 @@ export class DocumentUtilities {
    */
   public static createBorderlessCell(
     content: Paragraph[],
-    verticalAlign: typeof VerticalAlign.TOP = VerticalAlign.TOP
+    verticalAlign: typeof VerticalAlign.TOP = VerticalAlign.TOP,
   ): TableCell {
     return new TableCell({
       children: content,
@@ -348,18 +359,42 @@ export class DocumentUtilities {
   public static async getUnitDetails(unit: string): Promise<UnitDetails> {
     try {
       logger.debug(`Fetching unit details for: ${unit}`);
-      
-      // This would typically fetch from database or API
-      // For now, return a basic structure
+
+      // Map unit abbreviations to full names with proper Greek grammar
+      const unitMappings: Record<string, { name: string; prop: string }> = {
+        "ΔΑΕΦΚ-ΚΕ": {
+          name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
+          prop: "τη"
+        },
+        "ΔΑΕΦΚ-ΒΕ": {
+          name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΑΣ ΕΛΛΑΔΟΣ",
+          prop: "τη"
+        },
+        "ΔΑΕΦΚ-ΝΕ": {
+          name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΝΟΤΙΑΣ ΕΛΛΑΔΟΣ",
+          prop: "τη"
+        },
+        "ΔΑΕΦΚ-ΑΜ": {
+          name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΜΑΚΕΔΟΝΙΑΣ",
+          prop: "τη"
+        }
+      };
+
+      const unitInfo = unitMappings[unit] || { 
+        name: unit, 
+        prop: "τη" 
+      };
+
       return {
         unit,
-        name: `Unit ${unit}`,
+        name: unitInfo.name,
+        unit_name: unitInfo,
         manager: {
           name: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
           order: "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
           title: "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
-          degree: "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β."
-        }
+          degree: "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β.",
+        },
       };
     } catch (error) {
       logger.error("Error fetching unit details:", error);
@@ -370,22 +405,24 @@ export class DocumentUtilities {
   /**
    * Get project title by MIS or NA853
    */
-  public static async getProjectTitle(misOrNA853: string | number): Promise<string> {
+  public static async getProjectTitle(
+    misOrNA853: string | number,
+  ): Promise<string> {
     try {
       logger.debug(`Fetching project title for: ${misOrNA853}`);
-      
+
       // Import storage to fetch project data
       const { storage } = await import("../storage");
-      
+
       // Try to fetch from projects by MIS first
-      if (typeof misOrNA853 === 'number' || !isNaN(Number(misOrNA853))) {
+      if (typeof misOrNA853 === "number" || !isNaN(Number(misOrNA853))) {
         const projects = await storage.getProjectsByUnit(""); // Get all projects
-        const project = projects.find(p => p.mis === Number(misOrNA853));
+        const project = projects.find((p) => p.mis === Number(misOrNA853));
         if (project) {
           return project.title || `Project ${misOrNA853}`;
         }
       }
-      
+
       // If no project found, return a default title
       return `Project ${misOrNA853}`;
     } catch (error) {
@@ -400,17 +437,17 @@ export class DocumentUtilities {
   public static async getProjectNA853(mis: string | number): Promise<string> {
     try {
       logger.debug(`Fetching project NA853 for MIS: ${mis}`);
-      
+
       // Import storage to fetch project data
       const { storage } = await import("../storage");
-      
+
       const projects = await storage.getProjectsByUnit(""); // Get all projects
-      const project = projects.find(p => p.mis === Number(mis));
-      
+      const project = projects.find((p) => p.mis === Number(mis));
+
       if (project && project.budget_na853) {
         return project.budget_na853;
       }
-      
+
       // Return default if not found
       return `2024ΝΑ85300000`;
     } catch (error) {
@@ -429,11 +466,11 @@ export class DocumentUtilities {
   public static formatCurrency(amount: number): string {
     try {
       // Format with Greek number formatting (comma as thousands separator, period as decimal)
-      return new Intl.NumberFormat('el-GR', {
-        style: 'currency',
-        currency: 'EUR',
+      return new Intl.NumberFormat("el-GR", {
+        style: "currency",
+        currency: "EUR",
         minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        maximumFractionDigits: 2,
       }).format(amount);
     } catch (error) {
       logger.error("Error formatting currency:", error);
@@ -446,17 +483,24 @@ export class DocumentUtilities {
    * @param expenditureType The expenditure type to get configuration for
    * @returns Configuration object with proper fallback
    */
-  public static getExpenditureConfig(expenditureType: string): ExpenditureConfig {
+  public static getExpenditureConfig(
+    expenditureType: string,
+  ): ExpenditureConfig {
     // Log unknown expenditure types for debugging
     if (expenditureType && !EXPENDITURE_CONFIGS[expenditureType]) {
-      logger.warn(`Unknown expenditure type: ${expenditureType}. Using default configuration.`);
+      logger.warn(
+        `Unknown expenditure type: ${expenditureType}. Using default configuration.`,
+      );
     }
-    
-    return EXPENDITURE_CONFIGS[expenditureType] || {
-      documentTitle: `Αίτημα πληρωμής δαπάνης τύπου: ${expenditureType}`,
-      columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΠΟΣΟ (€)"],
-      mainText: "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την παρακάτω δαπάνη για τους κατωτέρω δικαιούχους:"
-    };
+
+    return (
+      EXPENDITURE_CONFIGS[expenditureType] || {
+        documentTitle: `Αίτημα πληρωμής δαπάνης τύπου: ${expenditureType}`,
+        columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΠΟΣΟ (€)"],
+        mainText:
+          "Παρακαλούμε όπως εγκρίνετε και εξοφλήσετε την παρακάτω δαπάνη για τους κατωτέρω δικαιούχους:",
+      }
+    );
   }
 
   /**
