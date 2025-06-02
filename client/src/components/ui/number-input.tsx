@@ -75,6 +75,22 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       return true;
     };
 
+    // Add live thousand separators while typing
+    const addThousandSeparators = (value: string): string => {
+      // Split by comma to handle decimal part separately
+      const parts = value.split(',');
+      let integerPart = parts[0] || '';
+      const decimalPart = parts[1];
+      
+      // Add dots as thousand separators to integer part
+      if (integerPart.length > 3) {
+        integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      }
+      
+      // Combine parts
+      return decimalPart !== undefined ? `${integerPart},${decimalPart}` : integerPart;
+    };
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const rawValue = e.target.value;
       const cleanedValue = cleanInput(rawValue);
@@ -84,13 +100,15 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         return; // Don't update if invalid
       }
       
-      setDisplayValue(cleanedValue);
+      // Add live thousand separators while typing
+      const formattedValue = addThousandSeparators(cleanedValue);
+      setDisplayValue(formattedValue);
       
-      // Parse numeric value for callback
+      // Parse numeric value for callback (use cleaned value without formatting)
       const numericValue = parseEuropeanNumber(cleanedValue);
       
-      // Call onChange with cleaned string and numeric value
-      onChange?.(cleanedValue, numericValue);
+      // Call onChange with formatted string and numeric value
+      onChange?.(formattedValue, numericValue);
     };
 
     const handleFocus = () => {
