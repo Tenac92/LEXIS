@@ -121,7 +121,7 @@ export class DocumentUtilities {
         new TextRun({
           text,
           bold: true,
-          size: 18,
+          size: 28, // Increased font size for header text
           font: this.DEFAULT_FONT,
         }),
       ],

@@ -16,7 +16,10 @@ import {
   BorderStyle,
   HeightRule,
   VerticalAlign,
+  ImageRun,
 } from "docx";
+import * as fs from "fs";
+import * as path from "path";
 import { DocumentUtilities } from "./document-utilities";
 import { DocumentData, UnitDetails } from "./document-types";
 import { createLogger } from "./logger";
@@ -936,7 +939,7 @@ export class DocumentGenerator {
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      columnWidths: [60, 40],
+      columnWidths: [15, 45, 40],
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -954,8 +957,34 @@ export class DocumentGenerator {
       rows: [
         new TableRow({
           children: [
+            // Logo column
             new TableCell({
-              width: { size: 60, type: WidthType.PERCENTAGE },
+              width: { size: 15, type: WidthType.PERCENTAGE },
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
+              verticalAlign: VerticalAlign.TOP,
+              children: [
+                new Paragraph({
+                  children: [
+                    new ImageRun({
+                      data: fs.readFileSync(path.join(__dirname, "ethnosimo22.png")),
+                      transformation: {
+                        width: 80,
+                        height: 80,
+                      },
+                    }),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                }),
+              ],
+            }),
+            // Ministry information column
+            new TableCell({
+              width: { size: 45, type: WidthType.PERCENTAGE },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -1008,79 +1037,59 @@ export class DocumentGenerator {
                 right: 0,
               },
               children: [
-                new Table({
-                  width: { size: 100, type: WidthType.PERCENTAGE },
-                  borders: {
-                    top: { style: BorderStyle.NONE },
-                    bottom: { style: BorderStyle.NONE },
-                    left: { style: BorderStyle.NONE },
-                    right: { style: BorderStyle.NONE },
-                    insideHorizontal: { style: BorderStyle.NONE },
-                    insideVertical: { style: BorderStyle.NONE },
-                  },
-                  rows: [
-                    new TableRow({
-                      children: [
-                        new TableCell({
-                          width: { size: 8, type: WidthType.PERCENTAGE },
-                          borders: {
-                            top: { style: BorderStyle.NONE },
-                            bottom: { style: BorderStyle.NONE },
-                            left: { style: BorderStyle.NONE },
-                            right: { style: BorderStyle.NONE },
-                          },
-                          children: [
-                            new Paragraph({
-                              children: [
-                                new TextRun({
-                                  text: "ΠΡΟΣ:",
-                                  bold: true,
-                                }),
-                              ],
-                              spacing: { before: 2000 },
-                              alignment: AlignmentType.LEFT,
-                            }),
-                          ],
-                        }),
-                        new TableCell({
-                          width: { size: 92, type: WidthType.PERCENTAGE },
-                          borders: {
-                            top: { style: BorderStyle.NONE },
-                            bottom: { style: BorderStyle.NONE },
-                            left: { style: BorderStyle.NONE },
-                            right: { style: BorderStyle.NONE },
-                          },
-                          children: [
-                            new Paragraph({
-                              children: [new TextRun("Γενική Δ/νση Οικονομικών  Υπηρεσιών")],
-                              spacing: { before: 2000 },
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              children: [new TextRun("Διεύθυνση Οικονομικής Διαχείρισης")],
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              children: [new TextRun("Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών")],
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              children: [new TextRun("Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)")],
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              children: [new TextRun("Δημοκρίτου 2")],
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              children: [new TextRun("151 23 Μαρούσι")],
-                              alignment: AlignmentType.LEFT,
-                            }),
-                          ],
-                        }),
-                      ],
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "ΠΡΟΣ:",
+                      bold: true,
+                      size: 24,
                     }),
                   ],
+                  spacing: { before: 2000 },
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  children: [new TextRun({
+                    text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                    size: 22,
+                  })],
+                  spacing: { before: 200 },
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  children: [new TextRun({
+                    text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                    size: 22,
+                  })],
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  children: [new TextRun({
+                    text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                    size: 22,
+                  })],
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  children: [new TextRun({
+                    text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                    size: 22,
+                  })],
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  children: [new TextRun({
+                    text: "Δημοκρίτου 2",
+                    size: 22,
+                  })],
+                  alignment: AlignmentType.LEFT,
+                }),
+                new Paragraph({
+                  children: [new TextRun({
+                    text: "151 23 Μαρούσι",
+                    size: 22,
+                  })],
+                  alignment: AlignmentType.LEFT,
                 }),
               ],
             }),
