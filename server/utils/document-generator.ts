@@ -684,18 +684,12 @@ export class DocumentGenerator {
           totalAmount += amount;
 
           const subsequentRowCells = [
-            // Amount cell
+            // Installment cell (ΔΟΣΗ)
             new TableCell({
               children: [
-                DocumentUtilities.createCenteredParagraph(
-                  amount.toLocaleString("el-GR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  }),
-                  {
-                    size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                  }
-                ),
+                DocumentUtilities.createCenteredParagraph(installment, {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                }),
               ],
               borders: {
                 top: { style: borderStyle, size: 1 },
@@ -704,12 +698,15 @@ export class DocumentGenerator {
                 right: { style: borderStyle, size: 1 },
               },
             }),
-            // Installment cell
+            // Amount cell (ΠΟΣΟ (€))
             new TableCell({
               children: [
-                DocumentUtilities.createCenteredParagraph(installment, {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                }),
+                DocumentUtilities.createCenteredParagraph(
+                  DocumentUtilities.formatCurrency(amount),
+                  {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                  }
+                ),
               ],
               borders: {
                 top: { style: borderStyle, size: 1 },
