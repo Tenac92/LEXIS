@@ -874,15 +874,22 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getProjectDetails(mis: string): Promise<any | null> {
+  async getProjectDetails(identifier: string): Promise<any | null> {
     try {
-      console.log(`[Storage] Fetching project details for MIS: ${mis}`);
+      console.log(`[Storage] Fetching project details for identifier: ${identifier}`);
       
-      const { data, error } = await supabase
-        .from('Projects')
-        .select('*')
-        .eq('mis', mis)
-        .single();
+      let query = supabase.from('Projects').select('*');
+      
+      // Check if identifier is numeric (MIS) or alphanumeric (NA853)
+      if (/^\d+$/.test(identifier)) {
+        // Numeric identifier - search by MIS
+        query = query.eq('mis', parseInt(identifier));
+      } else {
+        // Alphanumeric identifier - search by budget_na853
+        query = query.eq('budget_na853', identifier);
+      }
+      
+      const { data, error } = await query.single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
         console.error('[Storage] Error fetching project details:', error);
@@ -890,9 +897,9 @@ export class DatabaseStorage implements IStorage {
       }
 
       if (data) {
-        console.log(`[Storage] Successfully fetched project details for MIS: ${mis}`);
+        console.log(`[Storage] Successfully fetched project details for identifier: ${identifier}`);
       } else {
-        console.log(`[Storage] No project found for MIS: ${mis}`);
+        console.log(`[Storage] No project found for identifier: ${identifier}`);
       }
       return data;
     } catch (error) {

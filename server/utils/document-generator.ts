@@ -347,54 +347,81 @@ export class DocumentGenerator {
     let totalAmount = 0;
 
     recipients.forEach((recipient, index) => {
-      const amount = recipient.amount || 0;
-      totalAmount += amount;
+      // Check if fathername exists and is not empty
+      const firstname = recipient.firstname || "";
+      const lastname = recipient.lastname || "";
+      const fathername = recipient.fathername || "";
 
-      // Create standard cells for most expenditure types
-      const cells = [
-        new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(`${index + 1}.`, {
-              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            }),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        }),
-        new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(
-              `${recipient.firstname} ${recipient.lastname}`,
-              {
+      // Check if fathername exists and is not empty
+      const fullName =
+        !fathername || fathername.trim() === ""
+          ? `${lastname} ${firstname}`.trim()
+          : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
+      const afm = recipient.afm || "";
+      const rowNumber = (index + 1).toString() + ".";
+      let installments: string[] = [];
+      if (
+        Array.isArray(recipient.installments) &&
+        recipient.installments.length > 0
+      ) {
+        installments = recipient.installments;
+      } else if (recipient.installment) {
+        installments = [recipient.installment.toString()];
+      } else {
+        installments = ["ΕΦΑΠΑΞ"];
+      }
+
+      // Get installment amounts if available
+      const installmentAmounts = recipient.installmentAmounts || {};
+
+      // If there's only one installment, create a simple row
+      if (installments.length === 1) {
+        const installment = installments[0];
+        const amount = installmentAmounts[installment] || recipient.amount;
+        totalAmount += amount;
+
+        // Create standard cells for most expenditure types
+        const cells = [
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(rowNumber, {
                 size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-              },
-            ),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        }),
-        new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(recipient.afm || "", {
-              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            }),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        }),
-      ];
+              }),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(fullName, {
+                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              }),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(afm, {
+                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              }),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+        ];
 
       // Add expenditure-specific column based on type
       if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
@@ -474,10 +501,231 @@ export class DocumentGenerator {
             left: { style: borderStyle, size: 1 },
             right: { style: borderStyle, size: 1 },
           },
-        }),
+        })
       );
 
-      rows.push(new TableRow({ children: cells }));
+      // Add installment column
+      cells.push(
+        new TableCell({
+          children: [
+            DocumentUtilities.createCenteredParagraph(installment, {
+              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            }),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        })
+      );
+
+        rows.push(new TableRow({ children: cells }));
+      } else {
+        // For multiple installments, use row spanning (same as primary document)
+        const rowSpan = installments.length;
+        const rowHeight = 360; // Base height for one row
+
+        // Create cells for the first row with rowSpan
+        const nameCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: fullName,
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                }),
+              ],
+            }),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        });
+
+        const indexCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: rowNumber,
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                }),
+              ],
+            }),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        });
+
+        const afmCell = new TableCell({
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({
+                  text: afm,
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                }),
+              ],
+            }),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        });
+
+        // Add the first row with installment details
+        const firstInstallment = installments[0];
+        const firstAmount = installmentAmounts[firstInstallment] || 0;
+        totalAmount += firstAmount;
+
+        const firstRowCells = [indexCell, nameCell];
+
+        // Add amount cell for first installment
+        firstRowCells.push(
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(
+                firstAmount.toLocaleString("el-GR", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }),
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                }
+              ),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          })
+        );
+
+        // Add installment cell for first installment
+        firstRowCells.push(
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(firstInstallment, {
+                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              }),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          })
+        );
+
+        // Add AFM cell
+        firstRowCells.push(afmCell);
+
+        // Add expenditure-specific cells for first row if needed
+        if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
+          firstRowCells.push(
+            new TableCell({
+              rowSpan: rowSpan,
+              verticalAlign: VerticalAlign.CENTER,
+              children: [
+                DocumentUtilities.createCenteredParagraph(
+                  recipient.days?.toString() || "1",
+                  {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                  },
+                ),
+              ],
+              borders: {
+                top: { style: borderStyle, size: 1 },
+                bottom: { style: borderStyle, size: 1 },
+                left: { style: borderStyle, size: 1 },
+                right: { style: borderStyle, size: 1 },
+              },
+            })
+          );
+        }
+
+        rows.push(
+          new TableRow({
+            height: { value: rowHeight, rule: HeightRule.ATLEAST },
+            children: firstRowCells,
+          })
+        );
+
+        // Add subsequent rows for remaining installments
+        for (let i = 1; i < installments.length; i++) {
+          const installment = installments[i];
+          const amount = installmentAmounts[installment] || 0;
+          totalAmount += amount;
+
+          const subsequentRowCells = [
+            // Amount cell
+            new TableCell({
+              children: [
+                DocumentUtilities.createCenteredParagraph(
+                  amount.toLocaleString("el-GR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }),
+                  {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                  }
+                ),
+              ],
+              borders: {
+                top: { style: borderStyle, size: 1 },
+                bottom: { style: borderStyle, size: 1 },
+                left: { style: borderStyle, size: 1 },
+                right: { style: borderStyle, size: 1 },
+              },
+            }),
+            // Installment cell
+            new TableCell({
+              children: [
+                DocumentUtilities.createCenteredParagraph(installment, {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                }),
+              ],
+              borders: {
+                top: { style: borderStyle, size: 1 },
+                bottom: { style: borderStyle, size: 1 },
+                left: { style: borderStyle, size: 1 },
+                right: { style: borderStyle, size: 1 },
+              },
+            }),
+          ];
+
+          rows.push(
+            new TableRow({
+              height: { value: rowHeight, rule: HeightRule.ATLEAST },
+              children: subsequentRowCells,
+            })
+          );
+        }
+      }
     });
 
     // Add total row
