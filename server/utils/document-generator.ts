@@ -381,8 +381,9 @@ export class DocumentGenerator {
         const amount = installmentAmounts[installment] || recipient.amount;
         totalAmount += amount;
 
-        // Create standard cells for most expenditure types
+        // Create table cells according to expenditure type configuration
         const cells = [
+          // Index/Number column
           new TableCell({
             children: [
               DocumentUtilities.createCenteredParagraph(rowNumber, {
@@ -396,6 +397,7 @@ export class DocumentGenerator {
               right: { style: borderStyle, size: 1 },
             },
           }),
+          // Name column
           new TableCell({
             children: [
               DocumentUtilities.createCenteredParagraph(fullName, {
@@ -409,6 +411,85 @@ export class DocumentGenerator {
               right: { style: borderStyle, size: 1 },
             },
           }),
+          // Amount column
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(
+                DocumentUtilities.formatCurrency(amount),
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                },
+              ),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+        ];
+
+        // Add expenditure-specific column based on type
+        if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
+          cells.push(
+            new TableCell({
+              children: [
+                DocumentUtilities.createCenteredParagraph(
+                  recipient.days?.toString() || "1",
+                  {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                  },
+                ),
+              ],
+              borders: {
+                top: { style: borderStyle, size: 1 },
+                bottom: { style: borderStyle, size: 1 },
+                left: { style: borderStyle, size: 1 },
+                right: { style: borderStyle, size: 1 },
+              },
+            }),
+          );
+        } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+          cells.push(
+            new TableCell({
+              children: [
+                DocumentUtilities.createCenteredParagraph(
+                  recipient.months?.toString() || "1",
+                  {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                  },
+                ),
+              ],
+              borders: {
+                top: { style: borderStyle, size: 1 },
+                bottom: { style: borderStyle, size: 1 },
+                left: { style: borderStyle, size: 1 },
+                right: { style: borderStyle, size: 1 },
+              },
+            }),
+          );
+        } else {
+          // For ΔΚΑ types, add installment column
+          cells.push(
+            new TableCell({
+              children: [
+                DocumentUtilities.createCenteredParagraph(installment, {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                }),
+              ],
+              borders: {
+                top: { style: borderStyle, size: 1 },
+                bottom: { style: borderStyle, size: 1 },
+                left: { style: borderStyle, size: 1 },
+                right: { style: borderStyle, size: 1 },
+              },
+            }),
+          );
+        }
+
+        // Add AFM column at the end
+        cells.push(
           new TableCell({
             children: [
               DocumentUtilities.createCenteredParagraph(afm, {
@@ -422,105 +503,7 @@ export class DocumentGenerator {
               right: { style: borderStyle, size: 1 },
             },
           }),
-        ];
-
-      // Add expenditure-specific column based on type
-      if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
-        cells.push(
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                recipient.days?.toString() || "1",
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                },
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
         );
-      } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
-        cells.push(
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                recipient.months?.toString() || "1",
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                },
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-        );
-      } else {
-        // Default to installment for ΔΚΑ types
-        cells.push(
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                recipient.installment?.toString() || "Α",
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                },
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-        );
-      }
-
-      // Add amount column
-      cells.push(
-        new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(
-              DocumentUtilities.formatCurrency(amount),
-              {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-              },
-            ),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        })
-      );
-
-      // Add installment column
-      cells.push(
-        new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(installment, {
-              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            }),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        })
-      );
 
         rows.push(new TableRow({ children: cells }));
       } else {
