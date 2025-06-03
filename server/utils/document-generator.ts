@@ -411,15 +411,12 @@ export class DocumentGenerator {
               right: { style: borderStyle, size: 1 },
             },
           }),
-          // Amount column
+          // AFM column (moved to correct position)
           new TableCell({
             children: [
-              DocumentUtilities.createCenteredParagraph(
-                DocumentUtilities.formatCurrency(amount),
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                },
-              ),
+              DocumentUtilities.createCenteredParagraph(afm, {
+                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              }),
             ],
             borders: {
               top: { style: borderStyle, size: 1 },
@@ -488,13 +485,16 @@ export class DocumentGenerator {
           );
         }
 
-        // Add AFM column at the end
+        // Add amount column at the end
         cells.push(
           new TableCell({
             children: [
-              DocumentUtilities.createCenteredParagraph(afm, {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-              }),
+              DocumentUtilities.createCenteredParagraph(
+                DocumentUtilities.formatCurrency(amount),
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                },
+              ),
             ],
             borders: {
               top: { style: borderStyle, size: 1 },
@@ -556,6 +556,7 @@ export class DocumentGenerator {
           },
         });
 
+        // AFM cell with row span
         const afmCell = new TableCell({
           rowSpan: rowSpan,
           verticalAlign: VerticalAlign.CENTER,
@@ -578,55 +579,13 @@ export class DocumentGenerator {
           },
         });
 
-        // Add the first row with installment details
+        // Build first row with correct column order
         const firstInstallment = installments[0];
         const firstAmount = installmentAmounts[firstInstallment] || 0;
         totalAmount += firstAmount;
 
-        const firstRowCells = [indexCell, nameCell];
-
-        // Add amount cell for first installment
-        firstRowCells.push(
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                firstAmount.toLocaleString("el-GR", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }),
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                }
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          })
-        );
-
-        // Add installment cell for first installment
-        firstRowCells.push(
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(firstInstallment, {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-              }),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          })
-        );
-
-        // Add AFM cell
-        firstRowCells.push(afmCell);
+        // Correct column order: Index, Name, AFM, Installment/Type-specific, Amount
+        const firstRowCells = [indexCell, nameCell, afmCell];
 
         // Add expenditure-specific cells for first row if needed
         if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
@@ -758,7 +717,7 @@ export class DocumentGenerator {
       new TableCell({
         children: [
           DocumentUtilities.createCenteredParagraph(
-            `${DocumentUtilities.formatCurrency(totalAmount)} €`,
+            DocumentUtilities.formatCurrency(totalAmount),
             {
               bold: true,
               size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
