@@ -779,7 +779,7 @@ export class DatabaseStorage implements IStorage {
       let installmentData = oikonomika[paymentType];
       if (Array.isArray(installmentData)) {
         // Convert array to object structure
-        const newStructure = {};
+        const newStructure: any = {};
         for (let record of installmentData) {
           if (record.installment) {
             newStructure[record.installment] = record;
@@ -791,7 +791,7 @@ export class DatabaseStorage implements IStorage {
       
       // Find and update the specific installment
       let found = false;
-      if (installmentData[installment]) {
+      if (installmentData && installmentData[installment]) {
         const record = installmentData[installment];
         record.status = status;
         if (protocolNumber) {
