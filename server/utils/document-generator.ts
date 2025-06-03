@@ -58,23 +58,7 @@ export class DocumentGenerator {
 
       // Create document sections
       const children: any[] = [
-        // Logo at the top of the document - smaller size for Word compatibility
-        new Paragraph({
-          children: [
-            new ImageRun({
-              data: fs.readFileSync(path.join(__dirname, "ethnosimo22.png")),
-              transformation: {
-                width: 40,
-                height: 40,
-              },
-              type: "png",
-            } as any),
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 100 },
-        }),
-
-        // Header with two-column layout (includes contact info and recipient section)
+        // Header with two-column layout (includes logo, contact info and recipient section)
         await this.createDocumentHeader(documentData, unitDetails),
 
         // Subject
@@ -228,13 +212,6 @@ export class DocumentGenerator {
     return contactParagraphs;
   }
 
-  /**
-   * Create recipient information (now integrated into header)
-   */
-  private static createRecipientInfo(): Paragraph[] {
-    const recipientParagraphs: Paragraph[] = [];
-    return recipientParagraphs;
-  }
 
   /**
    * Create document subject with bordered table
@@ -1215,6 +1192,21 @@ export class DocumentGenerator {
                 right: 0,
               },
               children: [
+                // Logo at the top - smaller size for Word compatibility
+                new Paragraph({
+                  children: [
+                    new ImageRun({
+                      data: fs.readFileSync(path.join(__dirname, "ethnosimo22.png")),
+                      transformation: {
+                        width: 40,
+                        height: 40,
+                      },
+                      type: "png",
+                    } as any),
+                  ],
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 100 },
+                }),
                 DocumentUtilities.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
                 DocumentUtilities.createBoldParagraph(
                   "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ",
