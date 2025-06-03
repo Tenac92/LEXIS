@@ -1,17 +1,6 @@
 /**
  * Document Generator - Complete document generation functionality
  * Single file for all Greek government document generation with expenditure type handling
- * 
- * This file is organized in a logical top-down order matching the document structure:
- * 1. Main generation method
- * 2. Document header components (logo, contact info, recipient info)
- * 3. Document subject
- * 4. Legal references
- * 5. Main content
- * 6. Project information
- * 7. Payment table
- * 8. Final request
- * 9. Footer components
  */
 
 import {
@@ -42,12 +31,8 @@ import { createLogger } from "./logger";
 const logger = createLogger("DocumentGenerator");
 
 export class DocumentGenerator {
-  // ========================================
-  // 1. MAIN GENERATION METHOD
-  // ========================================
-  
   /**
-   * Generate primary document - Main entry point
+   * Generate primary document
    */
   public static async generatePrimaryDocument(
     documentData: DocumentData,
@@ -137,10 +122,6 @@ export class DocumentGenerator {
       throw error;
     }
   }
-
-  // ========================================
-  // 2. DOCUMENT HEADER COMPONENTS
-  // ========================================
 
   /**
    * Create contact information section
@@ -236,10 +217,6 @@ export class DocumentGenerator {
     return recipientParagraphs;
   }
 
-  // ========================================
-  // 3. DOCUMENT SUBJECT
-  // ========================================
-
   /**
    * Create document subject with bordered table
    */
@@ -309,10 +286,6 @@ export class DocumentGenerator {
     });
   }
 
-  // ========================================
-  // 5. MAIN CONTENT
-  // ========================================
-
   /**
    * Create main content section
    */
@@ -339,10 +312,6 @@ export class DocumentGenerator {
 
     return contentParagraphs;
   }
-
-  // ========================================
-  // 7. PAYMENT TABLE
-  // ========================================
 
   /**
    * Create payment table with expenditure type specific columns
@@ -830,10 +799,6 @@ export class DocumentGenerator {
   /**
    * Create note paragraph
    */
-  // ========================================
-  // 8. FINAL REQUEST
-  // ========================================
-
   private static createNote(): Paragraph {
     return new Paragraph({
       children: [
