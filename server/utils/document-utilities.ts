@@ -539,13 +539,10 @@ export class DocumentUtilities {
       // Import storage to fetch project data
       const { storage } = await import("../storage");
 
-      // Try to fetch from projects by MIS first
-      if (typeof misOrNA853 === "number" || !isNaN(Number(misOrNA853))) {
-        const projects = await storage.getProjectsByUnit(""); // Get all projects
-        const project = projects.find((p) => p.mis === Number(misOrNA853));
-        if (project) {
-          return project.title || `Project ${misOrNA853}`;
-        }
+      // Try to fetch project directly by MIS instead of querying by unit
+      const projectDetails = await storage.getProjectDetails(String(misOrNA853));
+      if (projectDetails) {
+        return projectDetails.title || `Project ${misOrNA853}`;
       }
 
       // If no project found, return a default title
@@ -566,8 +563,8 @@ export class DocumentUtilities {
       // Import storage to fetch project data
       const { storage } = await import("../storage");
 
-      const projects = await storage.getProjectsByUnit(""); // Get all projects
-      const project = projects.find((p) => p.mis === Number(mis));
+      const projectDetails = await storage.getProjectDetails(String(mis));
+      const project = projectDetails;
 
       if (project && project.budget_na853) {
         return project.budget_na853;

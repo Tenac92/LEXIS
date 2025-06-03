@@ -56,7 +56,7 @@ export class DocumentGenerator {
                 width: 60,
                 height: 60,
               },
-            }),
+            } as any),
           ],
           alignment: AlignmentType.LEFT,
           spacing: { after: 200 },
@@ -213,49 +213,6 @@ export class DocumentGenerator {
    */
   private static createRecipientInfo(): Paragraph[] {
     const recipientParagraphs: Paragraph[] = [];
-
-    recipientParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "ΠΡΟΣ:",
-            bold: true,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      }),
-    );
-
-    const recipientLines = [
-      "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
-      "Διεύθυνση Οικονομικής Διαχείρισης",
-      "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-      "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-      "Δημοκρίτου 2",
-      "151 23 Μαρούσι",
-    ];
-
-    recipientLines.forEach((line) => {
-      recipientParagraphs.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: line,
-              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-              font: DocumentUtilities.DEFAULT_FONT,
-            }),
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 0 },
-        }),
-      );
-    });
-
-    recipientParagraphs.push(DocumentUtilities.createBlankLine(0));
-
     return recipientParagraphs;
   }
 
@@ -1086,7 +1043,7 @@ export class DocumentGenerator {
                   children: [
                     new TextRun({
                       text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-                      size: 22,
+                      size: 20,
                     }),
                   ],
                   alignment: AlignmentType.LEFT,

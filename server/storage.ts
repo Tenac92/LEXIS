@@ -770,24 +770,36 @@ export class DatabaseStorage implements IStorage {
         oikonomika = JSON.parse(oikonomika);
       }
       
-      // Ensure the payment type array exists
+      // Ensure the payment type exists and is properly structured
       if (!oikonomika[paymentType]) {
-        oikonomika[paymentType] = [];
+        oikonomika[paymentType] = {};
+      }
+      
+      // Handle both array and object structures for backward compatibility
+      let installmentData = oikonomika[paymentType];
+      if (Array.isArray(installmentData)) {
+        // Convert array to object structure
+        const newStructure = {};
+        for (let record of installmentData) {
+          if (record.installment) {
+            newStructure[record.installment] = record;
+          }
+        }
+        oikonomika[paymentType] = newStructure;
+        installmentData = newStructure;
       }
       
       // Find and update the specific installment
       let found = false;
-      for (let record of oikonomika[paymentType]) {
-        if (record.installment === installment) {
-          record.status = status;
-          if (protocolNumber) {
-            record.protocol_number = protocolNumber;
-          }
-          record.updated_at = new Date().toISOString();
-          found = true;
-          console.log(`[Storage] Updated existing installment record: ${JSON.stringify(record)}`);
-          break;
+      if (installmentData[installment]) {
+        const record = installmentData[installment];
+        record.status = status;
+        if (protocolNumber) {
+          record.protocol_number = protocolNumber;
         }
+        record.updated_at = new Date().toISOString();
+        found = true;
+        console.log(`[Storage] Updated existing installment record: ${JSON.stringify(record)}`);
       }
       
       // If installment not found, this shouldn't happen in normal flow but we'll log it
