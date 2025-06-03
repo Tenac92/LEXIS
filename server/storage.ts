@@ -67,11 +67,11 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Getting projects for unit: ${unit}`);
       console.log(`[Storage] Unit search pattern: %${unit}%`);
       
-      // Use JSONB array contains to search properly
+      // Use JSONB array contains to search properly - fixed JSON syntax
       const { data, error } = await supabase
         .from('Projects')
         .select('*')
-        .filter('implementing_agency', 'cs', `{"${unit}"}`);
+        .filter('implementing_agency', 'cs', `["${unit}"]`);
 
       console.log(`[Storage] Query executed, error:`, error);
       console.log(`[Storage] Query result count:`, data?.length || 0);

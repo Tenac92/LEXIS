@@ -47,19 +47,19 @@ export class DocumentGenerator {
 
       // Create document sections
       const children: any[] = [
-        // Logo at the top of the document
+        // Logo at the top of the document - smaller size for Word compatibility
         new Paragraph({
           children: [
             new ImageRun({
               data: fs.readFileSync(path.join(__dirname, "ethnosimo22.png")),
               transformation: {
-                width: 100,
-                height: 100,
+                width: 60,
+                height: 60,
               },
             }),
           ],
           alignment: AlignmentType.LEFT,
-          spacing: { after: 400 },
+          spacing: { after: 200 },
         }),
 
         // Header with two-column layout (includes contact info and recipient section)
