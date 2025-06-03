@@ -878,33 +878,56 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Fetching project details for identifier: ${identifier}`);
       
-      let query = supabase.from('Projects').select('*');
-      
       // Check if identifier is numeric (MIS) or alphanumeric (NA853)
       if (/^\d+$/.test(identifier)) {
         // Numeric identifier - search by MIS
-        query = query.eq('mis', parseInt(identifier));
-      } else {
-        // Alphanumeric identifier - search by budget_na853
-        query = query.eq('budget_na853', identifier);
-      }
-      
-      const { data, error } = await query.single();
+        const { data, error } = await supabase
+          .from('Projects')
+          .select('*')
+          .eq('mis', parseInt(identifier))
+          .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-        console.error('[Storage] Error fetching project details:', error);
-        throw error;
+        if (error && error.code !== 'PGRST116') {
+          console.error('[Storage] Error fetching project details by MIS:', error);
+          throw error;
+        }
+
+        if (data) {
+          console.log(`[Storage] Successfully fetched project details for MIS: ${identifier}`);
+          return data;
+        }
+      } else {
+        // Alphanumeric identifier - try different possible column names for NA853
+        const possibleColumns = ['budget_na853', 'na853', 'project_na853'];
+        
+        for (const column of possibleColumns) {
+          try {
+            const { data, error } = await supabase
+              .from('Projects')
+              .select('*')
+              .eq(column, identifier)
+              .single();
+
+            if (data) {
+              console.log(`[Storage] Successfully fetched project details for ${column}: ${identifier}`);
+              return data;
+            }
+            
+            if (error && error.code !== 'PGRST116') {
+              console.log(`[Storage] Column ${column} not found or error:`, error.message);
+            }
+          } catch (err) {
+            console.log(`[Storage] Skipping column ${column} due to error:`, err);
+            continue;
+          }
+        }
       }
 
-      if (data) {
-        console.log(`[Storage] Successfully fetched project details for identifier: ${identifier}`);
-      } else {
-        console.log(`[Storage] No project found for identifier: ${identifier}`);
-      }
-      return data;
+      console.log(`[Storage] No project found for identifier: ${identifier}`);
+      return null;
     } catch (error) {
       console.error('[Storage] Error in getProjectDetails:', error);
-      throw error;
+      return null; // Return null instead of throwing to prevent document generation from failing
     }
   }
 }

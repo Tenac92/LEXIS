@@ -56,6 +56,7 @@ export class DocumentGenerator {
                 width: 60,
                 height: 60,
               },
+              type: "png",
             } as any),
           ],
           alignment: AlignmentType.LEFT,
