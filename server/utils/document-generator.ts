@@ -53,14 +53,14 @@ export class DocumentGenerator {
             new ImageRun({
               data: fs.readFileSync(path.join(__dirname, "ethnosimo22.png")),
               transformation: {
-                width: 60,
-                height: 60,
+                width: 40,
+                height: 40,
               },
               type: "png",
             } as any),
           ],
           alignment: AlignmentType.LEFT,
-          spacing: { after: 200 },
+          spacing: { after: 100 },
         }),
 
         // Header with two-column layout (includes contact info and recipient section)
@@ -1208,7 +1208,7 @@ export class DocumentGenerator {
                   unitDetails?.unit_name?.name || unitDetails?.name || "",
                 ),
                 DocumentUtilities.createBoldParagraph(userInfo.department),
-                DocumentUtilities.createBlankLine(10),
+                DocumentUtilities.createBlankLine(5),
                 DocumentUtilities.createContactDetail(
                   "Ταχ. Δ/νση",
                   address.address,
@@ -1229,7 +1229,7 @@ export class DocumentGenerator {
                   "Email",
                   unitDetails?.email || "",
                 ),
-                DocumentUtilities.createBlankLine(10),
+                DocumentUtilities.createBlankLine(5),
               ],
             }),
             new TableCell({

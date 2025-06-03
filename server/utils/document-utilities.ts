@@ -81,7 +81,7 @@ export const EXPENDITURE_CONFIGS: Record<string, ExpenditureConfig> = {
 
 export class DocumentUtilities {
   // Document constants
-  public static readonly DEFAULT_FONT_SIZE = 22;
+  public static readonly DEFAULT_FONT_SIZE = 20;
   public static readonly DEFAULT_FONT = "Calibri";
   public static readonly DEFAULT_MARGINS = {
     top: 720, // 0.5 inch top margin for Greek government documents
@@ -361,28 +361,29 @@ export class DocumentUtilities {
       logger.debug(`Fetching unit details for: ${unit}`);
 
       // Import database connection
-      const { supabase } = await import('../config/db');
+      const { supabase } = await import("../config/db");
 
       // Try to fetch unit details from database
       const { data: unitData, error: unitError } = await supabase
-        .from('Monada')
-        .select('*')
-        .eq('unit', unit)
+        .from("Monada")
+        .select("*")
+        .eq("unit", unit)
         .single();
 
       if (unitData && !unitError) {
         logger.debug(`Found unit details in database for: ${unit}`);
-        
+
         // Extract manager information from database
         const manager = unitData.manager || {};
-        
+
         return {
           unit,
           name: unitData.unit_name?.name || unitData.unit_name || unit,
           unit_name: unitData.unit_name || { name: unit, prop: "τη" },
           manager: {
             name: manager.name || "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
-            order: manager.order || "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
+            order:
+              manager.order || "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
             title: manager.title || "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
             degree: manager.degree || "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β.",
           },
@@ -447,20 +448,22 @@ export class DocumentUtilities {
       logger.debug(`Fetching staff details for unit: ${unit}`);
 
       // Import database connection
-      const { supabase } = await import('../config/db');
+      const { supabase } = await import("../config/db");
 
       // Fetch employees from database for the specific unit
       const { data: employees, error } = await supabase
-        .from('Employees')
-        .select('*')
-        .eq('monada', unit);
+        .from("Employees")
+        .select("*")
+        .eq("monada", unit);
 
       if (error) {
         logger.error("Error fetching staff from database:", error);
         return [];
       }
 
-      logger.debug(`Found ${employees?.length || 0} staff members for unit: ${unit}`);
+      logger.debug(
+        `Found ${employees?.length || 0} staff members for unit: ${unit}`,
+      );
       return employees || [];
     } catch (error) {
       logger.error("Error fetching staff details:", error);
@@ -476,20 +479,22 @@ export class DocumentUtilities {
       logger.debug(`Fetching beneficiaries for unit: ${unit}`);
 
       // Import database connection
-      const { supabase } = await import('../config/db');
+      const { supabase } = await import("../config/db");
 
       // Fetch beneficiaries from database for the specific unit
       const { data: beneficiaries, error } = await supabase
-        .from('Beneficiaries')
-        .select('*')
-        .eq('monada', unit);
+        .from("Beneficiaries")
+        .select("*")
+        .eq("monada", unit);
 
       if (error) {
         logger.error("Error fetching beneficiaries from database:", error);
         return [];
       }
 
-      logger.debug(`Found ${beneficiaries?.length || 0} beneficiaries for unit: ${unit}`);
+      logger.debug(
+        `Found ${beneficiaries?.length || 0} beneficiaries for unit: ${unit}`,
+      );
       return beneficiaries || [];
     } catch (error) {
       logger.error("Error fetching beneficiaries:", error);
@@ -505,13 +510,13 @@ export class DocumentUtilities {
       logger.debug(`Fetching project details for MIS: ${mis}`);
 
       // Import database connection
-      const { supabase } = await import('../config/db');
+      const { supabase } = await import("../config/db");
 
       // Fetch project from database
       const { data: project, error } = await supabase
-        .from('Projects')
-        .select('*')
-        .eq('mis', mis)
+        .from("Projects")
+        .select("*")
+        .eq("mis", mis)
         .single();
 
       if (error) {
@@ -540,7 +545,9 @@ export class DocumentUtilities {
       const { storage } = await import("../storage");
 
       // Try to fetch project directly by MIS instead of querying by unit
-      const projectDetails = await storage.getProjectDetails(String(misOrNA853));
+      const projectDetails = await storage.getProjectDetails(
+        String(misOrNA853),
+      );
       if (projectDetails) {
         return projectDetails.title || `Project ${misOrNA853}`;
       }
