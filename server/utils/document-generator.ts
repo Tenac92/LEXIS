@@ -137,15 +137,22 @@ export class DocumentGenerator {
   /**
    * Create contact information section
    */
-  private static createContactInfo(documentData: DocumentData): Paragraph[] {
+  private static createContactInfo(documentData: DocumentData, unitDetails: UnitDetails | null | undefined): Paragraph[] {
     const contactParagraphs: Paragraph[] = [];
+
+    // Use unitDetails.address if available, otherwise use defaults
+    const address = unitDetails?.address || {
+      address: "Δημοκρίτου 2",
+      tk: "11523",
+      region: "Μαρούσι",
+    };
 
     // Contact details
     contactParagraphs.push(
       new Paragraph({
         children: [
           new TextRun({
-            text: "Ταχ. Δ/νση: Δημοκρίτου 2",
+            text: `Ταχ. Δ/νση: ${address.address}`,
             size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
@@ -159,7 +166,7 @@ export class DocumentGenerator {
       new Paragraph({
         children: [
           new TextRun({
-            text: "Ταχ. Κώδικας: 11523, Μαρούσι",
+            text: `Ταχ. Κώδικας: ${address.tk}, ${address.region}`,
             size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
@@ -203,11 +210,12 @@ export class DocumentGenerator {
       }),
     );
 
+    const email = unitDetails?.email || "daefkke@civilprotection.gr";
     contactParagraphs.push(
       new Paragraph({
         children: [
           new TextRun({
-            text: "Email: daefkke@civilprotection.gr",
+            text: `Email: ${email}`,
             size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
