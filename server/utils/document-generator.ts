@@ -847,6 +847,10 @@ export class DocumentGenerator {
     });
   }
 
+  // ========================================
+  // 9. FOOTER COMPONENTS
+  // ========================================
+
   /**
    * Create footer with signature
    */
@@ -1008,6 +1012,10 @@ export class DocumentGenerator {
     });
   }
 
+  // ========================================
+  // 4. LEGAL REFERENCES
+  // ========================================
+
   /**
    * Create legal references section
    */
@@ -1034,6 +1042,10 @@ export class DocumentGenerator {
   /**
    * Create project information section using table layout
    */
+  // ========================================
+  // 6. PROJECT INFORMATION
+  // ========================================
+
   private static createProjectInfo(
     documentData: DocumentData,
   ): (Table | Paragraph)[] {
@@ -1145,6 +1157,10 @@ export class DocumentGenerator {
       }),
     ];
   }
+
+  // ========================================
+  // 8. FINAL REQUEST
+  // ========================================
 
   /**
    * Create final request paragraph
