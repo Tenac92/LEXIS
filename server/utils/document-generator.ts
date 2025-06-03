@@ -382,8 +382,9 @@ export class DocumentGenerator {
         totalAmount += amount;
 
         // Create table cells according to expenditure type configuration
+        // Correct order: Α/Α, ΟΝΟΜΑΤΕΠΩΝΥΜΟ, Α.Φ.Μ., ΔΟΣΗ/ΗΜΕΡΕΣ/ΜΗΝΕΣ, ΠΟΣΟ (€)
         const cells = [
-          // Index/Number column
+          // Index/Number column (Α/Α)
           new TableCell({
             children: [
               DocumentUtilities.createCenteredParagraph(rowNumber, {
@@ -397,7 +398,7 @@ export class DocumentGenerator {
               right: { style: borderStyle, size: 1 },
             },
           }),
-          // Name column
+          // Name column (ΟΝΟΜΑΤΕΠΩΝΥΜΟ)
           new TableCell({
             children: [
               DocumentUtilities.createCenteredParagraph(fullName, {
@@ -411,7 +412,7 @@ export class DocumentGenerator {
               right: { style: borderStyle, size: 1 },
             },
           }),
-          // AFM column (moved to correct position)
+          // AFM column (Α.Φ.Μ.)
           new TableCell({
             children: [
               DocumentUtilities.createCenteredParagraph(afm, {
@@ -427,7 +428,7 @@ export class DocumentGenerator {
           }),
         ];
 
-        // Add expenditure-specific column based on type
+        // Add expenditure-specific column based on type (ΔΟΣΗ/ΗΜΕΡΕΣ/ΜΗΝΕΣ)
         if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
           cells.push(
             new TableCell({
@@ -467,7 +468,7 @@ export class DocumentGenerator {
             }),
           );
         } else {
-          // For ΔΚΑ types, add installment column
+          // For ΔΚΑ types, add installment column (ΔΟΣΗ)
           cells.push(
             new TableCell({
               children: [
@@ -485,7 +486,7 @@ export class DocumentGenerator {
           );
         }
 
-        // Add amount column at the end
+        // Add amount column at the end (ΠΟΣΟ (€))
         cells.push(
           new TableCell({
             children: [
@@ -587,7 +588,7 @@ export class DocumentGenerator {
         // Correct column order: Index, Name, AFM, Installment/Type-specific, Amount
         const firstRowCells = [indexCell, nameCell, afmCell];
 
-        // Add expenditure-specific cells for first row if needed
+        // Add expenditure-specific or installment cells based on type
         if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
           firstRowCells.push(
             new TableCell({
@@ -609,7 +610,65 @@ export class DocumentGenerator {
               },
             })
           );
+        } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+          firstRowCells.push(
+            new TableCell({
+              rowSpan: rowSpan,
+              verticalAlign: VerticalAlign.CENTER,
+              children: [
+                DocumentUtilities.createCenteredParagraph(
+                  recipient.months?.toString() || "1",
+                  {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                  },
+                ),
+              ],
+              borders: {
+                top: { style: borderStyle, size: 1 },
+                bottom: { style: borderStyle, size: 1 },
+                left: { style: borderStyle, size: 1 },
+                right: { style: borderStyle, size: 1 },
+              },
+            })
+          );
+        } else {
+          // For ΔΚΑ types, add installment cell for first row
+          firstRowCells.push(
+            new TableCell({
+              children: [
+                DocumentUtilities.createCenteredParagraph(firstInstallment, {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                }),
+              ],
+              borders: {
+                top: { style: borderStyle, size: 1 },
+                bottom: { style: borderStyle, size: 1 },
+                left: { style: borderStyle, size: 1 },
+                right: { style: borderStyle, size: 1 },
+              },
+            })
+          );
         }
+
+        // Add amount cell for first installment at the end
+        firstRowCells.push(
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(
+                DocumentUtilities.formatCurrency(firstAmount),
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                }
+              ),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          })
+        );
 
         rows.push(
           new TableRow({
