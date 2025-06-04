@@ -398,6 +398,7 @@ export async function authenticateUser(email: string, password: string): Promise
       department: userData.department || undefined,
       telephone: userData.telephone || undefined,
       descr: userData.descr || undefined,
+      details: userData.details || undefined,
       created_at: userData.created_at || undefined,
       updated_at: userData.updated_at || undefined
     };
@@ -531,7 +532,8 @@ export async function setupAuth(app: Express) {
         units: userData.units || [],
         department: userData.department || undefined,
         telephone: userData.telephone || undefined,
-        descr: userData.descr || undefined
+        descr: userData.descr || undefined,
+        details: userData.details || undefined
       };
 
       // Store user data in session with expiry
