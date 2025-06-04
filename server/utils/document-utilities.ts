@@ -265,8 +265,7 @@ export class DocumentUtilities {
       }),
     );
 
-    rightColumnParagraphs.push(this.createBlankLine(120));
-    rightColumnParagraphs.push(this.createBlankLine(120));
+    rightColumnParagraphs.push(this.createBlankLine(160));
 
     rightColumnParagraphs.push(
       new Paragraph({

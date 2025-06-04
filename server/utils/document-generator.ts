@@ -43,7 +43,7 @@ const logger = createLogger("DocumentGenerator");
 
 export class DocumentGenerator {
   // Unified helper methods for common declarations
-  
+
   /**
    * Get expenditure type configuration - unified method to avoid repetition
    */
@@ -67,12 +67,19 @@ export class DocumentGenerator {
   /**
    * Get contact information - unified method
    */
-  private static getContactInfo(documentData: DocumentData, unitDetails: UnitDetails | null | undefined) {
-    const contactPerson = documentData.generated_by?.name || documentData.user_name || "Υπάλληλος";
-    const telephone = documentData.generated_by?.telephone || documentData.contact_number || "2131331391";
+  private static getContactInfo(
+    documentData: DocumentData,
+    unitDetails: UnitDetails | null | undefined,
+  ) {
+    const contactPerson =
+      documentData.generated_by?.name || documentData.user_name || "Υπάλληλος";
+    const telephone =
+      documentData.generated_by?.telephone ||
+      documentData.contact_number ||
+      "2131331391";
     const email = unitDetails?.email || "daefkke@civilprotection.gr";
     const address = unitDetails?.address || this.getDefaultAddress();
-    
+
     return { contactPerson, telephone, email, address };
   }
 
@@ -102,7 +109,7 @@ export class DocumentGenerator {
         ...DocumentGenerator.createLegalReferences(),
 
         // Main request text
-        ...this.createMainContent(documentData),
+        ...this.createMainContent(documentData, unitDetails),
 
         // Project information
         ...DocumentGenerator.createProjectInfo(documentData),
@@ -160,7 +167,10 @@ export class DocumentGenerator {
     unitDetails: UnitDetails | null | undefined,
   ): Paragraph[] {
     const contactParagraphs: Paragraph[] = [];
-    const { contactPerson, telephone, email, address } = this.getContactInfo(documentData, unitDetails);
+    const { contactPerson, telephone, email, address } = this.getContactInfo(
+      documentData,
+      unitDetails,
+    );
 
     // Contact details
     contactParagraphs.push(
@@ -307,7 +317,7 @@ export class DocumentGenerator {
   /**
    * Create main content section
    */
-  private static createMainContent(documentData: DocumentData): Paragraph[] {
+  private static createMainContent(documentData: DocumentData, unitDetails: UnitDetails): Paragraph[] {
     const contentParagraphs: Paragraph[] = [];
 
     // Main request text based on expenditure type
@@ -319,7 +329,7 @@ export class DocumentGenerator {
       new Paragraph({
         children: [
           new TextRun({
-            text: mainText,
+            text: `${mainText} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name}`,
             size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
@@ -1238,7 +1248,7 @@ export class DocumentGenerator {
                 DocumentUtilities.createBoldParagraph(
                   "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
                 ),
-                DocumentUtilities.createBoldParagraph("ΓΕΝΙΚΗ Δ.Α.Ε.Φ.Κ."),
+                DocumentUtilities.createBoldParagraph("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ "),
                 DocumentUtilities.createBoldParagraph(
                   unitDetails?.unit_name?.name || unitDetails?.name || "",
                 ),
@@ -1312,7 +1322,7 @@ export class DocumentGenerator {
                                   size: 20,
                                 }),
                               ],
-                              spacing: { before: 2000 },
+                              spacing: { before: 2200 },
                               alignment: AlignmentType.LEFT,
                             }),
                           ],
@@ -1333,7 +1343,7 @@ export class DocumentGenerator {
                                   size: 20,
                                 }),
                               ],
-                              spacing: { before: 2000 },
+                              spacing: { before: 2200 },
                               alignment: AlignmentType.LEFT,
                             }),
                             new Paragraph({
