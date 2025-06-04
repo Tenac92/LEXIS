@@ -827,7 +827,10 @@ export default function BeneficiariesPage() {
 
       {/* Details Modal */}
       <BeneficiaryDetailsModal
-        beneficiary={detailsBeneficiary || null}
+        beneficiary={detailsBeneficiary ? {
+          ...detailsBeneficiary,
+          fathername: detailsBeneficiary.fathername || null
+        } : null}
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
       />
