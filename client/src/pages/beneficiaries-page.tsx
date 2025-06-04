@@ -866,6 +866,14 @@ function BeneficiaryForm({
     status: string;
   }>>([]);
 
+  const { data: userData } = useQuery({ queryKey: ["/api/auth/me"] });
+  const { data: unitsData } = useQuery({ queryKey: ["/api/public/units"] });
+  const { data: projectsData } = useQuery({ queryKey: ["/api/projects"] });
+  const { data: existingPayments } = useQuery({ 
+    queryKey: ["/api/beneficiary-payments", beneficiary?.id], 
+    enabled: !!beneficiary?.id 
+  });
+
   const form = useForm<BeneficiaryFormData>({
     resolver: zodResolver(beneficiaryFormSchema),
     defaultValues: {
@@ -1152,11 +1160,13 @@ function BeneficiaryForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Array.isArray(units) && units.map((unit: any) => (
-                        <SelectItem key={unit.id} value={unit.id}>
-                          {unit.name}
-                        </SelectItem>
-                      ))}
+                      {Array.isArray(unitsData) && unitsData
+                        .filter((unit: any) => (userData as any)?.user?.units?.includes(unit.id))
+                        .map((unit: any) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -1201,7 +1211,7 @@ function BeneficiaryForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Array.isArray(projects) && projects.map((project: any) => (
+                      {Array.isArray(projectsData) && projectsData.map((project: any) => (
                         <SelectItem key={project.id} value={project.na853 || ""}>
                           {project.na853} - {project.title}
                         </SelectItem>
@@ -1311,7 +1321,7 @@ function BeneficiaryForm({
               }}
             >
               <FileText className="w-4 h-4 mr-2" />
-              Προβολή Υπαρχουσών ({payments.length})
+              Προβολή Υπαρχουσών ({existingPayments?.length || 0})
             </Button>
           </div>
 
