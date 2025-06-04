@@ -43,6 +43,15 @@ const logger = createLogger("DocumentGenerator");
 
 export class DocumentGenerator {
   /**
+   * Get expenditure configuration (unified helper to eliminate redundancy)
+   */
+  private static getExpenditureConfig(documentData: DocumentData) {
+    const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
+    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
+    return { expenditureType, config };
+  }
+
+  /**
    * Generate primary document
    */
   public static async generatePrimaryDocument(
@@ -243,8 +252,7 @@ export class DocumentGenerator {
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
   ): Table {
-    const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
+    const { expenditureType, config } = this.getExpenditureConfig(documentData);
     const documentTitle = config.documentTitle;
 
     const subjectText = [
@@ -312,8 +320,7 @@ export class DocumentGenerator {
     const contentParagraphs: Paragraph[] = [];
 
     // Main request text based on expenditure type
-    const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
+    const { expenditureType, config } = this.getExpenditureConfig(documentData);
     const mainText = config.mainText;
 
     contentParagraphs.push(
