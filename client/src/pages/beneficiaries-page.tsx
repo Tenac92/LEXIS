@@ -960,10 +960,17 @@ function BeneficiaryForm({
   // Get projects for selected unit
   const availableProjects = useMemo(() => {
     const selectedUnit = form.watch("selectedUnit");
-    if (!selectedUnit || !Array.isArray(projectsData)) return [];
-    return projectsData.filter((project: any) => 
+    if (!selectedUnit || !Array.isArray(projectsData)) {
+      console.log('[Beneficiary Form] No projects available:', { selectedUnit, projectsDataLength: projectsData?.length });
+      return [];
+    }
+    
+    const filtered = projectsData.filter((project: any) => 
       project.unit === selectedUnit && project.na853
     );
+    
+    console.log('[Beneficiary Form] Available projects for unit', selectedUnit, ':', filtered);
+    return filtered;
   }, [projectsData, form.watch("selectedUnit")]);
 
   // Get expenditure types for selected NA853
@@ -1319,16 +1326,26 @@ function BeneficiaryForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Κωδικός ΝΑ853</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    disabled={!form.watch("selectedUnit") || availableProjects.length === 0}
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Επιλέξτε κωδικό ΝΑ853" />
+                        <SelectValue placeholder={
+                          form.watch("selectedUnit") 
+                            ? availableProjects.length > 0 
+                              ? "Επιλέξτε κωδικό ΝΑ853" 
+                              : "Δεν υπάρχουν διαθέσιμα έργα"
+                            : "Πρώτα επιλέξτε μονάδα"
+                        } />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {availableProjects.map((project: any) => (
-                        <SelectItem key={project.id} value={project.na853 || ""}>
-                          {project.na853} - {project.title}
+                        <SelectItem key={project.id || project.mis} value={project.na853 || ""}>
+                          {project.na853} - {project.title || project.name || project.id}
                         </SelectItem>
                       ))}
                     </SelectContent>
