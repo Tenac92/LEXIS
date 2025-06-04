@@ -1,7 +1,7 @@
 /**
  * Document Generator - Complete document generation functionality
  * Single file for all Greek government document generation with expenditure type handling
- * 
+ *
  * This file is organized in logical top-down order matching document structure:
  * 1. Main generation method
  * 2. Document header components (logo, contact info, recipient info)
@@ -42,6 +42,40 @@ import { createLogger } from "./logger";
 const logger = createLogger("DocumentGenerator");
 
 export class DocumentGenerator {
+  // Unified helper methods for common declarations
+  
+  /**
+   * Get expenditure type configuration - unified method to avoid repetition
+   */
+  private static getExpenditureConfig(documentData: DocumentData) {
+    const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
+    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
+    return { expenditureType, config };
+  }
+
+  /**
+   * Get default address configuration - unified method
+   */
+  private static getDefaultAddress() {
+    return {
+      address: "Δημοκρίτου 2",
+      tk: "11523",
+      region: "Μαρούσι",
+    };
+  }
+
+  /**
+   * Get contact information - unified method
+   */
+  private static getContactInfo(documentData: DocumentData, unitDetails: UnitDetails | null | undefined) {
+    const contactPerson = documentData.generated_by?.name || documentData.user_name || "Υπάλληλος";
+    const telephone = documentData.generated_by?.telephone || documentData.contact_number || "2131331391";
+    const email = unitDetails?.email || "daefkke@civilprotection.gr";
+    const address = unitDetails?.address || this.getDefaultAddress();
+    
+    return { contactPerson, telephone, email, address };
+  }
+
   /**
    * Generate primary document
    */
@@ -121,15 +155,12 @@ export class DocumentGenerator {
   /**
    * Create contact information section
    */
-  private static createContactInfo(documentData: DocumentData, unitDetails: UnitDetails | null | undefined): Paragraph[] {
+  private static createContactInfo(
+    documentData: DocumentData,
+    unitDetails: UnitDetails | null | undefined,
+  ): Paragraph[] {
     const contactParagraphs: Paragraph[] = [];
-
-    // Use unitDetails.address if available, otherwise use defaults
-    const address = unitDetails?.address || {
-      address: "Δημοκρίτου 2",
-      tk: "11523",
-      region: "Μαρούσι",
-    };
+    const { contactPerson, telephone, email, address } = this.getContactInfo(documentData, unitDetails);
 
     // Contact details
     contactParagraphs.push(
@@ -160,8 +191,6 @@ export class DocumentGenerator {
       }),
     );
 
-    const contactPerson =
-      documentData.generated_by?.name || documentData.user_name || "Υπάλληλος";
     contactParagraphs.push(
       new Paragraph({
         children: [
@@ -176,10 +205,6 @@ export class DocumentGenerator {
       }),
     );
 
-    const telephone =
-      documentData.generated_by?.telephone ||
-      documentData.contact_number ||
-      "2131331391";
     contactParagraphs.push(
       new Paragraph({
         children: [
@@ -194,7 +219,6 @@ export class DocumentGenerator {
       }),
     );
 
-    const email = unitDetails?.email || "daefkke@civilprotection.gr";
     contactParagraphs.push(
       new Paragraph({
         children: [
@@ -212,7 +236,6 @@ export class DocumentGenerator {
     return contactParagraphs;
   }
 
-
   /**
    * Create document subject with bordered table
    */
@@ -220,8 +243,7 @@ export class DocumentGenerator {
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
   ): Table {
-    const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
+    const { expenditureType, config } = this.getExpenditureConfig(documentData);
     const documentTitle = config.documentTitle;
 
     const subjectText = [
@@ -604,7 +626,7 @@ export class DocumentGenerator {
                 left: { style: borderStyle, size: 1 },
                 right: { style: borderStyle, size: 1 },
               },
-            })
+            }),
           );
         } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
           firstRowCells.push(
@@ -625,7 +647,7 @@ export class DocumentGenerator {
                 left: { style: borderStyle, size: 1 },
                 right: { style: borderStyle, size: 1 },
               },
-            })
+            }),
           );
         } else {
           // For ΔΚΑ types, add installment cell for first row
@@ -642,7 +664,7 @@ export class DocumentGenerator {
                 left: { style: borderStyle, size: 1 },
                 right: { style: borderStyle, size: 1 },
               },
-            })
+            }),
           );
         }
 
@@ -654,7 +676,7 @@ export class DocumentGenerator {
                 DocumentUtilities.formatCurrency(firstAmount),
                 {
                   size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                }
+                },
               ),
             ],
             borders: {
@@ -663,14 +685,14 @@ export class DocumentGenerator {
               left: { style: borderStyle, size: 1 },
               right: { style: borderStyle, size: 1 },
             },
-          })
+          }),
         );
 
         rows.push(
           new TableRow({
             height: { value: rowHeight, rule: HeightRule.ATLEAST },
             children: firstRowCells,
-          })
+          }),
         );
 
         // Add subsequent rows for remaining installments
@@ -701,7 +723,7 @@ export class DocumentGenerator {
                   DocumentUtilities.formatCurrency(amount),
                   {
                     size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                  }
+                  },
                 ),
               ],
               borders: {
@@ -717,7 +739,7 @@ export class DocumentGenerator {
             new TableRow({
               height: { value: rowHeight, rule: HeightRule.ATLEAST },
               children: subsequentRowCells,
-            })
+            }),
           );
         }
       }
@@ -1196,7 +1218,9 @@ export class DocumentGenerator {
                 new Paragraph({
                   children: [
                     new ImageRun({
-                      data: fs.readFileSync(path.join(__dirname, "ethnosimo22.png")),
+                      data: fs.readFileSync(
+                        path.join(__dirname, "ethnosimo22.png"),
+                      ),
                       transformation: {
                         width: 40,
                         height: 40,
