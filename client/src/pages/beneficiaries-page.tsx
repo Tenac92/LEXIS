@@ -965,12 +965,36 @@ function BeneficiaryForm({
       return [];
     }
     
-    const filtered = projectsData.filter((project: any) => 
+    // Debug: Log first few projects to see structure
+    console.log('[Beneficiary Form] Sample projects:', projectsData.slice(0, 3));
+    console.log('[Beneficiary Form] Looking for unit:', selectedUnit);
+    
+    // Try different filtering approaches
+    const filtered1 = projectsData.filter((project: any) => 
       project.unit === selectedUnit && project.na853
     );
     
-    console.log('[Beneficiary Form] Available projects for unit', selectedUnit, ':', filtered);
-    return filtered;
+    const filtered2 = projectsData.filter((project: any) => 
+      project.unit_name === selectedUnit && project.na853
+    );
+    
+    const filtered3 = projectsData.filter((project: any) => 
+      project.unit_id === selectedUnit && project.na853
+    );
+    
+    console.log('[Beneficiary Form] Filter results:', {
+      byUnit: filtered1.length,
+      byUnitName: filtered2.length, 
+      byUnitId: filtered3.length
+    });
+    
+    // Return the one with results
+    const result = filtered1.length > 0 ? filtered1 : 
+                  filtered2.length > 0 ? filtered2 : 
+                  filtered3.length > 0 ? filtered3 : [];
+    
+    console.log('[Beneficiary Form] Final projects for unit', selectedUnit, ':', result);
+    return result;
   }, [projectsData, form.watch("selectedUnit")]);
 
   // Get expenditure types for selected NA853
