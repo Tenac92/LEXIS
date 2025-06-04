@@ -770,57 +770,22 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Beneficiary with AFM ${afm} not found`);
       }
       
-      // Parse the oikonomika JSONB field
-      let oikonomika = beneficiary.oikonomika || {};
-      if (typeof oikonomika === 'string') {
-        oikonomika = JSON.parse(oikonomika);
-      }
+      // Using normalized beneficiary_payments table approach
+      console.log(`[Storage] Updating payment record for beneficiary ${beneficiary.id}`);
       
-      // Ensure the payment type exists and is properly structured
-      if (!oikonomika[paymentType]) {
-        oikonomika[paymentType] = {};
-      }
-      
-      // Handle both array and object structures for backward compatibility
-      let installmentData = oikonomika[paymentType];
-      if (Array.isArray(installmentData)) {
-        // Convert array to object structure
-        const newStructure: any = {};
-        for (let record of installmentData) {
-          if (record.installment) {
-            newStructure[record.installment] = record;
-          }
-        }
-        oikonomika[paymentType] = newStructure;
-        installmentData = newStructure;
-      }
-      
-      // Find and update the specific installment
-      let found = false;
-      if (installmentData && installmentData[installment]) {
-        const record = installmentData[installment];
-        record.status = status;
-        if (protocolNumber) {
-          record.protocol_number = protocolNumber;
-        }
-        record.updated_at = new Date().toISOString();
-        found = true;
-        console.log(`[Storage] Updated existing installment record: ${JSON.stringify(record)}`);
-      }
-      
-      // If installment not found, this shouldn't happen in normal flow but we'll log it
-      if (!found) {
-        console.warn(`[Storage] Installment ${installment} not found for payment type ${paymentType}, but continuing...`);
-      }
+      // The update will happen to the beneficiary_payments table directly
       
       // Update the beneficiary record
       const { error: updateError } = await supabase
-        .from('Beneficiary')
+        .from('beneficiary_payments')
         .update({
-          oikonomika: oikonomika,
+          status: status,
+          protocol_number: protocolNumber,
           updated_at: new Date().toISOString()
         })
-        .eq('id', beneficiary.id);
+        .eq('beneficiary_id', beneficiary.id)
+        .eq('expenditure_type', paymentType)
+        .eq('installment', installment);
         
       if (updateError) {
         console.error('[Storage] Error updating beneficiary installment status:', updateError);
