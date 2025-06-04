@@ -83,7 +83,7 @@ export class SecondaryDocumentFormatter {
             left: { style: BorderStyle.SINGLE, size: 1 },
             right: { style: BorderStyle.SINGLE, size: 1 },
           },
-          width: { size: 8, type: WidthType.PERCENTAGE },
+          width: { size: 10, type: WidthType.PERCENTAGE },
         }),
         new TableCell({
           children: [
@@ -106,7 +106,7 @@ export class SecondaryDocumentFormatter {
             left: { style: BorderStyle.SINGLE, size: 1 },
             right: { style: BorderStyle.SINGLE, size: 1 },
           },
-          width: { size: 30, type: WidthType.PERCENTAGE },
+          width: { size: 35, type: WidthType.PERCENTAGE },
         }),
         new TableCell({
           children: [
@@ -175,7 +175,7 @@ export class SecondaryDocumentFormatter {
             left: { style: BorderStyle.SINGLE, size: 1 },
             right: { style: BorderStyle.SINGLE, size: 1 },
           },
-          width: { size: 32, type: WidthType.PERCENTAGE },
+          width: { size: 25, type: WidthType.PERCENTAGE },
         }),
       ],
     });
@@ -304,8 +304,31 @@ export class SecondaryDocumentFormatter {
     const totalRow = new TableRow({
       children: [
         new TableCell({
-          children: [new Paragraph({ text: "" })],
-          columnSpan: 3,
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: "", size: 14, font: DocumentUtilities.DEFAULT_FONT })]
+          })],
+          borders: {
+            top: { style: BorderStyle.SINGLE, size: 1 },
+            bottom: { style: BorderStyle.SINGLE, size: 1 },
+            left: { style: BorderStyle.SINGLE, size: 1 },
+            right: { style: BorderStyle.SINGLE, size: 1 },
+          },
+        }),
+        new TableCell({
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: "", size: 14, font: DocumentUtilities.DEFAULT_FONT })]
+          })],
+          borders: {
+            top: { style: BorderStyle.SINGLE, size: 1 },
+            bottom: { style: BorderStyle.SINGLE, size: 1 },
+            left: { style: BorderStyle.SINGLE, size: 1 },
+            right: { style: BorderStyle.SINGLE, size: 1 },
+          },
+        }),
+        new TableCell({
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: "", size: 14, font: DocumentUtilities.DEFAULT_FONT })]
+          })],
           borders: {
             top: { style: BorderStyle.SINGLE, size: 1 },
             bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -320,7 +343,7 @@ export class SecondaryDocumentFormatter {
                 new TextRun({
                   text: `ΣΥΝΟΛΟ: ${DocumentUtilities.formatCurrency(totalAmount)}`,
                   bold: true,
-                  size: 16,
+                  size: 14,
                   font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
@@ -336,7 +359,9 @@ export class SecondaryDocumentFormatter {
           },
         }),
         new TableCell({
-          children: [new Paragraph({ text: "" })],
+          children: [new Paragraph({ 
+            children: [new TextRun({ text: "", size: 14, font: DocumentUtilities.DEFAULT_FONT })]
+          })],
           borders: {
             top: { style: BorderStyle.SINGLE, size: 1 },
             bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -349,11 +374,11 @@ export class SecondaryDocumentFormatter {
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      layout: TableLayoutType.FIXED,
+      layout: TableLayoutType.AUTOFIT,
       rows: [headerRow, ...dataRows, totalRow],
       margins: {
-        top: 0,
-        bottom: 0,
+        top: 100,
+        bottom: 100,
         left: 0,
         right: 0,
       },
@@ -406,33 +431,33 @@ export class SecondaryDocumentFormatter {
                     new TextRun({
                       text: "Ο/Η Υπάλληλος",
                       bold: true,
-                      size: 18,
+                      size: 16,
                       font: DocumentUtilities.DEFAULT_FONT,
                     }),
                   ],
-                  alignment: AlignmentType.CENTER,
-                  spacing: { after: 960 },
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
                 }),
                 new Paragraph({
                   children: [
                     new TextRun({
                       text: userInfo.name,
-                      size: 18,
+                      size: 16,
                       font: DocumentUtilities.DEFAULT_FONT,
                     }),
                   ],
-                  alignment: AlignmentType.CENTER,
+                  alignment: AlignmentType.LEFT,
                 }),
                 new Paragraph({
                   children: [
                     new TextRun({
                       text: userInfo.department,
-                      size: 16,
+                      size: 14,
                       font: DocumentUtilities.DEFAULT_FONT,
                     }),
                   ],
-                  alignment: AlignmentType.CENTER,
-                  spacing: { before: 120 },
+                  alignment: AlignmentType.LEFT,
+                  spacing: { before: 60 },
                 }),
               ],
               borders: {
@@ -449,22 +474,22 @@ export class SecondaryDocumentFormatter {
                     new TextRun({
                       text: "Ο/Η Προϊστάμενος/η",
                       bold: true,
-                      size: 18,
+                      size: 16,
                       font: DocumentUtilities.DEFAULT_FONT,
                     }),
                   ],
-                  alignment: AlignmentType.CENTER,
-                  spacing: { after: 960 },
+                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 120 },
                 }),
                 new Paragraph({
                   children: [
                     new TextRun({
                       text: "",
-                      size: 18,
+                      size: 16,
                       font: DocumentUtilities.DEFAULT_FONT,
                     }),
                   ],
-                  alignment: AlignmentType.CENTER,
+                  alignment: AlignmentType.LEFT,
                 }),
               ],
               borders: {
@@ -517,17 +542,28 @@ export class SecondaryDocumentFormatter {
         {
           properties: {
             page: {
-              size: { width: 16838, height: 11906 }, // Landscape orientation
-              margins: DocumentUtilities.DOCUMENT_MARGINS,
-              orientation: PageOrientation.LANDSCAPE,
+              size: { width: 11906, height: 16838 }, // Portrait orientation like your example
+              margins: {
+                top: 720,    // 0.5 inch
+                right: 720,  // 0.5 inch  
+                bottom: 720, // 0.5 inch
+                left: 720,   // 0.5 inch
+              },
+              orientation: PageOrientation.PORTRAIT,
             },
           },
           children: [
             ...this.createDocumentTitle(documentData, projectTitle, projectNA853),
             this.createRecipientsTable(documentData.recipients || [], documentData.expenditure_type),
-            DocumentUtilities.createBlankLine(480),
+            new Paragraph({
+              children: [new TextRun({ text: "", size: 14 })],
+              spacing: { before: 240, after: 240 },
+            }),
             this.createRetentionText(),
-            DocumentUtilities.createBlankLine(480),
+            new Paragraph({
+              children: [new TextRun({ text: "", size: 14 })],
+              spacing: { before: 240, after: 240 },
+            }),
             this.createSignatureSection(documentData),
           ],
         },
