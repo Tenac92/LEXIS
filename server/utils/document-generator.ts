@@ -311,8 +311,7 @@ export class DocumentGenerator {
     const contentParagraphs: Paragraph[] = [];
 
     // Main request text based on expenditure type
-    const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
-    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
+    const { expenditureType, config } = this.getExpenditureConfig(documentData);
     const mainText = config.mainText;
 
     contentParagraphs.push(
@@ -1168,12 +1167,8 @@ export class DocumentGenerator {
         "",
     };
 
-    // Use unitDetails.address if available
-    const address = unitDetails?.address || {
-      address: "Δημοκρίτου 2",
-      tk: "11523",
-      region: "Μαρούσι",
-    };
+    // Use unified address configuration
+    const { address } = this.getContactInfo(documentData, unitDetails);
 
     // Load logo buffer (you may need to implement this)
     const logoBuffer = Buffer.from(""); // Placeholder for logo
