@@ -109,7 +109,7 @@ export class SecondaryDocumentFormatter {
         new TableCell({
           children: [
             DocumentUtilities.createCenteredParagraph(rowNumber, {
-              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
             }),
           ],
           borders: {
@@ -123,7 +123,7 @@ export class SecondaryDocumentFormatter {
         new TableCell({
           children: [
             DocumentUtilities.createCenteredParagraph(fullName, {
-              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
             }),
           ],
           borders: {
@@ -137,7 +137,7 @@ export class SecondaryDocumentFormatter {
         new TableCell({
           children: [
             DocumentUtilities.createCenteredParagraph(afm, {
-              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
             }),
           ],
           borders: {
@@ -157,7 +157,7 @@ export class SecondaryDocumentFormatter {
               DocumentUtilities.createCenteredParagraph(
                 recipient.days?.toString() || "1",
                 {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
                 },
               ),
             ],
@@ -176,7 +176,7 @@ export class SecondaryDocumentFormatter {
               DocumentUtilities.createCenteredParagraph(
                 recipient.months?.toString() || "1",
                 {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
                 },
               ),
             ],
@@ -194,7 +194,7 @@ export class SecondaryDocumentFormatter {
           new TableCell({
             children: [
               DocumentUtilities.createCenteredParagraph(recipient.installment || "ΕΦΑΠΑΞ", {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                size: DocumentUtilities.DEFAULT_FONT_SIZE,
               }),
             ],
             borders: {
@@ -214,7 +214,7 @@ export class SecondaryDocumentFormatter {
             DocumentUtilities.createCenteredParagraph(
               recipient.secondary_text || expenditureType || "",
               {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                size: DocumentUtilities.DEFAULT_FONT_SIZE,
               },
             ),
           ],
@@ -234,7 +234,7 @@ export class SecondaryDocumentFormatter {
             DocumentUtilities.createCenteredParagraph(
               DocumentUtilities.formatCurrency(amount),
               {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                size: DocumentUtilities.DEFAULT_FONT_SIZE,
               },
             ),
           ],
@@ -270,7 +270,7 @@ export class SecondaryDocumentFormatter {
                 new TextRun({
                   text: `ΣΥΝΟΛΟ: ${DocumentUtilities.formatCurrency(totalAmount)}`,
                   bold: true,
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
                   font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
@@ -314,13 +314,12 @@ export class SecondaryDocumentFormatter {
   private static async createSignatureSection(documentData: DocumentData): Promise<Table> {
     const userInfo = {
       name: documentData.generated_by?.name || documentData.user_name || "",
-      department:
-        documentData.generated_by?.department ||
-        documentData.generated_by?.descr ||
-        (documentData as any).descr ||
-        documentData.department ||
-        "",
+      specialty: documentData.generated_by?.details?.specialty || "",
+      gender: documentData.generated_by?.details?.gender || "male", // Default to male if not specified
     };
+
+    // Determine gender-specific signature text
+    const signatureText = userInfo.gender === "female" ? "Η ΣΥΝΤΑΞΑΣΑ" : "Ο ΣΥΝΤΑΞΑΣ";
 
     // Get unit details for manager information
     const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
@@ -352,13 +351,25 @@ export class SecondaryDocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: userInfo.department,
+            text: userInfo.specialty,
             size: 16,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
         alignment: AlignmentType.CENTER,
         spacing: { before: 120 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: signatureText,
+            bold: true,
+            size: 16,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 240 },
       }),
     ];
 
@@ -463,7 +474,7 @@ export class SecondaryDocumentFormatter {
           children: [
             ...this.createDocumentTitle(documentData, projectTitle, projectNA853),
             this.createRecipientsTable(documentData.recipients || [], documentData.expenditure_type),
-            DocumentUtilities.createBlankLine(480),
+            DocumentUtilities.createBlankLine(120),
             this.createRetentionText(),
             DocumentUtilities.createBlankLine(480),
             signatureSection,
