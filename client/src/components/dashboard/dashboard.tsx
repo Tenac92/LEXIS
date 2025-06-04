@@ -14,7 +14,31 @@ import {
 } from "lucide-react";
 import React, { useState } from 'react';
 
-import type { DashboardStats } from "@/lib/dashboard";
+// Dashboard Types
+interface DashboardStats {
+  totalDocuments: number;
+  pendingDocuments: number;
+  completedDocuments: number;
+  projectStats: {
+    active: number;
+    pending: number;
+    completed: number;
+    pending_reallocation?: number;
+  };
+  budgetTotals: Record<string, number>;
+  recentActivity: Array<{
+    id: number;
+    type: string;
+    description: string;
+    date: string;
+    createdBy?: string;
+    documentId?: number;
+    mis?: string;
+    previousAmount?: number;
+    newAmount?: number;
+    changeAmount?: number;
+  }>;
+}
 
 // Custom number formatting function
 const formatLargeNumber = (value: number): string => {
@@ -199,7 +223,7 @@ export function Dashboard() {
               <p className="text-2xl font-bold mt-1">
                 {(() => {
                   const values = Object.values(stats.budgetTotals || {});
-                  const total = values.reduce((sum, val) => {
+                  const total = values.reduce((sum: number, val: any) => {
                     const num = typeof val === 'number' ? val : 0;
                     return sum + num;
                   }, 0);
@@ -252,16 +276,33 @@ export function Dashboard() {
             ) : userDocuments.length > 0 ? (
               userDocuments.slice(0, 5).map((doc) => (
                 <div key={doc.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <div>
-                    <p className="font-medium">{doc.title || "Έγγραφο χωρίς τίτλο"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {doc.status === 'pending' ? 'Εκκρεμεί' : 
-                       doc.status === 'completed' ? 'Ολοκληρώθηκε' : 'Σε επεξεργασία'}
+                  <div className="flex-1">
+                    <p className="font-medium">
+                      {doc.title || 
+                       doc.document_type || 
+                       (doc.protocol_number ? `Έγγραφο ${doc.protocol_number}` : `Έγγραφο #${doc.id}`)}
                     </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-sm text-muted-foreground">
+                        {doc.status === 'pending' ? 'Εκκρεμεί' : 
+                         doc.status === 'completed' ? 'Ολοκληρώθηκε' : 
+                         doc.status === 'approved' ? 'Εγκεκριμένο' : 'Σε επεξεργασία'}
+                      </p>
+                      {doc.created_at && (
+                        <span className="text-xs text-muted-foreground">
+                          • {new Date(doc.created_at).toLocaleDateString('el-GR')}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <Link href={`/documents/${doc.id}`}>
-                    <Button size="sm" variant="ghost">Προβολή</Button>
-                  </Link>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => window.location.href = '/documents'}
+                    className="ml-2"
+                  >
+                    Προβολή
+                  </Button>
                 </div>
               ))
             ) : (
