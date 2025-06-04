@@ -66,18 +66,18 @@ interface Beneficiary {
   afm: string;
   surname: string;
   name: string;
-  fathername?: string | null;
-  region?: string | null;
-  adeia?: number | null;
-  cengsur1?: string | null;
-  cengname1?: string | null;
-  cengsur2?: string | null;
-  cengname2?: string | null;
-  onlinefoldernumber?: string | null;
-  freetext?: string | null;
-  date?: string | null;
-  created_at?: Date | null;
-  updated_at?: Date | null;
+  fathername: string | null;
+  region: string | null;
+  adeia: number | null;
+  cengsur1: string | null;
+  cengname1: string | null;
+  cengsur2: string | null;
+  cengname2: string | null;
+  onlinefoldernumber: string | null;
+  freetext: string | null;
+  date: string | null;
+  created_at: Date | null;
+  updated_at: Date | null;
 }
 
 interface Unit {
@@ -827,7 +827,7 @@ export default function BeneficiariesPage() {
 
       {/* Details Modal */}
       <BeneficiaryDetailsModal
-        beneficiary={detailsBeneficiary}
+        beneficiary={detailsBeneficiary || null}
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
       />
@@ -859,6 +859,10 @@ export default function BeneficiariesPage() {
                 createMutation.mutate(data);
               }
             }}
+            onCancel={() => {
+              setDialogOpen(false);
+              setSelectedBeneficiary(undefined);
+            }}
           />
         </DialogContent>
       </Dialog>
@@ -869,9 +873,11 @@ export default function BeneficiariesPage() {
 function BeneficiaryForm({
   beneficiary,
   onSubmit,
+  onCancel,
 }: {
   beneficiary?: Beneficiary;
   onSubmit: (data: BeneficiaryFormData) => void;
+  onCancel?: () => void;
 }) {
   const [payments, setPayments] = useState<Array<{
     unit: string;
@@ -1397,21 +1403,9 @@ function BeneficiaryForm({
             onClick={() => {
               form.reset();
               setPayments([]);
-              onSubmit({ 
-                surname: "", 
-                name: "", 
-                fathername: "", 
-                afm: "", 
-                date: "", 
-                region: "", 
-                adeia: 0, 
-                onlinefoldernumber: "", 
-                cengsur1: "", 
-                cengname1: "", 
-                cengsur2: "", 
-                cengname2: "", 
-                freetext: "" 
-              });
+              if (onCancel) {
+                onCancel();
+              }
             }}
           >
             Ακύρωση
