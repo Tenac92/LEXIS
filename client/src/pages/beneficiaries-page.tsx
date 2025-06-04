@@ -99,6 +99,7 @@ const beneficiaryFormSchema = z.object({
   
   // Project & Location Information
   project: z.string().optional(),
+  expenditure_type: z.string().optional(),
   region: z.string().optional(),
   monada: z.string().optional(),
   
@@ -834,6 +835,7 @@ function BeneficiaryForm({
       fathername: beneficiary?.fathername || "",
       afm: beneficiary?.afm?.toString() || "",
       project: beneficiary?.project?.toString() || "",
+      expenditure_type: "", // Not in current schema, will be handled separately
       region: beneficiary?.region || "",
       monada: beneficiary?.monada || "",
       adeia: beneficiary?.adeia?.toString() || "",
@@ -858,6 +860,16 @@ function BeneficiaryForm({
   const { data: projects = [] } = useQuery({
     queryKey: ["/api/projects"],
   });
+
+  // Define expenditure types
+  const expenditureTypes = [
+    "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ",
+    "ΔΚΑ ΕΠΙΣΚΕΥΗ",
+    "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ",
+    "ΔΚΑ ΔΗΜΟΣΙΑ ΕΡΓΑ",
+    "ΔΚΑ ΜΕΤΑΦΟΡΑ",
+    "ΔΚΑ ΑΛΛΟ"
+  ];
 
   return (
     <Form {...form}>
@@ -1023,17 +1035,64 @@ function BeneficiaryForm({
                   <FormItem>
                     <FormLabel className="flex items-center gap-2">
                       <FileText className="w-4 h-4" />
-                      Κωδικός Έργου (MIS)
+                      Κωδικός NA853 Έργου
                     </FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        placeholder="π.χ. 5001234"
-                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                      />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-blue-500">
+                          <SelectValue placeholder="Επιλέξτε κωδικό NA853" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="max-h-60">
+                        {projects
+                          .filter(project => project.budget_na853)
+                          .map((project) => (
+                          <SelectItem key={project.mis || project.id} value={project.mis?.toString() || project.id?.toString()}>
+                            <div className="flex flex-col">
+                              <span className="font-mono text-sm font-semibold">
+                                {project.budget_na853}
+                              </span>
+                              <span className="text-xs text-muted-foreground truncate">
+                                {project.title?.length > 50 ? `${project.title.substring(0, 50)}...` : project.title}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      Κωδικός MIS του έργου
+                      Επιλέξτε έργο με βάση τον κωδικό NA853
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="expenditure_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <DollarSign className="w-4 h-4" />
+                      Τύπος Δαπάνης
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-blue-500">
+                          <SelectValue placeholder="Επιλέξτε τύπο δαπάνης" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {expenditureTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Κατηγορία δαπάνης για τον δικαιούχο
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
