@@ -474,9 +474,9 @@ export class SecondaryDocumentFormatter {
           children: [
             ...this.createDocumentTitle(documentData, projectTitle, projectNA853),
             this.createRecipientsTable(documentData.recipients || [], documentData.expenditure_type),
-            DocumentUtilities.createBlankLine(120),
+            DocumentUtilities.createBlankLine(30),
             this.createRetentionText(),
-            DocumentUtilities.createBlankLine(480),
+            DocumentUtilities.createBlankLine(240),
             signatureSection,
           ],
         },
