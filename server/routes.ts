@@ -324,9 +324,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Check if beneficiary exists with this AFM
             const { data: existingBeneficiary, error: searchError } = await supabase
-              .from('Beneficiary')
+              .from('beneficiaries')
               .select('*')
-              .eq('afm', parseInt(recipient.afm))
+              .eq('afm', recipient.afm)
               .single();
               
             if (searchError && searchError.code !== 'PGRST116') { // PGRST116 is "not found" error
@@ -379,10 +379,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
             
             if (existingBeneficiary) {
-              // Update existing beneficiary
+              // Update existing beneficiary using normalized structure
+              const updateData = {
+                surname: recipient.lastname,
+                name: recipient.firstname,
+                fathername: recipient.fathername || null,
+                region: region || null,
+                freetext: recipient.secondary_text || null,
+                updated_at: new Date().toISOString()
+              };
+              
               const { error: updateError } = await supabase
-                .from('Beneficiary')
-                .update(beneficiaryData)
+                .from('beneficiaries')
+                .update(updateData)
                 .eq('id', existingBeneficiary.id);
                 
               if (updateError) {
@@ -391,22 +400,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 console.log(`[DIRECT_ROUTE_V2] Updated existing beneficiary with AFM: ${recipient.afm}`);
               }
             } else {
-              // Create new beneficiary using storage layer
+              // Create new beneficiary using normalized structure
               try {
                 const beneficiaryData = {
                   surname: recipient.lastname,
                   name: recipient.firstname,
-                  fathername: recipient.fathername || '',
-                  afm: parseInt(recipient.afm),
-                  monada: unit,
-                  project: parseInt(req.body.project_mis || project_id),
-                  oikonomika: oikonomika,
-                  freetext: recipient.secondary_text || '',
+                  fathername: recipient.fathername || null,
+                  afm: recipient.afm, // Keep as string to match schema
+                  region: region || null,
+                  freetext: recipient.secondary_text || null,
                   date: new Date().toISOString().split('T')[0]
                 };
                 
                 const createdBeneficiary = await storage.createBeneficiary(beneficiaryData);
                 console.log(`[DIRECT_ROUTE_V2] Created new beneficiary with AFM: ${recipient.afm} using storage layer`);
+                
+                // Now create payment records for each installment
+                if (recipient.installments && Array.isArray(recipient.installments)) {
+                  for (const installment of recipient.installments) {
+                    const amount = recipient.installmentAmounts?.[installment] || recipient.amount;
+                    const paymentData = {
+                      beneficiary_id: createdBeneficiary.id,
+                      unit_code: unit,
+                      na853_code: project_id,
+                      expenditure_type: expenditure_type,
+                      installment: installment,
+                      amount: amount,
+                      status: 'διαβιβάστηκε',
+                      protocol_number: data.id.toString()
+                    };
+                    
+                    await storage.createBeneficiaryPayment(paymentData);
+                    console.log(`[DIRECT_ROUTE_V2] Created payment record for ${recipient.afm} installment ${installment}`);
+                  }
+                }
               } catch (storageError) {
                 console.error(`[DIRECT_ROUTE_V2] Error creating beneficiary ${recipient.afm} via storage:`, storageError);
                 
