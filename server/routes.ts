@@ -1168,25 +1168,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use('/api/documents', authenticateSession, documentsRouter);
     log('[Routes] Document routes setup complete');
 
-    // Dashboard API routes - basic stats endpoint
-    app.get('/api/dashboard/stats', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-      try {
-        // Return basic dashboard stats
-        res.json({
-          totalDocuments: 0,
-          pendingDocuments: 0,
-          completedDocuments: 0,
-          projectStats: {
-            active: 0,
-            pending: 0,
-            completed: 0
-          }
-        });
-      } catch (error) {
-        console.error('[Dashboard] Error fetching stats:', error);
-        res.status(500).json({ message: 'Failed to fetch dashboard stats' });
-      }
-    });
+    // Dashboard API routes - use controller for real stats
+    const { getDashboardStats } = await import('./controllers/dashboard');
+    app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
     log('[Routes] Dashboard routes setup complete');
     
     // Import test controller
