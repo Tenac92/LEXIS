@@ -1,0 +1,71 @@
+Document data: 
+Object {id: 100, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 900, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1000, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Fetching NA853 for MIS: 5174085
+Fetching NA853 for MIS: 5174694
+[CreateDocument] Auto-selected the only available unit: ΔΑΕΦΚ-ΔΕ
+[Budget Debug] budgetData state: 
+Object {available: false, currentStep: 0, projectId: "", currentAmount: 0}
+[CreateDocument] Auto-selected the only available unit: ΔΑΕΦΚ-ΔΕ
+[Budget Debug] budgetData state: 
+Object {available: false, currentStep: 0, projectId: "", currentAmount: 0}
+Document data: 
+Object {id: 100, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 900, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1000, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+Document data: 
+Object {id: 100, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1000, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+NA853 data received: 
+Object {source: "Projects", mis: "5174085", na853: "2024ΝΑ85300027"}
+Found NA853 from dedicated endpoint: 2024ΝΑ85300027
+NA853 data received: 
+Object {source: "Projects", mis: "5174085", na853: "2024ΝΑ85300027"}
+Found NA853 from dedicated endpoint: 2024ΝΑ85300027
+Document data: 
+Object {id: 100, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1000, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 900, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+NA853 data received: 
+Object {source: "Projects", mis: "5174694", na853: "2024ΝΑ85300052"}
+Found NA853 from dedicated endpoint: 2024ΝΑ85300052
+Document data: 
+Object {id: 900, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 100, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+Document data: 
+Object {id: 100, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 900, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1000, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+Export failed: {"error":"Failed to export document","details":"signatureText is not defined"}
+Export error: 
+Error {}
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Document data: 
+Object {id: 100, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 900, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
+Document data: 
+Object {id: 1000, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: null}
