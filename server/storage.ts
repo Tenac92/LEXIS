@@ -632,7 +632,7 @@ export class DatabaseStorage implements IStorage {
       
       // For exact AFM match first, then partial matches
       const { data, error } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .select('*')
         .eq('afm', searchNum)
         .order('id', { ascending: false });
@@ -656,7 +656,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Fetching beneficiary by ID: ${id}`);
       
       const { data, error } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .select('*')
         .eq('id', id)
         .single();
@@ -684,7 +684,7 @@ export class DatabaseStorage implements IStorage {
       
       // Let the database handle ID generation with its sequence
       const { data, error } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .insert({
           ...beneficiary,
           created_at: new Date().toISOString(),
@@ -711,7 +711,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Updating beneficiary ${id}:`, beneficiary);
       
       const { data, error } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .update({
           ...beneficiary,
           updated_at: new Date().toISOString()
@@ -738,7 +738,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Deleting beneficiary ${id}`);
       
       const { error } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .delete()
         .eq('id', id);
         
@@ -760,7 +760,7 @@ export class DatabaseStorage implements IStorage {
       
       // First, get the beneficiary by AFM
       const { data: beneficiary, error: fetchError } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .select('id, oikonomika')
         .eq('afm', afm)
         .single();
@@ -815,7 +815,7 @@ export class DatabaseStorage implements IStorage {
       
       // Update the beneficiary record
       const { error: updateError } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .update({
           oikonomika: oikonomika,
           updated_at: new Date().toISOString()
