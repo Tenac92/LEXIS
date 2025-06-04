@@ -488,17 +488,17 @@ export class SecondaryDocumentFormatter {
       logger.debug("Unit details:", unitDetails);
 
       // Get project information from linked projects or database
-      let projectTitle = null;
-      let projectNA853 = null;
+      let projectTitle: string | null = null;
+      let projectNA853: string | null = null;
       
       // First, check if project data is available in the document's projects array
       if (documentData.projects && documentData.projects.length > 0) {
         const linkedProject = documentData.projects[0]; // Take the first linked project
-        projectTitle = linkedProject.name || linkedProject.description;
+        projectTitle = linkedProject.name ?? linkedProject.title ?? linkedProject.description ?? null;
         logger.debug(`Secondary document - Using linked project: ${linkedProject.id} - ${projectTitle}`);
         
         // Get NA853 for the linked project
-        projectNA853 = await DocumentUtilities.getProjectNA853(linkedProject.id);
+        projectNA853 = await DocumentUtilities.getProjectNA853(String(linkedProject.id));
       } else {
         // Fallback to using project_na853 field
         const projectMis = documentData.project_na853 || (documentData as any).mis?.toString() || "";
