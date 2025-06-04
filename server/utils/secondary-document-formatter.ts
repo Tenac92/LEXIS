@@ -480,7 +480,7 @@ export class SecondaryDocumentFormatter {
       // First, check if project data is available in the document's projects array
       if (documentData.projects && documentData.projects.length > 0) {
         const linkedProject = documentData.projects[0]; // Take the first linked project
-        projectTitle = linkedProject.name ?? linkedProject.title ?? linkedProject.description ?? null;
+        projectTitle = linkedProject.project_title ?? linkedProject.title ?? linkedProject.name ?? linkedProject.event_description ?? linkedProject.description ?? null;
         logger.debug(`Secondary document - Using linked project: ${linkedProject.id} - ${projectTitle}`);
         
         // Get NA853 for the linked project

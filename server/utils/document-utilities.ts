@@ -631,19 +631,20 @@ export class DocumentUtilities {
       
       // Extract title from found project
       if (project) {
-        // Use event_description as primary title
+        // Use project_title as primary source (contains the full Greek governmental title)
+        if (project.project_title && project.project_title.trim()) {
+          logger.debug(`Using project_title: ${project.project_title}`);
+          return project.project_title.trim();
+        }
+        // Fallback to event_description
         if (project.event_description && project.event_description.trim()) {
           logger.debug(`Using event_description: ${project.event_description}`);
           return project.event_description.trim();
         }
-        // Fallback to other title fields
+        // Other fallbacks
         if (project.title && project.title.trim()) {
           logger.debug(`Using title: ${project.title}`);
           return project.title.trim();
-        }
-        if (project.project_title && project.project_title.trim()) {
-          logger.debug(`Using project_title: ${project.project_title}`);
-          return project.project_title.trim();
         }
         if (project.name && project.name.trim()) {
           logger.debug(`Using name: ${project.name}`);

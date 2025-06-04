@@ -35,11 +35,14 @@ export interface DocumentData {
   project_id?: string | number;
   projects?: {
     id: string | number;
-    name: string;
+    name?: string;
     title?: string;
+    project_title?: string;
+    event_description?: string;
     description?: string;
     na853?: string;
-    mis?: string;
+    budget_na853?: string;
+    mis?: string | number;
     start_date?: string;
     end_date?: string;
     budget?: number;
