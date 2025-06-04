@@ -543,40 +543,114 @@ export class DocumentUtilities {
       // Import database connection to fetch project data directly
       const { supabase } = await import("../config/db");
 
-      // Try to fetch project by MIS first
-      const { data: project, error } = await supabase
-        .from("Projects")
-        .select("*")
-        .eq("mis", String(misOrNA853))
-        .single();
+      // Try to fetch project by MIS first (if numeric)
+      let project = null;
+      let error = null;
+      
+      // Check if identifier looks like a MIS (numeric) or NA853 (alphanumeric with Greek letters)
+      const isNumericMIS = /^\d+$/.test(String(misOrNA853));
+      const isNA853Code = /^\d{4}[Ν|N][Α|A]\d+/.test(String(misOrNA853));
+      
+      if (isNumericMIS) {
+        const result = await supabase
+          .from("Projects")
+          .select("*")
+          .eq("mis", parseInt(String(misOrNA853)))
+          .single();
+        project = result.data;
+        error = result.error;
+      } else if (isNA853Code) {
+        // If it's an NA853 code, search by budget_na853 field first
+        const result = await supabase
+          .from("Projects")
+          .select("*")
+          .eq("budget_na853", String(misOrNA853))
+          .single();
+        project = result.data;
+        error = result.error;
+      }
 
       if (project && !error) {
+        logger.debug(`Found project by MIS: ${JSON.stringify(project)}`);
+        
         // Use event_description as primary title (as seen in ProjectCard.tsx)
         if (project.event_description && project.event_description.trim()) {
+          logger.debug(`Using event_description: ${project.event_description}`);
           return project.event_description.trim();
         }
         // Fallback to other title fields
-        if (project.title && project.title.trim()) return project.title.trim();
-        if (project.project_title && project.project_title.trim()) return project.project_title.trim();
-        if (project.name && project.name.trim()) return project.name.trim();
+        if (project.title && project.title.trim()) {
+          logger.debug(`Using title: ${project.title}`);
+          return project.title.trim();
+        }
+        if (project.project_title && project.project_title.trim()) {
+          logger.debug(`Using project_title: ${project.project_title}`);
+          return project.project_title.trim();
+        }
+        if (project.name && project.name.trim()) {
+          logger.debug(`Using name: ${project.name}`);
+          return project.name.trim();
+        }
+        
+        logger.debug(`No usable title fields found in project data`);
+      } else {
+        logger.debug(`No project found by MIS or error occurred: ${error?.message}`);
       }
 
-      // If MIS search fails, try with NA853 budget code
-      const { data: projectByNA853, error: na853Error } = await supabase
-        .from("Projects")
-        .select("*")
-        .eq("budget_na853", String(misOrNA853))
-        .single();
-
-      if (projectByNA853 && !na853Error) {
+      // If no project found yet, try alternative searches
+      if (!project) {
+        logger.debug(`Primary search failed, trying alternative methods for: ${misOrNA853}`);
+        
+        // Try searching by different field combinations
+        const searchQueries = [
+          { field: "budget_na853", value: String(misOrNA853) },
+          { field: "na853", value: String(misOrNA853) },
+          { field: "project_na853", value: String(misOrNA853) },
+          { field: "mis", value: String(misOrNA853) },
+        ];
+        
+        for (const query of searchQueries) {
+          try {
+            const result = await supabase
+              .from("Projects")
+              .select("*")
+              .eq(query.field, query.value)
+              .single();
+              
+            if (result.data && !result.error) {
+              project = result.data;
+              logger.debug(`Found project using ${query.field}: ${JSON.stringify(project)}`);
+              break;
+            }
+          } catch (searchError) {
+            logger.debug(`Search by ${query.field} failed: ${searchError}`);
+            continue;
+          }
+        }
+      }
+      
+      // Extract title from found project
+      if (project) {
         // Use event_description as primary title
-        if (projectByNA853.event_description && projectByNA853.event_description.trim()) {
-          return projectByNA853.event_description.trim();
+        if (project.event_description && project.event_description.trim()) {
+          logger.debug(`Using event_description: ${project.event_description}`);
+          return project.event_description.trim();
         }
         // Fallback to other title fields
-        if (projectByNA853.title && projectByNA853.title.trim()) return projectByNA853.title.trim();
-        if (projectByNA853.project_title && projectByNA853.project_title.trim()) return projectByNA853.project_title.trim();
-        if (projectByNA853.name && projectByNA853.name.trim()) return projectByNA853.name.trim();
+        if (project.title && project.title.trim()) {
+          logger.debug(`Using title: ${project.title}`);
+          return project.title.trim();
+        }
+        if (project.project_title && project.project_title.trim()) {
+          logger.debug(`Using project_title: ${project.project_title}`);
+          return project.project_title.trim();
+        }
+        if (project.name && project.name.trim()) {
+          logger.debug(`Using name: ${project.name}`);
+          return project.name.trim();
+        }
+        
+        logger.debug(`No usable title fields found in project data`);
       }
 
       // If no project found, return the MIS code as fallback
