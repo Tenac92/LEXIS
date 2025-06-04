@@ -50,6 +50,7 @@ export const users = pgTable("users", {
   department: text("department"),
   telephone: text("telephone"),
   descr: text("descr"),
+  details: jsonb("details"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at"),
 });
@@ -311,6 +312,12 @@ export const beneficiaries = pgTable("Beneficiary", {
 // Schema definitions for insert operations - used with forms and validation
 export const insertUserSchema = createInsertSchema(users);
 
+// Schema for user details JSON structure
+export const userDetailsSchema = z.object({
+  gender: z.enum(["male", "female"]).optional(),
+  specialty: z.string().optional(),
+}).optional();
+
 // Extended schemas with additional validation
 export const extendedUserSchema = insertUserSchema.extend({
   email: z.string().email("Παρακαλώ εισάγετε ένα έγκυρο email"),
@@ -318,9 +325,10 @@ export const extendedUserSchema = insertUserSchema.extend({
     .string()
     .min(6, "Ο κωδικός πρέπει να έχει τουλάχιστον 6 χαρακτήρες"),
   name: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
-  role: z.string().refine((val) => ["admin", "user"].includes(val), {
-    message: "Ο ρόλος πρέπει να είναι admin ή user",
+  role: z.string().refine((val) => ["admin", "user", "manager"].includes(val), {
+    message: "Ο ρόλος πρέπει να είναι admin, user ή manager",
   }),
+  details: userDetailsSchema,
 });
 
 export const insertProjectSchema = createInsertSchema(projects);

@@ -164,7 +164,8 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
       units: sessionUser.units || [],
       department: sessionUser.department || undefined,
       telephone: sessionUser.telephone || undefined,
-      descr: sessionUser.descr || undefined
+      descr: sessionUser.descr || undefined,
+      details: sessionUser.details || undefined
     };
     
     console.log('[Auth] User authenticated:', { 
