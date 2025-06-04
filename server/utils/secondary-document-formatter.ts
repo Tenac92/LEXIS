@@ -34,24 +34,24 @@ export class SecondaryDocumentFormatter {
           new TextRun({
             text: `ΕΡΓΟ: ${title}`,
             bold: true,
-            size: 24,
+            size: 22,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 240 },
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 120 },
       }),
       new Paragraph({
         children: [
           new TextRun({
             text: `ΝΑ853: ${na853Code}`,
             bold: true,
-            size: 20,
+            size: 22,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 480 },
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 360 },
       }),
     ];
   }
