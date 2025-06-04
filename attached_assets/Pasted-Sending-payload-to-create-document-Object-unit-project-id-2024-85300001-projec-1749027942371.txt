@@ -1,0 +1,38 @@
+Sending payload to create document: 
+Object {unit: "ΔΑΕΦΚ-ΚΕ", project_id: "2024ΝΑ85300001", project_mis: "5174692", region: "ΣΤ. ΕΛΛΑΔΑΣ", expenditure_type: "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", …}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+Document created successfully with ID: 1300
+[Budget Debug] budgetData state: 
+Object {available: true, currentStep: 3, projectId: "2024ΝΑ85300001", currentAmount: 0}
+[Budget Debug] Budget data details: 
+Object {user_view: "19", total_budget: "5000", katanomes_etous: "5000", ethsia_pistosi: "20000", current_budget: "19", …}
+[DocumentForm Context] Current state: 
+Object {step: 3, projectId: "2024ΝΑ85300001", unit: "ΔΑΕΦΚ-ΚΕ", hasRecipients: false, recipientsCount: 0}
+[WebSocket] No status code in close frame
+[Query] Request failed: 
+Error {queryInfo: {…}, originalError: Error, isQueryError: true}
+isQueryError: true
+originalError: Error
+queryInfo: Object
+message: "Failed to fetch beneficiaries"
+stack: "Error: Failed to fetch beneficiaries↵ at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:161:29"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+[Query] Error details: 
+Object {message: "Failed to fetch beneficiaries", queryInfo: {…}, stack: "Error: Failed to fetch beneficiaries↵    at…"}
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
