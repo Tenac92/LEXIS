@@ -709,7 +709,8 @@ export async function setupAuth(app: Express) {
         units: sessionUser.units || [],
         department: sessionUser.department,
         telephone: sessionUser.telephone,
-        descr: sessionUser.descr
+        descr: sessionUser.descr,
+        details: sessionUser.details
       };
       
       return res.status(200).json({

@@ -5,6 +5,10 @@ export interface UserDetails {
   telephone?: string;
   department?: string;
   descr?: string;
+  details?: {
+    gender?: 'male' | 'female';
+    specialty?: string;
+  };
 }
 
 export interface UnitDetails {

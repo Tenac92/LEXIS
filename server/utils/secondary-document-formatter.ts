@@ -371,7 +371,18 @@ export class SecondaryDocumentFormatter {
         (documentData as any).descr ||
         documentData.department ||
         "",
+      details: documentData.generated_by?.details || (documentData as any).details || null,
     };
+
+    // Extract gender and specialty from user details
+    const userGender = userInfo.details?.gender;
+    const userSpecialty = userInfo.details?.specialty;
+    
+    // Determine gender-specific text for "Ο ΣΥΝΤΑΞΑΣ" or "Η ΣΥΝΤΑΞΑΣΑ"
+    const genderSpecificTitle = userGender === 'female' ? 'Η ΣΥΝΤΑΞΑΣΑ' : 'Ο ΣΥΝΤΑΞΑΣ';
+    
+    // Use specialty if available, otherwise fall back to department
+    const displayText = userSpecialty || userInfo.department;
 
     // Get unit details for manager information
     const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
@@ -381,7 +392,7 @@ export class SecondaryDocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: "Ο/Η Υπάλληλος",
+            text: genderSpecificTitle,
             bold: true,
             size: 18,
             font: DocumentUtilities.DEFAULT_FONT,
@@ -403,7 +414,7 @@ export class SecondaryDocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: userInfo.department,
+            text: displayText,
             size: 16,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
