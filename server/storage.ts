@@ -39,6 +39,12 @@ export interface IStorage {
   createBeneficiary(beneficiary: InsertBeneficiary): Promise<Beneficiary>;
   updateBeneficiary(id: number, beneficiary: Partial<InsertBeneficiary>): Promise<Beneficiary>;
   deleteBeneficiary(id: number): Promise<void>;
+  
+  // Beneficiary Payment operations - for normalized structure
+  getBeneficiaryPayments(beneficiaryId: number): Promise<BeneficiaryPayment[]>;
+  createBeneficiaryPayment(payment: InsertBeneficiaryPayment): Promise<BeneficiaryPayment>;
+  updateBeneficiaryPayment(id: number, payment: Partial<InsertBeneficiaryPayment>): Promise<BeneficiaryPayment>;
+  deleteBeneficiaryPayment(id: number): Promise<void>;
   updateBeneficiaryInstallmentStatus(afm: string, paymentType: string, installment: string, status: string, protocolNumber?: string): Promise<void>;
 
   // Document generation data operations
