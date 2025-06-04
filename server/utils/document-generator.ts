@@ -317,7 +317,10 @@ export class DocumentGenerator {
   /**
    * Create main content section
    */
-  private static createMainContent(documentData: DocumentData, unitDetails: UnitDetails): Paragraph[] {
+  private static createMainContent(
+    documentData: DocumentData,
+    unitDetails: UnitDetails,
+  ): Paragraph[] {
     const contentParagraphs: Paragraph[] = [];
 
     // Main request text based on expenditure type
@@ -1248,12 +1251,13 @@ export class DocumentGenerator {
                 DocumentUtilities.createBoldParagraph(
                   "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
                 ),
-                DocumentUtilities.createBoldParagraph("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ "),
+                DocumentUtilities.createBoldParagraph(
+                  "ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ",
+                ),
                 DocumentUtilities.createBoldParagraph(
                   unitDetails?.unit_name?.name || unitDetails?.name || "",
                 ),
                 DocumentUtilities.createBoldParagraph(userInfo.department),
-                DocumentUtilities.createBlankLine(5),
                 DocumentUtilities.createContactDetail(
                   "Ταχ. Δ/νση",
                   address.address,

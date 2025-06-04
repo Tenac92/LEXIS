@@ -51,10 +51,10 @@ export class SecondaryDocumentFormatter {
     // Get the original configuration and add ΠΡΑΞΗ column
     const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     const originalColumns = config.columns;
-    
+
     // Create modified columns by inserting ΠΡΑΞΗ before the last column (amount)
     const columns = [...originalColumns];
-    const amountColumnIndex = columns.findIndex(col => col.includes("ΠΟΣΟ"));
+    const amountColumnIndex = columns.findIndex((col) => col.includes("ΠΟΣΟ"));
     if (amountColumnIndex > -1) {
       columns.splice(amountColumnIndex, 0, "ΠΡΑΞΗ");
     } else {
@@ -97,10 +97,11 @@ export class SecondaryDocumentFormatter {
         !fathername || fathername.trim() === ""
           ? `${lastname} ${firstname}`.trim()
           : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
-      
+
       const afm = recipient.afm || "";
       const rowNumber = (index + 1).toString() + ".";
-      const amount = typeof recipient.amount === "number" ? recipient.amount : 0;
+      const amount =
+        typeof recipient.amount === "number" ? recipient.amount : 0;
       totalAmount += amount;
 
       // Create table cells using the same structure as document-generator.ts
@@ -193,9 +194,12 @@ export class SecondaryDocumentFormatter {
         cells.push(
           new TableCell({
             children: [
-              DocumentUtilities.createCenteredParagraph(recipient.installment || "ΕΦΑΠΑΞ", {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              }),
+              DocumentUtilities.createCenteredParagraph(
+                recipient.installment || "ΕΦΑΠΑΞ",
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                },
+              ),
             ],
             borders: {
               top: { style: borderStyle, size: 1 },
@@ -207,7 +211,7 @@ export class SecondaryDocumentFormatter {
         );
       }
 
-      // Add ΠΡΑΞΗ column 
+      // Add ΠΡΑΞΗ column
       cells.push(
         new TableCell({
           children: [
@@ -311,7 +315,9 @@ export class SecondaryDocumentFormatter {
     });
   }
 
-  private static async createSignatureSection(documentData: DocumentData): Promise<Table> {
+  private static async createSignatureSection(
+    documentData: DocumentData,
+  ): Promise<Table> {
     const userInfo = {
       name: documentData.generated_by?.name || documentData.user_name || "",
       specialty: documentData.generated_by?.details?.specialty || "",
@@ -319,11 +325,14 @@ export class SecondaryDocumentFormatter {
     };
 
     // Determine gender-specific signature text
-    const signatureText = userInfo.gender === "female" ? "Η ΣΥΝΤΑΞΑΣΑ" : "Ο ΣΥΝΤΑΞΑΣ";
+    const signatureText =
+      userInfo.gender === "female" ? "Η ΣΥΝΤΑΞΑΣΑ" : "Ο ΣΥΝΤΑΞΑΣ";
 
     // Get unit details for manager information
-    const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
-    
+    const unitDetails = await DocumentUtilities.getUnitDetails(
+      documentData.unit,
+    );
+
     // Create left column for user/employee signature
     const leftColumnParagraphs = [
       new Paragraph({
@@ -331,7 +340,7 @@ export class SecondaryDocumentFormatter {
           new TextRun({
             text: signatureText,
             bold: true,
-            size: 18,
+            size: 20,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
@@ -342,7 +351,7 @@ export class SecondaryDocumentFormatter {
         children: [
           new TextRun({
             text: userInfo.name,
-            size: 18,
+            size: 20,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
@@ -352,7 +361,7 @@ export class SecondaryDocumentFormatter {
         children: [
           new TextRun({
             text: userInfo.specialty,
-            size: 16,
+            size: 20,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
@@ -362,7 +371,8 @@ export class SecondaryDocumentFormatter {
     ];
 
     // Use DocumentUtilities to create manager signature paragraphs
-    const rightColumnParagraphs = DocumentUtilities.createManagerSignatureParagraphs(unitDetails?.manager);
+    const rightColumnParagraphs =
+      DocumentUtilities.createManagerSignatureParagraphs(unitDetails?.manager);
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -402,34 +412,53 @@ export class SecondaryDocumentFormatter {
     });
   }
 
-  public static async generateSecondDocument(documentData: DocumentData): Promise<Buffer> {
+  public static async generateSecondDocument(
+    documentData: DocumentData,
+  ): Promise<Buffer> {
     try {
       logger.debug("Generating secondary document for:", documentData);
 
-      const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
+      const unitDetails = await DocumentUtilities.getUnitDetails(
+        documentData.unit,
+      );
       logger.debug("Unit details:", unitDetails);
 
       // Get project information from linked projects or database
       let projectTitle: string | null = null;
       let projectNA853: string | null = null;
-      
+
       // First, check if project data is available in the document's projects array
       if (documentData.projects && documentData.projects.length > 0) {
         const linkedProject = documentData.projects[0]; // Take the first linked project
-        projectTitle = linkedProject.project_title ?? linkedProject.title ?? linkedProject.name ?? linkedProject.event_description ?? linkedProject.description ?? null;
-        logger.debug(`Secondary document - Using linked project: ${linkedProject.id} - ${projectTitle}`);
-        
+        projectTitle =
+          linkedProject.project_title ??
+          linkedProject.title ??
+          linkedProject.name ??
+          linkedProject.event_description ??
+          linkedProject.description ??
+          null;
+        logger.debug(
+          `Secondary document - Using linked project: ${linkedProject.id} - ${projectTitle}`,
+        );
+
         // Get NA853 for the linked project
-        projectNA853 = await DocumentUtilities.getProjectNA853(String(linkedProject.id));
+        projectNA853 = await DocumentUtilities.getProjectNA853(
+          String(linkedProject.id),
+        );
       } else {
         // Fallback to using project_na853 field
-        const projectMis = documentData.project_na853 || (documentData as any).mis?.toString() || "";
-        logger.debug(`Secondary document - Finding project with MIS/NA853: ${projectMis}`);
-        
+        const projectMis =
+          documentData.project_na853 ||
+          (documentData as any).mis?.toString() ||
+          "";
+        logger.debug(
+          `Secondary document - Finding project with MIS/NA853: ${projectMis}`,
+        );
+
         projectTitle = await DocumentUtilities.getProjectTitle(projectMis);
         projectNA853 = await DocumentUtilities.getProjectNA853(projectMis);
       }
-      
+
       logger.debug(`Secondary document - Final project title: ${projectTitle}`);
       logger.debug(`Secondary document - Final project NA853: ${projectNA853}`);
 
@@ -460,8 +489,15 @@ export class SecondaryDocumentFormatter {
             },
           },
           children: [
-            ...this.createDocumentTitle(documentData, projectTitle, projectNA853),
-            this.createRecipientsTable(documentData.recipients || [], documentData.expenditure_type),
+            ...this.createDocumentTitle(
+              documentData,
+              projectTitle,
+              projectNA853,
+            ),
+            this.createRecipientsTable(
+              documentData.recipients || [],
+              documentData.expenditure_type,
+            ),
             DocumentUtilities.createBlankLine(30),
             this.createRetentionText(),
             DocumentUtilities.createBlankLine(240),
