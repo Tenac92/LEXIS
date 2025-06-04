@@ -432,7 +432,7 @@ export default function BeneficiariesPage() {
                     return (
                       <Card
                         key={beneficiary.id}
-                        className="transition-shadow hover:shadow-lg flex cursor-pointer"
+                        className="transition-shadow hover:shadow-lg flex cursor-pointer border-l-4 border-l-green-500"
                         onClick={() => handleShowDetails(beneficiary)}
                       >
                         <div className="p-6 flex-1">
@@ -485,6 +485,7 @@ export default function BeneficiariesPage() {
                                   e.stopPropagation();
                                   handleShowDetails(beneficiary);
                                 }}
+                                className="text-green-600 border-green-200 hover:bg-green-50"
                               >
                                 <Info className="w-4 h-4" />
                               </Button>
@@ -495,6 +496,7 @@ export default function BeneficiariesPage() {
                                   e.stopPropagation();
                                   handleEdit(beneficiary);
                                 }}
+                                className="text-green-600 border-green-200 hover:bg-green-50"
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -505,6 +507,7 @@ export default function BeneficiariesPage() {
                                   e.stopPropagation();
                                   handleDelete(beneficiary);
                                 }}
+                                className="text-red-600 border-red-200 hover:bg-red-50"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -669,30 +672,30 @@ export default function BeneficiariesPage() {
                             <div className="space-y-4 text-sm">
                               {beneficiary.adeia && (
                                 <div className="space-y-1">
-                                  <span className="text-blue-700 font-medium text-sm">
+                                  <span className="text-green-700 font-medium text-sm">
                                     Άδεια:
                                   </span>
-                                  <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
+                                  <p className="text-green-900 text-sm bg-green-100 p-2 rounded border">
                                     {beneficiary.adeia}
                                   </p>
                                 </div>
                               )}
                               {beneficiary.onlinefoldernumber && (
                                 <div className="space-y-1">
-                                  <span className="text-blue-700 font-medium text-sm">
+                                  <span className="text-green-700 font-medium text-sm">
                                     Αρ. Online Φακέλου:
                                   </span>
-                                  <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
+                                  <p className="text-green-900 text-sm bg-green-100 p-2 rounded border">
                                     {beneficiary.onlinefoldernumber}
                                   </p>
                                 </div>
                               )}
                               {beneficiary.cengsur1 && (
                                 <div className="space-y-1">
-                                  <span className="text-blue-700 font-medium text-sm">
+                                  <span className="text-green-700 font-medium text-sm">
                                     Μηχανικός 1:
                                   </span>
-                                  <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
+                                  <p className="text-green-900 text-sm bg-green-100 p-2 rounded border">
                                     {beneficiary.cengsur1}{" "}
                                     {beneficiary.cengname1}
                                   </p>
@@ -700,10 +703,10 @@ export default function BeneficiariesPage() {
                               )}
                               {beneficiary.cengsur2 && (
                                 <div className="space-y-1">
-                                  <span className="text-blue-700 font-medium text-sm">
+                                  <span className="text-green-700 font-medium text-sm">
                                     Μηχανικός 2:
                                   </span>
-                                  <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
+                                  <p className="text-green-900 text-sm bg-green-100 p-2 rounded border">
                                     {beneficiary.cengsur2}{" "}
                                     {beneficiary.cengname2}
                                   </p>
@@ -711,14 +714,42 @@ export default function BeneficiariesPage() {
                               )}
                               {beneficiary.freetext && (
                                 <div className="space-y-1">
-                                  <span className="text-blue-700 font-medium text-sm">
+                                  <span className="text-green-700 font-medium text-sm">
                                     Ελεύθερο Κείμενο:
                                   </span>
-                                  <p className="text-blue-900 text-sm bg-blue-100 p-2 rounded border">
+                                  <p className="text-green-900 text-sm bg-green-100 p-2 rounded border">
                                     {beneficiary.freetext}
                                   </p>
                                 </div>
                               )}
+                            </div>
+
+                            {/* Action buttons for back card */}
+                            <div className="flex gap-2 mt-6 pt-4 border-t border-green-200">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(beneficiary);
+                                }}
+                                className="flex-1 text-green-600 border-green-200 hover:bg-green-50"
+                              >
+                                <Edit className="w-3 h-3 mr-1" />
+                                Επεξεργασία
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(beneficiary);
+                                }}
+                                className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Διαγραφή
+                              </Button>
                             </div>
                           </div>
                         </div>
