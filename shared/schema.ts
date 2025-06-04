@@ -269,11 +269,51 @@ export const employees = pgTable("Employees", {
 }));
 
 /**
- * Beneficiary Table (Recipients)
- * Contains beneficiary information for document generation and tracking
- * Updated structure with JSONB oikonomika field for multiple payment tracking
+ * Beneficiaries Table (Clean normalized structure)
+ * Contains basic beneficiary information
  */
-export const beneficiaries = pgTable("Beneficiary", {
+export const beneficiaries = pgTable("beneficiaries", {
+  id: serial("id").primaryKey(),
+  afm: text("afm").notNull().unique(), // Tax ID (AFM) - now text and required
+  surname: text("surname").notNull(),
+  name: text("name").notNull(),
+  fathername: text("fathername"),
+  region: text("region"),
+  adeia: integer("adeia"), // License/permit number
+  cengsur1: text("cengsur1"), // Engineer 1 surname
+  cengname1: text("cengname1"), // Engineer 1 name
+  cengsur2: text("cengsur2"), // Engineer 2 surname
+  cengname2: text("cengname2"), // Engineer 2 name
+  onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
+  freetext: text("freetext"), // Additional free text
+  date: date("date").defaultNow(),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+});
+
+/**
+ * Beneficiary Payments Table (Replaces oikonomika JSONB)
+ * Normalized financial data with proper relationships
+ */
+export const beneficiaryPayments = pgTable("beneficiary_payments", {
+  id: serial("id").primaryKey(),
+  beneficiary_id: integer("beneficiary_id").notNull().references(() => beneficiaries.id, { onDelete: "cascade" }),
+  unit_code: text("unit_code").notNull(),
+  na853_code: text("na853_code").notNull(),
+  expenditure_type: text("expenditure_type").notNull(),
+  installment: text("installment").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }),
+  status: text("status").default("pending"),
+  protocol_number: text("protocol_number"),
+  payment_date: date("payment_date"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at"),
+});
+
+/**
+ * Legacy Beneficiary Table (for backward compatibility during migration)
+ */
+export const beneficiariesLegacy = pgTable("Beneficiary", {
   id: serial("id").primaryKey(),
   aa: integer("a / a"), // Serial number
   region: text("region"),
@@ -369,7 +409,19 @@ export const insertBudgetNotificationSchema =
 
 export const insertEmployeeSchema = createInsertSchema(employees);
 
-export const insertBeneficiarySchema = createInsertSchema(beneficiaries);
+export const insertBeneficiarySchema = createInsertSchema(beneficiaries, {
+  surname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
+  name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
+  afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία").regex(/^\d{9}$/, "Το ΑΦΜ πρέπει να περιέχει μόνο αριθμούς"),
+});
+
+export const insertBeneficiaryPaymentSchema = createInsertSchema(beneficiaryPayments, {
+  unit_code: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
+  na853_code: z.string().min(1, "Ο κωδικός NA853 είναι υποχρεωτικός"),
+  expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
+  installment: z.string().min(1, "Η δόση είναι υποχρεωτική"),
+  amount: z.string().min(1, "Το ποσό είναι υποχρεωτικό"),
+});
 
 // Budget validation schema for validating budget changes
 export const budgetValidationSchema = z.object({
@@ -394,6 +446,7 @@ export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type Beneficiary = typeof beneficiaries.$inferSelect;
+export type BeneficiaryPayment = typeof beneficiaryPayments.$inferSelect;
 
 // ==============================================================
 // 4. Entity Types above, Insert Types below
@@ -412,6 +465,7 @@ export type InsertBudgetNotification = z.infer<
 >;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertBeneficiary = z.infer<typeof insertBeneficiarySchema>;
+export type InsertBeneficiaryPayment = z.infer<typeof insertBeneficiaryPaymentSchema>;
 export type Recipient = z.infer<typeof recipientSchema>;
 
 // ==============================================================
