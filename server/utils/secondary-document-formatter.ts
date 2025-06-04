@@ -48,257 +48,219 @@ export class SecondaryDocumentFormatter {
     recipients: any[],
     expenditureType: string,
   ): Table {
-    const headerRow = new TableRow({
-      children: [
-        new TableCell({
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "Α/Α",
-                  bold: true,
-                  size: 22,
-                  font: DocumentUtilities.DEFAULT_FONT,
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-            }),
-          ],
-          verticalAlign: VerticalAlign.CENTER,
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 1 },
-            bottom: { style: BorderStyle.SINGLE, size: 1 },
-            left: { style: BorderStyle.SINGLE, size: 1 },
-            right: { style: BorderStyle.SINGLE, size: 1 },
-          },
-          width: { size: 8, type: WidthType.PERCENTAGE },
-        }),
-        new TableCell({
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "ΕΠΩΝΥΜΟ ΟΝΟΜΑ ΠΑΤΡΩΝΥΜΟ",
-                  bold: true,
-                  size: 22,
-                  font: DocumentUtilities.DEFAULT_FONT,
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-            }),
-          ],
-          verticalAlign: VerticalAlign.CENTER,
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 1 },
-            bottom: { style: BorderStyle.SINGLE, size: 1 },
-            left: { style: BorderStyle.SINGLE, size: 1 },
-            right: { style: BorderStyle.SINGLE, size: 1 },
-          },
-          width: { size: 30, type: WidthType.PERCENTAGE },
-        }),
-        new TableCell({
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "Α.Φ.Μ.",
-                  bold: true,
-                  size: 22,
-                  font: DocumentUtilities.DEFAULT_FONT,
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-            }),
-          ],
-          verticalAlign: VerticalAlign.CENTER,
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 1 },
-            bottom: { style: BorderStyle.SINGLE, size: 1 },
-            left: { style: BorderStyle.SINGLE, size: 1 },
-            right: { style: BorderStyle.SINGLE, size: 1 },
-          },
-          width: { size: 22, type: WidthType.PERCENTAGE },
-        }),
-        new TableCell({
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "ΠΟΣΟ (€)",
-                  bold: true,
-                  size: 22,
-                  font: DocumentUtilities.DEFAULT_FONT,
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-            }),
-          ],
-          verticalAlign: VerticalAlign.CENTER,
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 1 },
-            bottom: { style: BorderStyle.SINGLE, size: 1 },
-            left: { style: BorderStyle.SINGLE, size: 1 },
-            right: { style: BorderStyle.SINGLE, size: 1 },
-          },
-          width: { size: 22, type: WidthType.PERCENTAGE },
-        }),
-        new TableCell({
-          children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: "ΠΡΑΞΗ",
-                  bold: true,
-                  size: 22,
-                  font: DocumentUtilities.DEFAULT_FONT,
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-            }),
-          ],
-          verticalAlign: VerticalAlign.CENTER,
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 1 },
-            bottom: { style: BorderStyle.SINGLE, size: 1 },
-            left: { style: BorderStyle.SINGLE, size: 1 },
-            right: { style: BorderStyle.SINGLE, size: 1 },
-          },
-          width: { size: 32, type: WidthType.PERCENTAGE },
-        }),
-      ],
-    });
+    // Get the original configuration and add ΠΡΑΞΗ column
+    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
+    const originalColumns = config.columns;
+    
+    // Create modified columns by inserting ΠΡΑΞΗ before the last column (amount)
+    const columns = [...originalColumns];
+    const amountColumnIndex = columns.findIndex(col => col.includes("ΠΟΣΟ"));
+    if (amountColumnIndex > -1) {
+      columns.splice(amountColumnIndex, 0, "ΠΡΑΞΗ");
+    } else {
+      // Fallback if amount column not found
+      columns.splice(-1, 0, "ΠΡΑΞΗ");
+    }
 
-    const dataRows = recipients.map((recipient, index) => {
+    const borderStyle = BorderStyle.SINGLE;
+
+    // Create header cells using the same approach as document-generator.ts
+    const headerCells = columns.map(
+      (column) =>
+        new TableCell({
+          children: [
+            DocumentUtilities.createCenteredParagraph(column, {
+              bold: false,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            }),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }),
+    );
+
+    const rows = [new TableRow({ children: headerCells, tableHeader: true })];
+
+    let totalAmount = 0;
+
+    recipients.forEach((recipient, index) => {
+      // Use the same name formatting logic as document-generator.ts
+      const firstname = recipient.firstname || "";
+      const lastname = recipient.lastname || "";
+      const fathername = recipient.fathername || "";
+
+      const fullName =
+        !fathername || fathername.trim() === ""
+          ? `${lastname} ${firstname}`.trim()
+          : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
+      
+      const afm = recipient.afm || "";
+      const rowNumber = (index + 1).toString() + ".";
       const amount = typeof recipient.amount === "number" ? recipient.amount : 0;
-      const formattedAmount = DocumentUtilities.formatCurrency(amount);
+      totalAmount += amount;
 
-      return new TableRow({
-        children: [
+      // Create table cells using the same structure as document-generator.ts
+      const cells = [
+        // Index/Number column (Α/Α)
+        new TableCell({
+          children: [
+            DocumentUtilities.createCenteredParagraph(rowNumber, {
+              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            }),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }),
+        // Name column (ΟΝΟΜΑΤΕΠΩΝΥΜΟ)
+        new TableCell({
+          children: [
+            DocumentUtilities.createCenteredParagraph(fullName, {
+              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            }),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }),
+        // AFM column (Α.Φ.Μ.)
+        new TableCell({
+          children: [
+            DocumentUtilities.createCenteredParagraph(afm, {
+              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            }),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }),
+      ];
+
+      // Add expenditure-specific column based on type
+      if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
+        cells.push(
           new TableCell({
             children: [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: (index + 1).toString(),
-                    size: 22,
-                    font: DocumentUtilities.DEFAULT_FONT,
-                  }),
-                ],
-                alignment: AlignmentType.CENTER,
-              }),
+              DocumentUtilities.createCenteredParagraph(
+                recipient.days?.toString() || "1",
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                },
+              ),
             ],
-            verticalAlign: VerticalAlign.CENTER,
             borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.SINGLE, size: 1 },
-              right: { style: BorderStyle.SINGLE, size: 1 },
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
             },
           }),
+        );
+      } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+        cells.push(
           new TableCell({
             children: [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: `${recipient.lastname || ""} ${recipient.firstname || ""} ${recipient.fathername || ""}`.trim(),
-                    size: 22,
-                    font: DocumentUtilities.DEFAULT_FONT,
-                  }),
-                ],
-                alignment: AlignmentType.LEFT,
-              }),
+              DocumentUtilities.createCenteredParagraph(
+                recipient.months?.toString() || "1",
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                },
+              ),
             ],
-            verticalAlign: VerticalAlign.CENTER,
             borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.SINGLE, size: 1 },
-              right: { style: BorderStyle.SINGLE, size: 1 },
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
             },
           }),
+        );
+      } else {
+        // For ΔΚΑ types, add installment column (ΔΟΣΗ)
+        cells.push(
           new TableCell({
             children: [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: recipient.afm || "",
-                    size: 14,
-                    font: DocumentUtilities.DEFAULT_FONT,
-                  }),
-                ],
-                alignment: AlignmentType.CENTER,
+              DocumentUtilities.createCenteredParagraph(recipient.installment || "ΕΦΑΠΑΞ", {
+                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
               }),
             ],
-            verticalAlign: VerticalAlign.CENTER,
             borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.SINGLE, size: 1 },
-              right: { style: BorderStyle.SINGLE, size: 1 },
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
             },
           }),
-          new TableCell({
-            children: [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: formattedAmount,
-                    size: 22,
-                    font: DocumentUtilities.DEFAULT_FONT,
-                  }),
-                ],
-                alignment: AlignmentType.RIGHT,
-              }),
-            ],
-            verticalAlign: VerticalAlign.CENTER,
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.SINGLE, size: 1 },
-              right: { style: BorderStyle.SINGLE, size: 1 },
-            },
-          }),
-          new TableCell({
-            children: [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: recipient.secondary_text || expenditureType || "",
-                    size: 22,
-                    font: DocumentUtilities.DEFAULT_FONT,
-                  }),
-                ],
-                alignment: AlignmentType.LEFT,
-              }),
-            ],
-            verticalAlign: VerticalAlign.CENTER,
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.SINGLE, size: 1 },
-              right: { style: BorderStyle.SINGLE, size: 1 },
-            },
-          }),
-        ],
-      });
+        );
+      }
+
+      // Add ΠΡΑΞΗ column 
+      cells.push(
+        new TableCell({
+          children: [
+            DocumentUtilities.createCenteredParagraph(
+              recipient.secondary_text || expenditureType || "",
+              {
+                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              },
+            ),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }),
+      );
+
+      // Add amount column at the end (ΠΟΣΟ (€))
+      cells.push(
+        new TableCell({
+          children: [
+            DocumentUtilities.createCenteredParagraph(
+              DocumentUtilities.formatCurrency(amount),
+              {
+                size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              },
+            ),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        }),
+      );
+
+      rows.push(new TableRow({ children: cells }));
     });
 
-    // Calculate total
-    const totalAmount = recipients.reduce((sum, r) => {
-      const amount = typeof r.amount === "number" && !isNaN(r.amount) ? r.amount : 0;
-      return sum + amount;
-    }, 0);
-
+    // Create total row spanning to the amount column
     const totalRow = new TableRow({
       children: [
         new TableCell({
           children: [new Paragraph({ text: "" })],
-          columnSpan: 3,
+          columnSpan: columns.length - 1,
           borders: {
-            top: { style: BorderStyle.SINGLE, size: 1 },
-            bottom: { style: BorderStyle.SINGLE, size: 1 },
-            left: { style: BorderStyle.SINGLE, size: 1 },
-            right: { style: BorderStyle.SINGLE, size: 1 },
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
           },
         }),
         new TableCell({
@@ -308,32 +270,25 @@ export class SecondaryDocumentFormatter {
                 new TextRun({
                   text: `ΣΥΝΟΛΟ: ${DocumentUtilities.formatCurrency(totalAmount)}`,
                   bold: true,
-                  size: 22,
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
                   font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
-              alignment: AlignmentType.RIGHT,
+              alignment: AlignmentType.CENTER,
             }),
           ],
           verticalAlign: VerticalAlign.CENTER,
           borders: {
-            top: { style: BorderStyle.SINGLE, size: 1 },
-            bottom: { style: BorderStyle.SINGLE, size: 1 },
-            left: { style: BorderStyle.SINGLE, size: 1 },
-            right: { style: BorderStyle.SINGLE, size: 1 },
-          },
-        }),
-        new TableCell({
-          children: [new Paragraph({ text: "" })],
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 1 },
-            bottom: { style: BorderStyle.SINGLE, size: 1 },
-            left: { style: BorderStyle.SINGLE, size: 1 },
-            right: { style: BorderStyle.SINGLE, size: 1 },
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
           },
         }),
       ],
     });
+
+    rows.push(totalRow);
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -371,18 +326,7 @@ export class SecondaryDocumentFormatter {
         (documentData as any).descr ||
         documentData.department ||
         "",
-      details: documentData.generated_by?.details || (documentData as any).details || null,
     };
-
-    // Extract gender and specialty from user details
-    const userGender = userInfo.details?.gender;
-    const userSpecialty = userInfo.details?.specialty;
-    
-    // Determine gender-specific text for "Ο ΣΥΝΤΑΞΑΣ" or "Η ΣΥΝΤΑΞΑΣΑ"
-    const genderSpecificTitle = userGender === 'female' ? 'Η ΣΥΝΤΑΞΑΣΑ' : 'Ο ΣΥΝΤΑΞΑΣ';
-    
-    // Use specialty if available, otherwise fall back to department
-    const displayText = userSpecialty || userInfo.department;
 
     // Get unit details for manager information
     const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
@@ -392,7 +336,7 @@ export class SecondaryDocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: genderSpecificTitle,
+            text: "Ο/Η Υπάλληλος",
             bold: true,
             size: 18,
             font: DocumentUtilities.DEFAULT_FONT,
@@ -414,7 +358,7 @@ export class SecondaryDocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: displayText,
+            text: userInfo.department,
             size: 16,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
