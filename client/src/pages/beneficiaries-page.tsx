@@ -113,8 +113,7 @@ const beneficiaryFormSchema = z.object({
   cengsur2: z.string().optional(),
   cengname2: z.string().optional(),
   
-  // Financial Information
-  paymentType: z.string().optional(),
+  // Financial Information - Multiple payment entries
   amount: z.string().optional(),
   installment: z.string().optional(),
   
@@ -849,7 +848,6 @@ function BeneficiaryForm({
       cengname1: beneficiary?.cengname1 || "",
       cengsur2: beneficiary?.cengsur2 || "",
       cengname2: beneficiary?.cengname2 || "",
-      paymentType: "", // Will be populated from expenditure_type selection
       amount: "",
       installment: "",
       freetext: beneficiary?.freetext || "",
@@ -877,14 +875,16 @@ function BeneficiaryForm({
     "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ"
   ];
 
-  // Define installment types
-  const installmentTypes = [
-    "ΕΦΑΠΑΞ",
-    "Α", 
-    "Β",
-    "Γ",
-    "Δ"
-  ];
+  // Define installment types based on expenditure type
+  const getInstallmentTypes = (expenditureType: string) => {
+    if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+      // For rent subsidy, installments 1-24
+      return Array.from({ length: 24 }, (_, i) => (i + 1).toString());
+    } else {
+      // For ΔΚΑ types, use Greek letters up to Γ plus ΕΦΑΠΑΞ
+      return ["ΕΦΑΠΑΞ", "Α", "Β", "Γ"];
+    }
+  };
 
   return (
     <Form {...form}>
@@ -1224,52 +1224,11 @@ function BeneficiaryForm({
                   Στοιχεία Πληρωμής
                 </CardTitle>
                 <CardDescription>
-                  Εισάγετε τα οικονομικά στοιχεία για τον επιλεγμένο τύπο δαπάνης
+                  Βασίζεται στον επιλεγμένο τύπο δαπάνης. Μπορείτε να προσθέσετε πολλαπλές δόσεις.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="paymentType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-2">
-                          <DollarSign className="w-4 h-4" />
-                          Τύπος Πληρωμής
-                        </FormLabel>
-                        <Select 
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            // Auto-populate from expenditure_type if selected
-                            const selectedExpenditureType = form.getValues("expenditure_type");
-                            if (selectedExpenditureType && !value) {
-                              field.onChange(selectedExpenditureType);
-                            }
-                          }} 
-                          value={field.value || form.getValues("expenditure_type")}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-blue-500">
-                              <SelectValue placeholder="Επιλέξτε τύπο πληρωμής" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {expenditureTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Αυτόματα συμπληρώνεται από τον τύπο δαπάνης
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   <FormField
                     control={form.control}
                     name="installment"
@@ -1286,15 +1245,63 @@ function BeneficiaryForm({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {installmentTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type === "ΕΦΑΠΑΞ" ? "Εφάπαξ" : `Δόση ${type}`}
-                              </SelectItem>
-                            ))}
+                            {(() => {
+                              const selectedExpenditureType = form.watch("expenditure_type");
+                              const availableInstallments = getInstallmentTypes(selectedExpenditureType || "");
+                              return availableInstallments.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type === "ΕΦΑΠΑΞ" ? "Εφάπαξ" : 
+                                   selectedExpenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" ? `Μήνας ${type}` : `Δόση ${type}`}
+                                </SelectItem>
+                              ));
+                            })()}
                           </SelectContent>
                         </Select>
                         <FormDescription>
-                          Επιλέξτε τη δόση πληρωμής
+                          {(() => {
+                            const selectedType = form.watch("expenditure_type");
+                            if (selectedType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+                              return "Μήνες 1-24 για επιδότηση ενοικίου";
+                            } else {
+                              return "ΕΦΑΠΑΞ, Α, Β, Γ για ΔΚΑ δαπάνες";
+                            }
+                          })()}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <DollarSign className="w-4 h-4" />
+                          Ποσό (€)
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input 
+                              {...field} 
+                              placeholder="π.χ. 10.286,06"
+                              className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 font-mono text-right pr-8"
+                              onChange={(e) => {
+                                // Allow European number format (dots for thousands, comma for decimal)
+                                const value = e.target.value;
+                                if (/^[\d.,]*$/.test(value)) {
+                                  field.onChange(value);
+                                }
+                              }}
+                            />
+                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                              €
+                            </span>
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          Εισάγετε το ποσό σε ευρώ (χρησιμοποιήστε κόμμα για δεκαδικά)
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -1302,56 +1309,22 @@ function BeneficiaryForm({
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4" />
-                        Ποσό (€)
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input 
-                            {...field} 
-                            placeholder="π.χ. 10.286,06"
-                            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 font-mono text-right pr-8"
-                            onChange={(e) => {
-                              // Allow European number format (dots for thousands, comma for decimal)
-                              const value = e.target.value;
-                              if (/^[\d.,]*$/.test(value)) {
-                                field.onChange(value);
-                              }
-                            }}
-                          />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                            €
-                          </span>
-                        </div>
-                      </FormControl>
-                      <FormDescription>
-                        Εισάγετε το ποσό σε ευρώ (χρησιμοποιήστε κόμμα για δεκαδικά)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-start gap-3">
                     <Info className="w-5 h-5 text-blue-600 mt-0.5" />
                     <div>
                       <h4 className="font-medium text-blue-900 mb-1">Πληροφορίες Οικονομικών Στοιχείων</h4>
                       <p className="text-sm text-blue-700 mb-2">
-                        Τα οικονομικά στοιχεία αποθηκεύονται με τη μορφή JSON στη βάση δεδομένων:
+                        Τα οικονομικά στοιχεία αποθηκεύονται με τη μορφή JSON:
                       </p>
-                      <code className="text-xs bg-blue-100 p-2 rounded block">
+                      <code className="text-xs bg-blue-100 p-2 rounded block mb-2">
                         {`{"[Τύπος Δαπάνης]":{"[Δόση]":{"amount":[Ποσό],"status":null,"protocol":null,"date":null}}}`}
                       </code>
-                      <p className="text-sm text-blue-700 mt-2">
-                        Παράδειγμα: ΔΚΑ ΕΠΙΣΚΕΥΗ με Εφάπαξ πληρωμή 10.286,06€
-                      </p>
+                      <div className="text-sm text-blue-700">
+                        <p><strong>Δόσεις για ΔΚΑ:</strong> ΕΦΑΠΑΞ, Α, Β, Γ</p>
+                        <p><strong>Δόσεις για ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ:</strong> 1-24 (μήνες)</p>
+                        <p className="mt-1"><em>Μπορείτε να προσθέσετε πολλαπλές καταχωρήσεις για τον ίδιο δικαιούχο</em></p>
+                      </div>
                     </div>
                   </div>
                 </div>
