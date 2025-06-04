@@ -162,6 +162,33 @@ export default function BeneficiariesPage() {
     queryKey: ["/api/projects"],
   });
 
+  // Fetch beneficiary payments for enhanced display
+  const {
+    data: beneficiaryPayments = [],
+  } = useQuery({
+    queryKey: ["/api/beneficiary-payments"],
+    enabled: beneficiaries.length > 0,
+  });
+
+  // Helper function to get payments for a specific beneficiary
+  const getPaymentsForBeneficiary = (beneficiaryId: number) => {
+    if (!Array.isArray(beneficiaryPayments)) return [];
+    return beneficiaryPayments.filter((payment: any) => payment.beneficiary_id === beneficiaryId);
+  };
+
+  // Helper function to calculate total amount for a beneficiary
+  const getTotalAmountForBeneficiary = (beneficiaryId: number) => {
+    const payments = getPaymentsForBeneficiary(beneficiaryId);
+    return payments.reduce((sum: number, payment: any) => sum + (parseFloat(payment.amount) || 0), 0);
+  };
+
+  // Helper function to get unique expenditure types for a beneficiary
+  const getExpenditureTypesForBeneficiary = (beneficiaryId: number) => {
+    const payments = getPaymentsForBeneficiary(beneficiaryId);
+    const types = payments.map((payment: any) => payment.expenditure_type).filter(Boolean);
+    return Array.from(new Set(types));
+  };
+
   // Create mutation
   const createMutation = useMutation({
     mutationFn: (data: BeneficiaryFormData) =>
@@ -434,16 +461,16 @@ export default function BeneficiariesPage() {
                                     )}
                                   </div>
                                   <div className="space-y-1">
-                                    {beneficiary.project && (
+                                    {getExpenditureTypesForBeneficiary(beneficiary.id).length > 0 && (
                                       <div className="flex items-center gap-2 text-muted-foreground">
                                         <FileText className="w-4 h-4" />
-                                        <span>{beneficiary.project}</span>
+                                        <span>{getExpenditureTypesForBeneficiary(beneficiary.id).join(", ")}</span>
                                       </div>
                                     )}
-                                    {beneficiary.monada && (
+                                    {getTotalAmountForBeneficiary(beneficiary.id) > 0 && (
                                       <div className="flex items-center gap-2 text-muted-foreground">
-                                        <Building className="w-4 h-4" />
-                                        <span>{beneficiary.monada}</span>
+                                        <DollarSign className="w-4 h-4" />
+                                        <span>{getTotalAmountForBeneficiary(beneficiary.id).toLocaleString("el-GR")} €</span>
                                       </div>
                                     )}
                                   </div>
