@@ -60,6 +60,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useMemo } from "react";
 // Beneficiary type definition
 interface Beneficiary {
   id: number;
@@ -874,6 +875,8 @@ function BeneficiaryForm({
     enabled: !!beneficiary?.id 
   });
 
+
+
   const form = useForm<BeneficiaryFormData>({
     resolver: zodResolver(beneficiaryFormSchema),
     defaultValues: {
@@ -881,10 +884,10 @@ function BeneficiaryForm({
       name: beneficiary?.name || "",
       fathername: beneficiary?.fathername || "",
       afm: beneficiary?.afm?.toString() || "",
-      project: "", // Will be set from payment data
-      expenditure_type: "", // Not in current schema, will be handled separately
+      project: "", 
+      expenditure_type: "", 
       region: beneficiary?.region || "",
-      monada: "", // Will be set from payment data
+      monada: "", 
       adeia: beneficiary?.adeia?.toString() || "",
       onlinefoldernumber: beneficiary?.onlinefoldernumber || "",
       cengsur1: beneficiary?.cengsur1 || "",
@@ -900,6 +903,41 @@ function BeneficiaryForm({
       date: beneficiary?.date?.toString() || "",
     },
   });
+
+  // Get user's available units
+  const userUnits = useMemo(() => {
+    if (!(userData as any)?.user?.units || !Array.isArray(unitsData)) return [];
+    return unitsData.filter((unit: any) => (userData as any).user.units.includes(unit.id));
+  }, [userData, unitsData]);
+
+  // Get projects for selected unit
+  const availableProjects = useMemo(() => {
+    const selectedUnit = form.watch("selectedUnit");
+    if (!selectedUnit || !Array.isArray(projectsData)) return [];
+    return projectsData.filter((project: any) => 
+      project.unit === selectedUnit && project.na853
+    );
+  }, [projectsData, form.watch("selectedUnit")]);
+
+  // Format number to European format
+  const formatEuropeanNumber = (value: string) => {
+    // Remove all non-digit characters except comma
+    const cleanValue = value.replace(/[^\d,]/g, '');
+    
+    // Split by comma to handle decimal part
+    const parts = cleanValue.split(',');
+    let wholePart = parts[0] || '';
+    const decimalPart = parts[1] || '';
+    
+    // Add thousand separators (dots) to whole part
+    wholePart = wholePart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    
+    // Return formatted number
+    if (decimalPart) {
+      return `${wholePart},${decimalPart.slice(0, 2)}`; // Limit to 2 decimal places
+    }
+    return wholePart;
+  };
 
   const addPayment = () => {
     const selectedUnit = form.getValues("selectedUnit");
@@ -1160,13 +1198,11 @@ function BeneficiaryForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Array.isArray(unitsData) && unitsData
-                        .filter((unit: any) => (userData as any)?.user?.units?.includes(unit.id))
-                        .map((unit: any) => (
-                          <SelectItem key={unit.id} value={unit.id}>
-                            {unit.name}
-                          </SelectItem>
-                        ))}
+                      {userUnits.map((unit: any) => (
+                        <SelectItem key={unit.id} value={unit.id}>
+                          {unit.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -1211,7 +1247,7 @@ function BeneficiaryForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Array.isArray(projectsData) && projectsData.map((project: any) => (
+                      {availableProjects.map((project: any) => (
                         <SelectItem key={project.id} value={project.na853 || ""}>
                           {project.na853} - {project.title}
                         </SelectItem>
@@ -1235,9 +1271,8 @@ function BeneficiaryForm({
                       placeholder="0,00" 
                       {...field}
                       onChange={(e) => {
-                        // Format number using Greek locale
-                        const value = e.target.value.replace(/[^\d,]/g, '');
-                        field.onChange(value);
+                        const formattedValue = formatEuropeanNumber(e.target.value);
+                        field.onChange(formattedValue);
                       }}
                     />
                   </FormControl>
