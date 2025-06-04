@@ -657,7 +657,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Fetching beneficiary by ID: ${id}`);
       
       const { data, error } = await supabase
-        .from('beneficiaries')
+        .from('Beneficiary')
         .select('*')
         .eq('id', id)
         .single();
@@ -685,7 +685,7 @@ export class DatabaseStorage implements IStorage {
       
       // Let the database handle ID generation with its sequence
       const { data, error } = await supabase
-        .from('beneficiaries')
+        .from('Beneficiary')
         .insert({
           ...beneficiary,
           created_at: new Date().toISOString(),
@@ -712,7 +712,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Updating beneficiary ${id}:`, beneficiary);
       
       const { data, error } = await supabase
-        .from('beneficiaries')
+        .from('Beneficiary')
         .update({
           ...beneficiary,
           updated_at: new Date().toISOString()
@@ -739,7 +739,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Deleting beneficiary ${id}`);
       
       const { error } = await supabase
-        .from('beneficiaries')
+        .from('Beneficiary')
         .delete()
         .eq('id', id);
         
@@ -761,7 +761,7 @@ export class DatabaseStorage implements IStorage {
       
       // First, get the beneficiary by AFM
       const { data: beneficiary, error: fetchError } = await supabase
-        .from('beneficiaries')
+        .from('Beneficiary')
         .select('id, oikonomika')
         .eq('afm', afm)
         .single();
@@ -816,7 +816,7 @@ export class DatabaseStorage implements IStorage {
       
       // Update the beneficiary record
       const { error: updateError } = await supabase
-        .from('beneficiaries')
+        .from('Beneficiary')
         .update({
           oikonomika: oikonomika,
           updated_at: new Date().toISOString()
