@@ -32,7 +32,13 @@ export interface UnitDetails {
 export interface DocumentData {
   id: number;
   unit: string;
-  project_id?: string;
+  projects?: {
+    id: string;
+    name: string;
+    description?: string;
+    start_date?: string;
+    end_date?: string;
+  }[];
   project_na853?: string;
   expenditure_type: string;
   status?: string;

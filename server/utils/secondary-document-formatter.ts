@@ -364,7 +364,7 @@ export class SecondaryDocumentFormatter {
     return new Paragraph({
       children: [
         new TextRun({
-          text: "Τα δικαιολογητικά της δαπάνης διατηρούνται στην αρμόδια υπηρεσία για διάστημα 10 ετών από την ημερομηνία εκκαθάρισης του δημόσιου λογαριασμού ή από την ημερομηνία λήξης του προγράμματος, εφόσον αυτή είναι μεταγενέστερη.",
+          text: "ΤΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ ΒΑΣΕΙ ΤΩΝ ΟΠΟΙΩΝ ΕΚΔΟΘΗΚΑΝ ΟΙ ΔΙΟΙΚΗΤΙΚΕΣ ΠΡΑΞΕΙΣ ΑΝΑΓΝΩΡΙΣΗΣ ΔΙΚΑΙΟΥΧΩΝ ΔΩΡΕΑΝ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ ΤΗΡΟΥΝΤΑΙ ΣΤΟ ΑΡΧΕΙΟ ΤΗΣ ΥΠΗΡΕΣΙΑΣ ΜΑΣ.",
           size: 16,
           font: DocumentUtilities.DEFAULT_FONT,
         }),
@@ -487,17 +487,29 @@ export class SecondaryDocumentFormatter {
       const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
       logger.debug("Unit details:", unitDetails);
 
-      // Get project title and NA853 code from database
-      const projectMis =
-        documentData.project_na853 ||
-        (documentData as any).mis?.toString() ||
-        "";
-      logger.debug(`Secondary document - Finding project with MIS/NA853: ${projectMis}`);
-
-      const projectTitle = await DocumentUtilities.getProjectTitle(projectMis);
-      const projectNA853 = await DocumentUtilities.getProjectNA853(projectMis);
-      logger.debug(`Secondary document - Project title for MIS ${projectMis}:`, projectTitle);
-      logger.debug(`Secondary document - Project NA853 for MIS ${projectMis}:`, projectNA853);
+      // Get project information from linked projects or database
+      let projectTitle = null;
+      let projectNA853 = null;
+      
+      // First, check if project data is available in the document's projects array
+      if (documentData.projects && documentData.projects.length > 0) {
+        const linkedProject = documentData.projects[0]; // Take the first linked project
+        projectTitle = linkedProject.name || linkedProject.description;
+        logger.debug(`Secondary document - Using linked project: ${linkedProject.id} - ${projectTitle}`);
+        
+        // Get NA853 for the linked project
+        projectNA853 = await DocumentUtilities.getProjectNA853(linkedProject.id);
+      } else {
+        // Fallback to using project_na853 field
+        const projectMis = documentData.project_na853 || (documentData as any).mis?.toString() || "";
+        logger.debug(`Secondary document - Finding project with MIS/NA853: ${projectMis}`);
+        
+        projectTitle = await DocumentUtilities.getProjectTitle(projectMis);
+        projectNA853 = await DocumentUtilities.getProjectNA853(projectMis);
+      }
+      
+      logger.debug(`Secondary document - Final project title: ${projectTitle}`);
+      logger.debug(`Secondary document - Final project NA853: ${projectNA853}`);
 
       // Calculate total amount from recipients
       const totalAmount = (documentData.recipients || []).reduce((sum, r) => {
