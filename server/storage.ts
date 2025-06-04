@@ -587,7 +587,7 @@ export class DatabaseStorage implements IStorage {
         console.log(`[Storage] Fetching batch ${Math.floor(fromIndex / batchSize) + 1}, starting from index ${fromIndex}`);
         
         const { data, error } = await supabase
-          .from('Beneficiary')
+          .from('beneficiaries')
           .select('*')
           .eq('monada', unit)
           .range(fromIndex, fromIndex + batchSize - 1);
