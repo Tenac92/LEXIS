@@ -293,13 +293,7 @@ export class SecondaryDocumentFormatter {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       layout: TableLayoutType.FIXED,
-      rows: [headerRow, ...dataRows, totalRow],
-      margins: {
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0,
-      },
+      rows: rows,
     });
   }
 
