@@ -113,9 +113,12 @@ const beneficiaryFormSchema = z.object({
   cengsur2: z.string().optional(),
   cengname2: z.string().optional(),
   
-  // Financial Information - Multiple payment entries
+  // Financial Information - Multiple payment entries with complex structure
+  selectedUnit: z.string().optional(),
+  selectedNA853: z.string().optional(),
   amount: z.string().optional(),
   installment: z.string().optional(),
+  protocol: z.string().optional(),
   
   // Additional Information
   freetext: z.string().max(500, "Το ελεύθερο κείμενο δεν μπορεί να υπερβαίνει τους 500 χαρακτήρες").optional(),
@@ -848,8 +851,11 @@ function BeneficiaryForm({
       cengname1: beneficiary?.cengname1 || "",
       cengsur2: beneficiary?.cengsur2 || "",
       cengname2: beneficiary?.cengname2 || "",
+      selectedUnit: "",
+      selectedNA853: "",
       amount: "",
       installment: "",
+      protocol: "",
       freetext: beneficiary?.freetext || "",
       date: beneficiary?.date || new Date().toISOString().split('T')[0],
     },
@@ -1228,7 +1234,73 @@ function BeneficiaryForm({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <FormField
+                    control={form.control}
+                    name="selectedUnit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <Building className="w-4 h-4" />
+                          Μονάδα
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-blue-500">
+                              <SelectValue placeholder="Επιλέξτε μονάδα" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {units.map((unit) => (
+                              <SelectItem key={unit.id} value={unit.id}>
+                                {unit.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Η μονάδα στην οποία ανήκει η δαπάνη
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="selectedNA853"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          Κωδικός NA853 Έργου
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-blue-500">
+                              <SelectValue placeholder="Επιλέξτε έργο NA853" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {projects
+                              .filter(project => project.na853_code)
+                              .map((project) => (
+                                <SelectItem key={project.na853_code} value={project.na853_code!}>
+                                  {project.na853_code} - {project.title}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Ο κωδικός NA853 του έργου για τη δαπάνη
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="installment"
@@ -1261,9 +1333,9 @@ function BeneficiaryForm({
                           {(() => {
                             const selectedType = form.watch("expenditure_type");
                             if (selectedType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
-                              return "Μήνες 1-24 για επιδότηση ενοικίου";
+                              return "Μήνες 1-24";
                             } else {
-                              return "ΕΦΑΠΑΞ, Α, Β, Γ για ΔΚΑ δαπάνες";
+                              return "ΕΦΑΠΑΞ, Α, Β, Γ";
                             }
                           })()}
                         </FormDescription>
@@ -1301,12 +1373,83 @@ function BeneficiaryForm({
                           </div>
                         </FormControl>
                         <FormDescription>
-                          Εισάγετε το ποσό σε ευρώ (χρησιμοποιήστε κόμμα για δεκαδικά)
+                          Ποσό σε ευρώ
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="protocol"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          Αριθμός Πρωτοκόλλου
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="π.χ. 12564"
+                            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Προαιρετικό
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-green-900">Προσθήκη Οικονομικής Καταχώρησης</h4>
+                    <Button 
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="bg-green-100 hover:bg-green-200 border-green-300"
+                      onClick={() => {
+                        const formData = form.getValues();
+                        if (!formData.selectedUnit || !formData.selectedNA853 || 
+                            !formData.expenditure_type || !formData.installment || !formData.amount) {
+                          alert('Παρακαλώ συμπληρώστε όλα τα απαιτούμενα πεδία πριν προσθέσετε την καταχώρηση');
+                          return;
+                        }
+                        
+                        // Create or update oikonomika structure
+                        const newEntry = {
+                          unit: formData.selectedUnit,
+                          na853: formData.selectedNA853,
+                          expenditureType: formData.expenditure_type,
+                          installment: formData.installment,
+                          amount: formData.amount,
+                          protocol: formData.protocol || null
+                        };
+                        
+                        console.log('Adding financial entry:', newEntry);
+                        
+                        // Clear the financial form fields for next entry
+                        form.setValue('selectedUnit', '');
+                        form.setValue('selectedNA853', '');
+                        form.setValue('amount', '');
+                        form.setValue('installment', '');
+                        form.setValue('protocol', '');
+                        
+                        alert('Η οικονομική καταχώρηση προστέθηκε! Μπορείτε να προσθέσετε περισσότερες ή να αποθηκεύσετε τη φόρμα.');
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Προσθήκη Καταχώρησης
+                    </Button>
+                  </div>
+                  <p className="text-sm text-green-700">
+                    Κάθε καταχώρηση δημιουργεί μια εγγραφή στη δομή: Μονάδα → NA853 → Τύπος Δαπάνης → Δόση
+                  </p>
                 </div>
 
                 <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -1317,13 +1460,41 @@ function BeneficiaryForm({
                       <p className="text-sm text-blue-700 mb-2">
                         Τα οικονομικά στοιχεία αποθηκεύονται με τη μορφή JSON:
                       </p>
-                      <code className="text-xs bg-blue-100 p-2 rounded block mb-2">
-                        {`{"[Τύπος Δαπάνης]":{"[Δόση]":{"amount":[Ποσό],"status":null,"protocol":null,"date":null}}}`}
+                      <code className="text-xs bg-blue-100 p-2 rounded block mb-2 whitespace-pre-wrap">
+                        {`{
+  "[Μονάδα]": {
+    "[Κωδικός NA853]": {
+      "[Τύπος Δαπάνης]": {
+        "[Δόση]": {
+          "amount": "[Ποσό]",
+          "status": null,
+          "protocol": null,
+          "date": null
+        }
+      }
+    }
+  }
+}`}
                       </code>
                       <div className="text-sm text-blue-700">
+                        <p><strong>Παράδειγμα:</strong></p>
+                        <code className="text-xs bg-blue-50 p-2 rounded block mt-1 mb-2 whitespace-pre-wrap">
+                          {`{
+  "ΔΑΕΦΚ-ΚΕ": {
+    "2024ΝΑ85300053": {
+      "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ": {
+        "Α": {"amount": "12000", "status": null, "protocol": "12564", "date": null}
+      },
+      "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ": {
+        "1": {"amount": "300", "status": null, "protocol": null, "date": null}
+      }
+    }
+  }
+}`}
+                        </code>
                         <p><strong>Δόσεις για ΔΚΑ:</strong> ΕΦΑΠΑΞ, Α, Β, Γ</p>
                         <p><strong>Δόσεις για ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ:</strong> 1-24 (μήνες)</p>
-                        <p className="mt-1"><em>Μπορείτε να προσθέσετε πολλαπλές καταχωρήσεις για τον ίδιο δικαιούχο</em></p>
+                        <p className="mt-1"><em>Κάθε δικαιούχος μπορεί να έχει πολλαπλές μονάδες, έργα και τύπους δαπανών</em></p>
                       </div>
                     </div>
                   </div>
