@@ -50,6 +50,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -485,7 +486,7 @@ export default function BeneficiariesPage() {
                                   e.stopPropagation();
                                   handleShowDetails(beneficiary);
                                 }}
-                                className="text-green-600 border-green-200 hover:bg-green-50"
+                                className="text-purple-600 border-purple-200 hover:bg-purple-50"
                               >
                                 <Info className="w-4 h-4" />
                               </Button>
@@ -496,7 +497,7 @@ export default function BeneficiariesPage() {
                                   e.stopPropagation();
                                   handleEdit(beneficiary);
                                 }}
-                                className="text-green-600 border-green-200 hover:bg-green-50"
+                                className="text-purple-600 border-purple-200 hover:bg-purple-50"
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -981,10 +982,30 @@ function BeneficiaryForm({
             name="afm"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>ΑΦΜ *</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-purple-600" />
+                  ΑΦΜ *
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="123456789" {...field} />
+                  <div className="relative">
+                    <Input 
+                      placeholder="123456789" 
+                      {...field} 
+                      maxLength={9}
+                      className="pl-8 font-mono"
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        field.onChange(value);
+                      }}
+                    />
+                    <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
+                      <span className="text-xs text-muted-foreground">#</span>
+                    </div>
+                  </div>
                 </FormControl>
+                <FormDescription className="text-xs">
+                  Εισάγετε έγκυρο ελληνικό ΑΦΜ (9 ψηφία)
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -994,9 +1015,16 @@ function BeneficiaryForm({
             name="region"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Περιοχή</FormLabel>
+                <FormLabel className="flex items-center gap-2">
+                  <Building className="w-4 h-4 text-purple-600" />
+                  Περιοχή
+                </FormLabel>
                 <FormControl>
-                  <Input placeholder="Περιοχή" {...field} />
+                  <Input 
+                    placeholder="π.χ. Αθήνα, Θεσσαλονίκη" 
+                    {...field}
+                    className="capitalize"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
