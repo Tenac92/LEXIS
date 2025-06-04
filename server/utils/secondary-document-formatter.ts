@@ -314,30 +314,15 @@ export class SecondaryDocumentFormatter {
   private static async createSignatureSection(documentData: DocumentData): Promise<Table> {
     const userInfo = {
       name: documentData.generated_by?.name || documentData.user_name || "",
-      specialty: documentData.generated_by?.details?.specialty || "",
-      gender: documentData.generated_by?.details?.gender || "male", // Default to male if not specified
+      specialty:
+        documentData.generated_by?.details?.specialty,
     };
-
-    // Determine gender-specific signature text
-    const signatureText = userInfo.gender === "female" ? "Η ΣΥΝΤΑΞΑΣΑ" : "Ο ΣΥΝΤΑΞΑΣ";
 
     // Get unit details for manager information
     const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
     
     // Create left column for user/employee signature
     const leftColumnParagraphs = [
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "Ο/Η Υπάλληλος",
-            bold: true,
-            size: 18,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 960 },
-      }),
       new Paragraph({
         children: [
           new TextRun({
