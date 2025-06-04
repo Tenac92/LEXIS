@@ -40,6 +40,17 @@ async function checkBeneficiaryTables() {
             
           if (sample && sample.length > 0) {
             console.log('Sample structure:', Object.keys(sample[0]));
+          } else {
+            // Get table schema if no data
+            const { data: schema } = await supabase
+              .rpc('exec_sql', { 
+                sql: `SELECT column_name, data_type FROM information_schema.columns 
+                      WHERE table_name = '${tableName}' AND table_schema = 'public'
+                      ORDER BY ordinal_position;` 
+              });
+            if (schema) {
+              console.log('Table schema:', schema);
+            }
           }
         }
       } catch (tableError) {
