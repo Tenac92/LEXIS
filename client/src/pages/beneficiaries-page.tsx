@@ -1356,7 +1356,7 @@ function BeneficiaryForm({
               }}
             >
               <FileText className="w-4 h-4 mr-2" />
-              Προβολή Υπαρχουσών ({existingPayments?.length || 0})
+              Προβολή Υπαρχουσών ({Array.isArray(existingPayments) ? existingPayments.length : 0})
             </Button>
           </div>
 
