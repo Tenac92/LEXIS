@@ -936,6 +936,105 @@ export class DatabaseStorage implements IStorage {
       return null; // Return null instead of throwing to prevent document generation from failing
     }
   }
+
+  // Beneficiary Payment operations - for normalized structure
+  async getBeneficiaryPayments(beneficiaryId: number): Promise<BeneficiaryPayment[]> {
+    try {
+      console.log(`[Storage] Fetching payments for beneficiary ID: ${beneficiaryId}`);
+      
+      const { data, error } = await supabase
+        .from('beneficiary_payments')
+        .select('*')
+        .eq('beneficiary_id', beneficiaryId)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error('[Storage] Error fetching beneficiary payments:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Found ${data?.length || 0} payments for beneficiary ${beneficiaryId}`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getBeneficiaryPayments:', error);
+      throw error;
+    }
+  }
+
+  async createBeneficiaryPayment(payment: InsertBeneficiaryPayment): Promise<BeneficiaryPayment> {
+    try {
+      console.log('[Storage] Creating new beneficiary payment:', payment);
+      
+      const { data, error } = await supabase
+        .from('beneficiary_payments')
+        .insert({
+          ...payment,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error creating beneficiary payment:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully created beneficiary payment with ID:', data.id);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in createBeneficiaryPayment:', error);
+      throw error;
+    }
+  }
+
+  async updateBeneficiaryPayment(id: number, payment: Partial<InsertBeneficiaryPayment>): Promise<BeneficiaryPayment> {
+    try {
+      console.log(`[Storage] Updating beneficiary payment ${id}:`, payment);
+      
+      const { data, error } = await supabase
+        .from('beneficiary_payments')
+        .update({
+          ...payment,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error updating beneficiary payment:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully updated beneficiary payment:', data);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in updateBeneficiaryPayment:', error);
+      throw error;
+    }
+  }
+
+  async deleteBeneficiaryPayment(id: number): Promise<void> {
+    try {
+      console.log(`[Storage] Deleting beneficiary payment ${id}`);
+      
+      const { error } = await supabase
+        .from('beneficiary_payments')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.error('[Storage] Error deleting beneficiary payment:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully deleted beneficiary payment ${id}`);
+    } catch (error) {
+      console.error('[Storage] Error in deleteBeneficiaryPayment:', error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
