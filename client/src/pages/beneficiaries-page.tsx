@@ -590,13 +590,13 @@ export default function BeneficiariesPage() {
                               </div>
 
                               <div className="grid grid-cols-2 gap-2 text-sm mb-6">
-                                {beneficiary.project && (
+                                {getExpenditureTypesForBeneficiary(beneficiary.id).length > 0 && (
                                   <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
                                     <span className="text-xs text-gray-600">
-                                      Έργο (MIS)
+                                      Τύποι Δαπάνης
                                     </span>
-                                    <span className="text-gray-900 font-mono">
-                                      {beneficiary.project}
+                                    <span className="text-gray-900 text-xs">
+                                      {getExpenditureTypesForBeneficiary(beneficiary.id).join(", ")}
                                     </span>
                                   </div>
                                 )}
@@ -610,15 +610,35 @@ export default function BeneficiariesPage() {
                                     </span>
                                   </div>
                                 )}
+                                {getTotalAmountForBeneficiary(beneficiary.id) > 0 && (
+                                  <div className="flex flex-col py-1.5 px-2 bg-green-50 rounded col-span-2">
+                                    <span className="text-xs text-green-600">
+                                      Συνολικό Ποσό
+                                    </span>
+                                    <span className="text-green-900 font-semibold">
+                                      {getTotalAmountForBeneficiary(beneficiary.id).toLocaleString("el-GR")} €
+                                    </span>
+                                  </div>
+                                )}
                               </div>
 
-                              {/* Financial Status Summary */}
-                              {(beneficiary as any).oikonomika && (
+                              {/* Payment Details Summary */}
+                              {getPaymentsForBeneficiary(beneficiary.id).length > 0 && (
                                 <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                                   <h4 className="text-sm font-medium text-blue-800 mb-2">
                                     Οικονομικά Στοιχεία
                                   </h4>
                                   <div className="space-y-1">
+                                    {getPaymentsForBeneficiary(beneficiary.id).map((payment: any, index: number) => (
+                                      <div key={index} className="flex justify-between items-center text-xs">
+                                        <span className="text-blue-700">{payment.expenditure_type}</span>
+                                        <div className="text-right">
+                                          <div className="font-medium">{parseFloat(payment.amount || 0).toLocaleString("el-GR")} €</div>
+                                          <div className="text-blue-600">{payment.installment || 'ΕΦΑΠΑΞ'}</div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
                                     {typeof (beneficiary as any).oikonomika ===
                                       "object" &&
                                       Object.entries(
@@ -868,10 +888,10 @@ function BeneficiaryForm({
       name: beneficiary?.name || "",
       fathername: beneficiary?.fathername || "",
       afm: beneficiary?.afm?.toString() || "",
-      project: beneficiary?.project?.toString() || "",
+      project: "", // Will be set from payment data
       expenditure_type: "", // Not in current schema, will be handled separately
       region: beneficiary?.region || "",
-      monada: beneficiary?.monada || "",
+      monada: "", // Will be set from payment data
       adeia: beneficiary?.adeia?.toString() || "",
       onlinefoldernumber: beneficiary?.onlinefoldernumber || "",
       cengsur1: beneficiary?.cengsur1 || "",

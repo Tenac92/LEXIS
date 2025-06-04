@@ -1044,6 +1044,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use('/api/employees', authenticateSession, employeesRouter);
     log('[Routes] Setting up beneficiary management routes...');
     app.use('/api/beneficiaries', authenticateSession, beneficiariesRouter);
+    
+    // Beneficiary payments endpoint for enhanced display
+    app.get('/api/beneficiary-payments', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        if (!req.user?.units) {
+          return res.status(401).json({ message: 'Authentication required' });
+        }
+
+        // Get all beneficiaries for user's units first
+        const beneficiaries = await storage.getBeneficiariesByUnit(req.user.units[0]);
+        
+        // Get payments for all these beneficiaries
+        const allPayments = [];
+        for (const beneficiary of beneficiaries) {
+          const payments = await storage.getBeneficiaryPayments(beneficiary.id);
+          allPayments.push(...payments);
+        }
+
+        res.json(allPayments);
+      } catch (error) {
+        console.error('[Beneficiary Payments] Error fetching payments:', error);
+        res.status(500).json({ message: 'Failed to fetch beneficiary payments' });
+      }
+    });
+    
     log('[Routes] Beneficiary management routes setup complete');
     log('[Routes] Employee management routes setup complete');
     
