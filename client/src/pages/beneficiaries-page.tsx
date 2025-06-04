@@ -787,12 +787,20 @@ export default function BeneficiariesPage() {
 
       {/* Create/Edit Modal */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {selectedBeneficiary
-                ? "Επεξεργασία Δικαιούχου"
-                : "Νέος Δικαιούχος"}
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              {selectedBeneficiary ? (
+                <>
+                  <Edit className="w-5 h-5 text-blue-600" />
+                  Επεξεργασία Δικαιούχου
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5 text-green-600" />
+                  Νέος Δικαιούχος
+                </>
+              )}
             </DialogTitle>
           </DialogHeader>
           <BeneficiaryForm
