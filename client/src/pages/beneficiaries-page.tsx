@@ -571,6 +571,28 @@ export default function BeneficiariesPage() {
                                 >
                                   <Info className="h-4 w-4 text-purple-600" />
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0 hover:bg-purple-100"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEdit(beneficiary);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 text-purple-600" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0 hover:bg-red-100"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(beneficiary);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
                               </div>
                             </div>
 
@@ -1175,7 +1197,7 @@ function BeneficiaryForm({
                       <SelectItem value="ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ">ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ</SelectItem>
                       <SelectItem value="ΔΚΑ ΕΠΙΣΚΕΥΗ">ΔΚΑ ΕΠΙΣΚΕΥΗ</SelectItem>
                       <SelectItem value="ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ">ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ</SelectItem>
-                      <SelectItem value="ΕΚΤΟΣ ΕΔΡΑΣ">ΕΚΤΟΣ ΕΔΡΑΣ</SelectItem>
+                      <SelectItem value="ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ">ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -1189,9 +1211,20 @@ function BeneficiaryForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Κωδικός ΝΑ853</FormLabel>
-                  <FormControl>
-                    <Input placeholder="π.χ. 2024ΝΑ85300001" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Επιλέξτε κωδικό ΝΑ853" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Array.isArray(projects) && projects.map((project: any) => (
+                        <SelectItem key={project.id} value={project.na853 || ""}>
+                          {project.na853} - {project.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -1257,11 +1290,27 @@ function BeneficiaryForm({
           </div>
           
           <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={addPayment}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={addPayment}
+              disabled={!form.getValues("selectedUnit") || !form.getValues("expenditure_type") || !form.getValues("amount")}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Προσθήκη Πληρωμής
             </Button>
-            <Button type="button" variant="ghost" size="sm">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                if (payments.length > 0) {
+                  // Show payments in a modal or expand view
+                  console.log("Showing payments:", payments);
+                }
+              }}
+            >
               <FileText className="w-4 h-4 mr-2" />
               Προβολή Υπαρχουσών ({payments.length})
             </Button>
@@ -1342,7 +1391,29 @@ function BeneficiaryForm({
         />
 
         <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline">
+          <Button 
+            type="button" 
+            variant="outline"
+            onClick={() => {
+              form.reset();
+              setPayments([]);
+              onSubmit({ 
+                surname: "", 
+                name: "", 
+                fathername: "", 
+                afm: "", 
+                date: "", 
+                region: "", 
+                adeia: 0, 
+                onlinefoldernumber: "", 
+                cengsur1: "", 
+                cengname1: "", 
+                cengsur2: "", 
+                cengname2: "", 
+                freetext: "" 
+              });
+            }}
+          >
             Ακύρωση
           </Button>
           <Button type="submit">
