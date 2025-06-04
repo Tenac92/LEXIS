@@ -670,17 +670,67 @@ export class DocumentUtilities {
     try {
       logger.debug(`Fetching project NA853 for MIS: ${mis}`);
 
-      // Import storage to fetch project data
-      const { storage } = await import("../storage");
+      // Import database connection to fetch project data directly
+      const { supabase } = await import("../config/db");
 
-      const projectDetails = await storage.getProjectDetails(String(mis));
-      const project = projectDetails;
+      // Check if identifier looks like a MIS (numeric) or NA853 (alphanumeric with Greek letters)
+      const isNumericMIS = /^\d+$/.test(String(mis));
+      const isNA853Code = /^\d{4}[Ν|N][Α|A]\d+/.test(String(mis));
+      
+      let project = null;
+      
+      if (isNumericMIS) {
+        const result = await supabase
+          .from("Projects")
+          .select("budget_na853, na853")
+          .eq("mis", parseInt(String(mis)))
+          .single();
+        project = result.data;
+      } else if (isNA853Code) {
+        // If it's already an NA853 code, return it
+        logger.debug(`Input is already NA853 code: ${mis}`);
+        return String(mis);
+      } else {
+        // Try searching by different fields
+        const searchQueries = [
+          { field: "budget_na853", value: String(mis) },
+          { field: "na853", value: String(mis) },
+          { field: "project_na853", value: String(mis) },
+        ];
+        
+        for (const query of searchQueries) {
+          try {
+            const result = await supabase
+              .from("Projects")
+              .select("budget_na853, na853")
+              .eq(query.field, query.value)
+              .single();
+              
+            if (result.data && !result.error) {
+              project = result.data;
+              break;
+            }
+          } catch (searchError) {
+            continue;
+          }
+        }
+      }
 
-      if (project && project.budget_na853) {
-        return project.budget_na853;
+      if (project) {
+        // Prioritize budget_na853 field
+        if (project.budget_na853 && project.budget_na853.trim()) {
+          logger.debug(`Found budget_na853: ${project.budget_na853}`);
+          return project.budget_na853.trim();
+        }
+        // Fallback to na853 field
+        if (project.na853 && project.na853.trim()) {
+          logger.debug(`Found na853: ${project.na853}`);
+          return project.na853.trim();
+        }
       }
 
       // Return default if not found
+      logger.warn(`No NA853 found for identifier: ${mis}`);
       return `2024ΝΑ85300000`;
     } catch (error) {
       logger.error("Error fetching project NA853:", error);

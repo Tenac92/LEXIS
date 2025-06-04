@@ -44,7 +44,7 @@ export class SecondaryDocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: `ΝΑ853: ${na853Code}`,
+            text: `ΑΡ.ΕΡΓΟΥ: ${na853Code} της ΣΑΝΑ 853`,
             bold: true,
             size: 20,
             font: DocumentUtilities.DEFAULT_FONT,
