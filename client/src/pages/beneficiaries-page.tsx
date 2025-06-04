@@ -919,6 +919,29 @@ function BeneficiaryForm({
     );
   }, [projectsData, form.watch("selectedUnit")]);
 
+  // Get expenditure types for selected NA853
+  const availableExpenditureTypes = useMemo(() => {
+    const selectedNA853 = form.watch("selectedNA853");
+    if (!selectedNA853 || !Array.isArray(projectsData)) return [];
+    
+    const project = projectsData.find((p: any) => p.na853 === selectedNA853);
+    if (!project?.expenditure_type) return [];
+    
+    // Parse expenditure types - handle both string and array formats
+    let types: string[] = [];
+    if (typeof project.expenditure_type === 'string') {
+      try {
+        types = JSON.parse(project.expenditure_type);
+      } catch {
+        types = [project.expenditure_type];
+      }
+    } else if (Array.isArray(project.expenditure_type)) {
+      types = project.expenditure_type;
+    }
+    
+    return types.filter(type => type && type.trim());
+  }, [projectsData, form.watch("selectedNA853")]);
+
   // Format number to European format
   const formatEuropeanNumber = (value: string) => {
     // Remove all non-digit characters except comma
@@ -1216,17 +1239,26 @@ function BeneficiaryForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Τύπος Δαπάνης</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    defaultValue={field.value}
+                    disabled={!form.watch("selectedNA853")}
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Επιλέξτε τύπο δαπάνης" />
+                        <SelectValue placeholder={
+                          form.watch("selectedNA853") 
+                            ? "Επιλέξτε τύπο δαπάνης" 
+                            : "Πρώτα επιλέξτε κωδικό ΝΑ853"
+                        } />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ">ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ</SelectItem>
-                      <SelectItem value="ΔΚΑ ΕΠΙΣΚΕΥΗ">ΔΚΑ ΕΠΙΣΚΕΥΗ</SelectItem>
-                      <SelectItem value="ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ">ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ</SelectItem>
-                      <SelectItem value="ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ">ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ</SelectItem>
+                      {availableExpenditureTypes.map((type: string) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
