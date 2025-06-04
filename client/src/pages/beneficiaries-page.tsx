@@ -747,33 +747,7 @@ export default function BeneficiariesPage() {
                               )}
                             </div>
 
-                            {/* Action buttons for back card */}
-                            <div className="flex gap-2 mt-6 pt-4 border-t border-purple-200">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(beneficiary);
-                                }}
-                                className="flex-1 text-purple-600 border-purple-200 hover:bg-purple-50"
-                              >
-                                <Edit className="w-3 h-3 mr-1" />
-                                Επεξεργασία
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(beneficiary);
-                                }}
-                                className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-3 h-3 mr-1" />
-                                Διαγραφή
-                              </Button>
-                            </div>
+
                           </div>
                         </div>
                       </div>
@@ -1178,7 +1152,7 @@ function BeneficiaryForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {units.map((unit) => (
+                      {Array.isArray(units) && units.map((unit: any) => (
                         <SelectItem key={unit.id} value={unit.id}>
                           {unit.name}
                         </SelectItem>
@@ -1247,10 +1221,14 @@ function BeneficiaryForm({
                   <FormLabel>Ποσό (€)</FormLabel>
                   <FormControl>
                     <Input 
-                      type="number" 
-                      step="0.01" 
-                      placeholder="0.00" 
-                      {...field} 
+                      type="text" 
+                      placeholder="0,00" 
+                      {...field}
+                      onChange={(e) => {
+                        // Format number using Greek locale
+                        const value = e.target.value.replace(/[^\d,]/g, '');
+                        field.onChange(value);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
@@ -1271,11 +1249,23 @@ function BeneficiaryForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="ΕΦΑΠΑΞ">ΕΦΑΠΑΞ</SelectItem>
-                      <SelectItem value="Α ΔΟΣΗ">Α ΔΟΣΗ</SelectItem>
-                      <SelectItem value="Β ΔΟΣΗ">Β ΔΟΣΗ</SelectItem>
-                      <SelectItem value="Γ ΔΟΣΗ">Γ ΔΟΣΗ</SelectItem>
-                      <SelectItem value="Δ ΔΟΣΗ">Δ ΔΟΣΗ</SelectItem>
+                      {form.watch("expenditure_type") === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" ? (
+                        <>
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <SelectItem key={i + 1} value={`ΤΡΙΜΗΝΟ ${i + 1}`}>
+                              ΤΡΙΜΗΝΟ {i + 1}
+                            </SelectItem>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="ΕΦΑΠΑΞ">ΕΦΑΠΑΞ</SelectItem>
+                          <SelectItem value="Α ΔΟΣΗ">Α ΔΟΣΗ</SelectItem>
+                          <SelectItem value="Β ΔΟΣΗ">Β ΔΟΣΗ</SelectItem>
+                          <SelectItem value="Γ ΔΟΣΗ">Γ ΔΟΣΗ</SelectItem>
+                          <SelectItem value="Δ ΔΟΣΗ">Δ ΔΟΣΗ</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
