@@ -40,22 +40,25 @@ async function checkBeneficiarySchema() {
       console.log(`Total records in beneficiaries: ${count}`);
     }
     
-    // Try different possible column names that might exist
-    const possibleColumns = ['monada', 'unit', 'unit_name', 'department', 'organization'];
-    
-    for (const col of possibleColumns) {
-      try {
-        const { data, error } = await supabase
-          .from('beneficiaries')
-          .select(col)
+    // Check both tables to see which one has data
+    console.log('\n=== Checking Beneficiary (legacy) table ===');
+    try {
+      const { count: legacyCount } = await supabase
+        .from('Beneficiary')
+        .select('*', { count: 'exact', head: true });
+      console.log(`Legacy Beneficiary table records: ${legacyCount}`);
+      
+      if (legacyCount > 0) {
+        const { data: legacySample } = await supabase
+          .from('Beneficiary')
+          .select('*')
           .limit(1);
-          
-        if (!error) {
-          console.log(`✓ Column "${col}" exists`);
+        if (legacySample && legacySample.length > 0) {
+          console.log('Legacy table structure:', Object.keys(legacySample[0]));
         }
-      } catch (err) {
-        console.log(`✗ Column "${col}" does not exist`);
       }
+    } catch (error) {
+      console.log('Error checking legacy table:', error.message);
     }
     
   } catch (error) {

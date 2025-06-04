@@ -586,40 +586,12 @@ export class DatabaseStorage implements IStorage {
       while (hasMore) {
         console.log(`[Storage] Fetching batch ${Math.floor(fromIndex / batchSize) + 1}, starting from index ${fromIndex}`);
         
-        // Try to join with beneficiary_payments, but fall back if table doesn't exist
-        let data, error;
-        
-        try {
-          const result = await supabase
-            .from('beneficiaries')
-            .select(`
-              *,
-              beneficiary_payments!inner(
-                unit_code,
-                na853_code,
-                expenditure_type,
-                installment,
-                amount,
-                status
-              )
-            `)
-            .eq('beneficiary_payments.unit_code', unit)
-            .range(fromIndex, fromIndex + batchSize - 1);
-          
-          data = result.data;
-          error = result.error;
-        } catch (joinError) {
-          console.log('[Storage] Join with beneficiary_payments failed, falling back to all beneficiaries:', joinError);
-          
-          // Fallback: get all beneficiaries (during migration period)
-          const result = await supabase
-            .from('beneficiaries')
-            .select('*')
-            .range(fromIndex, fromIndex + batchSize - 1);
-            
-          data = result.data;
-          error = result.error;
-        }
+        // Use the legacy Beneficiary table since it has the expected structure with monada column
+        const { data, error } = await supabase
+          .from('Beneficiary')
+          .select('*')
+          .eq('monada', unit)
+          .range(fromIndex, fromIndex + batchSize - 1);
           
         if (error) {
           console.error('[Storage] Error fetching beneficiaries batch:', error);
@@ -661,7 +633,7 @@ export class DatabaseStorage implements IStorage {
       
       // For exact AFM match first, then partial matches
       const { data, error } = await supabase
-        .from('beneficiaries')
+        .from('Beneficiary')
         .select('*')
         .eq('afm', searchNum)
         .order('id', { ascending: false });
