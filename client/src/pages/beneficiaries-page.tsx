@@ -867,9 +867,24 @@ function BeneficiaryForm({
     status: string;
   }>>([]);
 
-  const { data: userData } = useQuery({ queryKey: ["/api/auth/me"] });
-  const { data: unitsData } = useQuery({ queryKey: ["/api/public/units"] });
-  const { data: projectsData } = useQuery({ queryKey: ["/api/projects"] });
+  const { data: userData } = useQuery({ 
+    queryKey: ["/api/auth/me"],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+  
+  const { data: unitsData, isLoading: unitsLoading } = useQuery({ 
+    queryKey: ["/api/public/units"],
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+  
+  const { data: projectsData } = useQuery({ 
+    queryKey: ["/api/projects"],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+  
   const { data: existingPayments } = useQuery({ 
     queryKey: ["/api/beneficiary-payments", beneficiary?.id], 
     enabled: !!beneficiary?.id 
@@ -904,11 +919,43 @@ function BeneficiaryForm({
     },
   });
 
-  // Get user's available units
+  // Get user's available units with debugging
   const userUnits = useMemo(() => {
-    if (!(userData as any)?.user?.units || !Array.isArray(unitsData)) return [];
-    return unitsData.filter((unit: any) => (userData as any).user.units.includes(unit.id));
+    if (!(userData as any)?.user?.units || !Array.isArray(unitsData)) {
+      console.log('[Beneficiary Form] Missing data:', { 
+        userUnits: (userData as any)?.user?.units, 
+        unitsDataLength: unitsData?.length 
+      });
+      return [];
+    }
+    
+    const filtered = unitsData.filter((unit: any) => (userData as any).user.units.includes(unit.id));
+    console.log('[Beneficiary Form] Filtered units:', filtered);
+    return filtered;
   }, [userData, unitsData]);
+
+  // Auto-select unit if user has only one
+  useEffect(() => {
+    if (userUnits.length === 1 && !form.getValues("selectedUnit")) {
+      console.log('[Beneficiary Form] Auto-selecting unit:', userUnits[0].id);
+      form.setValue("selectedUnit", userUnits[0].id);
+    }
+  }, [userUnits, form]);
+
+  // Reset dependent fields when unit changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "selectedUnit") {
+        // Clear NA853 and expenditure type when unit changes
+        form.setValue("selectedNA853", "");
+        form.setValue("expenditure_type", "");
+      } else if (name === "selectedNA853") {
+        // Clear expenditure type when NA853 changes
+        form.setValue("expenditure_type", "");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   // Get projects for selected unit
   const availableProjects = useMemo(() => {
