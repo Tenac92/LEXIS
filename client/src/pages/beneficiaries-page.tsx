@@ -11,6 +11,14 @@ import {
   User,
   FileText,
   Building,
+  Mail,
+  Phone,
+  Calendar,
+  DollarSign,
+  Briefcase,
+  UserCheck,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
@@ -23,6 +31,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +40,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -42,26 +67,54 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
-import type { Beneficiary } from "@/shared/schema";
+import type { Beneficiary } from "../../../shared/schema";
+
+// Define an interface for units
+interface Unit {
+  id: string;
+  name: string;
+}
 
 const beneficiaryFormSchema = z.object({
-  surname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
-  name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
-  fathername: z.string().min(1, "Το πατρώνυμο είναι υποχρεωτικό"),
+  // Basic Information
+  surname: z.string().min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες").max(50, "Το επώνυμο δεν μπορεί να υπερβαίνει τους 50 χαρακτήρες"),
+  name: z.string().min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες").max(50, "Το όνομα δεν μπορεί να υπερβαίνει τους 50 χαρακτήρες"),
+  fathername: z.string().min(2, "Το πατρώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες").max(50, "Το πατρώνυμο δεν μπορεί να υπερβαίνει τους 50 χαρακτήρες"),
   afm: z
     .string()
-    .min(9, "Το ΑΦΜ πρέπει να είναι 9 ψηφία")
-    .max(9, "Το ΑΦΜ πρέπει να είναι 9 ψηφία"),
+    .regex(/^\d{9}$/, "Το ΑΦΜ πρέπει να είναι ακριβώς 9 ψηφία")
+    .refine((val) => {
+      // Basic AFM validation algorithm
+      const digits = val.split('').map(Number);
+      let sum = 0;
+      for (let i = 0; i < 8; i++) {
+        sum += digits[i] * Math.pow(2, 8 - i);
+      }
+      const remainder = sum % 11;
+      const checkDigit = remainder < 2 ? remainder : 11 - remainder;
+      return checkDigit === digits[8];
+    }, "Μη έγκυρο ΑΦΜ"),
+  
+  // Project & Location Information
   project: z.string().optional(),
   region: z.string().optional(),
   monada: z.string().optional(),
+  
+  // License Information
   adeia: z.string().optional(),
+  onlinefoldernumber: z.string().optional(),
+  
+  // Engineer Information
   cengsur1: z.string().optional(),
   cengname1: z.string().optional(),
   cengsur2: z.string().optional(),
   cengname2: z.string().optional(),
-  freetext: z.string().optional(),
+  
+  // Additional Information
+  freetext: z.string().max(500, "Το ελεύθερο κείμενο δεν μπορεί να υπερβαίνει τους 500 χαρακτήρες").optional(),
+  date: z.string().optional(),
 });
 
 type BeneficiaryFormData = z.infer<typeof beneficiaryFormSchema>;
@@ -87,8 +140,18 @@ export default function BeneficiariesPage() {
     data: beneficiaries = [],
     isLoading,
     error,
-  } = useQuery({
+  } = useQuery<Beneficiary[]>({
     queryKey: ["/api/beneficiaries"],
+  });
+
+  // Fetch units for dropdown
+  const { data: units = [] } = useQuery<Unit[]>({
+    queryKey: ["/api/public/units"],
+  });
+
+  // Fetch projects for dropdown
+  const { data: projects = [] } = useQuery({
+    queryKey: ["/api/projects"],
   });
 
   // Create mutation
@@ -761,147 +824,500 @@ function BeneficiaryForm({
       surname: beneficiary?.surname || "",
       name: beneficiary?.name || "",
       fathername: beneficiary?.fathername || "",
-      afm: beneficiary?.afm || "",
-      project: beneficiary?.project || "",
+      afm: beneficiary?.afm?.toString() || "",
+      project: beneficiary?.project?.toString() || "",
       region: beneficiary?.region || "",
       monada: beneficiary?.monada || "",
-      adeia: beneficiary?.adeia || "",
+      adeia: beneficiary?.adeia?.toString() || "",
+      onlinefoldernumber: beneficiary?.onlinefoldernumber || "",
       cengsur1: beneficiary?.cengsur1 || "",
       cengname1: beneficiary?.cengname1 || "",
       cengsur2: beneficiary?.cengsur2 || "",
       cengname2: beneficiary?.cengname2 || "",
       freetext: beneficiary?.freetext || "",
+      date: beneficiary?.date || new Date().toISOString().split('T')[0],
     },
+  });
+
+  const [activeTab, setActiveTab] = useState("basic");
+
+  // Fetch units for dropdown
+  const { data: units = [] } = useQuery<Unit[]>({
+    queryKey: ["/api/public/units"],
+  });
+
+  // Fetch projects for dropdown 
+  const { data: projects = [] } = useQuery({
+    queryKey: ["/api/projects"],
   });
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="surname"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Επώνυμο *</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Όνομα *</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="fathername"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Πατρώνυμο *</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="afm"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>ΑΦΜ *</FormLabel>
-                <FormControl>
-                  <Input {...field} maxLength={9} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="project"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Έργο</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="region"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Περιοχή</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="monada"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Μονάδα</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="adeia"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Άδεια</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="basic" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Βασικά Στοιχεία
+            </TabsTrigger>
+            <TabsTrigger value="project" className="flex items-center gap-2">
+              <Briefcase className="w-4 h-4" />
+              Έργο & Τοποθεσία
+            </TabsTrigger>
+            <TabsTrigger value="engineers" className="flex items-center gap-2">
+              <UserCheck className="w-4 h-4" />
+              Μηχανικοί
+            </TabsTrigger>
+            <TabsTrigger value="additional" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Επιπλέον Στοιχεία
+            </TabsTrigger>
+          </TabsList>
 
-        <FormField
-          control={form.control}
-          name="freetext"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Ελεύθερο Κείμενο</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <TabsContent value="basic" className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <User className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold">Προσωπικά Στοιχεία</h3>
+            </div>
 
-        <div className="flex justify-end gap-2">
-          <Button type="submit">
-            {beneficiary ? "Ενημέρωση" : "Δημιουργία"}
-          </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="surname"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <span>Επώνυμο</span>
+                      <Badge variant="destructive" className="text-xs">Υποχρεωτικό</Badge>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Εισάγετε το επώνυμο"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <span>Όνομα</span>
+                      <Badge variant="destructive" className="text-xs">Υποχρεωτικό</Badge>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Εισάγετε το όνομα"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="fathername"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <span>Πατρώνυμο</span>
+                      <Badge variant="destructive" className="text-xs">Υποχρεωτικό</Badge>
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Εισάγετε το πατρώνυμο"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="afm"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <span>Α.Φ.Μ.</span>
+                      <Badge variant="destructive" className="text-xs">Υποχρεωτικό</Badge>
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input 
+                          {...field} 
+                          maxLength={9}
+                          placeholder="123456789"
+                          className="transition-all duration-200 focus:ring-2 focus:ring-blue-500 font-mono"
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            field.onChange(value);
+                          }}
+                        />
+                        {field.value && field.value.length === 9 && (
+                          <CheckCircle2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500" />
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormDescription>
+                      Εισάγετε 9 ψηφία χωρίς κενά ή παύλες
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Ημερομηνία Καταχώρησης
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      type="date"
+                      className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </TabsContent>
+
+          <TabsContent value="project" className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Briefcase className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold">Στοιχεία Έργου & Τοποθεσίας</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="project"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Κωδικός Έργου (MIS)
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="π.χ. 5001234"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Κωδικός MIS του έργου
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="region"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Building className="w-4 h-4" />
+                      Περιοχή
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="π.χ. Αθήνα, Θεσσαλονίκη"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="monada"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Building className="w-4 h-4" />
+                      Μονάδα
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="transition-all duration-200 focus:ring-2 focus:ring-blue-500">
+                          <SelectValue placeholder="Επιλέξτε μονάδα" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="adeia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Αριθμός Άδειας
+                    </FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="π.χ. 12345"
+                        className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="onlinefoldernumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Αριθμός Ηλεκτρονικού Φακέλου
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="Εισάγετε τον αριθμό ηλεκτρονικού φακέλου"
+                      className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </TabsContent>
+
+          <TabsContent value="engineers" className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <UserCheck className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold">Στοιχεία Μηχανικών</h3>
+            </div>
+
+            <Card className="p-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <UserCheck className="w-4 h-4" />
+                  Πρώτος Μηχανικός
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="cengsur1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Επώνυμο Μηχανικού</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="Επώνυμο"
+                            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="cengname1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Όνομα Μηχανικού</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="Όνομα"
+                            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="p-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <UserCheck className="w-4 h-4" />
+                  Δεύτερος Μηχανικός
+                </CardTitle>
+                <CardDescription>
+                  Προαιρετικά στοιχεία δεύτερου μηχανικού
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="cengsur2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Επώνυμο Μηχανικού</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="Επώνυμο (προαιρετικό)"
+                            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="cengname2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Όνομα Μηχανικού</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="Όνομα (προαιρετικό)"
+                            className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="additional" className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <FileText className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold">Επιπλέον Πληροφορίες</h3>
+            </div>
+
+            <FormField
+              control={form.control}
+              name="freetext"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Ελεύθερο Κείμενο / Σχόλια
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      {...field} 
+                      placeholder="Εισάγετε επιπλέον πληροφορίες, σχόλια ή παρατηρήσεις..."
+                      className="min-h-[120px] transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+                      rows={6}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Μέγιστος αριθμός χαρακτήρων: 500
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">Πληροφορίες</h4>
+                  <p className="text-sm text-blue-700">
+                    Τα στοιχεία που εισάγετε θα χρησιμοποιηθούν για τη δημιουργία εγγράφων και την παρακολούθηση των δικαιούχων. 
+                    Βεβαιωθείτε ότι όλα τα υποχρεωτικά πεδία έχουν συμπληρωθεί σωστά.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <Separator />
+
+        <div className="flex justify-between items-center pt-4">
+          <div className="text-sm text-muted-foreground">
+            * Υποχρεωτικά πεδία
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={() => form.reset()}
+            >
+              Επαναφορά
+            </Button>
+            <Button 
+              type="submit"
+              className="flex items-center gap-2"
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Επεξεργασία...
+                </>
+              ) : (
+                <>
+                  {beneficiary ? (
+                    <>
+                      <Edit className="w-4 h-4" />
+                      Ενημέρωση Δικαιούχου
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Δημιουργία Δικαιούχου
+                    </>
+                  )}
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>
