@@ -1,0 +1,12 @@
+id,name,email,role,password,units,telephone,department,details
+49,KONSTANTINOS KYRIAKOU,kkiriakou92@gmail.com,admin,$2b$10$PYu9ij.V07n2wyXRHeRCZ.zMrY6SxnnrORpO96UUQBt0M1me/W0jC,"[""ΔΑΕΦΚ-ΚΕ""]",,,
+75,Νικόλαος Αποστόλου,napostolou@civilprotection.gr,admin,$2b$10$gt6iWiShWL31dEo4NtM1GORMA9tBFNn5IajSKQ49XqWguoalD0PjO,"[""ΔΑΕΦΚ-ΚΕ""]",0,ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.),
+76,Ιωάννης Αβραμόπουλος,iavramopoulos@civilprotection.gr,manager,$2b$10$eA7.rdxiw0n8XTEsieZUweD2qIOQpuMPSnIXCMeYe2lmksknhQXd6,"[""ΔΑΕΦΚ-ΚΕ""]",0,ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.),
+79,Δημήτριος Καραβίας,dkaravias@civilprotection.gr,user,$2b$10$LJmtODzUKekcWGlU4waCkuuD/NBcEtbbVSzCSL0/CJX3V9KpLusVy,"[""ΔΑΕΦΚ-ΚΕ""]",2131331391,ΤΜΗΜΑ ΕΠΟΠΤΕΙΑΣ ΚΑΙ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""male"",""specialty"":""ΠΕ ΜΗΧΑΝΙΚΩΝ""}"
+80,Νικόλαος Βεστάρχης,nvestarchis@civilprotection.gr,user,$2b$10$yskS.TlYSzEkLWzmUX5OQeLcRDz/lO7RcpBSMqFIOU6c5mG2J26mi,"[""ΔΑΕΦΚ-ΚΕ""]",2131331388,ΤΜΗΜΑ ΕΠΟΠΤΕΙΑΣ ΚΑΙ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""male"",""specialty"":""ΠΕ ΜΗΧΑΝΙΚΩΝ""}"
+83,Στεφανία Ανδριοπούλου,sandriopoulou@civilprotection.gr,user,$2b$10$kecNgK2d5dElXjHIoGyvb.pJh0Fvwyh0mpIq6E8pSXwUZc/8Kr5By,"[""ΔΑΕΦΚ-ΔΕ""]",2610589115,,"{""gender"":""female"",""specialty"":""ΠΕ ΜΗΧΑΝΙΚΩΝ""}"
+84,Δόλγυρα Αικατερίνη,kdolgyra@civilprotection.gr,user,$2b$10$EohZS4T8/4KfwdqjC78RpOoQHUazktdFIYF5Lj4mU7oPFKstMxL9G,"[""ΔΑΕΦΚ-ΑΚ""]",2131331472,ΤΜΗΜΑ ΥΛΟΠΟΙΗΣΗΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""female"",""specialty"":""ΠΕ ΔΙΟΙΚΗΤΙΚΩΝ""}"
+86,ΠΕΠΠΑ ΟΛΓΑ,opeppa@civilprotection.gr,manager,$2b$10$f9HcSO1YXXBVawM3et9.o.VlI8W0caYsiRuolnGXnMz0bQiDyD0t6,"[""ΔΑΕΦΚ-ΑΚ""]",,ΤΜΗΜΑ ΥΛΟΠΟΙΗΣΗΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""female"",""specialty"":""ΠΕ ΔΙΟΙΚΗΤΙΚΩΝ""}"
+87,Μπουλαμάτση Σοφία,sboulamatsi@civilprotection.gr,user,$2b$10$naX70.3Ti75qxEgPQgnl8OB1W9NBBPjFEMGLj0Cx2wAii60CNr/8W,"[""ΔΑΕΦΚ-ΑΚ""]",2131331476,ΤΜΗΜΑ ΥΛΟΠΟΙΗΣΗΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""female"",""specialty"":""ΠΕ ΔΙΟΙΚΗΤΙΚΩΝ""}"
+88,Άννα Μαρία Γεωργίου,amgeorgiou@civilprotection.gr,user,$2b$10$.xZYtZ/NbnaBcXYc8qSnL.0GSz9YjrnNf0NAMY0ZwCygDpg6BQOdi,"[""ΔΑΕΦΚ-ΑΚ""]",2131331263,ΤΜΗΜΑ ΥΛΟΠΟΙΗΣΗΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""female"",""specialty"":""ΠΕ ΔΙΟΙΚΗΤΙΚΩΝ""}"
+89,Admin User,admin@example.com,admin,$2b$10$5LSX0EHip/uIuz0j08Y.auM7rnGKPH1jKW8DAenLmIoupWjuf5hDC,"[""UNIT_A""]",,Administration,

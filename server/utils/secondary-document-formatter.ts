@@ -32,7 +32,7 @@ export class SecondaryDocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: `ΕΡΓΟ: ${title}`,
+            text: `ΕΡΓΟ: ${title} - ΑΡ.ΕΡΓΟΥ: ${na853Code} της ΣΑΝΑ 853`,
             bold: true,
             size: 24,
             font: DocumentUtilities.DEFAULT_FONT,
@@ -40,18 +40,6 @@ export class SecondaryDocumentFormatter {
         ],
         alignment: AlignmentType.CENTER,
         spacing: { after: 240 },
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `ΑΡ.ΕΡΓΟΥ: ${na853Code} της ΣΑΝΑ 853`,
-            bold: true,
-            size: 20,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 480 },
       }),
     ];
   }
@@ -69,7 +57,7 @@ export class SecondaryDocumentFormatter {
                 new TextRun({
                   text: "Α/Α",
                   bold: true,
-                  size: 16,
+                  size: 22,
                   font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
@@ -92,7 +80,7 @@ export class SecondaryDocumentFormatter {
                 new TextRun({
                   text: "ΕΠΩΝΥΜΟ ΟΝΟΜΑ ΠΑΤΡΩΝΥΜΟ",
                   bold: true,
-                  size: 16,
+                  size: 22,
                   font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
@@ -115,7 +103,7 @@ export class SecondaryDocumentFormatter {
                 new TextRun({
                   text: "Α.Φ.Μ.",
                   bold: true,
-                  size: 16,
+                  size: 22,
                   font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
@@ -129,7 +117,7 @@ export class SecondaryDocumentFormatter {
             left: { style: BorderStyle.SINGLE, size: 1 },
             right: { style: BorderStyle.SINGLE, size: 1 },
           },
-          width: { size: 15, type: WidthType.PERCENTAGE },
+          width: { size: 22, type: WidthType.PERCENTAGE },
         }),
         new TableCell({
           children: [
@@ -138,7 +126,7 @@ export class SecondaryDocumentFormatter {
                 new TextRun({
                   text: "ΠΟΣΟ (€)",
                   bold: true,
-                  size: 16,
+                  size: 22,
                   font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
@@ -152,7 +140,7 @@ export class SecondaryDocumentFormatter {
             left: { style: BorderStyle.SINGLE, size: 1 },
             right: { style: BorderStyle.SINGLE, size: 1 },
           },
-          width: { size: 15, type: WidthType.PERCENTAGE },
+          width: { size: 22, type: WidthType.PERCENTAGE },
         }),
         new TableCell({
           children: [
@@ -161,7 +149,7 @@ export class SecondaryDocumentFormatter {
                 new TextRun({
                   text: "ΠΡΑΞΗ",
                   bold: true,
-                  size: 16,
+                  size: 22,
                   font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
@@ -192,7 +180,7 @@ export class SecondaryDocumentFormatter {
                 children: [
                   new TextRun({
                     text: (index + 1).toString(),
-                    size: 14,
+                    size: 22,
                     font: DocumentUtilities.DEFAULT_FONT,
                   }),
                 ],
@@ -213,7 +201,7 @@ export class SecondaryDocumentFormatter {
                 children: [
                   new TextRun({
                     text: `${recipient.lastname || ""} ${recipient.firstname || ""} ${recipient.fathername || ""}`.trim(),
-                    size: 14,
+                    size: 22,
                     font: DocumentUtilities.DEFAULT_FONT,
                   }),
                 ],
@@ -255,7 +243,7 @@ export class SecondaryDocumentFormatter {
                 children: [
                   new TextRun({
                     text: formattedAmount,
-                    size: 14,
+                    size: 22,
                     font: DocumentUtilities.DEFAULT_FONT,
                   }),
                 ],
@@ -276,7 +264,7 @@ export class SecondaryDocumentFormatter {
                 children: [
                   new TextRun({
                     text: recipient.secondary_text || expenditureType || "",
-                    size: 14,
+                    size: 22,
                     font: DocumentUtilities.DEFAULT_FONT,
                   }),
                 ],
@@ -320,7 +308,7 @@ export class SecondaryDocumentFormatter {
                 new TextRun({
                   text: `ΣΥΝΟΛΟ: ${DocumentUtilities.formatCurrency(totalAmount)}`,
                   bold: true,
-                  size: 16,
+                  size: 22,
                   font: DocumentUtilities.DEFAULT_FONT,
                 }),
               ],
@@ -365,12 +353,12 @@ export class SecondaryDocumentFormatter {
       children: [
         new TextRun({
           text: "ΤΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ ΒΑΣΕΙ ΤΩΝ ΟΠΟΙΩΝ ΕΚΔΟΘΗΚΑΝ ΟΙ ΔΙΟΙΚΗΤΙΚΕΣ ΠΡΑΞΕΙΣ ΑΝΑΓΝΩΡΙΣΗΣ ΔΙΚΑΙΟΥΧΩΝ ΔΩΡΕΑΝ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ ΤΗΡΟΥΝΤΑΙ ΣΤΟ ΑΡΧΕΙΟ ΤΗΣ ΥΠΗΡΕΣΙΑΣ ΜΑΣ.",
-          size: 16,
+          size: 22,
           font: DocumentUtilities.DEFAULT_FONT,
         }),
       ],
-      alignment: AlignmentType.JUSTIFIED,
-      spacing: { before: 480, after: 480 },
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 0, after: 240 },
     });
   }
 
