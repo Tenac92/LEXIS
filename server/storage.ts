@@ -588,9 +588,8 @@ export class DatabaseStorage implements IStorage {
         
         // Use the legacy Beneficiary table since it has the expected structure with monada column
         const { data, error } = await supabase
-          .from('Beneficiary')
+          .from('beneficiaries')
           .select('*')
-          .eq('monada', unit)
           .range(fromIndex, fromIndex + batchSize - 1);
           
         if (error) {
@@ -633,7 +632,7 @@ export class DatabaseStorage implements IStorage {
       
       // For exact AFM match first, then partial matches
       const { data, error } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .select('*')
         .eq('afm', searchNum)
         .order('id', { ascending: false });
@@ -657,7 +656,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Fetching beneficiary by ID: ${id}`);
       
       const { data, error } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .select('*')
         .eq('id', id)
         .single();
@@ -685,7 +684,7 @@ export class DatabaseStorage implements IStorage {
       
       // Let the database handle ID generation with its sequence
       const { data, error } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .insert({
           ...beneficiary,
           created_at: new Date().toISOString(),
@@ -712,7 +711,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Updating beneficiary ${id}:`, beneficiary);
       
       const { data, error } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .update({
           ...beneficiary,
           updated_at: new Date().toISOString()
@@ -739,7 +738,7 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Deleting beneficiary ${id}`);
       
       const { error } = await supabase
-        .from('Beneficiary')
+        .from('beneficiaries')
         .delete()
         .eq('id', id);
         
@@ -761,8 +760,8 @@ export class DatabaseStorage implements IStorage {
       
       // First, get the beneficiary by AFM
       const { data: beneficiary, error: fetchError } = await supabase
-        .from('Beneficiary')
-        .select('id, oikonomika')
+        .from('beneficiaries')
+        .select('id')
         .eq('afm', afm)
         .single();
         
