@@ -662,7 +662,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
   console.log('[DocumentsController] Export request for document ID:', id, 'Format:', format, 'Generate both:', generateBoth);
 
   try {
-    // Get document with user details
+    // Get document with user details including gender and specialty
     const { data: document, error } = await supabase
       .from('generated_documents')
       .select(`
@@ -671,7 +671,8 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
           name,
           email,
           department,
-          telephone
+          telephone,
+          details
         )
       `)
       .eq('id', parseInt(id))
