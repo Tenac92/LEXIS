@@ -1282,71 +1282,110 @@ export class DocumentGenerator {
                 right: 0,
               },
               children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "ΠΡΟΣ:",
-                      bold: true,
-                      size: 20,
+                new Table({
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  borders: {
+                    top: { style: BorderStyle.NONE },
+                    bottom: { style: BorderStyle.NONE },
+                    left: { style: BorderStyle.NONE },
+                    right: { style: BorderStyle.NONE },
+                    insideHorizontal: { style: BorderStyle.NONE },
+                    insideVertical: { style: BorderStyle.NONE },
+                  },
+                  rows: [
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          width: { size: 20, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          children: [
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: "ΠΡΟΣ:",
+                                  bold: true,
+                                  size: 20,
+                                }),
+                              ],
+                              spacing: { before: 2000 },
+                              alignment: AlignmentType.LEFT,
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          width: { size: 80, type: WidthType.PERCENTAGE },
+                          borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                          },
+                          children: [
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                                  size: 20,
+                                }),
+                              ],
+                              spacing: { before: 2000 },
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: "Διεύθυνση Οικονομικής Διαχείρισης",
+                                  size: 20,
+                                }),
+                              ],
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                                  size: 20,
+                                }),
+                              ],
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                                  size: 20,
+                                }),
+                              ],
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: "Δημοκρίτου 2",
+                                  size: 20,
+                                }),
+                              ],
+                              alignment: AlignmentType.LEFT,
+                            }),
+                            new Paragraph({
+                              children: [
+                                new TextRun({
+                                  text: "151 23 Μαρούσι",
+                                  size: 20,
+                                }),
+                              ],
+                              alignment: AlignmentType.LEFT,
+                            }),
+                          ],
+                        }),
+                      ],
                     }),
                   ],
-                  spacing: { before: 2000 },
-                  alignment: AlignmentType.LEFT,
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
-                      size: 20,
-                    }),
-                  ],
-                  spacing: { before: 200 },
-                  alignment: AlignmentType.LEFT,
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "Διεύθυνση Οικονομικής Διαχείρισης",
-                      size: 20,
-                    }),
-                  ],
-                  alignment: AlignmentType.LEFT,
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-                      size: 20,
-                    }),
-                  ],
-                  alignment: AlignmentType.LEFT,
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-                      size: 20,
-                    }),
-                  ],
-                  alignment: AlignmentType.LEFT,
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "Δημοκρίτου 2",
-                      size: 20,
-                    }),
-                  ],
-                  alignment: AlignmentType.LEFT,
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "151 23 Μαρούσι",
-                      size: 20,
-                    }),
-                  ],
-                  alignment: AlignmentType.LEFT,
                 }),
               ],
             }),
