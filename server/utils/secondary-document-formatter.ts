@@ -374,7 +374,7 @@ export class SecondaryDocumentFormatter {
     });
   }
 
-  private static createSignatureSection(documentData: DocumentData): Table {
+  private static async createSignatureSection(documentData: DocumentData): Promise<Table> {
     const userInfo = {
       name: documentData.generated_by?.name || documentData.user_name || "",
       department:
@@ -384,6 +384,49 @@ export class SecondaryDocumentFormatter {
         documentData.department ||
         "",
     };
+
+    // Get unit details for manager information
+    const unitDetails = await DocumentUtilities.getUnitDetails(documentData.unit);
+    
+    // Create left column for user/employee signature
+    const leftColumnParagraphs = [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: "Ο/Η Υπάλληλος",
+            bold: true,
+            size: 18,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 960 },
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: userInfo.name,
+            size: 18,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+      }),
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: userInfo.department,
+            size: 16,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 120 },
+      }),
+    ];
+
+    // Use DocumentUtilities to create manager signature paragraphs
+    const rightColumnParagraphs = DocumentUtilities.createManagerSignatureParagraphs(unitDetails?.manager);
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -400,41 +443,7 @@ export class SecondaryDocumentFormatter {
         new TableRow({
           children: [
             new TableCell({
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "Ο/Η Υπάλληλος",
-                      bold: true,
-                      size: 18,
-                      font: DocumentUtilities.DEFAULT_FONT,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                  spacing: { after: 960 },
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: userInfo.name,
-                      size: 18,
-                      font: DocumentUtilities.DEFAULT_FONT,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: userInfo.department,
-                      size: 16,
-                      font: DocumentUtilities.DEFAULT_FONT,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                  spacing: { before: 120 },
-                }),
-              ],
+              children: leftColumnParagraphs,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -443,30 +452,7 @@ export class SecondaryDocumentFormatter {
               },
             }),
             new TableCell({
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "Ο/Η Προϊστάμενος/η",
-                      bold: true,
-                      size: 18,
-                      font: DocumentUtilities.DEFAULT_FONT,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                  spacing: { after: 960 },
-                }),
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: "",
-                      size: 18,
-                      font: DocumentUtilities.DEFAULT_FONT,
-                    }),
-                  ],
-                  alignment: AlignmentType.CENTER,
-                }),
-              ],
+              children: rightColumnParagraphs,
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -525,6 +511,9 @@ export class SecondaryDocumentFormatter {
 
       const formattedTotal = DocumentUtilities.formatCurrency(totalAmount);
 
+      // Create signature section first since it's async
+      const signatureSection = await this.createSignatureSection(documentData);
+
       const sections = [
         {
           properties: {
@@ -540,7 +529,7 @@ export class SecondaryDocumentFormatter {
             DocumentUtilities.createBlankLine(480),
             this.createRetentionText(),
             DocumentUtilities.createBlankLine(480),
-            this.createSignatureSection(documentData),
+            signatureSection,
           ],
         },
       ];

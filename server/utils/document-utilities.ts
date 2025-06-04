@@ -540,22 +540,51 @@ export class DocumentUtilities {
     try {
       logger.debug(`Fetching project title for: ${misOrNA853}`);
 
-      // Import storage to fetch project data
-      const { storage } = await import("../storage");
+      // Import database connection to fetch project data directly
+      const { supabase } = await import("../config/db");
 
-      // Try to fetch project directly by MIS instead of querying by unit
-      const projectDetails = await storage.getProjectDetails(
-        String(misOrNA853),
-      );
-      if (projectDetails) {
-        return projectDetails.title || `Project ${misOrNA853}`;
+      // Try to fetch project by MIS first
+      const { data: project, error } = await supabase
+        .from("Projects")
+        .select("*")
+        .eq("mis", String(misOrNA853))
+        .single();
+
+      if (project && !error) {
+        // Use event_description as primary title (as seen in ProjectCard.tsx)
+        if (project.event_description && project.event_description.trim()) {
+          return project.event_description.trim();
+        }
+        // Fallback to other title fields
+        if (project.title && project.title.trim()) return project.title.trim();
+        if (project.project_title && project.project_title.trim()) return project.project_title.trim();
+        if (project.name && project.name.trim()) return project.name.trim();
       }
 
-      // If no project found, return a default title
-      return `Project ${misOrNA853}`;
+      // If MIS search fails, try with NA853 budget code
+      const { data: projectByNA853, error: na853Error } = await supabase
+        .from("Projects")
+        .select("*")
+        .eq("budget_na853", String(misOrNA853))
+        .single();
+
+      if (projectByNA853 && !na853Error) {
+        // Use event_description as primary title
+        if (projectByNA853.event_description && projectByNA853.event_description.trim()) {
+          return projectByNA853.event_description.trim();
+        }
+        // Fallback to other title fields
+        if (projectByNA853.title && projectByNA853.title.trim()) return projectByNA853.title.trim();
+        if (projectByNA853.project_title && projectByNA853.project_title.trim()) return projectByNA853.project_title.trim();
+        if (projectByNA853.name && projectByNA853.name.trim()) return projectByNA853.name.trim();
+      }
+
+      // If no project found, return the MIS code as fallback
+      logger.warn(`No project found for identifier: ${misOrNA853}`);
+      return `Έργο MIS: ${misOrNA853}`;
     } catch (error) {
       logger.error("Error fetching project title:", error);
-      return `Project ${misOrNA853}`;
+      return `Έργο MIS: ${misOrNA853}`;
     }
   }
 
