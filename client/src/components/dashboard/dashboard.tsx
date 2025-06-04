@@ -15,7 +15,6 @@ import {
 import React, { useState } from 'react';
 
 import type { DashboardStats } from "@/lib/dashboard";
-import { formatCurrency } from "@/lib/services/dashboard";
 
 // Custom number formatting function
 const formatLargeNumber = (value: number): string => {
@@ -32,6 +31,11 @@ interface DocumentItem {
   id: number;
   title?: string;
   status?: string;
+  document_type?: string;
+  protocol_number?: string;
+  created_at?: string;
+  mis?: string;
+  unit?: string;
 }
 
 export function Dashboard() {
@@ -47,14 +51,14 @@ export function Dashboard() {
     refetchOnWindowFocus: false
   });
   
-  // Query for recent documents from the main documents endpoint
+  // Query for recent documents using the user endpoint for better data
   const { data: userDocs = [], isLoading: isLoadingUserDocs } = useQuery<DocumentItem[]>({
-    queryKey: ["/api/documents", "recent"],
+    queryKey: ["/api/documents/user", "recent"],
     queryFn: async () => {
       try {
         if (!user?.units || user.units.length === 0) return [];
         
-        const response = await fetch(`/api/documents?unit=${user.units[0]}&limit=5`, {
+        const response = await fetch('/api/documents/user', {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -68,7 +72,14 @@ export function Dashboard() {
         }
         
         const data = await response.json();
-        return Array.isArray(data) ? data.slice(0, 5) : [];
+        const documents = Array.isArray(data) ? data : [];
+        
+        // Process documents to create meaningful titles and ensure proper structure
+        return documents.slice(0, 5).map(doc => ({
+          ...doc,
+          title: doc.title || doc.document_type || `Έγγραφο ${doc.protocol_number || doc.id}`,
+          status: doc.status || 'pending'
+        }));
       } catch (error) {
         console.warn('[Dashboard] Error fetching recent documents:', error);
         return [];
@@ -186,7 +197,14 @@ export function Dashboard() {
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Συνολικός Προϋπολογισμός</h3>
               <p className="text-2xl font-bold mt-1">
-                {formatLargeNumber(Object.values(stats.budgetTotals || {}).reduce((a, b) => a + b, 0))}
+                {(() => {
+                  const values = Object.values(stats.budgetTotals || {});
+                  const total = values.reduce((sum, val) => {
+                    const num = typeof val === 'number' ? val : 0;
+                    return sum + num;
+                  }, 0);
+                  return formatLargeNumber(total);
+                })()}
               </p>
             </div>
           </div>
@@ -274,7 +292,7 @@ export function Dashboard() {
         
         <div className="space-y-4">
           {stats.recentActivity && stats.recentActivity.length > 0 ? (
-            stats.recentActivity.map((activity) => (
+            stats.recentActivity.map((activity: any) => (
               <div 
                 key={activity.id} 
                 className="p-4 rounded-lg border hover:shadow-md transition-shadow"
