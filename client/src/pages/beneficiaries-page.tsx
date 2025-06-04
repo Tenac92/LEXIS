@@ -59,7 +59,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import type { Beneficiary } from "@/lib/types";
+// Beneficiary type definition
+interface Beneficiary {
+  id: number;
+  afm: string;
+  surname: string;
+  name: string;
+  fathername?: string | null;
+  region?: string | null;
+  adeia?: number | null;
+  cengsur1?: string | null;
+  cengname1?: string | null;
+  cengsur2?: string | null;
+  cengname2?: string | null;
+  onlinefoldernumber?: string | null;
+  freetext?: string | null;
+  date?: string | null;
+  created_at?: Date | null;
+  updated_at?: Date | null;
+}
 
 interface Unit {
   id: string;
@@ -518,7 +536,7 @@ export default function BeneficiariesPage() {
                       >
                         {/* Front of card */}
                         <div className="flip-card-front">
-                          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-blue-600"></div>
+                          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-500 to-green-600"></div>
                           <div className="p-6">
                             <div className="flex items-start justify-between mb-4">
                               <div className="space-y-2 flex-1">
@@ -531,7 +549,7 @@ export default function BeneficiariesPage() {
                                   )}
                                 </h3>
                                 <div className="flex items-center gap-2 mt-3">
-                                  <User className="w-4 h-4 text-blue-600" />
+                                  <User className="w-4 h-4 text-green-600" />
                                   <span className="text-sm font-mono text-gray-700">
                                     ΑΦΜ: {beneficiary.afm}
                                   </span>
@@ -541,13 +559,13 @@ export default function BeneficiariesPage() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-8 w-8 p-0 hover:bg-blue-100"
+                                  className="h-8 w-8 p-0 hover:bg-green-100"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleShowDetails(beneficiary);
                                   }}
                                 >
-                                  <Info className="h-4 w-4 text-blue-600" />
+                                  <Info className="h-4 w-4 text-green-600" />
                                 </Button>
                               </div>
                             </div>
@@ -587,17 +605,17 @@ export default function BeneficiariesPage() {
 
                             {/* Payment Details Summary */}
                             {getPaymentsForBeneficiary(beneficiary.id).length > 0 && (
-                              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <h4 className="text-sm font-medium text-blue-800 mb-2">
+                              <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                                <h4 className="text-sm font-medium text-green-800 mb-2">
                                   Οικονομικά Στοιχεία
                                 </h4>
                                 <div className="space-y-1">
                                   {getPaymentsForBeneficiary(beneficiary.id).map((payment: any, index: number) => (
                                     <div key={index} className="flex justify-between items-center text-xs">
-                                      <span className="text-blue-700">{payment.expenditure_type}</span>
+                                      <span className="text-green-700">{payment.expenditure_type}</span>
                                       <div className="text-right">
                                         <div className="font-medium">{parseFloat(payment.amount || 0).toLocaleString("el-GR")} €</div>
-                                        <div className="text-blue-600">{payment.installment || 'ΕΦΑΠΑΞ'}</div>
+                                        <div className="text-green-600">{payment.installment || 'ΕΦΑΠΑΞ'}</div>
                                       </div>
                                     </div>
                                   ))}
@@ -609,45 +627,43 @@ export default function BeneficiariesPage() {
                               className="flex items-center justify-center"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEdit(beneficiary);
-                                  }}
-                                >
-                                  <Edit className="w-3 h-3 mr-1" />
-                                  Επεξεργασία
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDelete(beneficiary);
-                                  }}
-                                >
-                                  <Trash2 className="w-3 h-3 mr-1" />
-                                  Διαγραφή
-                                </Button>
-                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => toggleCardFlip(beneficiary.id)}
+                                className="text-green-600 border-green-200 hover:bg-green-50"
+                              >
+                                <Info className="w-4 h-4 mr-2" />
+                                Περισσότερα στοιχεία
+                              </Button>
                             </div>
                           </div>
                         </div>
 
                         {/* Back of card */}
-                        <div className="flip-card-back">
+                        <div className="flip-card-back bg-green-50">
                           <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-500 to-green-600"></div>
-                          <div className="p-6">
-                            <div className="text-center mb-6">
-                              <h3 className="text-lg font-bold text-gray-900 mb-2">
-                                Λεπτομέρειες
-                              </h3>
-                              <p className="text-sm text-gray-600">
-                                {beneficiary.surname} {beneficiary.name}
-                              </p>
+                          <div className="p-6 h-full overflow-y-auto">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="space-y-1">
+                                <h3 className="text-lg font-bold text-green-900">
+                                  Λεπτομέρειες Δικαιούχου
+                                </h3>
+                                <p className="text-green-700 text-sm">
+                                  {beneficiary.surname} {beneficiary.name}
+                                </p>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleCardFlip(beneficiary.id);
+                                }}
+                                className="text-green-600 hover:bg-green-100"
+                              >
+                                <Info className="h-4 w-4" />
+                              </Button>
                             </div>
 
                             <div className="space-y-4 text-sm">
@@ -803,6 +819,16 @@ function BeneficiaryForm({
   beneficiary?: Beneficiary;
   onSubmit: (data: BeneficiaryFormData) => void;
 }) {
+  const [payments, setPayments] = useState<Array<{
+    unit: string;
+    expenditure_type: string;
+    na853: string;
+    amount: string;
+    installment: string;
+    protocol: string;
+    status: string;
+  }>>([]);
+
   const form = useForm<BeneficiaryFormData>({
     resolver: zodResolver(beneficiaryFormSchema),
     defaultValues: {
@@ -829,6 +855,39 @@ function BeneficiaryForm({
       date: beneficiary?.date?.toString() || "",
     },
   });
+
+  const addPayment = () => {
+    const selectedUnit = form.getValues("selectedUnit");
+    const expenditure_type = form.getValues("expenditure_type");
+    const selectedNA853 = form.getValues("selectedNA853");
+    const amount = form.getValues("amount");
+    const installment = form.getValues("installment");
+    const protocol = form.getValues("protocol");
+
+    if (selectedUnit && expenditure_type && amount) {
+      setPayments(prev => [...prev, {
+        unit: selectedUnit,
+        expenditure_type,
+        na853: selectedNA853 || "",
+        amount,
+        installment: installment || "ΕΦΑΠΑΞ",
+        protocol: protocol || "",
+        status: "νέα"
+      }]);
+
+      // Clear the form fields
+      form.setValue("selectedUnit", "");
+      form.setValue("expenditure_type", "");
+      form.setValue("selectedNA853", "");
+      form.setValue("amount", "");
+      form.setValue("installment", "");
+      form.setValue("protocol", "");
+    }
+  };
+
+  const removePayment = (index: number) => {
+    setPayments(prev => prev.filter((_, i) => i !== index));
+  };
 
   const { data: units = [] } = useQuery<Unit[]>({
     queryKey: ["/api/public/units"],
@@ -1003,6 +1062,205 @@ function BeneficiaryForm({
               )}
             />
           </div>
+        </div>
+
+        {/* Payment Management Section */}
+        <div className="space-y-4 border-t pt-6">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-green-600" />
+            Διαχείριση Πληρωμών
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Προσθήκη οικονομικών στοιχείων για τον δικαιούχο. Μπορείτε να προσθέσετε πολλαπλούς τύπους δαπάνης και κωδικούς ΝΑ853.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="selectedUnit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Μονάδα</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Επιλέξτε μονάδα" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {units.map((unit) => (
+                        <SelectItem key={unit.id} value={unit.id}>
+                          {unit.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="expenditure_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Τύπος Δαπάνης</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Επιλέξτε τύπο δαπάνης" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ">ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ</SelectItem>
+                      <SelectItem value="ΔΚΑ ΕΠΙΣΚΕΥΗ">ΔΚΑ ΕΠΙΣΚΕΥΗ</SelectItem>
+                      <SelectItem value="ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ">ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ</SelectItem>
+                      <SelectItem value="ΕΚΤΟΣ ΕΔΡΑΣ">ΕΚΤΟΣ ΕΔΡΑΣ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="selectedNA853"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Κωδικός ΝΑ853</FormLabel>
+                  <FormControl>
+                    <Input placeholder="π.χ. 2024ΝΑ85300001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ποσό (€)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      step="0.01" 
+                      placeholder="0.00" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="installment"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Δόση</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Επιλέξτε δόση" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="ΕΦΑΠΑΞ">ΕΦΑΠΑΞ</SelectItem>
+                      <SelectItem value="Α ΔΟΣΗ">Α ΔΟΣΗ</SelectItem>
+                      <SelectItem value="Β ΔΟΣΗ">Β ΔΟΣΗ</SelectItem>
+                      <SelectItem value="Γ ΔΟΣΗ">Γ ΔΟΣΗ</SelectItem>
+                      <SelectItem value="Δ ΔΟΣΗ">Δ ΔΟΣΗ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="protocol"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Αρ. Πρωτοκόλλου</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Αριθμός πρωτοκόλλου" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={addPayment}>
+              <Plus className="w-4 h-4 mr-2" />
+              Προσθήκη Πληρωμής
+            </Button>
+            <Button type="button" variant="ghost" size="sm">
+              <FileText className="w-4 h-4 mr-2" />
+              Προβολή Υπαρχουσών ({payments.length})
+            </Button>
+          </div>
+
+          {/* Payment Entries Table */}
+          {payments.length > 0 && (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-muted/50 px-4 py-2 border-b">
+                <h4 className="font-medium text-sm">Καταχωρημένες Πληρωμές</h4>
+              </div>
+              <div className="divide-y">
+                {payments.map((payment, index) => (
+                  <div key={index} className="p-4 flex items-center justify-between">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-2 flex-1 text-sm">
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Μονάδα</span>
+                        <span>{payment.unit}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Τύπος Δαπάνης</span>
+                        <span>{payment.expenditure_type}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">ΝΑ853</span>
+                        <span className="font-mono">{payment.na853 || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Ποσό</span>
+                        <span className="font-semibold text-green-700">{parseFloat(payment.amount).toLocaleString("el-GR")} €</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Δόση</span>
+                        <span>{payment.installment}</span>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePayment(index)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-muted/30 px-4 py-2 border-t">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Συνολικό Ποσό:</span>
+                  <span className="font-bold text-green-700">
+                    {payments.reduce((sum, p) => sum + parseFloat(p.amount), 0).toLocaleString("el-GR")} €
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Additional Information */}
