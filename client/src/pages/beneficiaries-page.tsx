@@ -921,26 +921,24 @@ function BeneficiaryForm({
 
   // Get user's available units with debugging
   const userUnits = useMemo(() => {
-    if (!(userData as any)?.user?.units || !Array.isArray(unitsData)) {
-      console.log('[Beneficiary Form] Missing data:', { 
-        userUnits: (userData as any)?.user?.units, 
-        unitsDataLength: unitsData?.length 
-      });
+    const userUnitsArray = (userData as any)?.user?.units;
+    
+    if (!userUnitsArray || !Array.isArray(userUnitsArray) || !Array.isArray(unitsData)) {
       return [];
     }
     
-    const filtered = unitsData.filter((unit: any) => (userData as any).user.units.includes(unit.id));
+    const filtered = unitsData.filter((unit: any) => userUnitsArray.includes(unit.id));
     console.log('[Beneficiary Form] Filtered units:', filtered);
     return filtered;
   }, [userData, unitsData]);
 
-  // Auto-select unit if user has only one
+  // Auto-select unit if user has only one and data is loaded
   useEffect(() => {
-    if (userUnits.length === 1 && !form.getValues("selectedUnit")) {
+    if (userUnits.length === 1 && !form.getValues("selectedUnit") && !unitsLoading) {
       console.log('[Beneficiary Form] Auto-selecting unit:', userUnits[0].id);
       form.setValue("selectedUnit", userUnits[0].id);
     }
-  }, [userUnits, form]);
+  }, [userUnits, form, unitsLoading]);
 
   // Reset dependent fields when unit changes
   useEffect(() => {
@@ -1272,10 +1270,20 @@ function BeneficiaryForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Μονάδα</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value}
+                    disabled={unitsLoading || userUnits.length === 0}
+                  >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Επιλέξτε μονάδα" />
+                        <SelectValue placeholder={
+                          unitsLoading 
+                            ? "Φόρτωση μονάδων..." 
+                            : userUnits.length === 0 
+                              ? "Δεν υπάρχουν διαθέσιμες μονάδες"
+                              : "Επιλέξτε μονάδα"
+                        } />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
