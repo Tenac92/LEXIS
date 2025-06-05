@@ -75,6 +75,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       contact_number: req.user.telephone || null,
       user_name: req.user.name || null,
       attachments: attachments || [],
+      esdian: esdian_field1 || esdian_field2 ? [esdian_field1, esdian_field2].filter(Boolean) : [],
       created_at: now,
       updated_at: now
     };
