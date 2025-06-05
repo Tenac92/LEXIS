@@ -1072,7 +1072,7 @@ function BeneficiaryForm({
 
   // Reset form when modal opens for new beneficiary
   useEffect(() => {
-    if (open && !beneficiary) {
+    if (open && !beneficiary && userUnits.length > 0) {
       form.reset({
         surname: "",
         name: "",
@@ -1158,24 +1158,24 @@ function BeneficiaryForm({
     return types.filter(type => type && type.trim());
   }, [projectsData, form.watch("selectedNA853")]);
 
-  // Format number to European format
+  // Format number to European format with proper comma support
   const formatEuropeanNumber = (value: string) => {
-    // Remove all non-digit characters except comma
+    // Allow only digits and comma
     const cleanValue = value.replace(/[^\d,]/g, '');
     
-    // Split by comma to handle decimal part
-    const parts = cleanValue.split(',');
-    let wholePart = parts[0] || '';
-    const decimalPart = parts[1] || '';
+    // Handle multiple commas - only keep the first one
+    const commaIndex = cleanValue.indexOf(',');
+    const beforeComma = cleanValue.substring(0, commaIndex === -1 ? cleanValue.length : commaIndex);
+    const afterComma = commaIndex === -1 ? '' : cleanValue.substring(commaIndex + 1).replace(/,/g, '');
     
-    // Add thousand separators (dots) to whole part
-    wholePart = wholePart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    // Format whole part with thousand separators (dots)
+    const formattedWhole = beforeComma.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     
-    // Return formatted number
-    if (decimalPart) {
-      return `${wholePart},${decimalPart.slice(0, 2)}`; // Limit to 2 decimal places
+    // Return formatted number with proper decimal handling
+    if (afterComma) {
+      return `${formattedWhole},${afterComma.slice(0, 2)}`; // Limit to 2 decimal places
     }
-    return wholePart;
+    return formattedWhole;
   };
 
   const addPayment = () => {
@@ -1690,63 +1690,7 @@ function BeneficiaryForm({
             </div>
           )}
 
-          {/* Payment Entries Table */}
-          {payments.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-muted/50 px-4 py-2 border-b">
-                <h4 className="font-medium text-sm">Καταχωρημένες Πληρωμές</h4>
-              </div>
-              <div className="divide-y">
-                {payments.map((payment, index) => (
-                  <div key={index} className="p-4 flex items-center justify-between">
-                    <div className="grid grid-cols-1 md:grid-cols-6 gap-2 flex-1 text-sm">
-                      <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Μονάδα</span>
-                        <span>{payment.unit}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Κωδικός ΝΑ853</span>
-                        <span className="font-mono">{payment.na853 || "—"}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Τύπος Δαπάνης</span>
-                        <span>{payment.expenditure_type}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Δόση</span>
-                        <span>{payment.installment}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Ποσό (€)</span>
-                        <span className="font-semibold text-green-700">{parseFloat(payment.amount).toLocaleString("el-GR")} €</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Αρ. Πρωτοκόλλου</span>
-                        <span className="font-mono">{payment.protocol || "—"}</span>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removePayment(index)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-muted/30 px-4 py-2 border-t">
-                <div className="flex justify-between text-sm">
-                  <span className="font-medium">Συνολικό Ποσό:</span>
-                  <span className="font-bold text-green-700">
-                    {payments.reduce((sum, p) => sum + parseFloat(p.amount), 0).toLocaleString("el-GR")} €
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* Additional Information */}
