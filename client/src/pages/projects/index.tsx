@@ -50,10 +50,7 @@ export default function ProjectsPage() {
   }, [search]);
 
   const { data: projects, isLoading, error } = useQuery<Project[]>({
-    queryKey: ["/api/projects", { search: debouncedSearch, status: status !== "all" ? status : undefined }],
-    onError: (err) => {
-      console.error("Error fetching projects:", err);
-    }
+    queryKey: ["/api/projects", { search: debouncedSearch, status: status !== "all" ? status : undefined }]
   });
 
   const handleExport = async () => {
@@ -99,17 +96,17 @@ export default function ProjectsPage() {
   };
 
   // Filter projects based on search and status
-  const filteredProjects = projects?.filter(project => {
+  const filteredProjects = Array.isArray(projects) ? projects.filter((project: any) => {
     const searchMatch = !debouncedSearch ||
-      project.event_description?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.title?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
       project.mis?.toString().includes(debouncedSearch) ||
       (project.region as any)?.region?.[0]?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      project.na853?.toLowerCase().includes(debouncedSearch.toLowerCase());
+      project.budget_na853?.toLowerCase().includes(debouncedSearch.toLowerCase());
 
     const statusMatch = status === "all" || project.status === status;
 
     return searchMatch && statusMatch;
-  });
+  }) : [];
 
   return (
     <div className="min-h-screen bg-background">

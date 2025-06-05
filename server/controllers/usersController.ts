@@ -96,8 +96,11 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
     // Combine all parts from selected units
     const allParts = selectedUnits?.reduce<string[]>((acc, unit) => {
       if (unit.parts && typeof unit.parts === 'object') {
-        // Extract values from the parts object
-        return [...acc, ...Object.values(unit.parts)];
+        // Extract values from the parts object and ensure they are strings
+        const partValues = Object.values(unit.parts).filter((value): value is string => 
+          typeof value === 'string'
+        );
+        return [...acc, ...partValues];
       }
       return acc;
     }, []) || [];
@@ -491,7 +494,7 @@ router.get('/matching-units', authenticateSession, async (req: AuthenticatedRequ
     // Filter users to only include those that have at least one matching unit
     const filteredUsers = users?.filter(user => {
       if (!user.units || !Array.isArray(user.units) || !req.user?.units) return false;
-      return user.units.some((unit: string) => req.user.units!.includes(unit));
+      return user.units.some((unit: string) => req.user!.units!.includes(unit));
     }) || [];
 
     console.log('[Users] Found matching users:', filteredUsers.length);

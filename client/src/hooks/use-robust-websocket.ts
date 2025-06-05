@@ -102,6 +102,7 @@ export function useRobustWebSocket() {
         
         clearTimeout(connectionTimeout);
         setConnectionState(ConnectionState.CONNECTED);
+        connectionStateRef.current = ConnectionState.CONNECTED;
         retryCountRef.current = 0;
 
         // Send initial connection message
