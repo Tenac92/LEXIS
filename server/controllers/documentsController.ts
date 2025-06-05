@@ -699,7 +699,9 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     };
 
     console.log('[DocumentsController] Document data prepared for export:', documentData.id);
-    console.log('[DocumentsController] ESDIAN Debug - Full document data:', JSON.stringify(documentData, null, 2));
+    console.log('[DocumentsController] ESDIAN Debug - Raw ESDIAN field:', document.esdian);
+    console.log('[DocumentsController] ESDIAN Debug - ESDIAN type:', typeof document.esdian);
+    console.log('[DocumentsController] ESDIAN Debug - ESDIAN is array:', Array.isArray(document.esdian));
 
     // If generating a single document (old behavior)
     if (!generateBoth) {
