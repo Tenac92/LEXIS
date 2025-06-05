@@ -45,6 +45,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
+import { Download, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 
 // Hook to fetch users from the same unit for the creator filter
 const useUnitUsers = (userUnits: string[] | undefined) => {
@@ -281,6 +282,7 @@ export default function BudgetHistoryPage() {
     : [];
     
   const pagination: PaginationData = data?.pagination || { total: 0, page: 1, limit: 10, pages: 1 };
+  const statistics = data?.statistics;
 
   const handlePageChange = (newPage: number) => {
     setPage(Math.max(1, Math.min(newPage, pagination.pages)));

@@ -431,8 +431,45 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Get total count for pagination (with same filters)
-      const { count, error: countError } = await query
-        .select('id', { count: 'exact', head: true });
+      // Clone the query for count to avoid conflicts
+      let countQuery = supabase
+        .from('budget_history')
+        .select('*', { count: 'exact', head: true });
+        
+      // Apply the same filters to count query
+      if (userUnits && userUnits.length > 0 && allowedProjectIds.length > 0) {
+        countQuery = countQuery.in('mis', allowedProjectIds);
+      }
+      
+      if (mis && mis !== 'all') {
+        countQuery = countQuery.eq('mis', mis);
+      }
+      
+      if (changeType && changeType !== 'all') {
+        countQuery = countQuery.eq('change_type', changeType);
+      }
+      
+      if (dateFrom) {
+        countQuery = countQuery.gte('created_at', dateFrom);
+      }
+      
+      if (dateTo) {
+        countQuery = countQuery.lte('created_at', dateTo + 'T23:59:59.999Z');
+      }
+      
+      if (creator && creator !== 'all' && creator !== '') {
+        const { data: creatorData, error: creatorError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('name', creator)
+          .single();
+          
+        if (!creatorError && creatorData) {
+          countQuery = countQuery.eq('created_by', creatorData.id);
+        }
+      }
+      
+      const { count, error: countError } = await countQuery;
       
       if (countError) {
         console.error('[Storage] Error getting count of budget history records:', countError);

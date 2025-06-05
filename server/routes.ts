@@ -1008,18 +1008,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const limit = parseInt(req.query.limit as string) || 10;
         const mis = req.query.mis as string | undefined;
         const changeType = req.query.change_type as string | undefined;
+        const dateFrom = req.query.date_from as string | undefined;
+        const dateTo = req.query.date_to as string | undefined;
+        const creator = req.query.creator as string | undefined;
         
-        console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}`);
+        // Get user units for access control
+        const userUnits = req.user.role === 'admin' ? undefined : req.user.units;
         
-        // Use the enhanced storage method with pagination
-        const result = await storage.getBudgetHistory(mis, page, limit, changeType);
+        console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}, userUnits=${userUnits?.join(',') || 'admin'}`);
+        
+        // Use the enhanced storage method with pagination and access control
+        const result = await storage.getBudgetHistory(mis, page, limit, changeType, userUnits, dateFrom, dateTo, creator);
         
         console.log(`[Budget] Successfully fetched ${result.data.length} of ${result.pagination.total} history records`);
         
         return res.json({
           status: 'success',
           data: result.data,
-          pagination: result.pagination
+          pagination: result.pagination,
+          statistics: result.statistics
         });
       } catch (error) {
         console.error('[Budget] History fetch error:', error);
@@ -1033,6 +1040,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     log('[Routes] Budget history route registered');
+    
+    // Budget history Excel export route
+    app.get('/api/budget/history/export', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        console.log('[Budget] Handling Excel export request');
+        
+        // Check authentication
+        if (!req.user?.id) {
+          return res.status(401).json({
+            status: 'error',
+            message: 'Authentication required'
+          });
+        }
+        
+        // Parse query parameters (same as regular history endpoint)
+        const mis = req.query.mis as string | undefined;
+        const changeType = req.query.change_type as string | undefined;
+        const dateFrom = req.query.date_from as string | undefined;
+        const dateTo = req.query.date_to as string | undefined;
+        const creator = req.query.creator as string | undefined;
+        
+        // Get user units for access control
+        const userUnits = req.user.role === 'admin' ? undefined : req.user.units;
+        
+        console.log(`[Budget] Exporting history with filters: mis=${mis || 'all'}, changeType=${changeType || 'all'}, userUnits=${userUnits?.join(',') || 'admin'}`);
+        
+        // Get all data without pagination for export
+        const result = await storage.getBudgetHistory(mis, 1, 10000, changeType, userUnits, dateFrom, dateTo, creator);
+        
+        // Import required Excel libraries
+        const ExcelJS = require('exceljs');
+        
+        // Create workbook
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Ιστορικό Προϋπολογισμού');
+        
+        // Set up columns
+        worksheet.columns = [
+          { header: 'ID', key: 'id', width: 10 },
+          { header: 'MIS Έργου', key: 'mis', width: 15 },
+          { header: 'Προηγούμενο Ποσό (€)', key: 'previous_amount', width: 20 },
+          { header: 'Νέο Ποσό (€)', key: 'new_amount', width: 20 },
+          { header: 'Διαφορά (€)', key: 'difference', width: 15 },
+          { header: 'Τύπος Αλλαγής', key: 'change_type', width: 25 },
+          { header: 'Αιτιολογία', key: 'change_reason', width: 40 },
+          { header: 'ID Εγγράφου', key: 'document_id', width: 15 },
+          { header: 'Κατάσταση Εγγράφου', key: 'document_status', width: 20 },
+          { header: 'Αρ. Πρωτοκόλλου', key: 'protocol_number', width: 20 },
+          { header: 'Δημιουργήθηκε από', key: 'created_by', width: 25 },
+          { header: 'Ημερομηνία Δημιουργίας', key: 'created_at', width: 25 }
+        ];
+        
+        // Style the header row
+        const headerRow = worksheet.getRow(1);
+        headerRow.font = { bold: true };
+        headerRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF4472C4' }
+        };
+        headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        
+        // Add data rows
+        result.data.forEach((entry: any) => {
+          const prevAmount = parseFloat(entry.previous_amount) || 0;
+          const newAmount = parseFloat(entry.new_amount) || 0;
+          const difference = newAmount - prevAmount;
+          
+          worksheet.addRow({
+            id: entry.id,
+            mis: entry.mis,
+            previous_amount: prevAmount,
+            new_amount: newAmount,
+            difference: difference,
+            change_type: getChangeTypeLabel(entry.change_type),
+            change_reason: entry.change_reason || '',
+            document_id: entry.document_id || '',
+            document_status: getStatusLabel(entry.document_status),
+            protocol_number: entry.protocol_number_input || '',
+            created_by: entry.created_by || 'Σύστημα',
+            created_at: entry.created_at ? new Date(entry.created_at).toLocaleString('el-GR') : ''
+          });
+        });
+        
+        // Add statistics sheet
+        const statsWorksheet = workbook.addWorksheet('Στατιστικά');
+        
+        if (result.statistics) {
+          statsWorksheet.addRow(['Στατιστικά Περιόδου']);
+          statsWorksheet.addRow([]);
+          statsWorksheet.addRow(['Συνολικές Εγγραφές:', result.statistics.totalEntries]);
+          statsWorksheet.addRow(['Συνολική Μεταβολή Ποσού (€):', result.statistics.totalAmountChange]);
+          statsWorksheet.addRow([]);
+          statsWorksheet.addRow(['Κατανομή ανά Τύπο Αλλαγής:']);
+          
+          Object.entries(result.statistics.changeTypes).forEach(([type, count]) => {
+            statsWorksheet.addRow([getChangeTypeLabel(type), count]);
+          });
+          
+          if (result.statistics.periodRange.start && result.statistics.periodRange.end) {
+            statsWorksheet.addRow([]);
+            statsWorksheet.addRow(['Χρονική Περίοδος:']);
+            statsWorksheet.addRow(['Από:', new Date(result.statistics.periodRange.start).toLocaleString('el-GR')]);
+            statsWorksheet.addRow(['Έως:', new Date(result.statistics.periodRange.end).toLocaleString('el-GR')]);
+          }
+          
+          // Style statistics header
+          const statsHeaderRow = statsWorksheet.getRow(1);
+          statsHeaderRow.font = { bold: true, size: 16 };
+        }
+        
+        // Auto-fit columns
+        worksheet.columns.forEach(column => {
+          if (column.eachCell) {
+            let maxLength = 0;
+            column.eachCell({ includeEmpty: true }, (cell) => {
+              const columnLength = cell.value ? cell.value.toString().length : 10;
+              if (columnLength > maxLength) {
+                maxLength = columnLength;
+              }
+            });
+            column.width = maxLength < 10 ? 10 : maxLength + 2;
+          }
+        });
+        
+        // Set response headers for Excel download
+        const fileName = `Istoriko_Proypologismou_${new Date().toISOString().split('T')[0]}.xlsx`;
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        
+        // Write to response
+        await workbook.xlsx.write(res);
+        res.end();
+        
+        console.log(`[Budget] Excel export completed: ${result.data.length} records exported`);
+        
+      } catch (error) {
+        console.error('[Budget] Excel export error:', error);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to export budget history',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+    
+    // Helper functions for Excel export
+    function getChangeTypeLabel(type: string): string {
+      const labels: Record<string, string> = {
+        'document_created': 'Δημιουργία Εγγράφου',
+        'document_creation': 'Δημιουργία Εγγράφου',
+        'manual_adjustment': 'Χειροκίνητη Προσαρμογή',
+        'notification_created': 'Δημιουργία Ειδοποίησης',
+        'error': 'Σφάλμα',
+        'import': 'Εισαγωγή'
+      };
+      return labels[type] || type.replace(/_/g, ' ');
+    }
+    
+    function getStatusLabel(status: string | null): string {
+      if (!status) return 'Άγνωστη';
+      const labels: Record<string, string> = {
+        'pending': 'Σε εκκρεμότητα',
+        'completed': 'Ολοκληρωμένο',
+        'cancelled': 'Ακυρωμένο'
+      };
+      return labels[status] || status;
+    }
+    
+    log('[Routes] Budget history Excel export route registered');
     
     // Budget notifications routes - must be registered BEFORE the main budget routes
     log('[Routes] Setting up budget notifications routes...');
