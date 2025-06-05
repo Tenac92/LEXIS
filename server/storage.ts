@@ -257,7 +257,7 @@ export class DatabaseStorage implements IStorage {
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, name, units')
-          .filter('units', 'cs', `{${userUnits.map(unit => `"${unit}"`).join(',')}}`);
+          .overlaps('units', userUnits);
         
         console.log('[Storage] User query result:', { userData, userError });
           
@@ -273,7 +273,7 @@ export class DatabaseStorage implements IStorage {
             
           if (!budgetError && budgetData && budgetData.length > 0) {
             const uniqueMisIds = new Set(budgetData.map(b => parseInt(b.mis)).filter(id => !isNaN(id)));
-            allowedMisIds = [...uniqueMisIds];
+            allowedMisIds = Array.from(uniqueMisIds);
             console.log('[Storage] Found allowed MIS codes for units:', allowedMisIds.length, allowedMisIds);
           } else {
             console.log('[Storage] No budget history found for unit users');
@@ -364,9 +364,9 @@ export class DatabaseStorage implements IStorage {
         .select('id, previous_amount, new_amount, change_type, created_at');
         
       // Apply the same filters to stats query
-      if (userUnits && userUnits.length > 0 && allowedProjectIds.length > 0) {
-        statsQuery = statsQuery.in('mis', allowedProjectIds);
-      } else if (userUnits && userUnits.length > 0 && allowedProjectIds.length === 0) {
+      if (userUnits && userUnits.length > 0 && allowedMisIds.length > 0) {
+        statsQuery = statsQuery.in('mis', allowedMisIds);
+      } else if (userUnits && userUnits.length > 0 && allowedMisIds.length === 0) {
         // Return empty statistics
         const emptyStats = {
           totalEntries: 0,
@@ -464,8 +464,8 @@ export class DatabaseStorage implements IStorage {
         .select('*', { count: 'exact', head: true });
         
       // Apply the same filters to count query
-      if (userUnits && userUnits.length > 0 && allowedProjectIds.length > 0) {
-        countQuery = countQuery.in('mis', allowedProjectIds);
+      if (userUnits && userUnits.length > 0 && allowedMisIds.length > 0) {
+        countQuery = countQuery.in('mis', allowedMisIds);
       }
       
       if (mis && mis !== 'all') {
