@@ -11,6 +11,8 @@ export function useWebSocketUpdates() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | undefined>(undefined);
   const retryCountRef = useRef<number>(0);
+  const connectionIdRef = useRef<string>('');
+  const isConnectingRef = useRef<boolean>(false);
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<BudgetUpdate | null>(null);
   const { toast } = useToast();
@@ -42,24 +44,25 @@ export function useWebSocketUpdates() {
     }
   }, []);
 
+  // Generate unique connection ID for tracking
+  const generateConnectionId = useCallback(() => {
+    return `conn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }, []);
+
   // Connect to WebSocket with improved stability and error handling
   const connect = useCallback(() => {
-    if (!user) {
+    if (!user || isConnectingRef.current) {
       return;
     }
 
-    // Prevent duplicate connections
-    if (wsRef.current && 
-        (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
-      return;
-    }
+    // Prevent multiple simultaneous connection attempts
+    isConnectingRef.current = true;
 
-    // Clean shutdown of existing connection
+    // Close any existing connection first to prevent duplicates
     if (wsRef.current) {
       try {
-        if (wsRef.current.readyState !== WebSocket.CLOSED && 
-            wsRef.current.readyState !== WebSocket.CLOSING) {
-          wsRef.current.close(1000, 'Reconnecting');
+        if (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING) {
+          wsRef.current.close(1000, 'Creating new connection');
         }
       } catch (error) {
         console.error('[WebSocket] Error closing existing connection:', error);
@@ -67,6 +70,10 @@ export function useWebSocketUpdates() {
         wsRef.current = null;
       }
     }
+
+    // Generate new connection ID for tracking
+    const connectionId = generateConnectionId();
+    connectionIdRef.current = connectionId;
 
     const MAX_RETRIES = 10; // Increase max retries for better resilience
     
@@ -102,12 +109,14 @@ export function useWebSocketUpdates() {
         
         wsRef.current = ws;
 
-        // Set up event handlers
+        // Set up event handlers with connection tracking
         ws.onopen = () => {
-          // WebSocket connection established successfully
-          clearTimeout(connectionTimeout); // Clear the timeout on successful connection
-          setIsConnected(true);
-          retryCountRef.current = 0;
+          // Only proceed if this is still the current connection
+          if (connectionIdRef.current === connectionId) {
+            clearTimeout(connectionTimeout);
+            setIsConnected(true);
+            retryCountRef.current = 0;
+            isConnectingRef.current = false;
 
           // Send initial connection message
           try {
