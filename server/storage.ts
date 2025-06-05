@@ -246,24 +246,38 @@ export class DatabaseStorage implements IStorage {
       
       const offset = (page - 1) * limit;
       
-      // First, get projects that belong to user's units for access control
-      let allowedProjectIds: number[] = [];
+      // Apply unit-based access control by filtering budget history through user documents
+      let allowedMisIds: number[] = [];
       if (userUnits && userUnits.length > 0) {
         console.log('[Storage] Applying unit-based access control for units:', userUnits);
         
-        // Get projects that belong to the user's units - more comprehensive approach
-        const { data: projectsData, error: projectsError } = await supabase
-          .from('Projects')
-          .select('id, mis, units')
-          .or(userUnits.map(unit => `units.cs.{${unit}}`).join(','));
+        // Get documents created by users from the same units to determine accessible MIS codes
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id')
+          .overlaps('units', userUnits);
           
-        if (!projectsError && projectsData && projectsData.length > 0) {
-          allowedProjectIds = projectsData.map(p => parseInt(p.mis)).filter(id => !isNaN(id));
-          console.log('[Storage] Found allowed project MIS codes for units:', allowedProjectIds.length, allowedProjectIds);
+        if (!userError && userData && userData.length > 0) {
+          const userIds = userData.map(u => u.id);
+          console.log('[Storage] Found user IDs in same units:', userIds);
+          
+          // Get budget history entries created by users from the same units
+          const { data: budgetData, error: budgetError } = await supabase
+            .from('budget_history')
+            .select('mis')
+            .in('created_by', userIds);
+            
+          if (!budgetError && budgetData && budgetData.length > 0) {
+            const uniqueMisIds = new Set(budgetData.map(b => parseInt(b.mis)).filter(id => !isNaN(id)));
+            allowedMisIds = [...uniqueMisIds];
+            console.log('[Storage] Found allowed MIS codes for units:', allowedMisIds.length, allowedMisIds);
+          } else {
+            console.log('[Storage] No budget history found for unit users');
+            allowedMisIds = [-1]; // Use impossible MIS to ensure empty results
+          }
         } else {
-          console.log('[Storage] No projects found for user units:', userUnits, 'Error:', projectsError);
-          // For managers with no projects, we'll still show an empty result to maintain security
-          allowedProjectIds = [-1]; // Use impossible MIS to ensure empty results
+          console.log('[Storage] No users found for units:', userUnits);
+          allowedMisIds = [-1]; // Use impossible MIS to ensure empty results
         }
       }
       
@@ -289,12 +303,12 @@ export class DatabaseStorage implements IStorage {
       
       // Apply unit-based access control - managers must only see their unit's data
       if (userUnits && userUnits.length > 0) {
-        if (allowedProjectIds.length > 0 && !allowedProjectIds.includes(-1)) {
-          console.log('[Storage] Applying MIS filter for allowed projects:', allowedProjectIds);
-          query = query.in('mis', allowedProjectIds);
+        if (allowedMisIds.length > 0 && !allowedMisIds.includes(-1)) {
+          console.log('[Storage] Applying MIS filter for allowed MIS codes:', allowedMisIds);
+          query = query.in('mis', allowedMisIds);
         } else {
-          // No projects found for user's units or using security filter - return empty result
-          console.log('[Storage] No valid projects for user units - returning empty result for security');
+          // No MIS codes found for user's units or using security filter - return empty result
+          console.log('[Storage] No valid MIS codes for user units - returning empty result for security');
           return {
             data: [],
             pagination: { total: 0, page, limit, pages: 0 },
