@@ -196,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       } catch (error) {
         console.error('Error fetching user:', error);
+        // Ensure we always return null on error to prevent unhandled rejections
         return null;
       }
     },
