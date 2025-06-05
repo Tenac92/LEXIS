@@ -74,6 +74,11 @@ const DKA_TYPES = ["ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΕΠΙΣΚΕΥΗ",
 const DKA_INSTALLMENTS = ["ΕΦΑΠΑΞ", "Α", "Β", "Γ"];
 const ALL_INSTALLMENTS = ["ΕΦΑΠΑΞ", "Α", "Β", "Γ"];
 
+// Housing allowance constants
+const HOUSING_ALLOWANCE_TYPE = "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ";
+const HOUSING_QUARTERS = Array.from({ length: 24 }, (_, i) => `ΤΡΙΜΗΝΟ ${i + 1}`);
+const STANDARD_QUARTER_AMOUNT = 900.00;
+
 // Project selection component
 interface Project {
   id: string;
@@ -1133,6 +1138,9 @@ export function CreateDocumentDialog({
 
   // Add this function to get available installments based on expenditure type
   const getAvailableInstallments = (expenditureType: string) => {
+    if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
+      return HOUSING_QUARTERS;
+    }
     return DKA_TYPES.includes(expenditureType)
       ? DKA_INSTALLMENTS
       : ALL_INSTALLMENTS;
@@ -1155,8 +1163,14 @@ export function CreateDocumentDialog({
   };
 
   // Helper function to check if installments are in sequence
-  const areInstallmentsInSequence = (installments: string[]) => {
+  const areInstallmentsInSequence = (installments: string[], expenditureType: string) => {
     if (installments.length <= 1) return true;
+    
+    // For housing allowance, quarters can be non-consecutive
+    if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
+      return true; // Allow any combination of quarters
+    }
+    
     if (installments.includes("ΕΦΑΠΑΞ") && installments.length > 1)
       return false;
 
@@ -1211,56 +1225,79 @@ export function CreateDocumentDialog({
         }
       }
       
-      // Toggling installment selection
-      
       // Create a copy of current installments
       let newInstallments = [...selectedInstallments];
       
-      // Handle ΕΦΑΠΑΞ special case (mutually exclusive)
-      if (installment === "ΕΦΑΠΑΞ") {
-        // Special case - if ΕΦΑΠΑΞ is already selected and clicked again, do nothing
-        if (newInstallments.length === 1 && newInstallments[0] === "ΕΦΑΠΑΞ") {
-          return;
-        }
-        
-        // If ΕΦΑΠΑΞ is clicked, it should be the only option
-        newInstallments = ["ΕΦΑΠΑΞ"];
-      } else {
-        // For any other option:
-        
-        // 1. Remove ΕΦΑΠΑΞ if present
-        newInstallments = newInstallments.filter(i => i !== "ΕΦΑΠΑΞ");
-        
-        // 2. Toggle the selected installment
+      // Handle housing allowance quarters
+      if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
+        // For housing allowance, just toggle the quarter selection
         if (newInstallments.includes(installment)) {
-          // If already selected, remove it
           newInstallments = newInstallments.filter(i => i !== installment);
         } else {
-          // If not selected, add it
           newInstallments.push(installment);
         }
         
-        // 3. If no installments are left, fall back to ΕΦΑΠΑΞ
+        // Ensure at least one quarter is selected
         if (newInstallments.length === 0) {
-          newInstallments = ["ΕΦΑΠΑΞ"];
+          newInstallments = ["ΤΡΙΜΗΝΟ 1"];
         }
-        
-        // 4. Validate installments are in sequence
-        if (!areInstallmentsInSequence(newInstallments) && newInstallments.length > 1) {
-          toast({
-            title: "Μη έγκυρες δόσεις",
-            description: "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
-            variant: "destructive",
-          });
-          return;
+      } else {
+        // Handle ΕΦΑΠΑΞ special case (mutually exclusive)
+        if (installment === "ΕΦΑΠΑΞ") {
+          // Special case - if ΕΦΑΠΑΞ is already selected and clicked again, do nothing
+          if (newInstallments.length === 1 && newInstallments[0] === "ΕΦΑΠΑΞ") {
+            return;
+          }
+          
+          // If ΕΦΑΠΑΞ is clicked, it should be the only option
+          newInstallments = ["ΕΦΑΠΑΞ"];
+        } else {
+          // For any other option:
+          
+          // 1. Remove ΕΦΑΠΑΞ if present
+          newInstallments = newInstallments.filter(i => i !== "ΕΦΑΠΑΞ");
+          
+          // 2. Toggle the selected installment
+          if (newInstallments.includes(installment)) {
+            // If already selected, remove it
+            newInstallments = newInstallments.filter(i => i !== installment);
+          } else {
+            // If not selected, add it
+            newInstallments.push(installment);
+          }
+          
+          // 3. If no installments are left, fall back to ΕΦΑΠΑΞ
+          if (newInstallments.length === 0) {
+            newInstallments = ["ΕΦΑΠΑΞ"];
+          }
+          
+          // 4. Validate installments are in sequence
+          if (!areInstallmentsInSequence(newInstallments, expenditureType) && newInstallments.length > 1) {
+            toast({
+              title: "Μη έγκυρες δόσεις",
+              description: "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
+              variant: "destructive",
+            });
+            return;
+          }
         }
       }
       
-      // Sort installments in proper order: ΕΦΑΠΑΞ first, then Α, Β, Γ
-      newInstallments.sort((a, b) => {
-        const order = { "Α": 1, "Β": 2, "Γ": 3, "ΕΦΑΠΑΞ": 0 };
-        return (order[a as keyof typeof order] || 99) - (order[b as keyof typeof order] || 99);
-      });
+      // Sort installments in proper order
+      if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
+        // Sort quarters numerically
+        newInstallments.sort((a, b) => {
+          const aNum = parseInt(a.replace("ΤΡΙΜΗΝΟ ", ""));
+          const bNum = parseInt(b.replace("ΤΡΙΜΗΝΟ ", ""));
+          return aNum - bNum;
+        });
+      } else {
+        // Sort standard installments: ΕΦΑΠΑΞ first, then Α, Β, Γ
+        newInstallments.sort((a, b) => {
+          const order = { "Α": 1, "Β": 2, "Γ": 3, "ΕΦΑΠΑΞ": 0 };
+          return (order[a as keyof typeof order] || 99) - (order[b as keyof typeof order] || 99);
+        });
+      }
       
       // Block context updates during this operation
       isUpdatingFromContext.current = true;
@@ -1271,7 +1308,12 @@ export function CreateDocumentDialog({
         
         // Copy over existing amounts for selected installments
         newInstallments.forEach(inst => {
-          newAmounts[inst] = installmentAmounts[inst] || 0;
+          if (expenditureType === HOUSING_ALLOWANCE_TYPE && inst.startsWith("ΤΡΙΜΗΝΟ ")) {
+            // Set standard amount for housing allowance quarters
+            newAmounts[inst] = installmentAmounts[inst] || STANDARD_QUARTER_AMOUNT;
+          } else {
+            newAmounts[inst] = installmentAmounts[inst] || 0;
+          }
         });
         
         // Set ΕΦΑΠΑΞ amount to total if it's the only option
@@ -1831,7 +1873,7 @@ export function CreateDocumentDialog({
       // Validate that all installments are in sequence
       const hasInvalidSequence = data.recipients.some((r) => {
         if (r.installments.length <= 1) return false;
-        return !areInstallmentsInSequence(r.installments);
+        return !areInstallmentsInSequence(r.installments, data.expenditure_type);
       });
 
       if (hasInvalidSequence) {
