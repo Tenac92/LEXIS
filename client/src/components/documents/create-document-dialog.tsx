@@ -1166,9 +1166,19 @@ export function CreateDocumentDialog({
   const areInstallmentsInSequence = (installments: string[], expenditureType: string) => {
     if (installments.length <= 1) return true;
     
-    // For housing allowance, quarters can be non-consecutive
+    // For housing allowance, quarters must be consecutive
     if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
-      return true; // Allow any combination of quarters
+      const quarterNumbers = installments
+        .map(q => parseInt(q.replace("ΤΡΙΜΗΝΟ ", "")))
+        .sort((a, b) => a - b);
+      
+      // Check if quarters are consecutive
+      for (let i = 1; i < quarterNumbers.length; i++) {
+        if (quarterNumbers[i] - quarterNumbers[i - 1] !== 1) {
+          return false;
+        }
+      }
+      return true;
     }
     
     if (installments.includes("ΕΦΑΠΑΞ") && installments.length > 1)
@@ -1230,11 +1240,22 @@ export function CreateDocumentDialog({
       
       // Handle housing allowance quarters
       if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
-        // For housing allowance, just toggle the quarter selection
+        // For housing allowance, enforce consecutive quarter selection
         if (newInstallments.includes(installment)) {
           newInstallments = newInstallments.filter(i => i !== installment);
         } else {
-          newInstallments.push(installment);
+          // Try adding the quarter and check if it maintains consecutiveness
+          const testInstallments = [...newInstallments, installment];
+          if (areInstallmentsInSequence(testInstallments, expenditureType)) {
+            newInstallments = testInstallments;
+          } else {
+            toast({
+              title: "Μη έγκυρη επιλογή τριμήνων",
+              description: "Τα τρίμηνα πρέπει να είναι διαδοχικά (π.χ. ΤΡΙΜΗΝΟ 1, 2, 3)",
+              variant: "destructive",
+            });
+            return;
+          }
         }
         
         // Ensure at least one quarter is selected
@@ -1521,13 +1542,16 @@ export function CreateDocumentDialog({
           )}
         </div>
 
-        {selectedInstallments.length > 0 && expenditureType !== HOUSING_ALLOWANCE_TYPE && (
+        {selectedInstallments.length > 0 && (
           <div className="space-y-2">
             <div className="grid grid-cols-1 gap-1.5">
               {selectedInstallments.map((installment) => (
                 <div key={installment} className="flex items-center gap-1.5">
                   <div className="font-medium text-xs bg-muted px-2 py-1 rounded min-w-[60px] text-center">
-                    {installment}
+                    {expenditureType === HOUSING_ALLOWANCE_TYPE 
+                      ? installment.replace("ΤΡΙΜΗΝΟ ", "Τ")
+                      : installment
+                    }
                   </div>
                   <div className="relative flex-1">
                     <NumberInput
@@ -1539,7 +1563,7 @@ export function CreateDocumentDialog({
                         )
                       }
                       className="pr-6 h-8 text-sm"
-                      placeholder="Ποσό"
+                      placeholder={expenditureType === HOUSING_ALLOWANCE_TYPE ? "900,00" : "Ποσό"}
                       decimals={2}
                     />
                     <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
@@ -1562,27 +1586,7 @@ export function CreateDocumentDialog({
             </div>
           </div>
         )}
-        
-        {/* Housing allowance total display */}
-        {selectedInstallments.length > 0 && expenditureType === HOUSING_ALLOWANCE_TYPE && (
-          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div className="text-sm font-medium text-green-800 mb-2">
-              Συνολικό ποσό επιδότησης ενοικίου
-            </div>
-            <div className="text-lg font-bold text-green-700">
-              {(selectedInstallments.length * STANDARD_QUARTER_AMOUNT).toLocaleString("el-GR", {
-                style: "currency",
-                currency: "EUR",
-              })}
-            </div>
-            <div className="text-xs text-green-600 mt-1">
-              {selectedInstallments.length} τρίμηνα × {STANDARD_QUARTER_AMOUNT.toLocaleString("el-GR", {
-                style: "currency",
-                currency: "EUR",
-              })}
-            </div>
-          </div>
-        )}
+
       </div>
     );
   };
@@ -2062,16 +2066,28 @@ export function CreateDocumentDialog({
         project_mis: projectForSubmission.mis,
         region: data.region,
         expenditure_type: data.expenditure_type,
-        recipients: data.recipients.map((r) => ({
-          firstname: r.firstname.trim(),
-          lastname: r.lastname.trim(),
-          fathername: r.fathername.trim(),
-          afm: r.afm.trim(),
-          amount: parseFloat(r.amount.toString()),
-          secondary_text: r.secondary_text?.trim() || "",
-          installments: r.installments,
-          installmentAmounts: r.installmentAmounts || {},
-        })),
+        recipients: data.recipients.map((r) => {
+          // For housing allowance, ensure the total amount equals sum of quarter amounts
+          let finalAmount = parseFloat(r.amount.toString());
+          let finalInstallmentAmounts = r.installmentAmounts || {};
+          
+          if (data.expenditure_type === HOUSING_ALLOWANCE_TYPE && r.installmentAmounts) {
+            // Calculate total from quarter amounts
+            const quarterTotal = Object.values(r.installmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0);
+            finalAmount = quarterTotal;
+          }
+          
+          return {
+            firstname: r.firstname.trim(),
+            lastname: r.lastname.trim(),
+            fathername: r.fathername.trim(),
+            afm: r.afm.trim(),
+            amount: finalAmount,
+            secondary_text: r.secondary_text?.trim() || "",
+            installments: r.installments,
+            installmentAmounts: finalInstallmentAmounts,
+          };
+        }),
         total_amount: totalAmount,
         status: "draft",
         attachments: data.selectedAttachments || [],
