@@ -685,6 +685,8 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
       throw error;
     }
 
+    console.log('[DocumentsController] Raw document from database:', JSON.stringify(document, null, 2));
+
     if (!document) {
       console.error('[DocumentsController] Document not found:', id);
       return res.status(404).json({ error: 'Document not found' });
