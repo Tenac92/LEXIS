@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -833,6 +833,7 @@ export default function BeneficiariesPage() {
           </DialogHeader>
           <BeneficiaryForm
             beneficiary={selectedBeneficiary}
+            dialogOpen={dialogOpen}
             onSubmit={(data) => {
               if (selectedBeneficiary) {
                 updateMutation.mutate({ id: selectedBeneficiary.id, data });
@@ -976,10 +977,12 @@ function BeneficiaryForm({
   beneficiary,
   onSubmit,
   onCancel,
+  dialogOpen,
 }: {
   beneficiary?: Beneficiary;
   onSubmit: (data: BeneficiaryFormData) => void;
   onCancel?: () => void;
+  dialogOpen: boolean;
 }) {
   const [payments, setPayments] = useState<Array<{
     unit: string;
@@ -1045,7 +1048,14 @@ function BeneficiaryForm({
     },
   });
 
-  // Get user's available units with debugging
+  // Track initialization state to prevent excessive re-renders
+  const initializationRef = useRef({
+    hasAutoSelected: false,
+    lastSelectedUnit: "",
+    isInitialized: false
+  });
+
+  // Get user's available units with optimized filtering
   const userUnits = useMemo(() => {
     const userUnitsArray = (userData as any)?.user?.units;
     
@@ -1054,65 +1064,97 @@ function BeneficiaryForm({
     }
     
     const filtered = unitsData.filter((unit: any) => userUnitsArray.includes(unit.id));
-    console.log('[Beneficiary Form] Filtered units:', filtered);
     return filtered;
   }, [userData, unitsData]);
 
-  // Auto-select unit if user has only one and data is loaded
-  useEffect(() => {
-    if (userUnits.length === 1 && !unitsLoading && userData) {
+  // Optimized auto-selection logic to prevent WebSocket connectivity issues
+  const handleAutoUnitSelection = useCallback(() => {
+    if (!userData || unitsLoading || initializationRef.current.hasAutoSelected) {
+      return;
+    }
+
+    if (userUnits.length === 1) {
       const currentUnit = form.getValues("selectedUnit");
       if (!currentUnit || currentUnit === "") {
-        console.log('[Beneficiary Form] Auto-selecting unit:', userUnits[0].id);
-        form.setValue("selectedUnit", userUnits[0].id);
-        form.trigger("selectedUnit");
+        const unitToSelect = userUnits[0].id;
+        form.setValue("selectedUnit", unitToSelect, { shouldValidate: false });
+        initializationRef.current.hasAutoSelected = true;
+        initializationRef.current.lastSelectedUnit = unitToSelect;
       }
     }
-  }, [userUnits, form, unitsLoading, userData]);
+  }, [userUnits, form, userData, unitsLoading]);
+
+  // Single effect for auto-selection with proper cleanup
+  useEffect(() => {
+    if (!unitsLoading && userData && userUnits.length > 0) {
+      handleAutoUnitSelection();
+    }
+  }, [handleAutoUnitSelection, unitsLoading, userData, userUnits.length]);
+
+  // Reset form when dialog opens - optimized to prevent excessive re-renders
+  const handleFormReset = useCallback(() => {
+    if (!userUnits.length) return;
+    
+    const defaultValues = {
+      surname: "",
+      name: "",
+      fathername: "",
+      afm: "",
+      project: "", 
+      expenditure_type: "", 
+      region: "",
+      monada: "", 
+      adeia: "",
+      onlinefoldernumber: "",
+      cengsur1: "",
+      cengname1: "",
+      cengsur2: "",
+      cengname2: "",
+      selectedUnit: userUnits.length === 1 ? userUnits[0].id : "",
+      selectedNA853: "",
+      amount: "",
+      installment: "",
+      protocol: "",
+      freetext: "",
+      date: "",
+    };
+    
+    form.reset(defaultValues);
+    initializationRef.current.isInitialized = true;
+  }, [form, userUnits]);
 
   // Reset form when modal opens for new beneficiary
   useEffect(() => {
-    if (open && !beneficiary && userUnits.length > 0) {
-      form.reset({
-        surname: "",
-        name: "",
-        fathername: "",
-        afm: "",
-        project: "", 
-        expenditure_type: "", 
-        region: "",
-        monada: "", 
-        adeia: "",
-        onlinefoldernumber: "",
-        cengsur1: "",
-        cengname1: "",
-        cengsur2: "",
-        cengname2: "",
-        selectedUnit: userUnits.length === 1 ? userUnits[0].id : "",
-        selectedNA853: "",
-        amount: "",
-        installment: "",
-        protocol: "",
-        freetext: "",
-        date: "",
-      });
+    if (dialogOpen && !beneficiary && userUnits.length > 0 && !initializationRef.current.isInitialized) {
+      handleFormReset();
     }
-  }, [open, beneficiary, form, userUnits]);
+    
+    // Reset initialization state when dialog closes
+    if (!dialogOpen) {
+      initializationRef.current.hasAutoSelected = false;
+      initializationRef.current.isInitialized = false;
+    }
+  }, [dialogOpen, beneficiary, userUnits.length, handleFormReset]);
 
-  // Reset dependent fields when unit changes
+  // Optimized field dependency management to prevent WebSocket issues
+  const watchedUnit = form.watch("selectedUnit");
+  const watchedNA853 = form.watch("selectedNA853");
+  
   useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === "selectedUnit") {
-        // Clear NA853 and expenditure type when unit changes
-        form.setValue("selectedNA853", "");
-        form.setValue("expenditure_type", "");
-      } else if (name === "selectedNA853") {
-        // Clear expenditure type when NA853 changes
-        form.setValue("expenditure_type", "");
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
+    // Only clear dependent fields when unit actually changes
+    if (initializationRef.current.lastSelectedUnit && initializationRef.current.lastSelectedUnit !== watchedUnit) {
+      form.setValue("selectedNA853", "", { shouldValidate: false });
+      form.setValue("expenditure_type", "", { shouldValidate: false });
+    }
+    initializationRef.current.lastSelectedUnit = watchedUnit;
+  }, [watchedUnit, form]);
+
+  useEffect(() => {
+    // Clear expenditure type when NA853 changes
+    if (watchedNA853) {
+      form.setValue("expenditure_type", "", { shouldValidate: false });
+    }
+  }, [watchedNA853, form]);
 
   // Get projects for selected unit
   const availableProjects = useMemo(() => {
