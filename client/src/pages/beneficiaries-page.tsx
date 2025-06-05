@@ -846,6 +846,127 @@ export default function BeneficiariesPage() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Existing Payments Modal */}
+      <Dialog open={existingPaymentsModalOpen} onOpenChange={setExistingPaymentsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <DollarSign className="w-5 h-5 text-purple-600" />
+              Υπάρχουσες Πληρωμές
+              {selectedBeneficiaryForPayments && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  - {selectedBeneficiaryForPayments.surname} {selectedBeneficiaryForPayments.name}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedBeneficiaryForPayments && (
+            <ExistingPaymentsView beneficiary={selectedBeneficiaryForPayments} />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ExistingPaymentsView({ beneficiary }: { beneficiary: Beneficiary }) {
+  const { data: payments = [], isLoading } = useQuery({
+    queryKey: ["/api/beneficiary-payments", beneficiary.id],
+    enabled: !!beneficiary.id
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!Array.isArray(payments) || payments.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-muted-foreground">
+          <DollarSign className="h-8 w-8 mx-auto mb-2" />
+          <p>Δεν βρέθηκαν καταχωρημένες πληρωμές για αυτόν τον δικαιούχο</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalAmount = payments.reduce((sum: number, payment: any) => 
+    sum + (parseFloat(payment.amount) || 0), 0
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+        <div>
+          <span className="text-sm font-medium text-muted-foreground">Συνολικές Πληρωμές</span>
+          <p className="text-lg font-bold">{payments.length}</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-muted-foreground">Συνολικό Ποσό</span>
+          <p className="text-lg font-bold text-green-700">{totalAmount.toLocaleString("el-GR")} €</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-muted-foreground">ΑΦΜ</span>
+          <p className="text-lg font-mono">{beneficiary.afm}</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-muted-foreground">Περιοχή</span>
+          <p className="text-lg">{beneficiary.region || "—"}</p>
+        </div>
+      </div>
+
+      <div className="border rounded-lg overflow-hidden">
+        <div className="bg-muted/50 px-4 py-3 border-b">
+          <h4 className="font-medium">Λεπτομέρειες Πληρωμών</h4>
+        </div>
+        <div className="divide-y">
+          {payments.map((payment: any, index: number) => (
+            <div key={payment.id || index} className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Μονάδα</span>
+                  <span className="text-sm">{payment.unit_code}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Κωδικός ΝΑ853</span>
+                  <span className="font-mono text-sm">{payment.na853_code}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Τύπος Δαπάνης</span>
+                  <span className="text-sm">{payment.expenditure_type}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Δόση</span>
+                  <span className="text-sm">{payment.installment}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Ποσό (€)</span>
+                  <span className="font-semibold text-green-700 text-sm">
+                    {parseFloat(payment.amount).toLocaleString("el-GR")} €
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Αρ. Πρωτοκόλλου</span>
+                  <span className="font-mono text-sm">{payment.protocol_number || "—"}</span>
+                </div>
+              </div>
+              {payment.payment_date && (
+                <div className="mt-2 pt-2 border-t border-muted">
+                  <span className="text-xs text-muted-foreground">Ημερομηνία Πληρωμής: </span>
+                  <span className="text-xs">
+                    {new Date(payment.payment_date).toLocaleDateString("el-GR")}
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -868,6 +989,8 @@ function BeneficiaryForm({
     protocol: string;
     status: string;
   }>>([]);
+  const [existingPaymentsModalOpen, setExistingPaymentsModalOpen] = useState(false);
+  const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] = useState<Beneficiary | null>(null);
 
   const { data: userData } = useQuery({ 
     queryKey: ["/api/auth/me"],
@@ -961,7 +1084,8 @@ function BeneficiaryForm({
   const availableProjects = useMemo(() => {
     const selectedUnit = form.watch("selectedUnit");
     if (!selectedUnit || !Array.isArray(projectsData)) {
-      console.log('[Beneficiary Form] No projects available:', { selectedUnit, projectsDataLength: projectsData?.length });
+      const projectsLength = Array.isArray(projectsData) ? projectsData.length : (projectsData && typeof projectsData === 'object' ? Object.keys(projectsData).length : 0);
+      console.log('[Beneficiary Form] No projects available:', { selectedUnit, projectsDataLength: projectsLength });
       return [];
     }
     
@@ -1359,7 +1483,12 @@ function BeneficiaryForm({
                     <SelectContent>
                       {availableProjects.map((project: any) => (
                         <SelectItem key={project.id || project.mis} value={project.na853 || ""}>
-                          {project.na853} - {project.title || project.name || project.id}
+                          <div className="flex flex-col">
+                            <span className="font-medium">{project.na853}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {project.title || project.event_description || project.name || `MIS: ${project.mis}`}
+                            </span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1569,5 +1698,106 @@ function BeneficiaryForm({
         </div>
       </form>
     </Form>
+  );
+}
+
+function ExistingPaymentsView({ beneficiary }: { beneficiary: Beneficiary }) {
+  const { data: payments = [], isLoading } = useQuery({
+    queryKey: ["/api/beneficiary-payments", beneficiary.id],
+    enabled: !!beneficiary.id
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!Array.isArray(payments) || payments.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-muted-foreground">
+          <DollarSign className="h-8 w-8 mx-auto mb-2" />
+          <p>Δεν βρέθηκαν καταχωρημένες πληρωμές για αυτόν τον δικαιούχο</p>
+        </div>
+      </div>
+    );
+  }
+
+  const totalAmount = payments.reduce((sum: number, payment: any) => 
+    sum + (parseFloat(payment.amount) || 0), 0
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+        <div>
+          <span className="text-sm font-medium text-muted-foreground">Συνολικές Πληρωμές</span>
+          <p className="text-lg font-bold">{payments.length}</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-muted-foreground">Συνολικό Ποσό</span>
+          <p className="text-lg font-bold text-green-700">{totalAmount.toLocaleString("el-GR")} €</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-muted-foreground">ΑΦΜ</span>
+          <p className="text-lg font-mono">{beneficiary.afm}</p>
+        </div>
+        <div>
+          <span className="text-sm font-medium text-muted-foreground">Περιοχή</span>
+          <p className="text-lg">{beneficiary.region || "—"}</p>
+        </div>
+      </div>
+
+      <div className="border rounded-lg overflow-hidden">
+        <div className="bg-muted/50 px-4 py-3 border-b">
+          <h4 className="font-medium">Λεπτομέρειες Πληρωμών</h4>
+        </div>
+        <div className="divide-y">
+          {payments.map((payment: any, index: number) => (
+            <div key={payment.id || index} className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Μονάδα</span>
+                  <span className="text-sm">{payment.unit_code}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Κωδικός ΝΑ853</span>
+                  <span className="font-mono text-sm">{payment.na853_code}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Τύπος Δαπάνης</span>
+                  <span className="text-sm">{payment.expenditure_type}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Δόση</span>
+                  <span className="text-sm">{payment.installment}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Ποσό (€)</span>
+                  <span className="font-semibold text-green-700 text-sm">
+                    {parseFloat(payment.amount).toLocaleString("el-GR")} €
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium text-xs text-muted-foreground block">Αρ. Πρωτοκόλλου</span>
+                  <span className="font-mono text-sm">{payment.protocol_number || "—"}</span>
+                </div>
+              </div>
+              {payment.payment_date && (
+                <div className="mt-2 pt-2 border-t border-muted">
+                  <span className="text-xs text-muted-foreground">Ημερομηνία Πληρωμής: </span>
+                  <span className="text-xs">
+                    {new Date(payment.payment_date).toLocaleDateString("el-GR")}
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
