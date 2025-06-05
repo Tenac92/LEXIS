@@ -1337,6 +1337,9 @@ export function CreateDocumentDialog({
           }
         });
         
+        // Calculate total amount for recipient
+        const totalRecipientAmount = Object.values(newAmounts).reduce((sum, amount) => sum + (amount || 0), 0);
+        
         // Set ΕΦΑΠΑΞ amount to total if it's the only option
         if (newInstallments.length === 1 && newInstallments[0] === "ΕΦΑΠΑΞ") {
           newAmounts["ΕΦΑΠΑΞ"] = currentRecipient?.amount || 0;
@@ -1348,6 +1351,7 @@ export function CreateDocumentDialog({
         // Update form values immediately
         form.setValue(`recipients.${index}.installments`, newInstallments);
         form.setValue(`recipients.${index}.installmentAmounts`, newAmounts);
+        form.setValue(`recipients.${index}.amount`, totalRecipientAmount);
         
         // Wait a bit then update context to ensure changes are saved
         setTimeout(() => {
@@ -1359,6 +1363,7 @@ export function CreateDocumentDialog({
             if (updatedRecipients[index]) {
               updatedRecipients[index] = {
                 ...updatedRecipients[index],
+                amount: totalRecipientAmount,
                 installments: [...newInstallments],
                 installmentAmounts: {...newAmounts}
               };
@@ -1430,6 +1435,15 @@ export function CreateDocumentDialog({
         
         form.setValue(`recipients.${index}.amount`, safeTotal);
         
+        // For housing allowance, ensure the installment field is updated for compatibility
+        const expenditureType = form.watch("expenditure_type");
+        if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
+          const currentInstallments = form.getValues(`recipients.${index}.installments`) || [];
+          if (currentInstallments.length > 0) {
+            form.setValue(`recipients.${index}.installment`, currentInstallments[0]);
+          }
+        }
+        
         // Updated installment amount and recalculated total recipient amount
           
         // Wait a small amount of time before updating context to avoid race conditions
@@ -1470,51 +1484,43 @@ export function CreateDocumentDialog({
           </label>
           
           {expenditureType === HOUSING_ALLOWANCE_TYPE ? (
-            // Housing allowance quarter selection grid
-            <div className="space-y-4">
-              <div className="grid grid-cols-6 gap-2">
-                {availableInstallments.map((quarter) => (
-                  <Button
-                    key={quarter}
-                    type="button"
-                    variant={
-                      selectedInstallments.includes(quarter)
-                        ? "default"
-                        : "outline"
-                    }
-                    size="sm"
-                    onClick={() => handleInstallmentToggle(quarter)}
-                    className="h-8 px-2 text-xs"
-                  >
-                    {quarter.replace("ΤΡΙΜΗΝΟ ", "")}
-                  </Button>
-                ))}
+            // Housing allowance quarter selection - compact design
+            <div className="space-y-3">
+              <div className="grid grid-cols-8 gap-1.5">
+                {availableInstallments.map((quarter) => {
+                  const quarterNum = quarter.replace("ΤΡΙΜΗΝΟ ", "");
+                  return (
+                    <Button
+                      key={quarter}
+                      type="button"
+                      variant={
+                        selectedInstallments.includes(quarter)
+                          ? "default"
+                          : "outline"
+                      }
+                      size="sm"
+                      onClick={() => handleInstallmentToggle(quarter)}
+                      className="h-7 px-1 text-xs font-medium"
+                    >
+                      {quarterNum}
+                    </Button>
+                  );
+                })}
               </div>
               
               {selectedInstallments.length > 0 && (
-                <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-medium text-blue-700">Επιλεγμένα τρίμηνα:</span>
-                    <Badge variant="secondary" className="text-blue-700">
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-blue-700 font-medium">
+                      Επιλογή: {selectedInstallments.sort((a, b) => {
+                        const aNum = parseInt(a.replace("ΤΡΙΜΗΝΟ ", ""));
+                        const bNum = parseInt(b.replace("ΤΡΙΜΗΝΟ ", ""));
+                        return aNum - bNum;
+                      }).map(q => q.replace("ΤΡΙΜΗΝΟ ", "")).join("-")}
+                    </span>
+                    <span className="text-blue-600">
                       {selectedInstallments.length} τρίμηνα
-                    </Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedInstallments.sort((a, b) => {
-                      const aNum = parseInt(a.replace("ΤΡΙΜΗΝΟ ", ""));
-                      const bNum = parseInt(b.replace("ΤΡΙΜΗΝΟ ", ""));
-                      return aNum - bNum;
-                    }).map((quarter) => (
-                      <Badge key={quarter} variant="outline" className="text-xs">
-                        {quarter}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="mt-2 text-xs text-blue-600">
-                    Τυπικό ποσό ανά τρίμηνο: {STANDARD_QUARTER_AMOUNT.toLocaleString("el-GR", {
-                      style: "currency",
-                      currency: "EUR",
-                    })}
+                    </span>
                   </div>
                 </div>
               )}
@@ -2067,25 +2073,36 @@ export function CreateDocumentDialog({
         region: data.region,
         expenditure_type: data.expenditure_type,
         recipients: data.recipients.map((r) => {
-          // For housing allowance, ensure the total amount equals sum of quarter amounts
-          let finalAmount = parseFloat(r.amount.toString());
-          let finalInstallmentAmounts = r.installmentAmounts || {};
-          
+          // For housing allowance, ensure proper data structure for export
           if (data.expenditure_type === HOUSING_ALLOWANCE_TYPE && r.installmentAmounts) {
             // Calculate total from quarter amounts
             const quarterTotal = Object.values(r.installmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0);
-            finalAmount = quarterTotal;
+            
+            // For housing allowance, use a simplified structure that properly exports
+            return {
+              firstname: r.firstname.trim(),
+              lastname: r.lastname.trim(),
+              fathername: r.fathername.trim(),
+              afm: r.afm.trim(),
+              amount: quarterTotal,
+              secondary_text: r.secondary_text?.trim() || "",
+              installment: r.installments.length === 1 ? r.installments[0] : `${r.installments.length} τρίμηνα`,
+              installments: r.installments,
+              installmentAmounts: r.installmentAmounts,
+            };
           }
           
+          // Standard structure for other expenditure types
           return {
             firstname: r.firstname.trim(),
             lastname: r.lastname.trim(),
             fathername: r.fathername.trim(),
             afm: r.afm.trim(),
-            amount: finalAmount,
+            amount: parseFloat(r.amount.toString()),
             secondary_text: r.secondary_text?.trim() || "",
+            installment: r.installment || (r.installments && r.installments[0]) || "ΕΦΑΠΑΞ",
             installments: r.installments,
-            installmentAmounts: finalInstallmentAmounts,
+            installmentAmounts: r.installmentAmounts || {},
           };
         }),
         total_amount: totalAmount,
