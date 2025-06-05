@@ -152,6 +152,8 @@ export default function BeneficiariesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(60);
+  const [existingPaymentsModalOpen, setExistingPaymentsModalOpen] = useState(false);
+  const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] = useState<Beneficiary | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1457,11 +1459,12 @@ function BeneficiaryForm({
               variant="ghost" 
               size="sm"
               onClick={() => {
-                if (payments.length > 0) {
-                  // Show payments in a modal or expand view
-                  console.log("Showing payments:", payments);
+                if (beneficiary && Array.isArray(existingPayments) && existingPayments.length > 0) {
+                  setSelectedBeneficiaryForPayments(beneficiary);
+                  setExistingPaymentsModalOpen(true);
                 }
               }}
+              disabled={!beneficiary || !Array.isArray(existingPayments) || existingPayments.length === 0}
             >
               <FileText className="w-4 h-4 mr-2" />
               Προβολή Υπαρχουσών ({Array.isArray(existingPayments) ? existingPayments.length : 0})
@@ -1477,26 +1480,30 @@ function BeneficiaryForm({
               <div className="divide-y">
                 {payments.map((payment, index) => (
                   <div key={index} className="p-4 flex items-center justify-between">
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-2 flex-1 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-2 flex-1 text-sm">
                       <div>
                         <span className="font-medium text-xs text-muted-foreground block">Μονάδα</span>
                         <span>{payment.unit}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Κωδικός ΝΑ853</span>
+                        <span className="font-mono">{payment.na853 || "—"}</span>
                       </div>
                       <div>
                         <span className="font-medium text-xs text-muted-foreground block">Τύπος Δαπάνης</span>
                         <span>{payment.expenditure_type}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-xs text-muted-foreground block">ΝΑ853</span>
-                        <span className="font-mono">{payment.na853 || "—"}</span>
+                        <span className="font-medium text-xs text-muted-foreground block">Δόση</span>
+                        <span>{payment.installment}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Ποσό</span>
+                        <span className="font-medium text-xs text-muted-foreground block">Ποσό (€)</span>
                         <span className="font-semibold text-green-700">{parseFloat(payment.amount).toLocaleString("el-GR")} €</span>
                       </div>
                       <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Δόση</span>
-                        <span>{payment.installment}</span>
+                        <span className="font-medium text-xs text-muted-foreground block">Αρ. Πρωτοκόλλου</span>
+                        <span className="font-mono">{payment.protocol || "—"}</span>
                       </div>
                     </div>
                     <Button
