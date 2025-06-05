@@ -106,12 +106,17 @@ export function Dashboard() {
         const data = await response.json();
         const documents = Array.isArray(data) ? data : [];
         
+        console.log('[Dashboard] Raw documents from API:', documents);
+        
         // Process documents to create meaningful titles and ensure proper structure
-        return documents.slice(0, 5).map(doc => ({
-          ...doc,
-          title: doc.title || doc.document_type || `Έγγραφο ${doc.protocol_number || doc.id}`,
-          status: doc.status || 'pending'
-        }));
+        return documents.slice(0, 5).map(doc => {
+          console.log('[Dashboard] Processing document:', doc);
+          return {
+            ...doc,
+            title: doc.title || doc.document_type || `Έγγραφο ${doc.protocol_number || doc.id}`,
+            status: doc.status || 'pending'
+          };
+        });
       } catch (error) {
         console.warn('[Dashboard] Error fetching recent documents:', error);
         return [];
@@ -284,9 +289,10 @@ export function Dashboard() {
             ) : userDocuments.length > 0 ? (
               userDocuments.slice(0, 5).map((doc) => {
                 // Generate proper document title based on status and protocol number
-                const documentTitle = doc.status === 'completed' && doc.protocol_number_input 
+                // Use protocol_number_input for completed documents, otherwise show document ID
+                const documentTitle = (doc.status === 'completed' && doc.protocol_number_input) 
                   ? doc.protocol_number_input 
-                  : `Έγγραφο #${doc.id}`;
+                  : (doc.protocol_number || `Έγγραφο #${doc.id}`);
 
                 return (
                   <div key={doc.id} className="flex items-center justify-between py-2 border-b last:border-0">
