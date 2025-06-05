@@ -1443,31 +1443,85 @@ export function CreateDocumentDialog({
 
     return (
       <div className="w-full">
-        <div className="mb-2 flex items-center">
-          <label className="text-sm font-medium mr-2 whitespace-nowrap">
-            Δόσεις:
+        <div className="mb-2">
+          <label className="text-sm font-medium mb-2 block">
+            {expenditureType === HOUSING_ALLOWANCE_TYPE ? "Τρίμηνα:" : "Δόσεις:"}
           </label>
-          <div className="flex flex-row gap-1">
-            {availableInstallments.map((installment) => (
-              <Button
-                key={installment}
-                type="button"
-                variant={
-                  selectedInstallments.includes(installment)
-                    ? "default"
-                    : "outline"
-                }
-                size="sm"
-                onClick={() => handleInstallmentToggle(installment)}
-                className="h-7 px-2 min-w-[32px]"
-              >
-                {installment}
-              </Button>
-            ))}
-          </div>
+          
+          {expenditureType === HOUSING_ALLOWANCE_TYPE ? (
+            // Housing allowance quarter selection grid
+            <div className="space-y-4">
+              <div className="grid grid-cols-6 gap-2">
+                {availableInstallments.map((quarter) => (
+                  <Button
+                    key={quarter}
+                    type="button"
+                    variant={
+                      selectedInstallments.includes(quarter)
+                        ? "default"
+                        : "outline"
+                    }
+                    size="sm"
+                    onClick={() => handleInstallmentToggle(quarter)}
+                    className="h-8 px-2 text-xs"
+                  >
+                    {quarter.replace("ΤΡΙΜΗΝΟ ", "")}
+                  </Button>
+                ))}
+              </div>
+              
+              {selectedInstallments.length > 0 && (
+                <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-medium text-blue-700">Επιλεγμένα τρίμηνα:</span>
+                    <Badge variant="secondary" className="text-blue-700">
+                      {selectedInstallments.length} τρίμηνα
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedInstallments.sort((a, b) => {
+                      const aNum = parseInt(a.replace("ΤΡΙΜΗΝΟ ", ""));
+                      const bNum = parseInt(b.replace("ΤΡΙΜΗΝΟ ", ""));
+                      return aNum - bNum;
+                    }).map((quarter) => (
+                      <Badge key={quarter} variant="outline" className="text-xs">
+                        {quarter}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-xs text-blue-600">
+                    Τυπικό ποσό ανά τρίμηνο: {STANDARD_QUARTER_AMOUNT.toLocaleString("el-GR", {
+                      style: "currency",
+                      currency: "EUR",
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            // Standard installment selection
+            <div className="flex flex-row gap-1 flex-wrap">
+              {availableInstallments.map((installment) => (
+                <Button
+                  key={installment}
+                  type="button"
+                  variant={
+                    selectedInstallments.includes(installment)
+                      ? "default"
+                      : "outline"
+                  }
+                  size="sm"
+                  onClick={() => handleInstallmentToggle(installment)}
+                  className="h-7 px-2 min-w-[32px]"
+                >
+                  {installment}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {selectedInstallments.length > 0 && (
+        {selectedInstallments.length > 0 && expenditureType !== HOUSING_ALLOWANCE_TYPE && (
           <div className="space-y-2">
             <div className="grid grid-cols-1 gap-1.5">
               {selectedInstallments.map((installment) => (
@@ -1505,6 +1559,27 @@ export function CreateDocumentDialog({
                     currency: "EUR",
                   })}
               </span>
+            </div>
+          </div>
+        )}
+        
+        {/* Housing allowance total display */}
+        {selectedInstallments.length > 0 && expenditureType === HOUSING_ALLOWANCE_TYPE && (
+          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="text-sm font-medium text-green-800 mb-2">
+              Συνολικό ποσό επιδότησης ενοικίου
+            </div>
+            <div className="text-lg font-bold text-green-700">
+              {(selectedInstallments.length * STANDARD_QUARTER_AMOUNT).toLocaleString("el-GR", {
+                style: "currency",
+                currency: "EUR",
+              })}
+            </div>
+            <div className="text-xs text-green-600 mt-1">
+              {selectedInstallments.length} τρίμηνα × {STANDARD_QUARTER_AMOUNT.toLocaleString("el-GR", {
+                style: "currency",
+                currency: "EUR",
+              })}
             </div>
           </div>
         )}
@@ -2101,10 +2176,29 @@ export function CreateDocumentDialog({
       toast({
         title: "Μέγιστος Αριθμός Δικαιούχων",
         description:
-          "Δεν μπορείτε να προσθέσετε περιp�σότερους από 10 δικαιούχους.",
+          "Δεν μπορείτε να προσθέσετε περισσότερους από 10 δικαιούχους.",
         variant: "destructive",
       });
       return;
+    }
+
+    const expenditureType = form.watch("expenditure_type");
+    
+    // Set default installments and amounts based on expenditure type
+    let defaultInstallments: string[];
+    let defaultInstallmentAmounts: Record<string, number>;
+    let defaultAmount: number = 0;
+
+    if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
+      // For housing allowance, default to first quarter with standard amount
+      defaultInstallments = ["ΤΡΙΜΗΝΟ 1"];
+      defaultInstallmentAmounts = { "ΤΡΙΜΗΝΟ 1": STANDARD_QUARTER_AMOUNT };
+      defaultAmount = STANDARD_QUARTER_AMOUNT;
+    } else {
+      // For other expenditure types, use ΕΦΑΠΑΞ
+      defaultInstallments = ["ΕΦΑΠΑΞ"];
+      defaultInstallmentAmounts = { ΕΦΑΠΑΞ: 0 };
+      defaultAmount = 0;
     }
 
     form.setValue("recipients", [
@@ -2114,11 +2208,11 @@ export function CreateDocumentDialog({
         lastname: "",
         fathername: "",
         afm: "",
-        amount: 0,
+        amount: defaultAmount,
         secondary_text: "",
-        installment: "ΕΦΑΠΑΞ", // Διατηρούμε το παλιό πεδίο για συμβατότητα
-        installments: ["ΕΦΑΠΑΞ"], // Default to ΕΦΑΠΑΞ for new recipients
-        installmentAmounts: { ΕΦΑΠΑΞ: 0 }, // Initialize installment amount
+        installment: defaultInstallments[0], // Διατηρούμε το παλιό πεδίο για συμβατότητα
+        installments: defaultInstallments,
+        installmentAmounts: defaultInstallmentAmounts,
       },
     ]);
   };
