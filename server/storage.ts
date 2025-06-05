@@ -256,7 +256,7 @@ export class DatabaseStorage implements IStorage {
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, name, units')
-          .overlaps('units', userUnits);
+          .contains('units', userUnits);
         
         console.log('[Storage] User query result:', { userData, userError });
           
