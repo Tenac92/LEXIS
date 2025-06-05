@@ -642,13 +642,15 @@ export class DocumentGenerator {
             }),
           );
         } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+          // For housing allowance, add quarter cell for first row
+          const quarterNum = typeof firstInstallment === 'string' ? 
+            firstInstallment.replace("ΤΡΙΜΗΝΟ ", "") : firstInstallment;
+          
           firstRowCells.push(
             new TableCell({
-              rowSpan: rowSpan,
-              verticalAlign: VerticalAlign.CENTER,
               children: [
                 DocumentUtilities.createCenteredParagraph(
-                  recipient.months?.toString() || "1",
+                  quarterNum.toString(),
                   {
                     size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
                   },
@@ -714,11 +716,20 @@ export class DocumentGenerator {
           const amount = installmentAmounts[installment] || 0;
           totalAmount += amount;
 
+          // Format installment display based on expenditure type
+          let installmentDisplay = installment;
+          if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+            // For housing allowance, show quarter number only
+            const quarterNum = typeof installment === 'string' ? 
+              installment.replace("ΤΡΙΜΗΝΟ ", "") : installment;
+            installmentDisplay = quarterNum.toString();
+          }
+
           const subsequentRowCells = [
-            // Installment cell (ΔΟΣΗ)
+            // Installment cell (ΔΟΣΗ/ΤΡΙΜΗΝΟ)
             new TableCell({
               children: [
-                DocumentUtilities.createCenteredParagraph(installment, {
+                DocumentUtilities.createCenteredParagraph(installmentDisplay, {
                   size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
                 }),
               ],

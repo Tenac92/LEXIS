@@ -171,11 +171,27 @@ export class SecondaryDocumentFormatter {
           }),
         );
       } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+        // For housing allowance, show quarter information
+        let quarterInfo = "1";
+        if (recipient.installments && Array.isArray(recipient.installments) && recipient.installments.length > 0) {
+          // If installments are stored as numbers (3, 4, 5, 6), format them as quarters
+          const quarters = recipient.installments.map((q: any) => {
+            const quarterNum = typeof q === 'string' ? q.replace("ΤΡΙΜΗΝΟ ", "") : q;
+            return `Τ${quarterNum}`;
+          });
+          quarterInfo = quarters.join(", ");
+        } else if (recipient.installment) {
+          // Fallback to single installment
+          const quarterNum = typeof recipient.installment === 'string' ? 
+            recipient.installment.replace("ΤΡΙΜΗΝΟ ", "") : recipient.installment;
+          quarterInfo = `Τ${quarterNum}`;
+        }
+        
         cells.push(
           new TableCell({
             children: [
               DocumentUtilities.createCenteredParagraph(
-                recipient.months?.toString() || "1",
+                quarterInfo,
                 {
                   size: DocumentUtilities.DEFAULT_FONT_SIZE,
                 },
