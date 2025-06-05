@@ -815,7 +815,7 @@ export default function BeneficiariesPage() {
 
       {/* Create/Edit Modal */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto" aria-describedby="beneficiary-form-description">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               {selectedBeneficiary ? (
@@ -830,6 +830,12 @@ export default function BeneficiariesPage() {
                 </>
               )}
             </DialogTitle>
+            <div id="beneficiary-form-description" className="sr-only">
+              {selectedBeneficiary ? 
+                "Φόρμα επεξεργασίας στοιχείων δικαιούχου" : 
+                "Φόρμα δημιουργίας νέου δικαιούχου"
+              }
+            </div>
           </DialogHeader>
           <BeneficiaryForm
             beneficiary={selectedBeneficiary}

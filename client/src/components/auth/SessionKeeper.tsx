@@ -5,9 +5,9 @@ import { queryClient } from '@/lib/queryClient';
 import { SessionWarning } from './SessionWarning';
 import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
 
-// Interval settings for various checks
-const REFRESH_INTERVAL = 5 * 60 * 1000; // Refresh session every 5 minutes
-const ACTIVITY_TIMEOUT = 60 * 1000; // Check for user activity every minute
+// Optimized interval settings to reduce API calls
+const REFRESH_INTERVAL = 15 * 60 * 1000; // Refresh session every 15 minutes (reduced frequency)
+const ACTIVITY_TIMEOUT = 5 * 60 * 1000; // Check for user activity every 5 minutes (reduced frequency)
 const EXPIRATION_WARNING_TIME = 10 * 60 * 1000; // Show warning 10 minutes before session expires
 
 export function SessionKeeper() {
@@ -83,18 +83,18 @@ export function SessionKeeper() {
       const now = Date.now();
       const timeSinceLastActivity = now - lastActivityRef.current;
       
-      // Only refresh if user exists and has been active recently
-      if (auth.user && timeSinceLastActivity < ACTIVITY_TIMEOUT) {
-        // Use debounced refresh to prevent excessive calls during logout
-        console.log('[SessionKeeper] User active, refreshing session');
-        auth.refreshUser().catch((err) => {
-          // Suppress errors during logout process
-          if (auth.user) {
-            console.error('[SessionKeeper] Error refreshing session after activity', err);
-          }
-        });
+      // Only refresh if user exists and has been active recently, with throttling
+      if (auth.user && timeSinceLastActivity < ACTIVITY_TIMEOUT && timeSinceLastActivity > 60000) {
+        // Throttle refresh calls to prevent spam
+        setTimeout(() => {
+          auth.refreshUser().catch((err) => {
+            if (auth.user) {
+              console.error('[SessionKeeper] Error refreshing session after activity', err);
+            }
+          });
+        }, 2000);
       }
-    }, ACTIVITY_TIMEOUT * 2); // Reduce frequency to half
+    }, ACTIVITY_TIMEOUT * 3); // Further reduce frequency
     
     // Cleanup
     return () => {
