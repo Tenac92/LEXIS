@@ -42,31 +42,28 @@ export function useWebSocketUpdates() {
     }
   }, []);
 
-  // Connect to WebSocket with improved error handling
+  // Connect to WebSocket with improved stability and error handling
   const connect = useCallback(() => {
     if (!user) {
-      // Not establishing WebSocket connection - user not authenticated
       return;
     }
 
-    // If we already have a connection, don't reconnect
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      // WebSocket connection already established
+    // Prevent duplicate connections
+    if (wsRef.current && 
+        (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
-    // Careful shutdown of any existing connection
+    // Clean shutdown of existing connection
     if (wsRef.current) {
       try {
-        // Only close if not already closed or closing
         if (wsRef.current.readyState !== WebSocket.CLOSED && 
             wsRef.current.readyState !== WebSocket.CLOSING) {
-          wsRef.current.close();
+          wsRef.current.close(1000, 'Reconnecting');
         }
       } catch (error) {
         console.error('[WebSocket] Error closing existing connection:', error);
       } finally {
-        // Always null out the reference to prevent memory leaks
         wsRef.current = null;
       }
     }
@@ -373,14 +370,16 @@ export function useWebSocketUpdates() {
     }
   }, [user, toast, checkSession]);
 
-  // Effect to connect WebSocket and manage reconnection
+  // Stabilized WebSocket connection management
   useEffect(() => {
-    if (user) {
-      connect();
-    } else {
-      // If no user, close any existing connection
+    if (user && !wsRef.current) {
+      // Only connect if we don't already have a connection
+      const timer = setTimeout(() => connect(), 200);
+      return () => clearTimeout(timer);
+    } else if (!user) {
+      // Clean shutdown when user logs out
       if (wsRef.current) {
-        wsRef.current.close();
+        wsRef.current.close(1000, 'User logged out');
         wsRef.current = null;
       }
       setIsConnected(false);
@@ -428,7 +427,7 @@ export function useWebSocketUpdates() {
         wsRef.current = null;
       }
     };
-  }, [user, connect, checkSession]);
+  }, [user?.id]); // Only depend on user ID to prevent connection storms
 
   // Method to manually reconnect
   const reconnect = useCallback(() => {
