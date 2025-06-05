@@ -1063,6 +1063,8 @@ function BeneficiaryForm({
     if (userUnits.length === 1 && !form.getValues("selectedUnit") && !unitsLoading) {
       console.log('[Beneficiary Form] Auto-selecting unit:', userUnits[0].id);
       form.setValue("selectedUnit", userUnits[0].id);
+      // Trigger form validation after setting the value
+      form.trigger("selectedUnit");
     }
   }, [userUnits, form, unitsLoading]);
 
@@ -1590,24 +1592,24 @@ function BeneficiaryForm({
               <Plus className="w-4 h-4 mr-2" />
               Προσθήκη Πληρωμής
             </Button>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm"
-              onClick={() => {
-                if (beneficiary && Array.isArray(existingPayments) && existingPayments.length > 0) {
+            {beneficiary && (
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
                   setSelectedBeneficiaryForPayments(beneficiary);
                   setExistingPaymentsModalOpen(true);
-                }
-              }}
-              disabled={!beneficiary || !Array.isArray(existingPayments) || existingPayments.length === 0}
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Προβολή Υπαρχουσών ({Array.isArray(existingPayments) ? existingPayments.length : 0})
-            </Button>
+                }}
+                disabled={!Array.isArray(existingPayments) || existingPayments.length === 0}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Προβολή Υπαρχουσών ({Array.isArray(existingPayments) ? existingPayments.length : 0})
+              </Button>
+            )}
           </div>
 
-          {/* Payment Entries Table - no longer needed as we have the button above */}
+          {/* Payment Entries Table */}
           {payments.length > 0 && (
             <div className="border rounded-lg overflow-hidden">
               <div className="bg-muted/50 px-4 py-2 border-b">
