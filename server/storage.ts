@@ -14,7 +14,11 @@ export interface IStorage {
     mis?: string, 
     page?: number, 
     limit?: number, 
-    changeType?: string
+    changeType?: string,
+    userUnits?: string[],
+    dateFrom?: string,
+    dateTo?: string,
+    creator?: string
   ): Promise<{
     data: any[], 
     pagination: {
@@ -22,6 +26,12 @@ export interface IStorage {
       page: number, 
       limit: number, 
       pages: number
+    },
+    statistics?: {
+      totalEntries: number,
+      totalAmountChange: number,
+      changeTypes: Record<string, number>,
+      periodRange: { start: string, end: string }
     }
   }>;
   
@@ -230,11 +240,27 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async getBudgetHistory(mis?: string, page: number = 1, limit: number = 10, changeType?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}}> {
+  async getBudgetHistory(mis?: string, page: number = 1, limit: number = 10, changeType?: string, userUnits?: string[], dateFrom?: string, dateTo?: string, creator?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}, statistics?: {totalEntries: number, totalAmountChange: number, changeTypes: Record<string, number>, periodRange: { start: string, end: string }}}> {
     try {
-      console.log(`[Storage] Fetching budget history${mis ? ` for MIS: ${mis}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}`);
+      console.log(`[Storage] Fetching budget history${mis ? ` for MIS: ${mis}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}, userUnits: ${userUnits?.join(',') || 'all'}`);
       
       const offset = (page - 1) * limit;
+      
+      // First, get projects that belong to user's units for access control
+      let allowedProjectIds: number[] = [];
+      if (userUnits && userUnits.length > 0) {
+        console.log('[Storage] Applying unit-based access control for units:', userUnits);
+        
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('Projects')
+          .select('id, mis')
+          .overlaps('units', userUnits);
+          
+        if (!projectsError && projectsData) {
+          allowedProjectIds = projectsData.map(p => parseInt(p.mis)).filter(id => !isNaN(id));
+          console.log('[Storage] Found allowed project MIS codes:', allowedProjectIds);
+        }
+      }
       
       // Build the base query with the actual schema columns and join with generated_documents for protocol_number_input
       let query = supabase
@@ -256,6 +282,23 @@ export class DatabaseStorage implements IStorage {
           )
         `, { count: 'exact' });
       
+      // Apply unit-based access control
+      if (userUnits && userUnits.length > 0 && allowedProjectIds.length > 0) {
+        query = query.in('mis', allowedProjectIds);
+      } else if (userUnits && userUnits.length > 0 && allowedProjectIds.length === 0) {
+        // No projects found for user's units, return empty result
+        return {
+          data: [],
+          pagination: { total: 0, page, limit, pages: 0 },
+          statistics: {
+            totalEntries: 0,
+            totalAmountChange: 0,
+            changeTypes: {},
+            periodRange: { start: '', end: '' }
+          }
+        };
+      }
+      
       // Apply filters
       if (mis && mis !== 'all') {
         query = query.eq('mis', mis);
@@ -265,9 +308,130 @@ export class DatabaseStorage implements IStorage {
         query = query.eq('change_type', changeType);
       }
       
-      // Get total count first
-      const { count, error: countError } = await supabase
+      // Apply date filters
+      if (dateFrom) {
+        query = query.gte('created_at', dateFrom);
+      }
+      
+      if (dateTo) {
+        query = query.lte('created_at', dateTo + 'T23:59:59.999Z');
+      }
+      
+      // Apply creator filter if specified
+      if (creator && creator !== 'all' && creator !== '') {
+        // First get the user ID for the creator name
+        const { data: creatorData, error: creatorError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('name', creator)
+          .single();
+          
+        if (!creatorError && creatorData) {
+          query = query.eq('created_by', creatorData.id);
+        }
+      }
+      
+      // Get filtered data for statistics calculation (without pagination)
+      let statsQuery = supabase
         .from('budget_history')
+        .select('id, previous_amount, new_amount, change_type, created_at');
+        
+      // Apply the same filters to stats query
+      if (userUnits && userUnits.length > 0 && allowedProjectIds.length > 0) {
+        statsQuery = statsQuery.in('mis', allowedProjectIds);
+      } else if (userUnits && userUnits.length > 0 && allowedProjectIds.length === 0) {
+        // Return empty statistics
+        const emptyStats = {
+          totalEntries: 0,
+          totalAmountChange: 0,
+          changeTypes: {},
+          periodRange: { start: '', end: '' }
+        };
+        
+        return {
+          data: [],
+          pagination: { total: 0, page, limit, pages: 0 },
+          statistics: emptyStats
+        };
+      }
+      
+      if (mis && mis !== 'all') {
+        statsQuery = statsQuery.eq('mis', mis);
+      }
+      
+      if (changeType && changeType !== 'all') {
+        statsQuery = statsQuery.eq('change_type', changeType);
+      }
+      
+      if (dateFrom) {
+        statsQuery = statsQuery.gte('created_at', dateFrom);
+      }
+      
+      if (dateTo) {
+        statsQuery = statsQuery.lte('created_at', dateTo + 'T23:59:59.999Z');
+      }
+      
+      if (creator && creator !== 'all' && creator !== '') {
+        const { data: creatorData, error: creatorError } = await supabase
+          .from('users')
+          .select('id')
+          .eq('name', creator)
+          .single();
+          
+        if (!creatorError && creatorData) {
+          statsQuery = statsQuery.eq('created_by', creatorData.id);
+        }
+      }
+      
+      // Get statistics data
+      const { data: statsData, error: statsError } = await statsQuery;
+      
+      // Calculate statistics
+      let statistics = {
+        totalEntries: 0,
+        totalAmountChange: 0,
+        changeTypes: {} as Record<string, number>,
+        periodRange: { start: '', end: '' }
+      };
+      
+      if (!statsError && statsData) {
+        statistics.totalEntries = statsData.length;
+        
+        // Calculate total amount change and change types
+        let totalChange = 0;
+        const changeTypeCounts: Record<string, number> = {};
+        let dates: string[] = [];
+        
+        statsData.forEach(entry => {
+          const prevAmount = parseFloat(entry.previous_amount) || 0;
+          const newAmount = parseFloat(entry.new_amount) || 0;
+          totalChange += (newAmount - prevAmount);
+          
+          // Count change types
+          const changeType = entry.change_type || 'unknown';
+          changeTypeCounts[changeType] = (changeTypeCounts[changeType] || 0) + 1;
+          
+          // Collect dates for period range
+          if (entry.created_at) {
+            dates.push(entry.created_at);
+          }
+        });
+        
+        statistics.totalAmountChange = totalChange;
+        statistics.changeTypes = changeTypeCounts;
+        
+        // Set period range
+        if (dates.length > 0) {
+          dates.sort();
+          statistics.periodRange = {
+            start: dates[0],
+            end: dates[dates.length - 1]
+          };
+        }
+      }
+      
+      // Get total count for pagination (with same filters)
+      const { count, error: countError } = await query
         .select('id', { count: 'exact', head: true });
       
       if (countError) {
@@ -406,7 +570,8 @@ export class DatabaseStorage implements IStorage {
           page,
           limit,
           pages: totalPages
-        }
+        },
+        statistics
       };
     } catch (error) {
       console.error('[Storage] Error in getBudgetHistory:', error);
