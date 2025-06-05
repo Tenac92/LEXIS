@@ -66,13 +66,15 @@ export function useRobustWebSocket() {
       return;
     }
 
-    // Prevent duplicate connections
-    if (connectionState === ConnectionState.CONNECTING || connectionState === ConnectionState.CONNECTED) {
+    // Prevent duplicate connections - use ref state for accuracy
+    if (connectionStateRef.current === ConnectionState.CONNECTING || connectionStateRef.current === ConnectionState.CONNECTED) {
       return;
     }
 
-    // Clean up any existing connection
-    disconnect(1000, 'Creating new connection');
+    // Clean up any existing connection only if it exists
+    if (wsRef.current) {
+      disconnect(1000, 'Creating new connection');
+    }
 
     const connectionId = generateConnectionId();
     connectionIdRef.current = connectionId;
@@ -211,11 +213,11 @@ export function useRobustWebSocket() {
 
   // Effect for managing connection lifecycle
   useEffect(() => {
-    if (user && connectionState === ConnectionState.DISCONNECTED) {
-      // Small delay to prevent rapid connection attempts during navigation
+    if (user && connectionStateRef.current === ConnectionState.DISCONNECTED) {
+      // Longer delay to prevent rapid connection attempts during React development mode
       const timer = setTimeout(() => {
         connect();
-      }, 100);
+      }, 1000);
       
       return () => clearTimeout(timer);
     } else if (!user && connectionState !== ConnectionState.DISCONNECTED) {
@@ -240,12 +242,15 @@ export function useRobustWebSocket() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user, connectionState, connect]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - only in production or when user logs out
   useEffect(() => {
     return () => {
-      disconnect(1000, 'Component unmounting');
+      // In development mode, preserve connections to prevent constant reconnection
+      if (process.env.NODE_ENV === 'production' || !user) {
+        disconnect(1000, 'Component unmounting');
+      }
     };
-  }, [disconnect]);
+  }, [disconnect, user]);
 
   return {
     isConnected: connectionState === ConnectionState.CONNECTED,

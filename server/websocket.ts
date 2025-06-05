@@ -137,7 +137,7 @@ export function createWebSocketServer(server: Server) {
       });
     });
 
-    // Set up more frequent heartbeat interval (15 seconds instead of 30)
+    // Set up less aggressive heartbeat interval (30 seconds)
     const heartbeatInterval = setInterval(() => {
       // Count active/inactive clients for logging
       let activeCount = 0;
@@ -185,7 +185,7 @@ export function createWebSocketServer(server: Server) {
       if (wss.clients.size > 0) {
         console.log(`[WebSocket] Heartbeat - Clients: ${wss.clients.size} (${activeCount} active, ${inactiveCount} terminated)`);
       }
-    }, 15000); // Run every 15 seconds
+    }, 30000); // Run every 30 seconds
 
     // Make sure we clean up the interval when the server closes
     wss.on('close', () => {

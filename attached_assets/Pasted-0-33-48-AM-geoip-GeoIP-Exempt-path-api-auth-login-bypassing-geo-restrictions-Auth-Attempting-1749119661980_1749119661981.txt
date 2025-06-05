@@ -1,0 +1,212 @@
+0:33:48 AM [geoip] [GeoIP] Exempt path /api/auth/login bypassing geo-restrictions
+[Auth] Attempting login for email: dkaravias@civilprotection.gr
+[Auth] Session saved successfully: {
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP',
+  userID: 79,
+  secure: true,
+  protocol: 'https'
+}
+[Auth] Login successful: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  department: 'ΤΜΗΜΑ ΕΠΟΠΤΕΙΑΣ ΚΑΙ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ',
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP',
+  ip: '10.81.4.79'
+}
+10:33:49 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+[Auth] Returning current user: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP'
+}
+10:33:49 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+10:33:49 AM [express] [Request] GET /api/dashboard/stats from 10.81.4.79
+[Auth] User authenticated: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP',
+  ip: '10.81.4.79'
+}
+[Dashboard] Starting to fetch dashboard statistics...
+10:33:49 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+10:33:49 AM [express] [Request] GET /api/public/units from 10.81.10.204
+[Units] Completely public access to units list
+10:33:49 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+10:33:49 AM [express] [Request] GET /api/documents/user from 10.81.4.79
+[Auth] User authenticated: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP',
+  ip: '10.81.4.79'
+}
+10:33:49 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+10:33:49 AM [express] [Request] GET /api/projects-working/%CE%94%CE%91%CE%95%CE%A6%CE%9A-%CE%9A%CE%95 from 10.81.0.134
+[Auth] User authenticated: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP',
+  ip: '10.81.0.134'
+}
+[ProjectsWorking] Fetching authentic projects for unit: ΔΑΕΦΚ-ΚΕ
+[Units] Successfully fetched units: 11
+10:33:49 AM [express] GET /api/public/units 304 in 186ms
+[ProjectsWorking] Retrieved 195 authentic projects from database
+[ProjectsWorking] SUCCESS: Found 79 authentic projects for unit ΔΑΕΦΚ-ΚΕ
+10:33:49 AM [express] GET /api/projects-working/%CE%94%CE%91%CE%95%CE%A6%CE%9A-%CE%9A%CE%95 200 in 179ms
+10:33:50 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+[Auth] Returning current user: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP'
+}
+10:33:50 AM [express] GET /api/documents/user 304 in 403ms
+[Dashboard] Unit ΔΑΕΦΚ-ΚΕ: 14 total, 11 pending, 3 completed
+[WebSocket] New client connected: 822f98mbj8o0jd from 172.31.128.14
+[WSManager] Added connection 822f98mbj8o0jd, total: 2
+[WebSocket] Connection 822f98mbj8o0jd registered with manager
+[WebSocket] Received message from 822f98mbj8o0jd: { type: 'connect', timestamp: '2025-06-05T10:33:53.770Z' }
+[Dashboard] Successfully compiled stats: {
+  documents: { total: 14, pending: 11, completed: 3 },
+  projects: { active: 0, pending: 0, pending_reallocation: 141, completed: 0 },
+  budgets: [ 'active', 'pending', 'pending_reallocation', 'completed' ]
+}
+10:33:51 AM [express] GET /api/dashboard/stats 304 in 1528ms
+[WebSocket] New client connected: avbzeqmbj8o18z from 172.31.128.14
+[WSManager] Added connection avbzeqmbj8o18z, total: 3
+[WebSocket] Connection avbzeqmbj8o18z registered with manager
+[WebSocket] Heartbeat - Clients: 3 (3 active, 0 terminated)
+[WebSocket] Received message from avbzeqmbj8o18z: { type: 'connect', timestamp: '2025-06-05T10:33:54.692Z' }
+[WebSocket] Client disconnected: {
+  clientId: '822f98mbj8o0jd',
+  address: '172.31.128.14',
+  code: 1000,
+  reason: 'Cleanup',
+  timestamp: '2025-06-05T10:33:52.037Z'
+}
+[WSManager] Removed connection 822f98mbj8o0jd, total: 2
+10:33:52 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+10:33:52 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+10:33:52 AM [express] [Request] GET /api/beneficiaries from 10.81.4.79
+[Auth] User authenticated: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP',
+  ip: '10.81.4.79'
+}
+[Auth] User authenticated: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP',
+  ip: '10.81.4.79'
+}
+[Beneficiaries] SECURITY: User 79 (user) requesting beneficiaries for units: ΔΑΕΦΚ-ΚΕ
+10:33:52 AM [express] [Request] GET /api/public/units from 10.81.0.134
+[Units] Completely public access to units list
+10:33:52 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+10:33:52 AM [express] [Request] GET /api/projects from 10.81.4.79
+[Auth] User authenticated: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP',
+  ip: '10.81.4.79'
+}
+[Projects] Fetching all projects
+[Units] Successfully fetched units: 11
+10:33:52 AM [express] GET /api/public/units 304 in 138ms
+[Beneficiaries] Unit "ΔΑΕΦΚ-ΚΕ" is already an abbreviation
+[Beneficiaries] SECURITY: Fetching beneficiaries ONLY for authorized unit: ΔΑΕΦΚ-ΚΕ (mapped from: ΔΑΕΦΚ-ΚΕ)
+[Storage] Fetching ALL beneficiaries for unit: ΔΑΕΦΚ-ΚΕ using pagination
+[Storage] Fetching batch 1, starting from index 0
+[Storage] Fetched 1 beneficiaries in this batch. Total so far: 1
+[Storage] FINAL: Successfully fetched 1 beneficiaries for unit: ΔΑΕΦΚ-ΚΕ
+[Beneficiaries] SECURITY: Returning 1 beneficiaries from 1 authorized units only
+10:33:52 AM [express] GET /api/beneficiaries 200 in 286ms
+10:33:52 AM [express] GET /api/projects 304 in 625ms
+10:33:52 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+10:33:52 AM [express] [Request] GET /api/beneficiary-payments from 10.81.4.79
+[Auth] User authenticated: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP',
+  ip: '10.81.4.79'
+}
+[Storage] Fetching ALL beneficiaries for unit: ΔΑΕΦΚ-ΚΕ using pagination
+[Storage] Fetching batch 1, starting from index 0
+[Storage] Fetched 1 beneficiaries in this batch. Total so far: 1
+[Storage] FINAL: Successfully fetched 1 beneficiaries for unit: ΔΑΕΦΚ-ΚΕ
+[Storage] Fetching payments for beneficiary ID: 5
+[Storage] Found 1 payments for beneficiary 5
+10:33:53 AM [express] GET /api/beneficiary-payments 304 in 496ms
+10:33:54 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+[Auth] Returning current user: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP'
+}
+[WebSocket] New client connected: fj1y4bmbj8o4yc from 172.31.128.14
+[WSManager] Added connection fj1y4bmbj8o4yc, total: 3
+[WebSocket] Connection fj1y4bmbj8o4yc registered with manager
+[WebSocket] Received message from fj1y4bmbj8o4yc: { type: 'connect', timestamp: '2025-06-05T10:33:59.499Z' }
+[WebSocket] New client connected: t7ojeambj8o5m0 from 172.31.128.14
+[WSManager] Added connection t7ojeambj8o5m0, total: 4
+[WebSocket] Connection t7ojeambj8o5m0 registered with manager
+[WebSocket] Received message from t7ojeambj8o5m0: { type: 'connect', timestamp: '2025-06-05T10:34:00.357Z' }
+[WebSocket] Client disconnected: {
+  clientId: 'fj1y4bmbj8o4yc',
+  address: '172.31.128.14',
+  code: 1000,
+  reason: 'Cleanup',
+  timestamp: '2025-06-05T10:33:58.041Z'
+}
+[WSManager] Removed connection fj1y4bmbj8o4yc, total: 3
+10:34:00 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+[Auth] Returning current user: {
+  id: 79,
+  name: 'Δημήτριος Καραβίας',
+  email: 'dkaravias@civilprotection.gr',
+  role: 'user',
+  units: [ 'ΔΑΕΦΚ-ΚΕ' ],
+  sessionID: 'VbxJq38YVH_ACxKi3Z2iNxKNS9KCWHRP'
+}
+[WebSocket] New client connected: m8ph1mbj8o8vt from 172.31.128.14
+[WSManager] Added connection m8ph1mbj8o8vt, total: 4
+[WebSocket] Connection m8ph1mbj8o8vt registered with manager
+[WebSocket] Received message from m8ph1mbj8o8vt: { type: 'connect', timestamp: '2025-06-05T10:34:04.582Z' }
+[WebSocket] New client connected: p5wgmqmbj8oacs from 172.31.128.14
+[WSManager] Added connection p5wgmqmbj8oacs, total: 5
+[WebSocket] Connection p5wgmqmbj8oacs registered with manager
+[WebSocket] Received message from p5wgmqmbj8oacs: { type: 'connect', timestamp: '2025-06-05T10:34:06.491Z' }
+[WebSocket] Heartbeat - Clients: 5 (5 active, 0 terminated)
