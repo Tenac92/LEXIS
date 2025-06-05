@@ -4,12 +4,11 @@ import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { BudgetUpdate } from '@/lib/types';
 
-// For backward compatibility, keep the old type name as well
 export interface BudgetUpdateMessage extends BudgetUpdate {}
 
 export function useWebSocketUpdates() {
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<number | undefined>(undefined);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef<number>(0);
   const connectionIdRef = useRef<string>('');
   const isConnectingRef = useRef<boolean>(false);
@@ -369,15 +368,15 @@ export function useWebSocketUpdates() {
       } catch (error) {
         console.error('[WebSocket] Error creating WebSocket:', error);
         setIsConnected(false);
-        
-        // Check our session if WebSocket creation fails
+        isConnectingRef.current = false;
         checkSession();
       }
-    } catch (error) {
-      console.error('[WebSocket] Setup error:', error);
+    } catch (outerError) {
+      console.error('[WebSocket] Setup error:', outerError);
       setIsConnected(false);
+      isConnectingRef.current = false;
     }
-  }, [user, toast, checkSession]);
+  }, [user, toast, checkSession, generateConnectionId]);
 
   // Stabilized WebSocket connection management
   useEffect(() => {
