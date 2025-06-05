@@ -27,7 +27,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const { unit, project_id, expenditure_type, recipients, total_amount, attachments } = req.body;
+    const { unit, project_id, expenditure_type, recipients, total_amount, attachments, esdian_field1, esdian_field2 } = req.body;
 
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
       return res.status(400).json({
@@ -120,7 +120,7 @@ router.post('/v2', async (req: Request, res: Response) => {
     // Check if there's a session but don't require auth for testing
     console.log('[DocumentsController] V2 Session info:', (req as any).session);
     
-    const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [] } = req.body;
+    const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2 } = req.body;
     
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
       return res.status(400).json({
@@ -226,6 +226,7 @@ router.post('/v2', async (req: Request, res: Response) => {
       contact_number: (req as any).user?.telephone || null,
       user_name: (req as any).user?.name || null,
       attachments: attachments || [],
+      esdian: esdian_field1 || esdian_field2 ? [esdian_field1, esdian_field2].filter(Boolean) : [],
       created_at: now,
       updated_at: now
     };

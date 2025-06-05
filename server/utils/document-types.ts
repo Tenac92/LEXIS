@@ -62,6 +62,7 @@ export interface DocumentData {
   user_name?: string;
   user_id?: number;
   attachments?: string[];
+  esdian?: string[];
   contact_number?: string;
   department?: string;
   created_at?: string;
