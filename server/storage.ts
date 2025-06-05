@@ -57,12 +57,15 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
   
   constructor() {
-    // Create an in-memory session store instead of using PostgreSQL
+    // Create an in-memory session store with proper configuration
     const MemoryStoreSession = MemoryStore(session);
     this.sessionStore = new MemoryStoreSession({
       checkPeriod: 86400000, // prune expired entries every 24h
-      ttl: 24 * 60 * 60 * 1000, // 24 hours
-      stale: false
+      ttl: 48 * 60 * 60 * 1000, // 48 hours (match cookie maxAge)
+      stale: false,
+      dispose: (key: string, session: any) => {
+        console.log(`[SessionStore] Session expired and disposed: ${key}`);
+      }
     });
     
     console.log('[Storage] In-memory session store initialized');

@@ -158,15 +158,26 @@ export function useWebSocketUpdates() {
 
           console.log(`[WebSocket] Connection closed with code: ${event.code}`);
 
+          // Check if this is a session expiry closure
+          const isSessionExpired = event.reason === 'Session expired' || 
+                                   event.code === 4001 || 
+                                   (event.code === 1000 && event.reason === 'Session expired');
+
           // Determine if we should reconnect
           const shouldReconnect = 
             retryCountRef.current < MAX_RETRIES && 
             event.code !== 1000 && // Normal closure
             event.code !== 4000 && // Authentication error
+            event.code !== 4001 && // Session expired
+            !isSessionExpired && // Explicit session expiry check
             user && 
             document.visibilityState === 'visible';
 
-          if (shouldReconnect) {
+          if (isSessionExpired) {
+            console.log('[WebSocket] Connection closed due to session expiry, checking session status');
+            // For session expiry, don't reconnect immediately - check session first
+            checkSession();
+          } else if (shouldReconnect) {
             const backoff = Math.min(
               BASE_RETRY_DELAY * Math.pow(2, retryCountRef.current), 
               30000

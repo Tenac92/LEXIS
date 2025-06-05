@@ -94,11 +94,17 @@ class WebSocketSessionManager {
     const now = Date.now();
     const maxAge = 60 * 60 * 1000; // 1 hour
 
+    const sessionsToDelete: string[] = [];
+    
     this.sessions.forEach((session, sessionId) => {
       if (now - session.lastActivity > maxAge || !session.isValid) {
-        this.sessions.delete(sessionId);
-        console.log(`[WSSession] Cleaned up expired session ${sessionId}`);
+        sessionsToDelete.push(sessionId);
       }
+    });
+
+    sessionsToDelete.forEach(sessionId => {
+      this.sessions.delete(sessionId);
+      console.log(`[WSSession] Cleaned up expired session ${sessionId}`);
     });
   }
 
