@@ -2078,7 +2078,17 @@ export function CreateDocumentDialog({
             // Calculate total from quarter amounts
             const quarterTotal = Object.values(r.installmentAmounts).reduce((sum, amount) => sum + (amount || 0), 0);
             
-            // For housing allowance, use a simplified structure that properly exports
+            // Convert quarter names to numbers for storage
+            const quarterNumbers = r.installments.map(q => q.replace("ΤΡΙΜΗΝΟ ", ""));
+            const quarterAmountsWithNumbers: Record<string, number> = {};
+            
+            // Map quarter amounts to numeric keys
+            Object.entries(r.installmentAmounts).forEach(([key, value]) => {
+              const quarterNum = key.replace("ΤΡΙΜΗΝΟ ", "");
+              quarterAmountsWithNumbers[quarterNum] = value;
+            });
+            
+            // For housing allowance, use numeric quarter format for storage
             return {
               firstname: r.firstname.trim(),
               lastname: r.lastname.trim(),
@@ -2086,9 +2096,9 @@ export function CreateDocumentDialog({
               afm: r.afm.trim(),
               amount: quarterTotal,
               secondary_text: r.secondary_text?.trim() || "",
-              installment: r.installments.length === 1 ? r.installments[0] : `${r.installments.length} τρίμηνα`,
-              installments: r.installments,
-              installmentAmounts: r.installmentAmounts,
+              installment: quarterNumbers.length === 1 ? quarterNumbers[0] : `${quarterNumbers.length} τρίμηνα`,
+              installments: quarterNumbers,
+              installmentAmounts: quarterAmountsWithNumbers,
             };
           }
           
