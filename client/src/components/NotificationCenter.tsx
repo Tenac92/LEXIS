@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { BudgetNotification } from '@shared/schema';
-import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
+import { useStableWebSocket } from '@/hooks/use-stable-websocket';
 
 const notificationStyles = {
   funding: {
@@ -46,7 +46,7 @@ interface NotificationCenterProps {
 
 export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotificationClick }) => {
   const { toast } = useToast();
-  const { isConnected, reconnect } = useWebSocketUpdates();
+  const { isConnected, reconnect } = useStableWebSocket();
   const queryClient = useQueryClient();
   
   // Local state management for manual handling

@@ -36,7 +36,9 @@ export function SessionKeeper() {
       try {
         await auth.refreshUser();
         // Also reconnect WebSocket if it's disconnected
-        websocket.connect();
+        if (!websocket.isConnected) {
+          websocket.reconnect();
+        }
       } catch (error) {
         console.error('[SessionKeeper] Failed to refresh session', error);
       }

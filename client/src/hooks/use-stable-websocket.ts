@@ -1,227 +1,185 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
+import { useAuth } from '@/hooks/use-auth';
 import { BudgetUpdate } from '@/lib/types';
 
-/**
- * Stable WebSocket hook that prevents connection storms
- * Does not rely on session validation for connection management
- */
+// Global connection pool to prevent duplicate connections in dev mode
+const globalConnections = new Map<string, WebSocket>();
+
+enum ConnectionState {
+  DISCONNECTED = 'disconnected',
+  CONNECTING = 'connecting', 
+  CONNECTED = 'connected',
+  ERROR = 'error'
+}
+
 export function useStableWebSocket() {
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const retryCountRef = useRef<number>(0);
-  const connectionIdRef = useRef<string>('');
-  const isConnectingRef = useRef<boolean>(false);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
   const [lastMessage, setLastMessage] = useState<BudgetUpdate | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const connectionKeyRef = useRef<string>('');
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef<number>(0);
 
-  const MAX_RETRIES = 3; // Reduced from 5
-  const BASE_RETRY_DELAY = 5000; // Increased to 5 seconds
-  const MAX_RETRY_DELAY = 30000;
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 5000;
 
-  // Generate unique connection ID
-  const generateConnectionId = useCallback(() => {
-    return `stable_ws_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }, []);
+  // Generate stable connection key based on user
+  const getConnectionKey = useCallback(() => {
+    return user?.id ? `ws_${user.id}` : '';
+  }, [user?.id]);
 
   // Clean disconnect function
-  const disconnect = useCallback((code = 1000, reason = 'Disconnecting') => {
+  const disconnect = useCallback((code = 1000, reason = 'Normal closure') => {
+    const key = connectionKeyRef.current;
+    if (key && globalConnections.has(key)) {
+      const ws = globalConnections.get(key);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        console.log(`[StableWebSocket] Disconnecting: ${reason}`);
+        ws.close(code, reason);
+      }
+      globalConnections.delete(key);
+    }
+    setConnectionState(ConnectionState.DISCONNECTED);
+    
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-
-    if (wsRef.current) {
-      const currentWs = wsRef.current;
-      wsRef.current = null;
-      
-      if (currentWs.readyState === WebSocket.OPEN || currentWs.readyState === WebSocket.CONNECTING) {
-        try {
-          currentWs.close(code, reason);
-        } catch (error) {
-          console.error('[StableWebSocket] Error during disconnect:', error);
-        }
-      }
-    }
-
-    setIsConnected(false);
-    connectionIdRef.current = '';
-    retryCountRef.current = 0;
-    isConnectingRef.current = false;
   }, []);
 
-  // Connect function without session dependency
+  // Connect function
   const connect = useCallback(() => {
-    // Prevent multiple concurrent connections
-    if (isConnectingRef.current || wsRef.current?.readyState === WebSocket.OPEN) {
+    if (!user?.id) {
+      console.log('[StableWebSocket] No user, skipping connection');
       return;
     }
 
-    isConnectingRef.current = true;
-    disconnect(); // Clean up any existing connection
+    const key = getConnectionKey();
+    connectionKeyRef.current = key;
 
-    const connectionId = generateConnectionId();
-    connectionIdRef.current = connectionId;
+    // Check if connection already exists and is healthy
+    if (globalConnections.has(key)) {
+      const existingWs = globalConnections.get(key);
+      if (existingWs && existingWs.readyState === WebSocket.OPEN) {
+        console.log('[StableWebSocket] Using existing connection');
+        setConnectionState(ConnectionState.CONNECTED);
+        return;
+      } else {
+        // Clean up stale connection
+        globalConnections.delete(key);
+      }
+    }
+
+    console.log('[StableWebSocket] Creating new connection');
+    setConnectionState(ConnectionState.CONNECTING);
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws?t=${Date.now()}`;
-
-      const ws = new WebSocket(wsUrl, ['notifications']);
-      wsRef.current = ws;
-
-      // Connection timeout
-      const connectionTimeout = setTimeout(() => {
-        if (ws.readyState !== WebSocket.OPEN) {
-          console.warn('[StableWebSocket] Connection timeout');
-          ws.close();
-        }
-      }, 15000); // Increased timeout
+      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      
+      globalConnections.set(key, ws);
 
       ws.onopen = () => {
-        if (connectionIdRef.current === connectionId) {
-          clearTimeout(connectionTimeout);
-          setIsConnected(true);
-          retryCountRef.current = 0;
-          isConnectingRef.current = false;
-
-          console.log('[StableWebSocket] Connected successfully');
-
-          // Send initial connection message
-          try {
-            ws.send(JSON.stringify({ 
-              type: 'connect', 
-              timestamp: new Date().toISOString() 
-            }));
-          } catch (error) {
-            console.error('[StableWebSocket] Error sending initial message:', error);
-          }
-        }
+        console.log('[StableWebSocket] Connected successfully');
+        setConnectionState(ConnectionState.CONNECTED);
+        retryCountRef.current = 0;
+        
+        // Send initial message
+        ws.send(JSON.stringify({
+          type: 'connect',
+          timestamp: new Date().toISOString()
+        }));
       };
 
       ws.onmessage = (event) => {
-        if (connectionIdRef.current !== connectionId) return;
-        
         try {
           const data = JSON.parse(event.data);
-          setLastMessage(data);
-
-          // Handle different message types
-          switch (data.type) {
-            case 'budget_update':
-              queryClient.invalidateQueries({ queryKey: ['/api/budget'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-              if (data.message) {
-                toast({
-                  title: "Ενημέρωση Προϋπολογισμού",
-                  description: data.message,
-                });
-              }
-              break;
-            case 'project_update':
-              queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
-              if (data.message) {
-                toast({
-                  title: "Ενημέρωση Έργου",
-                  description: data.message,
-                });
-              }
-              break;
-            case 'beneficiary_update':
-              queryClient.invalidateQueries({ queryKey: ['/api/beneficiaries'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/beneficiary-payments'] });
-              break;
+          if (data.type === 'budget_update') {
+            setLastMessage(data);
+            // Invalidate budget-related queries
+            queryClient.invalidateQueries({ queryKey: ['/api/budget'] });
           }
         } catch (error) {
-          console.error('[StableWebSocket] Error processing message:', error);
+          console.error('[StableWebSocket] Failed to parse message:', error);
         }
       };
 
       ws.onerror = (error) => {
-        if (connectionIdRef.current === connectionId) {
-          console.error('[StableWebSocket] Connection error:', error);
-          setIsConnected(false);
-          isConnectingRef.current = false;
-        }
+        console.error('[StableWebSocket] Connection error:', error);
+        setConnectionState(ConnectionState.ERROR);
       };
 
       ws.onclose = (event) => {
-        clearTimeout(connectionTimeout);
-        
-        if (connectionIdRef.current === connectionId) {
-          setIsConnected(false);
-          isConnectingRef.current = false;
-          wsRef.current = null;
+        console.log(`[StableWebSocket] Connection closed with code: ${event.code}, reason: ${event.reason}`);
+        globalConnections.delete(key);
+        setConnectionState(ConnectionState.DISCONNECTED);
 
-          console.log(`[StableWebSocket] Connection closed with code: ${event.code}, reason: ${event.reason}`);
-
-          // Only reconnect on unexpected closures and if we haven't exceeded retry limit
-          const shouldReconnect = 
-            retryCountRef.current < MAX_RETRIES && 
-            event.code !== 1000 && // Normal closure
-            document.visibilityState === 'visible';
-
-          if (shouldReconnect) {
-            const backoff = Math.min(
-              BASE_RETRY_DELAY * Math.pow(2, retryCountRef.current), 
-              MAX_RETRY_DELAY
-            );
-            
-            console.log(`[StableWebSocket] Reconnecting in ${backoff}ms (attempt ${retryCountRef.current + 1})`);
-            
-            reconnectTimeoutRef.current = setTimeout(() => {
-              if (connectionIdRef.current === connectionId) {
-                retryCountRef.current += 1;
-                connect();
-              }
-            }, backoff);
-          } else {
-            console.log('[StableWebSocket] Not reconnecting - normal closure or retry limit reached');
-          }
+        // Only auto-reconnect if user is still logged in and we haven't exceeded retries
+        if (user?.id && retryCountRef.current < MAX_RETRIES && event.code !== 1000) {
+          retryCountRef.current += 1;
+          console.log(`[StableWebSocket] Reconnecting in ${RETRY_DELAY}ms (attempt ${retryCountRef.current})`);
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (user?.id && connectionKeyRef.current === key) {
+              connect();
+            }
+          }, RETRY_DELAY);
+        } else if (event.code !== 1000) {
+          console.log('[StableWebSocket] Max retries reached or user logged out');
+          setConnectionState(ConnectionState.ERROR);
+          toast({
+            title: "Σφάλμα Σύνδεσης",
+            description: "Αποτυχία σύνδεσης με τον διακομιστή. Παρακαλώ ανανεώστε τη σελίδα.",
+            variant: "destructive"
+          });
         }
       };
 
     } catch (error) {
-      console.error('[StableWebSocket] Setup error:', error);
-      setIsConnected(false);
-      isConnectingRef.current = false;
+      console.error('[StableWebSocket] Failed to create connection:', error);
+      setConnectionState(ConnectionState.ERROR);
+      globalConnections.delete(key);
     }
-  }, [generateConnectionId, disconnect, toast]);
+  }, [user?.id, getConnectionKey, toast]);
 
-  // Auto-connect on mount, disconnect on unmount
-  useEffect(() => {
-    connect();
-    
-    return () => {
-      disconnect();
-    };
+  // Manual reconnection
+  const reconnect = useCallback(() => {
+    console.log('[StableWebSocket] Manual reconnect requested');
+    retryCountRef.current = 0;
+    disconnect(1000, 'Manual reconnect');
+    setTimeout(() => connect(), 1000);
   }, [connect, disconnect]);
 
-  // Handle visibility changes to prevent unnecessary connections
+  // Connection management effect
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        disconnect();
-      } else if (document.visibilityState === 'visible' && !wsRef.current) {
-        setTimeout(() => connect(), 1000); // Delay reconnection
+    if (user?.id && connectionState === ConnectionState.DISCONNECTED) {
+      // Delay connection to prevent rapid reconnections during navigation
+      const timer = setTimeout(() => {
+        connect();
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else if (!user?.id && connectionState !== ConnectionState.DISCONNECTED) {
+      disconnect(1000, 'User logged out');
+    }
+  }, [user?.id, connectionState, connect, disconnect]);
+
+  // Cleanup on unmount (only in production)
+  useEffect(() => {
+    return () => {
+      if (process.env.NODE_ENV === 'production') {
+        disconnect(1000, 'Component unmounting');
       }
     };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [connect, disconnect]);
+  }, [disconnect]);
 
   return {
-    isConnected,
+    isConnected: connectionState === ConnectionState.CONNECTED,
+    connectionState,
     lastMessage,
-    connect: () => {
-      if (!isConnectingRef.current) {
-        connect();
-      }
-    },
+    reconnect,
     disconnect
   };
 }

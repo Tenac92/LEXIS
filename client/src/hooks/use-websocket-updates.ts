@@ -3,10 +3,24 @@ import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { BudgetUpdate } from '@/lib/types';
+import { useStableWebSocket } from '@/hooks/use-stable-websocket';
 
 export interface BudgetUpdateMessage extends BudgetUpdate {}
 
+// Re-export the stable WebSocket implementation to maintain compatibility
 export function useWebSocketUpdates() {
+  const { isConnected, connectionState, lastMessage, reconnect, disconnect } = useStableWebSocket();
+  
+  return {
+    isConnected,
+    lastMessage,
+    connect: reconnect,
+    disconnect,
+    reconnect
+  };
+}
+
+function useWebSocketUpdatesOriginal() {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<any>(null);
   const retryCountRef = useRef<number>(0);
@@ -17,8 +31,8 @@ export function useWebSocketUpdates() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const MAX_RETRIES = 5;
-  const BASE_RETRY_DELAY = 1000;
+  const MAX_RETRIES = 3;
+  const BASE_RETRY_DELAY = 5000;
 
   // Generate unique connection ID for tracking
   const generateConnectionId = useCallback(() => {
