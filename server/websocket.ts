@@ -1,12 +1,14 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import type { Server } from 'http';
 import type { BudgetNotification } from '@shared/schema';
+import { wsSessionManager, type SessionInfo } from './websocket-session-manager';
 
 const WS_PATH = '/ws';
 
 interface ExtendedWebSocket extends WebSocket {
   isAlive: boolean;
   clientId?: string;
+  sessionInfo?: SessionInfo;
 }
 
 export interface BudgetUpdate {
