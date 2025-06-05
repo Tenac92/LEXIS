@@ -251,17 +251,19 @@ export class DatabaseStorage implements IStorage {
       if (userUnits && userUnits.length > 0) {
         console.log('[Storage] Applying unit-based access control for units:', userUnits);
         
-        // For managers, we need to be less restrictive and show budget history
-        // Let's get all budget history for now and filter by unit later if needed
-        // This is because budget history might not have direct unit associations
-        const { data: allBudgetData, error: budgetError } = await supabase
-          .from('budget_history')
-          .select('mis')
-          .limit(1000);
+        // Get projects that belong to the user's units - more comprehensive approach
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('Projects')
+          .select('id, mis, units')
+          .or(userUnits.map(unit => `units.cs.{${unit}}`).join(','));
           
-        if (!budgetError && allBudgetData) {
-          allowedProjectIds = allBudgetData.map(b => parseInt(b.mis)).filter(id => !isNaN(id));
-          console.log('[Storage] Found budget history MIS codes for access control:', allowedProjectIds.length);
+        if (!projectsError && projectsData && projectsData.length > 0) {
+          allowedProjectIds = projectsData.map(p => parseInt(p.mis)).filter(id => !isNaN(id));
+          console.log('[Storage] Found allowed project MIS codes for units:', allowedProjectIds.length, allowedProjectIds);
+        } else {
+          console.log('[Storage] No projects found for user units:', userUnits, 'Error:', projectsError);
+          // For managers with no projects, we'll still show an empty result to maintain security
+          allowedProjectIds = [-1]; // Use impossible MIS to ensure empty results
         }
       }
       
@@ -285,21 +287,25 @@ export class DatabaseStorage implements IStorage {
           )
         `, { count: 'exact' });
       
-      // Apply unit-based access control
-      if (userUnits && userUnits.length > 0 && allowedProjectIds.length > 0) {
-        query = query.in('mis', allowedProjectIds);
-      } else if (userUnits && userUnits.length > 0 && allowedProjectIds.length === 0) {
-        // No projects found for user's units, return empty result
-        return {
-          data: [],
-          pagination: { total: 0, page, limit, pages: 0 },
-          statistics: {
-            totalEntries: 0,
-            totalAmountChange: 0,
-            changeTypes: {},
-            periodRange: { start: '', end: '' }
-          }
-        };
+      // Apply unit-based access control - managers must only see their unit's data
+      if (userUnits && userUnits.length > 0) {
+        if (allowedProjectIds.length > 0 && !allowedProjectIds.includes(-1)) {
+          console.log('[Storage] Applying MIS filter for allowed projects:', allowedProjectIds);
+          query = query.in('mis', allowedProjectIds);
+        } else {
+          // No projects found for user's units or using security filter - return empty result
+          console.log('[Storage] No valid projects for user units - returning empty result for security');
+          return {
+            data: [],
+            pagination: { total: 0, page, limit, pages: 0 },
+            statistics: {
+              totalEntries: 0,
+              totalAmountChange: 0,
+              changeTypes: {},
+              periodRange: { start: '', end: '' }
+            }
+          };
+        }
       }
       
       // Apply filters

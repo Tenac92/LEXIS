@@ -1094,8 +1094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get all data without pagination for export
         const result = await storage.getBudgetHistory(mis, 1, 10000, changeType, userUnits, dateFrom, dateTo, creator);
         
-        // Import required Excel libraries
-        const ExcelJS = require('exceljs');
+        // Use imported ExcelJS library
         
         // Create workbook
         const workbook = new ExcelJS.Workbook();
