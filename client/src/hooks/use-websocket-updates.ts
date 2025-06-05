@@ -8,7 +8,7 @@ export interface BudgetUpdateMessage extends BudgetUpdate {}
 
 export function useWebSocketUpdates() {
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectTimeoutRef = useRef<any>(null);
   const retryCountRef = useRef<number>(0);
   const connectionIdRef = useRef<string>('');
   const isConnectingRef = useRef<boolean>(false);

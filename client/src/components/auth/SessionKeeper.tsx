@@ -19,7 +19,7 @@ export function SessionKeeper() {
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const activityCheckRef = useRef<NodeJS.Timeout | null>(null);
-  const { reconnect } = useWebSocketUpdates();
+  const websocket = useWebSocketUpdates();
   
   // Set up session refresh on regular intervals
   useEffect(() => {
@@ -36,7 +36,7 @@ export function SessionKeeper() {
       try {
         await auth.refreshUser();
         // Also reconnect WebSocket if it's disconnected
-        reconnect();
+        websocket.connect();
       } catch (error) {
         console.error('[SessionKeeper] Failed to refresh session', error);
       }
@@ -48,7 +48,7 @@ export function SessionKeeper() {
         clearInterval(refreshIntervalRef.current);
       }
     };
-  }, [auth.user, auth.refreshUser, reconnect]);
+  }, [auth.user, auth.refreshUser, websocket]);
   
   // Track user activity
   useEffect(() => {
