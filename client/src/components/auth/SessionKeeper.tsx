@@ -19,7 +19,7 @@ export function SessionKeeper() {
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const activityCheckRef = useRef<NodeJS.Timeout | null>(null);
-  const websocket = useWebSocketUpdates();
+  const websocket = useStableWebSocket();
   
   // Set up session refresh on regular intervals
   useEffect(() => {
