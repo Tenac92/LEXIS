@@ -16,7 +16,7 @@ import { type Project } from "@shared/schema";
 import { Plus, FileUp, Download, LayoutGrid, LayoutList, Upload, FolderOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 import { useRef } from "react";
 import { Header } from "@/components/header";
 
