@@ -18,6 +18,7 @@ export function useRobustWebSocket() {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const connectionIdRef = useRef<string>('');
   const retryCountRef = useRef<number>(0);
+  const connectionStateRef = useRef<ConnectionState>(ConnectionState.DISCONNECTED);
   const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.DISCONNECTED);
   const [lastMessage, setLastMessage] = useState<BudgetUpdate | null>(null);
   const { toast } = useToast();
@@ -53,6 +54,7 @@ export function useRobustWebSocket() {
     }
 
     setConnectionState(ConnectionState.DISCONNECTED);
+    connectionStateRef.current = ConnectionState.DISCONNECTED;
     connectionIdRef.current = '';
     retryCountRef.current = 0;
   }, []);
@@ -75,6 +77,7 @@ export function useRobustWebSocket() {
     const connectionId = generateConnectionId();
     connectionIdRef.current = connectionId;
     setConnectionState(ConnectionState.CONNECTING);
+    connectionStateRef.current = ConnectionState.CONNECTING;
 
     try {
       // Construct WebSocket URL with protocol detection
@@ -145,7 +148,7 @@ export function useRobustWebSocket() {
         
         if (connectionIdRef.current !== connectionId) return;
 
-        const wasConnected = connectionState === ConnectionState.CONNECTED;
+        const wasConnected = connectionStateRef.current === ConnectionState.CONNECTED;
         setConnectionState(ConnectionState.DISCONNECTED);
 
         // Determine if we should attempt reconnection

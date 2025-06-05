@@ -20,8 +20,8 @@ const __dirname = path.dirname(__filename);
 
 // Configuration
 const DIRS_TO_CHECK = [
-  'server',
-  'client/src'
+  '../server',
+  '../client/src'
 ];
 
 const EXCLUDE_DIRS = [
