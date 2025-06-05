@@ -3,7 +3,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { queryClient } from '@/lib/queryClient';
 import { SessionWarning } from './SessionWarning';
-import { useWebSocketUpdates } from '@/hooks/use-websocket-updates';
+import { useStableWebSocket } from '@/hooks/use-stable-websocket';
 
 // Optimized interval settings to reduce API calls
 const REFRESH_INTERVAL = 15 * 60 * 1000; // Refresh session every 15 minutes (reduced frequency)

@@ -1,14 +1,13 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import type { Server } from 'http';
 import type { BudgetNotification } from '@shared/schema';
-import { wsSessionManager, type SessionInfo } from './websocket-session-manager';
+import { wsConnectionManager } from './websocket-connection-manager';
 
 const WS_PATH = '/ws';
 
 interface ExtendedWebSocket extends WebSocket {
   isAlive: boolean;
   clientId?: string;
-  sessionInfo?: SessionInfo;
 }
 
 export interface BudgetUpdate {
@@ -44,6 +43,10 @@ export function createWebSocketServer(server: Server) {
 
       // Mark as alive immediately
       ws.isAlive = true;
+
+      // Add connection to manager without forced session validation
+      wsConnectionManager.addConnection(ws, clientId, req as any);
+      console.log(`[WebSocket] Connection ${clientId} registered with manager`);
 
       // Try to send a welcome message
       try {
@@ -130,6 +133,7 @@ export function createWebSocketServer(server: Server) {
 
         // Cleanup
         ws.isAlive = false;
+        wsConnectionManager.removeConnection(clientId);
       });
     });
 
