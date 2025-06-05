@@ -36,6 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -805,6 +806,12 @@ export default function BeneficiariesPage() {
                 </>
               )}
             </DialogTitle>
+            <DialogDescription>
+              {selectedBeneficiary ? 
+                "Επεξεργαστείτε τα στοιχεία του δικαιούχου και πατήστε αποθήκευση" : 
+                "Συμπληρώστε τα στοιχεία για τον νέο δικαιούχο"
+              }
+            </DialogDescription>
           </DialogHeader>
           <BeneficiaryForm
             beneficiary={selectedBeneficiary}
