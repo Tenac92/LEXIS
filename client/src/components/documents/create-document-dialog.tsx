@@ -821,7 +821,9 @@ export function CreateDocumentDialog({
         expenditure_type: formData?.expenditure_type || "",
         recipients: Array.isArray(formData?.recipients) ? [...formData.recipients] : [],
         status: formData?.status || "draft",
-        selectedAttachments: Array.isArray(formData?.selectedAttachments) ? [...formData.selectedAttachments] : []
+        selectedAttachments: Array.isArray(formData?.selectedAttachments) ? [...formData.selectedAttachments] : [],
+        esdian_field1: formData?.esdian_field1 || "",
+        esdian_field2: formData?.esdian_field2 || ""
       };
       
       // STAGE 3: Apply all form values in a single atomic operation
@@ -967,6 +969,8 @@ export function CreateDocumentDialog({
   const selectedRegion = form.watch("region");
   const selectedExpenditureType = form.watch("expenditure_type");
   const selectedAttachments = form.watch("selectedAttachments") || [];
+  const esdianField1 = form.watch("esdian_field1") || "";
+  const esdianField2 = form.watch("esdian_field2") || "";
 
   // Use a reference to store the timeout ID for debouncing
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -987,8 +991,10 @@ export function CreateDocumentDialog({
       recipients: recipients,
       status: "draft",
       selectedAttachments: selectedAttachments,
+      esdian_field1: esdianField1,
+      esdian_field2: esdianField2,
     };
-  }, [selectedUnit, selectedProjectId, selectedRegion, selectedExpenditureType, recipients, selectedAttachments]);
+  }, [selectedUnit, selectedProjectId, selectedRegion, selectedExpenditureType, recipients, selectedAttachments, esdianField1, esdianField2]);
   
   // MAJOR OPTIMIZATION: State caching and deep comparison optimization 
   // This will dramatically reduce flicker by preventing needless updates
