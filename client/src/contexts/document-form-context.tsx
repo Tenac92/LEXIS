@@ -45,6 +45,8 @@ const defaultFormData: DocumentFormData = {
   recipients: [],
   status: "draft",
   selectedAttachments: [],
+  esdian_field1: "",
+  esdian_field2: "",
 };
 
 const DocumentFormContext = createContext<DocumentFormContextType | undefined>(undefined);

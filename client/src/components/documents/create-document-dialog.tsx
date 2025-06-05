@@ -528,7 +528,9 @@ export function CreateDocumentDialog({
             expenditure_type: formValues.expenditure_type,
             recipients: formValues.recipients,
             status: formValues.status || "draft",
-            selectedAttachments: formValues.selectedAttachments
+            selectedAttachments: formValues.selectedAttachments,
+            esdian_field1: formValues.esdian_field1 || "",
+            esdian_field2: formValues.esdian_field2 || ""
           });
           
           if (formValues.project_id) {
@@ -2122,6 +2124,7 @@ export function CreateDocumentDialog({
         total_amount: totalAmount,
         status: "draft",
         attachments: data.selectedAttachments || [],
+        esdian: [data.esdian_field1 || "", data.esdian_field2 || ""].filter(field => field.trim() !== ""),
       };
 
       console.log("Sending payload to create document:", payload);
@@ -3122,6 +3125,45 @@ export function CreateDocumentDialog({
                       <p>Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης</p>
                     </div>
                   )}
+                </div>
+
+                {/* ESDIAN Fields for Internal Distribution */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Εσωτερική Διανομή</h3>
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="esdian_field1"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Εσωτερική Διανομή - Πεδίο 1</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Εισάγετε το πρώτο πεδίο εσωτερικής διανομής"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="esdian_field2"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Εσωτερική Διανομή - Πεδίο 2</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Εισάγετε το δεύτερο πεδίο εσωτερικής διανομής"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Navigation buttons for final step */}

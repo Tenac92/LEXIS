@@ -167,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if there's a session but don't require auth for testing
         console.log('[DIRECT_ROUTE_V2] Session info:', (req as any).session);
         
-        const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [], region } = req.body;
+        const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [], region, esdian = [] } = req.body;
         
         if (!recipients?.length || !project_id || !unit || !expenditure_type) {
           return res.status(400).json({
@@ -296,6 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           region: region || null, // Add region field
           generated_by: (req as any).session?.user?.id || null, // Add user ID if available
           department: (req as any).session?.user?.department || null, // Add department if available
+          ESDIAN: esdian || [], // Add ESDIAN fields for internal distribution
           created_at: now,
           updated_at: now
           // Τα πεδία installments και installmentAmounts αφορούν τους παραλήπτες και όχι το έγγραφο,
