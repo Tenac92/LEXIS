@@ -73,8 +73,9 @@ export class DatabaseStorage implements IStorage {
       checkPeriod: 86400000, // prune expired entries every 24h
       ttl: 48 * 60 * 60 * 1000, // 48 hours (match cookie maxAge)
       stale: false,
+      noDisposeOnSet: true, // Prevent disposal on session updates
       dispose: (key: string, session: any) => {
-        console.log(`[SessionStore] Session expired and disposed: ${key}`);
+        console.log(`[SessionStore] Session naturally expired: ${key}`);
       }
     });
     

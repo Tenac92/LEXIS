@@ -142,6 +142,7 @@ export function useRobustWebSocket() {
         
         console.error('[RobustWebSocket] Connection error:', error);
         setConnectionState(ConnectionState.ERROR);
+        connectionStateRef.current = ConnectionState.ERROR;
       };
 
       ws.onclose = (event) => {
@@ -151,6 +152,7 @@ export function useRobustWebSocket() {
 
         const wasConnected = connectionStateRef.current === ConnectionState.CONNECTED;
         setConnectionState(ConnectionState.DISCONNECTED);
+        connectionStateRef.current = ConnectionState.DISCONNECTED;
 
         // Determine if we should attempt reconnection
         const shouldReconnect = 
@@ -161,6 +163,7 @@ export function useRobustWebSocket() {
 
         if (shouldReconnect && wasConnected) {
           setConnectionState(ConnectionState.RECONNECTING);
+          connectionStateRef.current = ConnectionState.RECONNECTING;
           
           // Calculate retry delay with exponential backoff and jitter
           const baseDelay = Math.min(BASE_RETRY_DELAY * Math.pow(2, retryCountRef.current), MAX_RETRY_DELAY);
