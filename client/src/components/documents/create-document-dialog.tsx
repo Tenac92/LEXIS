@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogClose,
@@ -3099,15 +3100,14 @@ export function CreateDocumentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-w-5xl"
-        aria-describedby="dialog-description"
       >
         <DialogHeader>
           <DialogTitle>Δημιουργία Εγγράφου</DialogTitle>
+          <DialogDescription>
+            Φόρμα δημιουργίας νέου εγγράφου με βήματα για την επιλογή μονάδας,
+            έργου, και δικαιούχων
+          </DialogDescription>
         </DialogHeader>
-        <span id="dialog-description" className="sr-only">
-          Φόρμα δημιουργίας νέου εγγράφου με βήματα για την επιλογή μονάδας,
-          έργου, και δικαιούχων
-        </span>
         <StepIndicator currentStep={currentStep} />
         <Form {...form}>
           <div className="space-y-6">{renderStepContent()}</div>
