@@ -72,61 +72,7 @@ export function Dashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  // Component for individual recent document items - moved inside Dashboard for proper scope
-  const RecentDocumentItem = ({ document: doc }: { document: DocumentItem }) => {
-    const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-    // Generate proper document title based on status and protocol number
-    const getDocumentTitle = () => {
-      // For completed documents, show protocol number if available
-      if (doc.status === 'completed' && doc.protocol_number_input) {
-        return doc.protocol_number_input;
-      }
-      
-      // Otherwise show document ID
-      return `Έγγραφο #${doc.id}`;
-    };
-
-    return (
-      <>
-        <div className="flex items-center justify-between py-2 border-b last:border-0">
-          <div className="flex-1">
-            <p className="font-medium">
-              {getDocumentTitle()}
-            </p>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-sm text-muted-foreground">
-                {doc.status === 'pending' ? 'Εκκρεμεί' : 
-                 doc.status === 'completed' ? 'Ολοκληρώθηκε' : 
-                 doc.status === 'approved' ? 'Εγκεκριμένο' : 'Σε επεξεργασία'}
-              </p>
-              {doc.created_at && (
-                <span className="text-xs text-muted-foreground">
-                  • {new Date(doc.created_at).toLocaleDateString('el-GR')}
-                </span>
-              )}
-            </div>
-          </div>
-          <Button 
-            size="sm" 
-            variant="ghost" 
-            onClick={() => setShowDetailsModal(true)}
-            className="ml-2 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-            title="Λεπτομέρειες"
-          >
-            <Info className="w-4 h-4 mr-2" />
-            Προβολή
-          </Button>
-        </div>
-
-        <DocumentDetailsModal
-          document={doc as any}
-          open={showDetailsModal}
-          onOpenChange={setShowDetailsModal}
-        />
-      </>
-    );
-  };
   
   // State for user's documents filtered by unit
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
@@ -336,9 +282,46 @@ export function Dashboard() {
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             ) : userDocuments.length > 0 ? (
-              userDocuments.slice(0, 5).map((doc) => (
-                <RecentDocumentItem key={doc.id} document={doc} />
-              ))
+              userDocuments.slice(0, 5).map((doc) => {
+                // Generate proper document title based on status and protocol number
+                const documentTitle = doc.status === 'completed' && doc.protocol_number_input 
+                  ? doc.protocol_number_input 
+                  : `Έγγραφο #${doc.id}`;
+
+                return (
+                  <div key={doc.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div className="flex-1">
+                      <p className="font-medium">{documentTitle}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm text-muted-foreground">
+                          {doc.status === 'pending' ? 'Εκκρεμεί' : 
+                           doc.status === 'completed' ? 'Ολοκληρώθηκε' : 
+                           doc.status === 'approved' ? 'Εγκεκριμένο' : 'Σε επεξεργασία'}
+                        </p>
+                        {doc.created_at && (
+                          <span className="text-xs text-muted-foreground">
+                            • {new Date(doc.created_at).toLocaleDateString('el-GR')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => {
+                        // For now, redirect to documents page with document ID in the URL
+                        // This allows users to find and view the specific document
+                        window.location.href = `/documents?highlight=${doc.id}`;
+                      }}
+                      className="ml-2 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                      title="Λεπτομέρειες"
+                    >
+                      <Info className="w-4 h-4 mr-2" />
+                      Προβολή
+                    </Button>
+                  </div>
+                );
+              })
             ) : (
               <div className="text-center p-4 text-muted-foreground">
                 <p>Δεν βρέθηκαν πρόσφατα έγγραφα</p>
