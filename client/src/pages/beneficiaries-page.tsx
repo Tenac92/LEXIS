@@ -1060,13 +1060,44 @@ function BeneficiaryForm({
 
   // Auto-select unit if user has only one and data is loaded
   useEffect(() => {
-    if (userUnits.length === 1 && !form.getValues("selectedUnit") && !unitsLoading) {
-      console.log('[Beneficiary Form] Auto-selecting unit:', userUnits[0].id);
-      form.setValue("selectedUnit", userUnits[0].id);
-      // Trigger form validation after setting the value
-      form.trigger("selectedUnit");
+    if (userUnits.length === 1 && !unitsLoading && userData) {
+      const currentUnit = form.getValues("selectedUnit");
+      if (!currentUnit || currentUnit === "") {
+        console.log('[Beneficiary Form] Auto-selecting unit:', userUnits[0].id);
+        form.setValue("selectedUnit", userUnits[0].id);
+        form.trigger("selectedUnit");
+      }
     }
-  }, [userUnits, form, unitsLoading]);
+  }, [userUnits, form, unitsLoading, userData]);
+
+  // Reset form when modal opens for new beneficiary
+  useEffect(() => {
+    if (open && !beneficiary) {
+      form.reset({
+        surname: "",
+        name: "",
+        fathername: "",
+        afm: "",
+        project: "", 
+        expenditure_type: "", 
+        region: "",
+        monada: "", 
+        adeia: "",
+        onlinefoldernumber: "",
+        cengsur1: "",
+        cengname1: "",
+        cengsur2: "",
+        cengname2: "",
+        selectedUnit: userUnits.length === 1 ? userUnits[0].id : "",
+        selectedNA853: "",
+        amount: "",
+        installment: "",
+        protocol: "",
+        freetext: "",
+        date: "",
+      });
+    }
+  }, [open, beneficiary, form, userUnits]);
 
   // Reset dependent fields when unit changes
   useEffect(() => {
