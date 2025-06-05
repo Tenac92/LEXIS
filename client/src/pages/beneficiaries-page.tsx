@@ -19,6 +19,7 @@ import {
   UserCheck,
   CheckCircle2,
   AlertCircle,
+  X,
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
@@ -1565,43 +1566,6 @@ function BeneficiaryForm({
             
             <FormField
               control={form.control}
-              name="installment"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Δόση</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Επιλέξτε δόση" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {form.watch("expenditure_type") === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" ? (
-                        <>
-                          {Array.from({ length: 24 }, (_, i) => (
-                            <SelectItem key={i + 1} value={`ΤΡΙΜΗΝΟ ${i + 1}`}>
-                              ΤΡΙΜΗΝΟ {i + 1}
-                            </SelectItem>
-                          ))}
-                        </>
-                      ) : (
-                        <>
-                          <SelectItem value="ΕΦΑΠΑΞ">ΕΦΑΠΑΞ</SelectItem>
-                          <SelectItem value="Α ΔΟΣΗ">Α ΔΟΣΗ</SelectItem>
-                          <SelectItem value="Β ΔΟΣΗ">Β ΔΟΣΗ</SelectItem>
-                          <SelectItem value="Γ ΔΟΣΗ">Γ ΔΟΣΗ</SelectItem>
-                          <SelectItem value="Δ ΔΟΣΗ">Δ ΔΟΣΗ</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
               name="protocol"
               render={({ field }) => (
                 <FormItem>
@@ -1613,6 +1577,85 @@ function BeneficiaryForm({
                 </FormItem>
               )}
             />
+          </div>
+          
+          <div className="flex gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={addPayment}
+              disabled={!form.getValues("selectedUnit") || !form.getValues("expenditure_type") || !form.getValues("amount")}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Προσθήκη Πληρωμής
+            </Button>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                if (beneficiary && Array.isArray(existingPayments) && existingPayments.length > 0) {
+                  setSelectedBeneficiaryForPayments(beneficiary);
+                  setExistingPaymentsModalOpen(true);
+                }
+              }}
+              disabled={!beneficiary || !Array.isArray(existingPayments) || existingPayments.length === 0}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Προβολή Υπαρχουσών ({Array.isArray(existingPayments) ? existingPayments.length : 0})
+            </Button>
+          </div>
+
+          {/* Payment Entries Table - no longer needed as we have the button above */}
+          {payments.length > 0 && (
+            <div className="border rounded-lg overflow-hidden">
+              <div className="bg-muted/50 px-4 py-2 border-b">
+                <h4 className="font-medium text-sm">Καταχωρημένες Πληρωμές</h4>
+              </div>
+              <div className="divide-y">
+                {payments.map((payment, index) => (
+                  <div key={index} className="p-4 flex items-center justify-between">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-2 flex-1 text-sm">
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Μονάδα</span>
+                        <span>{payment.unit}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Κωδικός ΝΑ853</span>
+                        <span className="font-mono">{payment.na853 || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Τύπος Δαπάνης</span>
+                        <span>{payment.expenditure_type}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Δόση</span>
+                        <span>{payment.installment}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Ποσό (€)</span>
+                        <span className="font-semibold text-green-700">{payment.amount} €</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-xs text-muted-foreground block">Αρ. Πρωτοκόλλου</span>
+                        <span className="font-mono">{payment.protocol || "—"}</span>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePayment(index)}
+                      className="ml-2 text-red-600 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           </div>
           
           <div className="flex gap-2">
