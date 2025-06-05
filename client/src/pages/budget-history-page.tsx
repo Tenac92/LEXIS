@@ -1014,7 +1014,7 @@ export default function BudgetHistoryPage() {
                           <div key={type} className="bg-white p-3 rounded-lg border border-gray-100">
                             <div className="text-center">
                               <div className="mb-2">{getChangeTypeBadge(type)}</div>
-                              <p className="text-lg font-bold text-gray-800">{count}</p>
+                              <p className="text-lg font-bold text-gray-800">{count as number}</p>
                               <p className="text-xs text-gray-500">εγγραφές</p>
                             </div>
                           </div>

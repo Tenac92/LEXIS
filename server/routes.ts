@@ -32,6 +32,31 @@ import { log } from "./vite";
 import { supabase } from "./config/db"; // Main supabase client
 import { verifyDatabaseConnections } from "./data"; // Database utilities
 import { BudgetService } from "./services/budgetService"; // Budget service for operations
+import ExcelJS from 'exceljs';
+import { format } from 'date-fns';
+
+// Helper functions for Excel export
+function getChangeTypeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    'document_created': 'Δημιουργία Εγγράφου',
+    'document_creation': 'Δημιουργία Εγγράφου',
+    'manual_adjustment': 'Χειροκίνητη Προσαρμογή',
+    'notification_created': 'Δημιουργία Ειδοποίησης',
+    'error': 'Σφάλμα',
+    'import': 'Εισαγωγή'
+  };
+  return labels[type] || type.replace(/_/g, ' ');
+}
+
+function getStatusLabel(status: string | null): string {
+  if (!status) return 'Άγνωστη';
+  const labels: Record<string, string> = {
+    'pending': 'Σε εκκρεμότητα',
+    'completed': 'Ολοκληρωμένο',
+    'cancelled': 'Ακυρωμένο'
+  };
+  return labels[status] || status;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   try {
@@ -1152,10 +1177,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Auto-fit columns
-        worksheet.columns.forEach(column => {
+        worksheet.columns.forEach((column: any) => {
           if (column.eachCell) {
             let maxLength = 0;
-            column.eachCell({ includeEmpty: true }, (cell) => {
+            column.eachCell({ includeEmpty: true }, (cell: any) => {
               const columnLength = cell.value ? cell.value.toString().length : 10;
               if (columnLength > maxLength) {
                 maxLength = columnLength;
@@ -1186,28 +1211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
-    // Helper functions for Excel export
-    function getChangeTypeLabel(type: string): string {
-      const labels: Record<string, string> = {
-        'document_created': 'Δημιουργία Εγγράφου',
-        'document_creation': 'Δημιουργία Εγγράφου',
-        'manual_adjustment': 'Χειροκίνητη Προσαρμογή',
-        'notification_created': 'Δημιουργία Ειδοποίησης',
-        'error': 'Σφάλμα',
-        'import': 'Εισαγωγή'
-      };
-      return labels[type] || type.replace(/_/g, ' ');
-    }
-    
-    function getStatusLabel(status: string | null): string {
-      if (!status) return 'Άγνωστη';
-      const labels: Record<string, string> = {
-        'pending': 'Σε εκκρεμότητα',
-        'completed': 'Ολοκληρωμένο',
-        'cancelled': 'Ακυρωμένο'
-      };
-      return labels[status] || status;
-    }
+
     
     log('[Routes] Budget history Excel export route registered');
     
