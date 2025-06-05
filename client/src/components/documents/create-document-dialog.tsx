@@ -466,6 +466,8 @@ const createDocumentSchema = z.object({
   total_amount: z.number().optional(),
   status: z.string().default("draft"),
   selectedAttachments: z.array(z.string()).optional().default([]),
+  esdian_field1: z.string().optional().default(""),
+  esdian_field2: z.string().optional().default(""),
 });
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
@@ -570,6 +572,8 @@ export function CreateDocumentDialog({
     recipients: formData.recipients || [],
     status: formData.status || "draft",
     selectedAttachments: formData.selectedAttachments || [],
+    esdian_field1: formData.esdian_field1 || "",
+    esdian_field2: formData.esdian_field2 || "",
   }), []);
   
   const form = useForm<CreateDocumentForm>({

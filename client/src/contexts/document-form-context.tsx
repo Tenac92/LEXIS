@@ -22,6 +22,8 @@ export const documentFormSchema = z.object({
   recipients: z.array(recipientSchema).optional().default([]),
   status: z.string().optional().default("draft"),
   selectedAttachments: z.array(z.string()).optional().default([]),
+  esdian_field1: z.string().optional().default(""),
+  esdian_field2: z.string().optional().default(""),
 });
 
 export type DocumentFormData = z.infer<typeof documentFormSchema>;
