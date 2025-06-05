@@ -1564,8 +1564,6 @@ function BeneficiaryForm({
                           <SelectItem value="Α ΔΟΣΗ">Α ΔΟΣΗ</SelectItem>
                           <SelectItem value="Β ΔΟΣΗ">Β ΔΟΣΗ</SelectItem>
                           <SelectItem value="Γ ΔΟΣΗ">Γ ΔΟΣΗ</SelectItem>
-                          <SelectItem value="Δ ΔΟΣΗ">Δ ΔΟΣΗ</SelectItem>
-                          <SelectItem value="Ε ΔΟΣΗ">Ε ΔΟΣΗ</SelectItem>
                         </>
                       )}
                     </SelectContent>
