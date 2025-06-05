@@ -1146,7 +1146,7 @@ function BeneficiaryForm({
       form.setValue("selectedNA853", "", { shouldValidate: false });
       form.setValue("expenditure_type", "", { shouldValidate: false });
     }
-    initializationRef.current.lastSelectedUnit = watchedUnit;
+    initializationRef.current.lastSelectedUnit = watchedUnit || "";
   }, [watchedUnit, form]);
 
   useEffect(() => {
@@ -1156,12 +1156,9 @@ function BeneficiaryForm({
     }
   }, [watchedNA853, form]);
 
-  // Get projects for selected unit
+  // Get projects for selected unit with stable reference to prevent WebSocket issues
   const availableProjects = useMemo(() => {
-    const selectedUnit = form.watch("selectedUnit");
-    if (!selectedUnit || !Array.isArray(projectsData)) {
-      const projectsLength = Array.isArray(projectsData) ? projectsData.length : (projectsData && typeof projectsData === 'object' ? Object.keys(projectsData).length : 0);
-      console.log('[Beneficiary Form] No projects available:', { selectedUnit, projectsDataLength: projectsLength });
+    if (!watchedUnit || !Array.isArray(projectsData)) {
       return [];
     }
     
@@ -1169,20 +1166,18 @@ function BeneficiaryForm({
     const filtered = projectsData.filter((project: any) => 
       project.implementing_agency && 
       Array.isArray(project.implementing_agency) &&
-      project.implementing_agency.includes(selectedUnit) &&
+      project.implementing_agency.includes(watchedUnit) &&
       project.na853
     );
     
-    console.log('[Beneficiary Form] Found', filtered.length, 'projects for unit', selectedUnit);
     return filtered;
-  }, [projectsData, form.watch("selectedUnit")]);
+  }, [projectsData, watchedUnit]);
 
-  // Get expenditure types for selected NA853
+  // Get expenditure types for selected NA853 with stable reference
   const availableExpenditureTypes = useMemo(() => {
-    const selectedNA853 = form.watch("selectedNA853");
-    if (!selectedNA853 || !Array.isArray(projectsData)) return [];
+    if (!watchedNA853 || !Array.isArray(projectsData)) return [];
     
-    const project = projectsData.find((p: any) => p.na853 === selectedNA853);
+    const project = projectsData.find((p: any) => p.na853 === watchedNA853);
     if (!project?.expenditure_type) return [];
     
     // Parse expenditure types - handle both string and array formats
@@ -1198,7 +1193,7 @@ function BeneficiaryForm({
     }
     
     return types.filter(type => type && type.trim());
-  }, [projectsData, form.watch("selectedNA853")]);
+  }, [projectsData, watchedNA853]);
 
   // Format number to European format with proper comma support
   const formatEuropeanNumber = (value: string) => {
