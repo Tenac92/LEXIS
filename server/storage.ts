@@ -252,10 +252,13 @@ export class DatabaseStorage implements IStorage {
         console.log('[Storage] Applying unit-based access control for units:', userUnits);
         
         // Get documents created by users from the same units to determine accessible MIS codes
+        console.log('[Storage] Searching for users with units overlapping:', userUnits);
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('id')
+          .select('id, name, units')
           .overlaps('units', userUnits);
+        
+        console.log('[Storage] User query result:', { userData, userError });
           
         if (!userError && userData && userData.length > 0) {
           const userIds = userData.map(u => u.id);
