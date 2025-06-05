@@ -970,6 +970,28 @@ export class DocumentGenerator {
       }),
     );
 
+    // Add ESDIAN fields if they exist
+    let esdianCounter = 2;
+    if (documentData.esdian && Array.isArray(documentData.esdian)) {
+      for (const esdianItem of documentData.esdian) {
+        if (esdianItem && esdianItem.trim()) {
+          leftColumnParagraphs.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${esdianCounter}. ${esdianItem.trim()}`,
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
+                  font: DocumentUtilities.DEFAULT_FONT,
+                }),
+              ],
+              indent: { left: 426 },
+            }),
+          );
+          esdianCounter++;
+        }
+      }
+    }
+
     // Right column - use centralized signature utility
     const rightColumnParagraphs =
       DocumentUtilities.createManagerSignatureParagraphs(unitDetails?.manager);
