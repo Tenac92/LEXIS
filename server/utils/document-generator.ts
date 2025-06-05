@@ -972,9 +972,14 @@ export class DocumentGenerator {
 
     // Add ESDIAN fields if they exist
     let esdianCounter = 2;
+    console.log('[DocumentGenerator] ESDIAN Debug - documentData.esdian:', documentData.esdian);
+    console.log('[DocumentGenerator] ESDIAN Debug - Array check:', Array.isArray(documentData.esdian));
     if (documentData.esdian && Array.isArray(documentData.esdian)) {
+      console.log('[DocumentGenerator] ESDIAN Debug - Processing ESDIAN array with length:', documentData.esdian.length);
       for (const esdianItem of documentData.esdian) {
+        console.log('[DocumentGenerator] ESDIAN Debug - Processing item:', esdianItem);
         if (esdianItem && esdianItem.trim()) {
+          console.log('[DocumentGenerator] ESDIAN Debug - Adding paragraph for:', esdianItem.trim());
           leftColumnParagraphs.push(
             new Paragraph({
               children: [
@@ -990,6 +995,8 @@ export class DocumentGenerator {
           esdianCounter++;
         }
       }
+    } else {
+      console.log('[DocumentGenerator] ESDIAN Debug - No ESDIAN data found or not an array');
     }
 
     // Right column - use centralized signature utility
