@@ -38,12 +38,12 @@ function useLoginMutation() {
 
         if (!response.ok) {
           try {
-            const error = await response.json();
-            throw new Error(error.message || 'Login failed');
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Login failed');
           } catch (parseError) {
             // If JSON parsing fails, use the status text
             console.error('Error parsing error response:', parseError);
-            throw new Error(`Login failed: ${response.statusText}`);
+            throw new Error(`Authentication error: ${response.status} ${response.statusText}`);
           }
         }
 
@@ -98,10 +98,10 @@ function useLoginMutation() {
       });
     },
     onError: (error: Error) => {
-      console.error('Login mutation error:', error);
+      console.error('Authentication error:', error);
       toast({
         title: "Login failed",
-        description: error.message,
+        description: error.message || "Authentication failed. Please try again.",
         variant: "destructive",
       });
     },

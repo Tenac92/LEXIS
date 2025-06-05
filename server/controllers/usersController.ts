@@ -349,16 +349,27 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Prepare update data
+    // Prepare update data - clean empty strings and handle null values
     const updateData: Record<string, any> = {
-      name: req.body.name,
-      email: req.body.email,
-      role: req.body.role,
-      units: req.body.units,
-      telephone: req.body.telephone,
-      department: req.body.department
-      // removed updated_at as it's causing errors with the schema
+      name: req.body.name?.trim() || null,
+      email: req.body.email?.trim() || null,
+      role: req.body.role?.trim() || null,
+      units: Array.isArray(req.body.units) ? req.body.units : [],
+      telephone: req.body.telephone?.trim() || null,
+      department: req.body.department?.trim() || null
     };
+
+    // Remove null values and empty strings to prevent database errors
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === null || updateData[key] === '' || updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    // Ensure units is always an array
+    if (updateData.units && !Array.isArray(updateData.units)) {
+      updateData.units = [];
+    }
     
     // Only update password if it's provided
     if (req.body.password && req.body.password.trim() !== '') {
