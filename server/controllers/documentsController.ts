@@ -699,7 +699,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     };
 
     console.log('[DocumentsController] Document data prepared for export:', documentData.id);
-    console.log('[DocumentsController] ESDIAN Debug - Full document data:', JSON.stringify(documentData, null, 2));;
+    console.log('[DocumentsController] ESDIAN Debug - Full document data:', JSON.stringify(documentData, null, 2));
 
     // If generating a single document (old behavior)
     if (!generateBoth) {
