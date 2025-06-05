@@ -1013,7 +1013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const creator = req.query.creator as string | undefined;
         
         // Get user units for access control
-        const userUnits = req.user.role === 'admin' ? undefined : req.user.units;
+        const userUnits = req.user.role === 'admin' ? undefined : (req.user.units || undefined);
         
         console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}, userUnits=${userUnits?.join(',') || 'admin'}`);
         
@@ -1062,7 +1062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const creator = req.query.creator as string | undefined;
         
         // Get user units for access control
-        const userUnits = req.user.role === 'admin' ? undefined : req.user.units;
+        const userUnits = req.user.role === 'admin' ? undefined : (req.user.units || undefined);
         
         console.log(`[Budget] Exporting history with filters: mis=${mis || 'all'}, changeType=${changeType || 'all'}, userUnits=${userUnits?.join(',') || 'admin'}`);
         

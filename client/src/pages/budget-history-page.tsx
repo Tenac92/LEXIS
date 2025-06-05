@@ -288,6 +288,44 @@ export default function BudgetHistoryPage() {
     setPage(Math.max(1, Math.min(newPage, pagination.pages)));
   };
 
+  // Excel export function
+  const handleExcelExport = async () => {
+    try {
+      // Build export URL with current filters
+      let url = '/api/budget/history/export?';
+      
+      if (appliedMisFilter) {
+        url += `mis=${appliedMisFilter}&`;
+      }
+      
+      if (changeType !== 'all') {
+        url += `change_type=${changeType}&`;
+      }
+      
+      if (appliedDateFilter.from) {
+        url += `date_from=${appliedDateFilter.from}&`;
+      }
+      
+      if (appliedDateFilter.to) {
+        url += `date_to=${appliedDateFilter.to}&`;
+      }
+      
+      if (appliedCreatorFilter) {
+        url += `creator=${appliedCreatorFilter}&`;
+      }
+      
+      // Create a temporary link element to trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Istoriko_Proypologismou_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error exporting Excel file:', error);
+    }
+  };
+
   // Function to format monetary values
   const formatCurrency = (amount: string | number | undefined | null) => {
     if (amount === undefined || amount === null) {
@@ -737,6 +775,12 @@ export default function BudgetHistoryPage() {
                       Καθαρισμός Φίλτρων
                     </Button>
                   )}
+                  {(isManager || isAdmin) && (
+                    <Button variant="outline" onClick={handleExcelExport} size="sm" title="Εξαγωγή σε Excel">
+                      <Download className="h-4 w-4 mr-2" />
+                      Εξαγωγή Excel
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -888,6 +932,97 @@ export default function BudgetHistoryPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              )}
+
+              {/* Statistics Section - Στατιστικά Περιόδου */}
+              {statistics && (isManager || isAdmin) && (
+                <Card className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BarChart3 className="h-5 w-5 text-green-600" />
+                    <h3 className="font-semibold text-green-900">Στατιστικά Περιόδου</h3>
+                    <Badge variant="outline" className="bg-white">
+                      Ενημερώνονται με τα ενεργά φίλτρα
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Total Entries */}
+                    <div className="bg-white p-4 rounded-lg border border-green-100">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Συνολικές Εγγραφές</p>
+                          <p className="text-2xl font-bold text-green-700">{statistics.totalEntries}</p>
+                        </div>
+                        <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
+                          <FileText className="h-5 w-5 text-green-600" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Total Amount Change */}
+                    <div className="bg-white p-4 rounded-lg border border-blue-100">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Συνολική Μεταβολή</p>
+                          <p className={`text-2xl font-bold ${statistics.totalAmountChange >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                            {formatCurrency(statistics.totalAmountChange)}
+                          </p>
+                        </div>
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                          statistics.totalAmountChange >= 0 ? 'bg-green-100' : 'bg-red-100'
+                        }`}>
+                          {statistics.totalAmountChange >= 0 ? (
+                            <TrendingUp className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <TrendingDown className="h-5 w-5 text-red-600" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Period Range */}
+                    <div className="bg-white p-4 rounded-lg border border-purple-100">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Χρονική Περίοδος</p>
+                          {statistics.periodRange.start && statistics.periodRange.end ? (
+                            <div className="text-sm">
+                              <p className="font-medium text-purple-700">
+                                {format(new Date(statistics.periodRange.start), 'dd/MM/yyyy')}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                έως {format(new Date(statistics.periodRange.end), 'dd/MM/yyyy')}
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500">Δεν υπάρχουν δεδομένα</p>
+                          )}
+                        </div>
+                        <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
+                          <Info className="h-5 w-5 text-purple-600" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Change Types Distribution */}
+                  {Object.keys(statistics.changeTypes).length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-medium text-gray-700 mb-3">Κατανομή ανά Τύπο Αλλαγής</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {Object.entries(statistics.changeTypes).map(([type, count]) => (
+                          <div key={type} className="bg-white p-3 rounded-lg border border-gray-100">
+                            <div className="text-center">
+                              <div className="mb-2">{getChangeTypeBadge(type)}</div>
+                              <p className="text-lg font-bold text-gray-800">{count}</p>
+                              <p className="text-xs text-gray-500">εγγραφές</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
               )}
             </div>
 

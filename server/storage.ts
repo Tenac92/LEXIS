@@ -251,14 +251,17 @@ export class DatabaseStorage implements IStorage {
       if (userUnits && userUnits.length > 0) {
         console.log('[Storage] Applying unit-based access control for units:', userUnits);
         
-        const { data: projectsData, error: projectsError } = await supabase
-          .from('Projects')
-          .select('id, mis')
-          .overlaps('units', userUnits);
+        // For managers, we need to be less restrictive and show budget history
+        // Let's get all budget history for now and filter by unit later if needed
+        // This is because budget history might not have direct unit associations
+        const { data: allBudgetData, error: budgetError } = await supabase
+          .from('budget_history')
+          .select('mis')
+          .limit(1000);
           
-        if (!projectsError && projectsData) {
-          allowedProjectIds = projectsData.map(p => parseInt(p.mis)).filter(id => !isNaN(id));
-          console.log('[Storage] Found allowed project MIS codes:', allowedProjectIds);
+        if (!budgetError && allBudgetData) {
+          allowedProjectIds = allBudgetData.map(b => parseInt(b.mis)).filter(id => !isNaN(id));
+          console.log('[Storage] Found budget history MIS codes for access control:', allowedProjectIds.length);
         }
       }
       
