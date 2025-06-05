@@ -66,65 +66,67 @@ interface DocumentItem {
   protocol_date?: string;
 }
 
-// Component for individual recent document items
-function RecentDocumentItem({ document: doc }: { document: DocumentItem }) {
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  // Generate proper document title based on status and protocol number
-  const getDocumentTitle = () => {
-    // For completed documents, show protocol number if available
-    if (doc.status === 'completed' && doc.protocol_number_input) {
-      return doc.protocol_number_input;
-    }
-    
-    // Otherwise show document ID
-    return `Έγγραφο #${doc.id}`;
-  };
-
-  return (
-    <>
-      <div className="flex items-center justify-between py-2 border-b last:border-0">
-        <div className="flex-1">
-          <p className="font-medium">
-            {getDocumentTitle()}
-          </p>
-          <div className="flex items-center gap-2 mt-1">
-            <p className="text-sm text-muted-foreground">
-              {doc.status === 'pending' ? 'Εκκρεμεί' : 
-               doc.status === 'completed' ? 'Ολοκληρώθηκε' : 
-               doc.status === 'approved' ? 'Εγκεκριμένο' : 'Σε επεξεργασία'}
-            </p>
-            {doc.created_at && (
-              <span className="text-xs text-muted-foreground">
-                • {new Date(doc.created_at).toLocaleDateString('el-GR')}
-              </span>
-            )}
-          </div>
-        </div>
-        <Button 
-          size="sm" 
-          variant="ghost" 
-          onClick={() => setShowDetailsModal(true)}
-          className="ml-2 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-          title="Λεπτομέρειες"
-        >
-          <Info className="w-4 h-4 mr-2" />
-          Προβολή
-        </Button>
-      </div>
-
-      <DocumentDetailsModal
-        document={doc as any}
-        open={showDetailsModal}
-        onOpenChange={setShowDetailsModal}
-      />
-    </>
-  );
-}
 
 export function Dashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+
+  // Component for individual recent document items - moved inside Dashboard for proper scope
+  const RecentDocumentItem = ({ document: doc }: { document: DocumentItem }) => {
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+    // Generate proper document title based on status and protocol number
+    const getDocumentTitle = () => {
+      // For completed documents, show protocol number if available
+      if (doc.status === 'completed' && doc.protocol_number_input) {
+        return doc.protocol_number_input;
+      }
+      
+      // Otherwise show document ID
+      return `Έγγραφο #${doc.id}`;
+    };
+
+    return (
+      <>
+        <div className="flex items-center justify-between py-2 border-b last:border-0">
+          <div className="flex-1">
+            <p className="font-medium">
+              {getDocumentTitle()}
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-sm text-muted-foreground">
+                {doc.status === 'pending' ? 'Εκκρεμεί' : 
+                 doc.status === 'completed' ? 'Ολοκληρώθηκε' : 
+                 doc.status === 'approved' ? 'Εγκεκριμένο' : 'Σε επεξεργασία'}
+              </p>
+              {doc.created_at && (
+                <span className="text-xs text-muted-foreground">
+                  • {new Date(doc.created_at).toLocaleDateString('el-GR')}
+                </span>
+              )}
+            </div>
+          </div>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={() => setShowDetailsModal(true)}
+            className="ml-2 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+            title="Λεπτομέρειες"
+          >
+            <Info className="w-4 h-4 mr-2" />
+            Προβολή
+          </Button>
+        </div>
+
+        <DocumentDetailsModal
+          document={doc as any}
+          open={showDetailsModal}
+          onOpenChange={setShowDetailsModal}
+        />
+      </>
+    );
+  };
   
   // State for user's documents filtered by unit
   const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
