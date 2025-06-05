@@ -60,11 +60,13 @@ export function SessionKeeper() {
       
       // If there's a warning showing, refresh user to check if session is still valid
       if (showWarning) {
-        auth.refreshUser().then((refreshedUser) => {
-          if (refreshedUser) {
-            setShowWarning(false);
-          }
-        });
+        setTimeout(() => {
+          auth.refreshUser().then((refreshedUser) => {
+            if (refreshedUser) {
+              setShowWarning(false);
+            }
+          });
+        }, 1000);
       }
     };
     

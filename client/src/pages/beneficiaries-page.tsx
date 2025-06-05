@@ -1476,7 +1476,7 @@ function BeneficiaryForm({
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value}
-                    disabled={unitsLoading || userUnits.length === 0}
+                    disabled={unitsLoading}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -1490,11 +1490,27 @@ function BeneficiaryForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {userUnits.map((unit: any) => (
-                        <SelectItem key={unit.id} value={unit.id}>
-                          {unit.name}
+                      {unitsLoading ? (
+                        <SelectItem value="loading" disabled>
+                          Φόρτωση...
                         </SelectItem>
-                      ))}
+                      ) : userUnits.length > 0 ? (
+                        userUnits.map((unit: any) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name}
+                          </SelectItem>
+                        ))
+                      ) : unitsData && Array.isArray(unitsData) ? (
+                        unitsData.map((unit: any) => (
+                          <SelectItem key={unit.id} value={unit.id}>
+                            {unit.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          Δεν υπάρχουν διαθέσιμες μονάδες
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
