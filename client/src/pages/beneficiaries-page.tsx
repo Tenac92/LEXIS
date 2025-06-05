@@ -1658,34 +1658,6 @@ function BeneficiaryForm({
               </div>
             </div>
           )}
-          
-          <div className="flex gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              onClick={addPayment}
-              disabled={!form.getValues("selectedUnit") || !form.getValues("expenditure_type") || !form.getValues("amount")}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Προσθήκη Πληρωμής
-            </Button>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm"
-              onClick={() => {
-                if (beneficiary && Array.isArray(existingPayments) && existingPayments.length > 0) {
-                  setSelectedBeneficiaryForPayments(beneficiary);
-                  setExistingPaymentsModalOpen(true);
-                }
-              }}
-              disabled={!beneficiary || !Array.isArray(existingPayments) || existingPayments.length === 0}
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Προβολή Υπαρχουσών ({Array.isArray(existingPayments) ? existingPayments.length : 0})
-            </Button>
-          </div>
 
           {/* Payment Entries Table */}
           {payments.length > 0 && (
