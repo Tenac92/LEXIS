@@ -98,6 +98,9 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       <DialogContent className="max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Λεπτομέρειες Εγγράφου</DialogTitle>
+          <DialogDescription>
+            Προβολή και επεξεργασία των στοιχείων του εγγράφου
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-4">

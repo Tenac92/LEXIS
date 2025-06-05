@@ -868,6 +868,9 @@ export default function BeneficiariesPage() {
                 </span>
               )}
             </DialogTitle>
+            <DialogDescription>
+              Προβολή όλων των καταχωρημένων πληρωμών για τον επιλεγμένο δικαιούχο
+            </DialogDescription>
           </DialogHeader>
           {selectedBeneficiaryForPayments && (
             <ExistingPaymentsDisplay beneficiary={selectedBeneficiaryForPayments} />
