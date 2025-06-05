@@ -253,10 +253,11 @@ export class DatabaseStorage implements IStorage {
         
         // Get documents created by users from the same units to determine accessible MIS codes
         console.log('[Storage] Searching for users with units overlapping:', userUnits);
+        // Use PostgreSQL's JSONB operators correctly for array overlap
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('id, name, units')
-          .contains('units', userUnits);
+          .filter('units', 'cs', `{${userUnits.map(unit => `"${unit}"`).join(',')}}`);
         
         console.log('[Storage] User query result:', { userData, userError });
           
