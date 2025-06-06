@@ -255,20 +255,28 @@ export class DocumentUtilities {
       }),
     );
 
-    rightColumnParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: title,
-            bold: true,
-            size: this.DEFAULT_FONT_SIZE,
-            font: this.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 120 },
-      }),
-    );
+    // Split title into multiple lines for better formatting in secondary document
+    const titleLines = this.splitTitleIntoLines(title);
+    
+    titleLines.forEach((line: string, index: number) => {
+      rightColumnParagraphs.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: line,
+              bold: true,
+              size: this.DEFAULT_FONT_SIZE,
+              font: this.DEFAULT_FONT,
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { 
+            after: index === titleLines.length - 1 ? 120 : 0,
+            before: index === 0 ? 0 : 0
+          },
+        }),
+      );
+    });
 
     rightColumnParagraphs.push(this.createBlankLine(160));
 
@@ -805,5 +813,54 @@ export class DocumentUtilities {
    */
   public static isValidExpenditureType(expenditureType: string): boolean {
     return expenditureType in EXPENDITURE_CONFIGS;
+  }
+
+  /**
+   * Split a long title into multiple lines for better formatting
+   * @param title The title to split
+   * @returns Array of title lines
+   */
+  public static splitTitleIntoLines(title: string): string[] {
+    // If title is short enough, return as single line
+    if (title.length <= 40) {
+      return [title];
+    }
+
+    // Common Greek title patterns to split appropriately
+    const splitPatterns = [
+      /^(.*?)(Ο\s+(?:ΑΝΑΠΛ\.|ΑΝΑΠΛΗΡΩΤΗΣ)\s+ΠΡΟΪΣΤΑΜΕΝΟΣ.*?)$/i,
+      /^(.*?)(Ο\s+ΠΡΟΪΣΤΑΜΕΝΟΣ.*?)$/i,
+      /^(.*?)(Η\s+(?:ΑΝΑΠΛ\.|ΑΝΑΠΛΗΡΩΤΡΙΑ)\s+ΠΡΟΪΣΤΑΜΕΝΗ.*?)$/i,
+      /^(.*?)(Η\s+ΠΡΟΪΣΤΑΜΕΝΗ.*?)$/i,
+    ];
+
+    for (const pattern of splitPatterns) {
+      const match = title.match(pattern);
+      if (match && match[1] && match[2]) {
+        return [match[1].trim(), match[2].trim()];
+      }
+    }
+
+    // If no pattern matches, split at natural break points
+    const words = title.split(' ');
+    const midPoint = Math.ceil(words.length / 2);
+    
+    // Try to find a good break point around the middle
+    let breakPoint = midPoint;
+    for (let i = midPoint - 2; i <= midPoint + 2; i++) {
+      if (i > 0 && i < words.length) {
+        const word = words[i];
+        // Break after prepositions or connecting words
+        if (['ΤΗΣ', 'ΤΟΥ', 'ΚΑΙ', 'ΜΕ'].includes(word.toUpperCase())) {
+          breakPoint = i + 1;
+          break;
+        }
+      }
+    }
+
+    const firstLine = words.slice(0, breakPoint).join(' ');
+    const secondLine = words.slice(breakPoint).join(' ');
+
+    return [firstLine, secondLine];
   }
 }
