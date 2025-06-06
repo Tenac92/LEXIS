@@ -276,8 +276,8 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           // Try to extract MIS value using different possible keys
           const possibleMisKeys = ['MIS', 'mis', 'Mis', 'κωδικός', 'id', 'ID'];
           for (const key of possibleMisKeys) {
-            if (key in f.row && f.row[key]) {
-              misValue = String(f.row[key]);
+            if (key in f.row && (f.row as any)[key]) {
+              misValue = String((f.row as any)[key]);
               break;
             }
           }
@@ -459,54 +459,16 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
             throw new Error(`Failed to update budget split for MIS ${mis}: ${updateError.message}`);
           }
 
-          // Create a budget history entry for the update using the new schema
+          // Create a budget history entry for the update
           await storage.createBudgetHistoryEntry({
-            mis,
+            project_id: projectId,
+            previous_amount: String(katanomesEtousBeforeUpdate),
+            new_amount: String(newKatanomesEtous),
             change_type: 'import',
-            change_date: new Date().toISOString(),
-            previous_version: {
-              user_view: existingRecord.user_view || 0,
-              ethsia_pistosi: existingRecord.ethsia_pistosi || 0,
-              q1: existingRecord.q1 || 0,
-              q2: existingRecord.q2 || 0,
-              q3: existingRecord.q3 || 0,
-              q4: existingRecord.q4 || 0,
-              katanomes_etous: existingRecord.katanomes_etous || 0,
-              na853: existingRecord.na853 || na853
-            },
-            updated_version: {
-              ethsia_pistosi: newEthsiaPistosi,
-              q1: newQ1,
-              q2: newQ2,
-              q3: newQ3,
-              q4: newQ4,
-              katanomes_etous: newKatanomesEtous,
-              user_view: newUserView,
-              na853
-            },
-            changes: {
-              reason: `Updated from Excel import for MIS ${mis} (NA853: ${na853})`,
-              type: 'import',
-              source: 'excel_upload',
-              katanomes_adjustment: data.katanomes_etous !== undefined && existingRecord.katanomes_etous !== data.katanomes_etous ? 
-                data.katanomes_etous - existingRecord.katanomes_etous : 0
-            },
-            user_id: req.user?.id ? parseInt(req.user.id) : null
+            change_reason: `Updated from Excel import for MIS ${mis} (NA853: ${na853})`,
+            document_id: null,
+            mis: parseInt(mis)
           });
-          
-          // If katanomes_etous has changed, check for and resolve any pending reallocation notifications
-          if (katanomesDifference !== 0) {
-            try {
-              console.log(`[BudgetUpload] Checking for reallocation notifications for MIS: ${mis}`);
-              const resolved = await BudgetService.resolveReallocationNotifications(mis, katanomesDifference);
-              if (resolved) {
-                console.log(`[BudgetUpload] Successfully resolved reallocation notification for MIS: ${mis}`);
-              }
-            } catch (notificationError) {
-              console.error(`[BudgetUpload] Error resolving reallocation notifications for MIS ${mis}:`, notificationError);
-              // Don't fail the whole update if notification resolution fails
-            }
-          }
         }
 
         results.success++;
@@ -519,8 +481,8 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
         results.failedRecords = results.failedRecords || [];
         results.failedRecords.push({
           row: results.success + results.failures, // Row number in processing sequence
-          mis: update?.mis || 'unknown',
-          na853: update?.na853 || 'unknown',
+          mis: String(update?.mis || 'unknown'),
+          na853: String(update?.na853 || 'unknown'),
           error: errorMessage
         });
         
