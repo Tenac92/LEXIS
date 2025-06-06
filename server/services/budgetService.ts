@@ -206,12 +206,69 @@ export class BudgetService {
         };
       }
       
-      // Try to get budget data using project_id
-      const { data: budgetData, error } = await supabase
-        .from('budget_na853_split')
-        .select('*')
-        .eq('project_id', projectId)
-        .single();
+      // Enhanced budget lookup with multiple fallback strategies
+      let budgetData: any = null;
+      let error: any = null;
+
+      // Strategy 1: If we have a resolved project, try project_id lookup first
+      if (projectId) {
+        try {
+          const { data: projectBudgetData, error: projectError } = await supabase
+            .from('budget_na853_split')
+            .select('*')
+            .eq('project_id', projectId)
+            .single();
+          
+          if (!projectError && projectBudgetData) {
+            budgetData = projectBudgetData;
+            console.log(`[BudgetService] Found budget by project_id: ${projectId}`);
+          }
+        } catch (projectLookupError) {
+          console.log(`[BudgetService] Project ID lookup failed: ${projectLookupError}`);
+        }
+      }
+
+      // Strategy 2: If no data yet, try by NA853 code
+      if (!budgetData && projectCodePattern.test(projectIdentifier)) {
+        try {
+          const { data: na853BudgetData, error: na853Error } = await supabase
+            .from('budget_na853_split')
+            .select('*')
+            .eq('na853', projectIdentifier)
+            .single();
+          
+          if (!na853Error && na853BudgetData) {
+            budgetData = na853BudgetData;
+            console.log(`[BudgetService] Found budget by NA853: ${projectIdentifier}`);
+          }
+        } catch (na853LookupError) {
+          console.log(`[BudgetService] NA853 lookup failed: ${na853LookupError}`);
+        }
+      }
+
+      // Strategy 3: Try direct MIS lookup as final fallback
+      if (!budgetData) {
+        const numericIdentifier = parseInt(String(projectIdentifier));
+        if (!isNaN(numericIdentifier)) {
+          try {
+            const { data: misBudgetData, error: misError } = await supabase
+              .from('budget_na853_split')
+              .select('*')
+              .eq('mis', numericIdentifier)
+              .single();
+            
+            if (!misError && misBudgetData) {
+              budgetData = misBudgetData;
+              console.log(`[BudgetService] Found budget by MIS: ${numericIdentifier}`);
+            } else {
+              error = misError;
+            }
+          } catch (misLookupError) {
+            console.log(`[BudgetService] MIS lookup failed: ${misLookupError}`);
+            error = misLookupError;
+          }
+        }
+      }
         
       if (error) {
         console.error(`[BudgetService] Analyzing - Error fetching budget data: ${error.message}`);
