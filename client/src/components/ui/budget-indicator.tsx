@@ -318,11 +318,11 @@ export function BudgetIndicator({
     q1, q2, q3, q4 
   });
   
-  // FIXED: Use katanomes_etous as the base allocation amount (Διαθέσιμη Κατανομή)
-  const baseAllocationAmount = katanomesEtous; // This is the total allocation for the year
+  // Use current quarter allocation as the base (Διαθέσιμη Κατανομή)
+  const quarterAllocationAmount = currentQuarterValue; // Current quarter's allocation
   
-  // Calculate remaining available after user_view (what's actually available to spend)
-  const remainingAvailable = Math.max(0, katanomesEtous - userView);
+  // Calculate remaining available after user_view (quarter_available from API)
+  const remainingAvailable = quarterAvailable || Math.max(0, quarterAllocationAmount - userView);
   
   // Calculate what would remain after the current input amount
   const afterCurrentAmount = Math.max(0, remainingAvailable - amount);
@@ -336,7 +336,7 @@ export function BudgetIndicator({
   const percentageUsed = safeAvailableBudget > 0 ? ((amount / safeAvailableBudget) * 100) : 0;
   
   // Check budget thresholds for warnings (showing in real-time as they type)
-  const isExceeding20Percent = amount > (katanomesEtous * 0.2);
+  const isExceeding20Percent = amount > (quarterAllocationAmount * 0.2);
   const isExceedingEthsiaPistosi = amount > ethsiaPistosi;
   const isExceedingAvailable = afterCurrentAmount < 0;
 
@@ -359,18 +359,18 @@ export function BudgetIndicator({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
             <h3 className="text-sm font-medium text-gray-600">Διαθέσιμη Κατανομή</h3>
-            <p className={`text-2xl font-bold ${baseAllocationAmount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
-              {baseAllocationAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            <p className={`text-2xl font-bold ${quarterAllocationAmount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+              {quarterAllocationAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <div className="mt-2">
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full ${(userView / baseAllocationAmount * 100) > 90 ? 'bg-red-500' : 'bg-blue-500'} transition-all duration-300`}
-                  style={{ width: `${Math.min((userView / baseAllocationAmount * 100), 100)}%` }}
+                  className={`h-full ${((userView + amount) / quarterAllocationAmount * 100) > 90 ? 'bg-red-500' : 'bg-blue-500'} transition-all duration-300`}
+                  style={{ width: `${Math.min(((userView + amount) / quarterAllocationAmount * 100), 100)}%` }}
                 />
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {baseAllocationAmount > 0 ? (userView / baseAllocationAmount * 100).toFixed(1) : 0}% δεσμευμένα
+                {quarterAllocationAmount > 0 ? ((userView + amount) / quarterAllocationAmount * 100).toFixed(1) : 0}% χρησιμοποιήθηκε
               </p>
             </div>
           </div>
