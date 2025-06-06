@@ -3397,11 +3397,43 @@ export function CreateDocumentDialog({
     }
   }, [budgetData, currentStep, selectedProjectId, currentAmount]);
 
-  // Add an effect for enhanced dialog close handling
+  // Add an effect for enhanced dialog close handling with form state preservation
   useEffect(() => {
+    // Function to preserve form state before closing
+    const preserveFormStateAndClose = () => {
+      try {
+        // Get current form values
+        const formValues = form.getValues();
+        
+        // Save all form state to context before closing
+        updateFormData({
+          unit: formValues.unit,
+          project_id: formValues.project_id,
+          region: formValues.region,
+          expenditure_type: formValues.expenditure_type,
+          recipients: formValues.recipients,
+          status: formValues.status || "draft",
+          selectedAttachments: formValues.selectedAttachments,
+          esdian_field1: formValues.esdian_field1 || "",
+          esdian_field2: formValues.esdian_field2 || ""
+        });
+        
+        console.log("[CreateDocument] Form state preserved on dialog close:", {
+          expenditure_type: formValues.expenditure_type,
+          project_id: formValues.project_id,
+          step: currentStep
+        });
+      } catch (error) {
+        console.error("[CreateDocument] Error preserving form state on close:", error);
+      }
+    };
+
     // Handler to help force close the dialog when escape is pressed
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && open) {
+        // Preserve form state before closing
+        preserveFormStateAndClose();
+        
         // Close dialog when Escape key is pressed
         if (dialogCloseRef.current) {
           dialogCloseRef.current.click();
@@ -3418,6 +3450,9 @@ export function CreateDocumentDialog({
       );
       closeButtons.forEach((button) => {
         button.addEventListener("click", () => {
+          // Preserve form state before closing
+          preserveFormStateAndClose();
+          
           // Handle dialog close button click
           onOpenChange(false);
           onClose();
@@ -3434,10 +3469,44 @@ export function CreateDocumentDialog({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onOpenChange, onClose]);
+  }, [open, onOpenChange, onClose, form, updateFormData, currentStep]);
+
+  // Create a custom handler for dialog close that preserves form state
+  const handleDialogOpenChange = useCallback((newOpen: boolean) => {
+    if (!newOpen && open) {
+      // Dialog is being closed, preserve form state first
+      try {
+        const formValues = form.getValues();
+        
+        // Save all form state to context before closing
+        updateFormData({
+          unit: formValues.unit,
+          project_id: formValues.project_id,
+          region: formValues.region,
+          expenditure_type: formValues.expenditure_type,
+          recipients: formValues.recipients,
+          status: formValues.status || "draft",
+          selectedAttachments: formValues.selectedAttachments,
+          esdian_field1: formValues.esdian_field1 || "",
+          esdian_field2: formValues.esdian_field2 || ""
+        });
+        
+        console.log("[CreateDocument] Form state preserved on dialog close (click outside):", {
+          expenditure_type: formValues.expenditure_type,
+          project_id: formValues.project_id,
+          step: currentStep
+        });
+      } catch (error) {
+        console.error("[CreateDocument] Error preserving form state on dialog close:", error);
+      }
+    }
+    
+    // Call the original handler
+    onOpenChange(newOpen);
+  }, [open, onOpenChange, form, updateFormData, currentStep]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
         className="max-w-5xl"
       >
