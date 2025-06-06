@@ -3193,7 +3193,67 @@ export function CreateDocumentDialog({
             {currentStep === 4 && (
               <>
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Συνημμένα Έγγραφα</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Συνημμένα Έγγραφα</h3>
+                    {/* Select All functionality - only show when there are valid attachments */}
+                    {!attachmentsLoading && attachments.length > 0 && 
+                     attachments.some(att => att.file_type !== "none") && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Get all valid attachment IDs (excluding error/no-data entries)
+                          const validAttachmentIds = attachments
+                            .filter(att => att.file_type !== "none")
+                            .map(att => att.id);
+                          
+                          const currentSelections = form.watch("selectedAttachments") || [];
+                          
+                          // Check if all valid attachments are already selected
+                          const allSelected = validAttachmentIds.every(id => 
+                            currentSelections.includes(id)
+                          );
+                          
+                          let newSelections;
+                          if (allSelected) {
+                            // Deselect all - remove all valid attachment IDs from current selection
+                            newSelections = currentSelections.filter(id => 
+                              !validAttachmentIds.includes(id)
+                            );
+                            console.log("[SelectAll] Deselecting all attachments");
+                          } else {
+                            // Select all - merge current selections with all valid attachment IDs
+                            newSelections = [...new Set([...currentSelections, ...validAttachmentIds])];
+                            console.log("[SelectAll] Selecting all attachments");
+                          }
+                          
+                          console.log("[SelectAll] New selections:", newSelections);
+                          
+                          // Update form
+                          form.setValue("selectedAttachments", newSelections);
+                          
+                          // Update context
+                          setTimeout(() => {
+                            updateFormData({
+                              selectedAttachments: newSelections
+                            });
+                          }, 100);
+                        }}
+                      >
+                        {(() => {
+                          const validAttachmentIds = attachments
+                            .filter(att => att.file_type !== "none")
+                            .map(att => att.id);
+                          const currentSelections = form.watch("selectedAttachments") || [];
+                          const allSelected = validAttachmentIds.every(id => 
+                            currentSelections.includes(id)
+                          );
+                          return allSelected ? "Αποεπιλογή Όλων" : "Επιλογή Όλων";
+                        })()}
+                      </Button>
+                    )}
+                  </div>
                   {attachmentsLoading ? (
                     <div className="flex items-center justify-center p-8">
                       <FileText className="h-8 w-8 animate-spin text-primary" />
