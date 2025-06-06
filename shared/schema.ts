@@ -338,6 +338,22 @@ export const beneficiaryPayments = pgTable("beneficiary_payments", {
 });
 
 /**
+ * User Preferences Table
+ * Stores user preferences including frequently used Internal Distribution options
+ */
+export const userPreferences = pgTable("user_preferences", {
+  id: serial("id").primaryKey(),
+  user_id: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  preference_type: text("preference_type").notNull(), // 'esdian', 'attachments', etc.
+  preference_key: text("preference_key").notNull(), // 'field1', 'field2', etc.
+  preference_value: text("preference_value").notNull(), // The actual preference value
+  usage_count: integer("usage_count").default(1), // How many times user has used this preference
+  last_used: timestamp("last_used").defaultNow(),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+/**
  * Legacy Beneficiary Table (for backward compatibility during migration)
  */
 export const beneficiariesLegacy = pgTable("Beneficiary", {
@@ -379,6 +395,7 @@ export const beneficiariesLegacy = pgTable("Beneficiary", {
 
 // Schema definitions for insert operations - used with forms and validation
 export const insertUserSchema = createInsertSchema(users);
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences);
 
 // Schema for user details JSON structure
 export const userDetailsSchema = z.object({

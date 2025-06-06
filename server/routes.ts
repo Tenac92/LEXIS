@@ -1460,6 +1460,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     log('[Routes] Setting up document routes...');
     
     // Add user documents endpoint for dashboard
+    // User preferences endpoints for ESDIAN suggestions
+    app.get('/api/user-preferences/esdian', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = (req as any).user?.id;
+        if (!userId) {
+          return res.status(401).json({ message: 'User not authenticated' });
+        }
+
+        // Query user's most frequently used ESDIAN values from generated_documents
+        const { data: documents, error } = await supabase
+          .from('generated_documents')
+          .select('esdian')
+          .eq('generated_by', userId)
+          .not('esdian', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(50); // Get last 50 documents to analyze patterns
+
+        if (error) {
+          console.error('[UserPreferences] Error fetching ESDIAN data:', error);
+          return res.status(500).json({ message: 'Error fetching preferences' });
+        }
+
+        // Analyze ESDIAN patterns and create suggestions
+        const esdianCounts: { [key: string]: number } = {};
+        
+        documents?.forEach(doc => {
+          if (doc.esdian && Array.isArray(doc.esdian)) {
+            doc.esdian.forEach((item: string) => {
+              if (item && item.trim()) {
+                const cleanItem = item.trim();
+                esdianCounts[cleanItem] = (esdianCounts[cleanItem] || 0) + 1;
+              }
+            });
+          }
+        });
+
+        // Sort by usage frequency and get top suggestions
+        const suggestions = Object.entries(esdianCounts)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 10) // Top 10 most used
+          .map(([value, count]) => ({ value, count }));
+
+        res.json({
+          status: 'success',
+          suggestions,
+          total: suggestions.length
+        });
+
+      } catch (error) {
+        console.error('[UserPreferences] Error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+      }
+    });
+
     app.get('/api/documents/user', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
       try {
         if (!req.user?.id) {
