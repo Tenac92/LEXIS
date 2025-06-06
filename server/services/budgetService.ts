@@ -88,12 +88,12 @@ export class BudgetService {
    * Analyzes changes between admin budget updates by comparing the sum JSON column
    * with current budget values. This is used to handle anakatanomh (reallocation) requests.
    * 
-   * @param mis The MIS project code
+   * @param projectIdentifier The project identifier (can be id, mis, or na853)
    * @returns Analysis of changes between updates
    */
-  static async analyzeChangesBetweenUpdates(mis: string): Promise<BudgetChangeAnalysis> {
+  static async analyzeChangesBetweenUpdates(projectIdentifier: string): Promise<BudgetChangeAnalysis> {
     try {
-      if (!mis) {
+      if (!projectIdentifier) {
         return {
           status: 'error',
           mis: '',
@@ -116,70 +116,108 @@ export class BudgetService {
             katanomes_etous_diff: 0,
             ethsia_pistosi_diff: 0,
           },
-          error: 'MIS parameter is required'
+          error: 'Project identifier is required'
         };
       }
 
-      // Check if the MIS is purely numeric or has a project code format
-      let misToSearch = mis;
-      let isProjectCode = false;
+      // Find the project by identifier (id, mis, or na853)
+      let projectId: number | null = null;
       
       // Pattern to detect project codes like "2024ΝΑ85300001"
       const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
-      const isNumericString = /^\d+$/.test(mis);
-      let numericalMis: number | null = null;
+      const isNumericString = /^\d+$/.test(projectIdentifier);
       
-      console.log(`[BudgetService] Analyzing changes for MIS: ${mis}, isNumericString: ${isNumericString}`);
+      console.log(`[BudgetService] Analyzing changes for identifier: ${projectIdentifier}, isNumericString: ${isNumericString}`);
       
-      // CASE 1: Project code format (like "2024ΝΑ85300001")
-      if (projectCodePattern.test(mis)) {
-        isProjectCode = true;
-        console.log(`[BudgetService] Analyzing - MIS appears to be a project code: ${mis}`);
+      // CASE 1: Direct project ID (numeric)
+      if (isNumericString) {
+        projectId = parseInt(projectIdentifier);
+        console.log(`[BudgetService] Analyzing - Using direct project ID: ${projectId}`);
+      }
+      // CASE 2: Project code format (like "2024ΝΑ85300001") 
+      else if (projectCodePattern.test(projectIdentifier)) {
+        console.log(`[BudgetService] Analyzing - Identifier appears to be a project code: ${projectIdentifier}`);
         
-        // Try to find the numerical MIS by looking up the project
+        // Try to find the project ID by looking up the project by na853
         try {
           const { data: projectData, error: projectError } = await supabase
             .from('Projects')
-            .select('id, mis')
-            .eq('na853', mis) // Look up by na853 field (this is the correct field name)
+            .select('id, mis, na853')
+            .eq('na853', projectIdentifier)
             .single();
           
           if (projectError && projectError.code !== 'PGRST116') {
             console.error(`[BudgetService] Analyzing - Supabase error looking up project: ${projectError.message}`);
           }
             
-          if (projectData?.mis) {
-            console.log(`[BudgetService] Analyzing - Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
-            // Convert to number since MIS is now int4 in the database
-            numericalMis = parseInt(projectData.mis.toString());
-            misToSearch = String(numericalMis); // Convert to string for consistency in search
+          if (projectData?.id) {
+            projectId = projectData.id;
+            console.log(`[BudgetService] Analyzing - Found project with ID ${projectId} for project code ${projectIdentifier}`);
           } else {
-            console.log(`[BudgetService] Analyzing - No project found with project code: ${mis}, will try to find by direct match`);
+            console.log(`[BudgetService] Analyzing - No project found with project code: ${projectIdentifier}`);
           }
         } catch (projectLookupError) {
-          console.log(`[BudgetService] Analyzing - Error looking up project by code ${mis}:`, projectLookupError);
-          // Continue with other strategies if lookup fails
+          console.log(`[BudgetService] Analyzing - Error looking up project by code ${projectIdentifier}:`, projectLookupError);
         }
-      } 
-      // CASE 2: Numeric MIS
-      else if (isNumericString) {
-        numericalMis = parseInt(mis);
-        misToSearch = String(numericalMis); // Convert to string for consistency in search
-        console.log(`[BudgetService] Analyzing - Using numerical MIS: ${misToSearch}`);
+      }
+      // CASE 3: Legacy MIS lookup
+      else {
+        // Try to find project by legacy MIS field
+        try {
+          const { data: projectData, error: projectError } = await supabase
+            .from('Projects')
+            .select('id, mis')
+            .eq('mis', parseInt(projectIdentifier))
+            .single();
+          
+          if (projectData?.id) {
+            projectId = projectData.id;
+            console.log(`[BudgetService] Analyzing - Found project with ID ${projectId} for legacy MIS ${projectIdentifier}`);
+          }
+        } catch (legacyMisError) {
+          console.log(`[BudgetService] Analyzing - Error looking up project by legacy MIS ${projectIdentifier}:`, legacyMisError);
+        }
+      }
+
+      if (!projectId) {
+        return {
+          status: 'error',
+          mis: projectIdentifier,
+          isReallocation: false,
+          changeType: 'no_change',
+          beforeUpdate: null,
+          afterUpdate: {
+            available_budget: 0,
+            quarter_available: 0,
+            yearly_available: 0,
+            katanomes_etous: 0,
+            ethsia_pistosi: 0,
+            user_view: 0,
+            current_quarter: 0
+          },
+          changes: {
+            available_budget_diff: 0,
+            quarter_available_diff: 0,
+            yearly_available_diff: 0,
+            katanomes_etous_diff: 0,
+            ethsia_pistosi_diff: 0,
+          },
+          error: `Project not found for identifier: ${projectIdentifier}`
+        };
       }
       
-      // Try to get budget data with the determined MIS value
+      // Try to get budget data using project_id
       const { data: budgetData, error } = await supabase
         .from('budget_na853_split')
         .select('*')
-        .eq('mis', misToSearch)
+        .eq('project_id', projectId)
         .single();
         
       if (error) {
         console.error(`[BudgetService] Analyzing - Error fetching budget data: ${error.message}`);
         return {
           status: 'error',
-          mis: mis,
+          mis: projectIdentifier,
           isReallocation: false,
           changeType: 'no_change',
           beforeUpdate: null,
