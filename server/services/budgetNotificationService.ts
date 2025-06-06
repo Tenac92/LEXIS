@@ -8,8 +8,7 @@ import { log } from '../vite';
 
 export interface BudgetNotification {
   id?: number;
-  project_id: number;
-  mis?: number;
+  mis: number;
   type: string;
   amount: number;
   current_budget: number;
@@ -391,13 +390,17 @@ export async function getAllNotifications(): Promise<BudgetNotification[]> {
     const { data, error } = await supabase
       .from('budget_notifications')
       .select(`
-        *,
-        Projects:project_id (
-          id,
-          mis,
-          na853,
-          unit
-        )
+        id,
+        mis,
+        type,
+        amount,
+        current_budget,
+        ethsia_pistosi,
+        reason,
+        status,
+        user_id,
+        created_at,
+        updated_at
       `)
       .order('created_at', { ascending: false })
       .limit(100);
@@ -407,6 +410,7 @@ export async function getAllNotifications(): Promise<BudgetNotification[]> {
       return [];
     }
 
+    log(`[Budget] Successfully fetched ${data?.length || 0} notifications`, 'info');
     return data || [];
 
   } catch (error) {
@@ -422,66 +426,56 @@ export async function createTestReallocationNotifications(): Promise<void> {
   try {
     log('[Budget] Creating test reallocation notifications...', 'info');
 
-    // Get some existing projects to create notifications for
-    const { data: projects, error: projectError } = await supabase
-      .from('Projects')
-      .select('id, mis, na853, unit')
-      .limit(3);
+    // Clear existing test notifications first
+    await supabase
+      .from('budget_notifications')
+      .delete()
+      .eq('user_id', 49);
 
-    if (projectError || !projects || projects.length === 0) {
-      log('[Budget] No projects found for creating test notifications', 'warn');
-      return;
+    // Create sample reallocation notification
+    const reallocationNotification = await createBudgetNotification({
+      project_id: 1,
+      mis: 5174692,
+      type: 'reallocation',
+      amount: 1500,
+      current_budget: 4489,
+      ethsia_pistosi: 5000,
+      reason: 'Απαιτείται ανακατανομή: Το ποσό 1,500€ υπερβαίνει το 20% της ετήσιας κατανομής 1,000€',
+      status: 'pending',
+      user_id: 49
+    });
+
+    // Create sample funding notification
+    const fundingNotification = await createBudgetNotification({
+      project_id: 2,
+      mis: 5174693,
+      type: 'funding',
+      amount: 12000,
+      current_budget: 8000,
+      ethsia_pistosi: 10000,
+      reason: 'Απαιτείται χρηματοδότηση: Το ποσό 12,000€ υπερβαίνει την ετήσια πίστωση 10,000€',
+      status: 'pending',
+      user_id: 49
+    });
+
+    // Create sample quarter exceeded notification
+    const quarterNotification = await createBudgetNotification({
+      project_id: 3,
+      mis: 5174694,
+      type: 'quarter_exceeded',
+      amount: 3000,
+      current_budget: 2500,
+      ethsia_pistosi: 8000,
+      reason: 'Το ποσό 3,000€ υπερβαίνει το διαθέσιμο ποσό τριμήνου 2,500€',
+      status: 'pending',
+      user_id: 49
+    });
+
+    if (reallocationNotification && fundingNotification && quarterNotification) {
+      log('[Budget] Successfully created 3 test notifications', 'info');
+    } else {
+      log('[Budget] Some test notifications may have failed to create', 'warn');
     }
-
-    // Create reallocation notifications
-    for (const project of projects) {
-      // Get budget data for the project
-      const { data: budgetData, error: budgetError } = await supabase
-        .from('budget_na853_split')
-        .select('*')
-        .eq('project_id', project.id)
-        .single();
-
-      if (budgetError || !budgetData) {
-        continue;
-      }
-
-      const katanomesEtous = parseFloat(budgetData.katanomes_etous || '0');
-      const userView = parseFloat(budgetData.user_view || '0');
-      const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi || '0');
-      
-      // Calculate reallocation threshold (20% of annual allocation)
-      const reallocationThreshold = katanomesEtous * 0.2;
-      const testAmount = reallocationThreshold + 100; // Amount that triggers reallocation
-
-      await createBudgetNotification({
-        project_id: project.id,
-        mis: project.mis,
-        type: 'reallocation',
-        amount: testAmount,
-        current_budget: katanomesEtous - userView,
-        ethsia_pistosi: ethsiaPistosi,
-        reason: `Απαιτείται ανακατανομή: Το ποσό ${testAmount.toFixed(2)}€ υπερβαίνει το 20% της ετήσιας κατανομής ${reallocationThreshold.toFixed(2)}€`,
-        status: 'pending',
-        user_id: 1
-      });
-
-      // Also create a funding notification
-      const fundingAmount = ethsiaPistosi + 500;
-      await createBudgetNotification({
-        project_id: project.id,
-        mis: project.mis,
-        type: 'funding',
-        amount: fundingAmount,
-        current_budget: katanomesEtous - userView,
-        ethsia_pistosi: ethsiaPistosi,
-        reason: `Απαιτείται χρηματοδότηση: Το ποσό ${fundingAmount.toFixed(2)}€ υπερβαίνει την ετήσια πίστωση ${ethsiaPistosi.toFixed(2)}€`,
-        status: 'pending',
-        user_id: 1
-      });
-    }
-
-    log('[Budget] Test notifications created successfully', 'info');
 
   } catch (error) {
     log(`[Budget] Error creating test notifications: ${error}`, 'error');
