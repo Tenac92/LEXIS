@@ -2267,14 +2267,38 @@ export function CreateDocumentDialog({
           description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
         });
 
-        // Reset recipient list after successful document creation
-        form.setValue("recipients", []);
+        // Reset entire form after successful document creation
+        const defaultUnit = user?.units && user.units.length > 0 ? user.units[0] : "";
         
-        // Update context to clear recipients  
-        updateFormData({
-          ...formData,
-          recipients: []
+        form.reset({
+          unit: defaultUnit,
+          project_id: "",
+          region: "",
+          expenditure_type: "",
+          recipients: [],
+          status: "draft",
+          selectedAttachments: [],
+          esdian_field1: "",
+          esdian_field2: ""
         });
+        
+        // Reset context state completely for new document
+        updateFormData({
+          unit: defaultUnit,
+          project_id: "",
+          region: "",
+          expenditure_type: "",
+          recipients: [],
+          status: "draft",
+          selectedAttachments: [],
+          esdian_field1: "",
+          esdian_field2: ""
+        });
+        
+        // Reset to first step
+        setCurrentStep(0);
+        
+        console.log("[CreateDocument] Form completely reset after successful document creation");
         
         // Force close the dialog
         onClose();
