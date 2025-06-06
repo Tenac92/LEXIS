@@ -2928,6 +2928,8 @@ export function CreateDocumentDialog({
                             <SimpleAFMAutocomplete
                               expenditureType={form.getValues("expenditure_type") || ""}
                               value={form.watch(`recipients.${index}.afm`) || ""}
+                              userUnit={selectedUnit || ""}
+                              projectNa853={selectedProject?.mis || ""}
                               onChange={(value) => {
                                 // Update the AFM field in the form when user types
                                 form.setValue(`recipients.${index}.afm`, value);
