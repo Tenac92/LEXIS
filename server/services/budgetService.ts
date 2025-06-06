@@ -340,7 +340,7 @@ export class BudgetService {
       
       return {
         status: 'success',
-        mis: mis,
+        mis: projectIdentifier,
         isReallocation,
         changeType,
         beforeUpdate: previousState,
@@ -351,7 +351,7 @@ export class BudgetService {
       console.error(`[BudgetService] Error analyzing budget changes:`, error);
       return {
         status: 'error',
-        mis: mis,
+        mis: projectIdentifier,
         isReallocation: false,
         changeType: 'no_change',
         beforeUpdate: null,
@@ -1057,16 +1057,25 @@ export class BudgetService {
         const previousAvailable = katanomesEtous - currentUserView;
         const newAvailable = katanomesEtous - newUserView;
         
-        // Convert to correct decimal type using Zod schema expectations
-        await storage.createBudgetHistoryEntry({
-          mis: numericalMis ?? ((/^\d+$/.test(mis)) ? parseInt(mis) : 0), // Ensure numeric MIS
-          previous_amount: previousAvailable.toString(), // Convert to string for decimal type
-          new_amount: newAvailable.toString(), // Convert to string for decimal type
-          change_type: 'document_created',
-          change_reason: changeReason || documentChangeReason,
-          document_id: documentId, // This is numeric ID parsed from sessionId
-          created_by: userId ? parseInt(userId) : null
-        });
+        // Get project ID for the budget history entry
+        const resolvedProject = await import('../utils/projectResolver').then(m => m.resolveProject(mis));
+        const projectId = resolvedProject?.id;
+
+        if (!projectId) {
+          console.warn(`[BudgetService] Update - Could not resolve project ID for MIS: ${mis}, skipping history entry`);
+        } else {
+          // Convert to correct decimal type using Zod schema expectations
+          await storage.createBudgetHistoryEntry({
+            project_id: projectId, // Use project_id instead of mis
+            mis: numericalMis ?? ((/^\d+$/.test(mis)) ? parseInt(mis) : 0), // Keep legacy MIS for compatibility
+            previous_amount: previousAvailable.toString(), // Convert to string for decimal type
+            new_amount: newAvailable.toString(), // Convert to string for decimal type
+            change_type: 'document_created',
+            change_reason: changeReason || documentChangeReason,
+            document_id: documentId, // This is numeric ID parsed from sessionId
+            created_by: userId ? parseInt(userId) : null
+          });
+        }
         
         console.log(`[BudgetService] Update - Created standardized history entry for MIS: ${mis}`);
       } catch (historyError) {
