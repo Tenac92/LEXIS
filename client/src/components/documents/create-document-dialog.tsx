@@ -1138,7 +1138,7 @@ export function CreateDocumentDialog({
     if (open && !dialogInitializationRef.current.isInitializing) {
       handleDialogOpen();
     }
-  }, [open]); // Removed handleDialogOpen from dependencies
+  }, [open]); // Removed handleDialogOpen from dependencies to break infinite loop
 
   // CRITICAL FIX: Completely redesigned unit default-setting mechanism
   // Uses a separate reference to track unit initialization to prevent duplicate operations
