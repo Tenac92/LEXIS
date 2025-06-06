@@ -2,6 +2,7 @@ import { Request, Response, Router } from 'express';
 import { db } from '../drizzle';
 import { supabase } from '../config/db';
 import { authenticateSession } from '../authentication';
+import { getAllNotifications, createTestReallocationNotifications } from '../services/budgetNotificationService';
 import type { User } from '@shared/schema';
 
 interface AuthRequest extends Request {
@@ -23,23 +24,8 @@ router.get('/admin', authenticateSession, async (req: AuthRequest, res: Response
 
     console.log('[BudgetNotificationsController] Admin fetching all notifications...');
 
-    // First get the notifications
-    const { data: notificationsData, error } = await supabase
-      .from('budget_notifications')
-      .select(`
-        id,
-        mis,
-        type,
-        amount,
-        current_budget,
-        ethsia_pistosi,
-        reason,
-        status,
-        user_id,
-        created_at,
-        updated_at
-      `)
-      .order('created_at', { ascending: false });
+    // Use the enhanced service function
+    const notificationsData = await getAllNotifications();
       
     if (error) {
       console.error('[BudgetNotificationsController] Error fetching notifications:', error);

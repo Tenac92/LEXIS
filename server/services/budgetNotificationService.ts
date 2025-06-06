@@ -214,6 +214,47 @@ export async function createBudgetNotification(notification: Omit<BudgetNotifica
   try {
     log(`[Budget] Creating notification for Project ID: ${notification.project_id}, Type: ${notification.type}`, 'info');
 
+    // Check if a similar notification already exists to avoid duplicates
+    const { data: existingNotifications, error: checkError } = await supabase
+      .from('budget_notifications')
+      .select('id')
+      .eq('project_id', notification.project_id)
+      .eq('type', notification.type)
+      .eq('status', 'pending')
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()); // Within last 24 hours
+
+    if (checkError) {
+      log(`[Budget] Error checking existing notifications: ${checkError.message}`, 'warn');
+    }
+
+    // If similar notification exists, update it instead of creating duplicate
+    if (existingNotifications && existingNotifications.length > 0) {
+      const existingId = existingNotifications[0].id;
+      log(`[Budget] Updating existing notification ${existingId} instead of creating duplicate`, 'info');
+      
+      const { data: updatedData, error: updateError } = await supabase
+        .from('budget_notifications')
+        .update({
+          amount: notification.amount,
+          current_budget: notification.current_budget,
+          ethsia_pistosi: notification.ethsia_pistosi,
+          reason: notification.reason,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingId)
+        .select()
+        .single();
+
+      if (updateError) {
+        log(`[Budget] Error updating existing notification: ${updateError.message}`, 'error');
+        // Fall through to create new notification
+      } else {
+        log(`[Budget] Successfully updated existing notification with ID: ${existingId}`, 'info');
+        return updatedData;
+      }
+    }
+
+    // Create new notification
     const { data, error } = await supabase
       .from('budget_notifications')
       .insert({
@@ -225,7 +266,7 @@ export async function createBudgetNotification(notification: Omit<BudgetNotifica
         ethsia_pistosi: notification.ethsia_pistosi,
         reason: notification.reason,
         status: notification.status || 'pending',
-        user_id: notification.user_id
+        user_id: notification.user_id || 0
       })
       .select()
       .single();
@@ -339,5 +380,110 @@ export async function getPendingNotifications(userUnits: string[]): Promise<Budg
   } catch (error) {
     log(`[Budget] Error getting pending notifications: ${error}`, 'error');
     return [];
+  }
+}
+
+/**
+ * Gets all notifications for admin users
+ */
+export async function getAllNotifications(): Promise<BudgetNotification[]> {
+  try {
+    const { data, error } = await supabase
+      .from('budget_notifications')
+      .select(`
+        *,
+        Projects:project_id (
+          id,
+          mis,
+          na853,
+          unit
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) {
+      log(`[Budget] Error fetching all notifications: ${error.message}`, 'error');
+      return [];
+    }
+
+    return data || [];
+
+  } catch (error) {
+    log(`[Budget] Error getting all notifications: ${error}`, 'error');
+    return [];
+  }
+}
+
+/**
+ * Creates test reallocation notifications for demonstration
+ */
+export async function createTestReallocationNotifications(): Promise<void> {
+  try {
+    log('[Budget] Creating test reallocation notifications...', 'info');
+
+    // Get some existing projects to create notifications for
+    const { data: projects, error: projectError } = await supabase
+      .from('Projects')
+      .select('id, mis, na853, unit')
+      .limit(3);
+
+    if (projectError || !projects || projects.length === 0) {
+      log('[Budget] No projects found for creating test notifications', 'warn');
+      return;
+    }
+
+    // Create reallocation notifications
+    for (const project of projects) {
+      // Get budget data for the project
+      const { data: budgetData, error: budgetError } = await supabase
+        .from('budget_na853_split')
+        .select('*')
+        .eq('project_id', project.id)
+        .single();
+
+      if (budgetError || !budgetData) {
+        continue;
+      }
+
+      const katanomesEtous = parseFloat(budgetData.katanomes_etous || '0');
+      const userView = parseFloat(budgetData.user_view || '0');
+      const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi || '0');
+      
+      // Calculate reallocation threshold (20% of annual allocation)
+      const reallocationThreshold = katanomesEtous * 0.2;
+      const testAmount = reallocationThreshold + 100; // Amount that triggers reallocation
+
+      await createBudgetNotification({
+        project_id: project.id,
+        mis: project.mis,
+        type: 'reallocation',
+        amount: testAmount,
+        current_budget: katanomesEtous - userView,
+        ethsia_pistosi: ethsiaPistosi,
+        reason: `Απαιτείται ανακατανομή: Το ποσό ${testAmount.toFixed(2)}€ υπερβαίνει το 20% της ετήσιας κατανομής ${reallocationThreshold.toFixed(2)}€`,
+        status: 'pending',
+        user_id: 1
+      });
+
+      // Also create a funding notification
+      const fundingAmount = ethsiaPistosi + 500;
+      await createBudgetNotification({
+        project_id: project.id,
+        mis: project.mis,
+        type: 'funding',
+        amount: fundingAmount,
+        current_budget: katanomesEtous - userView,
+        ethsia_pistosi: ethsiaPistosi,
+        reason: `Απαιτείται χρηματοδότηση: Το ποσό ${fundingAmount.toFixed(2)}€ υπερβαίνει την ετήσια πίστωση ${ethsiaPistosi.toFixed(2)}€`,
+        status: 'pending',
+        user_id: 1
+      });
+    }
+
+    log('[Budget] Test notifications created successfully', 'info');
+
+  } catch (error) {
+    log(`[Budget] Error creating test notifications: ${error}`, 'error');
   }
 }
