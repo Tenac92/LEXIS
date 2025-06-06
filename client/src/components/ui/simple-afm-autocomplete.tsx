@@ -90,13 +90,104 @@ export function SimpleAFMAutocomplete({
       // Cross-check criteria as requested
       const matchesExpenditure = payment.expenditure_type === expenditureType || !payment.expenditure_type;
       const matchesUnit = payment.unit_code === userUnit || !payment.unit_code;
-      const matchesNa853 = !projectNa853 || payment.na853_code === projectNa853 || !payment.na853_code;
       
-      return matchesExpenditure && matchesUnit && matchesNa853;
+      // For NA853 matching, be more flexible - check if projectNa853 is contained in payment na853 or vice versa
+      let matchesNa853 = true;
+      if (projectNa853 && payment.na853_code) {
+        // Try exact match first
+        matchesNa853 = payment.na853_code === projectNa853;
+        
+        // If no exact match, try partial matching (project code might be shorter)
+        if (!matchesNa853) {
+          matchesNa853 = payment.na853_code.includes(projectNa853) || projectNa853.includes(payment.na853_code);
+        }
+      }
+      
+      const matches = matchesExpenditure && matchesUnit && matchesNa853;
+      console.log(`[SmartAutocomplete] Payment ${payment.na853_code} vs project ${projectNa853}: expenditure=${matchesExpenditure}, unit=${matchesUnit}, na853=${matchesNa853}, overall=${matches}`);
+      
+      return matches;
     });
 
     if (matchingPayments.length === 0) {
-      return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
+      console.log('[SmartAutocomplete] No exact project match found, falling back to expenditure type and unit matching');
+      
+      // Fallback: Find payments for same expenditure type and unit, ignore project code
+      const fallbackPayments = expenditureData.filter((payment: any) => {
+        if (!payment || typeof payment !== 'object') return false;
+        const matchesExpenditure = payment.expenditure_type === expenditureType || !payment.expenditure_type;
+        const matchesUnit = payment.unit_code === userUnit || !payment.unit_code;
+        return matchesExpenditure && matchesUnit;
+      });
+      
+      if (fallbackPayments.length === 0) {
+        return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
+      }
+      
+      // Use fallback payments for smart selection
+      console.log('[SmartAutocomplete] Using fallback payments:', fallbackPayments);
+      
+      // Process fallback payments with the same logic
+      const fallbackInstallmentsByStatus: Record<string, any[]> = {
+        withStatus: [],
+        withoutStatus: []
+      };
+
+      fallbackPayments.forEach(payment => {
+        const installments = Array.isArray(payment.installment) ? payment.installment : [payment.installment].filter(Boolean);
+        const hasStatus = payment.status && payment.status !== '';
+        
+        installments.forEach((inst: string) => {
+          if (installmentSequence.includes(inst)) {
+            if (hasStatus) {
+              fallbackInstallmentsByStatus.withStatus.push({ ...payment, currentInstallment: inst });
+            } else {
+              fallbackInstallmentsByStatus.withoutStatus.push({ ...payment, currentInstallment: inst });
+            }
+          }
+        });
+      });
+
+      // Find next available installment from fallback data
+      let selectedInstallment = 'Α';
+      let selectedAmount = 0;
+
+      if (fallbackInstallmentsByStatus.withoutStatus.length > 0) {
+        const earliestNoStatus = fallbackInstallmentsByStatus.withoutStatus.reduce((earliest, current) => {
+          const earliestIndex = installmentSequence.indexOf(earliest.currentInstallment);
+          const currentIndex = installmentSequence.indexOf(current.currentInstallment);
+          return currentIndex < earliestIndex ? current : earliest;
+        });
+        
+        selectedInstallment = earliestNoStatus.currentInstallment;
+        selectedAmount = parseFloat(earliestNoStatus.amount || "0") || 0;
+      } else if (fallbackInstallmentsByStatus.withStatus.length > 0) {
+        const lastInstallmentWithStatus = fallbackInstallmentsByStatus.withStatus.reduce((latest, current) => {
+          const latestIndex = installmentSequence.indexOf(latest.currentInstallment);
+          const currentIndex = installmentSequence.indexOf(current.currentInstallment);
+          return currentIndex > latestIndex ? current : latest;
+        });
+        
+        const lastIndex = installmentSequence.indexOf(lastInstallmentWithStatus.currentInstallment);
+        const nextIndex = lastIndex + 1;
+        
+        if (nextIndex < installmentSequence.length) {
+          selectedInstallment = installmentSequence[nextIndex];
+          selectedAmount = parseFloat(lastInstallmentWithStatus.amount || "0") || 0;
+        } else {
+          selectedInstallment = lastInstallmentWithStatus.currentInstallment;
+          selectedAmount = parseFloat(lastInstallmentWithStatus.amount || "0") || 0;
+        }
+      }
+
+      console.log('[SmartAutocomplete] Fallback selection:', { selectedInstallment, selectedAmount });
+      
+      return {
+        installment: selectedInstallment,
+        amount: selectedAmount,
+        suggestedInstallments: [selectedInstallment],
+        installmentAmounts: { [selectedInstallment]: selectedAmount }
+      };
     }
 
     console.log('[SmartAutocomplete] Found matching payments:', matchingPayments);
