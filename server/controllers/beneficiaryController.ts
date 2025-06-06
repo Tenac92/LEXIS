@@ -152,14 +152,50 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
     
     console.log(`[Beneficiaries] Searching beneficiaries by AFM: ${afm}${type ? ` and type: ${type}` : ''} for unit: ${userUnit}`);
     
+    const includeFinancial = req.query.includeFinancial === 'true';
     let beneficiaries = await storage.searchBeneficiariesByAFM(afm);
     
     console.log(`[Beneficiaries] Raw search returned ${beneficiaries.length} beneficiaries`);
     console.log(`[Beneficiaries] Sample beneficiary monada values:`, beneficiaries.slice(0, 3).map(b => ({ id: b.id, monada: b.monada })));
     
-    // Allow cross-unit AFM searches for document creation, but log the cross-unit access
-    const includeFinancial = req.query.includeFinancial === 'true';
+    // Include financial data (oikonomika) if requested for smart autocomplete
     if (includeFinancial) {
+      console.log(`[Beneficiaries] Including financial data for smart autocomplete`);
+      
+      // Fetch financial data for each beneficiary from beneficiary_payments table
+      for (let i = 0; i < beneficiaries.length; i++) {
+        const beneficiary = beneficiaries[i] as any;
+        try {
+          const payments = await storage.getBeneficiaryPayments(beneficiary.id);
+          console.log(`[Beneficiaries] Found ${payments.length} payments for beneficiary ${beneficiary.id}`);
+          
+          // Group payments by expenditure_type to create oikonomika structure
+          const oikonomika: Record<string, any[]> = {};
+          payments.forEach(payment => {
+            const expType = payment.expenditure_type || 'UNKNOWN';
+            if (!oikonomika[expType]) {
+              oikonomika[expType] = [];
+            }
+            oikonomika[expType].push({
+              amount: payment.amount,
+              installment: payment.installment ? [payment.installment] : ['ΕΦΑΠΑΞ'],
+              status: payment.status,
+              expenditure_type: payment.expenditure_type,
+              unit_code: payment.unit_code,
+              na853_code: payment.na853_code,
+              protocol_number: payment.protocol_number,
+              created_at: payment.created_at
+            });
+          });
+          
+          beneficiary.oikonomika = oikonomika;
+          console.log(`[Beneficiaries] Added oikonomika for beneficiary ${beneficiary.id}:`, Object.keys(oikonomika));
+        } catch (error) {
+          console.error(`[Beneficiaries] Error fetching payments for beneficiary ${beneficiary.id}:`, error);
+          beneficiary.oikonomika = {};
+        }
+      }
+      
       // When including financial data (for document creation), allow cross-unit access
       console.log(`[Beneficiaries] Cross-unit AFM search enabled - showing all matching beneficiaries`);
       beneficiaries.forEach((beneficiary: any) => {
