@@ -37,11 +37,15 @@ export function BeneficiaryDetailsModal({
 }: BeneficiaryDetailsModalProps) {
   if (!beneficiary) return null;
 
-  // Fetch all payments for this beneficiary
-  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
-    queryKey: ["/api/beneficiary-payments", beneficiary.id],
-    enabled: !!beneficiary.id && open
+  // Fetch all payments for this specific beneficiary
+  const { data: allPayments = [], isLoading: paymentsLoading } = useQuery({
+    queryKey: ["/api/beneficiary-payments"],
+    enabled: open
   });
+
+  // Filter payments for this specific beneficiary
+  const payments = Array.isArray(allPayments) ? 
+    allPayments.filter((payment: any) => payment.beneficiary_id === beneficiary.id) : [];
 
   const formatCurrency = (amount: number | null) => {
     if (!amount) return '€0,00';
@@ -253,17 +257,19 @@ export function BeneficiaryDetailsModal({
               </div>
             ) : Array.isArray(payments) && payments.length > 0 ? (
               <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
-                {Object.entries(groupedPayments).map(([expenditureType, typePayments]: [string, any[]]) => (
+                {Object.entries(groupedPayments).map(([expenditureType, typePayments]) => {
+                  const paymentsArray = typePayments as any[];
+                  return (
                   <div key={expenditureType} className="bg-white p-4 rounded border border-green-200">
                     <h4 className="font-medium text-green-900 mb-3 flex items-center justify-between">
                       <span>Τύπος Δαπάνης: {expenditureType}</span>
                       <Badge variant="outline" className="text-green-700 border-green-300">
-                        {typePayments.length} πληρωμές
+                        {paymentsArray.length} πληρωμές
                       </Badge>
                     </h4>
                     
                     <div className="space-y-3">
-                      {typePayments.map((payment: any, index: number) => (
+                      {paymentsArray.map((payment: any, index: number) => (
                         <div key={index} className="bg-green-25 p-3 rounded border border-green-100">
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex-1">
@@ -309,7 +315,8 @@ export function BeneficiaryDetailsModal({
                       ))}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-green-700">
