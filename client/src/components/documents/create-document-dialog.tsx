@@ -1381,24 +1381,15 @@ export function CreateDocumentDialog({
     stateCache.current.pendingUpdates++;
   }, [currentFormState, updateFormData]);
   
-  // Effect to trigger form sync when state changes - FIXED: Remove all problematic dependencies
+  // Effect to trigger form sync when state changes - COMPLETELY DISABLED TO PREVENT INFINITE LOOP
+  // The form state will only sync when explicitly called by user actions (form submission, step changes)
+  // This prevents the circular dependency that was causing infinite re-renders
+  /*
   useEffect(() => {
-    // Skip during form reset to prevent circular updates
-    if (formReset || isUpdatingFromContext.current) return;
-    
-    // Add a small delay to prevent immediate execution during render cycle
-    const timer = setTimeout(() => {
-      syncFormToContext();
-    }, 100);
-    
-    // Cleanup function to clear timeout on unmount
-    return () => {
-      clearTimeout(timer);
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-    };
-  }, [currentFormState]); // Only depend on currentFormState, not the function itself
+    // This useEffect was causing infinite loops - disabled
+    // Form sync now happens only on explicit user actions
+  }, []);
+  */
 
   const currentAmount = recipients.reduce((sum: number, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
