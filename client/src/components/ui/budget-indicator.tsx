@@ -318,26 +318,19 @@ export function BudgetIndicator({
     q1, q2, q3, q4 
   });
   
-  // Calculate the true quarter value without subtracting the current amount
-  // First check if quarter_available is directly provided
-  const actualQuarterValue = quarterAvailable !== undefined && quarterAvailable > 0 ? 
-    quarterAvailable : 
-    (currentQuarterValue > 0 ? currentQuarterValue - userView : 0);
+  // FIXED: Use katanomes_etous as the base allocation amount (Διαθέσιμη Κατανομή)
+  const baseAllocationAmount = katanomesEtous; // This is the total allocation for the year
   
-  // Store original quarter value for reference - ensure it's never negative
-  const originalQuarterValue = Math.max(0, actualQuarterValue);
+  // Calculate remaining available after user_view (what's actually available to spend)
+  const remainingAvailable = Math.max(0, katanomesEtous - userView);
   
-  // Then calculate what would remain after the current amount is subtracted (for UI purposes elsewhere)
-  const quarterAvailableValue = Math.max(0, originalQuarterValue - amount);
+  // Calculate what would remain after the current input amount
+  const afterCurrentAmount = Math.max(0, remainingAvailable - amount);
 
   // Calculate remaining budget after potential deduction in real-time
   // Ensure we have valid numbers by providing fallbacks
   const safeAvailableBudget = typeof availableBudget === 'number' ? availableBudget : 0;
   const safeYearlyAvailable = typeof yearlyAvailable === 'number' ? yearlyAvailable : 0;
-  
-  const remainingAvailable = safeAvailableBudget - amount;
-  // Real-time calculation of remaining available budget based on current amount
-  // Uses safeAvailableBudget to ensure we have a valid number even with API inconsistencies
   
   // Calculate percentage for progress bar, showing real-time usage as user types
   const percentageUsed = safeAvailableBudget > 0 ? ((amount / safeAvailableBudget) * 100) : 0;
@@ -366,32 +359,32 @@ export function BudgetIndicator({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
             <h3 className="text-sm font-medium text-gray-600">Διαθέσιμη Κατανομή</h3>
-            <p className={`text-2xl font-bold ${originalQuarterValue < 0 ? 'text-red-600' : 'text-blue-600'}`}>
-              {originalQuarterValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            <p className={`text-2xl font-bold ${baseAllocationAmount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+              {baseAllocationAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <div className="mt-2">
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full ${(amount / quarterAvailableValue * 100) > 100 ? 'bg-red-500' : 'bg-blue-500'} transition-all duration-300`}
-                  style={{ width: `${Math.min((amount / quarterAvailableValue * 100), 100)}%` }}
+                  className={`h-full ${(userView / baseAllocationAmount * 100) > 90 ? 'bg-red-500' : 'bg-blue-500'} transition-all duration-300`}
+                  style={{ width: `${Math.min((userView / baseAllocationAmount * 100), 100)}%` }}
                 />
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {quarterAvailableValue > 0 ? (amount / quarterAvailableValue * 100).toFixed(1) : 0}% χρησιμοποιήθηκε
+                {baseAllocationAmount > 0 ? (userView / baseAllocationAmount * 100).toFixed(1) : 0}% δεσμευμένα
               </p>
             </div>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο Τριμήνου {currentQuarter?.substring(1) || currentQuarterNumber || ''}</h3>
-            <p className={`text-2xl font-bold ${originalQuarterValue > 0 ? 'text-gray-700' : 'text-blue-600'}`}>
-              {originalQuarterValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            <h3 className="text-sm font-medium text-gray-600">Διαθέσιμο Υπόλοιπο</h3>
+            <p className={`text-2xl font-bold ${remainingAvailable > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {remainingAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Υπόλοιπο τρέχοντος τριμήνου
+              Διαθέσιμο προς δέσμευση
             </p>
             {amount > 0 && (
-              <p className={`text-xs ${quarterAvailableValue < 0 ? 'text-red-500' : 'text-gray-500'} mt-1`}>
-                Μετά την αφαίρεση: {quarterAvailableValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              <p className={`text-xs ${afterCurrentAmount < 0 ? 'text-red-500' : 'text-green-600'} mt-1`}>
+                Μετά την αφαίρεση: {afterCurrentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
               </p>
             )}
           </div>
