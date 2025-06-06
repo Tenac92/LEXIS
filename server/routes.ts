@@ -22,6 +22,7 @@ import budgetUploadRouter from "./routes/budget-upload"; // Import the budget up
 import { storage } from "./storage"; // Import storage for beneficiary status updates
 import attachmentsRouter from "./controllers/attachments"; // Import for attachments (default export)
 import notificationsRouter from "./routes/api/notifications"; // Import budget notifications router
+import testNotificationsRouter from "./routes/api/test-notifications"; // Import test notifications router
 import healthcheckRouter from "./routes/healthcheck"; // Import the original healthcheck router
 import healthRouter from "./routes/health"; // Import our new enhanced health check router
 import sdegdaefkDiagnosticRouter from "./routes/sdegdaefk-diagnostic"; // Import the sdegdaefk.gr diagnostic router
@@ -1409,6 +1410,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Budget notifications routes - must be registered BEFORE the main budget routes
     log('[Routes] Setting up budget notifications routes...');
     app.use('/api/budget-notifications', authenticateSession, budgetNotificationsRouter);
+    app.use('/api/test-notifications', authenticateSession, testNotificationsRouter);
     log('[Routes] Budget notifications routes setup complete');
     
     // Employee management routes
