@@ -392,6 +392,7 @@ const StepIndicator = ({ currentStep }: { currentStep: number }) => {
     { title: "Επιλογή Μονάδας", icon: <User className="h-4 w-4" /> },
     { title: "Στοιχεία Έργου", icon: <FileText className="h-4 w-4" /> },
     { title: "Δικαιούχοι", icon: <User className="h-4 w-4" /> },
+    { title: "Υπογραφή", icon: <User className="h-4 w-4" /> },
     { title: "Συνημμένα", icon: <FileText className="h-4 w-4" /> },
   ];
 
@@ -457,6 +458,14 @@ const recipientSchema = z.object({
   installmentAmounts: z.record(z.string(), z.number()).optional().default({}),
 });
 
+const signatureSchema = z.object({
+  name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
+  order: z.string().min(1, "Η εντολή είναι υποχρεωτική"),
+  title: z.string().min(1, "Ο τίτλος είναι υποχρεωτικός"),
+  degree: z.string().optional(),
+  prepose: z.string().optional(),
+});
+
 const createDocumentSchema = z.object({
   unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
   project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
@@ -468,6 +477,8 @@ const createDocumentSchema = z.object({
   selectedAttachments: z.array(z.string()).optional().default([]),
   esdian_field1: z.string().optional().default(""),
   esdian_field2: z.string().optional().default(""),
+  director_signature: signatureSchema.optional(),
+  department_manager_signature: signatureSchema.optional(),
 });
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
@@ -2533,7 +2544,7 @@ export function CreateDocumentDialog({
       
       // Move to next step
       setDirection(1);
-      setCurrentStep(Math.min(currentStep + 1, 3));
+      setCurrentStep(Math.min(currentStep + 1, 4));
       
     } catch (error) {
       console.error("Navigation error:", error);
@@ -2547,7 +2558,7 @@ export function CreateDocumentDialog({
 
   const handleNextOrSubmit = async () => {
     try {
-      if (currentStep === 3) {
+      if (currentStep === 4) {
         const isValid = await form.trigger();
         if (isValid) {
           await form.handleSubmit(handleSubmit)();

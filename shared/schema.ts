@@ -181,6 +181,9 @@ export const generatedDocuments = pgTable("generated_documents", {
   installmentAmounts: jsonb("installmentAmounts").default({}),
   template_id: integer("template_id"),
   comments: text("comments"),
+  // Director signature fields
+  director_signature: jsonb("director_signature"), // Stores selected director info
+  department_manager_signature: jsonb("department_manager_signature"), // Stores selected department manager info
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at"),
 });
@@ -394,12 +397,23 @@ export const recipientSchema = z.object({
 export const insertGeneratedDocumentSchema =
   createInsertSchema(generatedDocuments);
 
-// Extended schema with validation for recipients
+// Schema for signature information
+export const signatureSchema = z.object({
+  name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
+  order: z.string().min(1, "Η εντολή είναι υποχρεωτική"),
+  title: z.string().min(1, "Ο τίτλος είναι υποχρεωτικός"),
+  degree: z.string().optional(),
+  prepose: z.string().optional(),
+});
+
+// Extended schema with validation for recipients and signatures
 export const extendedGeneratedDocumentSchema =
   insertGeneratedDocumentSchema.extend({
     recipients: z
       .array(recipientSchema)
       .min(1, "Πρέπει να υπάρχει τουλάχιστον ένας παραλήπτης"),
+    director_signature: signatureSchema.optional(),
+    department_manager_signature: signatureSchema.optional(),
   });
 
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory);
