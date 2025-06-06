@@ -611,21 +611,27 @@ export function CreateDocumentDialog({
     },
   });
 
-  // Process available directors from monada data
+  // Process available directors from monada data - filtered by selected unit
   const availableDirectors = useMemo(() => {
+    const selectedUnit = form.watch("unit");
+    if (!selectedUnit) return [];
+    
     return monada
-      .filter((unit: any) => unit.director && unit.director.name)
+      .filter((unit: any) => unit.unit === selectedUnit && unit.director && unit.director.name)
       .map((unit: any) => ({
         unit: unit.unit,
         director: unit.director
       }));
-  }, [monada]);
+  }, [monada, form.watch("unit")]);
 
-  // Process available department managers from monada data
+  // Process available department managers from monada data - filtered by selected unit
   const availableDepartmentManagers = useMemo(() => {
+    const selectedUnit = form.watch("unit");
+    if (!selectedUnit) return [];
+    
     const managers: any[] = [];
     monada.forEach((unit: any) => {
-      if (unit.parts && typeof unit.parts === 'object') {
+      if (unit.unit === selectedUnit && unit.parts && typeof unit.parts === 'object') {
         Object.entries(unit.parts).forEach(([key, value]: [string, any]) => {
           if (value && typeof value === 'object' && value.manager && value.manager.name) {
             managers.push({
@@ -638,7 +644,7 @@ export function CreateDocumentDialog({
       }
     });
     return managers;
-  }, [monada]);
+  }, [monada, form.watch("unit")]);
 
   // OPTIMIZED: Units query defined early to avoid reference errors
   const { 
