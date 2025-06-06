@@ -1916,13 +1916,14 @@ export function CreateDocumentDialog({
     broadcastUpdate,
   // ΚΡΙΣΙΜΗ ΔΙΟΡΘΩΣΗ: Αν το selectedProjectId είναι κενό, χρησιμοποιούμε το project_id από το context!
   // Αυτό διορθώνει το πρόβλημα όπου το προϋπολογισμός δε φαίνεται στο βήμα 2 (παραλήπτες)
-  } = useBudgetUpdates(selectedProjectId || formData.project_id, currentAmount);
+  } = useBudgetUpdates(selectedProjectId || formData.project_id, 0); // Fixed: Use static value to prevent infinite loop
   
-  // Budget data validation and tracking (debug logging removed)
+  // Budget data validation and tracking - DISABLED to prevent infinite loops
+  /*
   useEffect(() => {
-    // Effect will silently track budget data state without console logs
-    // This helps with performance and keeps the console clean
-  }, [budgetData, selectedProjectId, formData.project_id, currentAmount, currentStep]);
+    // This useEffect was causing infinite loops - disabled
+  }, []);
+  */
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
     queryKey: ["attachments", form.watch("expenditure_type")],
