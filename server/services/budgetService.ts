@@ -1145,6 +1145,29 @@ export class BudgetService {
       // Perform a second update to the sum field to capture the new state
       await this.updateBudgetSumField(mis);
       
+      // Broadcast real-time budget update to all connected clients
+      try {
+        const { broadcastBudgetUpdate } = await import('../websocket/wsManager');
+        
+        // Get updated budget data for broadcasting
+        const updatedBudgetResult = await this.getBudget(mis);
+        if (updatedBudgetResult.status === 'success' && updatedBudgetResult.data) {
+          await broadcastBudgetUpdate(mis, {
+            available_budget: updatedBudgetResult.data.available_budget,
+            quarter_available: updatedBudgetResult.data.quarter_available,
+            yearly_available: updatedBudgetResult.data.yearly_available,
+            user_view: updatedBudgetResult.data.user_view,
+            ethsia_pistosi: updatedBudgetResult.data.ethsia_pistosi,
+            katanomes_etous: updatedBudgetResult.data.katanomes_etous
+          });
+          
+          console.log(`[BudgetService] Broadcasting real-time budget update for MIS: ${mis}`);
+        }
+      } catch (broadcastError) {
+        console.warn(`[BudgetService] Error broadcasting budget update: ${broadcastError}`);
+        // Non-fatal, continue
+      }
+      
       return {
         status: 'success',
         message: 'Budget updated successfully',

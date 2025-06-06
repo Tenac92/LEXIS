@@ -498,6 +498,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Continue without failing - document is created but status may not be updated
         }
         
+        // Validate budget and create notifications if needed
+        try {
+          const projectIdentifier = req.body.project_mis || project_id;
+          const userId = (req as any).session?.user?.id;
+          
+          console.log('[DIRECT_ROUTE_V2] Validating budget for project:', projectIdentifier, 'with amount:', documentPayload.total_amount);
+          
+          // Import budget notification service
+          const { validateBudgetAllocation } = await import('./services/budgetNotificationService');
+          
+          // Validate budget allocation and create notifications if thresholds are exceeded
+          const validationResult = await validateBudgetAllocation(
+            projectIdentifier,
+            documentPayload.total_amount,
+            userId
+          );
+          
+          console.log('[DIRECT_ROUTE_V2] Budget validation result:', validationResult);
+          
+          // If validation indicates a notification was created, log it
+          if (validationResult.requiresNotification) {
+            console.log(`[DIRECT_ROUTE_V2] Budget notification created for ${validationResult.notificationType}: ${validationResult.message}`);
+          }
+          
+        } catch (validationError) {
+          console.error('[DIRECT_ROUTE_V2] Error validating budget (continuing with document creation):', validationError);
+        }
+
         // Update the budget to reflect the document creation
         try {
           // Convert project_id to MIS if needed (project_id or project_mis)
