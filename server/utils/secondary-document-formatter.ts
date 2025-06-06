@@ -386,9 +386,9 @@ export class SecondaryDocumentFormatter {
       }),
     ];
 
-    // Use DocumentUtilities to create manager signature paragraphs
+    // Use DocumentUtilities to create manager signature paragraphs from director_signature field
     const rightColumnParagraphs =
-      DocumentUtilities.createManagerSignatureParagraphs(unitDetails?.manager);
+      DocumentUtilities.createManagerSignatureParagraphs(documentData.director_signature);
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },

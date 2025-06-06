@@ -999,9 +999,9 @@ export class DocumentGenerator {
       console.log('[DocumentGenerator] ESDIAN Debug - No ESDIAN data found or not an array');
     }
 
-    // Right column - use centralized signature utility
+    // Right column - use signature from director_signature field
     const rightColumnParagraphs =
-      DocumentUtilities.createManagerSignatureParagraphs(unitDetails?.manager);
+      DocumentUtilities.createManagerSignatureParagraphs(documentData.director_signature);
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },

@@ -227,19 +227,24 @@ export class DocumentUtilities {
 
   /**
    * Create manager signature paragraphs for document signatures
+   * Uses director_signature field data from the document
    */
   public static createManagerSignatureParagraphs(
-    managerInfo?: any,
+    signatureInfo?: any,
   ): Paragraph[] {
     const rightColumnParagraphs: Paragraph[] = [];
+
+    // Use signature info from director_signature field
+    const order = signatureInfo?.order || "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.";
+    const title = signatureInfo?.title || "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.";
+    const name = signatureInfo?.name || "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ";
+    const degree = signatureInfo?.degree || "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β.";
 
     rightColumnParagraphs.push(
       new Paragraph({
         children: [
           new TextRun({
-            text:
-              managerInfo?.order ||
-              "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",
+            text: order,
             bold: true,
             size: this.DEFAULT_FONT_SIZE,
             font: this.DEFAULT_FONT,
@@ -254,7 +259,7 @@ export class DocumentUtilities {
       new Paragraph({
         children: [
           new TextRun({
-            text: managerInfo?.title || "Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.",
+            text: title,
             bold: true,
             size: this.DEFAULT_FONT_SIZE,
             font: this.DEFAULT_FONT,
@@ -271,7 +276,7 @@ export class DocumentUtilities {
       new Paragraph({
         children: [
           new TextRun({
-            text: managerInfo?.name || "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
+            text: name,
             bold: true,
             size: this.DEFAULT_FONT_SIZE,
             font: this.DEFAULT_FONT,
@@ -286,7 +291,7 @@ export class DocumentUtilities {
       new Paragraph({
         children: [
           new TextRun({
-            text: managerInfo?.degree || "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β.",
+            text: degree,
             size: this.DEFAULT_FONT_SIZE,
             font: this.DEFAULT_FONT,
           }),
