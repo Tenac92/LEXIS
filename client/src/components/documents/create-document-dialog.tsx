@@ -68,6 +68,7 @@ import type {
 } from "@/lib/types";
 import { BudgetIndicator } from "@/components/ui/budget-indicator";
 import { useDocumentForm } from "@/contexts/document-form-context";
+import { Lightbulb, Star } from "lucide-react";
 
 // Constants
 const DKA_TYPES = ["ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"];
@@ -85,6 +86,134 @@ interface Project {
   mis?: string;
   name: string;
   expenditure_types: string[];
+}
+
+// ESDIAN suggestion types
+interface EsdianSuggestion {
+  value: string;
+  count: number;
+}
+
+interface EsdianSuggestionsResponse {
+  status: string;
+  suggestions: EsdianSuggestion[];
+  total: number;
+}
+
+// ESDIAN Fields with Suggestions Component
+interface EsdianFieldsWithSuggestionsProps {
+  form: any;
+  user: any;
+}
+
+function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestionsProps) {
+  const { data: esdianSuggestions, isLoading: suggestionsLoading } = useQuery<EsdianSuggestionsResponse>({
+    queryKey: ['esdian-suggestions', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return { status: 'error', suggestions: [], total: 0 };
+      
+      const response = await apiRequest('/api/user-preferences/esdian');
+      return response as EsdianSuggestionsResponse;
+    },
+    enabled: Boolean(user?.id),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const suggestions = esdianSuggestions?.suggestions || [];
+
+  const handleSuggestionClick = (value: string, fieldName: 'esdian_field1' | 'esdian_field2') => {
+    form.setValue(fieldName, value);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <h3 className="text-lg font-medium">Εσωτερική Διανομή</h3>
+        {suggestions.length > 0 && (
+          <Badge variant="secondary" className="text-xs">
+            <Lightbulb className="h-3 w-3 mr-1" />
+            {suggestions.length} προτάσεις
+          </Badge>
+        )}
+      </div>
+
+      {/* Suggestions Section */}
+      {suggestions.length > 0 && (
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <div className="flex items-center gap-2 mb-3">
+            <Star className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-800">
+              Συχνά χρησιμοποιούμενες επιλογές
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {suggestions.slice(0, 6).map((suggestion, index) => (
+              <div key={index} className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 justify-start text-left h-auto py-2 px-3 text-xs"
+                  onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field1')}
+                >
+                  <span className="truncate">{suggestion.value}</span>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {suggestion.count}
+                  </Badge>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="px-2 text-xs"
+                  onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field2')}
+                  title="Προσθήκη στο Πεδίο 2"
+                >
+                  →2
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Form Fields */}
+      <div className="space-y-4">
+        <FormField
+          control={form.control}
+          name="esdian_field1"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Εσωτερική Διανομή - Πεδίο 1</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="Εισάγετε το πρώτο πεδίο εσωτερικής διανομής"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="esdian_field2"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Εσωτερική Διανομή - Πεδίο 2</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder="Εισάγετε το δεύτερο πεδίο εσωτερικής διανομής"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+    </div>
+  );
 }
 
 interface ProjectSelectProps {
@@ -3335,44 +3464,11 @@ export function CreateDocumentDialog({
                   )}
                 </div>
 
-                {/* ESDIAN Fields for Internal Distribution */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium">Εσωτερική Διανομή</h3>
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="esdian_field1"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Εσωτερική Διανομή - Πεδίο 1</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Εισάγετε το πρώτο πεδίο εσωτερικής διανομής"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="esdian_field2"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Εσωτερική Διανομή - Πεδίο 2</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Εισάγετε το δεύτερο πεδίο εσωτερικής διανομής"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
+                {/* ESDIAN Fields for Internal Distribution with Suggestions */}
+                <EsdianFieldsWithSuggestions 
+                  form={form} 
+                  user={user}
+                />
 
                 {/* Navigation buttons for final step */}
                 <div className="flex justify-end gap-2 pt-4">
