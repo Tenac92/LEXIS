@@ -318,14 +318,20 @@ export function BudgetIndicator({
     q1, q2, q3, q4 
   });
   
-  // Use current quarter allocation as the base (Διαθέσιμη Κατανομή)
-  const quarterAllocationAmount = currentQuarterValue; // Current quarter's allocation
+  // CORRECT FORMULAS as specified:
+  // Διαθέσιμη Κατανομή = katanomes_etous - user_view
+  const diathesimiKatanomi = Math.max(0, katanomesEtous - userView);
   
-  // Calculate remaining available after user_view (quarter_available from API)
-  const remainingAvailable = quarterAvailable || Math.max(0, quarterAllocationAmount - userView);
+  // Διαθέσιμο Υπόλοιπο Τριμήνου = (current quarter) - user_view  
+  const diathesimoTriminoυ = Math.max(0, currentQuarterValue - userView);
   
-  // Calculate what would remain after the current input amount
-  const afterCurrentAmount = Math.max(0, remainingAvailable - amount);
+  // Υπόλοιπο προς Πίστωση = ethsia_pistosi - user_view
+  const ypoloipoProsPistosi = Math.max(0, ethsiaPistosi - userView);
+  
+  // Calculate what would remain after the current input amount for each
+  const diathesimiKatanomiAfter = Math.max(0, diathesimiKatanomi - amount);
+  const diathesimoTriminoυAfter = Math.max(0, diathesimoTriminoυ - amount);
+  const ypoloipoProsPistosiAfter = Math.max(0, ypoloipoProsPistosi - amount);
 
   // Calculate remaining budget after potential deduction in real-time
   // Ensure we have valid numbers by providing fallbacks
@@ -336,9 +342,9 @@ export function BudgetIndicator({
   const percentageUsed = safeAvailableBudget > 0 ? ((amount / safeAvailableBudget) * 100) : 0;
   
   // Check budget thresholds for warnings (showing in real-time as they type)
-  const isExceeding20Percent = amount > (quarterAllocationAmount * 0.2);
+  const isExceeding20Percent = amount > (katanomesEtous * 0.2);
   const isExceedingEthsiaPistosi = amount > ethsiaPistosi;
-  const isExceedingAvailable = afterCurrentAmount < 0;
+  const isExceedingAvailable = diathesimiKatanomiAfter < 0 || diathesimoTriminoυAfter < 0;
 
   // Show warnings when thresholds are exceeded
   if (isExceedingEthsiaPistosi && onValidationWarning) {
@@ -359,43 +365,48 @@ export function BudgetIndicator({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
             <h3 className="text-sm font-medium text-gray-600">Διαθέσιμη Κατανομή</h3>
-            <p className={`text-2xl font-bold ${quarterAllocationAmount > 0 ? 'text-blue-600' : 'text-gray-400'}`}>
-              {quarterAllocationAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            <p className={`text-2xl font-bold ${diathesimiKatanomiAfter > 0 ? 'text-blue-600' : 'text-red-600'}`}>
+              {diathesimiKatanomiAfter.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <div className="mt-2">
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full ${((userView + amount) / quarterAllocationAmount * 100) > 90 ? 'bg-red-500' : 'bg-blue-500'} transition-all duration-300`}
-                  style={{ width: `${Math.min(((userView + amount) / quarterAllocationAmount * 100), 100)}%` }}
+                  className={`h-full ${((userView + amount) / katanomesEtous * 100) > 90 ? 'bg-red-500' : 'bg-blue-500'} transition-all duration-300`}
+                  style={{ width: `${Math.min(((userView + amount) / katanomesEtous * 100), 100)}%` }}
                 />
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {quarterAllocationAmount > 0 ? ((userView + amount) / quarterAllocationAmount * 100).toFixed(1) : 0}% χρησιμοποιήθηκε
+                {katanomesEtous > 0 ? ((userView + amount) / katanomesEtous * 100).toFixed(1) : 0}% χρησιμοποιήθηκε
               </p>
             </div>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-gray-600">Διαθέσιμο Υπόλοιπο</h3>
-            <p className={`text-2xl font-bold ${remainingAvailable > 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {remainingAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            <h3 className="text-sm font-medium text-gray-600">Διαθέσιμο Υπόλοιπο Τριμήνου</h3>
+            <p className={`text-2xl font-bold ${diathesimoTriminoυAfter > 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {diathesimoTriminoυAfter.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Διαθέσιμο προς δέσμευση
+              Υπόλοιπο τρέχοντος τριμήνου
             </p>
             {amount > 0 && (
-              <p className={`text-xs ${afterCurrentAmount < 0 ? 'text-red-500' : 'text-green-600'} mt-1`}>
-                Μετά την αφαίρεση: {afterCurrentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              <p className={`text-xs ${diathesimoTriminoυAfter < 0 ? 'text-red-500' : 'text-green-600'} mt-1`}>
+                Πριν: {diathesimoTriminoυ.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
               </p>
             )}
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο προς Πίστωση</h3>
-            <p className="text-2xl font-bold text-gray-700">
-              {(safeYearlyAvailable - amount).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            <p className={`text-2xl font-bold ${ypoloipoProsPistosiAfter > 0 ? 'text-gray-700' : 'text-red-600'}`}>
+              {ypoloipoProsPistosiAfter.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               Υπόλοιπο προς πίστωση για το έτος
             </p>
+            {amount > 0 && (
+              <p className={`text-xs ${ypoloipoProsPistosiAfter < 0 ? 'text-red-500' : 'text-gray-600'} mt-1`}>
+                Πριν: {ypoloipoProsPistosi.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -420,7 +431,7 @@ export function BudgetIndicator({
       {isExceedingAvailable && !isExceedingEthsiaPistosi && (
         <Alert variant="destructive">
           <AlertDescription>
-            Το ποσό υπερβαίνει τον διαθέσιμο προϋπολογισμό κατά {Math.abs(remainingAvailable).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}.
+            Το ποσό υπερβαίνει τον διαθέσιμο προϋπολογισμό κατά {Math.abs(diathesimiKatanomiAfter).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}.
           </AlertDescription>
         </Alert>
       )}
