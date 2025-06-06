@@ -137,88 +137,157 @@ function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestions
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Elegant Header with Animation */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Εσωτερική Διανομή</h3>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+            <Star className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Εσωτερική Διανομή</h3>
+            <p className="text-sm text-gray-600">Επιλέξτε από προτεινόμενες ή εισάγετε νέες</p>
+          </div>
+        </div>
         {suggestions.length > 0 && (
           <div className="flex items-center gap-2">
-            <Badge variant={hasContext ? "default" : "secondary"} className="text-xs">
-              <Lightbulb className="h-3 w-3 mr-1" />
+            <Badge 
+              variant={hasContext ? "default" : "secondary"} 
+              className={cn(
+                "text-xs px-3 py-1.5 font-medium shadow-sm",
+                hasContext 
+                  ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0" 
+                  : "bg-gray-100 text-gray-700"
+              )}
+            >
+              <Lightbulb className="h-3.5 w-3.5 mr-1.5" />
               {suggestions.length} {hasContext ? "έξυπνες" : "γενικές"} προτάσεις
             </Badge>
           </div>
         )}
       </div>
 
-      {/* Enhanced Suggestions Section */}
+      {/* Ultra-Elegant Suggestions Section */}
       {suggestions.length > 0 && (
         <div className={cn(
-          "rounded-xl p-5 border-2 transition-all duration-200",
+          "relative rounded-2xl p-6 border transition-all duration-300 shadow-lg backdrop-blur-sm",
           hasContext 
-            ? "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-sm" 
-            : "bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200"
+            ? "bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-purple-50/80 border-blue-200/60 shadow-blue-100/50" 
+            : "bg-gradient-to-br from-gray-50/80 via-slate-50/60 to-zinc-50/80 border-gray-200/60 shadow-gray-100/50"
         )}>
-          <div className="flex items-center gap-3 mb-4">
+          {/* Decorative Background Elements */}
+          <div className="absolute inset-0 rounded-2xl overflow-hidden">
             <div className={cn(
-              "p-2 rounded-lg",
-              hasContext ? "bg-blue-100" : "bg-gray-100"
+              "absolute -top-4 -right-4 w-24 h-24 rounded-full opacity-10",
+              hasContext ? "bg-blue-400" : "bg-gray-400"
+            )}></div>
+            <div className={cn(
+              "absolute -bottom-6 -left-6 w-32 h-32 rounded-full opacity-5",
+              hasContext ? "bg-indigo-400" : "bg-gray-400"
+            )}></div>
+          </div>
+
+          {/* Header Section */}
+          <div className="relative flex items-center gap-4 mb-6">
+            <div className={cn(
+              "p-3 rounded-xl shadow-md",
+              hasContext 
+                ? "bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-200/50" 
+                : "bg-gradient-to-br from-gray-100 to-slate-100 border border-gray-200/50"
             )}>
               <Star className={cn(
-                "h-4 w-4",
+                "h-5 w-5",
                 hasContext ? "text-blue-600" : "text-gray-600"
               )} />
             </div>
             <div>
-              <span className={cn(
-                "text-sm font-semibold",
+              <h4 className={cn(
+                "text-lg font-bold mb-1",
                 hasContext ? "text-blue-900" : "text-gray-900"
               )}>
-                {hasContext ? "Προτάσεις για αυτό το έργο/τύπο δαπάνης" : "Συχνά χρησιμοποιούμενες επιλογές"}
-              </span>
-              {hasContext && (
-                <p className="text-xs text-blue-700 mt-1">
-                  Βασισμένες στο ιστορικό σας για παρόμοια έγγραφα
-                </p>
-              )}
+                {hasContext ? "Έξυπνες Προτάσεις" : "Συχνές Επιλογές"}
+              </h4>
+              <p className={cn(
+                "text-sm",
+                hasContext ? "text-blue-700/80" : "text-gray-600"
+              )}>
+                {hasContext 
+                  ? "Βασισμένες στο επιλεγμένο έργο και τύπο δαπάνης" 
+                  : "Από το γενικό ιστορικό χρήσης"}
+              </p>
             </div>
           </div>
           
-          <div className="grid grid-cols-1 gap-3">
+          {/* Elegant Suggestions Grid */}
+          <div className="relative space-y-3">
             {suggestions.map((suggestion, index) => (
               <div 
-                key={index} 
+                key={index}
+                style={{ animationDelay: `${index * 50}ms` }}
                 className={cn(
-                  "group rounded-lg border-2 transition-all duration-200 hover:shadow-md",
+                  "group relative rounded-xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
+                  "bg-white/70 backdrop-blur-sm",
                   suggestion.contextMatches > 0 
-                    ? "border-blue-200 bg-white hover:border-blue-300" 
-                    : "border-gray-200 bg-white hover:border-gray-300"
+                    ? "border-blue-200/80 hover:border-blue-300 hover:shadow-blue-100/50" 
+                    : "border-gray-200/80 hover:border-gray-300 hover:shadow-gray-100/50",
+                  "animate-[fadeInUp_0.4s_ease-out_forwards]"
                 )}
               >
-                <div className="flex items-center p-3">
+                {/* Suggestion Content */}
+                <div className="flex items-center p-4">
+                  {/* Left: Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900 truncate">
-                        {suggestion.value}
-                      </span>
-                      <div className="flex gap-1">
-                        {suggestion.contextMatches > 0 && (
-                          <Badge variant="default" className="text-xs px-2 py-0.5">
-                            <Star className="h-3 w-3 mr-1" />
-                            {suggestion.contextMatches}
+                    <div className="flex items-center gap-3">
+                      {/* Department Icon */}
+                      <div className={cn(
+                        "p-2 rounded-lg shadow-sm",
+                        suggestion.contextMatches > 0
+                          ? "bg-gradient-to-br from-blue-100 to-indigo-100"
+                          : "bg-gradient-to-br from-gray-100 to-slate-100"
+                      )}>
+                        <div className={cn(
+                          "w-2 h-2 rounded-full",
+                          suggestion.contextMatches > 0 ? "bg-blue-500" : "bg-gray-500"
+                        )}></div>
+                      </div>
+                      
+                      {/* Text Content */}
+                      <div className="flex-1 min-w-0">
+                        <h5 className="text-sm font-semibold text-gray-900 truncate mb-1">
+                          {suggestion.value}
+                        </h5>
+                        <div className="flex items-center gap-2">
+                          {suggestion.contextMatches > 0 && (
+                            <Badge 
+                              variant="default" 
+                              className="text-xs px-2 py-0.5 bg-gradient-to-r from-blue-500 to-indigo-600 border-0 shadow-sm"
+                            >
+                              <Star className="h-3 w-3 mr-1" />
+                              {suggestion.contextMatches} συμβατές
+                            </Badge>
+                          )}
+                          <Badge 
+                            variant="secondary" 
+                            className="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 border-gray-200"
+                          >
+                            {suggestion.count} χρήσεις
                           </Badge>
-                        )}
-                        <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                          {suggestion.count} φορές
-                        </Badge>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 ml-3">
+                  
+                  {/* Right: Action Buttons */}
+                  <div className="flex gap-2 ml-4">
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="px-3 py-1.5 text-xs font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                      className={cn(
+                        "px-4 py-2 text-xs font-semibold transition-all duration-200 shadow-sm",
+                        "border-blue-200 text-blue-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50",
+                        "hover:border-blue-300 hover:shadow-md hover:scale-105"
+                      )}
                       onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field1')}
                     >
                       Πεδίο 1
@@ -227,41 +296,59 @@ function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestions
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="px-3 py-1.5 text-xs font-medium hover:bg-green-50 hover:border-green-300 hover:text-green-700"
+                      className={cn(
+                        "px-4 py-2 text-xs font-semibold transition-all duration-200 shadow-sm",
+                        "border-emerald-200 text-emerald-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-green-50",
+                        "hover:border-emerald-300 hover:shadow-md hover:scale-105"
+                      )}
                       onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field2')}
                     >
                       Πεδίο 2
                     </Button>
                   </div>
                 </div>
+
+                {/* Hover Effect Overlay */}
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
               </div>
             ))}
           </div>
           
+          {/* Loading State */}
           {suggestionsLoading && (
-            <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
-              <span className="ml-2 text-sm text-blue-600">Φόρτωση προτάσεων...</span>
+            <div className="flex items-center justify-center py-8">
+              <div className="relative">
+                <div className="animate-spin rounded-full h-8 w-8 border-3 border-blue-200 border-t-blue-600"></div>
+                <div className="absolute inset-0 rounded-full border-3 border-blue-100 animate-pulse"></div>
+              </div>
+              <span className="ml-3 text-sm font-medium text-blue-700">
+                Φόρτωση έξυπνων προτάσεων...
+              </span>
             </div>
           )}
         </div>
       )}
 
-      {/* Enhanced Form Fields */}
-      <div className="space-y-5">
+      {/* Premium Form Fields */}
+      <div className="space-y-6">
         <FormField
           control={form.control}
           name="esdian_field1"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-semibold text-gray-900">
+              <FormLabel className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                 Εσωτερική Διανομή - Πεδίο 1
               </FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   placeholder="Εισάγετε το πρώτο πεδίο εσωτερικής διανομής"
-                  className="h-11 border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  className={cn(
+                    "h-12 border-2 transition-all duration-200 bg-white/70 backdrop-blur-sm",
+                    "focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:shadow-lg",
+                    "hover:border-blue-300 hover:shadow-md"
+                  )}
                 />
               </FormControl>
               <FormMessage />
@@ -273,14 +360,19 @@ function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestions
           name="esdian_field2"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-sm font-semibold text-gray-900">
+              <FormLabel className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
                 Εσωτερική Διανομή - Πεδίο 2
               </FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   placeholder="Εισάγετε το δεύτερο πεδίο εσωτερικής διανομής"
-                  className="h-11 border-2 focus:border-blue-500 focus:ring-blue-500/20"
+                  className={cn(
+                    "h-12 border-2 transition-all duration-200 bg-white/70 backdrop-blur-sm",
+                    "focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 focus:shadow-lg",
+                    "hover:border-emerald-300 hover:shadow-md"
+                  )}
                 />
               </FormControl>
               <FormMessage />
