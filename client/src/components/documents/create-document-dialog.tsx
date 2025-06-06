@@ -2943,78 +2943,51 @@ export function CreateDocumentDialog({
                                   dialogInitializationRef.current.isInitializing = false;
                                   isUpdatingFromContext.current = true;
                                   
-                                  // Extract data from the new JSONB oikonomika structure
+                                  // Use smart autocomplete data if available from enhanced AFM component
+                                  const enhancedData = personData as any;
                                   let installmentsList: string[] = ["ΕΦΑΠΑΞ"];
                                   let installmentAmounts: Record<string, number> = { "ΕΦΑΠΑΞ": 0 };
                                   let totalAmount = 0;
                                   
-                                  // Check if this is a beneficiary with the new JSONB structure
-                                  const beneficiaryData = personData as any;
-                                  if (beneficiaryData.oikonomika && typeof beneficiaryData.oikonomika === 'object') {
-                                    console.log("[AFMAutocomplete] Extracting from JSONB oikonomika:", beneficiaryData.oikonomika);
+                                  console.log("[AFMAutocomplete] Enhanced person data:", enhancedData);
+                                  
+                                  // Check if we have smart autocomplete suggestions
+                                  if (enhancedData.suggestedInstallments && enhancedData.suggestedInstallmentAmounts) {
+                                    installmentsList = enhancedData.suggestedInstallments;
+                                    installmentAmounts = enhancedData.suggestedInstallmentAmounts;
+                                    totalAmount = enhancedData.suggestedAmount || 0;
+                                    
+                                    console.log("[SmartAutocomplete] Using suggested data:", {
+                                      installments: installmentsList,
+                                      amounts: installmentAmounts,
+                                      total: totalAmount
+                                    });
+                                  }
+                                  // Fallback to legacy structure if no smart suggestions
+                                  else if (enhancedData.oikonomika && typeof enhancedData.oikonomika === 'object') {
+                                    console.log("[AFMAutocomplete] Fallback to legacy extraction from JSONB oikonomika");
                                     
                                     // Get the current expenditure type to match against oikonomika keys
                                     const currentExpenditureType = form.getValues("expenditure_type");
                                     
                                     // Find matching expenditure type in oikonomika
-                                    for (const [expType, paymentsList] of Object.entries(beneficiaryData.oikonomika)) {
+                                    for (const [expType, paymentsList] of Object.entries(enhancedData.oikonomika)) {
                                       if (Array.isArray(paymentsList) && paymentsList.length > 0) {
-                                        // CHECK FOR CONFLICTS: Look for already processed installments
-                                        const processedInstallments: string[] = [];
-                                        for (const payment of paymentsList) {
-                                          if (payment && typeof payment === 'object') {
-                                            const status = payment.status;
-                                            const installments = payment.installment || [];
-                                            
-                                            // Check if marked as processed (διαβιβάστηκε with or without accent)
-                                            if (status && (status.includes('διαβιβάστηκε') || status.includes('διαβιβαστηκε'))) {
-                                              if (Array.isArray(installments)) {
-                                                processedInstallments.push(...installments);
-                                              }
-                                            }
-                                          }
-                                        }
-                                        
-                                        // Show warning if any installments are already processed
-                                        if (processedInstallments.length > 0) {
-                                          toast({
-                                            title: "Προειδοποίηση Δόσης",
-                                            description: `Οι δόσεις ${processedInstallments.join(", ")} έχουν ήδη διαβιβαστεί για αυτόν τον δικαιούχο. Παρακαλώ επιλέξτε άλλη δόση.`,
-                                            variant: "destructive",
-                                          });
-                                        }
-                                        
-                                        // Suggest next available installment if A is processed
-                                        let suggestedInstallment = "Α";
-                                        if (processedInstallments.includes("Α")) {
-                                          suggestedInstallment = "Β";
-                                        }
-                                        if (processedInstallments.includes("Β")) {
-                                          suggestedInstallment = "Γ";
-                                        }
-                                        
-                                        console.log("[SmartInstallment] Processed installments:", processedInstallments, "Suggesting:", suggestedInstallment);
-                                        
-                                        // Use the suggested installment instead of blindly taking the first payment
                                         const firstPayment = paymentsList[0];
                                         
                                         if (firstPayment && typeof firstPayment === 'object') {
-                                          // Extract amount (handle Greek number formatting: 9.766.00 = 9766.00)
+                                          // Extract amount (handle Greek number formatting)
                                           let amountStr = String(firstPayment.amount || "0");
                                           
-                                          // Check if this is Greek formatting (periods as thousands separators)
+                                          // Handle Greek formatting (periods as thousands separators)
                                           if (amountStr.includes('.') && amountStr.split('.').length === 3) {
-                                            // Format: 9.766.00 -> remove first period, keep decimal point
                                             const parts = amountStr.split('.');
                                             amountStr = parts[0] + parts[1] + '.' + parts[2];
                                           } else if (amountStr.includes(',')) {
-                                            // Handle comma as decimal separator: 9766,00 -> 9766.00
                                             amountStr = amountStr.replace(',', '.');
                                           }
                                           
                                           const amount = parseFloat(amountStr) || 0;
-                                          
-                                          // Extract installments
                                           const installments = firstPayment.installment || ["ΕΦΑΠΑΞ"];
                                           
                                           if (Array.isArray(installments) && installments.length > 0) {
@@ -3024,18 +2997,16 @@ export function CreateDocumentDialog({
                                             // Create installment amounts object
                                             installmentAmounts = {};
                                             if (installments.length === 1) {
-                                              // Single installment gets the full amount
                                               installmentAmounts[installments[0]] = amount;
                                             } else {
-                                              // Multiple installments split the amount equally
                                               const amountPerInstallment = amount / installments.length;
                                               installments.forEach(inst => {
                                                 installmentAmounts[inst] = amountPerInstallment;
                                               });
                                             }
                                             
-                                            console.log("[AFMAutocomplete] Extracted installments:", installmentsList, "amounts:", installmentAmounts);
-                                            break; // Use the first matching entry
+                                            console.log("[AFMAutocomplete] Legacy extraction:", installmentsList, "amounts:", installmentAmounts);
+                                            break;
                                           }
                                         }
                                       }
@@ -3043,8 +3014,8 @@ export function CreateDocumentDialog({
                                   } 
                                   // Fallback to old structure for employees
                                   else {
-                                    const installmentValue = beneficiaryData.installment || "";
-                                    const amountValue = parseFloat(beneficiaryData.amount || "0") || 0;
+                                    const installmentValue = enhancedData.installment || "";
+                                    const amountValue = parseFloat(enhancedData.amount || "0") || 0;
                                     
                                     if (installmentValue && amountValue) {
                                       installmentsList = [installmentValue];
