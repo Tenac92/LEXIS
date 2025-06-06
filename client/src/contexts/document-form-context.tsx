@@ -33,7 +33,6 @@ export const documentFormSchema = z.object({
   esdian_field1: z.string().optional().default(""),
   esdian_field2: z.string().optional().default(""),
   director_signature: signatureSchema.optional(),
-  department_manager_signature: signatureSchema.optional(),
 });
 
 export type DocumentFormData = z.infer<typeof documentFormSchema>;
@@ -58,7 +57,6 @@ const defaultFormData: DocumentFormData = {
   esdian_field1: "",
   esdian_field2: "",
   director_signature: undefined,
-  department_manager_signature: undefined,
 };
 
 const DocumentFormContext = createContext<DocumentFormContextType | undefined>(undefined);

@@ -413,7 +413,6 @@ export const extendedGeneratedDocumentSchema =
       .array(recipientSchema)
       .min(1, "Πρέπει να υπάρχει τουλάχιστον ένας παραλήπτης"),
     director_signature: signatureSchema.optional(),
-    department_manager_signature: signatureSchema.optional(),
   });
 
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory);

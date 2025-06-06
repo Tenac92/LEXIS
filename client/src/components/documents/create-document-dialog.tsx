@@ -478,7 +478,6 @@ const createDocumentSchema = z.object({
   esdian_field1: z.string().optional().default(""),
   esdian_field2: z.string().optional().default(""),
   director_signature: signatureSchema.optional(),
-  department_manager_signature: signatureSchema.optional(),
 });
 
 type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
@@ -588,7 +587,6 @@ export function CreateDocumentDialog({
     esdian_field1: formData.esdian_field1 || "",
     esdian_field2: formData.esdian_field2 || "",
     director_signature: formData.director_signature || undefined,
-    department_manager_signature: formData.department_manager_signature || undefined,
   }), []);
   
   const form = useForm<CreateDocumentForm>({
@@ -3112,14 +3110,14 @@ export function CreateDocumentDialog({
                 <div className="space-y-6">
                   <h3 className="text-lg font-medium">Επιλογή Υπογραφής</h3>
                   
-                  {/* Director Signature Selection */}
+                  {/* Single Signature Selection */}
                   <div className="space-y-4">
                     <FormField
                       control={form.control}
                       name="director_signature"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Υπογραφή Διευθυντή</FormLabel>
+                          <FormLabel>Επιλογή Υπογραφούντος</FormLabel>
                           <Select
                             value={field.value ? JSON.stringify(field.value) : ""}
                             onValueChange={(value) => {
@@ -3132,54 +3130,27 @@ export function CreateDocumentDialog({
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Επιλέξτε διευθυντή" />
+                                <SelectValue placeholder="Επιλέξτε υπογραφούντα" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
+                              {/* Directors */}
                               {availableDirectors.map((director: any) => (
                                 <SelectItem 
-                                  key={director.unit} 
-                                  value={JSON.stringify(director.director)}
+                                  key={`director-${director.unit}`} 
+                                  value={JSON.stringify({...director.director, type: 'director', unit: director.unit})}
                                 >
-                                  {director.director.name} - {director.unit}
+                                  {director.director.name} - Διευθυντής ({director.unit})
                                 </SelectItem>
                               ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Department Manager Signature Selection */}
-                    <FormField
-                      control={form.control}
-                      name="department_manager_signature"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Υπογραφή Προϊσταμένου Τμήματος</FormLabel>
-                          <Select
-                            value={field.value ? JSON.stringify(field.value) : ""}
-                            onValueChange={(value) => {
-                              if (value) {
-                                field.onChange(JSON.parse(value));
-                              } else {
-                                field.onChange(null);
-                              }
-                            }}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Επιλέξτε προϊστάμενο τμήματος" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
+                              
+                              {/* Department Managers */}
                               {availableDepartmentManagers.map((manager, index) => (
                                 <SelectItem 
-                                  key={`${manager.unit}-${index}`} 
-                                  value={JSON.stringify(manager.manager)}
+                                  key={`manager-${manager.unit}-${index}`} 
+                                  value={JSON.stringify({...manager.manager, type: 'manager', unit: manager.unit, department: manager.department})}
                                 >
-                                  {manager.manager.name} - {manager.department}
+                                  {manager.manager.name} - Προϊστάμενος ({manager.department})
                                 </SelectItem>
                               ))}
                             </SelectContent>
