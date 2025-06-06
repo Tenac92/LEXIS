@@ -366,8 +366,8 @@ export function BudgetIndicator({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
             <h3 className="text-sm font-medium text-gray-600">Διαθέσιμη Κατανομή</h3>
-            <p className={`text-2xl font-bold ${(quarterAvailableValue - amount) < 0 ? 'text-red-600' : 'text-blue-600'}`}>
-              {(quarterAvailableValue - amount).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            <p className={`text-2xl font-bold ${originalQuarterValue < 0 ? 'text-red-600' : 'text-blue-600'}`}>
+              {originalQuarterValue.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <div className="mt-2">
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
