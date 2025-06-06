@@ -77,29 +77,46 @@ export const projectCatalog = pgTable("project_catalog", {
 /**
  * Projects Table
  * Primary project data with budget information
+ * Uses 'id' as primary key for all operations, 'mis' kept for legacy compatibility
  */
 export const projects = pgTable("Projects", {
   id: serial("id").primaryKey(),
-  mis: integer("mis").notNull().unique(),
-  title: text("title").notNull(),
-  budget_na853: text("budget_na853"),
-  budget_na271: text("budget_na271"),
-  budget_e069: text("budget_e069"),
-  expenditure_type: text("expenditure_type").array().default([]),
-  status: text("status").notNull().default("active"),
-  implementing_agency: text("implementing_agency").array().default([]),
+  mis: integer("mis").unique(), // Legacy field, no longer primary identifier
+  e069: text("e069"),
+  na271: text("na271"),
+  na853: text("na853").notNull().unique(), // Main project code users see
+  event_description: text("event_description").notNull().unique(), // Main description users see
+  project_title: text("project_title"),
+  event_type: jsonb("event_type").default([]),
+  event_year: jsonb("event_year").default([]),
   region: jsonb("region").default({}),
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at"),
+  implementing_agency: jsonb("implementing_agency").default([]),
+  expenditure_type: jsonb("expenditure_type").default([]),
+  kya: jsonb("kya"),
+  fek: jsonb("fek"),
+  ada: jsonb("ada"),
+  ada_import_sana271: jsonb("ada_import_sana271"),
+  ada_import_sana853: jsonb("ada_import_sana853"),
+  budget_decision: jsonb("budget_decision"),
+  funding_decision: jsonb("funding_decision"),
+  allocation_decision: jsonb("allocation_decision"),
+  budget_e069: decimal("budget_e069", { precision: 12, scale: 2 }),
+  budget_na271: decimal("budget_na271", { precision: 12, scale: 2 }),
+  budget_na853: decimal("budget_na853", { precision: 12, scale: 2 }),
+  status: text("status"),
+  created_at: date("created_at"),
+  updated_at: date("updated_at"),
 });
 
 /**
  * Budget NA853 Split Table
  * Stores budget allocation data for NA853 budget code
+ * Now references project by id instead of mis
  */
 export const budgetNA853Split = pgTable("budget_na853_split", {
   id: serial("id").primaryKey(),
-  mis: text("mis").notNull(),
+  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  mis: integer("mis").unique(), // Legacy field for migration compatibility
   na853: text("na853").notNull(),
   ethsia_pistosi: decimal("ethsia_pistosi", {
     precision: 12,
@@ -124,10 +141,12 @@ export const budgetNA853Split = pgTable("budget_na853_split", {
 /**
  * Budget History Table
  * Tracks changes to budget allocations over time
+ * Now references project by id instead of mis
  */
 export const budgetHistory = pgTable("budget_history", {
   id: serial("id").primaryKey(),
-  mis: integer("mis").notNull(),
+  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  mis: integer("mis"), // Legacy field for migration compatibility
   previous_amount: decimal("previous_amount", { precision: 12, scale: 2 }).notNull(),
   new_amount: decimal("new_amount", { precision: 12, scale: 2 }).notNull(),
   change_type: text("change_type").notNull(),
@@ -141,10 +160,12 @@ export const budgetHistory = pgTable("budget_history", {
 /**
  * Budget Notifications Table
  * Stores budget-related notifications and alerts
+ * Now references project by id instead of mis
  */
 export const budgetNotifications = pgTable("budget_notifications", {
   id: serial("id").primaryKey(),
-  mis: integer("mis").notNull(),
+  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  mis: integer("mis"), // Legacy field for migration compatibility
   type: text("type").notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   current_budget: decimal("current_budget", { precision: 12, scale: 2 }),
@@ -159,12 +180,14 @@ export const budgetNotifications = pgTable("budget_notifications", {
 /**
  * Generated Documents Table
  * Stores information about documents generated in the system
+ * Now references project by id instead of mis
  */
 export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
   status: text("status").notNull().default("draft"),
   unit: text("unit").notNull(),
-  project_id: integer("mis").notNull(),
+  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  mis: integer("mis"), // Legacy field for migration compatibility
   project_na853: text("project_na853"),
   expenditure_type: text("expenditure_type").notNull(),
   total_amount: decimal("total_amount", { precision: 12, scale: 2 }),
@@ -334,7 +357,8 @@ export const beneficiariesLegacy = pgTable("Beneficiary", {
   cengsur2: text("cengsur2"), // Engineer 2 surname
   cengname2: text("cengname2"), // Engineer 2 name
   onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
-  project: integer("project"), // Project reference (MIS code)
+  project: integer("project"), // Legacy project reference (MIS code)
+  project_id: integer("project_id").references(() => projects.id, { onDelete: "set null" }), // New project reference by id
   oikonomika: jsonb("oikonomika"), // Financial data - stores multiple payment records
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at"),
