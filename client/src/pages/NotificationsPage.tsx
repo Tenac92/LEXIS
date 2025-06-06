@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { NotificationCenter } from '@/components/NotificationCenter';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import type { User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { RotateCw, Bell, AlertTriangle } from 'lucide-react';
+import { RotateCw, Bell, AlertTriangle, Plus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Header } from '@/components/header';
 
@@ -61,6 +61,40 @@ export const NotificationsPage = () => {
       description: "Updating notifications...",
     });
   };
+
+  // Mutation to create test notifications
+  const createTestNotifications = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/budget-notifications/create-test', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create test notifications');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Test notifications created successfully",
+      });
+      // Refresh notifications after creation
+      handleRefresh();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create test notifications",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Check admin access once when the user data is loaded
   useEffect(() => {
@@ -187,14 +221,25 @@ export const NotificationsPage = () => {
               Monitor and manage budget-related notifications
             </p>
           </div>
-          <Button 
-            variant="outline"
-            onClick={handleRefresh}
-            className="flex items-center gap-2"
-          >
-            <RotateCw className="h-4 w-4" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="secondary"
+              onClick={() => createTestNotifications.mutate()}
+              disabled={createTestNotifications.isPending}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              {createTestNotifications.isPending ? 'Creating...' : 'Create Test Notifications'}
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={handleRefresh}
+              className="flex items-center gap-2"
+            >
+              <RotateCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <Card className="bg-card">
