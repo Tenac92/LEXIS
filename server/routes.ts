@@ -1464,48 +1464,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.get('/api/user-preferences/esdian', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
       try {
         const userId = (req as any).user?.id;
+        const projectId = req.query.project_id as string;
+        const expenditureType = req.query.expenditure_type as string;
+        
         if (!userId) {
           return res.status(401).json({ message: 'User not authenticated' });
         }
 
-        // Query user's most frequently used ESDIAN values from generated_documents
-        const { data: documents, error } = await supabase
+        console.log('[UserPreferences] ESDIAN request for user:', userId, 'project:', projectId, 'type:', expenditureType);
+
+        // Build query with optional filters for better contextual suggestions
+        let query = supabase
           .from('generated_documents')
-          .select('esdian')
+          .select('esdian, project_id, expenditure_type')
           .eq('generated_by', userId)
           .not('esdian', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(50); // Get last 50 documents to analyze patterns
+          .order('created_at', { ascending: false });
+
+        // If we have context, prioritize matching documents but still include others
+        if (projectId || expenditureType) {
+          query = query.limit(100); // Get more documents for better filtering
+        } else {
+          query = query.limit(50);
+        }
+
+        const { data: documents, error } = await query;
 
         if (error) {
           console.error('[UserPreferences] Error fetching ESDIAN data:', error);
           return res.status(500).json({ message: 'Error fetching preferences' });
         }
 
-        // Analyze ESDIAN patterns and create suggestions
-        const esdianCounts: { [key: string]: number } = {};
+        console.log('[UserPreferences] Found', documents?.length || 0, 'documents with ESDIAN data');
+
+        // Analyze ESDIAN patterns with context-aware scoring
+        const esdianCounts: { [key: string]: { count: number; contextMatches: number } } = {};
         
         documents?.forEach(doc => {
           if (doc.esdian && Array.isArray(doc.esdian)) {
+            const isContextMatch = (projectId && doc.project_id === projectId) || 
+                                 (expenditureType && doc.expenditure_type === expenditureType);
+            
             doc.esdian.forEach((item: string) => {
               if (item && item.trim()) {
                 const cleanItem = item.trim();
-                esdianCounts[cleanItem] = (esdianCounts[cleanItem] || 0) + 1;
+                if (!esdianCounts[cleanItem]) {
+                  esdianCounts[cleanItem] = { count: 0, contextMatches: 0 };
+                }
+                esdianCounts[cleanItem].count += 1;
+                if (isContextMatch) {
+                  esdianCounts[cleanItem].contextMatches += 2; // Weight context matches higher
+                }
               }
             });
           }
         });
 
-        // Sort by usage frequency and get top suggestions
+        // Sort by combined score (frequency + context matches)
         const suggestions = Object.entries(esdianCounts)
-          .sort(([, a], [, b]) => b - a)
-          .slice(0, 10) // Top 10 most used
-          .map(([value, count]) => ({ value, count }));
+          .map(([value, data]) => ({ 
+            value, 
+            count: data.count,
+            contextMatches: data.contextMatches,
+            score: data.count + data.contextMatches
+          }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 8) // Top 8 most relevant suggestions
+          .map(({ value, count, contextMatches }) => ({ value, count, contextMatches }));
+
+        console.log('[UserPreferences] Returning', suggestions.length, 'suggestions');
 
         res.json({
           status: 'success',
           suggestions,
-          total: suggestions.length
+          total: suggestions.length,
+          hasContext: Boolean(projectId || expenditureType)
         });
 
       } catch (error) {

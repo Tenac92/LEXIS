@@ -92,12 +92,14 @@ interface Project {
 interface EsdianSuggestion {
   value: string;
   count: number;
+  contextMatches: number;
 }
 
 interface EsdianSuggestionsResponse {
   status: string;
   suggestions: EsdianSuggestion[];
   total: number;
+  hasContext: boolean;
 }
 
 // ESDIAN Fields with Suggestions Component
@@ -107,88 +109,159 @@ interface EsdianFieldsWithSuggestionsProps {
 }
 
 function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestionsProps) {
+  const projectId = form.watch("project_id");
+  const expenditureType = form.watch("expenditure_type");
+
   const { data: esdianSuggestions, isLoading: suggestionsLoading } = useQuery<EsdianSuggestionsResponse>({
-    queryKey: ['esdian-suggestions', user?.id],
+    queryKey: ['esdian-suggestions', user?.id, projectId, expenditureType],
     queryFn: async () => {
-      if (!user?.id) return { status: 'error', suggestions: [], total: 0 };
+      if (!user?.id) return { status: 'error', suggestions: [], total: 0, hasContext: false };
       
-      const response = await apiRequest('/api/user-preferences/esdian');
+      const params = new URLSearchParams();
+      if (projectId) params.append('project_id', projectId);
+      if (expenditureType) params.append('expenditure_type', expenditureType);
+      
+      const url = `/api/user-preferences/esdian${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await apiRequest(url);
       return response as EsdianSuggestionsResponse;
     },
     enabled: Boolean(user?.id),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes to allow for context changes
   });
 
   const suggestions = esdianSuggestions?.suggestions || [];
+  const hasContext = esdianSuggestions?.hasContext || false;
 
   const handleSuggestionClick = (value: string, fieldName: 'esdian_field1' | 'esdian_field2') => {
     form.setValue(fieldName, value);
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <h3 className="text-lg font-medium">Εσωτερική Διανομή</h3>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">Εσωτερική Διανομή</h3>
         {suggestions.length > 0 && (
-          <Badge variant="secondary" className="text-xs">
-            <Lightbulb className="h-3 w-3 mr-1" />
-            {suggestions.length} προτάσεις
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={hasContext ? "default" : "secondary"} className="text-xs">
+              <Lightbulb className="h-3 w-3 mr-1" />
+              {suggestions.length} {hasContext ? "έξυπνες" : "γενικές"} προτάσεις
+            </Badge>
+          </div>
         )}
       </div>
 
-      {/* Suggestions Section */}
+      {/* Enhanced Suggestions Section */}
       {suggestions.length > 0 && (
-        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <div className="flex items-center gap-2 mb-3">
-            <Star className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-800">
-              Συχνά χρησιμοποιούμενες επιλογές
-            </span>
+        <div className={cn(
+          "rounded-xl p-5 border-2 transition-all duration-200",
+          hasContext 
+            ? "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 shadow-sm" 
+            : "bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200"
+        )}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className={cn(
+              "p-2 rounded-lg",
+              hasContext ? "bg-blue-100" : "bg-gray-100"
+            )}>
+              <Star className={cn(
+                "h-4 w-4",
+                hasContext ? "text-blue-600" : "text-gray-600"
+              )} />
+            </div>
+            <div>
+              <span className={cn(
+                "text-sm font-semibold",
+                hasContext ? "text-blue-900" : "text-gray-900"
+              )}>
+                {hasContext ? "Προτάσεις για αυτό το έργο/τύπο δαπάνης" : "Συχνά χρησιμοποιούμενες επιλογές"}
+              </span>
+              {hasContext && (
+                <p className="text-xs text-blue-700 mt-1">
+                  Βασισμένες στο ιστορικό σας για παρόμοια έγγραφα
+                </p>
+              )}
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {suggestions.slice(0, 6).map((suggestion, index) => (
-              <div key={index} className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 justify-start text-left h-auto py-2 px-3 text-xs"
-                  onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field1')}
-                >
-                  <span className="truncate">{suggestion.value}</span>
-                  <Badge variant="secondary" className="ml-auto text-xs">
-                    {suggestion.count}
-                  </Badge>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="px-2 text-xs"
-                  onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field2')}
-                  title="Προσθήκη στο Πεδίο 2"
-                >
-                  →2
-                </Button>
+          
+          <div className="grid grid-cols-1 gap-3">
+            {suggestions.map((suggestion, index) => (
+              <div 
+                key={index} 
+                className={cn(
+                  "group rounded-lg border-2 transition-all duration-200 hover:shadow-md",
+                  suggestion.contextMatches > 0 
+                    ? "border-blue-200 bg-white hover:border-blue-300" 
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                )}
+              >
+                <div className="flex items-center p-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900 truncate">
+                        {suggestion.value}
+                      </span>
+                      <div className="flex gap-1">
+                        {suggestion.contextMatches > 0 && (
+                          <Badge variant="default" className="text-xs px-2 py-0.5">
+                            <Star className="h-3 w-3 mr-1" />
+                            {suggestion.contextMatches}
+                          </Badge>
+                        )}
+                        <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                          {suggestion.count} φορές
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="px-3 py-1.5 text-xs font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700"
+                      onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field1')}
+                    >
+                      Πεδίο 1
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="px-3 py-1.5 text-xs font-medium hover:bg-green-50 hover:border-green-300 hover:text-green-700"
+                      onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field2')}
+                    >
+                      Πεδίο 2
+                    </Button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
+          
+          {suggestionsLoading && (
+            <div className="flex items-center justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+              <span className="ml-2 text-sm text-blue-600">Φόρτωση προτάσεων...</span>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Form Fields */}
-      <div className="space-y-4">
+      {/* Enhanced Form Fields */}
+      <div className="space-y-5">
         <FormField
           control={form.control}
           name="esdian_field1"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Εσωτερική Διανομή - Πεδίο 1</FormLabel>
+              <FormLabel className="text-sm font-semibold text-gray-900">
+                Εσωτερική Διανομή - Πεδίο 1
+              </FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   placeholder="Εισάγετε το πρώτο πεδίο εσωτερικής διανομής"
+                  className="h-11 border-2 focus:border-blue-500 focus:ring-blue-500/20"
                 />
               </FormControl>
               <FormMessage />
@@ -200,11 +273,14 @@ function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestions
           name="esdian_field2"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Εσωτερική Διανομή - Πεδίο 2</FormLabel>
+              <FormLabel className="text-sm font-semibold text-gray-900">
+                Εσωτερική Διανομή - Πεδίο 2
+              </FormLabel>
               <FormControl>
                 <Input
                   {...field}
                   placeholder="Εισάγετε το δεύτερο πεδίο εσωτερικής διανομής"
+                  className="h-11 border-2 focus:border-blue-500 focus:ring-blue-500/20"
                 />
               </FormControl>
               <FormMessage />
