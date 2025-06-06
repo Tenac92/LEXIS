@@ -1476,7 +1476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Build query with optional filters for better contextual suggestions
         let query = supabase
           .from('generated_documents')
-          .select('esdian, project_id, expenditure_type')
+          .select('esdian, na853, expenditure_type')
           .eq('generated_by', userId)
           .not('esdian', 'is', null)
           .order('created_at', { ascending: false });
@@ -1502,7 +1502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         documents?.forEach(doc => {
           if (doc.esdian && Array.isArray(doc.esdian)) {
-            const isContextMatch = (projectId && doc.project_id === projectId) || 
+            const isContextMatch = (projectId && doc.na853 === projectId) || 
                                  (expenditureType && doc.expenditure_type === expenditureType);
             
             doc.esdian.forEach((item: string) => {
