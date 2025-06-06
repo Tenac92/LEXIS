@@ -462,8 +462,8 @@ const signatureSchema = z.object({
   name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
   order: z.string().min(1, "Η εντολή είναι υποχρεωτική"),
   title: z.string().min(1, "Ο τίτλος είναι υποχρεωτικός"),
-  degree: z.string().optional(),
-  prepose: z.string().optional(),
+  degree: z.string().optional().default(""),
+  prepose: z.string().optional().default(""),
 });
 
 const createDocumentSchema = z.object({
@@ -3136,7 +3136,7 @@ export function CreateDocumentDialog({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {availableDirectors.map((director) => (
+                              {availableDirectors.map((director: any) => (
                                 <SelectItem 
                                   key={director.unit} 
                                   value={JSON.stringify(director.director)}

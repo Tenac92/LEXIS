@@ -14,6 +14,14 @@ const recipientSchema = z.object({
   installmentAmounts: z.record(z.string(), z.number()).optional().default({}),
 });
 
+const signatureSchema = z.object({
+  name: z.string().optional().default(""),
+  order: z.string().optional().default(""),
+  title: z.string().optional().default(""),
+  degree: z.string().optional().default(""),
+  prepose: z.string().optional().default(""),
+});
+
 export const documentFormSchema = z.object({
   unit: z.string().optional().default(""),
   project_id: z.string().optional().default(""),
@@ -24,6 +32,8 @@ export const documentFormSchema = z.object({
   selectedAttachments: z.array(z.string()).optional().default([]),
   esdian_field1: z.string().optional().default(""),
   esdian_field2: z.string().optional().default(""),
+  director_signature: signatureSchema.optional(),
+  department_manager_signature: signatureSchema.optional(),
 });
 
 export type DocumentFormData = z.infer<typeof documentFormSchema>;
@@ -47,6 +57,8 @@ const defaultFormData: DocumentFormData = {
   selectedAttachments: [],
   esdian_field1: "",
   esdian_field2: "",
+  director_signature: undefined,
+  department_manager_signature: undefined,
 };
 
 const DocumentFormContext = createContext<DocumentFormContextType | undefined>(undefined);

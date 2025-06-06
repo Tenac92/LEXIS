@@ -1268,6 +1268,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use('/api/budget', authenticateSession, budgetRouter);
     log('[Routes] Main budget routes registered');
 
+    // Public monada data endpoint for signature selection
+    app.get('/api/public/monada', async (req: Request, res: Response) => {
+      try {
+        const { data, error } = await supabase
+          .from('Monada')
+          .select('*');
+          
+        if (error) {
+          console.error('[Monada] Error fetching monada data:', error);
+          return res.status(500).json({ 
+            message: 'Failed to fetch monada data', 
+            error: error.message 
+          });
+        }
+
+        res.json(data || []);
+      } catch (error) {
+        console.error('[Monada] Critical error:', error);
+        res.status(500).json({ 
+          message: 'Critical server error', 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      }
+    });
+
     // Documents routes
     log('[Routes] Setting up document routes...');
     
