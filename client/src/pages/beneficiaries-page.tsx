@@ -643,24 +643,25 @@ export default function BeneficiariesPage() {
                               )}
                             </div>
 
-                            {/* Payment Details Summary */}
+                            {/* Payment Details Summary - Last 3 Payments */}
                             {(() => {
                               const payments = getPaymentsForBeneficiary(beneficiary.id);
                               if (payments.length === 0) return null;
                               
                               const maxVisiblePayments = 3;
                               const hasMorePayments = payments.length > maxVisiblePayments;
-                              const visiblePayments = payments.slice(0, maxVisiblePayments);
+                              // Show the last 3 payments (most recent)
+                              const visiblePayments = payments.slice(-maxVisiblePayments).reverse();
                               
                               return (
                                 <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
                                   <div className="flex items-center justify-between mb-2">
                                     <h4 className="text-sm font-medium text-purple-800">
-                                      Οικονομικά Στοιχεία ({payments.length})
+                                      Τελευταίες Πληρωμές ({payments.length} συνολικά)
                                     </h4>
                                     {hasMorePayments && (
                                       <span className="text-xs text-purple-600">
-                                        +{payments.length - maxVisiblePayments} περισσότερα
+                                        +{payments.length - maxVisiblePayments} παλαιότερες
                                       </span>
                                     )}
                                   </div>
@@ -741,35 +742,57 @@ export default function BeneficiariesPage() {
 
                             {/* Scrollable content area */}
                             <div className="flex-1 overflow-y-auto space-y-4 text-sm custom-scrollbar">
-                              {/* Payment Details - Full List */}
-                              {getPaymentsForBeneficiary(beneficiary.id).length > 0 && (
-                                <div className="space-y-2">
-                                  <span className="text-purple-700 font-medium text-sm">
-                                    Οικονομικά Στοιχεία ({getPaymentsForBeneficiary(beneficiary.id).length}):
-                                  </span>
-                                  <div className="bg-purple-100 p-3 rounded border max-h-40 overflow-y-auto">
-                                    <div className="space-y-2">
-                                      {getPaymentsForBeneficiary(beneficiary.id).map((payment: any, index: number) => (
-                                        <div key={index} className="flex justify-between items-start p-2 bg-white rounded border-l-2 border-purple-300">
-                                          <div className="flex-1">
-                                            <div className="font-medium text-purple-800 text-xs">
-                                              {payment.expenditure_type}
+                              {/* Payment Details - Last 3 Payments */}
+                              {(() => {
+                                const payments = getPaymentsForBeneficiary(beneficiary.id);
+                                if (payments.length === 0) return null;
+                                
+                                const maxVisiblePayments = 3;
+                                const hasMorePayments = payments.length > maxVisiblePayments;
+                                // Show the last 3 payments (most recent)
+                                const visiblePayments = payments.slice(-maxVisiblePayments).reverse();
+                                
+                                return (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-purple-700 font-medium text-sm">
+                                        Τελευταίες Πληρωμές:
+                                      </span>
+                                      <span className="text-xs text-purple-600">
+                                        {payments.length} συνολικά
+                                      </span>
+                                    </div>
+                                    <div className="bg-purple-100 p-3 rounded border max-h-32 overflow-y-auto">
+                                      <div className="space-y-2">
+                                        {visiblePayments.map((payment: any, index: number) => (
+                                          <div key={index} className="flex justify-between items-start p-2 bg-white rounded border-l-2 border-purple-300">
+                                            <div className="flex-1">
+                                              <div className="font-medium text-purple-800 text-xs">
+                                                {payment.expenditure_type}
+                                              </div>
+                                              <div className="text-purple-600 text-xs">
+                                                {payment.installment || 'ΕΦΑΠΑΞ'}
+                                              </div>
                                             </div>
-                                            <div className="text-purple-600 text-xs">
-                                              {payment.installment || 'ΕΦΑΠΑΞ'}
+                                            <div className="text-right">
+                                              <div className="font-bold text-purple-900 text-sm">
+                                                {parseFloat(payment.amount || 0).toLocaleString("el-GR")} €
+                                              </div>
                                             </div>
                                           </div>
-                                          <div className="text-right">
-                                            <div className="font-bold text-purple-900 text-sm">
-                                              {parseFloat(payment.amount || 0).toLocaleString("el-GR")} €
-                                            </div>
-                                          </div>
+                                        ))}
+                                      </div>
+                                      {hasMorePayments && (
+                                        <div className="mt-2 pt-2 border-t border-purple-200 text-center">
+                                          <span className="text-xs text-purple-600">
+                                            +{payments.length - maxVisiblePayments} παλαιότερες πληρωμές
+                                          </span>
                                         </div>
-                                      ))}
+                                      )}
                                     </div>
                                   </div>
-                                </div>
-                              )}
+                                );
+                              })()}
 
                               {beneficiary.adeia && (
                                 <div className="space-y-1">
