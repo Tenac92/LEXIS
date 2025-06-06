@@ -366,18 +366,18 @@ export function BudgetIndicator({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div>
             <h3 className="text-sm font-medium text-gray-600">Διαθέσιμη Κατανομή</h3>
-            <p className={`text-2xl font-bold ${remainingAvailable < 0 ? 'text-red-600' : 'text-blue-600'}`}>
-              {remainingAvailable.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
+            <p className={`text-2xl font-bold ${(quarterAvailableValue - amount) < 0 ? 'text-red-600' : 'text-blue-600'}`}>
+              {(quarterAvailableValue - amount).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
             </p>
             <div className="mt-2">
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div 
-                  className={`h-full ${percentageUsed > 100 ? 'bg-red-500' : 'bg-blue-500'} transition-all duration-300`}
-                  style={{ width: `${Math.min(percentageUsed, 100)}%` }}
+                  className={`h-full ${(amount / quarterAvailableValue * 100) > 100 ? 'bg-red-500' : 'bg-blue-500'} transition-all duration-300`}
+                  style={{ width: `${Math.min((amount / quarterAvailableValue * 100), 100)}%` }}
                 />
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {percentageUsed.toFixed(1)}% χρησιμοποιήθηκε
+                {quarterAvailableValue > 0 ? (amount / quarterAvailableValue * 100).toFixed(1) : 0}% χρησιμοποιήθηκε
               </p>
             </div>
           </div>

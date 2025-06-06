@@ -8,7 +8,8 @@ import { log } from '../vite';
 
 export interface BudgetNotification {
   id?: number;
-  mis: number;
+  project_id: number;
+  mis?: number;
   type: string;
   amount: number;
   current_budget: number;
@@ -33,22 +34,70 @@ export interface BudgetValidationResult {
  * Validates budget allocation and determines if notification is needed
  */
 export async function validateBudgetAllocation(
-  mis: number, 
+  projectIdentifier: string | number, 
   requestedAmount: number, 
   userId?: number
 ): Promise<BudgetValidationResult> {
   try {
-    log(`[Budget] Validating allocation for MIS: ${mis}, Amount: ${requestedAmount}`, 'info');
+    log(`[Budget] Validating allocation for Project: ${projectIdentifier}, Amount: ${requestedAmount}`, 'info');
 
-    // Get current budget data
-    const { data: budgetData, error } = await supabase
-      .from('budget_na853_split')
-      .select('katanomes_etous, ethsia_pistosi, proip')
-      .eq('mis', mis)
-      .single();
+    // Enhanced lookup to support both project IDs and codes
+    let budgetData: any = null;
+    let projectId: number | null = null;
+    
+    // Pattern to detect project codes like "2024ΝΑ85300001"
+    const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
+    const isNumericString = /^\d+$/.test(String(projectIdentifier));
+    
+    // First try to find the project and get its ID
+    if (projectCodePattern.test(String(projectIdentifier))) {
+      // It's a project code like "2024ΝΑ85300001"
+      const { data: projectData, error: projectError } = await supabase
+        .from('Projects')
+        .select('id, mis, na853')
+        .eq('na853', projectIdentifier)
+        .single();
+      
+      if (!projectError && projectData?.id) {
+        projectId = projectData.id;
+        log(`[Budget] Found project ID ${projectId} for project code ${projectIdentifier}`, 'debug');
+      }
+    } else if (isNumericString) {
+      // It's a numeric ID, use directly
+      projectId = parseInt(String(projectIdentifier));
+      log(`[Budget] Using direct project ID: ${projectId}`, 'debug');
+    }
 
-    if (error || !budgetData) {
-      log(`[Budget] No budget data found for MIS: ${mis}`, 'warn');
+    // Get budget data using project_id if available
+    if (projectId) {
+      const { data: projectBudgetData, error: budgetError } = await supabase
+        .from('budget_na853_split')
+        .select('*')
+        .eq('project_id', projectId)
+        .single();
+      
+      if (!budgetError && projectBudgetData) {
+        budgetData = projectBudgetData;
+        log(`[Budget] Found budget data using project_id: ${projectId}`, 'debug');
+      }
+    }
+
+    // Fallback: try direct MIS lookup if no budget data found
+    if (!budgetData && isNumericString) {
+      const { data: misBudgetData, error: misError } = await supabase
+        .from('budget_na853_split')
+        .select('*')
+        .eq('mis', parseInt(String(projectIdentifier)))
+        .single();
+      
+      if (!misError && misBudgetData) {
+        budgetData = misBudgetData;
+        log(`[Budget] Found budget data using MIS: ${projectIdentifier}`, 'debug');
+      }
+    }
+
+    if (!budgetData) {
+      log(`[Budget] No budget data found for project: ${projectIdentifier}`, 'warn');
       return {
         isValid: false,
         requiresNotification: true,
@@ -57,54 +106,83 @@ export async function validateBudgetAllocation(
       };
     }
 
-    const currentBudget = budgetData.katanomes_etous || 0;
-    const ethsiaPistosi = budgetData.ethsia_pistosi || 0;
-    const proip = budgetData.proip || 0;
+    const katanomesEtous = parseFloat(budgetData.katanomes_etous || '0');
+    const ethsiaPistosi = parseFloat(budgetData.ethsia_pistosi || '0');
+    const userView = parseFloat(budgetData.user_view || '0');
+    const quarterAvailable = parseFloat(budgetData.quarter_available || '0');
+    
+    // Calculate available budgets
+    const availableBudget = katanomesEtous - userView;
+    const yearlyAvailable = ethsiaPistosi - userView;
 
-    log(`[Budget] Current budget: ${currentBudget}, Ethsia Pistosi: ${ethsiaPistosi}, PROIP: ${proip}`, 'debug');
+    log(`[Budget] Budget analysis: Available: ${availableBudget}, Yearly: ${yearlyAvailable}, Quarter: ${quarterAvailable}, Requested: ${requestedAmount}`, 'debug');
 
-    // Check if requested amount exceeds available budget
-    if (requestedAmount > currentBudget) {
+    // Check if requested amount exceeds ethsia_pistosi (funding required)
+    if (requestedAmount > ethsiaPistosi) {
       await createBudgetNotification({
-        mis,
-        type: 'budget_exceeded',
+        project_id: projectId || 0,
+        mis: budgetData.mis || 0,
+        type: 'funding',
         amount: requestedAmount,
-        current_budget: currentBudget,
+        current_budget: availableBudget,
         ethsia_pistosi: ethsiaPistosi,
-        reason: `Το αιτούμενο ποσό ${requestedAmount}€ υπερβαίνει τον διαθέσιμο προϋπολογισμό ${currentBudget}€`,
+        reason: `Απαιτείται χρηματοδότηση: Το ποσό ${requestedAmount.toFixed(2)}€ υπερβαίνει την ετήσια πίστωση ${ethsiaPistosi.toFixed(2)}€`,
         user_id: userId
       });
 
       return {
         isValid: false,
         requiresNotification: true,
-        notificationType: 'budget_exceeded',
-        message: `Το αιτούμενο ποσό υπερβαίνει τον διαθέσιμο προϋπολογισμό`,
-        currentBudget,
+        notificationType: 'funding',
+        message: 'Απαιτείται χρηματοδότηση - το ποσό υπερβαίνει την ετήσια πίστωση',
+        currentBudget: availableBudget,
         ethsiaPistosi
       };
     }
 
-    // Check if allocation would exceed 80% of budget (warning threshold)
-    const warningThreshold = currentBudget * 0.8;
-    if (requestedAmount > warningThreshold) {
+    // Check if requested amount exceeds 20% of annual allocation (reallocation required)
+    const reallocationThreshold = katanomesEtous * 0.2;
+    if (requestedAmount > reallocationThreshold && requestedAmount <= ethsiaPistosi) {
       await createBudgetNotification({
-        mis,
-        type: 'budget_warning',
+        project_id: projectId || 0,
+        mis: budgetData.mis || 0,
+        type: 'reallocation',
         amount: requestedAmount,
-        current_budget: currentBudget,
+        current_budget: availableBudget,
         ethsia_pistosi: ethsiaPistosi,
-        reason: `Το αιτούμενο ποσό ${requestedAmount}€ υπερβαίνει το 80% του διαθέσιμου προϋπολογισμού`,
-        status: 'warning',
+        reason: `Απαιτείται ανακατανομή: Το ποσό ${requestedAmount.toFixed(2)}€ υπερβαίνει το 20% της ετήσιας κατανομής ${reallocationThreshold.toFixed(2)}€`,
         user_id: userId
       });
 
       return {
         isValid: true,
         requiresNotification: true,
-        notificationType: 'budget_warning',
-        message: 'Προειδοποίηση: Το ποσό υπερβαίνει το 80% του διαθέσιμου προϋπολογισμού',
-        currentBudget,
+        notificationType: 'reallocation',
+        message: 'Απαιτείται ανακατανομή - το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
+        currentBudget: availableBudget,
+        ethsiaPistosi
+      };
+    }
+
+    // Check if requested amount exceeds quarter available
+    if (quarterAvailable > 0 && requestedAmount > quarterAvailable) {
+      await createBudgetNotification({
+        project_id: projectId || 0,
+        mis: budgetData.mis || 0,
+        type: 'quarter_exceeded',
+        amount: requestedAmount,
+        current_budget: quarterAvailable,
+        ethsia_pistosi: ethsiaPistosi,
+        reason: `Το ποσό ${requestedAmount.toFixed(2)}€ υπερβαίνει το διαθέσιμο ποσό τριμήνου ${quarterAvailable.toFixed(2)}€`,
+        user_id: userId
+      });
+
+      return {
+        isValid: false,
+        requiresNotification: true,
+        notificationType: 'quarter_exceeded',
+        message: 'Το ποσό υπερβαίνει το διαθέσιμο ποσό τριμήνου',
+        currentBudget: quarterAvailable,
         ethsiaPistosi
       };
     }
@@ -114,7 +192,7 @@ export async function validateBudgetAllocation(
       isValid: true,
       requiresNotification: false,
       message: 'Η κατανομή προϋπολογισμού είναι έγκυρη',
-      currentBudget,
+      currentBudget: availableBudget,
       ethsiaPistosi
     };
 
@@ -134,11 +212,12 @@ export async function validateBudgetAllocation(
  */
 export async function createBudgetNotification(notification: Omit<BudgetNotification, 'id' | 'created_at' | 'updated_at'>): Promise<BudgetNotification | null> {
   try {
-    log(`[Budget] Creating notification for MIS: ${notification.mis}, Type: ${notification.type}`, 'info');
+    log(`[Budget] Creating notification for Project ID: ${notification.project_id}, Type: ${notification.type}`, 'info');
 
     const { data, error } = await supabase
       .from('budget_notifications')
       .insert({
+        project_id: notification.project_id,
         mis: notification.mis,
         type: notification.type,
         amount: notification.amount,
