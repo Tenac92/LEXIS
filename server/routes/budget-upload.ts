@@ -286,6 +286,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
         return {
           row: rowData,
           mis: misValue,
+          na853: 'unknown',
           error: f.error
         };
       })
@@ -296,12 +297,41 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
       try {
         const { mis, na853, data } = update;
 
+        // First, find the project_id by mis or na853
+        let projectId = null;
+        
+        // Try to find project by MIS first
+        const { data: projectByMis, error: misError } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('mis', parseInt(mis))
+          .single();
+          
+        if (!misError && projectByMis) {
+          projectId = projectByMis.id;
+        } else {
+          // Try to find project by NA853
+          const { data: projectByNa853, error: na853Error } = await supabase
+            .from('projects')
+            .select('id')
+            .eq('na853', na853)
+            .single();
+            
+          if (!na853Error && projectByNa853) {
+            projectId = projectByNa853.id;
+          }
+        }
+        
+        // If we can't find a project, skip this record
+        if (!projectId) {
+          throw new Error(`No project found for MIS ${mis} or NA853 ${na853}. Budget record cannot be created without a valid project.`);
+        }
+
         // Check if the record exists
         const { data: existingRecord, error: fetchError } = await supabase
           .from('budget_na853_split')
           .select('*')
-          .eq('mis', mis)
-          .eq('na853', na853)
+          .eq('project_id', projectId)
           .single();
 
         // If record doesn't exist, create it
@@ -312,13 +342,14 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           const initialKatanomesEtous = data.katanomes_etous || 0;
           
           // DO NOT set user_view to match katanomes_etous - this was the previous incorrect behavior
-          console.log(`[BudgetUpload] Setting initial user_view for new MIS ${mis} (NA853: ${na853}) to 0 (not matching katanomes_etous)`);
+          console.log(`[BudgetUpload] Setting initial user_view for new MIS ${mis} (NA853: ${na853}, Project ID: ${projectId}) to 0 (not matching katanomes_etous)`);
           
           
           const { error: insertError } = await supabase
             .from('budget_na853_split')
             .insert({
-              mis,
+              project_id: projectId,
+              mis: parseInt(mis),
               na853,
               ethsia_pistosi: data.ethsia_pistosi || 0,
               q1: data.q1 || 0,
@@ -334,36 +365,15 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
             throw new Error(`Failed to insert budget split for MIS ${mis}: ${insertError.message}`);
           }
 
-          // Create a budget history entry for the new record using the new schema
+          // Create a budget history entry for the new record
           await storage.createBudgetHistoryEntry({
-            mis,
+            project_id: projectId,
+            previous_amount: '0',
+            new_amount: String(initialKatanomesEtous),
             change_type: 'import',
-            change_date: new Date().toISOString(),
-            previous_version: {
-              user_view: 0,
-              ethsia_pistosi: 0,
-              q1: 0,
-              q2: 0,
-              q3: 0,
-              q4: 0,
-              katanomes_etous: 0
-            },
-            updated_version: {
-              ethsia_pistosi: data.ethsia_pistosi || 0,
-              q1: data.q1 || 0,
-              q2: data.q2 || 0,
-              q3: data.q3 || 0,
-              q4: data.q4 || 0,
-              katanomes_etous: initialKatanomesEtous,
-              user_view: initialUserView,
-              na853
-            },
-            changes: {
-              reason: `Initial import from Excel for MIS ${mis} (NA853: ${na853})`,
-              type: 'import',
-              source: 'excel_upload'
-            },
-            user_id: req.user?.id ? parseInt(req.user.id) : null
+            change_reason: `Initial import from Excel for MIS ${mis} (NA853: ${na853})`,
+            document_id: null,
+            mis: parseInt(mis)
           });
         } else {
           // Record exists, update it
@@ -443,8 +453,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
               sum: budgetSumBeforeUpdate, // Store the pre-update state
               updated_at: new Date().toISOString()
             })
-            .eq('mis', mis)
-            .eq('na853', na853);
+            .eq('project_id', projectId);
 
           if (updateError) {
             throw new Error(`Failed to update budget split for MIS ${mis}: ${updateError.message}`);
