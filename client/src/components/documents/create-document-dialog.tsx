@@ -1379,17 +1379,17 @@ export function CreateDocumentDialog({
     
     // Track that we have a pending update
     stateCache.current.pendingUpdates++;
-  }, [currentFormState, updateFormData, isUpdatingFromContext]);
+  }, [currentFormState, updateFormData]);
   
-  // Effect to trigger form sync when state changes - with optimized dependency list
+  // Effect to trigger form sync when state changes - FIXED: Remove all problematic dependencies
   useEffect(() => {
-    // Skip the initial render
-    if (formReset) return;
+    // Skip during form reset to prevent circular updates
+    if (formReset || isUpdatingFromContext.current) return;
     
     // Add a small delay to prevent immediate execution during render cycle
     const timer = setTimeout(() => {
       syncFormToContext();
-    }, 0);
+    }, 100);
     
     // Cleanup function to clear timeout on unmount
     return () => {
@@ -1398,7 +1398,7 @@ export function CreateDocumentDialog({
         clearTimeout(updateTimeoutRef.current);
       }
     };
-  }, [formReset]); // Remove syncFormToContext from dependencies to break infinite loop
+  }, [currentFormState]); // Only depend on currentFormState, not the function itself
 
   const currentAmount = recipients.reduce((sum: number, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
