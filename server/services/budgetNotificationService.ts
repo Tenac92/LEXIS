@@ -119,7 +119,6 @@ export async function validateBudgetAllocation(
     // Check if requested amount exceeds ethsia_pistosi (funding required)
     if (requestedAmount > ethsiaPistosi) {
       await createBudgetNotification({
-        project_id: projectId || 0,
         mis: budgetData.mis || 0,
         type: 'funding',
         amount: requestedAmount,
@@ -143,7 +142,6 @@ export async function validateBudgetAllocation(
     const reallocationThreshold = katanomesEtous * 0.2;
     if (requestedAmount > reallocationThreshold && requestedAmount <= ethsiaPistosi) {
       await createBudgetNotification({
-        project_id: projectId || 0,
         mis: budgetData.mis || 0,
         type: 'reallocation',
         amount: requestedAmount,
@@ -166,7 +164,6 @@ export async function validateBudgetAllocation(
     // Check if requested amount exceeds quarter available
     if (quarterAvailable > 0 && requestedAmount > quarterAvailable) {
       await createBudgetNotification({
-        project_id: projectId || 0,
         mis: budgetData.mis || 0,
         type: 'quarter_exceeded',
         amount: requestedAmount,
@@ -211,13 +208,13 @@ export async function validateBudgetAllocation(
  */
 export async function createBudgetNotification(notification: Omit<BudgetNotification, 'id' | 'created_at' | 'updated_at'>): Promise<BudgetNotification | null> {
   try {
-    log(`[Budget] Creating notification for Project ID: ${notification.project_id}, Type: ${notification.type}`, 'info');
+    log(`[Budget] Creating notification for MIS: ${notification.mis}, Type: ${notification.type}`, 'info');
 
     // Check if a similar notification already exists to avoid duplicates
     const { data: existingNotifications, error: checkError } = await supabase
       .from('budget_notifications')
       .select('id')
-      .eq('project_id', notification.project_id)
+      .eq('mis', notification.mis)
       .eq('type', notification.type)
       .eq('status', 'pending')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()); // Within last 24 hours
@@ -257,7 +254,6 @@ export async function createBudgetNotification(notification: Omit<BudgetNotifica
     const { data, error } = await supabase
       .from('budget_notifications')
       .insert({
-        project_id: notification.project_id,
         mis: notification.mis,
         type: notification.type,
         amount: notification.amount,
@@ -434,7 +430,6 @@ export async function createTestReallocationNotifications(): Promise<void> {
 
     // Create sample reallocation notification
     const reallocationNotification = await createBudgetNotification({
-      project_id: 1,
       mis: 5174692,
       type: 'reallocation',
       amount: 1500,
@@ -447,7 +442,6 @@ export async function createTestReallocationNotifications(): Promise<void> {
 
     // Create sample funding notification
     const fundingNotification = await createBudgetNotification({
-      project_id: 2,
       mis: 5174693,
       type: 'funding',
       amount: 12000,
@@ -460,7 +454,6 @@ export async function createTestReallocationNotifications(): Promise<void> {
 
     // Create sample quarter exceeded notification
     const quarterNotification = await createBudgetNotification({
-      project_id: 3,
       mis: 5174694,
       type: 'quarter_exceeded',
       amount: 3000,
