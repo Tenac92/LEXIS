@@ -587,6 +587,8 @@ export function CreateDocumentDialog({
     selectedAttachments: formData.selectedAttachments || [],
     esdian_field1: formData.esdian_field1 || "",
     esdian_field2: formData.esdian_field2 || "",
+    director_signature: formData.director_signature || undefined,
+    department_manager_signature: formData.department_manager_signature || undefined,
   }), []);
   
   const form = useForm<CreateDocumentForm>({
@@ -594,6 +596,52 @@ export function CreateDocumentDialog({
     defaultValues: formDefaultValues,
   });
   
+  // Fetch available directors and department managers
+  const { data: monada = [] } = useQuery({
+    queryKey: ["monada-data"],
+    queryFn: async () => {
+      const response = await fetch("/api/public/monada", {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch monada data: ${response.status}`);
+      }
+      return response.json();
+    },
+  });
+
+  // Process available directors from monada data
+  const availableDirectors = useMemo(() => {
+    return monada
+      .filter((unit: any) => unit.director && unit.director.name)
+      .map((unit: any) => ({
+        unit: unit.unit,
+        director: unit.director
+      }));
+  }, [monada]);
+
+  // Process available department managers from monada data
+  const availableDepartmentManagers = useMemo(() => {
+    const managers: any[] = [];
+    monada.forEach((unit: any) => {
+      if (unit.parts && typeof unit.parts === 'object') {
+        Object.entries(unit.parts).forEach(([key, value]: [string, any]) => {
+          if (value && typeof value === 'object' && value.manager && value.manager.name) {
+            managers.push({
+              unit: unit.unit,
+              department: value.tmima || key,
+              manager: value.manager
+            });
+          }
+        });
+      }
+    });
+    return managers;
+  }, [monada]);
+
   // OPTIMIZED: Units query defined early to avoid reference errors
   const { 
     data: units = [], 
@@ -3061,6 +3109,92 @@ export function CreateDocumentDialog({
 
             {currentStep === 3 && (
               <>
+                <div className="space-y-6">
+                  <h3 className="text-lg font-medium">Επιλογή Υπογραφής</h3>
+                  
+                  {/* Director Signature Selection */}
+                  <div className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="director_signature"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Υπογραφή Διευθυντή</FormLabel>
+                          <Select
+                            value={field.value ? JSON.stringify(field.value) : ""}
+                            onValueChange={(value) => {
+                              if (value) {
+                                field.onChange(JSON.parse(value));
+                              } else {
+                                field.onChange(null);
+                              }
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Επιλέξτε διευθυντή" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {availableDirectors.map((director) => (
+                                <SelectItem 
+                                  key={director.unit} 
+                                  value={JSON.stringify(director.director)}
+                                >
+                                  {director.director.name} - {director.unit}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Department Manager Signature Selection */}
+                    <FormField
+                      control={form.control}
+                      name="department_manager_signature"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Υπογραφή Προϊσταμένου Τμήματος</FormLabel>
+                          <Select
+                            value={field.value ? JSON.stringify(field.value) : ""}
+                            onValueChange={(value) => {
+                              if (value) {
+                                field.onChange(JSON.parse(value));
+                              } else {
+                                field.onChange(null);
+                              }
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Επιλέξτε προϊστάμενο τμήματος" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {availableDepartmentManagers.map((manager, index) => (
+                                <SelectItem 
+                                  key={`${manager.unit}-${index}`} 
+                                  value={JSON.stringify(manager.manager)}
+                                >
+                                  {manager.manager.name} - {manager.department}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {currentStep === 4 && (
+              <>
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Συνημμένα Έγγραφα</h3>
                   {attachmentsLoading ? (
@@ -3214,7 +3348,7 @@ export function CreateDocumentDialog({
         </AnimatePresence>
 
         {/* Navigation buttons for non-final steps */}
-        {currentStep < 3 && (
+        {currentStep < 4 && (
           <div className="flex justify-end gap-2 pt-4">
             <Button
               type="button"
