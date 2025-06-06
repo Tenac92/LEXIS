@@ -643,59 +643,7 @@ export default function BeneficiariesPage() {
                               )}
                             </div>
 
-                            {/* Payment Details Summary - Last 3 Payments */}
-                            {(() => {
-                              const payments = getPaymentsForBeneficiary(beneficiary.id);
-                              if (payments.length === 0) return null;
-                              
-                              const maxVisiblePayments = 3;
-                              const hasMorePayments = payments.length > maxVisiblePayments;
-                              // Show the last 3 payments (most recent)
-                              const visiblePayments = payments.slice(-maxVisiblePayments).reverse();
-                              
-                              return (
-                                <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <h4 className="text-sm font-medium text-purple-800">
-                                      Τελευταίες Πληρωμές ({payments.length} συνολικά)
-                                    </h4>
-                                    {hasMorePayments && (
-                                      <span className="text-xs text-purple-600">
-                                        +{payments.length - maxVisiblePayments} παλαιότερες
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="space-y-1 max-h-20 overflow-y-auto">
-                                    {visiblePayments.map((payment: any, index: number) => (
-                                      <div key={index} className="flex justify-between items-center text-xs">
-                                        <span className="text-purple-700 truncate max-w-[60%]" title={payment.expenditure_type}>
-                                          {payment.expenditure_type}
-                                        </span>
-                                        <div className="text-right flex-shrink-0">
-                                          <div className="font-medium">{parseFloat(payment.amount || 0).toLocaleString("el-GR")} €</div>
-                                          <div className="text-purple-600">{payment.installment || 'ΕΦΑΠΑΞ'}</div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                  {hasMorePayments && (
-                                    <div className="mt-2 pt-2 border-t border-purple-200">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="w-full text-xs text-purple-600 hover:bg-purple-100 h-6"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleShowDetails(beneficiary);
-                                        }}
-                                      >
-                                        Προβολή όλων των πληρωμών
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
+
 
                             <div
                               className="flex items-center justify-center"
@@ -762,7 +710,7 @@ export default function BeneficiariesPage() {
                                         {payments.length} συνολικά
                                       </span>
                                     </div>
-                                    <div className="bg-purple-100 p-3 rounded border max-h-32 overflow-y-auto">
+                                    <div className="bg-purple-100 p-3 rounded border">
                                       <div className="space-y-2">
                                         {visiblePayments.map((payment: any, index: number) => (
                                           <div key={index} className="flex justify-between items-start p-2 bg-white rounded border-l-2 border-purple-300">
