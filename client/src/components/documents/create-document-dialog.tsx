@@ -138,57 +138,128 @@ function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestions
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-medium text-gray-900">Εσωτερική Διανομή</h3>
-        <p className="text-sm text-gray-600">Προαιρετικά πεδία για εσωτερική διανομή</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium text-gray-900">Εσωτερική Διανομή</h3>
+          <p className="text-sm text-gray-600">Επιλέξτε τμήματα για διανομή του εγγράφου</p>
+        </div>
+        {suggestions.length > 0 && hasContext && (
+          <Badge variant="secondary" className="text-xs">
+            <Lightbulb className="h-3 w-3 mr-1" />
+            Έξυπνες προτάσεις
+          </Badge>
+        )}
       </div>
 
-      {/* Simple Suggestions */}
+      {/* Smart Quick Actions */}
       {suggestions.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-blue-900 mb-3">Συχνές επιλογές:</h4>
-          <div className="space-y-2">
-            {suggestions.slice(0, 4).map((suggestion, index) => (
-              <div key={index} className="flex items-center justify-between bg-white rounded p-2 border">
-                <span className="text-sm text-gray-700">{suggestion.value}</span>
-                <div className="flex gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="text-xs px-2 py-1"
-                    onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field1')}
-                  >
-                    Πεδίο 1
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="text-xs px-2 py-1"
-                    onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field2')}
-                  >
-                    Πεδίο 2
-                  </Button>
-                </div>
+        <div className="space-y-3">
+          {/* Top Context Match */}
+          {suggestions.filter(s => s.contextMatches > 0).length > 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Star className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium text-green-800">Για αυτό το έργο συνήθως:</span>
               </div>
-            ))}
+              <div className="flex flex-wrap gap-2">
+                {suggestions
+                  .filter(s => s.contextMatches > 0)
+                  .slice(0, 2)
+                  .map((suggestion, index) => (
+                    <Button
+                      key={index}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs border-green-300 text-green-700 hover:bg-green-100"
+                      onClick={() => {
+                        form.setValue('esdian_field1', suggestion.value);
+                        if (suggestions.filter(s => s.contextMatches > 0).length > 1) {
+                          const second = suggestions.filter(s => s.contextMatches > 0)[1];
+                          if (second && index === 0) {
+                            form.setValue('esdian_field2', second.value);
+                          }
+                        }
+                      }}
+                    >
+                      {suggestion.value}
+                    </Button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Common Options */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-blue-800">Συχνές επιλογές:</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-xs text-blue-600 h-auto p-1"
+                onClick={() => {
+                  if (suggestions.length >= 2) {
+                    form.setValue('esdian_field1', suggestions[0].value);
+                    form.setValue('esdian_field2', suggestions[1].value);
+                  }
+                }}
+              >
+                Συμπλήρωση αυτόματα
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {suggestions.slice(0, 4).map((suggestion, index) => (
+                <div key={index} className="flex items-center justify-between bg-white rounded p-2 text-xs">
+                  <span className="text-gray-700 truncate">{suggestion.value}</span>
+                  <div className="flex gap-1 ml-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-blue-600"
+                      onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field1')}
+                      title="Πεδίο 1"
+                    >
+                      1
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-emerald-600"
+                      onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field2')}
+                      title="Πεδίο 2"
+                    >
+                      2
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Simple Form Fields */}
-      <div className="space-y-4">
+      {/* Form Fields with Smart Placeholders */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           control={form.control}
           name="esdian_field1"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Εσωτερική Διανομή - Πεδίο 1</FormLabel>
+              <FormLabel className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                Πρώτη Διανομή
+              </FormLabel>
               <FormControl>
                 <Input
                   {...field}
-                  placeholder="π.χ. ΤΜΗΜΑ ΟΙΚΟΝΟΜΙΚΩΝ"
+                  placeholder={
+                    suggestions.length > 0 
+                      ? `π.χ. ${suggestions[0].value}` 
+                      : "π.χ. ΤΜΗΜΑ ΟΙΚΟΝΟΜΙΚΩΝ"
+                  }
                 />
               </FormControl>
               <FormMessage />
@@ -200,17 +271,40 @@ function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestions
           name="esdian_field2"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Εσωτερική Διανομή - Πεδίο 2</FormLabel>
+              <FormLabel className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                Δεύτερη Διανομή
+              </FormLabel>
               <FormControl>
                 <Input
                   {...field}
-                  placeholder="π.χ. ΓΡΑΦΕΙΟ ΔΙΕΥΘΥΝΤΗ"
+                  placeholder={
+                    suggestions.length > 1 
+                      ? `π.χ. ${suggestions[1].value}` 
+                      : "π.χ. ΓΡΑΦΕΙΟ ΔΙΕΥΘΥΝΤΗ"
+                  }
                 />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+      </div>
+
+      {/* Skip Option */}
+      <div className="flex justify-center pt-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="text-xs text-gray-500"
+          onClick={() => {
+            form.setValue('esdian_field1', '');
+            form.setValue('esdian_field2', '');
+          }}
+        >
+          Παράλειψη εσωτερικής διανομής
+        </Button>
       </div>
     </div>
   );
