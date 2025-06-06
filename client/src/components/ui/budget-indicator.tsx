@@ -338,7 +338,7 @@ export function BudgetIndicator({
   // Check budget thresholds for warnings (showing in real-time as they type)
   const isExceeding20Percent = amount > (katanomesEtous * 0.2);
   const isExceedingEthsiaPistosi = amount > ethsiaPistosi;
-  const isExceedingAvailable = remainingAvailable < 0;
+  const isExceedingAvailable = afterCurrentAmount < 0;
 
   // Show warnings when thresholds are exceeded
   if (isExceedingEthsiaPistosi && onValidationWarning) {
