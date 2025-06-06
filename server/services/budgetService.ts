@@ -887,10 +887,20 @@ export class BudgetService {
       const currentQuarterNumber = Math.ceil(currentMonth / 3);
       const quarterKey = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
       
-      // Calculate available budget
+      // Calculate available budget - this is the correct quarter available amount
       const available_budget = parseFloat(katanomesEtous) - parseFloat(userView);
-      const quarter_available = parseFloat(budgetData[quarterKey]?.toString() || '0') - parseFloat(userView);
+      const currentQuarterAllocation = parseFloat(budgetData[quarterKey]?.toString() || '0');
+      const quarter_available = currentQuarterAllocation - parseFloat(userView);
       const yearly_available = parseFloat(ethsiaPistosi) - parseFloat(userView);
+      
+      console.log(`[BudgetService] Quarter calculation debug for MIS ${mis}:`, {
+        quarterKey,
+        currentQuarterAllocation,
+        userView: parseFloat(userView),
+        calculated_quarter_available: quarter_available,
+        katanomes_etous: parseFloat(katanomesEtous),
+        available_budget
+      });
       
       // Return budget data with correct types
       const response: BudgetResponse = {
@@ -1147,7 +1157,7 @@ export class BudgetService {
       
       // Broadcast real-time budget update to all connected clients
       try {
-        const { broadcastBudgetUpdate } = await import('../websocket/wsManager');
+        const { broadcastBudgetUpdate } = await import('./websocketService');
         
         // Get updated budget data for broadcasting
         const updatedBudgetResult = await this.getBudget(mis);
