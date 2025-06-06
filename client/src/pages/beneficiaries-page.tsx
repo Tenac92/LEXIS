@@ -19,6 +19,7 @@ import {
   UserCheck,
   CheckCircle2,
   AlertCircle,
+  CreditCard,
   X,
 } from "lucide-react";
 import { Header } from "@/components/header";
@@ -470,14 +471,22 @@ export default function BeneficiariesPage() {
                                 <div className="space-y-1">
                                   {getExpenditureTypesForBeneficiary(beneficiary.id).length > 0 && (
                                     <div className="flex items-center gap-2 text-muted-foreground">
-                                      <FileText className="w-4 h-4" />
-                                      <span>{getExpenditureTypesForBeneficiary(beneficiary.id).join(", ")}</span>
+                                      <FileText className="w-4 h-4 flex-shrink-0" />
+                                      <span className="truncate" title={getExpenditureTypesForBeneficiary(beneficiary.id).join(", ")}>
+                                        {getExpenditureTypesForBeneficiary(beneficiary.id).join(", ")}
+                                      </span>
                                     </div>
                                   )}
                                   {getTotalAmountForBeneficiary(beneficiary.id) > 0 && (
                                     <div className="flex items-center gap-2 text-muted-foreground">
-                                      <DollarSign className="w-4 h-4" />
+                                      <DollarSign className="w-4 h-4 flex-shrink-0" />
                                       <span>{getTotalAmountForBeneficiary(beneficiary.id).toLocaleString("el-GR")} €</span>
+                                    </div>
+                                  )}
+                                  {getPaymentsForBeneficiary(beneficiary.id).length > 0 && (
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <DollarSign className="w-4 h-4 flex-shrink-0" />
+                                      <span>{getPaymentsForBeneficiary(beneficiary.id).length} πληρωμές</span>
                                     </div>
                                   )}
                                 </div>
@@ -635,24 +644,57 @@ export default function BeneficiariesPage() {
                             </div>
 
                             {/* Payment Details Summary */}
-                            {getPaymentsForBeneficiary(beneficiary.id).length > 0 && (
-                              <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                                <h4 className="text-sm font-medium text-purple-800 mb-2">
-                                  Οικονομικά Στοιχεία
-                                </h4>
-                                <div className="space-y-1">
-                                  {getPaymentsForBeneficiary(beneficiary.id).map((payment: any, index: number) => (
-                                    <div key={index} className="flex justify-between items-center text-xs">
-                                      <span className="text-purple-700">{payment.expenditure_type}</span>
-                                      <div className="text-right">
-                                        <div className="font-medium">{parseFloat(payment.amount || 0).toLocaleString("el-GR")} €</div>
-                                        <div className="text-purple-600">{payment.installment || 'ΕΦΑΠΑΞ'}</div>
+                            {(() => {
+                              const payments = getPaymentsForBeneficiary(beneficiary.id);
+                              if (payments.length === 0) return null;
+                              
+                              const maxVisiblePayments = 3;
+                              const hasMorePayments = payments.length > maxVisiblePayments;
+                              const visiblePayments = payments.slice(0, maxVisiblePayments);
+                              
+                              return (
+                                <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-sm font-medium text-purple-800">
+                                      Οικονομικά Στοιχεία ({payments.length})
+                                    </h4>
+                                    {hasMorePayments && (
+                                      <span className="text-xs text-purple-600">
+                                        +{payments.length - maxVisiblePayments} περισσότερα
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="space-y-1 max-h-20 overflow-y-auto">
+                                    {visiblePayments.map((payment: any, index: number) => (
+                                      <div key={index} className="flex justify-between items-center text-xs">
+                                        <span className="text-purple-700 truncate max-w-[60%]" title={payment.expenditure_type}>
+                                          {payment.expenditure_type}
+                                        </span>
+                                        <div className="text-right flex-shrink-0">
+                                          <div className="font-medium">{parseFloat(payment.amount || 0).toLocaleString("el-GR")} €</div>
+                                          <div className="text-purple-600">{payment.installment || 'ΕΦΑΠΑΞ'}</div>
+                                        </div>
                                       </div>
+                                    ))}
+                                  </div>
+                                  {hasMorePayments && (
+                                    <div className="mt-2 pt-2 border-t border-purple-200">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full text-xs text-purple-600 hover:bg-purple-100 h-6"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleShowDetails(beneficiary);
+                                        }}
+                                      >
+                                        Προβολή όλων των πληρωμών
+                                      </Button>
                                     </div>
-                                  ))}
+                                  )}
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
 
                             <div
                               className="flex items-center justify-center"
@@ -674,8 +716,8 @@ export default function BeneficiariesPage() {
                         {/* Back of card */}
                         <div className="flip-card-back bg-purple-50">
                           <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-500 to-purple-600"></div>
-                          <div className="p-6 h-full overflow-y-auto">
-                            <div className="flex items-start justify-between mb-4">
+                          <div className="p-6 h-full flex flex-col">
+                            <div className="flex items-start justify-between mb-4 flex-shrink-0">
                               <div className="space-y-1">
                                 <h3 className="text-lg font-bold text-purple-900">
                                   Λεπτομέρειες Δικαιούχου
@@ -691,13 +733,44 @@ export default function BeneficiariesPage() {
                                   e.stopPropagation();
                                   toggleCardFlip(beneficiary.id);
                                 }}
-                                className="text-purple-600 hover:bg-purple-100"
+                                className="text-purple-600 hover:bg-purple-100 flex-shrink-0"
                               >
-                                <Info className="h-4 w-4" />
+                                <X className="h-4 w-4" />
                               </Button>
                             </div>
 
-                            <div className="space-y-4 text-sm">
+                            {/* Scrollable content area */}
+                            <div className="flex-1 overflow-y-auto space-y-4 text-sm custom-scrollbar">
+                              {/* Payment Details - Full List */}
+                              {getPaymentsForBeneficiary(beneficiary.id).length > 0 && (
+                                <div className="space-y-2">
+                                  <span className="text-purple-700 font-medium text-sm">
+                                    Οικονομικά Στοιχεία ({getPaymentsForBeneficiary(beneficiary.id).length}):
+                                  </span>
+                                  <div className="bg-purple-100 p-3 rounded border max-h-40 overflow-y-auto">
+                                    <div className="space-y-2">
+                                      {getPaymentsForBeneficiary(beneficiary.id).map((payment: any, index: number) => (
+                                        <div key={index} className="flex justify-between items-start p-2 bg-white rounded border-l-2 border-purple-300">
+                                          <div className="flex-1">
+                                            <div className="font-medium text-purple-800 text-xs">
+                                              {payment.expenditure_type}
+                                            </div>
+                                            <div className="text-purple-600 text-xs">
+                                              {payment.installment || 'ΕΦΑΠΑΞ'}
+                                            </div>
+                                          </div>
+                                          <div className="text-right">
+                                            <div className="font-bold text-purple-900 text-sm">
+                                              {parseFloat(payment.amount || 0).toLocaleString("el-GR")} €
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
                               {beneficiary.adeia && (
                                 <div className="space-y-1">
                                   <span className="text-purple-700 font-medium text-sm">
@@ -745,11 +818,39 @@ export default function BeneficiariesPage() {
                                   <span className="text-purple-700 font-medium text-sm">
                                     Ελεύθερο Κείμενο:
                                   </span>
-                                  <p className="text-purple-900 text-sm bg-purple-100 p-2 rounded border">
+                                  <p className="text-purple-900 text-sm bg-purple-100 p-2 rounded border break-words">
                                     {beneficiary.freetext}
                                   </p>
                                 </div>
                               )}
+                            </div>
+
+                            {/* Action buttons at bottom */}
+                            <div className="flex gap-2 mt-4 pt-4 border-t border-purple-200 flex-shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleShowDetails(beneficiary);
+                                }}
+                                className="flex-1 text-purple-600 border-purple-200 hover:bg-purple-100"
+                              >
+                                <Info className="w-4 h-4 mr-1" />
+                                Περισσότερα
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(beneficiary);
+                                }}
+                                className="flex-1 text-purple-600 border-purple-200 hover:bg-purple-100"
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                Επεξεργασία
+                              </Button>
                             </div>
 
 
