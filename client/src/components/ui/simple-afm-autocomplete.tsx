@@ -71,6 +71,9 @@ export function SimpleAFMAutocomplete({
 
   // Enhanced helper function to determine next available installment and amount
   const getSmartInstallmentData = useCallback((beneficiary: any, expenditureType: string, userUnit: string, projectNa853?: string) => {
+    // Define installment sequence at the very beginning to avoid hoisting issues
+    const installmentSequence = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'ΣΤ', 'Ζ', 'Η', 'Θ', 'Ι'];
+    
     if (!beneficiary.oikonomika || typeof beneficiary.oikonomika !== 'object') {
       return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
     }
@@ -197,8 +200,6 @@ export function SimpleAFMAutocomplete({
       withStatus: [],
       withoutStatus: []
     };
-
-    const installmentSequence = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'Ζ', 'Η', 'Θ'];
 
     matchingPayments.forEach(payment => {
       const installments = Array.isArray(payment.installment) ? payment.installment : [payment.installment].filter(Boolean);
