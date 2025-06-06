@@ -796,33 +796,7 @@ export default function BeneficiariesPage() {
                               )}
                             </div>
 
-                            {/* Action buttons at bottom */}
-                            <div className="flex gap-2 mt-4 pt-4 border-t border-purple-200 flex-shrink-0">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleShowDetails(beneficiary);
-                                }}
-                                className="flex-1 text-purple-600 border-purple-200 hover:bg-purple-100"
-                              >
-                                <Info className="w-4 h-4 mr-1" />
-                                Περισσότερα
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(beneficiary);
-                                }}
-                                className="flex-1 text-purple-600 border-purple-200 hover:bg-purple-100"
-                              >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Επεξεργασία
-                              </Button>
-                            </div>
+
 
 
                           </div>
