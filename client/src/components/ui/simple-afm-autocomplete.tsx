@@ -181,9 +181,15 @@ export function SimpleAFMAutocomplete({
   }, []);
 
   const handleSelect = useCallback((person: Employee | Beneficiary) => {
+    console.log('[SmartAutocomplete] Person selected:', person);
+    console.log('[SmartAutocomplete] Context:', { expenditureType, userUnit, projectNa853, useEmployeeData });
+    
     // For beneficiaries, add smart installment selection
     if (!useEmployeeData && 'oikonomika' in person) {
+      console.log('[SmartAutocomplete] Processing beneficiary with oikonomika:', person.oikonomika);
       const smartData = getSmartInstallmentData(person, expenditureType, userUnit, projectNa853);
+      console.log('[SmartAutocomplete] Smart data result:', smartData);
+      
       const enhancedPerson = {
         ...person,
         suggestedInstallment: smartData.installment,
@@ -191,8 +197,10 @@ export function SimpleAFMAutocomplete({
         suggestedInstallments: smartData.suggestedInstallments,
         suggestedInstallmentAmounts: smartData.installmentAmounts
       };
+      console.log('[SmartAutocomplete] Enhanced person data:', enhancedPerson);
       onSelectPerson(enhancedPerson);
     } else {
+      console.log('[SmartAutocomplete] No smart processing - using basic selection');
       onSelectPerson(person);
     }
     
