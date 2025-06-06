@@ -151,61 +151,61 @@ function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestions
         )}
       </div>
 
-      {/* Smart Project-Specific Suggestions */}
+      {/* Compact Smart Suggestions */}
       {suggestions.filter(s => s.contextMatches > 0).length > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Star className="h-4 w-4 text-green-600" />
-            <span className="text-sm font-medium text-green-800">Για αυτό το έργο συνήθως:</span>
+        <div className="bg-green-50 border border-green-200 rounded p-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1">
+              <Star className="h-3 w-3 text-green-600" />
+              <span className="text-xs font-medium text-green-800">Για αυτό το έργο συνήθως:</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-xs text-green-700 hover:bg-green-100 h-6 px-2"
+              onClick={() => {
+                const contextSuggestions = suggestions.filter(s => s.contextMatches > 0);
+                if (contextSuggestions.length >= 2) {
+                  form.setValue('esdian_field1', contextSuggestions[0].value);
+                  form.setValue('esdian_field2', contextSuggestions[1].value);
+                }
+              }}
+            >
+              Αυτόματα
+            </Button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             {suggestions
               .filter(s => s.contextMatches > 0)
               .slice(0, 3)
               .map((suggestion, index) => (
-                <div key={index} className="flex items-center justify-between bg-white rounded-lg p-3 border border-green-200">
-                  <span className="text-sm font-medium text-gray-800">{suggestion.value}</span>
-                  <div className="flex gap-2">
+                <div key={index} className="flex items-center justify-between bg-white rounded p-2 text-xs">
+                  <span className="text-gray-700 truncate flex-1 mr-2">{suggestion.value}</span>
+                  <div className="flex gap-1">
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="text-xs px-3 py-1 border-green-300 text-green-700 hover:bg-green-100"
+                      className="h-5 w-5 p-0 text-green-600 hover:bg-green-100"
                       onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field1')}
+                      title="Πεδίο 1"
                     >
-                      Πεδίο 1
+                      1
                     </Button>
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="text-xs px-3 py-1 border-green-300 text-green-700 hover:bg-green-100"
+                      className="h-5 w-5 p-0 text-green-600 hover:bg-green-100"
                       onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field2')}
+                      title="Πεδίο 2"
                     >
-                      Πεδίο 2
+                      2
                     </Button>
                   </div>
                 </div>
               ))}
-            {suggestions.filter(s => s.contextMatches > 0).length >= 2 && (
-              <div className="pt-2 border-t border-green-200">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-green-700 hover:bg-green-100 w-full"
-                  onClick={() => {
-                    const contextSuggestions = suggestions.filter(s => s.contextMatches > 0);
-                    if (contextSuggestions.length >= 2) {
-                      form.setValue('esdian_field1', contextSuggestions[0].value);
-                      form.setValue('esdian_field2', contextSuggestions[1].value);
-                    }
-                  }}
-                >
-                  Συμπλήρωση και των δύο πεδίων αυτόματα
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       )}
