@@ -17,8 +17,11 @@ import {
   Hash,
   Phone,
   Mail,
-  X
+  X,
+  CreditCard,
+  DollarSign
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import type { Beneficiary } from "@shared/schema";
 
 interface BeneficiaryDetailsModalProps {
@@ -33,6 +36,12 @@ export function BeneficiaryDetailsModal({
   onOpenChange 
 }: BeneficiaryDetailsModalProps) {
   if (!beneficiary) return null;
+
+  // Fetch all payments for this beneficiary
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
+    queryKey: ["/api/beneficiary-payments", beneficiary.id],
+    enabled: !!beneficiary.id && open
+  });
 
   const formatCurrency = (amount: number | null) => {
     if (!amount) return '€0,00';
@@ -57,13 +66,29 @@ export function BeneficiaryDetailsModal({
     }
   };
 
-  // Parse financial data
+  // Calculate total amount from payments
+  const totalAmount = Array.isArray(payments) ? 
+    payments.reduce((sum: number, payment: any) => sum + (parseFloat(payment.amount) || 0), 0) : 0;
+
+  // Group payments by expenditure type
+  const groupedPayments = Array.isArray(payments) ? 
+    payments.reduce((acc: any, payment: any) => {
+      const type = payment.expenditure_type || 'Άλλο';
+      if (!acc[type]) {
+        acc[type] = [];
+      }
+      acc[type].push(payment);
+      return acc;
+    }, {}) : {};
+
+  // Parse financial data (legacy support)
   let financialData = null;
   try {
-    if (beneficiary.oikonomika && typeof beneficiary.oikonomika === 'string') {
-      financialData = JSON.parse(beneficiary.oikonomika);
-    } else if (beneficiary.oikonomika && typeof beneficiary.oikonomika === 'object') {
-      financialData = beneficiary.oikonomika;
+    const oikonomika = (beneficiary as any).oikonomika;
+    if (oikonomika && typeof oikonomika === 'string') {
+      financialData = JSON.parse(oikonomika);
+    } else if (oikonomika && typeof oikonomika === 'object') {
+      financialData = oikonomika;
     }
   } catch (error) {
     console.error('Error parsing financial data:', error);
@@ -190,78 +215,121 @@ export function BeneficiaryDetailsModal({
             </div>
           )}
 
-          {/* Financial Information */}
-          {financialData && (
-            <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-              <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
-                <Euro className="w-5 h-5" />
-                Οικονομικά Στοιχεία
+          {/* Complete Payment Information */}
+          <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-green-900 flex items-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                Πλήρη Οικονομικά Στοιχεία
               </h3>
-              <div className="space-y-4">
-                {Object.entries(financialData).map(([paymentType, paymentData]: [string, any]) => (
-                  <div key={paymentType} className="bg-white p-4 rounded border border-green-200">
-                    <h4 className="font-medium text-green-900 mb-3">Τύπος Δαπάνης: {paymentType}</h4>
+              {paymentsLoading && (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
+              )}
+            </div>
+            
+            {/* Summary */}
+            {Array.isArray(payments) && payments.length > 0 && (
+              <div className="bg-white p-4 rounded border border-green-200 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-green-900">{payments.length}</div>
+                    <div className="text-sm text-green-700">Συνολικές Πληρωμές</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-900">{Object.keys(groupedPayments).length}</div>
+                    <div className="text-sm text-green-700">Τύποι Δαπανών</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-900">{formatCurrency(totalAmount)}</div>
+                    <div className="text-sm text-green-700">Συνολικό Ποσό</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {paymentsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-green-700">Φόρτωση πληρωμών...</div>
+              </div>
+            ) : Array.isArray(payments) && payments.length > 0 ? (
+              <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar">
+                {Object.entries(groupedPayments).map(([expenditureType, typePayments]: [string, any[]]) => (
+                  <div key={expenditureType} className="bg-white p-4 rounded border border-green-200">
+                    <h4 className="font-medium text-green-900 mb-3 flex items-center justify-between">
+                      <span>Τύπος Δαπάνης: {expenditureType}</span>
+                      <Badge variant="outline" className="text-green-700 border-green-300">
+                        {typePayments.length} πληρωμές
+                      </Badge>
+                    </h4>
                     
-                    {typeof paymentData === 'object' && paymentData !== null ? (
-                      <div className="space-y-3">
-                        {Object.entries(paymentData).map(([installment, installmentData]: [string, any]) => (
-                          <div key={installment} className="bg-green-25 p-3 rounded border border-green-100">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="font-medium text-green-800">Δόση: {installment}</span>
-                              {installmentData && typeof installmentData === 'object' && installmentData.status && (
-                                <Badge className={getFinancialStatusColor(installmentData.status)}>
-                                  {installmentData.status === 'paid' ? 'Πληρωμένο' :
-                                   installmentData.status === 'submitted' ? 'Υποβλημένο' :
-                                   installmentData.status === 'pending' ? 'Εκκρεμές' : 
-                                   installmentData.status || 'Εκκρεμές'}
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            {installmentData && typeof installmentData === 'object' ? (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                                {installmentData.amount && (
-                                  <div>
-                                    <span className="text-green-700 font-medium">Ποσό: </span>
-                                    <span className="text-green-900 font-mono">
-                                      {formatCurrency(installmentData.amount)}
-                                    </span>
-                                  </div>
-                                )}
-                                {installmentData.protocol && (
-                                  <div>
-                                    <span className="text-green-700 font-medium">Αρ. Πρωτοκόλλου: </span>
-                                    <span className="text-green-900 font-mono">{installmentData.protocol}</span>
-                                  </div>
-                                )}
-                                {installmentData.date && (
-                                  <div>
-                                    <span className="text-green-700 font-medium">Ημερομηνία: </span>
-                                    <span className="text-green-900">
-                                      {installmentData.date === null ? 'Δ/Υ' : 
-                                       new Date(installmentData.date).toLocaleDateString('el-GR')}
-                                    </span>
-                                  </div>
-                                )}
+                    <div className="space-y-3">
+                      {typePayments.map((payment: any, index: number) => (
+                        <div key={index} className="bg-green-25 p-3 rounded border border-green-100">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <div className="font-medium text-green-800">
+                                Δόση: {payment.installment || 'ΕΦΑΠΑΞ'}
                               </div>
-                            ) : (
                               <div className="text-sm text-green-700">
-                                Τιμή: {String(installmentData)}
+                                ID: {payment.id}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-green-900">
+                                {formatCurrency(parseFloat(payment.amount || 0))}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            {payment.protocol && (
+                              <div>
+                                <span className="text-green-700 font-medium">Αρ. Πρωτοκόλλου: </span>
+                                <span className="text-green-900 font-mono">{payment.protocol}</span>
+                              </div>
+                            )}
+                            {payment.date && (
+                              <div>
+                                <span className="text-green-700 font-medium">Ημερομηνία: </span>
+                                <span className="text-green-900">
+                                  {new Date(payment.date).toLocaleDateString('el-GR')}
+                                </span>
+                              </div>
+                            )}
+                            {payment.created_at && (
+                              <div>
+                                <span className="text-green-700 font-medium">Καταχωρήθηκε: </span>
+                                <span className="text-green-900">
+                                  {new Date(payment.created_at).toLocaleDateString('el-GR')}
+                                </span>
                               </div>
                             )}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-green-700">
-                        Τιμή: {String(paymentData)}
-                      </div>
-                    )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="text-center py-8 text-green-700">
+                <DollarSign className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Δεν υπάρχουν καταχωρημένες πληρωμές για αυτόν τον δικαιούχο</p>
+              </div>
+            )}
+
+            {/* Legacy Financial Data - if exists */}
+            {financialData && (
+              <div className="mt-6 pt-6 border-t border-green-200">
+                <h4 className="font-medium text-green-900 mb-3">Παλαιά Δεδομένα (Legacy):</h4>
+                <div className="bg-green-100 p-3 rounded text-sm">
+                  <pre className="text-green-800 overflow-x-auto">
+                    {JSON.stringify(financialData, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
