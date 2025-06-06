@@ -12,6 +12,7 @@ import { router as budgetNotificationsRouter } from "./controllers/budgetNotific
 import { router as unitsRouter } from "./controllers/unitsController";
 import { router as usersRouter } from "./controllers/usersController";
 import { router as projectRouter } from "./controllers/projectController";
+import projectResolverRouter from "./controllers/projectResolverController";
 import { router as documentsRouter } from "./controllers/documentsController";
 import employeesRouter from "./controllers/employeesController";
 import beneficiariesRouter from "./controllers/beneficiaryController";

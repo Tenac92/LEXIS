@@ -30,7 +30,7 @@ export function useProjectResolver(identifier: string | number | null) {
       
       try {
         const response = await apiRequest(`/api/projects/resolve/${encodeURIComponent(identifier)}`);
-        return response;
+        return response as ProjectData;
       } catch (error) {
         console.error('Failed to resolve project:', error);
         return null;

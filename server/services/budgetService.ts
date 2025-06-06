@@ -242,10 +242,10 @@ export class BudgetService {
       }
       
       if (!budgetData) {
-        console.error(`[BudgetService] Analyzing - No budget data found for MIS: ${misToSearch}`);
+        console.error(`[BudgetService] Analyzing - No budget data found for project ID: ${projectId}`);
         return {
           status: 'error',
-          mis: mis,
+          mis: projectIdentifier,
           isReallocation: false,
           changeType: 'no_change',
           beforeUpdate: null,
@@ -265,7 +265,7 @@ export class BudgetService {
             katanomes_etous_diff: 0,
             ethsia_pistosi_diff: 0,
           },
-          error: `No budget data found for MIS: ${misToSearch}`
+          error: `No budget data found for project ID: ${projectId}`
         };
       }
       
@@ -298,7 +298,7 @@ export class BudgetService {
         console.log(`[BudgetService] Analyzing - No previous state found in sum column, cannot compare changes`);
         return {
           status: 'success',
-          mis: mis,
+          mis: projectIdentifier,
           isReallocation: false,
           changeType: 'no_change',
           beforeUpdate: null,
