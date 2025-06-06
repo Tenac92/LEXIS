@@ -3612,7 +3612,7 @@ export function CreateDocumentDialog({
       
       console.log("[CreateDocument] Auto-selected the only available unit:", unitValue);
     }
-  }, [user?.units, form, formData, updateFormData]);
+  }, [user?.units]); // Removed form, formData, updateFormData from dependencies
 
   useEffect(() => {
     if (regions.length === 1) {
