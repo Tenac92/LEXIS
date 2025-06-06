@@ -803,8 +803,11 @@ export function CreateDocumentDialog({
       return;
     }
     
-    // Only reset for truly new documents (when dialog first opens)
-    if (!open) {
+    // Only reset for truly new documents (when there's no saved state in context)
+    const hasExistingFormData = formData?.project_id || formData?.expenditure_type || 
+                               (formData?.recipients && formData.recipients.length > 0);
+    
+    if (!hasExistingFormData) {
       console.log("[CreateDocument] Starting fresh document creation");
       
       // Don't reset the unit if user has one assigned - preserve auto-selection
@@ -836,6 +839,12 @@ export function CreateDocumentDialog({
       if (defaultUnit) {
         console.log("[CreateDocument] Preserved user unit during reset:", defaultUnit);
       }
+    } else {
+      console.log("[CreateDocument] Restoring existing form data:", {
+        project_id: formData?.project_id,
+        expenditure_type: formData?.expenditure_type,
+        step: savedStep
+      });
     }
     
     // Dialog initialization - form and units data will be refreshed
