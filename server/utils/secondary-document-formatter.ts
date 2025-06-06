@@ -171,40 +171,61 @@ export class SecondaryDocumentFormatter {
           }),
         );
       } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
-        // For housing allowance, show quarter information
-        let quarterInfo = "1";
-        if (recipient.installments && Array.isArray(recipient.installments) && recipient.installments.length > 0) {
-          // If installments are stored as numbers (3, 4, 5, 6), format them as quarters
-          const quarters = recipient.installments.map((q: any) => {
-            const quarterNum = typeof q === 'string' ? q.replace("ΤΡΙΜΗΝΟ ", "") : q;
-            return `Τ${quarterNum}`;
-          });
-          quarterInfo = quarters.join(", ");
-        } else if (recipient.installment) {
-          // Fallback to single installment
-          const quarterNum = typeof recipient.installment === 'string' ? 
-            recipient.installment.replace("ΤΡΙΜΗΝΟ ", "") : recipient.installment;
-          quarterInfo = `Τ${quarterNum}`;
-        }
+        // For housing allowance, replicate primary document structure exactly
+        // Check if recipient has multiple installments (quarters)
+        const installments = recipient.installments || [recipient.installment || "1"];
+        const installmentAmounts = recipient.installmentAmounts || {};
         
-        cells.push(
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                quarterInfo,
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                },
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-        );
+        if (installments.length === 1) {
+          // Single quarter - simple row structure
+          const quarterNum = typeof installments[0] === 'string' ? 
+            installments[0].replace("ΤΡΙΜΗΝΟ ", "") : installments[0];
+          
+          cells.push(
+            new TableCell({
+              children: [
+                DocumentUtilities.createCenteredParagraph(
+                  `Τ${quarterNum}`,
+                  {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                  },
+                ),
+              ],
+              borders: {
+                top: { style: borderStyle, size: 1 },
+                bottom: { style: borderStyle, size: 1 },
+                left: { style: borderStyle, size: 1 },
+                right: { style: borderStyle, size: 1 },
+              },
+            }),
+          );
+        } else {
+          // Multiple quarters - use the same multi-row structure as primary document
+          // This will be handled in the multi-installment processing section below
+          // For now, show the first quarter in this row
+          const firstQuarter = installments[0];
+          const quarterNum = typeof firstQuarter === 'string' ? 
+            firstQuarter.replace("ΤΡΙΜΗΝΟ ", "") : firstQuarter;
+          
+          cells.push(
+            new TableCell({
+              children: [
+                DocumentUtilities.createCenteredParagraph(
+                  `Τ${quarterNum}`,
+                  {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                  },
+                ),
+              ],
+              borders: {
+                top: { style: borderStyle, size: 1 },
+                bottom: { style: borderStyle, size: 1 },
+                left: { style: borderStyle, size: 1 },
+                right: { style: borderStyle, size: 1 },
+              },
+            }),
+          );
+        }
       } else {
         // For ΔΚΑ types, add installment column (ΔΟΣΗ)
         cells.push(
@@ -247,12 +268,23 @@ export class SecondaryDocumentFormatter {
         }),
       );
 
-      // Add amount column at the end (ΠΟΣΟ (€))
-      cells.push(
-        new TableCell({
+      // For housing allowance with multiple quarters, create multi-row structure exactly like primary document
+      if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" && recipient.installments && recipient.installments.length > 1) {
+        const installments = recipient.installments;
+        const installmentAmounts = recipient.installmentAmounts || {};
+        const rowSpan = installments.length;
+
+        // Create first row with row-spanned cells for Index, Name, AFM, and ΠΡΑΞΗ
+        const firstQuarterNum = typeof installments[0] === 'string' ? 
+          installments[0].replace("ΤΡΙΜΗΝΟ ", "") : installments[0];
+        const firstAmount = installmentAmounts[installments[0]] || installmentAmounts[firstQuarterNum] || 0;
+        totalAmount += firstAmount;
+
+        // Replace the quarter cell in the existing cells array
+        cells[cells.length - 2] = new TableCell({
           children: [
             DocumentUtilities.createCenteredParagraph(
-              DocumentUtilities.formatCurrency(amount),
+              `Τ${firstQuarterNum}`,
               {
                 size: DocumentUtilities.DEFAULT_FONT_SIZE,
               },
@@ -264,10 +296,122 @@ export class SecondaryDocumentFormatter {
             left: { style: borderStyle, size: 1 },
             right: { style: borderStyle, size: 1 },
           },
-        }),
-      );
+        });
 
-      rows.push(new TableRow({ children: cells }));
+        // Add amount for first quarter
+        cells.push(
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(
+                DocumentUtilities.formatCurrency(firstAmount),
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                },
+              ),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+        );
+
+        // Make Index, Name, AFM, and ΠΡΑΞΗ cells span multiple rows
+        cells[0] = new TableCell({
+          ...cells[0],
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+        });
+        cells[1] = new TableCell({
+          ...cells[1],
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+        });
+        cells[2] = new TableCell({
+          ...cells[2],
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+        });
+        cells[cells.length - 2] = new TableCell({
+          ...cells[cells.length - 2],
+          rowSpan: rowSpan,
+          verticalAlign: VerticalAlign.CENTER,
+        });
+
+        rows.push(new TableRow({ children: cells }));
+
+        // Add remaining quarters as separate rows
+        for (let i = 1; i < installments.length; i++) {
+          const quarterNum = typeof installments[i] === 'string' ? 
+            installments[i].replace("ΤΡΙΜΗΝΟ ", "") : installments[i];
+          const quarterAmount = installmentAmounts[installments[i]] || installmentAmounts[quarterNum] || 0;
+          totalAmount += quarterAmount;
+
+          const quarterRow = new TableRow({
+            children: [
+              // Quarter column
+              new TableCell({
+                children: [
+                  DocumentUtilities.createCenteredParagraph(
+                    `Τ${quarterNum}`,
+                    {
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                    },
+                  ),
+                ],
+                borders: {
+                  top: { style: borderStyle, size: 1 },
+                  bottom: { style: borderStyle, size: 1 },
+                  left: { style: borderStyle, size: 1 },
+                  right: { style: borderStyle, size: 1 },
+                },
+              }),
+              // Amount column
+              new TableCell({
+                children: [
+                  DocumentUtilities.createCenteredParagraph(
+                    DocumentUtilities.formatCurrency(quarterAmount),
+                    {
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                    },
+                  ),
+                ],
+                borders: {
+                  top: { style: borderStyle, size: 1 },
+                  bottom: { style: borderStyle, size: 1 },
+                  left: { style: borderStyle, size: 1 },
+                  right: { style: borderStyle, size: 1 },
+                },
+              }),
+            ],
+          });
+          rows.push(quarterRow);
+        }
+      } else {
+        // Single installment or non-housing allowance - add amount column normally
+        cells.push(
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(
+                DocumentUtilities.formatCurrency(amount),
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                },
+              ),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+        );
+
+        rows.push(new TableRow({ children: cells }));
+      }
     });
 
     // Create total row spanning to the amount column
