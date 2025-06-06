@@ -2194,6 +2194,7 @@ export function CreateDocumentDialog({
         status: "draft",
         attachments: data.selectedAttachments || [],
         esdian: [data.esdian_field1 || "", data.esdian_field2 || ""].filter(field => field.trim() !== ""),
+        director_signature: data.director_signature || null,
       };
 
       console.log("Sending payload to create document:", payload);

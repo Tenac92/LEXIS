@@ -181,6 +181,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   installmentAmounts: jsonb("installmentAmounts").default({}),
   template_id: integer("template_id"),
   comments: text("comments"),
+  esdian: jsonb("esdian").default([]), // Internal distribution fields
   // Director signature fields
   director_signature: jsonb("director_signature"), // Stores selected director info
   department_manager_signature: jsonb("department_manager_signature"), // Stores selected department manager info
