@@ -1317,6 +1317,7 @@ export function CreateDocumentDialog({
       if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
         // For housing allowance, enforce consecutive quarter selection
         if (newInstallments.includes(installment)) {
+          // If clicking on already selected quarter, remove it
           newInstallments = newInstallments.filter(i => i !== installment);
         } else {
           // Try adding the quarter and check if it maintains consecutiveness
@@ -1324,12 +1325,24 @@ export function CreateDocumentDialog({
           if (areInstallmentsInSequence(testInstallments, expenditureType)) {
             newInstallments = testInstallments;
           } else {
-            toast({
-              title: "Μη έγκυρη επιλογή τριμήνων",
-              description: "Τα τρίμηνα πρέπει να είναι διαδοχικά (π.χ. ΤΡΙΜΗΝΟ 1, 2, 3)",
-              variant: "destructive",
-            });
-            return;
+            // If not consecutive, offer to start fresh from this quarter
+            const quarterNumber = parseInt(installment.replace("ΤΡΙΜΗΝΟ ", ""));
+            if (!isNaN(quarterNumber)) {
+              // Clear existing selection and start with the new quarter
+              newInstallments = [installment];
+              toast({
+                title: "Νέα επιλογή τριμήνου",
+                description: `Η επιλογή άλλαξε σε ${installment}. Μπορείτε να προσθέσετε διαδοχικά τρίμηνα.`,
+                variant: "default",
+              });
+            } else {
+              toast({
+                title: "Μη έγκυρη επιλογή τριμήνων",
+                description: "Τα τρίμηνα πρέπει να είναι διαδοχικά (π.χ. ΤΡΙΜΗΝΟ 1, 2, 3)",
+                variant: "destructive",
+              });
+              return;
+            }
           }
         }
         
