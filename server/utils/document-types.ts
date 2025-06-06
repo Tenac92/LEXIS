@@ -72,6 +72,13 @@ export interface DocumentData {
   original_protocol_date?: string;
   comments?: string;
   generated_by?: UserDetails;
+  director_signature?: {
+    name: string;
+    order: string;
+    title: string;
+    degree?: string;
+    prepose?: string;
+  };
   recipients?: Array<{
     id?: number;
     firstname: string;
