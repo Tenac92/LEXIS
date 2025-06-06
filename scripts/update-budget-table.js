@@ -3,7 +3,11 @@
  * Adds project_id column to budget_na853_split table and populates it
  */
 
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 async function updateBudgetTable() {
   const supabase = createClient(
@@ -126,8 +130,4 @@ async function updateBudgetTable() {
 }
 
 // Run the script
-if (require.main === module) {
-  updateBudgetTable();
-}
-
-module.exports = { updateBudgetTable };
+updateBudgetTable();
