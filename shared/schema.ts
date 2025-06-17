@@ -115,7 +115,7 @@ export const projects = pgTable("Projects", {
  */
 export const budgetNA853Split = pgTable("budget_na853_split", {
   id: serial("id").primaryKey(),
-  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  project_id: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
   mis: integer("mis").unique(), // Legacy field for migration compatibility
   na853: text("na853").notNull(),
   ethsia_pistosi: decimal("ethsia_pistosi", {
