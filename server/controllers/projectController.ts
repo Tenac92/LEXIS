@@ -611,15 +611,12 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     const kallikratisData = kallikratisRes.data || [];
     const indexData = indexRes.data || [];
 
-    // Find corresponding index entry for enhanced data - match by na853 or mis
-    const indexItem = indexData.find(idx => 
-      (updatedProject.na853 && idx.project_na853 === updatedProject.na853) || 
-      (updatedProject.mis && idx.project_mis == updatedProject.mis)
-    );
+    // Find corresponding index entry for enhanced data using project_id
+    const indexItem = indexData.find(idx => idx.project_id === updatedProject.id);
 
-    // Get enhanced data if index entry exists
-    const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_type_id) : null;
-    const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expenditure_type_id) : null;
+    // Get enhanced data if index entry exists (using correct column names)
+    const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_types_id) : null;
+    const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expediture_type_id) : null;
     const monada = indexItem ? monadaData.find(m => m.id === indexItem.monada_id) : null;
     const kallikratis = indexItem ? kallikratisData.find(k => k.id === indexItem.kallikratis_id) : null;
 
@@ -705,15 +702,12 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
     const kallikratisData = kallikratisRes.data || [];
     const indexData = indexRes.data || [];
 
-    // Find corresponding index entry for enhanced data - match by na853 or mis
-    const indexItem = indexData.find(idx => 
-      (project.na853 && idx.project_na853 === project.na853) || 
-      (project.mis && idx.project_mis == project.mis)
-    );
+    // Find corresponding index entry for enhanced data using project_id
+    const indexItem = indexData.find(idx => idx.project_id === project.id);
 
-    // Get enhanced data if index entry exists
-    const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_type_id) : null;
-    const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expenditure_type_id) : null;
+    // Get enhanced data if index entry exists (using correct column names)
+    const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_types_id) : null;
+    const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expediture_type_id) : null;
     const monada = indexItem ? monadaData.find(m => m.id === indexItem.monada_id) : null;
     const kallikratis = indexItem ? kallikratisData.find(k => k.id === indexItem.kallikratis_id) : null;
 
