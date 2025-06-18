@@ -636,12 +636,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const filteredProjects = projects
           .filter(project => unitProjectIds.includes(project.id))
           .map(project => {
-            const indexItem = indexData.find(idx => idx.project_id === project.id);
-            const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_types_id) : null;
-            const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expediture_type_id) : null;
+            const indexItems = indexData.filter(idx => idx.project_id === project.id);
+            
+            // Get all expenditure types for this project
+            const projectExpenditureTypes = indexItems
+              .map(idx => expenditureTypes.find(et => et.id === idx.expediture_type_id))
+              .filter(et => et !== null && et !== undefined)
+              .map(et => et.expediture_types);
+            
+            // Remove duplicates
+            const uniqueExpenditureTypes = [...new Set(projectExpenditureTypes)];
+            
+            const eventType = indexItems.length > 0 ? eventTypes.find(et => et.id === indexItems[0].event_types_id) : null;
+            const expenditureType = indexItems.length > 0 ? expenditureTypes.find(et => et.id === indexItems[0].expediture_type_id) : null;
             
             return {
               ...project,
+              // Keep enhanced data for compatibility
               enhanced_event_type: eventType ? {
                 id: eventType.id,
                 name: eventType.name
@@ -653,7 +664,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               enhanced_unit: {
                 id: targetMonada.id,
                 name: targetMonada.unit
-              }
+              },
+              // Add expenditure_types array for document creation dialog
+              expenditure_types: uniqueExpenditureTypes
             };
           });
         
