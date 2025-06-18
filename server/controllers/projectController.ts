@@ -46,78 +46,53 @@ export async function listProjects(req: Request, res: Response) {
   }
 }
 
-
-
-router.get('/expenditure-types/:projectId', async (req: Request, res: Response) => {
-  const { projectId } = req.params;
-
-  try {
-    const expenditureTypes = await storage.getProjectExpenditureTypes(projectId);
-
-    if (!expenditureTypes || expenditureTypes.length === 0) {
-      return res.json({ message: "No expenditure types found." });
-    }
-
-    res.json(expenditureTypes);
-  } catch (error) {
-    console.error("Error fetching expenditure types:", error);
-    res.status(500).json({ message: "Failed to fetch expenditure types" });
-  }
-});
-
+// Enhanced Excel export with both projects and budget data
 export async function exportProjectsXLSX(req: Request, res: Response) {
   try {
-    console.log('[Projects] Starting XLSX export with integrated budget_na853_split data');
-    // Get all projects
-    const { data: projects, error } = await supabase
+    console.log('[Projects] Generating Excel export with projects and budget data');
+
+    // Fetch all projects
+    const { data: projects, error: projectsError } = await supabase
       .from('Projects')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    if (!projects?.length) {
-      console.log('[Projects] No projects found for export');
-      return res.status(400).json({ message: 'No projects found for export' });
-    }
-
-    console.log(`[Projects] Found ${projects.length} projects to export`);
-
-    // Get all budget_na853_split data
-    console.log('[Projects] Fetching budget_na853_split data');
-    const { data: budgetSplits, error: budgetError } = await supabase
-      .from('budget_na853_split')
-      .select('*');
-
-    if (budgetError) {
-      console.error('[Projects] Error fetching budget splits:', budgetError);
-    }
-
-    // Create a map of budget splits by project MIS for easier lookup
-    const budgetSplitsByMis = {};
-    if (budgetSplits && budgetSplits.length > 0) {
-      console.log(`[Projects] Found ${budgetSplits.length} budget splits`);
-      budgetSplits.forEach(split => {
-        // Use mis as the key
-        if (split.mis) {
-          if (!budgetSplitsByMis[split.mis]) {
-            budgetSplitsByMis[split.mis] = [];
-          }
-          budgetSplitsByMis[split.mis].push(split);
-        }
+    if (projectsError) {
+      console.error('Error fetching projects for Excel export:', projectsError);
+      return res.status(500).json({ 
+        message: "Failed to fetch projects for export",
+        error: projectsError.message
       });
     }
 
-    // Create a combined dataset with projects and their budget data
-    const combinedData = [];
-    
-    // Process each project
+    // Fetch all budget splits
+    const { data: budgetSplits, error: budgetError } = await supabase
+      .from('budget_na853_split')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (budgetError) {
+      console.warn('Warning: Could not fetch budget data for export:', budgetError);
+    }
+
+    if (!projects || projects.length === 0) {
+      return res.status(404).json({ message: 'No projects found for export' });
+    }
+
+    // Create a combined dataset for the integrated view
+    const combinedData: any[] = [];
+
     projects.forEach(project => {
-      // Get the budget splits for this project
-      const projectSplits = budgetSplitsByMis[project.mis] || [];
-      
-      // If there are no splits, add one row with just the project data
+      // Find all budget splits for this project (match by MIS or NA853)
+      const projectSplits = budgetSplits?.filter(split => 
+        split.mis?.toString() === project.mis?.toString() ||
+        split.na853 === project.na853
+      ) || [];
+
+      // If no budget splits found, still include the project with empty budget data
       if (projectSplits.length === 0) {
         combinedData.push({
-          // Project Core Data (from Projects table)
+          // Project Core Data
           'ΜΙS': project.mis || '',
           'Τίτλος': project.title || project.project_title || project.event_description || '',
           'Κατάσταση': project.status || '',
@@ -133,7 +108,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
           'Έτος Συμβάντος': Array.isArray(project.event_year) ? project.event_year.join(', ') : (project.event_year || ''),
           'Ημ/νία Δημιουργίας': project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : '',
           
-          // Budget Split Data (empty for this row)
+          // Empty Budget Split Data
           'ID Κατανομής': '',
           'ΠΡΟΙΠ': '',
           'Ετήσια Πίστωση': '',
@@ -148,7 +123,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
         });
       } else {
         // For projects with splits, add one row per split with both project and split data
-        projectSplits.forEach((split, index) => {
+        projectSplits.forEach((split: any, index: number) => {
           combinedData.push({
             // Project Core Data (only include full project data in the first row for this project)
             'ΜΙS': project.mis || '',
@@ -249,44 +224,52 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${encodedFilename}"`);
-    res.send(buffer);
+    res.setHeader('Content-Length', buffer.length.toString());
 
+    res.end(buffer);
+    console.log(`[Projects] Excel export successful: ${encodedFilename}`);
   } catch (error) {
-    console.error("Error exporting projects:", error);
+    console.error("Error generating Excel export:", error);
     res.status(500).json({ 
-      message: "Failed to export projects",
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to generate Excel export",
+      error: error instanceof Error ? error.message : "Unknown error"
     });
   }
 }
 
+// Bulk update projects
 router.post('/bulk-update', async (req: Request, res: Response) => {
   try {
     const { updates } = req.body;
-
+    
     if (!Array.isArray(updates)) {
-      return res.status(400).json({ message: "Updates must be an array" });
+      return res.status(400).json({ message: 'Updates must be an array' });
     }
 
     const results = [];
     const errors = [];
 
-    // Process each update
     for (const update of updates) {
-      if (!update.mis || !update.data) {
-        errors.push({ mis: update.mis, error: "Missing required fields" });
-        continue;
-      }
-
       try {
-        // Validate update data against our model
-        const validData = projectHelpers.validateProject({
-          ...update.data,
-          mis: update.mis
+        // Validate that we have an MIS to identify the project
+        if (!update.mis) {
+          errors.push({ mis: 'unknown', error: 'MIS is required for updates' });
+          continue;
+        }
+
+        // Only include fields that should be updated
+        const validData = {};
+        const allowedFields = ['title', 'status', 'budget_na853', 'budget_na271', 'budget_e069'];
+        
+        allowedFields.forEach(field => {
+          if (update[field] !== undefined) {
+            (validData as any)[field] = update[field];
+          }
         });
 
-        const { error } = await supabase
-          .from("Projects")
+        // Update the project
+        const { data, error } = await supabase
+          .from('Projects')
           .update(validData)
           .eq("mis", update.mis);
 
@@ -371,124 +354,6 @@ router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
 
 // Note: Project regions endpoint moved to routes.ts using optimized schema
 // This endpoint was removed to prevent database column errors
-    
-    if (error) {
-      console.error('[Projects] Error fetching regions:', error);
-      return res.status(500).json({ 
-        message: "Failed to fetch regions", 
-        error: error.message 
-      });
-    }
-    
-    if (!data) {
-      console.log(`[Projects] No project found with MIS: ${mis}`);
-      return res.status(404).json({ 
-        message: "Project not found" 
-      });
-    }
-    
-    // Process region data
-    let response: { region?: string[], regional_unit?: string[] } = {};
-    
-    // Log the actual columns to help debug
-    console.log('[Projects] Available columns in Projects table:', Object.keys(data));
-    
-    // Check if region exists in any column
-    const regionData = data.region || data.regions || data.regional_data || null;
-    
-    // Handle region field - whatever column name it uses
-    if (regionData) {
-      try {
-        let parsedRegionData: string | string[] = regionData;
-        
-        // If it's a string that looks like JSON, try to parse it
-        if (typeof parsedRegionData === 'string' && 
-            (parsedRegionData.startsWith('[') || parsedRegionData.startsWith('{'))) {
-          try {
-            parsedRegionData = JSON.parse(parsedRegionData);
-          } catch (e) {
-            console.log('[Projects] Could not parse region JSON, using as string:', e);
-          }
-        }
-        
-        // Convert to array if it's not already
-        if (!Array.isArray(parsedRegionData)) {
-          parsedRegionData = [parsedRegionData];
-        }
-        
-        response.region = parsedRegionData;
-      } catch (e) {
-        console.error('[Projects] Error processing region data:', e);
-      }
-    }
-    
-    // For regional unit, use any column that might contain it
-    const unitData = data.regional_unit || data.regionalUnit || data.regional_units || data.regionalUnits || null;
-    
-    // Handle regional_unit field - whatever column name it uses
-    if (unitData) {
-      try {
-        let parsedUnitData: string | string[] = unitData;
-        
-        // If it's a string that looks like JSON, try to parse it
-        if (typeof parsedUnitData === 'string' && 
-            (parsedUnitData.startsWith('[') || parsedUnitData.startsWith('{'))) {
-          try {
-            parsedUnitData = JSON.parse(parsedUnitData);
-          } catch (e) {
-            console.log('[Projects] Could not parse regional_unit JSON, using as string:', e);
-          }
-        }
-        
-        // Convert to array if it's not already
-        if (!Array.isArray(parsedUnitData)) {
-          parsedUnitData = [parsedUnitData];
-        }
-        
-        response.regional_unit = parsedUnitData;
-      } catch (e) {
-        console.error('[Projects] Error processing regional_unit data:', e);
-      }
-    }
-    
-    // If we still don't have data for regions, use a placeholder based on other fields
-    if (!response.region && !response.regional_unit) {
-      console.log('[Projects] No region data found, checking other columns');
-      
-      // Check if there are any columns that might contain region-related info
-      const possibleRegions = [];
-      
-      if (data.address) {
-        possibleRegions.push(data.address);
-      }
-      
-      if (data.location) {
-        possibleRegions.push(data.location);
-      }
-      
-      if (data.municipality) {
-        possibleRegions.push(data.municipality);
-      }
-      
-      if (data.prefectures) {
-        possibleRegions.push(data.prefectures);
-      }
-      
-      if (possibleRegions.length > 0) {
-        response.region = possibleRegions;
-      }
-    }
-    
-    console.log(`[Projects] Regions for project ${mis}:`, response);
-    res.json(response);
-  } catch (error) {
-    console.error('[Projects] Error fetching regions:', error);
-    res.status(500).json({ 
-      message: "Server error",
-      error: error instanceof Error ? error.message : "Unknown error"
-    });
-  }
-});
 
 // Mount routes
 router.get('/', listProjects);
@@ -593,58 +458,51 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     const kallikratisData = kallikratisRes.data || [];
     const indexData = indexRes.data || [];
 
-    // Find corresponding index entry for enhanced data using project_id
+    // Find enhanced data for this project
     const indexItem = indexData.find(idx => idx.project_id === updatedProject.id);
-
-    // Get enhanced data if index entry exists (using correct column names)
     const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_types_id) : null;
     const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expediture_type_id) : null;
     const monada = indexItem ? monadaData.find(m => m.id === indexItem.monada_id) : null;
     const kallikratis = indexItem ? kallikratisData.find(k => k.id === indexItem.kallikratis_id) : null;
 
-    // Enhanced project response
-    const enhancedUpdatedProject = {
+    // Return the updated project with enhanced data
+    const enhancedProject = {
       ...updatedProject,
-      // Enhanced information from project_index
       enhanced_event_type: eventType ? {
         id: eventType.id,
-        name: eventType.name,
-        description: eventType.description
+        name: eventType.name
       } : null,
-      
       enhanced_expenditure_type: expenditureType ? {
         id: expenditureType.id,
         name: expenditureType.expediture_types
       } : null,
-      
       enhanced_unit: monada ? {
         id: monada.id,
-        name: monada.unit || monada.unit_name
+        name: monada.unit
       } : null,
-      
-      enhanced_region: kallikratis ? {
+      enhanced_kallikratis: kallikratis ? {
         id: kallikratis.id,
-        region: kallikratis.perifereia,
-        regional_unit: kallikratis.onoma_dimou_koinotitas,
-        municipality: kallikratis.onoma_dimou_koinotitas
+        name: kallikratis.perifereia || kallikratis.onoma_dimou_koinotitas,
+        level: kallikratis.level || 'municipality'
       } : null
     };
 
     console.log(`[Projects] Successfully updated project with MIS: ${mis}`);
-    res.json(enhancedUpdatedProject);
+    res.json(enhancedProject);
   } catch (error) {
     console.error(`[Projects] Error updating project:`, error);
-    return res.status(500).json({
-      message: "Failed to update project due to server error",
-      error: error instanceof Error ? error.message : 'Unknown error'
+    res.status(500).json({ 
+      message: "Failed to update project",
+      error: error instanceof Error ? error.message : "Unknown error"
     });
   }
 });
 
-// Get a project by MIS - placed last to avoid route conflicts
+// Get single project by MIS with enhanced data
 router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis } = req.params;
+    
     console.log(`[Projects] Fetching project with MIS: ${mis}`);
 
     if (!req.user) {
@@ -654,23 +512,9 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
       });
     }
 
-    // Get project from Projects table
-    const { data: project, error } = await supabase
-      .from('Projects')
-      .select('*')
-      .eq('mis', mis)
-      .single();
-
-    if (error) {
-      console.error(`[Projects] Error fetching project with MIS ${mis}:`, error);
-      return res.status(404).json({ 
-        message: `Project with MIS ${mis} not found`,
-        error: error.message 
-      });
-    }
-
-    // Get all reference data for enhancement
-    const [eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
+    // Get project data with enhanced information
+    const [projectRes, eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
+      supabase.from('Projects').select('*').eq('mis', mis).single(),
       supabase.from('event_types').select('*'),
       supabase.from('expediture_types').select('*'),
       supabase.from('Monada').select('*'),
@@ -678,57 +522,59 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
       supabase.from('project_index').select('*')
     ]);
 
+    if (projectRes.error || !projectRes.data) {
+      console.error(`[Projects] Project not found for MIS ${mis}`);
+      return res.status(404).json({ 
+        message: "Project not found",
+        error: projectRes.error?.message || "Not found"
+      });
+    }
+
+    const project = projectRes.data;
     const eventTypes = eventTypesRes.data || [];
     const expenditureTypes = expenditureTypesRes.data || [];
     const monadaData = monadaRes.data || [];
     const kallikratisData = kallikratisRes.data || [];
     const indexData = indexRes.data || [];
 
-    // Find corresponding index entry for enhanced data using project_id
+    // Find enhanced data for this project
     const indexItem = indexData.find(idx => idx.project_id === project.id);
-
-    // Get enhanced data if index entry exists (using correct column names)
     const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_types_id) : null;
     const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expediture_type_id) : null;
     const monada = indexItem ? monadaData.find(m => m.id === indexItem.monada_id) : null;
     const kallikratis = indexItem ? kallikratisData.find(k => k.id === indexItem.kallikratis_id) : null;
 
-    // Enhanced project response
+    // Return project with enhanced data
     const enhancedProject = {
       ...project,
-      // Enhanced information from project_index
       enhanced_event_type: eventType ? {
         id: eventType.id,
-        name: eventType.name,
-        description: eventType.description
+        name: eventType.name
       } : null,
-      
       enhanced_expenditure_type: expenditureType ? {
         id: expenditureType.id,
         name: expenditureType.expediture_types
       } : null,
-      
       enhanced_unit: monada ? {
         id: monada.id,
-        name: monada.unit || monada.unit_name
+        name: monada.unit
       } : null,
-      
-      enhanced_region: kallikratis ? {
+      enhanced_kallikratis: kallikratis ? {
         id: kallikratis.id,
-        region: kallikratis.perifereia,
-        regional_unit: kallikratis.onoma_dimou_koinotitas,
-        municipality: kallikratis.onoma_dimou_koinotitas
+        name: kallikratis.perifereia || kallikratis.onoma_dimou_koinotitas,
+        level: kallikratis.level || 'municipality'
       } : null
     };
 
-    console.log(`[Projects] Successfully fetched project with MIS: ${mis}`);
+    console.log(`[Projects] Found project with MIS: ${mis}`);
     res.json(enhancedProject);
-    
   } catch (error) {
     console.error(`[Projects] Error fetching project:`, error);
-    return res.status(500).json({
-      message: "Failed to fetch project due to server error",
-      error: error instanceof Error ? error.message : 'Unknown error'
+    res.status(500).json({ 
+      message: "Failed to fetch project",
+      error: error instanceof Error ? error.message : "Unknown error"
     });
   }
 });
+
+export { router as projectsRouter };
