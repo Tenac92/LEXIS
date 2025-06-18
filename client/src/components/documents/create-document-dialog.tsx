@@ -2981,7 +2981,7 @@ export function CreateDocumentDialog({
                               ) : (
                                 <SelectItem
                                   key="no-expenditure-types"
-                                  value=""
+                                  value="no-expenditure-types"
                                   disabled
                                 >
                                   Δεν υπάρχουν διαθέσιμοι τύποι δαπάνης
@@ -3243,9 +3243,9 @@ export function CreateDocumentDialog({
                         <FormItem>
                           <FormLabel>Επιλογή Υπογραφούντος</FormLabel>
                           <Select
-                            value={field.value ? JSON.stringify(field.value) : ""}
+                            value={field.value ? JSON.stringify(field.value) : undefined}
                             onValueChange={(value) => {
-                              if (value) {
+                              if (value && value !== "no-signature") {
                                 field.onChange(JSON.parse(value));
                               } else {
                                 field.onChange(null);
@@ -3277,6 +3277,13 @@ export function CreateDocumentDialog({
                                   {manager.manager.name} - Προϊστάμενος ({manager.department})
                                 </SelectItem>
                               ))}
+                              
+                              {/* Fallback for empty signature lists */}
+                              {availableDirectors.length === 0 && availableDepartmentManagers.length === 0 && (
+                                <SelectItem value="no-signature" disabled>
+                                  Δεν υπάρχουν διαθέσιμοι υπογραφούντες
+                                </SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
