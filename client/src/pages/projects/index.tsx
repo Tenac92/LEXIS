@@ -13,7 +13,7 @@ import {
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ComprehensiveProjectsModal } from "@/components/projects/ComprehensiveProjectsModal";
 import { useToast } from "@/hooks/use-toast";
-import { type Project } from "@shared/schema";
+import { type Project, type OptimizedProject } from "@shared/schema";
 import { Plus, FileUp, Download, LayoutGrid, LayoutList, Upload, FolderOpen, Building2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
@@ -51,7 +51,7 @@ export default function ProjectsPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: projects, isLoading, error } = useQuery<Project[]>({
+  const { data: projects, isLoading, error } = useQuery<OptimizedProject[]>({
     queryKey: ["/api/projects/cards", { search: debouncedSearch, status: status !== "all" ? status : undefined }]
   });
 
@@ -98,12 +98,19 @@ export default function ProjectsPage() {
   };
 
   // Filter projects based on search and status
-  const filteredProjects = Array.isArray(projects) ? projects.filter((project: any) => {
+  const filteredProjects = Array.isArray(projects) ? projects.filter((project: OptimizedProject) => {
     const searchMatch = !debouncedSearch ||
-      project.title?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.event_description?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.project_title?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
       project.mis?.toString().includes(debouncedSearch) ||
-      (project.region as any)?.region?.[0]?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      project.budget_na853?.toLowerCase().includes(debouncedSearch.toLowerCase());
+      project.na853?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.event_type?.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.expenditure_type?.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.unit?.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.region?.region?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.region?.regional_unit?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      project.region?.municipality?.toLowerCase().includes(debouncedSearch.toLowerCase());
 
     const statusMatch = status === "all" || project.status === status;
 

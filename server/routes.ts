@@ -1209,47 +1209,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[Projects] Retrieved ${projectCards?.length || 0} project cards`);
         
         // Transform data for frontend consumption
-        const transformedCards = projectCards?.map(card => ({
-          // Core identifiers
-          na853: card.project_na853,
-          mis: card.project_mis,
+        const transformedCards = projectCards?.map(card => {
+          const projectData = Array.isArray(card.Projects) ? card.Projects[0] : card.Projects;
+          const eventTypeData = Array.isArray(card.event_types) ? card.event_types[0] : card.event_types;
+          const expenditureTypeData = Array.isArray(card.expenditure_types) ? card.expenditure_types[0] : card.expenditure_types;
+          const monadaData = Array.isArray(card.Monada) ? card.Monada[0] : card.Monada;
+          const kallikratisData = Array.isArray(card.kallikratis) ? card.kallikratis[0] : card.kallikratis;
           
-          // Project details from Projects table
-          budget_na853: card.Projects?.budget_na853,
-          status: card.Projects?.status || 'active',
-          created_at: card.Projects?.created_at,
-          updated_at: card.Projects?.updated_at,
-          event_description: card.Projects?.event_description,
-          project_title: card.Projects?.project_title,
-          name: card.Projects?.name,
-          
-          // Event information
-          event_type: {
-            id: card.event_types?.id,
-            name: card.event_types?.name,
-            description: card.event_types?.description
-          },
-          
-          // Expenditure information
-          expenditure_type: {
-            id: card.expenditure_types?.id,
-            name: card.expenditure_types?.name
-          },
-          
-          // Organizational unit
-          unit: {
-            id: card.Monada?.id,
-            name: card.Monada?.name
-          },
-          
-          // Geographic information
-          region: {
-            id: card.kallikratis?.id,
-            region: card.kallikratis?.region,
-            regional_unit: card.kallikratis?.regional_unit,
-            municipality: card.kallikratis?.municipality
-          }
-        }));
+          return {
+            // Core identifiers
+            na853: card.project_na853,
+            mis: card.project_mis,
+            
+            // Project details from Projects table
+            budget_na853: projectData?.budget_na853,
+            status: projectData?.status || 'active',
+            created_at: projectData?.created_at,
+            updated_at: projectData?.updated_at,
+            event_description: projectData?.event_description,
+            project_title: projectData?.project_title,
+            name: projectData?.name,
+            
+            // Event information
+            event_type: {
+              id: eventTypeData?.id,
+              name: eventTypeData?.name,
+              description: eventTypeData?.description
+            },
+            
+            // Expenditure information
+            expenditure_type: {
+              id: expenditureTypeData?.id,
+              name: expenditureTypeData?.name
+            },
+            
+            // Organizational unit
+            unit: {
+              id: monadaData?.id,
+              name: monadaData?.name
+            },
+            
+            // Geographic information
+            region: {
+              id: kallikratisData?.id,
+              region: kallikratisData?.region,
+              regional_unit: kallikratisData?.regional_unit,
+              municipality: kallikratisData?.municipality
+            }
+          };
+        });
         
         res.json(transformedCards);
       } catch (error) {

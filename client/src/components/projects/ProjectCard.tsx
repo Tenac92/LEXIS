@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type Project } from "@shared/schema";
+import { type Project, type OptimizedProject } from "@shared/schema";
 import { Edit, Trash2, Calendar, MapPin, Building2, Coins, FileText, Info, RotateCcw, Building, DollarSign, TrendingUp } from "lucide-react";
 import { useLocation } from "wouter";
 import {
@@ -24,7 +24,7 @@ import { CompactBudgetIndicator } from "@/components/ui/budget-indicator";
 import { type BudgetData } from "@/lib/types";
 
 interface ProjectCardProps {
-  project: Project;
+  project: OptimizedProject;
   view?: "grid" | "list";
   isAdmin: boolean;
 }

@@ -548,6 +548,38 @@ export interface MonadaUnitName {
   prop: string;
 }
 
+// Optimized project data from project_index with related tables
+export interface OptimizedProject {
+  na853: string;
+  mis: string;
+  budget_na853?: number;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  event_description?: string;
+  project_title?: string;
+  name?: string;
+  event_type: {
+    id?: number;
+    name?: string;
+    description?: string;
+  };
+  expenditure_type: {
+    id?: number;
+    name?: string;
+  };
+  unit: {
+    id?: number;
+    name?: string;
+  };
+  region: {
+    id?: number;
+    region?: string;
+    regional_unit?: string;
+    municipality?: string;
+  };
+}
+
 // Manager information structure
 export interface MonadaManager {
   name: string;
