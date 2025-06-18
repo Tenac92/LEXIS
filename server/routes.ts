@@ -629,7 +629,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Debug: Check expenditure types data
         console.log(`[ProjectsWorking] DEBUG: Found ${expenditureTypes.length} expenditure types in database`);
-        console.log(`[ProjectsWorking] DEBUG: Sample expenditure types:`, expenditureTypes.slice(0, 3));
+        console.log(`[ProjectsWorking] DEBUG: All expenditure types:`, expenditureTypes);
+        console.log(`[ProjectsWorking] DEBUG: Sample project_index data:`, indexData.slice(0, 5));
         
         // Filter projects by unit using project_index and Monada tables
         const targetMonada = monadaData.find(m => m.unit === unitName);
@@ -668,9 +669,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Remove duplicates
             const uniqueExpenditureTypes = Array.from(new Set(projectExpenditureTypes));
             
-            // Fallback: If no expenditure types from index, try legacy JSONB
-            let finalExpenditureTypes = uniqueExpenditureTypes;
-            if (finalExpenditureTypes.length === 0 && project.expenditure_type) {
+            // COMPREHENSIVE FALLBACK: Always try legacy JSONB first since project_index may be incomplete
+            let finalExpenditureTypes = [];
+            
+            // Primary: Try legacy JSONB expenditure_type (most reliable source)
+            if (project.expenditure_type) {
               try {
                 const legacyTypes = typeof project.expenditure_type === 'string' 
                   ? JSON.parse(project.expenditure_type)
@@ -680,6 +683,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               } catch (e) {
                 console.error(`[ProjectsWorking] Error parsing legacy expenditure_type for ${project.mis}:`, e);
               }
+            }
+            
+            // Secondary: If legacy failed, try optimized schema
+            if (finalExpenditureTypes.length === 0) {
+              finalExpenditureTypes = uniqueExpenditureTypes;
+              if (finalExpenditureTypes.length > 0) {
+                console.log(`[ProjectsWorking] DEBUG: Using optimized schema expenditure_types for ${project.mis}:`, finalExpenditureTypes);
+              }
+            }
+            
+            // Tertiary: If both failed, provide empty array with warning
+            if (finalExpenditureTypes.length === 0) {
+              console.warn(`[ProjectsWorking] WARNING: No expenditure types found for project ${project.mis}`);
             }
             
             const eventType = indexItems.length > 0 ? eventTypes.find(et => et.id === indexItems[0].event_types_id) : null;
