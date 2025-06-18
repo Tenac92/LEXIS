@@ -11,9 +11,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProjectCard } from "@/components/projects/ProjectCard";
+import { ComprehensiveProjectsModal } from "@/components/projects/ComprehensiveProjectsModal";
 import { useToast } from "@/hooks/use-toast";
 import { type Project } from "@shared/schema";
-import { Plus, FileUp, Download, LayoutGrid, LayoutList, Upload, FolderOpen } from "lucide-react";
+import { Plus, FileUp, Download, LayoutGrid, LayoutList, Upload, FolderOpen, Building2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -34,6 +35,7 @@ export default function ProjectsPage() {
   const [status, setStatus] = useState<string>("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [comprehensiveModalOpen, setComprehensiveModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   console.log("Current user:", user);
@@ -154,6 +156,15 @@ export default function ProjectsPage() {
                     Εξαγωγή
                   </Button>
                 )}
+                
+                <Button 
+                  variant="outline" 
+                  onClick={() => setComprehensiveModalOpen(true)}
+                  className="bg-blue-50 border-blue-200 hover:bg-blue-100"
+                >
+                  <Building2 className="mr-2 h-4 w-4" />
+                  Ολοκληρωμένη Προβολή
+                </Button>
               </div>
             </div>
 
@@ -217,6 +228,12 @@ export default function ProjectsPage() {
           </div>
         </Card>
       </div>
+      
+      {/* Comprehensive Projects Modal */}
+      <ComprehensiveProjectsModal 
+        open={comprehensiveModalOpen}
+        onOpenChange={setComprehensiveModalOpen}
+      />
     </div>
   );
 }

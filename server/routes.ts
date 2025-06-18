@@ -1307,7 +1307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
 
     // Helper function to get current quarter
-    function getCurrentQuarter(): number {
+    const getCurrentQuarter = (): number => {
       const now = new Date();
       const month = now.getMonth() + 1; // getMonth() returns 0-11
       
@@ -1315,7 +1315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (month >= 4 && month <= 6) return 2;
       if (month >= 7 && month <= 9) return 3;
       return 4;
-    }
+    };
     
     // Set up specific budget routes first
     // Budget history route - must be registered BEFORE the MIS lookup route
