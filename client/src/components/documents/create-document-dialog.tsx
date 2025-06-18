@@ -2865,7 +2865,7 @@ export function CreateDocumentDialog({
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem value="" disabled>
+                            <SelectItem value="no-units" disabled>
                               Δεν βρέθηκαν μονάδες
                             </SelectItem>
                           )}
@@ -2935,11 +2935,18 @@ export function CreateDocumentDialog({
                           />
                         </SelectTrigger>
                         <SelectContent>
-                          {regions.map((region) => (
-                            <SelectItem key={region.id} value={region.id}>
+                          {regions
+                            .filter((region) => region.id && String(region.id).trim() !== '')
+                            .map((region) => (
+                            <SelectItem key={region.id} value={String(region.id)}>
                               {region.name}
                             </SelectItem>
                           ))}
+                          {regions.length === 0 && (
+                            <SelectItem value="no-regions" disabled>
+                              Δεν υπάρχουν διαθέσιμες περιοχές
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
