@@ -135,9 +135,11 @@ This is a full-stack web application built for Greek government budget and docum
 - Achieved 175ms query performance for complex filtering operations
 - Validated all foreign key relationships and data integrity
 - Built optimized `/api/projects/cards` endpoint using project_index schema
+- Updated all project endpoints (`GET /api/projects/:mis`, `PATCH /api/projects/:mis`) to use optimized schema
 - Created OptimizedProjectCard component with enhanced data display
 - Added comprehensive projects modal with "Ολοκληρωμένη Προβολή" button
 - Updated project interface to display organizational units, expenditure types, and geographic regions
+- Enhanced project detail and edit pages with optimized data structure including event types, expenditure categories, and organizational assignments
 
 ### June 18, 2025 - Initial setup
 

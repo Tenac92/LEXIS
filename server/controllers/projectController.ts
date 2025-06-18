@@ -596,8 +596,62 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       });
     }
 
+    // Get enhanced data for the updated project
+    const [eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
+      supabase.from('event_types').select('*'),
+      supabase.from('expediture_types').select('*'),
+      supabase.from('Monada').select('*'),
+      supabase.from('kallikratis').select('*'),
+      supabase.from('project_index').select('*').or(`project_na853.eq.${updatedProject.na853},project_mis.eq.${mis}`)
+    ]);
+
+    const eventTypes = eventTypesRes.data || [];
+    const expenditureTypes = expenditureTypesRes.data || [];
+    const monadaData = monadaRes.data || [];
+    const kallikratisData = kallikratisRes.data || [];
+    const indexData = indexRes.data || [];
+
+    // Find corresponding index entry for enhanced data
+    const indexItem = indexData.find(idx => 
+      idx.project_na853 === updatedProject.na853 || idx.project_mis === updatedProject.mis
+    );
+
+    // Get enhanced data if index entry exists
+    const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_type_id) : null;
+    const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expenditure_type_id) : null;
+    const monada = indexItem ? monadaData.find(m => m.id === indexItem.monada_id) : null;
+    const kallikratis = indexItem ? kallikratisData.find(k => k.id === indexItem.kallikratis_id) : null;
+
+    // Enhanced project response
+    const enhancedUpdatedProject = {
+      ...updatedProject,
+      // Enhanced information from project_index
+      enhanced_event_type: eventType ? {
+        id: eventType.id,
+        name: eventType.name,
+        description: eventType.description
+      } : null,
+      
+      enhanced_expenditure_type: expenditureType ? {
+        id: expenditureType.id,
+        name: expenditureType.expediture_types
+      } : null,
+      
+      enhanced_unit: monada ? {
+        id: monada.id,
+        name: monada.unit || monada.unit_name
+      } : null,
+      
+      enhanced_region: kallikratis ? {
+        id: kallikratis.id,
+        region: kallikratis.perifereia,
+        regional_unit: kallikratis.onoma_dimou_koinotitas,
+        municipality: kallikratis.onoma_dimou_koinotitas
+      } : null
+    };
+
     console.log(`[Projects] Successfully updated project with MIS: ${mis}`);
-    res.json(updatedProject);
+    res.json(enhancedUpdatedProject);
   } catch (error) {
     console.error(`[Projects] Error updating project:`, error);
     return res.status(500).json({
@@ -620,27 +674,78 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
       });
     }
 
+    // Get project from Projects table
     const { data: project, error } = await supabase
-      .from('Projects') // Note the capital P to match the table name
+      .from('Projects')
       .select('*')
       .eq('mis', mis)
       .single();
 
     if (error) {
-      console.error(`[Projects] Database error for MIS ${mis}:`, error);
-      return res.status(500).json({ 
-        message: "Failed to fetch project",
-        error: error.message
+      console.error(`[Projects] Error fetching project with MIS ${mis}:`, error);
+      return res.status(404).json({ 
+        message: `Project with MIS ${mis} not found`,
+        error: error.message 
       });
     }
 
-    if (!project) {
-      console.log(`[Projects] No project found with MIS: ${mis}`);
-      return res.status(404).json({ message: 'Project not found' });
-    }
+    // Get all reference data for enhancement
+    const [eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
+      supabase.from('event_types').select('*'),
+      supabase.from('expediture_types').select('*'),
+      supabase.from('Monada').select('*'),
+      supabase.from('kallikratis').select('*'),
+      supabase.from('project_index').select('*').or(`project_na853.eq.${project.na853},project_mis.eq.${mis}`)
+    ]);
+
+    const eventTypes = eventTypesRes.data || [];
+    const expenditureTypes = expenditureTypesRes.data || [];
+    const monadaData = monadaRes.data || [];
+    const kallikratisData = kallikratisRes.data || [];
+    const indexData = indexRes.data || [];
+
+    // Find corresponding index entry for enhanced data
+    const indexItem = indexData.find(idx => 
+      idx.project_na853 === project.na853 || idx.project_mis === project.mis
+    );
+
+    // Get enhanced data if index entry exists
+    const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_type_id) : null;
+    const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expenditure_type_id) : null;
+    const monada = indexItem ? monadaData.find(m => m.id === indexItem.monada_id) : null;
+    const kallikratis = indexItem ? kallikratisData.find(k => k.id === indexItem.kallikratis_id) : null;
+
+    // Enhanced project response
+    const enhancedProject = {
+      ...project,
+      // Enhanced information from project_index
+      enhanced_event_type: eventType ? {
+        id: eventType.id,
+        name: eventType.name,
+        description: eventType.description
+      } : null,
+      
+      enhanced_expenditure_type: expenditureType ? {
+        id: expenditureType.id,
+        name: expenditureType.expediture_types
+      } : null,
+      
+      enhanced_unit: monada ? {
+        id: monada.id,
+        name: monada.unit || monada.unit_name
+      } : null,
+      
+      enhanced_region: kallikratis ? {
+        id: kallikratis.id,
+        region: kallikratis.perifereia,
+        regional_unit: kallikratis.onoma_dimou_koinotitas,
+        municipality: kallikratis.onoma_dimou_koinotitas
+      } : null
+    };
 
     console.log(`[Projects] Successfully fetched project with MIS: ${mis}`);
-    res.json(project);
+    res.json(enhancedProject);
+    
   } catch (error) {
     console.error(`[Projects] Error fetching project:`, error);
     return res.status(500).json({
