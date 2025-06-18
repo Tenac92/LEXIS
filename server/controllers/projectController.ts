@@ -602,7 +602,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       supabase.from('expediture_types').select('*'),
       supabase.from('Monada').select('*'),
       supabase.from('kallikratis').select('*'),
-      supabase.from('project_index').select('*').or(`project_na853.eq.${updatedProject.na853},project_mis.eq.${mis}`)
+      supabase.from('project_index').select('*')
     ]);
 
     const eventTypes = eventTypesRes.data || [];
@@ -611,9 +611,10 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     const kallikratisData = kallikratisRes.data || [];
     const indexData = indexRes.data || [];
 
-    // Find corresponding index entry for enhanced data
+    // Find corresponding index entry for enhanced data - match by na853 or mis
     const indexItem = indexData.find(idx => 
-      idx.project_na853 === updatedProject.na853 || idx.project_mis === updatedProject.mis
+      (updatedProject.na853 && idx.project_na853 === updatedProject.na853) || 
+      (updatedProject.mis && idx.project_mis == updatedProject.mis)
     );
 
     // Get enhanced data if index entry exists
@@ -695,7 +696,7 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
       supabase.from('expediture_types').select('*'),
       supabase.from('Monada').select('*'),
       supabase.from('kallikratis').select('*'),
-      supabase.from('project_index').select('*').or(`project_na853.eq.${project.na853},project_mis.eq.${mis}`)
+      supabase.from('project_index').select('*')
     ]);
 
     const eventTypes = eventTypesRes.data || [];
@@ -704,9 +705,10 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
     const kallikratisData = kallikratisRes.data || [];
     const indexData = indexRes.data || [];
 
-    // Find corresponding index entry for enhanced data
+    // Find corresponding index entry for enhanced data - match by na853 or mis
     const indexItem = indexData.find(idx => 
-      idx.project_na853 === project.na853 || idx.project_mis === project.mis
+      (project.na853 && idx.project_na853 === project.na853) || 
+      (project.mis && idx.project_mis == project.mis)
     );
 
     // Get enhanced data if index entry exists

@@ -260,47 +260,60 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   // Use this ref to avoid repeated updates of the same document
   const processedDocumentId = useRef<string | null>(null);
 
-  // Function to load NA853 code (project ID) from MIS
+  // Function to load enhanced project data from MIS using optimized schema
   const loadProjectIdFromMis = async (mis: string) => {
     if (!mis) return;
     
     try {
-      console.log(`[EditDocument] Fetching NA853 code for MIS: ${mis}`);
+      console.log(`[EditDocument] Fetching enhanced project data for MIS: ${mis}`);
       setLoading(true); // Show loading indicator while fetching
       
-      const response = await fetch(`/api/document-na853/${mis}`);
+      const response = await fetch(`/api/projects/${mis}`);
       
       if (response.ok) {
-        const data = await response.json();
-        if (data && data.na853) {
-          console.log(`[EditDocument] Found NA853 code: ${data.na853} for MIS: ${mis}`);
-          setProjectId(data.na853);
+        const projectData = await response.json();
+        if (projectData && projectData.na853) {
+          console.log(`[EditDocument] Found enhanced project data:`, {
+            na853: projectData.na853,
+            event_type: projectData.enhanced_event_type?.name,
+            expenditure_type: projectData.enhanced_expenditure_type?.name,
+            unit: projectData.enhanced_unit?.name,
+            region: projectData.enhanced_region?.region
+          });
+          
+          setProjectId(projectData.na853);
+          
+          // Auto-fill expenditure type if available from enhanced data
+          if (projectData.enhanced_expenditure_type?.name) {
+            setExpenditureType(projectData.enhanced_expenditure_type.name);
+          }
+          
           toast({
             title: "Επιτυχία",
-            description: `Βρέθηκε ο κωδικός NA853: ${data.na853} για το MIS: ${mis}`,
+            description: `Βρέθηκε το έργο: ${projectData.na853} - ${projectData.event_description || projectData.project_title}`,
           });
-          return data.na853;
+          return projectData.na853;
         } else {
-          console.log(`[EditDocument] No NA853 code found for MIS: ${mis}`);
+          console.log(`[EditDocument] No project data found for MIS: ${mis}`);
           toast({
             title: "Προσοχή",
-            description: `Δε βρέθηκε κωδικός NA853 για το MIS: ${mis}`,
+            description: `Δε βρέθηκε έργο για το MIS: ${mis}`,
             variant: "destructive",
           });
         }
       } else {
-        console.error(`[EditDocument] Failed to fetch NA853 for MIS: ${mis}`);
+        console.error(`[EditDocument] Failed to fetch project for MIS: ${mis}`);
         toast({
           title: "Σφάλμα",
-          description: `Αποτυχία αναζήτησης κωδικού NA853 για το MIS: ${mis}`,
+          description: `Αποτυχία αναζήτησης έργου για το MIS: ${mis}`,
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error(`[EditDocument] Error fetching NA853 for MIS ${mis}:`, error);
+      console.error(`[EditDocument] Error fetching project for MIS ${mis}:`, error);
       toast({
         title: "Σφάλμα",
-        description: `Σφάλμα κατά την αναζήτηση κωδικού NA853: ${error instanceof Error ? error.message : 'Άγνωστο σφάλμα'}`,
+        description: `Σφάλμα κατά την αναζήτηση έργου: ${error instanceof Error ? error.message : 'Άγνωστο σφάλμα'}`,
         variant: "destructive",
       });
     } finally {
