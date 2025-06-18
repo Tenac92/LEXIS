@@ -159,10 +159,19 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
       return project.event_description.trim();
     }
     
-    if (project.project_title && project.project_title.trim()) return project.project_title.trim();
-    if (project.name && project.name.trim()) return project.name.trim();
+    if (project.project_title && project.project_title.trim()) {
+      return project.project_title.trim();
+    }
     
-    return `Έργο MIS: ${project.mis}`;
+    if (project.mis) {
+      return `Έργο MIS: ${project.mis}`;
+    }
+    
+    if (project.na853) {
+      return `Έργο NA853: ${project.na853}`;
+    }
+    
+    return 'Έργο χωρίς τίτλο';
   };
 
   const getRegionText = (project: OptimizedProject) => {
@@ -194,7 +203,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Building className="w-4 h-4" />
-                    <span>MIS: {project.mis || "Δ/Υ"}</span>
+                    <span>MIS: {project.mis ? project.mis.toString() : "Δ/Υ"}</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Building className="w-4 h-4" />
@@ -326,7 +335,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
         <div className="space-y-3 mb-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Building className="w-4 h-4" />
-            <span>MIS: {project.mis}</span>
+            <span>MIS: {project.mis ? project.mis.toString() : "Δ/Υ"}</span>
           </div>
           
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
