@@ -629,8 +629,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Debug: Check expenditure types data
         console.log(`[ProjectsWorking] DEBUG: Found ${expenditureTypes.length} expenditure types in database`);
-        console.log(`[ProjectsWorking] DEBUG: All expenditure types:`, expenditureTypes);
-        console.log(`[ProjectsWorking] DEBUG: Sample project_index data:`, indexData.slice(0, 5));
+        if (expenditureTypes.length === 0) {
+          console.error(`[ProjectsWorking] ERROR: expediture_types table appears to be empty or query failed`);
+        } else {
+          console.log(`[ProjectsWorking] DEBUG: Expenditure types IDs:`, expenditureTypes.map(et => et.id));
+        }
+        console.log(`[ProjectsWorking] DEBUG: Sample project_index data:`, indexData.slice(0, 3));
         
         // Filter projects by unit using project_index and Monada tables
         const targetMonada = monadaData.find(m => m.unit === unitName);
@@ -660,7 +664,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const projectExpenditureTypes = indexItems
               .map(idx => {
                 const expenditureType = expenditureTypes.find(et => et.id === idx.expediture_type_id);
-                console.log(`[ProjectsWorking] DEBUG: Index item expenditure_type_id: ${idx.expediture_type_id}, found type:`, expenditureType);
+                if (!expenditureType) {
+                  console.log(`[ProjectsWorking] DEBUG: No expenditure type found for ID ${idx.expediture_type_id}. Available types:`, expenditureTypes.map(et => `${et.id}: ${et.expediture_types}`));
+                }
                 return expenditureType;
               })
               .filter(et => et !== null && et !== undefined)
