@@ -125,8 +125,16 @@ This is a full-stack web application built for Greek government budget and docum
 - Session-based authentication with secure cookies
 - Input validation using Zod schemas
 
-Changelog:
-- June 18, 2025. Initial setup
+## Recent Changes
+
+### June 18, 2025 - Database Optimization
+- Created optimized `project_index` table for better query performance
+- Populated reference tables (`event_types`, `expediture_types`) with real data from CSV exports
+- Established foreign key relationships between projects, disaster types, and assistance categories
+- Implemented composite primary key structure for efficient indexing
+- Validated data integrity and query performance
+
+### June 18, 2025 - Initial setup
 
 ## User Preferences
 
