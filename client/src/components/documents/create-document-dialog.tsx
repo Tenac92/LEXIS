@@ -1860,9 +1860,16 @@ export function CreateDocumentDialog({
         );
 
         return validProjects.map((item: any) => {
-          // Process expenditure types
+          // Process expenditure types - handle both legacy and optimized schema
           let expenditureTypes: string[] = [];
-          if (item.expenditure_type) {
+          
+          // Try optimized schema first (expenditure_types array)
+          if (item.expenditure_types && Array.isArray(item.expenditure_types)) {
+            expenditureTypes = item.expenditure_types;
+            console.log(`[Projects] Using optimized schema expenditure_types for ${item.mis}:`, expenditureTypes);
+          }
+          // Fallback to legacy format (expenditure_type string/array)
+          else if (item.expenditure_type) {
             try {
               if (typeof item.expenditure_type === "string") {
                 expenditureTypes = JSON.parse(item.expenditure_type);
