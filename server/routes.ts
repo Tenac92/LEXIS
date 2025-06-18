@@ -1274,6 +1274,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
 
+    // Project regions endpoint for document creation dialog
+    app.get('/api/projects/:mis/regions', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const { mis } = req.params;
+        console.log(`[ProjectRegions] Fetching regions for project MIS: ${mis}`);
+        
+        // Get project data using optimized schema
+        const [projectsRes, kallikratisRes, indexRes] = await Promise.all([
+          supabase.from('Projects').select('*').eq('mis', parseInt(mis)),
+          supabase.from('kallikratis').select('*'),
+          supabase.from('project_index').select('*')
+        ]);
+        
+        if (projectsRes.error) {
+          console.error('[ProjectRegions] Database error:', projectsRes.error);
+          return res.status(500).json({ error: 'Database query failed' });
+        }
+        
+        const project = projectsRes.data?.[0];
+        if (!project) {
+          console.log(`[ProjectRegions] Project not found for MIS: ${mis}`);
+          return res.json({ regions: [] });
+        }
+        
+        // Find project in index to get kallikratis relationship
+        const indexItem = indexRes.data?.find(idx => idx.project_id === project.id);
+        if (!indexItem || !indexItem.kallikratis_id) {
+          console.log(`[ProjectRegions] No region data found for project ${mis}`);
+          return res.json({ regions: [] });
+        }
+        
+        // Get region data from kallikratis table
+        const regionData = kallikratisRes.data?.find(k => k.id === indexItem.kallikratis_id);
+        if (!regionData) {
+          return res.json({ regions: [] });
+        }
+        
+        // Format regions for the frontend
+        const regions = [{
+          id: regionData.id,
+          name: regionData.perifereia || regionData.onoma_dimou_koinotitas,
+          municipality: regionData.onoma_dimou_koinotitas,
+          regional_unit: regionData.perifereia,
+          level: regionData.level || 'municipality'
+        }];
+        
+        console.log(`[ProjectRegions] Found ${regions.length} regions for project ${mis}`);
+        res.json({ regions });
+        
+      } catch (error) {
+        console.error('[ProjectRegions] Error:', error);
+        res.status(500).json({ error: 'Failed to fetch project regions' });
+      }
+    });
+
     // Use authentication for all other project routes
     app.use('/api/projects', authenticateSession, projectRouter);
     app.use('/api/catalog', authenticateSession, projectRouter);
