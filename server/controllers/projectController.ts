@@ -369,26 +369,8 @@ router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
   }
 });
 
-// Get project regions
-router.get('/:mis/regions', async (req: Request, res: Response) => {
-  try {
-    const { mis } = req.params;
-    
-    if (!mis) {
-      return res.status(400).json({ 
-        message: "Project MIS is required" 
-      });
-    }
-    
-    console.log(`[Projects] Fetching regions for project: ${mis}`);
-    
-    // Query the Projects table to get the region data
-    // Check which columns actually exist in the Projects table
-    const { data, error } = await supabase
-      .from('Projects')
-      .select('*')
-      .eq('mis', mis)
-      .single();
+// Note: Project regions endpoint moved to routes.ts using optimized schema
+// This endpoint was removed to prevent database column errors
     
     if (error) {
       console.error('[Projects] Error fetching regions:', error);

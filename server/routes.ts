@@ -793,45 +793,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Project catalog routes - maintaining both /catalog and /projects endpoints for backwards compatibility
     
     // TODO: Refactor - Move these project-related public endpoints to projectController
-    // Public access to project regions for document creation
-    app.get('/api/projects/:mis/regions', async (req, res) => {
-      try {
-        const { mis } = req.params;
-        
-        if (!mis) {
-          return res.status(400).json({
-            status: 'error',
-            message: 'MIS parameter is required'
-          });
-        }
-        
-        console.log('[Projects] Public access fetching regions for project:', mis);
-        
-        // Query project to get regions
-        const { data: projectData, error: projectError } = await supabase
-          .from('Projects')
-          .select('region')
-          .eq('mis', mis)
-          .single();
-        
-        if (projectError) {
-          console.error('[Projects] Error fetching project regions:', projectError);
-          return res.status(500).json({
-            status: 'error',
-            message: 'Failed to fetch project regions'
-          });
-        }
-        
-        console.log('[Projects] Regions for project', mis, ':', projectData?.region);
-        return res.json(projectData?.region || {});
-      } catch (error) {
-        console.error('[Projects] Error in public regions access:', error);
-        return res.status(500).json({
-          status: 'error',
-          message: 'Failed to fetch project regions'
-        });
-      }
-    });
     
     // Public access to project search for document creation
     app.get('/api/projects/search', async (req, res) => {

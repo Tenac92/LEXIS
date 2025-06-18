@@ -62,7 +62,7 @@ export function MultiSelect({
             onChange([...value, selectedId]);
           }
         }}
-        value=""
+        value={undefined}
       >
         <FormControl>
           <SelectTrigger>
