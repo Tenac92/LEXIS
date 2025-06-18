@@ -583,7 +583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Dashboard routes are handled by the dashboard router below
     
-    // WORKING PROJECT ENDPOINT - authentic data without JSONB issues
+    // WORKING PROJECT ENDPOINT - uses optimized schema with project_index
     app.get('/api/projects-working/:unitName', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
       try {
         let { unitName } = req.params;
@@ -595,45 +595,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[ProjectsWorking] URL decode failed, using original: ${unitName}`);
         }
         
-        console.log(`[ProjectsWorking] Fetching authentic projects for unit: ${unitName}`);
+        console.log(`[ProjectsWorking] Fetching projects for unit: ${unitName}`);
         
-        // Get authentic project data using correct table and column names
-        const { data: allProjects, error: queryError } = await supabase
-          .from('Projects')
-          .select('mis, event_description, implementing_agency, expenditure_type, na853, na271, e069, status')
-          .limit(1000);
-          
-        if (queryError) {
-          console.error(`[ProjectsWorking] Query failed:`, queryError);
+        // Get projects with enhanced data using optimized schema
+        const [projectsRes, monadaRes, eventTypesRes, expenditureTypesRes, indexRes] = await Promise.all([
+          supabase.from('Projects').select('*'),
+          supabase.from('Monada').select('*'),
+          supabase.from('event_types').select('*'),
+          supabase.from('expediture_types').select('*'),
+          supabase.from('project_index').select('*')
+        ]);
+        
+        if (projectsRes.error) {
+          console.error(`[ProjectsWorking] Query failed:`, projectsRes.error);
           return res.status(500).json({
             message: 'Database query failed',
-            error: queryError.message
+            error: projectsRes.error.message
           });
         }
         
-        console.log(`[ProjectsWorking] Retrieved ${allProjects?.length || 0} authentic projects from database`);
+        const projects = projectsRes.data || [];
+        const monadaData = monadaRes.data || [];
+        const eventTypes = eventTypesRes.data || [];
+        const expenditureTypes = expenditureTypesRes.data || [];
+        const indexData = indexRes.data || [];
         
-        // Filter projects using authentic data for your specific unit
-        const filteredProjects = allProjects?.filter(project => {
-          const agency = project.implementing_agency;
-          try {
-            if (Array.isArray(agency)) {
-              return agency.some(a => String(a).includes(unitName));
-            }
-            if (typeof agency === 'string') {
-              return agency.includes(unitName);
-            }
-            if (agency && typeof agency === 'object') {
-              const agencyStr = JSON.stringify(agency);
-              return agencyStr.includes(unitName);
-            }
-          } catch (filterError) {
-            console.log(`[ProjectsWorking] Filter error for project ${project.mis}:`, filterError);
-          }
-          return false;
-        }) || [];
+        // Filter projects by unit using project_index and Monada tables
+        const targetMonada = monadaData.find(m => m.unit === unitName);
+        if (!targetMonada) {
+          console.log(`[ProjectsWorking] Unit ${unitName} not found in Monada table`);
+          return res.json([]);
+        }
         
-        console.log(`[ProjectsWorking] SUCCESS: Found ${filteredProjects.length} authentic projects for unit ${unitName}`);
+        // Find project IDs that belong to this unit
+        const unitProjectIds = indexData
+          .filter(idx => idx.monada_id === targetMonada.id)
+          .map(idx => idx.project_id);
+        
+        // Get projects for this unit with enhanced data
+        const filteredProjects = projects
+          .filter(project => unitProjectIds.includes(project.id))
+          .map(project => {
+            const indexItem = indexData.find(idx => idx.project_id === project.id);
+            const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_types_id) : null;
+            const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expediture_type_id) : null;
+            
+            return {
+              ...project,
+              enhanced_event_type: eventType ? {
+                id: eventType.id,
+                name: eventType.name
+              } : null,
+              enhanced_expenditure_type: expenditureType ? {
+                id: expenditureType.id,
+                name: expenditureType.expediture_types
+              } : null,
+              enhanced_unit: {
+                id: targetMonada.id,
+                name: targetMonada.unit
+              }
+            };
+          });
+        
+        console.log(`[ProjectsWorking] SUCCESS: Found ${filteredProjects.length} projects for unit ${unitName}`);
         
         return res.json(filteredProjects);
       } catch (error) {

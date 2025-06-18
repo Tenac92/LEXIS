@@ -140,6 +140,7 @@ This is a full-stack web application built for Greek government budget and docum
 - Added comprehensive projects modal with "Ολοκληρωμένη Προβολή" button
 - Updated project interface to display organizational units, expenditure types, and geographic regions
 - Enhanced project detail and edit pages with optimized data structure including event types, expenditure categories, and organizational assignments
+- Fixed `/api/projects-working` endpoint to use optimized schema structure, resolving document creation dialog errors
 
 ### June 18, 2025 - Initial setup
 
