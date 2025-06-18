@@ -1146,6 +1146,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
 
+    // Optimized endpoint for project cards using project_index
+    app.get('/api/projects/cards', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        console.log('[Projects] Fetching optimized project card data...');
+        const user = req.user as User;
+        
+        // Build query with user unit filtering
+        let query = supabase
+          .from('project_index')
+          .select(`
+            project_na853,
+            project_mis,
+            event_type_id,
+            expenditure_type_id,
+            monada_id,
+            kallikratis_id,
+            event_types:event_type_id (
+              id,
+              name,
+              description
+            ),
+            expenditure_types:expenditure_type_id (
+              id,
+              name
+            ),
+            Monada:monada_id (
+              id,
+              name
+            ),
+            kallikratis:kallikratis_id (
+              id,
+              region,
+              regional_unit,
+              municipality
+            ),
+            Projects:project_na853 (
+              na853,
+              mis,
+              budget_na853,
+              status,
+              created_at,
+              updated_at,
+              event_description,
+              project_title,
+              name
+            )
+          `);
+        
+        // Filter by user units if not admin
+        if (user.role !== 'admin' && user.units && user.units.length > 0) {
+          query = query.in('Monada.name', user.units);
+        }
+        
+        const { data: projectCards, error } = await query;
+        
+        if (error) {
+          console.error('[Projects] Error fetching project cards:', error);
+          return res.status(500).json({ error: 'Failed to fetch project cards' });
+        }
+        
+        console.log(`[Projects] Retrieved ${projectCards?.length || 0} project cards`);
+        
+        // Transform data for frontend consumption
+        const transformedCards = projectCards?.map(card => ({
+          // Core identifiers
+          na853: card.project_na853,
+          mis: card.project_mis,
+          
+          // Project details from Projects table
+          budget_na853: card.Projects?.budget_na853,
+          status: card.Projects?.status || 'active',
+          created_at: card.Projects?.created_at,
+          updated_at: card.Projects?.updated_at,
+          event_description: card.Projects?.event_description,
+          project_title: card.Projects?.project_title,
+          name: card.Projects?.name,
+          
+          // Event information
+          event_type: {
+            id: card.event_types?.id,
+            name: card.event_types?.name,
+            description: card.event_types?.description
+          },
+          
+          // Expenditure information
+          expenditure_type: {
+            id: card.expenditure_types?.id,
+            name: card.expenditure_types?.name
+          },
+          
+          // Organizational unit
+          unit: {
+            id: card.Monada?.id,
+            name: card.Monada?.name
+          },
+          
+          // Geographic information
+          region: {
+            id: card.kallikratis?.id,
+            region: card.kallikratis?.region,
+            regional_unit: card.kallikratis?.regional_unit,
+            municipality: card.kallikratis?.municipality
+          }
+        }));
+        
+        res.json(transformedCards);
+      } catch (error) {
+        console.error('[Projects] Error in project cards endpoint:', error);
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
     // Use authentication for all other project routes
     app.use('/api/projects', authenticateSession, projectRouter);
     app.use('/api/catalog', authenticateSession, projectRouter);
