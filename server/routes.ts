@@ -1033,6 +1033,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
 
+    // New endpoint for comprehensive project organization using project_index
+    app.get('/api/projects/organized', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        console.log('[Projects] Fetching organized project data using project_index...');
+        
+        // Fetch organized project data using the project_index table
+        const { data: organizedProjects, error } = await supabase
+          .from('project_index')
+          .select(`
+            project_id,
+            Projects!inner(
+              id,
+              na853,
+              event_description,
+              project_title,
+              event_type,
+              expenditure_type,
+              region,
+              implementing_agency,
+              budget_na853,
+              status,
+              created_at
+            ),
+            Monada!inner(
+              id,
+              unit,
+              unit_name,
+              email
+            ),
+            event_types!inner(
+              id,
+              name
+            ),
+            expediture_types!inner(
+              id,
+              expediture_types
+            ),
+            kallikratis!inner(
+              id,
+              onoma_dimou_koinotitas,
+              perifereia
+            )
+          `);
+
+        if (error) {
+          console.error('[Projects] Error fetching organized projects:', error);
+          return res.status(500).json({ message: 'Failed to fetch organized projects' });
+        }
+
+        console.log(`[Projects] Retrieved ${organizedProjects?.length || 0} indexed project records`);
+
+        // Organize the data by organizational units
+        const organizationMap = new Map();
+
+        organizedProjects?.forEach((item: any) => {
+          const unitId = item.Monada.id;
+          const unitName = item.Monada.unit;
+          const unitFullName = item.Monada.unit_name;
+          
+          if (!organizationMap.has(unitId)) {
+            organizationMap.set(unitId, {
+              unit: {
+                id: unitId,
+                name: unitName,
+                fullName: unitFullName,
+                email: item.Monada.email
+              },
+              projects: new Map()
+            });
+          }
+
+          const orgData = organizationMap.get(unitId);
+          const projectId = item.Projects.id;
+          
+          if (!orgData.projects.has(projectId)) {
+            orgData.projects.set(projectId, {
+              ...item.Projects,
+              expenditureTypes: new Set(),
+              eventTypes: new Set(),
+              regions: new Set()
+            });
+          }
+
+          const project = orgData.projects.get(projectId);
+          project.expenditureTypes.add(item.expediture_types.expediture_types);
+          project.eventTypes.add(item.event_types.name);
+          if (item.kallikratis.perifereia) {
+            project.regions.add(item.kallikratis.perifereia);
+          }
+          if (item.kallikratis.onoma_dimou_koinotitas) {
+            project.regions.add(item.kallikratis.onoma_dimou_koinotitas);
+          }
+        });
+
+        // Convert Maps to arrays and Sets to arrays for JSON serialization
+        const result = Array.from(organizationMap.values()).map(orgData => ({
+          unit: orgData.unit,
+          projects: Array.from(orgData.projects.values()).map((project: any) => ({
+            ...project,
+            expenditureTypes: Array.from(project.expenditureTypes),
+            eventTypes: Array.from(project.eventTypes),
+            regions: Array.from(project.regions)
+          }))
+        }));
+
+        console.log(`[Projects] Successfully organized data for ${result.length} organizational units`);
+        return res.json(result);
+      } catch (error) {
+        console.error('[Projects] Error in organized projects route:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+    });
+
     // Use authentication for all other project routes
     app.use('/api/projects', authenticateSession, projectRouter);
     app.use('/api/catalog', authenticateSession, projectRouter);
