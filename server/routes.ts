@@ -597,6 +597,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[ProjectsWorking] Fetching projects for unit: ${unitName}`);
         
+        // Debug: Check if project_index has data
+        const { data: indexCheck, error: indexCheckError } = await supabase
+          .from('project_index')
+          .select('*')
+          .limit(5);
+        console.log(`[ProjectsWorking] DEBUG: Sample project_index data:`, indexCheck);
+        
         // Get projects with enhanced data using optimized schema
         const [projectsRes, monadaRes, eventTypesRes, expenditureTypesRes, indexRes] = await Promise.all([
           supabase.from('Projects').select('*'),
@@ -620,6 +627,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const expenditureTypes = expenditureTypesRes.data || [];
         const indexData = indexRes.data || [];
         
+        // Debug: Check expenditure types data
+        console.log(`[ProjectsWorking] DEBUG: Found ${expenditureTypes.length} expenditure types in database`);
+        console.log(`[ProjectsWorking] DEBUG: Sample expenditure types:`, expenditureTypes.slice(0, 3));
+        
         // Filter projects by unit using project_index and Monada tables
         const targetMonada = monadaData.find(m => m.unit === unitName);
         if (!targetMonada) {
@@ -627,10 +638,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json([]);
         }
         
+        console.log(`[ProjectsWorking] DEBUG: Target monada:`, targetMonada);
+        
         // Find project IDs that belong to this unit
         const unitProjectIds = indexData
           .filter(idx => idx.monada_id === targetMonada.id)
           .map(idx => idx.project_id);
+        
+        console.log(`[ProjectsWorking] DEBUG: Found ${unitProjectIds.length} project IDs for unit ${unitName}`);
         
         // Get projects for this unit with enhanced data
         const filteredProjects = projects
@@ -638,14 +653,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map(project => {
             const indexItems = indexData.filter(idx => idx.project_id === project.id);
             
+            console.log(`[ProjectsWorking] DEBUG: Project ${project.mis} has ${indexItems.length} index entries`);
+            
             // Get all expenditure types for this project
             const projectExpenditureTypes = indexItems
-              .map(idx => expenditureTypes.find(et => et.id === idx.expediture_type_id))
+              .map(idx => {
+                const expenditureType = expenditureTypes.find(et => et.id === idx.expediture_type_id);
+                console.log(`[ProjectsWorking] DEBUG: Index item expenditure_type_id: ${idx.expediture_type_id}, found type:`, expenditureType);
+                return expenditureType;
+              })
               .filter(et => et !== null && et !== undefined)
               .map(et => et.expediture_types);
             
             // Remove duplicates
             const uniqueExpenditureTypes = Array.from(new Set(projectExpenditureTypes));
+            
+            // Fallback: If no expenditure types from index, try legacy JSONB
+            let finalExpenditureTypes = uniqueExpenditureTypes;
+            if (finalExpenditureTypes.length === 0 && project.expenditure_type) {
+              try {
+                const legacyTypes = typeof project.expenditure_type === 'string' 
+                  ? JSON.parse(project.expenditure_type)
+                  : project.expenditure_type;
+                finalExpenditureTypes = Array.isArray(legacyTypes) ? legacyTypes : [];
+                console.log(`[ProjectsWorking] DEBUG: Using legacy expenditure_type for ${project.mis}:`, finalExpenditureTypes);
+              } catch (e) {
+                console.error(`[ProjectsWorking] Error parsing legacy expenditure_type for ${project.mis}:`, e);
+              }
+            }
             
             const eventType = indexItems.length > 0 ? eventTypes.find(et => et.id === indexItems[0].event_types_id) : null;
             const expenditureType = indexItems.length > 0 ? expenditureTypes.find(et => et.id === indexItems[0].expediture_type_id) : null;
@@ -665,8 +700,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 id: targetMonada.id,
                 name: targetMonada.unit
               },
-              // Add expenditure_types array for document creation dialog
-              expenditure_types: uniqueExpenditureTypes
+              // Add expenditure_types array for document creation dialog (includes fallback)
+              expenditure_types: finalExpenditureTypes
             };
           });
         
