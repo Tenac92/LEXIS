@@ -201,14 +201,14 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       console.warn('Warning: Could not fetch budget data for export:', budgetError);
     }
 
-    if (!projects || projects.length === 0) {
+    if (!enhancedProjects || enhancedProjects.length === 0) {
       return res.status(404).json({ message: 'No projects found for export' });
     }
 
     // Create a combined dataset for the integrated view
     const combinedData: any[] = [];
 
-    projects.forEach(project => {
+    enhancedProjects.forEach(project => {
       // Find all budget splits for this project (match by MIS or NA853)
       const projectSplits = budgetSplits?.filter(split => 
         split.mis?.toString() === project.mis?.toString() ||
