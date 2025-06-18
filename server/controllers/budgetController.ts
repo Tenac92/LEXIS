@@ -112,10 +112,10 @@ export async function getBudgetByMis(req: Request, res: Response) {
       console.log(`[Budget] Handling alphanumeric code: ${decodedMis}`);
       
       try {
-        // Look for project with this NA853 code
+        // Look for project with this NA853 code using optimized schema
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
-          .select('mis, na853')
+          .select('id, mis, na853, budget_na853')
           .eq('na853', decodedMis)
           .single();
         

@@ -115,19 +115,81 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
   try {
     console.log('[Projects] Generating Excel export with projects and budget data');
 
-    // Fetch all projects
-    const { data: projects, error: projectsError } = await supabase
-      .from('Projects')
-      .select('*')
-      .order('created_at', { ascending: false });
+    // Fetch all projects with enhanced data using optimized schema
+    const [projectsRes, monadaRes, eventTypesRes, expenditureTypesRes, kallikratisRes, indexRes] = await Promise.all([
+      supabase.from('Projects').select('*').order('created_at', { ascending: false }),
+      supabase.from('Monada').select('*'),
+      supabase.from('event_types').select('*'),
+      supabase.from('expediture_types').select('*'),
+      supabase.from('kallikratis').select('*'),
+      supabase.from('project_index').select('*')
+    ]);
 
-    if (projectsError) {
-      console.error('Error fetching projects for Excel export:', projectsError);
+    if (projectsRes.error) {
+      console.error('Error fetching projects for Excel export:', projectsRes.error);
       return res.status(500).json({ 
         message: "Failed to fetch projects for export",
-        error: projectsError.message
+        error: projectsRes.error.message
       });
     }
+
+    const projects = projectsRes.data;
+    const monadaData = monadaRes.data || [];
+    const eventTypes = eventTypesRes.data || [];
+    const expenditureTypes = expenditureTypesRes.data || [];
+    const kallikratisData = kallikratisRes.data || [];
+    const indexData = indexRes.data || [];
+
+    // Enhance projects with optimized schema data
+    const enhancedProjects = projects.map(project => {
+      const projectIndexItems = indexData.filter(idx => idx.project_id === project.id);
+      
+      // Get all expenditure types for this project
+      const allExpenditureTypes = projectIndexItems
+        .map(idx => expenditureTypes.find(et => et.id === idx.expediture_type_id))
+        .filter(et => et !== null && et !== undefined)
+        .map(et => et.expediture_types);
+      const uniqueExpenditureTypes = Array.from(new Set(allExpenditureTypes));
+
+      // Get all event types for this project
+      const allEventTypes = projectIndexItems
+        .map(idx => eventTypes.find(et => et.id === idx.event_types_id))
+        .filter(et => et !== null && et !== undefined)
+        .map(et => et.name);
+      const uniqueEventTypes = Array.from(new Set(allEventTypes));
+
+      const eventType = projectIndexItems.length > 0 ? 
+        eventTypes.find(et => et.id === projectIndexItems[0].event_types_id) : null;
+      const expenditureType = projectIndexItems.length > 0 ? 
+        expenditureTypes.find(et => et.id === projectIndexItems[0].expediture_type_id) : null;
+      const monadaItem = projectIndexItems.length > 0 ? 
+        monadaData.find(m => m.id === projectIndexItems[0].monada_id) : null;
+      const kallikratisItem = projectIndexItems.length > 0 ? 
+        kallikratisData.find(k => k.id === projectIndexItems[0].kallikratis_id) : null;
+
+      return {
+        ...project,
+        enhanced_event_type: eventType ? {
+          id: eventType.id,
+          name: eventType.name
+        } : null,
+        enhanced_expenditure_type: expenditureType ? {
+          id: expenditureType.id,
+          name: expenditureType.expediture_types
+        } : null,
+        enhanced_unit: monadaItem ? {
+          id: monadaItem.id,
+          name: monadaItem.unit
+        } : null,
+        enhanced_kallikratis: kallikratisItem ? {
+          id: kallikratisItem.id,
+          name: kallikratisItem.perifereia || kallikratisItem.onoma_dimou_koinotitas,
+          level: kallikratisItem.level || 'municipality'
+        } : null,
+        expenditure_types: uniqueExpenditureTypes,
+        event_types: uniqueEventTypes
+      };
+    });
 
     // Fetch all budget splits
     const { data: budgetSplits, error: budgetError } = await supabase

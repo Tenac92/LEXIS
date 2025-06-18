@@ -35,16 +35,37 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    // Get project NA853
-    const { data: projectData, error: projectError } = await supabase
-      .from('Projects')
-      .select('na853, budget_na853')
-      .eq('mis', project_id)
-      .single();
+    // Get project data with enhanced information using optimized schema
+    const [projectRes, eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
+      supabase.from('Projects').select('*').eq('mis', project_id).single(),
+      supabase.from('event_types').select('*'),
+      supabase.from('expediture_types').select('*'),
+      supabase.from('Monada').select('*'),
+      supabase.from('kallikratis').select('*'),
+      supabase.from('project_index').select('*')
+    ]);
 
-    if (projectError || !projectData) {
-      return res.status(404).json({ message: 'Project not found', error: projectError?.message });
+    if (projectRes.error || !projectRes.data) {
+      return res.status(404).json({ message: 'Project not found', error: projectRes.error?.message });
     }
+
+    const projectData = projectRes.data;
+    const eventTypes = eventTypesRes.data || [];
+    const expenditureTypes = expenditureTypesRes.data || [];
+    const monadaData = monadaRes.data || [];
+    const kallikratisData = kallikratisRes.data || [];
+    const indexData = indexRes.data || [];
+
+    // Get enhanced data for this project
+    const projectIndexItems = indexData.filter(idx => idx.project_id === projectData.id);
+    const eventType = projectIndexItems.length > 0 ? 
+      eventTypes.find(et => et.id === projectIndexItems[0].event_types_id) : null;
+    const expenditureTypeData = projectIndexItems.length > 0 ? 
+      expenditureTypes.find(et => et.id === projectIndexItems[0].expediture_type_id) : null;
+    const monadaItem = projectIndexItems.length > 0 ? 
+      monadaData.find(m => m.id === projectIndexItems[0].monada_id) : null;
+    const kallikratisItem = projectIndexItems.length > 0 ? 
+      kallikratisData.find(k => k.id === projectIndexItems[0].kallikratis_id) : null;
     
     console.log('[DocumentsController] Retrieved project data:', projectData);
 
@@ -135,12 +156,14 @@ router.post('/v2', async (req: Request, res: Response) => {
       console.log('[DocumentsController] V2 Fetching NA853 for project with MIS:', project_id);
       
       try {
-        // Look up in the Projects table - using the project_id as the MIS value
-        const { data: projectData, error: projectError } = await supabase
-          .from('Projects')
-          .select('na853, budget_na853')
-          .eq('mis', project_id)
-          .single();
+        // Look up in the Projects table with optimized schema - using the project_id as the MIS value
+        const [projectRes, indexRes] = await Promise.all([
+          supabase.from('Projects').select('*').eq('mis', project_id).single(),
+          supabase.from('project_index').select('*')
+        ]);
+        
+        const projectData = projectRes.data;
+        const projectError = projectRes.error;
         
         if (!projectError && projectData) {
           // First try to use the na853 field directly (this is the column referenced in the FK constraint)
@@ -158,10 +181,10 @@ router.post('/v2', async (req: Request, res: Response) => {
             console.error('[DocumentsController] V2 No NA853 or budget_na853 available in project data');
             // Try to use project_mis as fallback if available
             if (req.body.project_mis) {
-              // Look up project by project_mis to find a matching NA853 code
+              // Look up project by project_mis using optimized schema
               const { data: projectByMis } = await supabase
                 .from('Projects')
-                .select('na853')
+                .select('id, mis, na853, budget_na853')
                 .eq('mis', req.body.project_mis)
                 .single();
               
@@ -541,7 +564,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
         
         const projectResult = await supabase
           .from('Projects')
-          .select('na853, budget_na853')
+          .select('id, mis, na853, budget_na853')
           .eq('mis', project_id)
           .single();
           
