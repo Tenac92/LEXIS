@@ -141,6 +141,10 @@ This is a full-stack web application built for Greek government budget and docum
 - Updated project interface to display organizational units, expenditure types, and geographic regions
 - Enhanced project detail and edit pages with optimized data structure including event types, expenditure categories, and organizational assignments
 - Fixed `/api/projects-working` endpoint to use optimized schema structure, resolving document creation dialog errors
+- Added missing `/api/projects/:mis/regions` endpoint for document creation dialog region selection
+- Updated project validation schema to handle both legacy JSONB and optimized enhanced data structure
+- Fixed TypeScript errors in project helpers for proper union type handling
+- Verified complete document creation flow works with optimized database structure
 
 ### June 18, 2025 - Initial setup
 
