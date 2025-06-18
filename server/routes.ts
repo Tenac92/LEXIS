@@ -1169,7 +1169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const { data: projectsData, error: projectsError } = await supabase
           .from('Projects')
-          .select('na853, mis, budget_na853, status, created_at, updated_at, event_description, project_title, name')
+          .select('na853, mis, budget_na853, status, created_at, updated_at, event_description, project_title')
           .in('na853', projectIds);
         
         if (projectsError) {
@@ -1223,7 +1223,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updated_at: projectData?.updated_at,
             event_description: projectData?.event_description,
             project_title: projectData?.project_title,
-            name: projectData?.name,
             
             // Event information
             event_type: {

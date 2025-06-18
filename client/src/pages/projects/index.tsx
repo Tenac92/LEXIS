@@ -215,9 +215,9 @@ export default function ProjectsPage() {
               </div>
             ) : filteredProjects?.length ? (
               <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
-                {filteredProjects.map((project) => (
+                {filteredProjects.map((project, index) => (
                   <OptimizedProjectCard
-                    key={`${project.na853}-${project.mis}`}
+                    key={`${project.na853 || 'na853-' + index}-${project.mis || 'mis-' + index}`}
                     project={project}
                     view={view}
                     isAdmin={isAdmin}

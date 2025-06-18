@@ -224,6 +224,18 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                       <span>{project.unit.name}</span>
                     </div>
                   )}
+                  {project.event_type?.name && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Info className="w-4 h-4" />
+                      <span>Τύπος: {project.event_type.name}</span>
+                    </div>
+                  )}
+                  {project.expenditure_type?.name && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <DollarSign className="w-4 h-4" />
+                      <span>Δαπάνη: {project.expenditure_type.name}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -333,6 +345,20 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="w-4 h-4" />
               <span>{getRegionText(project)}</span>
+            </div>
+          )}
+
+          {project.event_type?.name && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Info className="w-4 h-4" />
+              <span>Τύπος: {project.event_type.name}</span>
+            </div>
+          )}
+
+          {project.expenditure_type?.name && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <DollarSign className="w-4 h-4" />
+              <span>Δαπάνη: {project.expenditure_type.name}</span>
             </div>
           )}
 
