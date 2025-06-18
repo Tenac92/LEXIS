@@ -11,35 +11,99 @@ export const router = Router();
 
 export async function listProjects(req: Request, res: Response) {
   try {
-    console.log('[Projects] Fetching all projects');
-    const { data, error } = await supabase
-      .from('Projects')
-      .select('*')
-      .order('created_at', { ascending: false });
+    console.log('[Projects] Fetching all projects with optimized schema');
+    
+    // Get projects with enhanced data using optimized schema
+    const [projectsRes, monadaRes, eventTypesRes, expenditureTypesRes, kallikratisRes, indexRes] = await Promise.all([
+      supabase.from('Projects').select('*').order('created_at', { ascending: false }),
+      supabase.from('Monada').select('*'),
+      supabase.from('event_types').select('*'),
+      supabase.from('expediture_types').select('*'),
+      supabase.from('kallikratis').select('*'),
+      supabase.from('project_index').select('*')
+    ]);
 
-    if (error) {
-      console.error("Database error:", error);
+    if (projectsRes.error) {
+      console.error("Database error:", projectsRes.error);
       return res.status(500).json({ 
         message: "Failed to fetch projects from database",
-        error: error.message
+        error: projectsRes.error.message
       });
     }
 
-    if (!data) {
+    if (!projectsRes.data) {
       return res.status(404).json({ message: 'No projects found' });
     }
 
-    // Map projects and validate with our model
-    const formattedProjects = data.map(project => {
+    const projects = projectsRes.data;
+    const monadaData = monadaRes.data || [];
+    const eventTypes = eventTypesRes.data || [];
+    const expenditureTypes = expenditureTypesRes.data || [];
+    const kallikratisData = kallikratisRes.data || [];
+    const indexData = indexRes.data || [];
+
+    // Enhance projects with optimized schema data
+    const enhancedProjects = projects.map(project => {
       try {
-        return projectHelpers.validateProject(project);
+        // Get all index entries for this project
+        const projectIndexItems = indexData.filter(idx => idx.project_id === project.id);
+        
+        // Get enhanced data
+        const eventTypeData = projectIndexItems.length > 0 ? 
+          eventTypes.find(et => et.id === projectIndexItems[0].event_types_id) : null;
+        const expenditureTypeData = projectIndexItems.length > 0 ? 
+          expenditureTypes.find(et => et.id === projectIndexItems[0].expediture_type_id) : null;
+        const monadaData_item = projectIndexItems.length > 0 ? 
+          monadaData.find(m => m.id === projectIndexItems[0].monada_id) : null;
+        const kallikratisData_item = projectIndexItems.length > 0 ? 
+          kallikratisData.find(k => k.id === projectIndexItems[0].kallikratis_id) : null;
+
+        // Get all expenditure types for this project
+        const allExpenditureTypes = projectIndexItems
+          .map(idx => expenditureTypes.find(et => et.id === idx.expediture_type_id))
+          .filter(et => et !== null && et !== undefined)
+          .map(et => et.expediture_types);
+        const uniqueExpenditureTypes = Array.from(new Set(allExpenditureTypes));
+
+        // Get all event types for this project
+        const allEventTypes = projectIndexItems
+          .map(idx => eventTypes.find(et => et.id === idx.event_types_id))
+          .filter(et => et !== null && et !== undefined)
+          .map(et => et.name);
+        const uniqueEventTypes = Array.from(new Set(allEventTypes));
+
+        const enhancedProject = {
+          ...project,
+          enhanced_event_type: eventTypeData ? {
+            id: eventTypeData.id,
+            name: eventTypeData.name
+          } : null,
+          enhanced_expenditure_type: expenditureTypeData ? {
+            id: expenditureTypeData.id,
+            name: expenditureTypeData.expediture_types
+          } : null,
+          enhanced_unit: monadaData_item ? {
+            id: monadaData_item.id,
+            name: monadaData_item.unit
+          } : null,
+          enhanced_kallikratis: kallikratisData_item ? {
+            id: kallikratisData_item.id,
+            name: kallikratisData_item.perifereia || kallikratisData_item.onoma_dimou_koinotitas,
+            level: kallikratisData_item.level || 'municipality'
+          } : null,
+          // Add arrays for backward compatibility
+          expenditure_types: uniqueExpenditureTypes,
+          event_types: uniqueEventTypes
+        };
+
+        return projectHelpers.validateProject(enhancedProject);
       } catch (error) {
         console.error('Project validation error:', error);
         return null;
       }
     }).filter((project): project is Project => project !== null);
 
-    res.json(formattedProjects);
+    res.json(enhancedProjects);
   } catch (error) {
     console.error("Error fetching projects:", error);
     res.status(500).json({ message: "Failed to fetch projects" });

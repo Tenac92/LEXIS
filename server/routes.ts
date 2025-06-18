@@ -80,10 +80,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Get project NA853
+        // Get project NA853 using optimized lookup
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
-          .select('budget_na853')
+          .select('id, mis, na853, budget_na853')
           .eq('mis', project_id)
           .single();
 
@@ -645,7 +645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .map(et => et.expediture_types);
             
             // Remove duplicates
-            const uniqueExpenditureTypes = [...new Set(projectExpenditureTypes)];
+            const uniqueExpenditureTypes = Array.from(new Set(projectExpenditureTypes));
             
             const eventType = indexItems.length > 0 ? eventTypes.find(et => et.id === indexItems[0].event_types_id) : null;
             const expenditureType = indexItems.length > 0 ? expenditureTypes.find(et => et.id === indexItems[0].expediture_type_id) : null;
@@ -697,43 +697,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[UnitProjects] Fetching projects for unit: ${unitName}`);
         
         try {
-          // Get all projects safely - no JSONB operations
-          const { data: allProjects, error: queryError } = await supabase
-            .from('Projects')
-            .select('id, mis, na853, title, budget_na853, implementing_agency, status')
-            .limit(1000);
-            
-          if (queryError) {
-            console.error(`[UnitProjects] Query failed:`, queryError);
+          // Use optimized schema with project_index for efficient unit-based filtering
+          const [projectsRes, monadaRes, eventTypesRes, expenditureTypesRes, kallikratisRes, indexRes] = await Promise.all([
+            supabase.from('Projects').select('*'),
+            supabase.from('Monada').select('*'),
+            supabase.from('event_types').select('*'),
+            supabase.from('expediture_types').select('*'),
+            supabase.from('kallikratis').select('*'),
+            supabase.from('project_index').select('*')
+          ]);
+          
+          if (projectsRes.error) {
+            console.error(`[UnitProjects] Query failed:`, projectsRes.error);
             return res.status(500).json({
               message: 'Database query failed',
-              error: queryError.message
+              error: projectsRes.error.message
             });
           }
           
-          console.log(`[UnitProjects] Retrieved ${allProjects?.length || 0} total projects from database`);
+          const projects = projectsRes.data || [];
+          const monadaData = monadaRes.data || [];
+          const eventTypes = eventTypesRes.data || [];
+          const expenditureTypes = expenditureTypesRes.data || [];
+          const kallikratisData = kallikratisRes.data || [];
+          const indexData = indexRes.data || [];
           
-          // Filter projects using authentic data for your specific unit
-          const filteredProjects = allProjects?.filter(project => {
-            const agency = project.implementing_agency;
-            try {
-              if (Array.isArray(agency)) {
-                return agency.some(a => String(a).includes(unitName));
-              }
-              if (typeof agency === 'string') {
-                return agency.includes(unitName);
-              }
-              if (agency && typeof agency === 'object') {
-                const agencyStr = JSON.stringify(agency);
-                return agencyStr.includes(unitName);
-              }
-            } catch (filterError) {
-              console.log(`[UnitProjects] Filter error for project ${project.id}:`, filterError);
-            }
-            return false;
-          }) || [];
+          console.log(`[UnitProjects] Retrieved ${projects.length} total projects from database`);
           
-          console.log(`[UnitProjects] After filtering: found ${filteredProjects.length} projects for unit ${unitName}`);
+          // Find the target unit in Monada table
+          const targetMonada = monadaData.find(m => m.unit === unitName);
+          if (!targetMonada) {
+            console.log(`[UnitProjects] Unit ${unitName} not found in Monada table`);
+            return res.json([]);
+          }
+          
+          // Find project IDs that belong to this unit using project_index
+          const unitProjectIds = indexData
+            .filter(idx => idx.monada_id === targetMonada.id)
+            .map(idx => idx.project_id);
+          
+          // Get enhanced projects for this unit
+          const filteredProjects = projects
+            .filter(project => unitProjectIds.includes(project.id))
+            .map(project => {
+              const indexItems = indexData.filter(idx => idx.project_id === project.id);
+              
+              // Get all expenditure types for this project
+              const projectExpenditureTypes = indexItems
+                .map(idx => expenditureTypes.find(et => et.id === idx.expediture_type_id))
+                .filter(et => et !== null && et !== undefined)
+                .map(et => et.expediture_types);
+              const uniqueExpenditureTypes = Array.from(new Set(projectExpenditureTypes));
+              
+              // Get all event types for this project
+              const projectEventTypes = indexItems
+                .map(idx => eventTypes.find(et => et.id === idx.event_types_id))
+                .filter(et => et !== null && et !== undefined)
+                .map(et => et.name);
+              const uniqueEventTypes = Array.from(new Set(projectEventTypes));
+              
+              const eventType = indexItems.length > 0 ? eventTypes.find(et => et.id === indexItems[0].event_types_id) : null;
+              const expenditureType = indexItems.length > 0 ? expenditureTypes.find(et => et.id === indexItems[0].expediture_type_id) : null;
+              const kallikratis = indexItems.length > 0 ? kallikratisData.find(k => k.id === indexItems[0].kallikratis_id) : null;
+              
+              return {
+                ...project,
+                enhanced_event_type: eventType ? {
+                  id: eventType.id,
+                  name: eventType.name
+                } : null,
+                enhanced_expenditure_type: expenditureType ? {
+                  id: expenditureType.id,
+                  name: expenditureType.expediture_types
+                } : null,
+                enhanced_unit: {
+                  id: targetMonada.id,
+                  name: targetMonada.unit
+                },
+                enhanced_kallikratis: kallikratis ? {
+                  id: kallikratis.id,
+                  name: kallikratis.perifereia || kallikratis.onoma_dimou_koinotitas,
+                  level: kallikratis.level || 'municipality'
+                } : null,
+                expenditure_types: uniqueExpenditureTypes,
+                event_types: uniqueEventTypes
+              };
+            });
+          
+          console.log(`[UnitProjects] After optimized filtering: found ${filteredProjects.length} projects for unit ${unitName}`);
           
           return res.json(filteredProjects);
         } catch (dbError) {
