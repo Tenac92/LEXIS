@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ProjectCard } from "@/components/projects/ProjectCard";
+import { OptimizedProjectCard } from "@/components/projects/OptimizedProjectCard";
 import { ComprehensiveProjectsModal } from "@/components/projects/ComprehensiveProjectsModal";
 import { useToast } from "@/hooks/use-toast";
 import { type Project, type OptimizedProject } from "@shared/schema";
@@ -216,8 +216,8 @@ export default function ProjectsPage() {
             ) : filteredProjects?.length ? (
               <div className={view === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
                 {filteredProjects.map((project) => (
-                  <ProjectCard
-                    key={`${project.id}-${project.mis}`}
+                  <OptimizedProjectCard
+                    key={`${project.na853}-${project.mis}`}
                     project={project}
                     view={view}
                     isAdmin={isAdmin}

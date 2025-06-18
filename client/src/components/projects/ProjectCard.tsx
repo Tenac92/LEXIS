@@ -169,83 +169,29 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
     }
   };
 
-  const getProjectTitle = (project: Project) => {
-    // Display event_description as the primary title for project cards
-    const projectData = project as any;
-    
+  const getProjectTitle = (project: OptimizedProject) => {
     // Use event_description as the main display field
-    if (projectData.event_description && projectData.event_description.trim()) {
-      return projectData.event_description.trim();
+    if (project.event_description && project.event_description.trim()) {
+      return project.event_description.trim();
     }
     
     // Fallback to other title fields if event_description is not available
-    if (projectData.title && projectData.title.trim()) return projectData.title.trim();
-    if (projectData.project_title && projectData.project_title.trim()) return projectData.project_title.trim();
-    if (projectData.name && projectData.name.trim()) return projectData.name.trim();
+    if (project.project_title && project.project_title.trim()) return project.project_title.trim();
+    if (project.name && project.name.trim()) return project.name.trim();
     
     // Final fallback to showing MIS code with a label
     return `Έργο MIS: ${project.mis}`;
   };
 
-  const getRegionText = (project: Project) => {
+  const getRegionText = (project: OptimizedProject) => {
     if (!project.region) return '';
     
-    // Handle string regions
-    if (typeof project.region === 'string') {
-      return project.region;
-    }
+    const parts = [];
+    if (project.region.region) parts.push(project.region.region);
+    if (project.region.regional_unit) parts.push(project.region.regional_unit);
+    if (project.region.municipality) parts.push(project.region.municipality);
     
-    // Handle array regions
-    if (Array.isArray(project.region)) {
-      return project.region.join(', ');
-    }
-    
-    // Handle object regions - try to extract meaningful text
-    if (typeof project.region === 'object') {
-      try {
-        // If it's an object with structured region data
-        const obj = project.region as any;
-        
-        // Try structured region data first
-        if (obj.region || obj.municipality || obj.regional_unit) {
-          const parts = [];
-          if (obj.region?.length) {
-            parts.push(Array.isArray(obj.region) ? obj.region[0] : obj.region);
-          }
-          if (obj.regional_unit?.length) {
-            parts.push(Array.isArray(obj.regional_unit) ? obj.regional_unit[0] : obj.regional_unit);
-          }
-          if (obj.municipality?.length) {
-            parts.push(Array.isArray(obj.municipality) ? obj.municipality[0] : obj.municipality);
-          }
-          if (parts.length > 0) return parts.join(' / ');
-        }
-        
-        // Try other common properties
-        if (obj.name) return obj.name;
-        if (obj.title) return obj.title;
-        
-        // If it has keys, try to join their values
-        const keys = Object.keys(obj);
-        if (keys.length > 0) {
-          const values = keys.map(key => {
-            const val = obj[key];
-            if (Array.isArray(val) && val.length > 0) {
-              return val[0];
-            }
-            return val;
-          }).filter(val => val && typeof val === 'string');
-          
-          if (values.length > 0) {
-            return values.join(', ');
-          }
-        }
-      } catch (e) {
-        console.warn('Error parsing region object:', e);
-      }
-    }
-    
-    return '';
+    return parts.join(' / ');
   };
 
   if (view === "list") {
@@ -282,7 +228,7 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <DollarSign className="w-4 h-4" />
-                      <span>Προϋπολογισμός: {formatCurrency(Number(project.budget_na853))}</span>
+                      <span>Προϋπολογισμός: {formatCurrency(Number(project.budget_na853) || 0)}</span>
                     </div>
                     {budgetData && (
                       <div className="flex items-center gap-2 text-muted-foreground">
