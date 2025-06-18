@@ -1152,74 +1152,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('[Projects] Fetching optimized project card data...');
         const user = req.user as User;
         
-        // Build query with user unit filtering
-        let query = supabase
+        // Get all project index records first
+        const { data: indexData, error: indexError } = await supabase
           .from('project_index')
-          .select(`
-            project_na853,
-            project_mis,
-            event_type_id,
-            expenditure_type_id,
-            monada_id,
-            kallikratis_id,
-            event_types:event_type_id (
-              id,
-              name,
-              description
-            ),
-            expenditure_types:expenditure_type_id (
-              id,
-              name
-            ),
-            Monada:monada_id (
-              id,
-              name
-            ),
-            kallikratis:kallikratis_id (
-              id,
-              region,
-              regional_unit,
-              municipality
-            ),
-            Projects:project_na853 (
-              na853,
-              mis,
-              budget_na853,
-              status,
-              created_at,
-              updated_at,
-              event_description,
-              project_title,
-              name
-            )
-          `);
+          .select('*');
         
-        // Filter by user units if not admin
-        if (user.role !== 'admin' && user.units && user.units.length > 0) {
-          query = query.in('Monada.name', user.units);
+        if (indexError) {
+          console.error('[Projects] Error fetching project index:', indexError);
+          return res.status(500).json({ error: 'Failed to fetch project index' });
         }
         
-        const { data: projectCards, error } = await query;
+        console.log(`[Projects] Retrieved ${indexData?.length || 0} project index records`);
         
-        if (error) {
-          console.error('[Projects] Error fetching project cards:', error);
-          return res.status(500).json({ error: 'Failed to fetch project cards' });
+        // Get related data from Projects table
+        const projectIds = indexData?.map(item => item.project_na853).filter(Boolean) || [];
+        
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('Projects')
+          .select('na853, mis, budget_na853, status, created_at, updated_at, event_description, project_title, name')
+          .in('na853', projectIds);
+        
+        if (projectsError) {
+          console.error('[Projects] Error fetching projects data:', projectsError);
         }
         
-        console.log(`[Projects] Retrieved ${projectCards?.length || 0} project cards`);
+        // Get event types
+        const { data: eventTypes, error: eventTypesError } = await supabase
+          .from('event_types')
+          .select('*');
         
-        // Transform data for frontend consumption
-        const transformedCards = projectCards?.map(card => {
-          const projectData = Array.isArray(card.Projects) ? card.Projects[0] : card.Projects;
-          const eventTypeData = Array.isArray(card.event_types) ? card.event_types[0] : card.event_types;
-          const expenditureTypeData = Array.isArray(card.expenditure_types) ? card.expenditure_types[0] : card.expenditure_types;
-          const monadaData = Array.isArray(card.Monada) ? card.Monada[0] : card.Monada;
-          const kallikratisData = Array.isArray(card.kallikratis) ? card.kallikratis[0] : card.kallikratis;
+        // Get expenditure types
+        const { data: expenditureTypes, error: expenditureTypesError } = await supabase
+          .from('expediture_types')
+          .select('*');
+        
+        // Get Monada data
+        const { data: monadaData, error: monadaError } = await supabase
+          .from('Monada')
+          .select('*');
+        
+        // Get Kallikratis data
+        const { data: kallikratisData, error: kallikratisError } = await supabase
+          .from('kallikratis')
+          .select('*');
+        
+        // Transform and combine data
+        const transformedCards = indexData?.map(indexItem => {
+          const projectData = projectsData?.find(p => p.na853 === indexItem.project_na853);
+          const eventType = eventTypes?.find(et => et.id === indexItem.event_type_id);
+          const expenditureType = expenditureTypes?.find(et => et.id === indexItem.expenditure_type_id);
+          const monada = monadaData?.find(m => m.id === indexItem.monada_id);
+          const kallikratis = kallikratisData?.find(k => k.id === indexItem.kallikratis_id);
+          
+          // Filter by user units if not admin
+          if (user.role !== 'admin' && user.units && user.units.length > 0) {
+            if (!monada || !user.units.includes(monada.unit)) {
+              return null; // Skip this project
+            }
+          }
           
           return {
             // Core identifiers
-            na853: card.project_na853,
-            mis: card.project_mis,
+            na853: indexItem.project_na853,
+            mis: indexItem.project_mis,
             
             // Project details from Projects table
             budget_na853: projectData?.budget_na853,
@@ -1232,34 +1227,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Event information
             event_type: {
-              id: eventTypeData?.id,
-              name: eventTypeData?.name,
-              description: eventTypeData?.description
+              id: eventType?.id,
+              name: eventType?.name,
+              description: eventType?.description
             },
             
             // Expenditure information
             expenditure_type: {
-              id: expenditureTypeData?.id,
-              name: expenditureTypeData?.name
+              id: expenditureType?.id,
+              name: expenditureType?.expediture_types
             },
             
             // Organizational unit
             unit: {
-              id: monadaData?.id,
-              name: monadaData?.name
+              id: monada?.id,
+              name: monada?.unit || monada?.unit_name
             },
             
             // Geographic information
             region: {
-              id: kallikratisData?.id,
-              region: kallikratisData?.region,
-              regional_unit: kallikratisData?.regional_unit,
-              municipality: kallikratisData?.municipality
+              id: kallikratis?.id,
+              region: kallikratis?.perifereia,
+              regional_unit: kallikratis?.onoma_dimou_koinotitas,
+              municipality: kallikratis?.onoma_dimou_koinotitas
             }
           };
-        });
+        }).filter(Boolean); // Remove null entries
         
+        console.log(`[Projects] Transformed ${transformedCards?.length || 0} project cards`);
         res.json(transformedCards);
+        
       } catch (error) {
         console.error('[Projects] Error in project cards endpoint:', error);
         res.status(500).json({ error: 'Internal server error' });

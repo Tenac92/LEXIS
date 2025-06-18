@@ -127,13 +127,17 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### June 18, 2025 - Database Optimization
+### June 18, 2025 - Database Optimization & UI Enhancement
 - Created optimized `project_index` table with composite primary key structure
 - Populated reference tables with authentic CSV export data (15 event types, 8 expenditure types)
 - Implemented intelligent alphanumerical value matching between Projects CSV and reference tables
 - Successfully mapped 693 project combinations with proper ID relationships
 - Achieved 175ms query performance for complex filtering operations
 - Validated all foreign key relationships and data integrity
+- Built optimized `/api/projects/cards` endpoint using project_index schema
+- Created OptimizedProjectCard component with enhanced data display
+- Added comprehensive projects modal with "Ολοκληρωμένη Προβολή" button
+- Updated project interface to display organizational units, expenditure types, and geographic regions
 
 ### June 18, 2025 - Initial setup
 

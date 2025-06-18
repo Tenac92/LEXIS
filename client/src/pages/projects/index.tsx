@@ -52,7 +52,7 @@ export default function ProjectsPage() {
   }, [search]);
 
   const { data: projects, isLoading, error } = useQuery<OptimizedProject[]>({
-    queryKey: ["/api/projects/cards", { search: debouncedSearch, status: status !== "all" ? status : undefined }]
+    queryKey: ["/api/projects/cards"]
   });
 
   const handleExport = async () => {
