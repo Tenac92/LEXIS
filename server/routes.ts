@@ -2120,6 +2120,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
 
+    // Event types routes for project_index support
+    log('[Routes] Registering event types routes...');
+    app.get('/api/event-types', async (req, res) => {
+      try {
+        console.log('[EventTypes] Fetching event types for project configuration');
+        
+        const { data: eventTypesData, error } = await supabase
+          .from('event_types')
+          .select('*')
+          .order('name');
+        
+        if (error) {
+          console.error('[EventTypes] Error fetching event types:', error);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch event types',
+            error: error.message
+          });
+        }
+        
+        console.log(`[EventTypes] Successfully fetched ${eventTypesData?.length || 0} event types`);
+        return res.json(eventTypesData || []);
+      } catch (error) {
+        console.error('[EventTypes] Error in event types endpoint:', error);
+        return res.status(500).json({
+          status: 'error', 
+          message: 'Failed to fetch event types',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
+    // Expenditure types routes for project_index support
+    log('[Routes] Registering expenditure types routes...');
+    app.get('/api/expenditure-types', async (req, res) => {
+      try {
+        console.log('[ExpenditureTypes] Fetching expenditure types for project configuration');
+        
+        const { data: expenditureTypesData, error } = await supabase
+          .from('expediture_types')
+          .select('*')
+          .order('name');
+        
+        if (error) {
+          console.error('[ExpenditureTypes] Error fetching expenditure types:', error);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch expenditure types',
+            error: error.message
+          });
+        }
+        
+        console.log(`[ExpenditureTypes] Successfully fetched ${expenditureTypesData?.length || 0} expenditure types`);
+        return res.json(expenditureTypesData || []);
+      } catch (error) {
+        console.error('[ExpenditureTypes] Error in expenditure types endpoint:', error);
+        return res.status(500).json({
+          status: 'error', 
+          message: 'Failed to fetch expenditure types',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
     // Units routes
     log('[Routes] Registering units routes...');
     
