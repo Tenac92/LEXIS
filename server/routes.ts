@@ -2184,6 +2184,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
 
+    // Expenditure types routes for project_index support
+    log('[Routes] Registering expenditure types routes...');
+    app.get('/api/expenditure-types', async (req, res) => {
+      try {
+        console.log('[ExpenditureTypes] Fetching expenditure types for project configuration');
+        
+        const { data: expenditureTypesData, error } = await supabase
+          .from('expediture_types')
+          .select('*')
+          .order('expediture_types');
+        
+        if (error) {
+          console.error('[ExpenditureTypes] Error fetching expenditure types:', error);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch expenditure types',
+            error: error.message
+          });
+        }
+        
+        console.log(`[ExpenditureTypes] Successfully fetched ${expenditureTypesData?.length || 0} expenditure types`);
+        return res.json(expenditureTypesData || []);
+      } catch (error) {
+        console.error('[ExpenditureTypes] Error in expenditure types endpoint:', error);
+        return res.status(500).json({
+          status: 'error', 
+          message: 'Failed to fetch expenditure types',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
     // Units routes
     log('[Routes] Registering units routes...');
     
