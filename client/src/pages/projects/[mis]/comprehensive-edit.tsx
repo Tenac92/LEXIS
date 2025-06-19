@@ -156,6 +156,9 @@ export default function ComprehensiveEditProjectPage() {
   });
 
   console.log("Edit Project Page - MIS Parameter:", mis);
+  console.log("Project data loading status:", projectLoading);
+  console.log("Project data:", projectData);
+  console.log("Project data structure:", projectData?.project ? "has project" : "no project");
   console.log("Kallikratis data loaded:", kallikratisData?.length || 0, "entries");
   console.log("Units data loaded:", unitsData?.length || 0, "entries");
   console.log("Units data structure:", unitsData?.slice(0, 2));
