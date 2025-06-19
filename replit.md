@@ -127,13 +127,14 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### June 19, 2025 - Comprehensive Project Edit System Implementation
-- Created comprehensive 5-section project edit interface matching Greek government documentation requirements
+### June 19, 2025 - Comprehensive Project Edit System Implementation & Regular Edit Replacement
+- Replaced regular edit page with comprehensive 5-section project edit interface matching Greek government documentation requirements
 - Implemented tabbed interface with Summary and Edit modes for complete project management workflow
 - Built dynamic table structures with add/remove functionality for multi-entry data management
 - Integrated event types and expenditure types API endpoints for project_index table support
 - Fixed implementing agency dropdown population using correct Monada table unit_name structure
 - Enhanced project configuration with proper foreign key relationships to reference tables
+- Removed old edit page route, making comprehensive edit the primary project editing interface
 
 #### 5-Section Project Form Structure
 - **Section 1**: Decisions documentation (protocol numbers, FEK, ADA, implementing agencies, budgets)
@@ -149,12 +150,16 @@ This is a full-stack web application built for Greek government budget and docum
 - **GET /api/public/units**: Supplies 11 implementing agencies for project assignment
 
 #### Technical Architecture
-- **Comprehensive Edit Page**: `/projects/:mis/comprehensive-edit` route for full project editing
+- **Primary Edit Interface**: `/projects/:mis/edit` now routes to comprehensive edit system
+- **5-Section Form Structure**: Decisions, Event Details, Project Details, Formulation Details, Changes
 - **Dynamic Form Management**: React Hook Form with Zod validation for complex nested data structures
+- **Enhanced Dropdowns**: Event types, implementing agencies, and expenditure types with real data
 - **Table Management**: Add/remove functionality for decisions, locations, formulation details, and changes
 - **Project Index Integration**: Automatic project_index table updates with proper foreign key relationships
-- **Data Transformation**: Frontend transforms project_lines data for backend processing
+- **Data Transformation**: Complete project data mapping from comprehensive form to database fields
 - **Reference Table Mapping**: Intelligent ID lookup for event types, expenditure types, implementing agencies, and regions
+- **Budget Integration**: Formulation details populate budget fields (NA853, NA271, E069)
+- **Document Fields**: Decision data maps to KYA, FEK, and ADA fields
 - **Project History Support**: Framework prepared for project history details table integration
 - **Data Integrity**: Proper TypeScript interfaces and validation schemas for all form sections
 
