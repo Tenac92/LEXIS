@@ -10,6 +10,7 @@ import DocumentsPage from "@/pages/documents-page";
 import ProjectsPage from "@/pages/projects";
 import ProjectDetailsPage from "@/pages/projects/[mis]";
 import EditProjectPage from "@/pages/projects/[mis]/edit";
+import ComprehensiveEditProjectPage from "@/pages/projects/[mis]/comprehensive-edit";
 import UsersPage from "@/pages/users";
 import EmployeesPage from "@/pages/employees";
 import BeneficiariesPage from "@/pages/beneficiaries-page";
@@ -40,6 +41,7 @@ function Router(): JSX.Element {
         <ProtectedRoute path="/templates" component={TemplatesPage} />
         <ProtectedRoute path="/projects/bulk-update" component={BulkUpdatePage} />
         {/* Order matters: more specific routes should come first */}
+        <ProtectedRoute path="/projects/:mis/comprehensive-edit" component={ComprehensiveEditProjectPage} />
         <ProtectedRoute path="/projects/:mis/edit" component={EditProjectPage} />
         <ProtectedRoute path="/projects/:mis" component={ProjectDetailsPage} />
         <ProtectedRoute path="/projects" component={ProjectsPage} />

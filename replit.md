@@ -127,23 +127,33 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### June 19, 2025 - Project Lines System with 4-Level Cascading Region Dropdowns
-- Completely replaced old field-specific editing with comprehensive project lines management system
-- Implemented 4-level cascading geographic region dropdowns using kallikratis table structure
-- Created hierarchical region selection: Περιφέρεια → Περιφερειακή Ενότητα → Δήμος → Δημοτική Ενότητα
-- Removed Τοπική Κοινότητα field per database table structure update
-- Added kallikratis API endpoint with proper data filtering and ordering capabilities
-- Integrated multi-select expenditure types with visual button-based interface
-- Fixed implementing agency population from Monada table with proper unit_name display
-- Added clear selection options for all cascading dropdown levels (2-4) for better user control
-- Optimized project edit modal with streamlined tabbed interface focusing on project configuration
+### June 19, 2025 - Comprehensive Project Edit System Implementation
+- Created comprehensive 5-section project edit interface matching Greek government documentation requirements
+- Implemented tabbed interface with Summary and Edit modes for complete project management workflow
+- Built dynamic table structures with add/remove functionality for multi-entry data management
+- Integrated event types and expenditure types API endpoints for project_index table support
+- Fixed implementing agency dropdown population using correct Monada table unit_name structure
+- Enhanced project configuration with proper foreign key relationships to reference tables
 
-#### Technical Implementation Details
-- **Kallikratis Integration**: Created `/api/kallikratis` endpoint returning 1000+ geographic entries with proper hierarchical filtering
-- **Cascading Logic**: Implemented intelligent dropdown filtering with automatic dependent field reset when parent selections change
-- **Project Lines Architecture**: Replaced individual field editing with structured project line objects containing agency, region hierarchy, and expenditure types
-- **Data Flow Optimization**: Fixed TypeScript errors and improved data mapping between frontend components and backend APIs
-- **User Experience Enhancement**: Added visual expenditure type selection buttons and clear selection options for all hierarchy levels
+#### 5-Section Project Form Structure
+- **Section 1**: Decisions documentation (protocol numbers, FEK, ADA, implementing agencies, budgets)
+- **Section 2**: Event details with location hierarchy (municipal community, municipality, regional unit, region)
+- **Section 3**: Project details (MIS, SA, enumeration codes, titles, descriptions, status tracking)
+- **Section 4**: Project formulation details (SA types, decision protocols, budgets, EPA versions)
+- **Section 5**: Changes tracking with detailed modification descriptions
+
+#### API Endpoints Implementation
+- **GET /api/event-types**: Returns 15 event types for project configuration dropdowns
+- **GET /api/expenditure-types**: Returns expenditure types from expediture_types table
+- **GET /api/kallikratis**: Provides 1000+ geographic entries for cascading region selection
+- **GET /api/public/units**: Supplies 11 implementing agencies for project assignment
+
+#### Technical Architecture
+- **Comprehensive Edit Page**: `/projects/:mis/comprehensive-edit` route for full project editing
+- **Dynamic Form Management**: React Hook Form with Zod validation for complex nested data structures
+- **Table Management**: Add/remove functionality for decisions, locations, formulation details, and changes
+- **Project History Support**: Framework prepared for project history details table integration
+- **Data Integrity**: Proper TypeScript interfaces and validation schemas for all form sections
 
 ### June 18, 2025 - Complete Project Index Schema Implementation & Audit
 - Created optimized `project_index` table with composite primary key structure
