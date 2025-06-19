@@ -2152,20 +2152,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
 
-    // Expenditure types routes for project_index support - PUBLIC ACCESS
+    // Expenditure types routes for project_index support
     log('[Routes] Registering expenditure types routes...');
     app.get('/api/expenditure-types', async (req, res) => {
       try {
-        console.log('[ExpenditureTypes] Public access - fetching expenditure types for project configuration');
+        console.log('[ExpenditureTypes] Fetching expenditure types for project configuration');
         
-        // Use service role key for public data access
-        const { createClient } = require('@supabase/supabase-js');
-        const publicSupabase = createClient(
-          process.env.SUPABASE_URL,
-          process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
-        );
-        
-        const { data: expenditureTypesData, error } = await publicSupabase
+        const { data: expenditureTypesData, error } = await supabase
           .from('expediture_types')
           .select('*')
           .order('expediture_types');
@@ -2180,6 +2173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         console.log(`[ExpenditureTypes] Successfully fetched ${expenditureTypesData?.length || 0} expenditure types`);
+        console.log('[ExpenditureTypes] Sample data:', expenditureTypesData?.slice(0, 2));
         return res.json(expenditureTypesData || []);
       } catch (error) {
         console.error('[ExpenditureTypes] Error in expenditure types endpoint:', error);
