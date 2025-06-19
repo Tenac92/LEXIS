@@ -969,6 +969,157 @@ export default function EditProjectPage() {
                       </div>
                     </TabsContent>
                     
+                    <TabsContent value="project-lines">
+                      <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-medium">Project Lines Management</h3>
+                          <Button type="button" onClick={addProjectLine} className="flex items-center gap-2">
+                            <Plus className="h-4 w-4" />
+                            Add New Line
+                          </Button>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {projectLines.map((line, index) => (
+                            <Card key={line.id} className="p-4">
+                              <div className="flex items-center justify-between mb-4">
+                                <h4 className="font-medium">Line {index + 1}</h4>
+                                {projectLines.length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeProjectLine(line.id!)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Implementing Agency */}
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">
+                                    Implementing Agency
+                                  </label>
+                                  <Select
+                                    value={line.implementing_agency}
+                                    onValueChange={(value) => updateProjectLine(line.id!, 'implementing_agency', value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select agency..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {unitsData?.map((unit: any) => (
+                                        <SelectItem key={unit.id} value={unit.id}>
+                                          {unit.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {/* Region */}
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">
+                                    Region
+                                  </label>
+                                  <Select
+                                    value={line.region}
+                                    onValueChange={(value) => updateProjectLine(line.id!, 'region', value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select region..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {regionsData?.regions?.map((region: any) => (
+                                        <SelectItem key={region.id} value={region.name}>
+                                          {region.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {/* Expenditure Types */}
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">
+                                    Expenditure Types
+                                  </label>
+                                  <Select
+                                    value={line.expenditure_types.join(',')}
+                                    onValueChange={(value) => {
+                                      const types = value ? value.split(',') : [];
+                                      updateProjectLine(line.id!, 'expenditure_types', types);
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select expenditure types..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ">ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ</SelectItem>
+                                      <SelectItem value="ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ">ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ</SelectItem>
+                                      <SelectItem value="ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ">ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ</SelectItem>
+                                      <SelectItem value="ΔΚΑ ΕΠΙΣΚΕΥΗ">ΔΚΑ ΕΠΙΣΚΕΥΗ</SelectItem>
+                                      <SelectItem value="ΕΚΤΟΣ ΕΔΡΑΣ">ΕΚΤΟΣ ΕΔΡΑΣ</SelectItem>
+                                      <SelectItem value="ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ">ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ</SelectItem>
+                                      <SelectItem value="ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ">ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ</SelectItem>
+                                      <SelectItem value="ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ">ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              
+                              {/* Display selected expenditure types */}
+                              {line.expenditure_types.length > 0 && (
+                                <div className="mt-3">
+                                  <div className="text-sm text-gray-600 mb-2">Selected Expenditure Types:</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {line.expenditure_types.map((type, typeIndex) => (
+                                      <span
+                                        key={typeIndex}
+                                        className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
+                                      >
+                                        {type}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const newTypes = line.expenditure_types.filter((_, i) => i !== typeIndex);
+                                            updateProjectLine(line.id!, 'expenditure_types', newTypes);
+                                          }}
+                                          className="ml-1 text-blue-600 hover:text-blue-800"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </Card>
+                          ))}
+                        </div>
+                        
+                        {projectLines.length > 0 && (
+                          <div className="flex justify-end pt-4">
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                // Save project lines logic would go here
+                                toast({
+                                  title: "Success",
+                                  description: "Project lines saved successfully",
+                                });
+                              }}
+                            >
+                              Save Project Lines
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                    
                     <TabsContent value="budget-info">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField
