@@ -83,10 +83,12 @@ export default function EditProjectPage() {
       const response = await apiRequest(`/api/projects/${mis}`);
       return response as Project;
     },
-    enabled: !!mis // Only run query if mis is available
+    enabled: !!mis,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    cacheTime: 15 * 60 * 1000, // 15 minutes cache
   });
 
-  // Fetch the budget data
+  // Fetch the budget data only when budget tab is active for faster loading
   const { data: budgetData, isLoading: isBudgetLoading } = useQuery<BudgetNA853Split>({
     queryKey: [`/api/budget/${mis}`],
     queryFn: async (): Promise<BudgetNA853Split> => {
@@ -97,20 +99,22 @@ export default function EditProjectPage() {
       }
       return response as BudgetNA853Split;
     },
-    enabled: !!mis // Only run query if mis is available
-  });
-
-  // Fetch reference data for project lines with lazy loading
-  const { data: unitsData } = useQuery({
-    queryKey: ['/api/public/units'],
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    enabled: !!mis && activeTab === 'budget-info', // Only load when budget tab is active
+    staleTime: 3 * 60 * 1000, // 3 minutes cache
     cacheTime: 10 * 60 * 1000, // 10 minutes cache
   });
 
-  const { data: kallikratisData } = useQuery<KallikratisEntry[]>({
-    queryKey: ['/api/kallikratis'],
+  // Fetch reference data for project lines with immediate caching
+  const { data: unitsData, isLoading: isUnitsLoading } = useQuery({
+    queryKey: ['/api/public/units'],
     staleTime: 10 * 60 * 1000, // 10 minutes cache
     cacheTime: 30 * 60 * 1000, // 30 minutes cache
+  });
+
+  const { data: kallikratisData, isLoading: isKallikratisLoading } = useQuery<KallikratisEntry[]>({
+    queryKey: ['/api/kallikratis'],
+    staleTime: 15 * 60 * 1000, // 15 minutes cache
+    cacheTime: 60 * 60 * 1000, // 1 hour cache
     enabled: activeTab === 'project-lines', // Only load when needed
   });
 
@@ -450,7 +454,8 @@ export default function EditProjectPage() {
     }
   }, [project]);
 
-  const isLoading = isProjectLoading || isBudgetLoading;
+  // Only show loading for project data (critical path)
+  const isLoading = isProjectLoading;
   
   // Show loading skeleton immediately after all hooks
   if (isLoading) {
@@ -595,6 +600,13 @@ export default function EditProjectPage() {
                 
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    
+                    {/* Loading indicators for different sections */}
+                    {(isBudgetLoading && activeTab === 'budget-info') && (
+                      <div className="text-sm text-gray-500 mb-4">
+                        Loading budget data...
+                      </div>
+                    )}
                     <TabsContent value="project-info">
                       <div className="grid grid-cols-1 gap-6">
                         <FormField
@@ -1134,8 +1146,8 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          {getFilteredOptions('perifereia', line.id!).map((option) => (
-                                            <SelectItem key={option} value={option} className="text-xs">
+                                          {getFilteredOptions('perifereia', line.id!).map((option, index) => (
+                                            <SelectItem key={`${line.id}-perifereia-${index}-${option}`} value={option} className="text-xs">
                                               {option}
                                             </SelectItem>
                                           ))}
@@ -1155,11 +1167,11 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="__clear__" className="text-xs italic text-gray-500">
+                                          <SelectItem key={`${line.id}-clear-perifereiaki`} value="__clear__" className="text-xs italic text-gray-500">
                                             -- Clear Selection --
                                           </SelectItem>
-                                          {getFilteredOptions('perifereiaki_enotita', line.id!).map((option) => (
-                                            <SelectItem key={option} value={option} className="text-xs">
+                                          {getFilteredOptions('perifereiaki_enotita', line.id!).map((option, index) => (
+                                            <SelectItem key={`${line.id}-perifereiaki-${index}-${option}`} value={option} className="text-xs">
                                               {option}
                                             </SelectItem>
                                           ))}
