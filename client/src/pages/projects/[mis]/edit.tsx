@@ -45,6 +45,7 @@ interface ProjectWithBudget {
 interface ProjectLine {
   id?: string;
   implementing_agency: string;
+  event_type: string;
   region: {
     perifereia: string;
     perifereiaki_enotita: string;
@@ -113,6 +114,18 @@ export default function EditProjectPage() {
 
   const { data: kallikratisData } = useQuery<KallikratisEntry[]>({
     queryKey: ['/api/kallikratis'],
+    staleTime: 30 * 60 * 1000, // 30 minutes cache
+    cacheTime: 2 * 60 * 60 * 1000, // 2 hours cache
+  });
+
+  const { data: eventTypesData } = useQuery({
+    queryKey: ['/api/event-types'],
+    staleTime: 30 * 60 * 1000, // 30 minutes cache
+    cacheTime: 2 * 60 * 60 * 1000, // 2 hours cache
+  });
+
+  const { data: expenditureTypesData } = useQuery({
+    queryKey: ['/api/expenditure-types'],
     staleTime: 30 * 60 * 1000, // 30 minutes cache
     cacheTime: 2 * 60 * 60 * 1000, // 2 hours cache
   });
@@ -340,6 +353,7 @@ export default function EditProjectPage() {
     const newLine: ProjectLine = {
       id: Date.now().toString(),
       implementing_agency: "",
+      event_type: "",
       region: {
         perifereia: "",
         perifereiaki_enotita: "",
@@ -444,6 +458,7 @@ export default function EditProjectPage() {
       const initialLines: ProjectLine[] = [{
         id: 'default-1',
         implementing_agency: "",
+        event_type: "",
         region: {
           perifereia: "",
           perifereiaki_enotita: "",
@@ -1134,7 +1149,29 @@ export default function EditProjectPage() {
                                   </Select>
                                 </div>
                                 
-                                {/* 5-Level Cascading Region Selection */}
+                                {/* Event Type */}
+                                <div>
+                                  <label className="block text-sm font-medium mb-2">
+                                    Event Type
+                                  </label>
+                                  <Select
+                                    value={line.event_type}
+                                    onValueChange={(value) => updateProjectLine(line.id!, 'event_type', value)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select event type..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {eventTypesData?.map((eventType: any, index: number) => (
+                                        <SelectItem key={`event-${index}-${eventType.id}`} value={eventType.name}>
+                                          {eventType.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {/* 4-Level Cascading Region Selection */}
                                 <div>
                                   <label className="block text-sm font-medium mb-2">
                                     Geographical Region Selection
