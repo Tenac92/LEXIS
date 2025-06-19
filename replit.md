@@ -152,8 +152,18 @@ This is a full-stack web application built for Greek government budget and docum
 - **Comprehensive Edit Page**: `/projects/:mis/comprehensive-edit` route for full project editing
 - **Dynamic Form Management**: React Hook Form with Zod validation for complex nested data structures
 - **Table Management**: Add/remove functionality for decisions, locations, formulation details, and changes
+- **Project Index Integration**: Automatic project_index table updates with proper foreign key relationships
+- **Data Transformation**: Frontend transforms project_lines data for backend processing
+- **Reference Table Mapping**: Intelligent ID lookup for event types, expenditure types, implementing agencies, and regions
 - **Project History Support**: Framework prepared for project history details table integration
 - **Data Integrity**: Proper TypeScript interfaces and validation schemas for all form sections
+
+#### Project Index Table Implementation
+- **Automatic Updates**: Project updates now populate project_index table with proper foreign key relationships
+- **Data Mapping**: Backend resolves event types, expenditure types, implementing agencies, and kallikratis regions
+- **Multi-Entry Support**: Handles multiple expenditure types per project with separate index entries
+- **Delete and Insert Pattern**: Existing entries cleared before inserting new relationships
+- **Enhanced Data Retrieval**: All project endpoints now return enhanced data with resolved foreign key relationships
 
 ### June 18, 2025 - Complete Project Index Schema Implementation & Audit
 - Created optimized `project_index` table with composite primary key structure

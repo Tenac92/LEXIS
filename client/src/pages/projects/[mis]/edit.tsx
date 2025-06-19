@@ -260,10 +260,27 @@ export default function EditProjectPage() {
     mutationFn: async (data: any) => {
       setLoading(true);
       try {
-        console.log(`Updating project ${mis} with data:`, data);
+        // Transform data to include project_lines for project_index table updates
+        const transformedData = {
+          ...data,
+          project_lines: projectLines.map(line => ({
+            implementing_agency: line.implementing_agency,
+            event_type: line.event_type,
+            expenditure_types: line.expenditure_types,
+            region: {
+              perifereia: line.region.perifereia,
+              perifereiaki_enotita: line.region.perifereiaki_enotita,
+              dimos: line.region.dimos,
+              dimotiki_enotita: line.region.dimotiki_enotita,
+              kallikratis_id: line.region.kallikratis_id
+            }
+          }))
+        };
+        
+        console.log(`Updating project ${mis} with project_lines:`, transformedData);
         const response = await apiRequest(`/api/projects/${mis}`, {
           method: "PATCH",
-          body: JSON.stringify(data),
+          body: JSON.stringify(transformedData),
         });
 
         if (!response) {

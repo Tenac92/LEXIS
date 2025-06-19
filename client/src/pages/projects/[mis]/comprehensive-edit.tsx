@@ -138,9 +138,29 @@ export default function ComprehensiveEditProjectPage() {
 
   const updateProjectMutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
+      // Transform comprehensive form data to include project_lines for project_index table
+      const transformedData = {
+        ...data,
+        project_lines: [
+          {
+            implementing_agency: data.event_details?.locations?.[0]?.implementing_agency || '',
+            event_type: data.project_details?.project_title || '', // Map to event type
+            expenditure_types: data.formulation_details?.map(fd => fd.sa).filter(Boolean) || [],
+            region: {
+              perifereia: data.event_details?.locations?.[0]?.region || '',
+              perifereiaki_enotita: data.event_details?.locations?.[0]?.regional_unit || '',
+              dimos: data.event_details?.locations?.[0]?.municipality || '',
+              dimotiki_enotita: data.event_details?.locations?.[0]?.municipal_community || ''
+            }
+          }
+        ]
+      };
+      
+      console.log('[Comprehensive Edit] Sending data with project_lines:', transformedData);
+      
       return apiRequest(`/api/projects/${mis}`, {
         method: 'PATCH',
-        body: JSON.stringify(data),
+        body: JSON.stringify(transformedData),
       });
     },
     onSuccess: () => {
