@@ -5,7 +5,7 @@ import { useLocation, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, X } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -41,6 +41,14 @@ interface ProjectWithBudget {
   budget?: BudgetNA853Split;
 }
 
+// Interface for project lines
+interface ProjectLine {
+  id?: string;
+  implementing_agency: string;
+  region: string;
+  expenditure_types: string[];
+}
+
 export default function EditProjectPage() {
   const { mis } = useParams<{ mis: string }>();
   const [, navigate] = useLocation();
@@ -48,6 +56,7 @@ export default function EditProjectPage() {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("project-info");
+  const [projectLines, setProjectLines] = useState<ProjectLine[]>([]);
   
   console.log("Edit Project Page - MIS Parameter:", mis);
 
@@ -73,6 +82,20 @@ export default function EditProjectPage() {
       return response as BudgetNA853Split;
     },
     enabled: !!mis // Only run query if mis is available
+  });
+
+  // Fetch reference data for project lines
+  const { data: unitsData } = useQuery({
+    queryKey: ['/api/public/units'],
+  });
+
+  const { data: regionsData } = useQuery({
+    queryKey: [`/api/projects/${mis}/regions`],
+    enabled: !!mis,
+  });
+
+  const { data: expenditureTypesData } = useQuery({
+    queryKey: ['/api/expenditure-types'],
   });
 
   const isLoading = isProjectLoading || isBudgetLoading;
@@ -291,6 +314,61 @@ export default function EditProjectPage() {
     },
   });
 
+  // Project lines management functions
+  const addProjectLine = () => {
+    const newLine: ProjectLine = {
+      id: Date.now().toString(),
+      implementing_agency: "",
+      region: "",
+      expenditure_types: []
+    };
+    setProjectLines([...projectLines, newLine]);
+  };
+
+  const updateProjectLine = (id: string, field: keyof ProjectLine, value: any) => {
+    setProjectLines(projectLines.map(line => 
+      line.id === id ? { ...line, [field]: value } : line
+    ));
+  };
+
+  const removeProjectLine = (id: string) => {
+    setProjectLines(projectLines.filter(line => line.id !== id));
+  };
+
+  // Initialize project lines from project data
+  useEffect(() => {
+    if (project && projectLines.length === 0) {
+      // If project has existing lines, load them
+      // For now, we'll create a default line structure from existing data
+      const initialLines: ProjectLine[] = [];
+      
+      // If project has implementing agencies and regions, create lines
+      if (project.implementing_agency && project.region) {
+        const agencies = Array.isArray(project.implementing_agency) ? project.implementing_agency : [project.implementing_agency];
+        agencies.forEach((agency, index) => {
+          initialLines.push({
+            id: `existing-${index}`,
+            implementing_agency: agency,
+            region: typeof project.region === 'object' ? project.region.name || '' : project.region,
+            expenditure_types: Array.isArray(project.expenditure_type) ? project.expenditure_type : []
+          });
+        });
+      }
+      
+      // If no existing data, add one empty line
+      if (initialLines.length === 0) {
+        initialLines.push({
+          id: 'default-1',
+          implementing_agency: "",
+          region: "",
+          expenditure_types: []
+        });
+      }
+      
+      setProjectLines(initialLines);
+    }
+  }, [project]);
+
   // Form submission handler
   const onSubmit = (data: any) => {
     // Determine which data to update based on active tab
@@ -412,8 +490,9 @@ export default function EditProjectPage() {
             </CardHeader>
             <CardContent className="p-6">
               <Tabs defaultValue="project-info" onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsList className="grid w-full grid-cols-3 mb-6">
                   <TabsTrigger value="project-info">Project Information</TabsTrigger>
+                  <TabsTrigger value="project-lines">Project Lines</TabsTrigger>
                   <TabsTrigger value="budget-info">Budget Allocation</TabsTrigger>
                 </TabsList>
                 
