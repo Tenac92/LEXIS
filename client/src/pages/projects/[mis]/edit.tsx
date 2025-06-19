@@ -100,16 +100,33 @@ export default function EditProjectPage() {
     enabled: !!mis // Only run query if mis is available
   });
 
-  // Fetch reference data for project lines
+  // Fetch reference data for project lines with lazy loading
   const { data: unitsData } = useQuery({
     queryKey: ['/api/public/units'],
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    cacheTime: 10 * 60 * 1000, // 10 minutes cache
   });
 
   const { data: kallikratisData } = useQuery<KallikratisEntry[]>({
     queryKey: ['/api/kallikratis'],
+    staleTime: 10 * 60 * 1000, // 10 minutes cache
+    cacheTime: 30 * 60 * 1000, // 30 minutes cache
+    enabled: activeTab === 'project-lines', // Only load when needed
   });
 
   const isLoading = isProjectLoading || isBudgetLoading;
+  
+  // Show loading skeleton immediately
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded mb-4 w-1/3"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   // Initialize the form with all possible fields from the SQL export
   const form = useForm<any>({
@@ -348,12 +365,13 @@ export default function EditProjectPage() {
   };
 
   const updateProjectLineRegion = (id: string, regionField: keyof ProjectLine["region"], value: string) => {
+    const finalValue = value === "__clear__" ? "" : value;
     setProjectLines(projectLines.map(line => 
       line.id === id ? { 
         ...line, 
         region: { 
           ...line.region, 
-          [regionField]: value,
+          [regionField]: finalValue,
           // Reset dependent fields when parent changes
           ...(regionField === 'perifereia' && {
             perifereiaki_enotita: "",
@@ -1134,7 +1152,7 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="" className="text-xs italic text-gray-500">
+                                          <SelectItem value="__clear__" className="text-xs italic text-gray-500">
                                             -- Clear Selection --
                                           </SelectItem>
                                           {getFilteredOptions('perifereiaki_enotita', line.id!).map((option) => (
@@ -1158,7 +1176,7 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="" className="text-xs italic text-gray-500">
+                                          <SelectItem value="__clear__" className="text-xs italic text-gray-500">
                                             -- Clear Selection --
                                           </SelectItem>
                                           {getFilteredOptions('dimos', line.id!).map((option) => (
@@ -1182,7 +1200,7 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="" className="text-xs italic text-gray-500">
+                                          <SelectItem value="__clear__" className="text-xs italic text-gray-500">
                                             -- Clear Selection --
                                           </SelectItem>
                                           {getFilteredOptions('dimotiki_enotita', line.id!).map((option) => (

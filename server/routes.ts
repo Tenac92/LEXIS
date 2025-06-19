@@ -2097,7 +2097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { data: kallikratisData, error } = await supabase
           .from('kallikratis')
           .select('*')
-          .order('perifereia, perifereiaki_enotita, onoma_neou_ota, onoma_dimotikis_enotitas, onoma_dimou_koinotitas');
+          .order('perifereia, perifereiaki_enotita, onoma_neou_ota, onoma_dimotikis_enotitas');
         
         if (error) {
           console.error('[Kallikratis] Error fetching kallikratis data:', error);
