@@ -1191,11 +1191,11 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="__clear__" className="text-xs italic text-gray-500">
+                                          <SelectItem key={`${line.id}-clear-dimos`} value="__clear__" className="text-xs italic text-gray-500">
                                             -- Clear Selection --
                                           </SelectItem>
-                                          {getFilteredOptions('dimos', line.id!).map((option) => (
-                                            <SelectItem key={option} value={option} className="text-xs">
+                                          {getFilteredOptions('dimos', line.id!).map((option, index) => (
+                                            <SelectItem key={`${line.id}-dimos-${index}-${option}`} value={option} className="text-xs">
                                               {option}
                                             </SelectItem>
                                           ))}
@@ -1215,11 +1215,11 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="__clear__" className="text-xs italic text-gray-500">
+                                          <SelectItem key={`${line.id}-clear-dimotiki`} value="__clear__" className="text-xs italic text-gray-500">
                                             -- Clear Selection --
                                           </SelectItem>
-                                          {getFilteredOptions('dimotiki_enotita', line.id!).map((option) => (
-                                            <SelectItem key={option} value={option} className="text-xs">
+                                          {getFilteredOptions('dimotiki_enotita', line.id!).map((option, index) => (
+                                            <SelectItem key={`${line.id}-dimotiki-${index}-${option}`} value={option} className="text-xs">
                                               {option}
                                             </SelectItem>
                                           ))}
