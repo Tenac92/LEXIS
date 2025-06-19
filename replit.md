@@ -127,14 +127,15 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### June 19, 2025 - Project Lines System with 5-Level Cascading Region Dropdowns
+### June 19, 2025 - Project Lines System with 4-Level Cascading Region Dropdowns
 - Completely replaced old field-specific editing with comprehensive project lines management system
-- Implemented 5-level cascading geographic region dropdowns using kallikratis table structure
-- Created hierarchical region selection: Περιφέρεια → Περιφερειακή Ενότητα → Δήμος → Δημοτική Ενότητα → Τοπική Κοινότητα
+- Implemented 4-level cascading geographic region dropdowns using kallikratis table structure
+- Created hierarchical region selection: Περιφέρεια → Περιφερειακή Ενότητα → Δήμος → Δημοτική Ενότητα
+- Removed Τοπική Κοινότητα field per database table structure update
 - Added kallikratis API endpoint with proper data filtering and ordering capabilities
 - Integrated multi-select expenditure types with visual button-based interface
 - Fixed implementing agency population from Monada table with proper unit_name display
-- Added clear selection options for all cascading dropdown levels (2-5) for better user control
+- Added clear selection options for all cascading dropdown levels (2-4) for better user control
 - Optimized project edit modal with streamlined tabbed interface focusing on project configuration
 
 #### Technical Implementation Details

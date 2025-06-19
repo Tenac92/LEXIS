@@ -50,7 +50,6 @@ interface ProjectLine {
     perifereiaki_enotita: string;
     dimos: string;
     dimotiki_enotita: string;
-    topiki_koinotita: string;
   };
   expenditure_types: string[];
 }
@@ -58,7 +57,6 @@ interface ProjectLine {
 // Interface for kallikratis data structure
 interface KallikratisEntry {
   id: number;
-  onoma_dimou_koinotitas: string;
   eidos_koinotitas: string;
   onoma_dimotikis_enotitas: string;
   eidos_neou_ota: string;
@@ -336,8 +334,7 @@ export default function EditProjectPage() {
         perifereia: "",
         perifereiaki_enotita: "",
         dimos: "",
-        dimotiki_enotita: "",
-        topiki_koinotita: ""
+        dimotiki_enotita: ""
       },
       expenditure_types: []
     };
@@ -361,20 +358,14 @@ export default function EditProjectPage() {
           ...(regionField === 'perifereia' && {
             perifereiaki_enotita: "",
             dimos: "",
-            dimotiki_enotita: "",
-            topiki_koinotita: ""
+            dimotiki_enotita: ""
           }),
           ...(regionField === 'perifereiaki_enotita' && {
             dimos: "",
-            dimotiki_enotita: "",
-            topiki_koinotita: ""
+            dimotiki_enotita: ""
           }),
           ...(regionField === 'dimos' && {
-            dimotiki_enotita: "",
-            topiki_koinotita: ""
-          }),
-          ...(regionField === 'dimotiki_enotita' && {
-            topiki_koinotita: ""
+            dimotiki_enotita: ""
           })
         } 
       } : line
@@ -429,17 +420,7 @@ export default function EditProjectPage() {
           .filter(Boolean)
           .sort();
 
-      case 'topiki_koinotita':
-        if (!currentLine.region.dimotiki_enotita) return [];
-        filtered = filtered.filter(item => 
-          item.perifereia === currentLine.region.perifereia &&
-          item.perifereiaki_enotita === currentLine.region.perifereiaki_enotita &&
-          `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim() === currentLine.region.dimos &&
-          `${item.eidos_koinotitas} ${item.onoma_dimotikis_enotitas}`.trim() === currentLine.region.dimotiki_enotita
-        );
-        return Array.from(new Set(filtered.map(item => item.onoma_dimou_koinotitas)))
-          .filter(Boolean)
-          .sort();
+
 
       default:
         return [];
@@ -456,8 +437,7 @@ export default function EditProjectPage() {
           perifereia: "",
           perifereiaki_enotita: "",
           dimos: "",
-          dimotiki_enotita: "",
-          topiki_koinotita: ""
+          dimotiki_enotita: ""
         },
         expenditure_types: []
       }];
@@ -1121,7 +1101,7 @@ export default function EditProjectPage() {
                                   <label className="block text-sm font-medium mb-2">
                                     Geographical Region Selection
                                   </label>
-                                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                                     {/* Περιφέρεια (Region) */}
                                     <div>
                                       <label className="block text-xs text-gray-500 mb-1">Περιφέρεια</label>
@@ -1214,29 +1194,7 @@ export default function EditProjectPage() {
                                       </Select>
                                     </div>
 
-                                    {/* Τοπ. Κοινότητα (Local Community) */}
-                                    <div>
-                                      <label className="block text-xs text-gray-500 mb-1">Τοπ. Κοινότητα</label>
-                                      <Select
-                                        value={line.region.topiki_koinotita}
-                                        onValueChange={(value) => updateProjectLineRegion(line.id!, 'topiki_koinotita', value)}
-                                        disabled={!line.region.dimotiki_enotita}
-                                      >
-                                        <SelectTrigger className="h-8 text-xs">
-                                          <SelectValue placeholder="Select..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="" className="text-xs italic text-gray-500">
-                                            -- Clear Selection --
-                                          </SelectItem>
-                                          {getFilteredOptions('topiki_koinotita', line.id!).map((option) => (
-                                            <SelectItem key={option} value={option} className="text-xs">
-                                              {option}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
+
                                   </div>
                                 </div>
                                 
