@@ -115,6 +115,7 @@ export default function ComprehensiveEditProjectPage() {
   // Fetch project data
   const { data: projectData, isLoading: projectLoading } = useQuery({
     queryKey: ['/api/projects', mis],
+    queryFn: () => apiRequest(`/api/projects/${mis}`),
     enabled: !!mis,
     staleTime: 30 * 60 * 1000, // 30 minutes
     cacheTime: 2 * 60 * 60 * 1000, // 2 hours
@@ -149,6 +150,7 @@ export default function ComprehensiveEditProjectPage() {
 
   const { data: expenditureTypesData } = useQuery({
     queryKey: ['/api/expenditure-types'],
+    queryFn: () => apiRequest('/api/expenditure-types'),
     staleTime: 30 * 60 * 1000,
     cacheTime: 2 * 60 * 60 * 1000,
   });
