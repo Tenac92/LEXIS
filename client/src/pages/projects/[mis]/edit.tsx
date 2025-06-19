@@ -41,12 +41,30 @@ interface ProjectWithBudget {
   budget?: BudgetNA853Split;
 }
 
-// Interface for project lines
+// Interface for project lines with detailed region structure
 interface ProjectLine {
   id?: string;
   implementing_agency: string;
-  region: string;
+  region: {
+    perifereia: string;
+    perifereiaki_enotita: string;
+    dimos: string;
+    dimotiki_enotita: string;
+    topiki_koinotita: string;
+  };
   expenditure_types: string[];
+}
+
+// Interface for kallikratis data structure
+interface KallikratisEntry {
+  id: number;
+  onoma_dimou_koinotitas: string;
+  eidos_koinotitas: string;
+  onoma_dimotikis_enotitas: string;
+  eidos_neou_ota: string;
+  onoma_neou_ota: string;
+  perifereiaki_enotita: string;
+  perifereia: string;
 }
 
 export default function EditProjectPage() {
@@ -89,13 +107,8 @@ export default function EditProjectPage() {
     queryKey: ['/api/public/units'],
   });
 
-  const { data: regionsData } = useQuery({
-    queryKey: [`/api/projects/${mis}/regions`],
-    enabled: !!mis,
-  });
-
-  const { data: expenditureTypesData } = useQuery({
-    queryKey: ['/api/expenditure-types'],
+  const { data: kallikratisData } = useQuery<KallikratisEntry[]>({
+    queryKey: ['/api/kallikratis'],
   });
 
   const isLoading = isProjectLoading || isBudgetLoading;
@@ -319,7 +332,13 @@ export default function EditProjectPage() {
     const newLine: ProjectLine = {
       id: Date.now().toString(),
       implementing_agency: "",
-      region: "",
+      region: {
+        perifereia: "",
+        perifereiaki_enotita: "",
+        dimos: "",
+        dimotiki_enotita: "",
+        topiki_koinotita: ""
+      },
       expenditure_types: []
     };
     setProjectLines([...projectLines, newLine]);
@@ -331,39 +350,117 @@ export default function EditProjectPage() {
     ));
   };
 
+  const updateProjectLineRegion = (id: string, regionField: keyof ProjectLine["region"], value: string) => {
+    setProjectLines(projectLines.map(line => 
+      line.id === id ? { 
+        ...line, 
+        region: { 
+          ...line.region, 
+          [regionField]: value,
+          // Reset dependent fields when parent changes
+          ...(regionField === 'perifereia' && {
+            perifereiaki_enotita: "",
+            dimos: "",
+            dimotiki_enotita: "",
+            topiki_koinotita: ""
+          }),
+          ...(regionField === 'perifereiaki_enotita' && {
+            dimos: "",
+            dimotiki_enotita: "",
+            topiki_koinotita: ""
+          }),
+          ...(regionField === 'dimos' && {
+            dimotiki_enotita: "",
+            topiki_koinotita: ""
+          }),
+          ...(regionField === 'dimotiki_enotita' && {
+            topiki_koinotita: ""
+          })
+        } 
+      } : line
+    ));
+  };
+
   const removeProjectLine = (id: string) => {
     setProjectLines(projectLines.filter(line => line.id !== id));
+  };
+
+  // Helper functions for cascading dropdowns
+  const getFilteredOptions = (level: keyof ProjectLine["region"], lineId: string) => {
+    if (!kallikratisData) return [];
+    
+    const currentLine = projectLines.find(line => line.id === lineId);
+    if (!currentLine) return [];
+
+    let filtered = kallikratisData;
+
+    switch (level) {
+      case 'perifereia':
+        // Get unique perifereia values
+        return Array.from(new Set(filtered.map(item => item.perifereia)))
+          .filter(Boolean)
+          .sort();
+
+      case 'perifereiaki_enotita':
+        if (!currentLine.region.perifereia) return [];
+        filtered = filtered.filter(item => item.perifereia === currentLine.region.perifereia);
+        return Array.from(new Set(filtered.map(item => item.perifereiaki_enotita)))
+          .filter(Boolean)
+          .sort();
+
+      case 'dimos':
+        if (!currentLine.region.perifereiaki_enotita) return [];
+        filtered = filtered.filter(item => 
+          item.perifereia === currentLine.region.perifereia &&
+          item.perifereiaki_enotita === currentLine.region.perifereiaki_enotita
+        );
+        return Array.from(new Set(filtered.map(item => `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim())))
+          .filter(Boolean)
+          .sort();
+
+      case 'dimotiki_enotita':
+        if (!currentLine.region.dimos) return [];
+        filtered = filtered.filter(item => 
+          item.perifereia === currentLine.region.perifereia &&
+          item.perifereiaki_enotita === currentLine.region.perifereiaki_enotita &&
+          `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim() === currentLine.region.dimos
+        );
+        return Array.from(new Set(filtered.map(item => `${item.eidos_koinotitas} ${item.onoma_dimotikis_enotitas}`.trim())))
+          .filter(Boolean)
+          .sort();
+
+      case 'topiki_koinotita':
+        if (!currentLine.region.dimotiki_enotita) return [];
+        filtered = filtered.filter(item => 
+          item.perifereia === currentLine.region.perifereia &&
+          item.perifereiaki_enotita === currentLine.region.perifereiaki_enotita &&
+          `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim() === currentLine.region.dimos &&
+          `${item.eidos_koinotitas} ${item.onoma_dimotikis_enotitas}`.trim() === currentLine.region.dimotiki_enotita
+        );
+        return Array.from(new Set(filtered.map(item => item.onoma_dimou_koinotitas)))
+          .filter(Boolean)
+          .sort();
+
+      default:
+        return [];
+    }
   };
 
   // Initialize project lines from project data
   useEffect(() => {
     if (project && projectLines.length === 0) {
-      // If project has existing lines, load them
-      // For now, we'll create a default line structure from existing data
-      const initialLines: ProjectLine[] = [];
-      
-      // If project has implementing agencies and regions, create lines
-      if (project.implementing_agency && project.region) {
-        const agencies = Array.isArray(project.implementing_agency) ? project.implementing_agency : [project.implementing_agency];
-        agencies.forEach((agency, index) => {
-          initialLines.push({
-            id: `existing-${index}`,
-            implementing_agency: agency,
-            region: typeof project.region === 'object' ? project.region.name || '' : project.region,
-            expenditure_types: Array.isArray(project.expenditure_type) ? project.expenditure_type : []
-          });
-        });
-      }
-      
-      // If no existing data, add one empty line
-      if (initialLines.length === 0) {
-        initialLines.push({
-          id: 'default-1',
-          implementing_agency: "",
-          region: "",
-          expenditure_types: []
-        });
-      }
+      const initialLines: ProjectLine[] = [{
+        id: 'default-1',
+        implementing_agency: "",
+        region: {
+          perifereia: "",
+          perifereiaki_enotita: "",
+          dimos: "",
+          dimotiki_enotita: "",
+          topiki_koinotita: ""
+        },
+        expenditure_types: []
+      }];
       
       setProjectLines(initialLines);
     }
@@ -489,10 +586,9 @@ export default function EditProjectPage() {
               <CardTitle>Project Details - MIS: {mis}</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <Tabs defaultValue="project-info" onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-3 mb-6">
-                  <TabsTrigger value="project-info">Project Information</TabsTrigger>
-                  <TabsTrigger value="project-lines">Project Lines</TabsTrigger>
+              <Tabs defaultValue="project-lines" onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="project-lines">Project Configuration</TabsTrigger>
                   <TabsTrigger value="budget-info">Budget Allocation</TabsTrigger>
                 </TabsList>
                 
@@ -1020,26 +1116,116 @@ export default function EditProjectPage() {
                                   </Select>
                                 </div>
                                 
-                                {/* Region */}
-                                <div>
+                                {/* 5-Level Cascading Region Selection */}
+                                <div className="col-span-2">
                                   <label className="block text-sm font-medium mb-2">
-                                    Region
+                                    Geographical Region Selection
                                   </label>
-                                  <Select
-                                    value={line.region}
-                                    onValueChange={(value) => updateProjectLine(line.id!, 'region', value)}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select region..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {regionsData?.regions?.map((region: any) => (
-                                        <SelectItem key={region.id} value={region.name}>
-                                          {region.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                    {/* Περιφέρεια (Region) */}
+                                    <div>
+                                      <label className="block text-xs text-gray-500 mb-1">Περιφέρεια</label>
+                                      <Select
+                                        value={line.region.perifereia}
+                                        onValueChange={(value) => updateProjectLineRegion(line.id!, 'perifereia', value)}
+                                      >
+                                        <SelectTrigger className="h-8 text-xs">
+                                          <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {getFilteredOptions('perifereia', line.id!).map((option) => (
+                                            <SelectItem key={option} value={option} className="text-xs">
+                                              {option}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    {/* Περιφερειακή Ενότητα (Regional Unit) */}
+                                    <div>
+                                      <label className="block text-xs text-gray-500 mb-1">Περιφ. Ενότητα</label>
+                                      <Select
+                                        value={line.region.perifereiaki_enotita}
+                                        onValueChange={(value) => updateProjectLineRegion(line.id!, 'perifereiaki_enotita', value)}
+                                        disabled={!line.region.perifereia}
+                                      >
+                                        <SelectTrigger className="h-8 text-xs">
+                                          <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {getFilteredOptions('perifereiaki_enotita', line.id!).map((option) => (
+                                            <SelectItem key={option} value={option} className="text-xs">
+                                              {option}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    {/* Δήμος (Municipality) */}
+                                    <div>
+                                      <label className="block text-xs text-gray-500 mb-1">Δήμος</label>
+                                      <Select
+                                        value={line.region.dimos}
+                                        onValueChange={(value) => updateProjectLineRegion(line.id!, 'dimos', value)}
+                                        disabled={!line.region.perifereiaki_enotita}
+                                      >
+                                        <SelectTrigger className="h-8 text-xs">
+                                          <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {getFilteredOptions('dimos', line.id!).map((option) => (
+                                            <SelectItem key={option} value={option} className="text-xs">
+                                              {option}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    {/* Δημ. Ενότητα (Municipal Unit) */}
+                                    <div>
+                                      <label className="block text-xs text-gray-500 mb-1">Δημ. Ενότητα</label>
+                                      <Select
+                                        value={line.region.dimotiki_enotita}
+                                        onValueChange={(value) => updateProjectLineRegion(line.id!, 'dimotiki_enotita', value)}
+                                        disabled={!line.region.dimos}
+                                      >
+                                        <SelectTrigger className="h-8 text-xs">
+                                          <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {getFilteredOptions('dimotiki_enotita', line.id!).map((option) => (
+                                            <SelectItem key={option} value={option} className="text-xs">
+                                              {option}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+
+                                    {/* Τοπ. Κοινότητα (Local Community) */}
+                                    <div>
+                                      <label className="block text-xs text-gray-500 mb-1">Τοπ. Κοινότητα</label>
+                                      <Select
+                                        value={line.region.topiki_koinotita}
+                                        onValueChange={(value) => updateProjectLineRegion(line.id!, 'topiki_koinotita', value)}
+                                        disabled={!line.region.dimotiki_enotita}
+                                      >
+                                        <SelectTrigger className="h-8 text-xs">
+                                          <SelectValue placeholder="Select..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {getFilteredOptions('topiki_koinotita', line.id!).map((option) => (
+                                            <SelectItem key={option} value={option} className="text-xs">
+                                              {option}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
                                 </div>
                                 
                                 {/* Expenditure Types */}

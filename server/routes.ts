@@ -2083,6 +2083,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Template preview route
     app.use('/api/templates', authenticateSession, templatePreviewRouter);
 
+    // Kallikratis routes for cascading region dropdowns
+    log('[Routes] Registering kallikratis routes...');
+    
+    // Public kallikratis endpoint for region selection
+    app.get('/api/kallikratis', async (req, res) => {
+      try {
+        console.log('[Kallikratis] Fetching kallikratis data for region selection');
+        
+        const { data: kallikratisData, error } = await supabase
+          .from('kallikratis')
+          .select('*')
+          .order('perifereia, perifereiaki_enotita, onoma_neou_ota, onoma_dimotikis_enotitas, onoma_dimou_koinotitas');
+        
+        if (error) {
+          console.error('[Kallikratis] Error fetching kallikratis data:', error);
+          return res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch kallikratis data',
+            error: error.message
+          });
+        }
+        
+        console.log(`[Kallikratis] Successfully fetched ${kallikratisData?.length || 0} kallikratis entries`);
+        return res.json(kallikratisData || []);
+      } catch (error) {
+        console.error('[Kallikratis] Error in kallikratis endpoint:', error);
+        return res.status(500).json({
+          status: 'error', 
+          message: 'Failed to fetch kallikratis data',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
     // Units routes
     log('[Routes] Registering units routes...');
     
