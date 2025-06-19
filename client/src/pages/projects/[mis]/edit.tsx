@@ -533,7 +533,7 @@ export default function EditProjectPage() {
   };
 
   // Handle loading and error states
-  if (isLoading) {
+  if (isProjectLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
