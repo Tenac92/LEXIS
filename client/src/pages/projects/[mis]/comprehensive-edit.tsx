@@ -124,6 +124,7 @@ export default function ComprehensiveEditProjectPage() {
   // Fetch budget data
   const { data: budgetData, isLoading: budgetLoading } = useQuery({
     queryKey: ['/api/budget', mis],
+    queryFn: () => apiRequest(`/api/budget/${mis}`),
     enabled: !!mis,
     staleTime: 30 * 60 * 1000,
     cacheTime: 2 * 60 * 60 * 1000,
@@ -158,7 +159,7 @@ export default function ComprehensiveEditProjectPage() {
   console.log("Edit Project Page - MIS Parameter:", mis);
   console.log("Project data loading status:", projectLoading);
   console.log("Project data:", projectData);
-  console.log("Project data structure:", projectData?.project ? "has project" : "no project");
+  console.log("Project data structure:", projectData ? "has project data" : "no project data");
   console.log("Kallikratis data loaded:", kallikratisData?.length || 0, "entries");
   console.log("Units data loaded:", unitsData?.length || 0, "entries");
   console.log("Units data structure:", unitsData?.slice(0, 2));
@@ -181,8 +182,8 @@ export default function ComprehensiveEditProjectPage() {
 
   // Update form values when project data loads
   useEffect(() => {
-    if (projectData?.project) {
-      const project = projectData.project;
+    if (projectData && projectData.mis) {
+      const project = projectData;
       
       // Populate project details section
       form.setValue("project_details.mis", project.mis?.toString() || "");
@@ -209,7 +210,9 @@ export default function ComprehensiveEditProjectPage() {
         form.setValue("project_details.budget_na853", budgetData.budget_na853?.toString() || "");
       }
       
-      console.log("[Comprehensive Edit] Form populated with project data:", project.mis);
+      console.log("[Comprehensive Edit] Populating form with project data:", project.mis);
+      console.log("[Comprehensive Edit] Available project fields:", Object.keys(project));
+      console.log("[Comprehensive Edit] Form data after population:", form.getValues());
     }
   }, [projectData, budgetData, form]);
 
