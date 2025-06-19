@@ -1108,7 +1108,7 @@ export default function EditProjectPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       {unitsData?.map((unit: any) => (
-                                        <SelectItem key={unit.unit} value={unit.unit}>
+                                        <SelectItem key={unit.unit} value={unit.unit_name}>
                                           {unit.unit_name}
                                         </SelectItem>
                                       ))}
@@ -1154,6 +1154,9 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
+                                          <SelectItem value="" className="text-xs italic text-gray-500">
+                                            -- Clear Selection --
+                                          </SelectItem>
                                           {getFilteredOptions('perifereiaki_enotita', line.id!).map((option) => (
                                             <SelectItem key={option} value={option} className="text-xs">
                                               {option}
@@ -1175,6 +1178,9 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
+                                          <SelectItem value="" className="text-xs italic text-gray-500">
+                                            -- Clear Selection --
+                                          </SelectItem>
                                           {getFilteredOptions('dimos', line.id!).map((option) => (
                                             <SelectItem key={option} value={option} className="text-xs">
                                               {option}
@@ -1196,6 +1202,9 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
+                                          <SelectItem value="" className="text-xs italic text-gray-500">
+                                            -- Clear Selection --
+                                          </SelectItem>
                                           {getFilteredOptions('dimotiki_enotita', line.id!).map((option) => (
                                             <SelectItem key={option} value={option} className="text-xs">
                                               {option}
@@ -1217,6 +1226,9 @@ export default function EditProjectPage() {
                                           <SelectValue placeholder="Select..." />
                                         </SelectTrigger>
                                         <SelectContent>
+                                          <SelectItem value="" className="text-xs italic text-gray-500">
+                                            -- Clear Selection --
+                                          </SelectItem>
                                           {getFilteredOptions('topiki_koinotita', line.id!).map((option) => (
                                             <SelectItem key={option} value={option} className="text-xs">
                                               {option}
