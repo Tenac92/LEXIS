@@ -2161,7 +2161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { data: expenditureTypesData, error } = await supabase
           .from('expediture_types')
           .select('*')
-          .order('name');
+          .order('expediture_types');
         
         if (error) {
           console.error('[ExpenditureTypes] Error fetching expenditure types:', error);
