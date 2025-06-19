@@ -104,19 +104,21 @@ export default function EditProjectPage() {
     cacheTime: 10 * 60 * 1000, // 10 minutes cache
   });
 
-  // Fetch reference data for project lines with immediate caching
-  const { data: unitsData, isLoading: isUnitsLoading } = useQuery({
+  // Prefetch reference data immediately for faster dropdowns
+  const { data: unitsData } = useQuery({
     queryKey: ['/api/public/units'],
-    staleTime: 10 * 60 * 1000, // 10 minutes cache
-    cacheTime: 30 * 60 * 1000, // 30 minutes cache
+    staleTime: 30 * 60 * 1000, // 30 minutes cache
+    cacheTime: 2 * 60 * 60 * 1000, // 2 hours cache
   });
 
-  const { data: kallikratisData, isLoading: isKallikratisLoading } = useQuery<KallikratisEntry[]>({
+  const { data: kallikratisData } = useQuery<KallikratisEntry[]>({
     queryKey: ['/api/kallikratis'],
-    staleTime: 15 * 60 * 1000, // 15 minutes cache
-    cacheTime: 60 * 60 * 1000, // 1 hour cache
-    enabled: activeTab === 'project-lines', // Only load when needed
+    staleTime: 30 * 60 * 1000, // 30 minutes cache
+    cacheTime: 2 * 60 * 60 * 1000, // 2 hours cache
   });
+
+  console.log("Kallikratis data loaded:", kallikratisData ? kallikratisData.length : 0, "entries");
+  console.log("Units data loaded:", unitsData ? unitsData.length : 0, "entries");
 
   // Initialize the form with all possible fields from the SQL export
   const form = useForm<any>({
@@ -454,11 +456,8 @@ export default function EditProjectPage() {
     }
   }, [project]);
 
-  // Only show loading for project data (critical path)
-  const isLoading = isProjectLoading;
-  
-  // Show loading skeleton immediately after all hooks
-  if (isLoading) {
+  // Show minimal loading for critical path only
+  if (isProjectLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -470,6 +469,11 @@ export default function EditProjectPage() {
         </div>
       </div>
     );
+  }
+
+  // Show data availability status
+  if (!kallikratisData || !unitsData) {
+    console.log("Missing reference data - Kallikratis:", !kallikratisData, "Units:", !unitsData);
   }
 
   // Form submission handler
