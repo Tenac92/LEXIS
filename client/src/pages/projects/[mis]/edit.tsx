@@ -114,20 +114,6 @@ export default function EditProjectPage() {
     enabled: activeTab === 'project-lines', // Only load when needed
   });
 
-  const isLoading = isProjectLoading || isBudgetLoading;
-  
-  // Show loading skeleton immediately
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded mb-4 w-1/3"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
   // Initialize the form with all possible fields from the SQL export
   const form = useForm<any>({
     resolver: zodResolver(updateProjectSchema),
@@ -463,6 +449,23 @@ export default function EditProjectPage() {
       setProjectLines(initialLines);
     }
   }, [project]);
+
+  const isLoading = isProjectLoading || isBudgetLoading;
+  
+  // Show loading skeleton immediately after all hooks
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded mb-4 w-1/3"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Form submission handler
   const onSubmit = (data: any) => {
