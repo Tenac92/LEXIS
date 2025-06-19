@@ -41,8 +41,7 @@ function Router(): JSX.Element {
         <ProtectedRoute path="/templates" component={TemplatesPage} />
         <ProtectedRoute path="/projects/bulk-update" component={BulkUpdatePage} />
         {/* Order matters: more specific routes should come first */}
-        <ProtectedRoute path="/projects/:mis/comprehensive-edit" component={ComprehensiveEditProjectPage} />
-        <ProtectedRoute path="/projects/:mis/edit" component={EditProjectPage} />
+        <ProtectedRoute path="/projects/:mis/edit" component={ComprehensiveEditProjectPage} />
         <ProtectedRoute path="/projects/:mis" component={ProjectDetailsPage} />
         <ProtectedRoute path="/projects" component={ProjectsPage} />
         <ProtectedRoute path="/users" component={UsersPage} />

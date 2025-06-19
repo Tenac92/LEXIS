@@ -120,6 +120,44 @@ export default function ComprehensiveEditProjectPage() {
     cacheTime: 2 * 60 * 60 * 1000, // 2 hours
   });
 
+  // Fetch budget data
+  const { data: budgetData, isLoading: budgetLoading } = useQuery({
+    queryKey: ['/api/budget', mis],
+    enabled: !!mis,
+    staleTime: 30 * 60 * 1000,
+    cacheTime: 2 * 60 * 60 * 1000,
+  });
+
+  // Fetch reference data for dropdowns
+  const { data: kallikratisData } = useQuery({
+    queryKey: ['/api/kallikratis'],
+    staleTime: 30 * 60 * 1000,
+    cacheTime: 2 * 60 * 60 * 1000,
+  });
+
+  const { data: unitsData } = useQuery({
+    queryKey: ['/api/public/units'],
+    staleTime: 30 * 60 * 1000,
+    cacheTime: 2 * 60 * 60 * 1000,
+  });
+
+  const { data: eventTypesData } = useQuery({
+    queryKey: ['/api/event-types'],
+    staleTime: 30 * 60 * 1000,
+    cacheTime: 2 * 60 * 60 * 1000,
+  });
+
+  const { data: expenditureTypesData } = useQuery({
+    queryKey: ['/api/expenditure-types'],
+    staleTime: 30 * 60 * 1000,
+    cacheTime: 2 * 60 * 60 * 1000,
+  });
+
+  console.log("Edit Project Page - MIS Parameter:", mis);
+  console.log("Kallikratis data loaded:", kallikratisData?.length || 0, "entries");
+  console.log("Units data loaded:", unitsData?.length || 0, "entries");
+  console.log("Units data structure:", unitsData?.slice(0, 2));
+
   const form = useForm<ComprehensiveFormData>({
     resolver: zodResolver(comprehensiveProjectSchema),
     defaultValues: {
@@ -136,15 +174,84 @@ export default function ComprehensiveEditProjectPage() {
     },
   });
 
+  // Update form values when project data loads
+  useEffect(() => {
+    if (projectData?.project) {
+      const project = projectData.project;
+      
+      // Populate project details section
+      form.setValue("project_details.mis", project.mis?.toString() || "");
+      form.setValue("project_details.project_title", project.title || "");
+      form.setValue("project_details.project_description", project.event_description || "");
+      form.setValue("project_details.project_summary", project.project_title || "");
+      
+      // Populate event details if available
+      if (project.event_type && Array.isArray(project.event_type) && project.event_type.length > 0) {
+        form.setValue("event_details.event_name", project.event_type[0] || "");
+      }
+      
+      if (project.event_year && Array.isArray(project.event_year) && project.event_year.length > 0) {
+        form.setValue("event_details.event_year", project.event_year[0] || "");
+      }
+
+      // Populate implementing agency from existing data
+      if (project.implementing_agency && Array.isArray(project.implementing_agency) && project.implementing_agency.length > 0) {
+        form.setValue("event_details.locations.0.implementing_agency", project.implementing_agency[0] || "");
+      }
+
+      // Set budget fields if available
+      if (budgetData) {
+        form.setValue("project_details.budget_na853", budgetData.budget_na853?.toString() || "");
+      }
+      
+      console.log("[Comprehensive Edit] Form populated with project data:", project.mis);
+    }
+  }, [projectData, budgetData, form]);
+
   const updateProjectMutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
-      // Transform comprehensive form data to include project_lines for project_index table
+      // Transform comprehensive form data for proper project updates
       const transformedData = {
-        ...data,
+        // Core project fields
+        title: data.project_details?.project_title || '',
+        project_title: data.project_details?.project_summary || '',
+        event_description: data.project_details?.project_description || '',
+        mis: data.project_details?.mis || '',
+        
+        // Event and type data
+        event_type: data.event_details?.event_name ? [data.event_details.event_name] : [],
+        event_year: data.event_details?.event_year ? [data.event_details.event_year] : [],
+        
+        // Implementing agency
+        implementing_agency: data.event_details?.locations?.[0]?.implementing_agency ? 
+          [data.event_details.locations[0].implementing_agency] : [],
+        
+        // Expenditure types from formulation details
+        expenditure_type: data.formulation_details?.map(fd => fd.sa).filter(Boolean) || [],
+        
+        // Region data
+        region: data.event_details?.locations?.[0] ? {
+          perifereia: data.event_details.locations[0].region || '',
+          perifereiaki_enotita: data.event_details.locations[0].regional_unit || '',
+          dimos: data.event_details.locations[0].municipality || '',
+          dimotiki_enotita: data.event_details.locations[0].municipal_community || ''
+        } : {},
+        
+        // Document fields from decisions
+        kya: data.decisions?.map(d => d.protocol_number).filter(Boolean) || [],
+        fek: data.decisions?.map(d => d.fek).filter(Boolean) || [],
+        ada: data.decisions?.map(d => d.ada).filter(Boolean) || [],
+        
+        // Budget fields from formulation details
+        budget_na853: data.formulation_details?.find(fd => fd.sa === 'ΝΑ853')?.project_budget || '',
+        budget_na271: data.formulation_details?.find(fd => fd.sa === 'ΝΑ271')?.project_budget || '',
+        budget_e069: data.formulation_details?.find(fd => fd.sa === 'Ε069')?.project_budget || '',
+        
+        // Project lines for project_index table
         project_lines: [
           {
             implementing_agency: data.event_details?.locations?.[0]?.implementing_agency || '',
-            event_type: data.project_details?.project_title || '', // Map to event type
+            event_type: data.event_details?.event_name || '',
             expenditure_types: data.formulation_details?.map(fd => fd.sa).filter(Boolean) || [],
             region: {
               perifereia: data.event_details?.locations?.[0]?.region || '',
@@ -156,7 +263,7 @@ export default function ComprehensiveEditProjectPage() {
         ]
       };
       
-      console.log('[Comprehensive Edit] Sending data with project_lines:', transformedData);
+      console.log('[Comprehensive Edit] Sending enhanced project data:', transformedData);
       
       return apiRequest(`/api/projects/${mis}`, {
         method: 'PATCH',
@@ -492,10 +599,21 @@ export default function ComprehensiveEditProjectPage() {
                           name="event_details.event_name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Συμβάν</FormLabel>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
+                              <FormLabel>Τύπος Συμβάντος</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Επιλέξτε τύπο συμβάντος" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {eventTypesData?.map((eventType: any) => (
+                                    <SelectItem key={eventType.id} value={eventType.name}>
+                                      {eventType.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </FormItem>
                           )}
                         />
@@ -585,9 +703,20 @@ export default function ComprehensiveEditProjectPage() {
                                     name={`event_details.locations.${index}.implementing_agency`}
                                     render={({ field }) => (
                                       <FormItem>
-                                        <FormControl>
-                                          <Input {...field} className="w-full" />
-                                        </FormControl>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                          <FormControl>
+                                            <SelectTrigger className="w-full">
+                                              <SelectValue placeholder="Επιλέξτε φορέα" />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                            {unitsData?.map((unit: any) => (
+                                              <SelectItem key={unit.id} value={unit.name}>
+                                                {unit.name}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
                                       </FormItem>
                                     )}
                                   />
@@ -848,7 +977,7 @@ export default function ComprehensiveEditProjectPage() {
                                         <Select onValueChange={field.onChange} value={field.value}>
                                           <FormControl>
                                             <SelectTrigger className="w-full">
-                                              <SelectValue />
+                                              <SelectValue placeholder="Επιλέξτε ΣΑ" />
                                             </SelectTrigger>
                                           </FormControl>
                                           <SelectContent>
@@ -861,7 +990,71 @@ export default function ComprehensiveEditProjectPage() {
                                     )}
                                   />
                                 </td>
-                                {/* Additional columns would continue here with similar pattern */}
+                                <td className="border border-gray-300 p-2">
+                                  <FormField
+                                    control={form.control}
+                                    name={`formulation_details.${index}.enumeration_code`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <Input {...field} className="w-full" placeholder="Κωδικός" />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                </td>
+                                <td className="border border-gray-300 p-2">
+                                  <FormField
+                                    control={form.control}
+                                    name={`formulation_details.${index}.protocol_number`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <Input {...field} className="w-full" placeholder="Αρ. πρωτ." />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                </td>
+                                <td className="border border-gray-300 p-2">
+                                  <FormField
+                                    control={form.control}
+                                    name={`formulation_details.${index}.ada`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <Input {...field} className="w-full" placeholder="ΑΔΑ" />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                </td>
+                                <td className="border border-gray-300 p-2">
+                                  <FormField
+                                    control={form.control}
+                                    name={`formulation_details.${index}.decision_year`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <Input {...field} className="w-full" placeholder="Έτος" />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                </td>
+                                <td className="border border-gray-300 p-2">
+                                  <FormField
+                                    control={form.control}
+                                    name={`formulation_details.${index}.project_budget`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <Input {...field} className="w-full" placeholder="Προϋπολογισμός" />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                </td>
                               </tr>
                             ))}
                           </tbody>
