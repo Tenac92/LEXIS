@@ -1093,7 +1093,7 @@ export default function EditProjectPage() {
                                 )}
                               </div>
                               
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="space-y-4">
                                 {/* Implementing Agency */}
                                 <div>
                                   <label className="block text-sm font-medium mb-2">
@@ -1108,8 +1108,8 @@ export default function EditProjectPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       {unitsData?.map((unit: any) => (
-                                        <SelectItem key={unit.id} value={unit.id}>
-                                          {unit.name}
+                                        <SelectItem key={unit.unit} value={unit.unit}>
+                                          {unit.unit_name}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -1117,11 +1117,11 @@ export default function EditProjectPage() {
                                 </div>
                                 
                                 {/* 5-Level Cascading Region Selection */}
-                                <div className="col-span-2">
+                                <div>
                                   <label className="block text-sm font-medium mb-2">
                                     Geographical Region Selection
                                   </label>
-                                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2">
                                     {/* Περιφέρεια (Region) */}
                                     <div>
                                       <label className="block text-xs text-gray-500 mb-1">Περιφέρεια</label>
@@ -1228,61 +1228,39 @@ export default function EditProjectPage() {
                                   </div>
                                 </div>
                                 
-                                {/* Expenditure Types */}
+                                {/* Expenditure Types with Multi-Select */}
                                 <div>
                                   <label className="block text-sm font-medium mb-2">
-                                    Expenditure Types
+                                    Expenditure Types (Τύπος Δαπάνης)
                                   </label>
-                                  <Select
-                                    value={line.expenditure_types.join(',')}
-                                    onValueChange={(value) => {
-                                      const types = value ? value.split(',') : [];
-                                      updateProjectLine(line.id!, 'expenditure_types', types);
-                                    }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select expenditure types..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ">ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ</SelectItem>
-                                      <SelectItem value="ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ">ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ</SelectItem>
-                                      <SelectItem value="ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ">ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ</SelectItem>
-                                      <SelectItem value="ΔΚΑ ΕΠΙΣΚΕΥΗ">ΔΚΑ ΕΠΙΣΚΕΥΗ</SelectItem>
-                                      <SelectItem value="ΕΚΤΟΣ ΕΔΡΑΣ">ΕΚΤΟΣ ΕΔΡΑΣ</SelectItem>
-                                      <SelectItem value="ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ">ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ</SelectItem>
-                                      <SelectItem value="ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ">ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ</SelectItem>
-                                      <SelectItem value="ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ">ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                              
-                              {/* Display selected expenditure types */}
-                              {line.expenditure_types.length > 0 && (
-                                <div className="mt-3">
-                                  <div className="text-sm text-gray-600 mb-2">Selected Expenditure Types:</div>
-                                  <div className="flex flex-wrap gap-2">
-                                    {line.expenditure_types.map((type, typeIndex) => (
-                                      <span
-                                        key={typeIndex}
-                                        className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800"
-                                      >
-                                        {type}
+                                  <div className="space-y-2">
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                      {['ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ', 'ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ', 'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ', 'ΔΚΑ ΕΠΙΣΚΕΥΗ', 
+                                        'ΕΚΤΟΣ ΕΔΡΑΣ', 'ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ', 'ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ', 'ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ'].map((type) => (
                                         <button
+                                          key={type}
                                           type="button"
                                           onClick={() => {
-                                            const newTypes = line.expenditure_types.filter((_, i) => i !== typeIndex);
+                                            const currentTypes = line.expenditure_types || [];
+                                            const newTypes = currentTypes.includes(type)
+                                              ? currentTypes.filter(t => t !== type)
+                                              : [...currentTypes, type];
                                             updateProjectLine(line.id!, 'expenditure_types', newTypes);
                                           }}
-                                          className="ml-1 text-blue-600 hover:text-blue-800"
+                                          className={`px-3 py-1 text-xs rounded-md border transition-colors ${
+                                            line.expenditure_types?.includes(type)
+                                              ? 'bg-blue-100 border-blue-300 text-blue-800'
+                                              : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                                          }`}
                                         >
-                                          <X className="h-3 w-3" />
+                                          {type}
                                         </button>
-                                      </span>
-                                    ))}
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
-                              )}
+                              </div>
+
                             </Card>
                           ))}
                         </div>

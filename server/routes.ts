@@ -693,7 +693,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
               
               const mappedTypes = indexItems
-                .map(idx => knownExpenditureTypes[idx.expenditure_type_id])
+                .map(idx => {
+                  const typeId = idx.expenditure_type_id;
+                  return knownExpenditureTypes[typeId as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8];
+                })
                 .filter(type => type !== undefined);
               
               finalExpenditureTypes = Array.from(new Set(mappedTypes));
