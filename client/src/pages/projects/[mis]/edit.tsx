@@ -119,6 +119,7 @@ export default function EditProjectPage() {
 
   console.log("Kallikratis data loaded:", kallikratisData ? kallikratisData.length : 0, "entries");
   console.log("Units data loaded:", unitsData ? unitsData.length : 0, "entries");
+  console.log("Units data structure:", unitsData ? unitsData.slice(0, 2) : "no data");
 
   // Initialize the form with all possible fields from the SQL export
   const form = useForm<any>({
@@ -1124,9 +1125,9 @@ export default function EditProjectPage() {
                                       <SelectValue placeholder="Select agency..." />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {unitsData?.map((unit: any) => (
-                                        <SelectItem key={unit.unit} value={unit.unit_name}>
-                                          {unit.unit_name}
+                                      {unitsData?.map((unit: any, index: number) => (
+                                        <SelectItem key={`unit-${index}-${unit.unit || unit.id}`} value={unit.unit_name || unit.name}>
+                                          {unit.unit_name || unit.name}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
