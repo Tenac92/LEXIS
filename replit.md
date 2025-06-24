@@ -127,15 +127,21 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### June 24, 2025 - Comprehensive Edit System Data Fetching Fix & Full Functionality
+### June 24, 2025 - Enhanced Comprehensive Edit System with Advanced Project Lines Management
 - Fixed TanStack Query v5 compatibility issues by updating `cacheTime` to `gcTime` in all query configurations
 - Resolved project data structure handling - API returns data directly, not nested under `project` property
-- Enhanced form population with proper field mapping for all 5 sections using actual project data structure
-- Implemented complete data flow: decisions (KYA, FEK, ADA), event details, project details, formulation details
+- Enhanced form population with proper field mapping for all 6 sections using actual project data structure
+- Implemented complete data flow: decisions (KYA, FEK, ADA), event details, project details, formulation details, changes, and project lines
+- Added advanced Section 6: Project Lines Management with cascading region dropdowns and multi-select expenditure types
+- Integrated 4-level geographic hierarchy (Περιφέρεια → Π.Ε. → Δήμος → Δημοτική Ενότητα) with smart dependency handling
+- Multi-select expenditure types with visual selection indicators for each project line
+- Project lines include implementing agency, event type, complete regional hierarchy, and expenditure type arrays
+- Enhanced mutation to include project_lines data for automatic project_index table updates
 - All API endpoints verified working: 8 expenditure types, 15 event types, 1000 kallikratis entries, 11 units
 - Form now properly populates with existing project data including enhanced relationships
 - Budget data integration fixed with correct API endpoint structure
-- TypeScript errors resolved for production-ready comprehensive edit system
+- Added loading states and enhanced error handling throughout the comprehensive edit system
+- TypeScript errors resolved for production-ready comprehensive edit system with advanced functionality
 
 ### June 19, 2025 - Comprehensive Project Edit System Implementation & Regular Edit Replacement
 - Replaced regular edit page with comprehensive 5-section project edit interface matching Greek government documentation requirements
