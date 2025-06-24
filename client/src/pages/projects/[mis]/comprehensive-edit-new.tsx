@@ -147,6 +147,9 @@ export default function ComprehensiveEditNew() {
     queryKey: ["/api/expenditure-types"],
   });
 
+  // Debug logging for expenditure types
+  console.log("Expenditure types data:", expenditureTypesData);
+
   // Initialize form with project data
   useEffect(() => {
     if (projectData) {
@@ -728,18 +731,18 @@ export default function ComprehensiveEditNew() {
                   </table>
 
                   {/* Location details with 4-level cascading dropdowns and multi-select expenditure types */}
-                  <div className="mt-4 space-y-4">
+                  <div className="mt-6 space-y-6">
                     {form.watch("location_details").map((location, index) => (
-                      <Card key={index} className="p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-medium">Γραμμή {index + 1}</h4>
+                      <Card key={index} className="p-6 border-2 border-gray-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                          <h4 className="text-lg font-semibold text-gray-800">Location Entry {index + 1}</h4>
                           {form.watch("location_details").length > 1 && (
                             <Button
                               type="button"
                               variant="outline"
                               size="sm"
                               onClick={() => removeLocationDetail(index)}
-                              className="text-red-600 hover:text-red-700"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -747,20 +750,20 @@ export default function ComprehensiveEditNew() {
                         </div>
 
                         {/* 4-Level Cascading Dropdowns */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                           {/* Περιφέρεια (Region) */}
                           <div>
-                            <label className="block text-xs text-gray-500 mb-1">Περιφέρεια</label>
+                            <label className="block text-base font-medium mb-3">Region (Περιφέρεια)</label>
                             <Select
                               value={location.region}
                               onValueChange={(value) => updateLocationField(index, 'region', value)}
                             >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Επιλέξτε..." />
+                              <SelectTrigger className="h-11">
+                                <SelectValue placeholder="Select region..." />
                               </SelectTrigger>
                               <SelectContent>
                                 {getFilteredOptions('region', index).map((option, optIndex) => (
-                                  <SelectItem key={`region-${index}-${optIndex}`} value={option} className="text-xs">
+                                  <SelectItem key={`region-${index}-${optIndex}`} value={option}>
                                     {option}
                                   </SelectItem>
                                 ))}
@@ -770,21 +773,21 @@ export default function ComprehensiveEditNew() {
 
                           {/* Περιφερειακή Ενότητα (Regional Unit) */}
                           <div>
-                            <label className="block text-xs text-gray-500 mb-1">Περιφ. Ενότητα</label>
+                            <label className="block text-base font-medium mb-3">Regional Unit (Περιφερειακή Ενότητα)</label>
                             <Select
                               value={location.regional_unit}
                               onValueChange={(value) => updateLocationField(index, 'regional_unit', value)}
                               disabled={!location.region}
                             >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Επιλέξτε..." />
+                              <SelectTrigger className="h-11">
+                                <SelectValue placeholder="Select regional unit..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="__clear__" className="text-xs italic text-gray-500">
-                                  -- Καθαρισμός --
+                                <SelectItem value="__clear__" className="italic text-gray-500">
+                                  -- Clear Selection --
                                 </SelectItem>
                                 {getFilteredOptions('regional_unit', index).map((option, optIndex) => (
-                                  <SelectItem key={`regional-unit-${index}-${optIndex}`} value={option} className="text-xs">
+                                  <SelectItem key={`regional-unit-${index}-${optIndex}`} value={option}>
                                     {option}
                                   </SelectItem>
                                 ))}
@@ -794,21 +797,21 @@ export default function ComprehensiveEditNew() {
 
                           {/* Δήμος (Municipality) */}
                           <div>
-                            <label className="block text-xs text-gray-500 mb-1">Δήμος</label>
+                            <label className="block text-base font-medium mb-3">Municipality (Δήμος)</label>
                             <Select
                               value={location.municipality}
                               onValueChange={(value) => updateLocationField(index, 'municipality', value)}
                               disabled={!location.regional_unit}
                             >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Επιλέξτε..." />
+                              <SelectTrigger className="h-11">
+                                <SelectValue placeholder="Select municipality..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="__clear__" className="text-xs italic text-gray-500">
-                                  -- Καθαρισμός --
+                                <SelectItem value="__clear__" className="italic text-gray-500">
+                                  -- Clear Selection --
                                 </SelectItem>
                                 {getFilteredOptions('municipality', index).map((option, optIndex) => (
-                                  <SelectItem key={`municipality-${index}-${optIndex}`} value={option} className="text-xs">
+                                  <SelectItem key={`municipality-${index}-${optIndex}`} value={option}>
                                     {option}
                                   </SelectItem>
                                 ))}
@@ -818,21 +821,21 @@ export default function ComprehensiveEditNew() {
 
                           {/* Δημ. Ενότητα (Municipal Community) */}
                           <div>
-                            <label className="block text-xs text-gray-500 mb-1">Δημ. Ενότητα</label>
+                            <label className="block text-base font-medium mb-3">Municipal Community (Δημοτική Ενότητα)</label>
                             <Select
                               value={location.municipal_community}
                               onValueChange={(value) => updateLocationField(index, 'municipal_community', value)}
                               disabled={!location.municipality}
                             >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue placeholder="Επιλέξτε..." />
+                              <SelectTrigger className="h-11">
+                                <SelectValue placeholder="Select municipal community..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="__clear__" className="text-xs italic text-gray-500">
-                                  -- Καθαρισμός --
+                                <SelectItem value="__clear__" className="italic text-gray-500">
+                                  -- Clear Selection --
                                 </SelectItem>
                                 {getFilteredOptions('municipal_community', index).map((option, optIndex) => (
-                                  <SelectItem key={`municipal-community-${index}-${optIndex}`} value={option} className="text-xs">
+                                  <SelectItem key={`municipal-community-${index}-${optIndex}`} value={option}>
                                     {option}
                                   </SelectItem>
                                 ))}
@@ -842,14 +845,14 @@ export default function ComprehensiveEditNew() {
                         </div>
 
                         {/* Implementing Agency */}
-                        <div className="mb-4">
-                          <label className="block text-sm font-medium mb-2">Φορέας υλοποίησης</label>
+                        <div className="mb-6">
+                          <label className="block text-base font-medium mb-3">Implementing Agency (Φορέας υλοποίησης)</label>
                           <Select
                             value={location.implementing_agency}
                             onValueChange={(value) => updateLocationField(index, 'implementing_agency', value)}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Επιλέξτε φορέα..." />
+                            <SelectTrigger className="h-11">
+                              <SelectValue placeholder="Select implementing agency..." />
                             </SelectTrigger>
                             <SelectContent>
                               {unitsData?.map((unit: any, unitIndex: number) => (
@@ -863,41 +866,46 @@ export default function ComprehensiveEditNew() {
 
                         {/* Multi-Select Expenditure Types */}
                         <div>
-                          <label className="block text-sm font-medium mb-2">
-                            Τύπος Δαπάνης (Multi-Select)
+                          <label className="block text-base font-medium mb-3">
+                            Expenditure Types (Τύπος Δαπάνης)
                           </label>
-                          <div className="flex flex-wrap gap-2">
-                            {expenditureTypesData?.map((expType: any) => {
-                              const isSelected = location.expenditure_types?.includes(expType.name);
-                              return (
-                                <button
-                                  key={`${index}-${expType.id}`}
-                                  type="button"
-                                  onClick={() => toggleExpenditureType(index, expType.name)}
-                                  className={`px-3 py-1 text-xs rounded-md border transition-all duration-200 flex items-center gap-1 ${
-                                    isSelected
-                                      ? 'bg-blue-100 border-blue-300 text-blue-800 shadow-sm'
-                                      : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
-                                  }`}
-                                >
-                                  {isSelected && <CheckCircle className="h-3 w-3" />}
-                                  {expType.name}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          {location.expenditure_types?.length > 0 && (
-                            <div className="mt-2 text-xs text-gray-600">
-                              Επιλεγμένα: {location.expenditure_types.length} τύπος/οι δαπάνης
+                          <div className="space-y-3">
+                            <div className="flex flex-wrap gap-2">
+                              {expenditureTypesData?.map((expType: any) => {
+                                const isSelected = location.expenditure_types?.includes(expType.expediture_types);
+                                return (
+                                  <button
+                                    key={`${index}-${expType.id}`}
+                                    type="button"
+                                    onClick={() => toggleExpenditureType(index, expType.expediture_types)}
+                                    className={`px-4 py-2 text-sm rounded-lg border transition-all duration-200 font-medium ${
+                                      isSelected
+                                        ? 'bg-blue-100 border-blue-300 text-blue-800 shadow-sm'
+                                        : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400'
+                                    }`}
+                                  >
+                                    {expType.expediture_types}
+                                  </button>
+                                );
+                              })}
                             </div>
-                          )}
+                            {location.expenditure_types?.length > 0 && (
+                              <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                                Selected: {location.expenditure_types.length} expenditure type(s)
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </Card>
                     ))}
                     
-                    <Button type="button" onClick={addLocationDetail} className="bg-green-600 hover:bg-green-700">
+                    <Button 
+                      type="button" 
+                      onClick={addLocationDetail} 
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3"
+                    >
                       <Plus className="h-4 w-4 mr-2" />
-                      Προσθήκη γραμμής
+                      Add New Location Entry
                     </Button>
                   </div>
                 </CardContent>
