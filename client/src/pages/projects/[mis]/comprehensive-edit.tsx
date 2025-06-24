@@ -152,7 +152,7 @@ export default function ComprehensiveEditProjectPage() {
 
   // Initialize form with project data and project index data
   useEffect(() => {
-    if (projectData && kallikratisData && unitsData && projectIndexData) {
+    if (projectData && kallikratisData && unitsData) {
       const project = projectData;
       
       // Initialize project lines from project_index data if available
@@ -204,21 +204,19 @@ export default function ComprehensiveEditProjectPage() {
           projectLines.push(projectLine);
         });
       } else {
-        // Fallback: create one project line from main project data
-        const kallikratisEntry = kallikratisData.find((entry: any) => entry.id === project.enhanced_kallikratis?.id);
-        
+        // Fallback: create one project line with basic project data
         const initialProjectLine: ProjectLine = {
           id: "1",
-          implementing_agency: project.enhanced_unit?.id?.toString() || "",
-          event_type: project.enhanced_event_type?.name || "",
+          implementing_agency: "",
+          event_type: "",
           region: {
-            perifereia: kallikratisEntry?.perifereia || "",
-            perifereiaki_enotita: kallikratisEntry?.perifereiaki_enotita || "",
-            dimos: kallikratisEntry ? `${kallikratisEntry.eidos_neou_ota || ""} ${kallikratisEntry.onoma_neou_ota || ""}`.trim() : "",
-            dimotiki_enotita: kallikratisEntry ? `${kallikratisEntry.eidos_koinotitas || ""} ${kallikratisEntry.onoma_dimotikis_enotitas || ""}`.trim() : "",
-            kallikratis_id: kallikratisEntry?.id
+            perifereia: "",
+            perifereiaki_enotita: "",
+            dimos: "",
+            dimotiki_enotita: "",
+            kallikratis_id: undefined
           },
-          expenditure_types: project.enhanced_expenditure_type?.name ? [project.enhanced_expenditure_type.name] : []
+          expenditure_types: []
         };
         
         projectLines.push(initialProjectLine);
@@ -226,25 +224,61 @@ export default function ComprehensiveEditProjectPage() {
 
       setProjectLines(projectLines);
 
-      // Populate form fields
+      // Populate all form fields with comprehensive project data
+      // Section 1: Decisions
+      if (project.kya?.length) {
+        project.kya.forEach((kya: string, index: number) => {
+          form.setValue(`decisions.${index}.protocol_number`, kya);
+        });
+      }
+      if (project.fek?.length) {
+        project.fek.forEach((fek: string, index: number) => {
+          form.setValue(`decisions.${index}.fek`, fek);
+        });
+      }
+      if (project.ada?.length) {
+        project.ada.forEach((ada: string, index: number) => {
+          form.setValue(`decisions.${index}.ada`, ada);
+        });
+      }
+
+      // Section 2: Event Details
+      if (eventTypesData && project.event_type_id) {
+        const eventType = eventTypesData.find((et: any) => et.id === project.event_type_id);
+        if (eventType) {
+          form.setValue("event_details.event_name", eventType.name);
+        }
+      }
+      if (project.event_year?.length) {
+        form.setValue("event_details.event_year", project.event_year[0]);
+      }
+
+      // Section 3: Project Details
       form.setValue("project_details.mis", project.mis?.toString() || "");
       form.setValue("project_details.project_title", project.project_title || "");
       form.setValue("project_details.project_description", project.event_description || "");
-      form.setValue("event_details.event_name", project.enhanced_event_type?.name || "");
-      form.setValue("event_details.event_year", project.event_year?.[0] || "");
+      form.setValue("project_details.na853", project.na853 || "");
+      form.setValue("project_details.na271", project.na271 || "");
+      form.setValue("project_details.e069", project.e069 || "");
 
-      // Populate decisions
-      if (project.kya?.[0]) form.setValue("decisions.0.protocol_number", project.kya[0]);
-      if (project.fek?.[0]) form.setValue("decisions.0.fek", project.fek[0]);
-      if (project.ada?.[0]) form.setValue("decisions.0.ada", project.ada[0]);
-
-      // Populate budget
+      // Section 4: Formulation Details
       if (project.budget_na853) {
         form.setValue("formulation_details.0.project_budget", project.budget_na853.toString());
         form.setValue("formulation_details.0.sa", "ΝΑ853");
       }
+      if (project.budget_na271) {
+        form.setValue("formulation_details.1.project_budget", project.budget_na271.toString());
+        form.setValue("formulation_details.1.sa", "ΝΑ271");
+      }
+      if (project.budget_e069) {
+        form.setValue("formulation_details.2.project_budget", project.budget_e069.toString());
+        form.setValue("formulation_details.2.sa", "Ε069");
+      }
+
+      // Section 5: Changes (if any existing data)
+      // This would be populated from project history or change tracking data when available
     }
-  }, [projectData, projectIndexData, kallikratisData, unitsData, form]);
+  }, [projectData, projectIndexData, kallikratisData, unitsData, eventTypesData, form]);
 
   // Project Lines Management Functions
   const addProjectLine = () => {
