@@ -152,13 +152,15 @@ export default function ComprehensiveEditProjectPage() {
 
   // Initialize form with project data and project index data
   useEffect(() => {
-    if (projectData && kallikratisData && unitsData) {
+    if (projectData) {
+      console.log('Initializing form with project data:', projectData);
       const project = projectData;
       
       // Initialize project lines from project_index data if available
       const projectLines: ProjectLine[] = [];
       
       if (projectIndexData && Array.isArray(projectIndexData) && projectIndexData.length > 0) {
+        console.log('Using project index data for project lines:', projectIndexData);
         // Group project index entries by common attributes to create consolidated project lines
         const groupedEntries = new Map<string, any>();
         
@@ -185,7 +187,7 @@ export default function ComprehensiveEditProjectPage() {
 
         // Create project lines from grouped entries
         Array.from(groupedEntries.values()).forEach((groupedEntry: any, idx: number) => {
-          const kallikratisEntry = groupedEntry.kallikratis || kallikratisData.find((entry: any) => entry.id === groupedEntry.kallikratis_id);
+          const kallikratisEntry = groupedEntry.kallikratis || (kallikratisData?.find((entry: any) => entry.id === groupedEntry.kallikratis_id));
           
           const projectLine: ProjectLine = {
             id: (idx + 1).toString(),
@@ -204,6 +206,7 @@ export default function ComprehensiveEditProjectPage() {
           projectLines.push(projectLine);
         });
       } else {
+        console.log('Creating fallback project line from main project data');
         // Fallback: create one project line with basic project data
         const initialProjectLine: ProjectLine = {
           id: "1",
@@ -224,19 +227,24 @@ export default function ComprehensiveEditProjectPage() {
 
       setProjectLines(projectLines);
 
-      // Populate all form fields with comprehensive project data
+      // Always populate all form fields with project data, regardless of dependencies
+      console.log('Populating form sections...');
+
       // Section 1: Decisions
-      if (project.kya?.length) {
+      if (project.kya && Array.isArray(project.kya) && project.kya.length > 0) {
+        console.log('Setting KYA values:', project.kya);
         project.kya.forEach((kya: string, index: number) => {
           form.setValue(`decisions.${index}.protocol_number`, kya);
         });
       }
-      if (project.fek?.length) {
+      if (project.fek && Array.isArray(project.fek) && project.fek.length > 0) {
+        console.log('Setting FEK values:', project.fek);
         project.fek.forEach((fek: string, index: number) => {
           form.setValue(`decisions.${index}.fek`, fek);
         });
       }
-      if (project.ada?.length) {
+      if (project.ada && Array.isArray(project.ada) && project.ada.length > 0) {
+        console.log('Setting ADA values:', project.ada);
         project.ada.forEach((ada: string, index: number) => {
           form.setValue(`decisions.${index}.ada`, ada);
         });
@@ -246,14 +254,17 @@ export default function ComprehensiveEditProjectPage() {
       if (eventTypesData && project.event_type_id) {
         const eventType = eventTypesData.find((et: any) => et.id === project.event_type_id);
         if (eventType) {
+          console.log('Setting event type:', eventType.name);
           form.setValue("event_details.event_name", eventType.name);
         }
       }
-      if (project.event_year?.length) {
+      if (project.event_year && Array.isArray(project.event_year) && project.event_year.length > 0) {
+        console.log('Setting event year:', project.event_year[0]);
         form.setValue("event_details.event_year", project.event_year[0]);
       }
 
-      // Section 3: Project Details
+      // Section 3: Project Details - Always populate these core fields
+      console.log('Setting project details...');
       form.setValue("project_details.mis", project.mis?.toString() || "");
       form.setValue("project_details.project_title", project.project_title || "");
       form.setValue("project_details.project_description", project.event_description || "");
@@ -262,23 +273,26 @@ export default function ComprehensiveEditProjectPage() {
       form.setValue("project_details.e069", project.e069 || "");
 
       // Section 4: Formulation Details
+      console.log('Setting formulation details...');
+      let formDetailIndex = 0;
       if (project.budget_na853) {
-        form.setValue("formulation_details.0.project_budget", project.budget_na853.toString());
-        form.setValue("formulation_details.0.sa", "ΝΑ853");
+        form.setValue(`formulation_details.${formDetailIndex}.project_budget`, project.budget_na853.toString());
+        form.setValue(`formulation_details.${formDetailIndex}.sa`, "ΝΑ853");
+        formDetailIndex++;
       }
       if (project.budget_na271) {
-        form.setValue("formulation_details.1.project_budget", project.budget_na271.toString());
-        form.setValue("formulation_details.1.sa", "ΝΑ271");
+        form.setValue(`formulation_details.${formDetailIndex}.project_budget`, project.budget_na271.toString());
+        form.setValue(`formulation_details.${formDetailIndex}.sa`, "ΝΑ271");
+        formDetailIndex++;
       }
       if (project.budget_e069) {
-        form.setValue("formulation_details.2.project_budget", project.budget_e069.toString());
-        form.setValue("formulation_details.2.sa", "Ε069");
+        form.setValue(`formulation_details.${formDetailIndex}.project_budget`, project.budget_e069.toString());
+        form.setValue(`formulation_details.${formDetailIndex}.sa`, "Ε069");
       }
 
-      // Section 5: Changes (if any existing data)
-      // This would be populated from project history or change tracking data when available
+      console.log('Form initialization complete');
     }
-  }, [projectData, projectIndexData, kallikratisData, unitsData, eventTypesData, form]);
+  }, [projectData, projectIndexData, kallikratisData, eventTypesData, form]);
 
   // Project Lines Management Functions
   const addProjectLine = () => {

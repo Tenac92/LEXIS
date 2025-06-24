@@ -1,0 +1,289 @@
+<script>
+function goToSummary() {
+  google.script.run.withSuccessHandler(function(html) {
+    document.open();
+    document.write(html);
+    document.close();
+  }).loadSummaryView();
+}
+</script>
+
+<button onclick="goToSummary()">Προβολή Καρτέλας</button>
+
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <title>Φόρμα Έργου</title>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css?family=Roboto:400,500&display=swap">
+  <style>
+    body { font-family: 'Roboto', Arial, sans-serif; background: #f6f7fa; margin: 0; }
+    .wrapper { max-width: 1080px; margin: 30px auto; background: #fff; border-radius: 15px;
+      box-shadow: 0 3px 24px rgba(80,100,120,0.14); overflow: hidden; }
+    .tabs { display: flex; border-bottom: 2px solid #e6e6e6; background: #f4f5fa; }
+    .tab-btn { flex: 1; padding: 16px; cursor: pointer; text-align: center;
+      background: transparent; border: none; outline: none; font-size: 1.08em; color: #4169e1;
+      transition: background 0.17s; font-weight: 500;}
+    .tab-btn.active, .tab-btn:hover { background: #fff; color: #1e2f43; border-bottom: 2px solid #4169e1;}
+    .content { padding: 34px 32px 18px 32px; min-height: 400px; animation: fadein .3s;}
+    @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+    h2 { margin: 8px 0 20px 0; color: #1a237e; font-weight: 500; font-size: 1.25em;}
+    table { border-collapse: collapse; margin-bottom: 24px; width: 100%; background: #fafdff; }
+    th, td { border: 1px solid #e6e6e6; padding: 7px 7px; font-size: 0.96em; }
+    th { background: #e9eef8; color: #223388; font-weight: 500; }
+    .add-btn { background: #2e7d32; color: #fff; border: none; border-radius: 3px; padding: 4px 14px;
+      margin-top: 4px; cursor: pointer; font-size: 0.95em;}
+    input, select, textarea {
+      border: 1px solid #c5cae9; border-radius: 5px; padding: 6px 6px; font-size: 1em;
+      margin-bottom: 4px; background: #fff; width: 100%; transition: border 0.16s;}
+    input:focus, select:focus, textarea:focus { border: 1.5px solid #4472c4; outline: none; }
+    .section-block { margin-bottom: 36px; }
+    .section-title { font-size: 1.12em; color: #20336e; background: #f4f7fe;
+      border-radius: 7px; padding: 7px 14px; margin-bottom: 7px; font-weight: 500; }
+    .checkbox-row { margin: 8px 0 0 0; }
+    .expand { margin-top: 8px; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn" onclick="showTab('summary')">&#128196; Καρτέλα Στοιχείων</button>
+    <button class="tab-btn active" onclick="showTab('edit')">&#9998; Καταχώρηση ή Τροποποίηση</button>
+  </div>
+
+  <!-- Καρτέλα καταχώρησης/τροποποίησης -->
+  <div class="content" id="edit-tab" style="display:block">
+    <!-- SECTION 1 -->
+    <div class="section-block">
+      <div class="section-title">1️⃣ Αποφάσεις που τεκμηριώνουν το έργο</div>
+      <table>
+        <tr>
+          <th>α.α.</th>
+          <th>Αρ. πρωτ. Απόφασης</th>
+          <th>ΦΕΚ</th>
+          <th>ΑΔΑ</th>
+          <th>Φορέας υλοποίησης</th>
+          <th>Προϋπολογισμός Απόφασης</th>
+          <th>Δαπάνες που αφορά</th>
+          <th>Είδος Απόφασης</th>
+          <th>Έχει συμπεριληφθεί</th>
+          <th>Σχόλια</th>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td>
+            <select>
+              <option>Έγκριση</option>
+              <option>Τροποποίηση</option>
+              <option>Παράταση</option>
+            </select>
+          </td>
+          <td>
+            <select>
+              <option>Ναι</option>
+              <option>Όχι</option>
+            </select>
+          </td>
+          <td><input></td>
+        </tr>
+      </table>
+      <button class="add-btn" onclick="addRow(this)">+ Προσθήκη Απόφασης</button>
+    </div>
+
+    <!-- SECTION 2 -->
+    <div class="section-block">
+      <div class="section-title">2️⃣ Στοιχεία συμβάντος</div>
+      <table>
+        <tr><th>Συμβάν</th><th>Έτος εκδήλωσης συμβάντος</th></tr>
+        <tr>
+          <td><input></td>
+          <td><input></td>
+        </tr>
+      </table>
+      <div class="expand">
+        <table>
+          <tr>
+            <th>Δημοτική Κοινότητα</th>
+            <th>Δήμος</th>
+            <th>Περιφερειακή Ενότητα</th>
+            <th>Περιφέρεια</th>
+            <th>Φορέας υλοποίησης</th>
+          </tr>
+          <tr>
+            <td><input></td>
+            <td><input></td>
+            <td><input></td>
+            <td><input></td>
+            <td><input></td>
+          </tr>
+        </table>
+        <button class="add-btn" onclick="addRow(this)">+ Προσθήκη γραμμής</button>
+      </div>
+    </div>
+
+    <!-- SECTION 3 -->
+    <div class="section-block">
+      <div class="section-title">3️⃣ Στοιχεία έργου</div>
+      <table>
+        <tr>
+          <th>MIS</th>
+          <th>ΣΑ</th>
+          <th>Κωδικός ενάριθμος</th>
+          <th>Έτος ένταξης</th>
+          <th>Τίτλος έργου (σύστημα)</th>
+          <th>Περιγραφή έργου</th>
+          <th>Συνοπτική περιγραφή έργου</th>
+          <th>Δαπάνες που εκτελούνται από το έργο</th>
+          <th>Κατάσταση έργου</th>
+        </tr>
+        <tr>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td>
+            <select>
+              <option>Συνεχιζόμενο</option>
+              <option>Ολοκληρωμένο</option>
+              <option>Απενταγμένο</option>
+            </select>
+          </td>
+        </tr>
+      </table>
+      <div class="checkbox-row">
+        <input type="checkbox" id="hasPrev" onclick="togglePrevTable()"> Προηγούμενες εγγραφές έργου στο ΠΔΕ
+      </div>
+      <div id="prevTable" style="display:none">
+        <table>
+          <tr><th>ΣΑ</th><th>Κωδικός Ενάριθμος</th></tr>
+          <tr><td><input></td><td><input></td></tr>
+        </table>
+        <button class="add-btn" onclick="addRow(this)">+ Προσθήκη γραμμής</button>
+      </div>
+    </div>
+
+    <!-- SECTION 4 -->
+    <div class="section-block">
+      <div class="section-title">4️⃣ Στοιχεία κατάρτισης έργου</div>
+      <table>
+        <tr>
+          <th>ΣΑ</th>
+          <th>Κωδικός ενάριθμος</th>
+          <th>Αρ. πρωτ. Απόφασης</th>
+          <th>ΑΔΑ</th>
+          <th>Έτος Απόφασης</th>
+          <th>Προϋπολογισμός έργου</th>
+          <th>Έκδοση ΕΠΑ</th>
+          <th>Συνολική δημόσια δαπάνη</th>
+          <th>Επιλέξιμη δημόσια δαπάνη</th>
+          <th>Κατάσταση Απόφασης</th>
+          <th>Μεταβολή</th>
+          <th>Αποφάσεις που συνδέονται</th>
+          <th>Σχόλια</th>
+        </tr>
+        <tr>
+          <td>
+            <select>
+              <option>ΝΑ853</option>
+              <option>ΝΑ271</option>
+              <option>Ε069</option>
+            </select>
+          </td>
+          <td>
+            <select>
+              <option>ΝΑ853-123</option>
+              <option>2023ΝΑ27100249</option>
+              <option>2018ΣΕ06900010</option>
+            </select>
+          </td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td><input></td>
+          <td>
+            <select>
+              <option>Ενεργή</option>
+              <option>Ανενεργή</option>
+            </select>
+          </td>
+          <td>
+            <select>
+              <option>Τροποποίηση</option>
+              <option>Παράταση</option>
+              <option>Έγκριση</option>
+            </select>
+          </td>
+          <td>
+            <select>
+              <option>ΑΠ123/2023</option>
+              <option>ΑΠ456/2022</option>
+            </select>
+          </td>
+          <td><input></td>
+        </tr>
+      </table>
+      <button class="add-btn" onclick="addRow(this)">+ Προσθήκη γραμμής</button>
+    </div>
+
+    <!-- SECTION 5 -->
+    <div class="section-block">
+      <div class="section-title">5️⃣ Αλλαγές που επιτελέστηκαν</div>
+      <table>
+        <tr><td><input placeholder="Περιγραφή αλλαγής/Παρατήρηση"></td></tr>
+      </table>
+      <button class="add-btn" onclick="addRow(this)">+ Προσθήκη γραμμής</button>
+    </div>
+
+    <div style="margin-top:18px;">
+      <button class="add-btn" style="background:#1976d2;">Αποθήκευση</button>
+      <button class="add-btn" style="background:#c62828;">Ακύρωση</button>
+    </div>
+  </div>
+
+  <!-- Καρτέλα προβολής (αδειάζει για συντομία εδώ, βάλε τα δικά σου στοιχεία summary!) -->
+  <div class="content" id="summary-tab" style="display:none">
+    <h2>Καρτέλα στοιχείων (Στατική προβολή)</h2>
+    <!-- Συμπλήρωσε εδώ τα στοιχεία summary -->
+  </div>
+</div>
+<script>
+  function showTab(tab) {
+    document.getElementById('edit-tab').style.display = (tab === 'edit') ? 'block' : 'none';
+    document.getElementById('summary-tab').style.display = (tab === 'summary') ? 'block' : 'none';
+    var btns = document.getElementsByClassName('tab-btn');
+    btns[0].classList.toggle('active', tab === 'summary');
+    btns[1].classList.toggle('active', tab === 'edit');
+  }
+  function togglePrevTable() {
+    var c = document.getElementById('hasPrev');
+    var t = document.getElementById('prevTable');
+    t.style.display = c.checked ? 'block' : 'none';
+  }
+  function addRow(btn) {
+    var tr = btn.parentNode.querySelector('table').rows[1];
+    var clone = tr.cloneNode(true);
+    // καθάρισε όλα τα inputs/selects
+    Array.from(clone.querySelectorAll('input, select')).forEach(function(el) {
+      if (el.tagName === "SELECT") el.selectedIndex = 0;
+      else el.value = "";
+    });
+    btn.parentNode.querySelector('table').appendChild(clone);
+  }
+</script>
+</body>
+</html>
