@@ -5,7 +5,7 @@ import { useLocation, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Plus, X, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Trash2, Calendar, Info, MapPin, FileText } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -1253,204 +1253,240 @@ export default function ComprehensiveEditProjectPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Section 6: Advanced Project Lines Management */}
-                  <Card>
-                    <CardHeader className="bg-purple-50">
-                      <CardTitle className="text-purple-900">
-                        6️⃣ Γραμμές Έργου (Προχωρημένη Διαχείριση)
+                  {/* Section 6: Project Lines Management (Consolidated) */}
+                  <Card className="shadow-sm">
+                    <CardHeader className="bg-gradient-to-r from-purple-50 to-purple-100 border-b">
+                      <CardTitle className="flex items-center gap-2 text-purple-900">
+                        <MapPin className="h-5 w-5" />
+                        6️⃣ Γραμμές Έργου & Διαχείριση Περιοχών
                       </CardTitle>
+                      <p className="text-sm text-purple-700 mt-1">
+                        Ορίστε τις γραμμές έργου με φορείς υλοποίησης, τύπους συμβάντων, περιοχές και τύπους δαπάνης
+                      </p>
                     </CardHeader>
                     <CardContent className="p-6">
-                      <div className="mb-4">
-                        <Button type="button" onClick={addProjectLine} className="bg-purple-600 hover:bg-purple-700">
+                      <div className="mb-6">
+                        <Button 
+                          type="button" 
+                          onClick={addProjectLine} 
+                          className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+                        >
                           <Plus className="h-4 w-4 mr-2" />
                           Προσθήκη Γραμμής Έργου
                         </Button>
                       </div>
 
-                      {projectLines.map((line, index) => (
-                        <div key={line.id} className="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50">
-                          <div className="flex justify-between items-center mb-4">
-                            <h4 className="font-semibold text-purple-700">Γραμμή Έργου #{index + 1}</h4>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => removeProjectLine(line.id!)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4 mb-4">
-                            {/* Implementing Agency */}
-                            <div>
-                              <label className="block text-sm font-medium mb-2">Φορέας Υλοποίησης</label>
-                              <Select
-                                value={line.implementing_agency}
-                                onValueChange={(value) => updateProjectLine(line.id!, 'implementing_agency', value)}
+                      <div className="space-y-6">
+                        {projectLines.map((line, index) => (
+                          <div key={line.id} className="border border-gray-200 rounded-xl p-6 bg-white shadow-sm">
+                            <div className="flex justify-between items-center mb-6">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                  <span className="text-purple-700 font-semibold text-sm">{index + 1}</span>
+                                </div>
+                                <h4 className="font-semibold text-gray-900">Γραμμή Έργου #{index + 1}</h4>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeProjectLine(line.id!)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Επιλέξτε φορέα" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {unitsData?.map((unit: any) => (
-                                    <SelectItem key={unit.id} value={unit.id}>
-                                      {unit.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
 
-                            {/* Event Type */}
-                            <div>
-                              <label className="block text-sm font-medium mb-2">Τύπος Συμβάντος</label>
-                              <Select
-                                value={line.event_type}
-                                onValueChange={(value) => updateProjectLine(line.id!, 'event_type', value)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Επιλέξτε συμβάν" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {eventTypesData?.map((eventType: any) => (
-                                    <SelectItem key={eventType.id} value={eventType.name}>
-                                      {eventType.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          {/* Cascading Region Dropdowns */}
-                          <div className="grid grid-cols-4 gap-2 mb-4">
-                            {/* Περιφέρεια */}
-                            <div>
-                              <label className="block text-xs font-medium mb-1">Περιφέρεια</label>
-                              <Select
-                                value={line.region.perifereia}
-                                onValueChange={(value) => updateProjectLineRegion(line.id!, 'perifereia', value)}
-                              >
-                                <SelectTrigger className="text-xs">
-                                  <SelectValue placeholder="Περιφέρεια" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__clear__">-- Καθαρισμός --</SelectItem>
-                                  {getFilteredOptions('perifereia', line.id!).map((option) => (
-                                    <SelectItem key={option} value={option}>
-                                      {option}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Περιφερειακή Ενότητα */}
-                            <div>
-                              <label className="block text-xs font-medium mb-1">Π.Ε.</label>
-                              <Select
-                                value={line.region.perifereiaki_enotita}
-                                onValueChange={(value) => updateProjectLineRegion(line.id!, 'perifereiaki_enotita', value)}
-                                disabled={!line.region.perifereia}
-                              >
-                                <SelectTrigger className="text-xs">
-                                  <SelectValue placeholder="Π.Ε." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__clear__">-- Καθαρισμός --</SelectItem>
-                                  {getFilteredOptions('perifereiaki_enotita', line.id!).map((option) => (
-                                    <SelectItem key={option} value={option}>
-                                      {option}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Δήμος */}
-                            <div>
-                              <label className="block text-xs font-medium mb-1">Δήμος</label>
-                              <Select
-                                value={line.region.dimos}
-                                onValueChange={(value) => updateProjectLineRegion(line.id!, 'dimos', value)}
-                                disabled={!line.region.perifereiaki_enotita}
-                              >
-                                <SelectTrigger className="text-xs">
-                                  <SelectValue placeholder="Δήμος" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__clear__">-- Καθαρισμός --</SelectItem>
-                                  {getFilteredOptions('dimos', line.id!).map((option) => (
-                                    <SelectItem key={option} value={option}>
-                                      {option}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            {/* Δημοτική Ενότητα */}
-                            <div>
-                              <label className="block text-xs font-medium mb-1">Δημ. Ενότητα</label>
-                              <Select
-                                value={line.region.dimotiki_enotita}
-                                onValueChange={(value) => updateProjectLineRegion(line.id!, 'dimotiki_enotita', value)}
-                                disabled={!line.region.dimos}
-                              >
-                                <SelectTrigger className="text-xs">
-                                  <SelectValue placeholder="Δημ. Ενότητα" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="__clear__">-- Καθαρισμός --</SelectItem>
-                                  {getFilteredOptions('dimotiki_enotita', line.id!).map((option) => (
-                                    <SelectItem key={option} value={option}>
-                                      {option}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-
-                          {/* Multi-select Expenditure Types */}
-                          <div>
-                            <label className="block text-sm font-medium mb-2">
-                              Τύποι Δαπάνης
-                            </label>
-                            <div className="flex flex-wrap gap-2 mb-2">
-                              {expenditureTypesData?.map((type: any) => (
-                                <button
-                                  key={type.id}
-                                  type="button"
-                                  onClick={() => {
-                                    const currentTypes = line.expenditure_types || [];
-                                    const newTypes = currentTypes.includes(type.expediture_types)
-                                      ? currentTypes.filter(t => t !== type.expediture_types)
-                                      : [...currentTypes, type.expediture_types];
-                                    updateProjectLine(line.id!, 'expenditure_types', newTypes);
-                                  }}
-                                  className={`px-3 py-1 text-xs rounded-md border transition-colors ${
-                                    line.expenditure_types?.includes(type.expediture_types)
-                                      ? 'bg-blue-100 border-blue-300 text-blue-800'
-                                      : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
-                                  }`}
+                            <div className="grid grid-cols-2 gap-6 mb-6">
+                              {/* Implementing Agency */}
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Φορέας Υλοποίησης</label>
+                                <Select
+                                  value={line.implementing_agency}
+                                  onValueChange={(value) => updateProjectLine(line.id!, 'implementing_agency', value)}
                                 >
-                                  {type.expediture_types}
-                                </button>
-                              ))}
+                                  <SelectTrigger className="h-10">
+                                    <SelectValue placeholder="Επιλέξτε φορέα" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {unitsData?.map((unit: any) => (
+                                      <SelectItem key={unit.id} value={unit.id}>
+                                        {unit.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              {/* Event Type */}
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Τύπος Συμβάντος</label>
+                                <Select
+                                  value={line.event_type}
+                                  onValueChange={(value) => updateProjectLine(line.id!, 'event_type', value)}
+                                >
+                                  <SelectTrigger className="h-10">
+                                    <SelectValue placeholder="Επιλέξτε συμβάν" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {eventTypesData?.map((eventType: any) => (
+                                      <SelectItem key={eventType.id} value={eventType.name}>
+                                        {eventType.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              Επιλεγμένοι: {line.expenditure_types?.join(', ') || 'Κανένας'}
+
+                            {/* Geographic Hierarchy */}
+                            <div className="mb-6">
+                              <h5 className="text-sm font-medium text-gray-700 mb-3">Γεωγραφική Ιεραρχία</h5>
+                              <div className="grid grid-cols-4 gap-3">
+                                {/* Περιφέρεια */}
+                                <div className="space-y-2">
+                                  <label className="text-xs font-medium text-gray-600">Περιφέρεια</label>
+                                  <Select
+                                    value={line.region.perifereia}
+                                    onValueChange={(value) => updateProjectLineRegion(line.id!, 'perifereia', value)}
+                                  >
+                                    <SelectTrigger className="h-9 text-xs">
+                                      <SelectValue placeholder="Επιλογή" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__clear__" className="text-gray-500">
+                                        -- Καθαρισμός --
+                                      </SelectItem>
+                                      {getFilteredOptions('perifereia', line.id!).map((option) => (
+                                        <SelectItem key={option} value={option}>
+                                          {option}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {/* Περιφερειακή Ενότητα */}
+                                <div className="space-y-2">
+                                  <label className="text-xs font-medium text-gray-600">Π.Ε.</label>
+                                  <Select
+                                    value={line.region.perifereiaki_enotita}
+                                    onValueChange={(value) => updateProjectLineRegion(line.id!, 'perifereiaki_enotita', value)}
+                                    disabled={!line.region.perifereia}
+                                  >
+                                    <SelectTrigger className="h-9 text-xs">
+                                      <SelectValue placeholder="Επιλογή" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__clear__" className="text-gray-500">
+                                        -- Καθαρισμός --
+                                      </SelectItem>
+                                      {getFilteredOptions('perifereiaki_enotita', line.id!).map((option) => (
+                                        <SelectItem key={option} value={option}>
+                                          {option}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {/* Δήμος */}
+                                <div className="space-y-2">
+                                  <label className="text-xs font-medium text-gray-600">Δήμος</label>
+                                  <Select
+                                    value={line.region.dimos}
+                                    onValueChange={(value) => updateProjectLineRegion(line.id!, 'dimos', value)}
+                                    disabled={!line.region.perifereiaki_enotita}
+                                  >
+                                    <SelectTrigger className="h-9 text-xs">
+                                      <SelectValue placeholder="Επιλογή" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__clear__" className="text-gray-500">
+                                        -- Καθαρισμός --
+                                      </SelectItem>
+                                      {getFilteredOptions('dimos', line.id!).map((option) => (
+                                        <SelectItem key={option} value={option}>
+                                          {option}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                {/* Δημοτική Ενότητα */}
+                                <div className="space-y-2">
+                                  <label className="text-xs font-medium text-gray-600">Δημ. Ενότητα</label>
+                                  <Select
+                                    value={line.region.dimotiki_enotita}
+                                    onValueChange={(value) => updateProjectLineRegion(line.id!, 'dimotiki_enotita', value)}
+                                    disabled={!line.region.dimos}
+                                  >
+                                    <SelectTrigger className="h-9 text-xs">
+                                      <SelectValue placeholder="Επιλογή" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__clear__" className="text-gray-500">
+                                        -- Καθαρισμός --
+                                      </SelectItem>
+                                      {getFilteredOptions('dimotiki_enotita', line.id!).map((option) => (
+                                        <SelectItem key={option} value={option}>
+                                          {option}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Expenditure Types */}
+                            <div className="space-y-3">
+                              <label className="text-sm font-medium text-gray-700">
+                                Τύποι Δαπάνης
+                              </label>
+                              <div className="flex flex-wrap gap-2">
+                                {expenditureTypesData?.map((type: any) => (
+                                  <button
+                                    key={type.id}
+                                    type="button"
+                                    onClick={() => {
+                                      const currentTypes = line.expenditure_types || [];
+                                      const newTypes = currentTypes.includes(type.expediture_types)
+                                        ? currentTypes.filter(t => t !== type.expediture_types)
+                                        : [...currentTypes, type.expediture_types];
+                                      updateProjectLine(line.id!, 'expenditure_types', newTypes);
+                                    }}
+                                    className={`px-3 py-2 text-xs font-medium rounded-lg border transition-all duration-200 ${
+                                      line.expenditure_types?.includes(type.expediture_types)
+                                        ? 'bg-blue-100 border-blue-300 text-blue-800 shadow-sm'
+                                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+                                    }`}
+                                  >
+                                    {line.expenditure_types?.includes(type.expediture_types) && (
+                                      <span className="mr-1">✓</span>
+                                    )}
+                                    {type.expediture_types}
+                                  </button>
+                                ))}
+                              </div>
+                              {line.expenditure_types && line.expenditure_types.length > 0 && (
+                                <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                                  <strong>Επιλεγμένοι:</strong> {line.expenditure_types.join(', ')}
+                                </div>
+                              )}
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
 
                       {projectLines.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          Δεν υπάρχουν γραμμές έργου. Κάντε κλικ στο κουμπί "Προσθήκη Γραμμής Έργου" για να ξεκινήσετε.
+                        <div className="text-center py-12 text-gray-500 bg-gray-50 rounded-lg">
+                          <MapPin className="h-8 w-8 mx-auto mb-3 text-gray-400" />
+                          <p className="text-sm">Δεν υπάρχουν γραμμές έργου</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Προσθέστε γραμμές έργου για να ορίσετε περιοχές και φορείς υλοποίησης
+                          </p>
                         </div>
                       )}
                     </CardContent>
