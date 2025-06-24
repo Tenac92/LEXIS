@@ -189,7 +189,7 @@ export default function ComprehensiveEditProjectPage() {
           
           const projectLine: ProjectLine = {
             id: (idx + 1).toString(),
-            implementing_agency: groupedEntry.unit_id || "",
+            implementing_agency: groupedEntry.unit_id?.toString() || "",
             event_type: groupedEntry.event_type_name || "",
             region: {
               perifereia: kallikratisEntry?.perifereia || "",
@@ -209,7 +209,7 @@ export default function ComprehensiveEditProjectPage() {
         
         const initialProjectLine: ProjectLine = {
           id: "1",
-          implementing_agency: project.enhanced_unit?.id || "",
+          implementing_agency: project.enhanced_unit?.id?.toString() || "",
           event_type: project.enhanced_event_type?.name || "",
           region: {
             perifereia: kallikratisEntry?.perifereia || "",

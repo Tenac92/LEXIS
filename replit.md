@@ -127,6 +127,15 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### June 24, 2025 - Complete Database Schema Analysis & Project Index Implementation
+- Performed comprehensive database schema analysis to identify exact table structures and relationships
+- Fixed project index API endpoint with correct column references (event_types_id, expediture_type_id, monada_id, kallikratis_id)
+- Implemented proper data transformation for project lines using actual database structure
+- Corrected unit ID handling to use proper string conversion for form compatibility
+- Enhanced project index endpoint to fetch complete relational data with proper joins
+- Project Lines section now successfully fetches and displays data from project_index table with 4 entries
+- Verified database contains: Projects (with event_type_id), event_types (id, name), expediture_types (id, expediture_types), Monada (id, unit, unit_name), kallikratis (complete regional hierarchy)
+
 ### June 24, 2025 - Complete Comprehensive Edit System Rebuild & Perfect Consolidation
 - Completely rebuilt comprehensive edit page from scratch with proper architecture and zero duplicated fields
 - Implemented clean 6-section structure: Decisions, Event Details (simplified), Project Details, Formulation Details, Changes, Project Lines

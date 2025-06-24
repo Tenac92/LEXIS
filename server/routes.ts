@@ -1388,8 +1388,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .select(`
             *,
             event_types:event_types_id(id, name),
-            expediture_types:expediture_type_id(id, expediture_types),
-            Monada:monada_id(id, unit_name),
+            expediture_types:expediture_type_id(id, expediture_types, expediture_types_minor),
+            Monada:monada_id(id, unit, unit_name),
             kallikratis:kallikratis_id(*)
           `)
           .eq('project_id', projectData.id);
@@ -1410,7 +1410,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           expenditure_type_id: entry.expediture_type_id,
           expenditure_type_name: entry.expediture_types?.expediture_types,
           unit_id: entry.monada_id,
-          unit_name: entry.Monada?.unit_name,
+          unit_name: entry.Monada?.unit,
+          unit_full_name: entry.Monada?.unit_name?.name,
           kallikratis_id: entry.kallikratis_id,
           kallikratis: entry.kallikratis
         }));
