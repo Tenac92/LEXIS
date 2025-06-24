@@ -11,9 +11,20 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, X, FileText, Calendar } from "lucide-react";
+import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+// Interface for kallikratis data structure
+interface KallikratisEntry {
+  id: number;
+  eidos_koinotitas: string;
+  onoma_dimotikis_enotitas: string;
+  eidos_neou_ota: string;
+  onoma_neou_ota: string;
+  perifereiaki_enotita: string;
+  perifereia: string;
+}
 
 // Complete schema based on Greek government documentation
 const comprehensiveProjectSchema = z.object({
@@ -36,13 +47,14 @@ const comprehensiveProjectSchema = z.object({
     event_year: z.string().default(""),
   }).default({ event_name: "", event_year: "" }),
   
-  // Section 2 Location details
+  // Section 2 Location details with cascading dropdowns
   location_details: z.array(z.object({
     municipal_community: z.string().default(""),
     municipality: z.string().default(""),
     regional_unit: z.string().default(""),
     region: z.string().default(""),
     implementing_agency: z.string().default(""),
+    expenditure_types: z.array(z.string()).default([]),
   })).default([]),
   
   // Section 3: Project details
@@ -105,7 +117,7 @@ export default function ComprehensiveEditNew() {
     defaultValues: {
       decisions: [{ protocol_number: "", fek: "", ada: "", implementing_agency: "", decision_budget: "", expenses_covered: "", decision_type: "Έγκριση", is_included: true, comments: "" }],
       event_details: { event_name: "", event_year: "" },
-      location_details: [{ municipal_community: "", municipality: "", regional_unit: "", region: "", implementing_agency: "" }],
+      location_details: [{ municipal_community: "", municipality: "", regional_unit: "", region: "", implementing_agency: "", expenditure_types: [] }],
       project_details: { mis: "", sa: "", enumeration_code: "", inclusion_year: "", project_title: "", project_description: "", summary_description: "", expenses_executed: "", project_status: "Συνεχιζόμενο" },
       previous_entries: [],
       formulation_details: [{ sa: "ΝΑ853", enumeration_code: "", protocol_number: "", ada: "", decision_year: "", project_budget: "", epa_version: "", total_public_expense: "", eligible_public_expense: "", decision_status: "Ενεργή", change_type: "Έγκριση", connected_decisions: "", comments: "" }],
@@ -125,6 +137,14 @@ export default function ComprehensiveEditNew() {
 
   const { data: unitsData } = useQuery({
     queryKey: ["/api/public/units"],
+  });
+
+  const { data: kallikratisData } = useQuery<KallikratisEntry[]>({
+    queryKey: ["/api/kallikratis"],
+  });
+
+  const { data: expenditureTypesData } = useQuery({
+    queryKey: ["/api/expenditure-types"],
   });
 
   // Initialize form with project data
@@ -267,7 +287,7 @@ export default function ComprehensiveEditNew() {
 
   const addLocationDetail = () => {
     const current = form.getValues("location_details");
-    form.setValue("location_details", [...current, { municipal_community: "", municipality: "", regional_unit: "", region: "", implementing_agency: "" }]);
+    form.setValue("location_details", [...current, { municipal_community: "", municipality: "", regional_unit: "", region: "", implementing_agency: "", expenditure_types: [] }]);
   };
 
   const removeLocationDetail = (index: number) => {
@@ -303,6 +323,94 @@ export default function ComprehensiveEditNew() {
   const removePreviousEntry = (index: number) => {
     const current = form.getValues("previous_entries");
     form.setValue("previous_entries", current.filter((_, i) => i !== index));
+  };
+
+  // Helper functions for cascading dropdowns
+  const getFilteredOptions = (level: string, locationIndex: number) => {
+    if (!kallikratisData) return [];
+    
+    const currentLocation = form.watch("location_details")[locationIndex];
+    if (!currentLocation) return [];
+
+    let filtered = kallikratisData;
+
+    switch (level) {
+      case 'region':
+        // Get unique region values (Περιφέρεια)
+        return Array.from(new Set(filtered.map(item => item.perifereia)))
+          .filter(Boolean)
+          .sort();
+
+      case 'regional_unit':
+        if (!currentLocation.region) return [];
+        filtered = filtered.filter(item => item.perifereia === currentLocation.region);
+        return Array.from(new Set(filtered.map(item => item.perifereiaki_enotita)))
+          .filter(Boolean)
+          .sort();
+
+      case 'municipality':
+        if (!currentLocation.regional_unit) return [];
+        filtered = filtered.filter(item => 
+          item.perifereia === currentLocation.region &&
+          item.perifereiaki_enotita === currentLocation.regional_unit
+        );
+        return Array.from(new Set(filtered.map(item => `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim())))
+          .filter(Boolean)
+          .sort();
+
+      case 'municipal_community':
+        if (!currentLocation.municipality) return [];
+        filtered = filtered.filter(item => 
+          item.perifereia === currentLocation.region &&
+          item.perifereiaki_enotita === currentLocation.regional_unit &&
+          `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim() === currentLocation.municipality
+        );
+        return Array.from(new Set(filtered.map(item => `${item.eidos_koinotitas} ${item.onoma_dimotikis_enotitas}`.trim())))
+          .filter(Boolean)
+          .sort();
+
+      default:
+        return [];
+    }
+  };
+
+  // Update location field and clear dependent fields
+  const updateLocationField = (locationIndex: number, field: string, value: string) => {
+    const currentLocations = form.getValues("location_details");
+    const updatedLocations = [...currentLocations];
+    
+    updatedLocations[locationIndex] = {
+      ...updatedLocations[locationIndex],
+      [field]: value,
+      // Clear dependent fields when parent changes
+      ...(field === 'region' && {
+        regional_unit: "",
+        municipality: "",
+        municipal_community: ""
+      }),
+      ...(field === 'regional_unit' && {
+        municipality: "",
+        municipal_community: ""
+      }),
+      ...(field === 'municipality' && {
+        municipal_community: ""
+      })
+    };
+    
+    form.setValue("location_details", updatedLocations);
+  };
+
+  // Toggle expenditure type selection
+  const toggleExpenditureType = (locationIndex: number, expenditureType: string) => {
+    const currentLocations = form.getValues("location_details");
+    const updatedLocations = [...currentLocations];
+    const currentTypes = updatedLocations[locationIndex].expenditure_types || [];
+    
+    updatedLocations[locationIndex].expenditure_types = currentTypes.includes(expenditureType)
+      ? currentTypes.filter(t => t !== expenditureType)
+      : [...currentTypes, expenditureType];
+    
+    form.setValue("location_details", updatedLocations);
   };
 
   // Form submission
@@ -619,103 +727,175 @@ export default function ComprehensiveEditNew() {
                     </tbody>
                   </table>
 
-                  {/* Location details */}
-                  <div className="mt-4">
-                    <table className="w-full border-collapse border border-gray-300">
-                      <thead>
-                        <tr className="bg-blue-50">
-                          <th className="border border-gray-300 p-2">Δημοτική Κοινότητα</th>
-                          <th className="border border-gray-300 p-2">Δήμος</th>
-                          <th className="border border-gray-300 p-2">Περιφερειακή Ενότητα</th>
-                          <th className="border border-gray-300 p-2">Περιφέρεια</th>
-                          <th className="border border-gray-300 p-2">Φορέας υλοποίησης</th>
-                          <th className="border border-gray-300 p-2">Ενέργειες</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {form.watch("location_details").map((_, index) => (
-                          <tr key={index}>
-                            <td className="border border-gray-300 p-1">
-                              <FormField
-                                control={form.control}
-                                name={`location_details.${index}.municipal_community`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input {...field} className="border-0 p-1" />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            </td>
-                            <td className="border border-gray-300 p-1">
-                              <FormField
-                                control={form.control}
-                                name={`location_details.${index}.municipality`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input {...field} className="border-0 p-1" />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            </td>
-                            <td className="border border-gray-300 p-1">
-                              <FormField
-                                control={form.control}
-                                name={`location_details.${index}.regional_unit`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input {...field} className="border-0 p-1" />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            </td>
-                            <td className="border border-gray-300 p-1">
-                              <FormField
-                                control={form.control}
-                                name={`location_details.${index}.region`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input {...field} className="border-0 p-1" />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            </td>
-                            <td className="border border-gray-300 p-1">
-                              <FormField
-                                control={form.control}
-                                name={`location_details.${index}.implementing_agency`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input {...field} className="border-0 p-1" />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            </td>
-                            <td className="border border-gray-300 p-1 text-center">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeLocationDetail(index)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <Button type="button" onClick={addLocationDetail} className="mt-4 bg-green-600 hover:bg-green-700">
+                  {/* Location details with 4-level cascading dropdowns and multi-select expenditure types */}
+                  <div className="mt-4 space-y-4">
+                    {form.watch("location_details").map((location, index) => (
+                      <Card key={index} className="p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium">Γραμμή {index + 1}</h4>
+                          {form.watch("location_details").length > 1 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeLocationDetail(index)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* 4-Level Cascading Dropdowns */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                          {/* Περιφέρεια (Region) */}
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Περιφέρεια</label>
+                            <Select
+                              value={location.region}
+                              onValueChange={(value) => updateLocationField(index, 'region', value)}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Επιλέξτε..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getFilteredOptions('region', index).map((option, optIndex) => (
+                                  <SelectItem key={`region-${index}-${optIndex}`} value={option} className="text-xs">
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Περιφερειακή Ενότητα (Regional Unit) */}
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Περιφ. Ενότητα</label>
+                            <Select
+                              value={location.regional_unit}
+                              onValueChange={(value) => updateLocationField(index, 'regional_unit', value)}
+                              disabled={!location.region}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Επιλέξτε..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__clear__" className="text-xs italic text-gray-500">
+                                  -- Καθαρισμός --
+                                </SelectItem>
+                                {getFilteredOptions('regional_unit', index).map((option, optIndex) => (
+                                  <SelectItem key={`regional-unit-${index}-${optIndex}`} value={option} className="text-xs">
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Δήμος (Municipality) */}
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Δήμος</label>
+                            <Select
+                              value={location.municipality}
+                              onValueChange={(value) => updateLocationField(index, 'municipality', value)}
+                              disabled={!location.regional_unit}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Επιλέξτε..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__clear__" className="text-xs italic text-gray-500">
+                                  -- Καθαρισμός --
+                                </SelectItem>
+                                {getFilteredOptions('municipality', index).map((option, optIndex) => (
+                                  <SelectItem key={`municipality-${index}-${optIndex}`} value={option} className="text-xs">
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Δημ. Ενότητα (Municipal Community) */}
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">Δημ. Ενότητα</label>
+                            <Select
+                              value={location.municipal_community}
+                              onValueChange={(value) => updateLocationField(index, 'municipal_community', value)}
+                              disabled={!location.municipality}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Επιλέξτε..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__clear__" className="text-xs italic text-gray-500">
+                                  -- Καθαρισμός --
+                                </SelectItem>
+                                {getFilteredOptions('municipal_community', index).map((option, optIndex) => (
+                                  <SelectItem key={`municipal-community-${index}-${optIndex}`} value={option} className="text-xs">
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Implementing Agency */}
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium mb-2">Φορέας υλοποίησης</label>
+                          <Select
+                            value={location.implementing_agency}
+                            onValueChange={(value) => updateLocationField(index, 'implementing_agency', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Επιλέξτε φορέα..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {unitsData?.map((unit: any, unitIndex: number) => (
+                                <SelectItem key={`unit-${index}-${unitIndex}`} value={unit.unit_name || unit.name}>
+                                  {unit.unit_name || unit.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Multi-Select Expenditure Types */}
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Τύπος Δαπάνης (Multi-Select)
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {expenditureTypesData?.map((expType: any) => {
+                              const isSelected = location.expenditure_types?.includes(expType.name);
+                              return (
+                                <button
+                                  key={`${index}-${expType.id}`}
+                                  type="button"
+                                  onClick={() => toggleExpenditureType(index, expType.name)}
+                                  className={`px-3 py-1 text-xs rounded-md border transition-all duration-200 flex items-center gap-1 ${
+                                    isSelected
+                                      ? 'bg-blue-100 border-blue-300 text-blue-800 shadow-sm'
+                                      : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  {isSelected && <CheckCircle className="h-3 w-3" />}
+                                  {expType.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {location.expenditure_types?.length > 0 && (
+                            <div className="mt-2 text-xs text-gray-600">
+                              Επιλεγμένα: {location.expenditure_types.length} τύπος/οι δαπάνης
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                    
+                    <Button type="button" onClick={addLocationDetail} className="bg-green-600 hover:bg-green-700">
                       <Plus className="h-4 w-4 mr-2" />
                       Προσθήκη γραμμής
                     </Button>
