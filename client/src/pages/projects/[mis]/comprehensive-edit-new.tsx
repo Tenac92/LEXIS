@@ -1168,35 +1168,35 @@ export default function ComprehensiveEditNew() {
               </Card>
 
               {/* Section 4: Formulation Details */}
-              <Card>
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
-                  <CardTitle>4️⃣ Στοιχεία κατάρτισης έργου</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
+              <div className="bg-white border border-gray-300 rounded-lg p-8 shadow-sm">
+                <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b border-gray-200 pb-4">
+                  Section 4: Στοιχεία κατάρτισης έργου
+                </h3>
+                <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-300">
+                    <table className="w-full border-collapse border border-gray-300 bg-white rounded-lg overflow-hidden">
                       <thead>
-                        <tr className="bg-blue-50">
-                          <th className="border border-gray-300 p-2 text-xs">ΣΑ</th>
-                          <th className="border border-gray-300 p-2 text-xs">Κωδικός ενάριθμος</th>
-                          <th className="border border-gray-300 p-2 text-xs">Αρ. πρωτ. Απόφασης</th>
-                          <th className="border border-gray-300 p-2 text-xs">ΑΔΑ</th>
-                          <th className="border border-gray-300 p-2 text-xs">Έτος Απόφασης</th>
-                          <th className="border border-gray-300 p-2 text-xs">Προϋπολογισμός έργου</th>
-                          <th className="border border-gray-300 p-2 text-xs">Έκδοση ΕΠΑ</th>
-                          <th className="border border-gray-300 p-2 text-xs">Συνολική δημόσια δαπάνη</th>
-                          <th className="border border-gray-300 p-2 text-xs">Επιλέξιμη δημόσια δαπάνη</th>
-                          <th className="border border-gray-300 p-2 text-xs">Κατάσταση Απόφασης</th>
-                          <th className="border border-gray-300 p-2 text-xs">Μεταβολή</th>
-                          <th className="border border-gray-300 p-2 text-xs">Αποφάσεις που συνδέονται</th>
-                          <th className="border border-gray-300 p-2 text-xs">Σχόλια</th>
-                          <th className="border border-gray-300 p-2 text-xs">Ενέργειες</th>
+                        <tr className="bg-gray-100">
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">ΣΑ</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Κωδικός ενάριθμος</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Αρ. πρωτ. Απόφασης</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">ΑΔΑ</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Έτος Απόφασης</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Προϋπολογισμός έργου</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Έκδοση ΕΠΑ</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Συνολική δημόσια δαπάνη</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Επιλέξιμη δημόσια δαπάνη</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Κατάσταση Απόφασης</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Μεταβολή</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Αποφάσεις που συνδέονται</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Σχόλια</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Ενέργειες</th>
                         </tr>
                       </thead>
                       <tbody>
                         {form.watch("formulation_details").map((_, index) => (
-                          <tr key={index}>
-                            <td className="border border-gray-300 p-1">
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.sa`}
@@ -1204,7 +1204,7 @@ export default function ComprehensiveEditNew() {
                                   <FormItem>
                                     <FormControl>
                                       <Select value={field.value} onValueChange={field.onChange}>
-                                        <SelectTrigger className="border-0 p-1 h-8">
+                                        <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors">
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1218,111 +1218,111 @@ export default function ComprehensiveEditNew() {
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.enumeration_code`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} className="border-0 p-1 h-8 text-xs" />
+                                      <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                     </FormControl>
                                   </FormItem>
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.protocol_number`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} className="border-0 p-1 h-8 text-xs" />
+                                      <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                     </FormControl>
                                   </FormItem>
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.ada`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} className="border-0 p-1 h-8 text-xs" />
+                                      <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                     </FormControl>
                                   </FormItem>
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.decision_year`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} className="border-0 p-1 h-8 text-xs" />
+                                      <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                     </FormControl>
                                   </FormItem>
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.project_budget`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} type="number" className="border-0 p-1 h-8 text-xs" />
+                                      <Input {...field} type="number" className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                     </FormControl>
                                   </FormItem>
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.epa_version`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} className="border-0 p-1 h-8 text-xs" />
+                                      <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                     </FormControl>
                                   </FormItem>
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.total_public_expense`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} type="number" className="border-0 p-1 h-8 text-xs" />
+                                      <Input {...field} type="number" className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                     </FormControl>
                                   </FormItem>
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.eligible_public_expense`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} type="number" className="border-0 p-1 h-8 text-xs" />
+                                      <Input {...field} type="number" className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                     </FormControl>
                                   </FormItem>
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.decision_status`}
@@ -1330,7 +1330,7 @@ export default function ComprehensiveEditNew() {
                                   <FormItem>
                                     <FormControl>
                                       <Select value={field.value} onValueChange={field.onChange}>
-                                        <SelectTrigger className="border-0 p-1 h-8">
+                                        <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors">
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1343,7 +1343,7 @@ export default function ComprehensiveEditNew() {
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.change_type`}
@@ -1351,7 +1351,7 @@ export default function ComprehensiveEditNew() {
                                   <FormItem>
                                     <FormControl>
                                       <Select value={field.value} onValueChange={field.onChange}>
-                                        <SelectTrigger className="border-0 p-1 h-8">
+                                        <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors">
                                           <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -1365,39 +1365,39 @@ export default function ComprehensiveEditNew() {
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.connected_decisions`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} className="border-0 p-1 h-8 text-xs" />
+                                      <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                     </FormControl>
                                   </FormItem>
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1">
+                            <td className="border border-gray-300 p-2">
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.comments`}
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} className="border-0 p-1 h-8 text-xs" />
+                                      <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                     </FormControl>
                                   </FormItem>
                                 )}
                               />
                             </td>
-                            <td className="border border-gray-300 p-1 text-center">
+                            <td className="border border-gray-300 p-2 text-center">
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 onClick={() => removeFormulationDetail(index)}
-                                className="text-red-600 hover:text-red-700 h-8"
+                                className="text-red-600 hover:text-red-700 border-red-300 hover:bg-red-50 h-10"
                               >
                                 <Trash2 className="h-3 w-3" />
                               </Button>
@@ -1406,13 +1406,13 @@ export default function ComprehensiveEditNew() {
                         ))}
                       </tbody>
                     </table>
-                    <Button type="button" onClick={addFormulationDetail} className="mt-4 bg-green-600 hover:bg-green-700">
+                    <Button type="button" onClick={addFormulationDetail} className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-sm hover:shadow transition-all duration-200">
                       <Plus className="h-4 w-4 mr-2" />
                       Προσθήκη γραμμής
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Section 5: Changes */}
               <Card>
