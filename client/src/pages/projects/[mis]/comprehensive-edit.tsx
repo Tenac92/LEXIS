@@ -120,6 +120,16 @@ export default function ComprehensiveEditProjectPage() {
     gcTime: 5 * 60 * 1000,
   });
 
+  const { data: projectIndexData } = useQuery({
+    queryKey: ["/api/projects", mis, "index"],
+    queryFn: async () => {
+      const response = await apiRequest(`/api/projects/${mis}/index`);
+      return response;
+    },
+    enabled: !!mis,
+    gcTime: 5 * 60 * 1000,
+  });
+
   const { data: kallikratisData } = useQuery({
     queryKey: ["/api/kallikratis"],
     gcTime: 10 * 60 * 1000,
@@ -140,41 +150,81 @@ export default function ComprehensiveEditProjectPage() {
     gcTime: 10 * 60 * 1000,
   });
 
-  // Initialize form with project data
+  // Initialize form with project data and project index data
   useEffect(() => {
-    if (projectData && kallikratisData && unitsData) {
+    if (projectData && kallikratisData && unitsData && projectIndexData) {
       const project = projectData;
       
-      // Initialize project line from existing data
-      const initialProjectLine: ProjectLine = {
-        id: "1",
-        implementing_agency: project.enhanced_unit?.id || "",
-        event_type: project.enhanced_event_type?.name || "",
-        region: {
-          perifereia: "",
-          perifereiaki_enotita: "",
-          dimos: "",
-          dimotiki_enotita: "",
-          kallikratis_id: project.enhanced_kallikratis?.id || undefined
-        },
-        expenditure_types: project.enhanced_expenditure_type?.name ? [project.enhanced_expenditure_type.name] : []
-      };
+      // Initialize project lines from project_index data if available
+      const projectLines: ProjectLine[] = [];
+      
+      if (projectIndexData && Array.isArray(projectIndexData) && projectIndexData.length > 0) {
+        // Group project index entries by common attributes to create consolidated project lines
+        const groupedEntries = new Map<string, any>();
+        
+        projectIndexData.forEach((indexEntry: any) => {
+          const key = `${indexEntry.unit_id}-${indexEntry.event_type_name}-${indexEntry.kallikratis_id}`;
+          
+          if (groupedEntries.has(key)) {
+            // Add expenditure type to existing group
+            const existing = groupedEntries.get(key);
+            if (indexEntry.expenditure_type_name && !existing.expenditure_types.includes(indexEntry.expenditure_type_name)) {
+              existing.expenditure_types.push(indexEntry.expenditure_type_name);
+            }
+          } else {
+            // Create new group
+            groupedEntries.set(key, {
+              unit_id: indexEntry.unit_id,
+              event_type_name: indexEntry.event_type_name,
+              kallikratis_id: indexEntry.kallikratis_id,
+              kallikratis: indexEntry.kallikratis,
+              expenditure_types: indexEntry.expenditure_type_name ? [indexEntry.expenditure_type_name] : []
+            });
+          }
+        });
 
-      // Extract region data from kallikratis
-      if (project.enhanced_kallikratis?.id) {
-        const kallikratisEntry = kallikratisData.find((entry: any) => entry.id === project.enhanced_kallikratis?.id);
-        if (kallikratisEntry) {
-          initialProjectLine.region = {
-            perifereia: kallikratisEntry.perifereia || "",
-            perifereiaki_enotita: kallikratisEntry.perifereiaki_enotita || "",
-            dimos: `${kallikratisEntry.eidos_neou_ota || ""} ${kallikratisEntry.onoma_neou_ota || ""}`.trim(),
-            dimotiki_enotita: `${kallikratisEntry.eidos_koinotitas || ""} ${kallikratisEntry.onoma_dimotikis_enotitas || ""}`.trim(),
-            kallikratis_id: kallikratisEntry.id
+        // Create project lines from grouped entries
+        Array.from(groupedEntries.values()).forEach((groupedEntry: any, idx: number) => {
+          const kallikratisEntry = groupedEntry.kallikratis || kallikratisData.find((entry: any) => entry.id === groupedEntry.kallikratis_id);
+          
+          const projectLine: ProjectLine = {
+            id: (idx + 1).toString(),
+            implementing_agency: groupedEntry.unit_id || "",
+            event_type: groupedEntry.event_type_name || "",
+            region: {
+              perifereia: kallikratisEntry?.perifereia || "",
+              perifereiaki_enotita: kallikratisEntry?.perifereiaki_enotita || "",
+              dimos: kallikratisEntry ? `${kallikratisEntry.eidos_neou_ota || ""} ${kallikratisEntry.onoma_neou_ota || ""}`.trim() : "",
+              dimotiki_enotita: kallikratisEntry ? `${kallikratisEntry.eidos_koinotitas || ""} ${kallikratisEntry.onoma_dimotikis_enotitas || ""}`.trim() : "",
+              kallikratis_id: groupedEntry.kallikratis_id
+            },
+            expenditure_types: groupedEntry.expenditure_types || []
           };
-        }
+          
+          projectLines.push(projectLine);
+        });
+      } else {
+        // Fallback: create one project line from main project data
+        const kallikratisEntry = kallikratisData.find((entry: any) => entry.id === project.enhanced_kallikratis?.id);
+        
+        const initialProjectLine: ProjectLine = {
+          id: "1",
+          implementing_agency: project.enhanced_unit?.id || "",
+          event_type: project.enhanced_event_type?.name || "",
+          region: {
+            perifereia: kallikratisEntry?.perifereia || "",
+            perifereiaki_enotita: kallikratisEntry?.perifereiaki_enotita || "",
+            dimos: kallikratisEntry ? `${kallikratisEntry.eidos_neou_ota || ""} ${kallikratisEntry.onoma_neou_ota || ""}`.trim() : "",
+            dimotiki_enotita: kallikratisEntry ? `${kallikratisEntry.eidos_koinotitas || ""} ${kallikratisEntry.onoma_dimotikis_enotitas || ""}`.trim() : "",
+            kallikratis_id: kallikratisEntry?.id
+          },
+          expenditure_types: project.enhanced_expenditure_type?.name ? [project.enhanced_expenditure_type.name] : []
+        };
+        
+        projectLines.push(initialProjectLine);
       }
 
-      setProjectLines([initialProjectLine]);
+      setProjectLines(projectLines);
 
       // Populate form fields
       form.setValue("project_details.mis", project.mis?.toString() || "");
@@ -194,7 +244,7 @@ export default function ComprehensiveEditProjectPage() {
         form.setValue("formulation_details.0.sa", "ΝΑ853");
       }
     }
-  }, [projectData, kallikratisData, unitsData, form]);
+  }, [projectData, projectIndexData, kallikratisData, unitsData, form]);
 
   // Project Lines Management Functions
   const addProjectLine = () => {
@@ -364,6 +414,7 @@ export default function ComprehensiveEditProjectPage() {
         description: "Το έργο ενημερώθηκε επιτυχώς",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", mis, "index"] });
     },
     onError: (error: any) => {
       toast({
