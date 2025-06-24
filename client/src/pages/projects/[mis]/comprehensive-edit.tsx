@@ -208,12 +208,43 @@ export default function ComprehensiveEditProjectPage() {
     },
   });
 
-  // Update form values when project data loads
+  // Initialize project lines from database data
   useEffect(() => {
-    if (projectData && projectData.mis) {
+    if (projectData && projectData.mis && kallikratisData) {
       const project = projectData;
       
-      // Populate project details section
+      // Initialize one project line with existing project data
+      const initialProjectLine: ProjectLine = {
+        id: "1",
+        implementing_agency: project.enhanced_unit?.id || "",
+        event_type: project.enhanced_event_type?.name || "",
+        region: {
+          perifereia: "",
+          perifereiaki_enotita: "",
+          dimos: "",
+          dimotiki_enotita: "",
+          kallikratis_id: project.enhanced_kallikratis?.id || ""
+        },
+        expenditure_types: project.enhanced_expenditure_type?.name ? [project.enhanced_expenditure_type.name] : []
+      };
+      
+      // Try to extract region data from project if available
+      if (project.enhanced_kallikratis?.name) {
+        const kallikratisEntry = kallikratisData.find((entry: any) => entry.id === project.enhanced_kallikratis?.id);
+        if (kallikratisEntry) {
+          initialProjectLine.region = {
+            perifereia: kallikratisEntry.perifereia || "",
+            perifereiaki_enotita: kallikratisEntry.perifereiaki_enotita || "",
+            dimos: `${kallikratisEntry.eidos_neou_ota || ""} ${kallikratisEntry.onoma_neou_ota || ""}`.trim(),
+            dimotiki_enotita: `${kallikratisEntry.eidos_koinotitas || ""} ${kallikratisEntry.onoma_dimotikis_enotitas || ""}`.trim(),
+            kallikratis_id: kallikratisEntry.id
+          };
+        }
+      }
+      
+      setProjectLines([initialProjectLine]);
+      
+      // Populate form fields
       form.setValue("project_details.mis", project.mis?.toString() || "");
       form.setValue("project_details.project_title", project.project_title || "");
       form.setValue("project_details.project_description", project.event_description || "");
@@ -239,11 +270,6 @@ export default function ComprehensiveEditProjectPage() {
         form.setValue("event_details.event_year", project.event_year[0] || "");
       }
 
-      // Populate implementing agency from enhanced data
-      if (project.enhanced_unit?.name) {
-        form.setValue("event_details.locations.0.implementing_agency", project.enhanced_unit.name);
-      }
-
       // Set budget fields from project data
       if (project.budget_na853) {
         form.setValue("formulation_details.0.project_budget", project.budget_na853?.toString() || "");
@@ -254,69 +280,78 @@ export default function ComprehensiveEditProjectPage() {
       console.log("[Comprehensive Edit] Available project fields:", Object.keys(project));
       console.log("[Comprehensive Edit] Form data after population:", form.getValues());
     }
-  }, [projectData, budgetData, form]);
+  }, [projectData, kallikratisData, form]);
 
   const updateProjectMutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
-      // Transform comprehensive form data for proper project updates
-      const transformedData = {
-        // Core project fields
-        title: data.project_details?.project_title || '',
-        project_title: data.project_details?.project_summary || '',
-        event_description: data.project_details?.project_description || '',
-        mis: data.project_details?.mis || '',
+      setLoading(true);
+      try {
+        // Get all expenditure types from project lines
+        const allExpenditureTypes = projectLines.flatMap(line => line.expenditure_types || []);
+        const uniqueExpenditureTypes = Array.from(new Set(allExpenditureTypes));
         
-        // Event and type data
-        event_type: data.event_details?.event_name ? [data.event_details.event_name] : [],
-        event_year: data.event_details?.event_year ? [data.event_details.event_year] : [],
+        // Get primary implementing agency and region from first project line
+        const primaryLine = projectLines[0];
         
-        // Implementing agency
-        implementing_agency: data.event_details?.locations?.[0]?.implementing_agency ? 
-          [data.event_details.locations[0].implementing_agency] : [],
-        
-        // Expenditure types from formulation details
-        expenditure_type: data.formulation_details?.map(fd => fd.sa).filter(Boolean) || [],
-        
-        // Region data
-        region: data.event_details?.locations?.[0] ? {
-          perifereia: data.event_details.locations[0].region || '',
-          perifereiaki_enotita: data.event_details.locations[0].regional_unit || '',
-          dimos: data.event_details.locations[0].municipality || '',
-          dimotiki_enotita: data.event_details.locations[0].municipal_community || ''
-        } : {},
-        
-        // Document fields from decisions
-        kya: data.decisions?.map(d => d.protocol_number).filter(Boolean) || [],
-        fek: data.decisions?.map(d => d.fek).filter(Boolean) || [],
-        ada: data.decisions?.map(d => d.ada).filter(Boolean) || [],
-        
-        // Budget fields from formulation details
-        budget_na853: data.formulation_details?.find(fd => fd.sa === 'ΝΑ853')?.project_budget || '',
-        budget_na271: data.formulation_details?.find(fd => fd.sa === 'ΝΑ271')?.project_budget || '',
-        budget_e069: data.formulation_details?.find(fd => fd.sa === 'Ε069')?.project_budget || '',
-        
-        // Project lines for project_index table
-        project_lines: [
-          {
-            implementing_agency: data.event_details?.locations?.[0]?.implementing_agency || '',
-            event_type: data.event_details?.event_name || '',
-            expenditure_types: data.formulation_details?.map(fd => fd.sa).filter(Boolean) || [],
+        // Transform comprehensive form data using project lines data
+        const transformedData = {
+          // Core project fields
+          title: data.project_details?.project_title || '',
+          project_title: data.project_details?.project_summary || '',
+          event_description: data.project_details?.project_description || '',
+          mis: data.project_details?.mis || '',
+          
+          // Event and type data from project lines
+          event_type: projectLines.map(line => line.event_type).filter(Boolean),
+          event_year: data.event_details?.event_year ? [data.event_details.event_year] : [],
+          
+          // Implementing agencies from project lines
+          implementing_agency: projectLines.map(line => line.implementing_agency).filter(Boolean),
+          
+          // All expenditure types from project lines
+          expenditure_type: uniqueExpenditureTypes,
+          
+          // Primary region data from first project line
+          region: primaryLine ? {
+            perifereia: primaryLine.region.perifereia || '',
+            perifereiaki_enotita: primaryLine.region.perifereiaki_enotita || '',
+            dimos: primaryLine.region.dimos || '',
+            dimotiki_enotita: primaryLine.region.dimotiki_enotita || ''
+          } : {},
+          
+          // Document fields from decisions
+          kya: data.decisions?.map(d => d.protocol_number).filter(Boolean) || [],
+          fek: data.decisions?.map(d => d.fek).filter(Boolean) || [],
+          ada: data.decisions?.map(d => d.ada).filter(Boolean) || [],
+          
+          // Budget fields from formulation details
+          budget_na853: data.formulation_details?.find(fd => fd.sa === 'ΝΑ853')?.project_budget || '',
+          budget_na271: data.formulation_details?.find(fd => fd.sa === 'ΝΑ271')?.project_budget || '',
+          budget_e069: data.formulation_details?.find(fd => fd.sa === 'Ε069')?.project_budget || '',
+          
+          // Complete project lines for project_index table updates
+          project_lines: projectLines.map(line => ({
+            implementing_agency: line.implementing_agency,
+            event_type: line.event_type,
+            expenditure_types: line.expenditure_types,
             region: {
-              perifereia: data.event_details?.locations?.[0]?.region || '',
-              perifereiaki_enotita: data.event_details?.locations?.[0]?.regional_unit || '',
-              dimos: data.event_details?.locations?.[0]?.municipality || '',
-              dimotiki_enotita: data.event_details?.locations?.[0]?.municipal_community || ''
+              perifereia: line.region.perifereia,
+              perifereiaki_enotita: line.region.perifereiaki_enotita,
+              dimos: line.region.dimos,
+              dimotiki_enotita: line.region.dimotiki_enotita,
+              kallikratis_id: line.region.kallikratis_id
             }
-          }
-        ]
-      };
-      
-      console.log('[Comprehensive Edit] Sending enhanced project data:', transformedData);
-      
-      return apiRequest(`/api/projects/${mis}`, {
-        method: 'PATCH',
-        body: JSON.stringify(transformedData),
-      });
+          }))
+        };
+
+        console.log(`[Comprehensive Edit] Updating project ${mis} with consolidated project lines:`, transformedData);
+        return apiRequest(`/api/projects/${mis}`, {
+          method: "PATCH",
+          body: JSON.stringify(transformedData),
+        });
+      } finally {
+        setLoading(false);
+      }
     },
     onSuccess: () => {
       toast({
@@ -351,10 +386,7 @@ export default function ComprehensiveEditProjectPage() {
     form.setValue("decisions", currentDecisions.filter((_, i) => i !== index));
   };
 
-  const addLocation = () => {
-    const currentLocations = form.getValues("event_details.locations") || [];
-    form.setValue("event_details.locations", [...currentLocations, {}]);
-  };
+
 
   const addFormulationDetail = () => {
     const currentDetails = form.getValues("formulation_details") || [];
@@ -736,24 +768,25 @@ export default function ComprehensiveEditProjectPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Section 2: Event Details */}
-                  <Card>
-                    <CardHeader className="bg-blue-50">
-                      <CardTitle className="text-blue-900">
+                  {/* Section 2: Event Details (Simplified) */}
+                  <Card className="shadow-sm">
+                    <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 border-b">
+                      <CardTitle className="flex items-center gap-2 text-blue-900">
+                        <Calendar className="h-5 w-5" />
                         2️⃣ Στοιχεία συμβάντος
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-2 gap-4 mb-4">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
                           name="event_details.event_name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Τύπος Συμβάντος</FormLabel>
+                              <FormLabel className="text-sm font-medium text-gray-700">Τύπος Συμβάντος</FormLabel>
                               <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
-                                  <SelectTrigger>
+                                  <SelectTrigger className="h-10">
                                     <SelectValue placeholder="Επιλέξτε τύπο συμβάντος" />
                                   </SelectTrigger>
                                 </FormControl>
@@ -773,113 +806,20 @@ export default function ComprehensiveEditProjectPage() {
                           name="event_details.event_year"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Έτος εκδήλωσης συμβάντος</FormLabel>
+                              <FormLabel className="text-sm font-medium text-gray-700">Έτος εκδήλωσης συμβάντος</FormLabel>
                               <FormControl>
-                                <Input {...field} />
+                                <Input {...field} className="h-10" placeholder="π.χ. 2024" />
                               </FormControl>
                             </FormItem>
                           )}
                         />
                       </div>
-
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse border border-gray-300 mb-4">
-                          <thead>
-                            <tr className="bg-blue-100">
-                              <th className="border border-gray-300 p-2 text-sm">Δημοτική Κοινότητα</th>
-                              <th className="border border-gray-300 p-2 text-sm">Δήμος</th>
-                              <th className="border border-gray-300 p-2 text-sm">Περιφερειακή Ενότητα</th>
-                              <th className="border border-gray-300 p-2 text-sm">Περιφέρεια</th>
-                              <th className="border border-gray-300 p-2 text-sm">Φορέας υλοποίησης</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(form.watch("event_details.locations") || [{}]).map((_, index) => (
-                              <tr key={index}>
-                                <td className="border border-gray-300 p-2">
-                                  <FormField
-                                    control={form.control}
-                                    name={`event_details.locations.${index}.municipal_community`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormControl>
-                                          <Input {...field} className="w-full" />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                </td>
-                                <td className="border border-gray-300 p-2">
-                                  <FormField
-                                    control={form.control}
-                                    name={`event_details.locations.${index}.municipality`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormControl>
-                                          <Input {...field} className="w-full" />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                </td>
-                                <td className="border border-gray-300 p-2">
-                                  <FormField
-                                    control={form.control}
-                                    name={`event_details.locations.${index}.regional_unit`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormControl>
-                                          <Input {...field} className="w-full" />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                </td>
-                                <td className="border border-gray-300 p-2">
-                                  <FormField
-                                    control={form.control}
-                                    name={`event_details.locations.${index}.region`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormControl>
-                                          <Input {...field} className="w-full" />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
-                                </td>
-                                <td className="border border-gray-300 p-2">
-                                  <FormField
-                                    control={form.control}
-                                    name={`event_details.locations.${index}.implementing_agency`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                          <FormControl>
-                                            <SelectTrigger className="w-full">
-                                              <SelectValue placeholder="Επιλέξτε φορέα" />
-                                            </SelectTrigger>
-                                          </FormControl>
-                                          <SelectContent>
-                                            {unitsData?.map((unit: any) => (
-                                              <SelectItem key={unit.id} value={unit.name}>
-                                                {unit.name}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      </FormItem>
-                                    )}
-                                  />
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                        <Button type="button" onClick={addLocation} className="bg-green-600 hover:bg-green-700">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Προσθήκη γραμμής
-                        </Button>
+                      
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <p className="text-sm text-blue-700">
+                          <Info className="inline h-4 w-4 mr-1" />
+                          Η λεπτομερής διαχείριση περιοχών και φορέων υλοποίησης γίνεται στην ενότητα "Γραμμές Έργου" παρακάτω.
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
