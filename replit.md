@@ -149,21 +149,19 @@ This is a full-stack web application built for Greek government budget and docum
 - Zero field duplication - single source of truth for all project configuration
 - Production-ready interface with proper accessibility and responsive design
 
-### June 24, 2025 - Complete Comprehensive Edit System Rebuild & Perfect Consolidation
-- Completely rebuilt comprehensive edit page from scratch with proper architecture and zero duplicated fields
-- Implemented clean 6-section structure: Decisions, Event Details (simplified), Project Details, Formulation Details, Changes, Project Lines
-- Section 2 now only contains event type and year - all region/agency management moved to Project Lines section
-- Project Lines section provides advanced management with 4-level cascading geographic hierarchy
-- Proper data initialization from database with automatic project line creation from existing project data
-- Enhanced UI with modern gradients, consistent styling, proper spacing, and visual feedback indicators
-- Multi-select expenditure types with checkboxes and visual confirmation (CheckCircle icons)
-- Summary tab provides clean overview of project data before editing
-- Form validation with Zod schemas and proper TypeScript typing throughout
-- Mutation function uses consolidated project lines data for all geographic and agency information
-- Proper loading states, error handling, and user feedback throughout the interface
-- All API endpoints integrated correctly: kallikratis (1000), units (11), event types (15), expenditure types (8)
-- Zero field duplication - single source of truth for all project configuration
-- Production-ready interface with proper accessibility and responsive design
+### June 24, 2025 - Complete Comprehensive Edit System Rebuild Based on Greek Government Documentation
+- Completely rebuilt comprehensive edit form from scratch matching exact Google Apps Script HTML structure provided by user
+- Implemented authentic 5-section Greek government form structure: Decisions, Event Details, Project Details, Formulation Details, Changes
+- Section 1 now includes all decision fields: protocol number, FEK, ADA, implementing agency, budget, expense category, decision type, inclusion status, comments
+- Section 2 contains event details with location management: municipal community, municipality, regional unit, region, implementing agency
+- Section 3 provides complete project details: MIS, SA, enumeration code, inclusion year, titles, descriptions, expenses, status, with optional previous entries
+- Section 4 implements full formulation details with 13 columns: SA, enumeration code, protocol, ADA, year, budget, EPA version, expenses, status, changes, decisions, comments
+- Section 5 handles changes tracking with description fields matching government requirements
+- Form structure exactly mirrors provided HTML documentation with proper table layouts and styling
+- Enhanced data initialization to populate all fields from existing project data with proper array handling
+- Comprehensive form validation with Zod schemas covering all government form requirements
+- Production-ready implementation with proper error handling, loading states, and user feedback
+- Complete field coverage ensuring no missing elements from government documentation requirements
 
 ### June 19, 2025 - Comprehensive Project Edit System Implementation & Regular Edit Replacement
 - Replaced regular edit page with comprehensive 5-section project edit interface matching Greek government documentation requirements
