@@ -5,7 +5,7 @@ import { useLocation, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Plus, X, Trash2 } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -29,8 +29,34 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Header } from "@/components/header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { insertProjectSchema, type Project } from "@shared/schema";
+import { insertProjectSchema, type Project, type BudgetNA853Split } from "@shared/schema";
 import { z } from "zod";
+
+// Interface for project lines with detailed region structure
+interface ProjectLine {
+  id?: string;
+  implementing_agency: string;
+  event_type: string;
+  region: {
+    perifereia: string;
+    perifereiaki_enotita: string;
+    dimos: string;
+    dimotiki_enotita: string;
+    kallikratis_id?: number;
+  };
+  expenditure_types: string[];
+}
+
+// Interface for kallikratis data structure
+interface KallikratisEntry {
+  id: number;
+  eidos_koinotitas: string;
+  onoma_dimotikis_enotitas: string;
+  eidos_neou_ota: string;
+  onoma_neou_ota: string;
+  perifereiaki_enotita: string;
+  perifereia: string;
+}
 
 // Extended schema for comprehensive project editing
 const comprehensiveProjectSchema = z.object({
@@ -118,7 +144,7 @@ export default function ComprehensiveEditProjectPage() {
     queryFn: () => apiRequest(`/api/projects/${mis}`),
     enabled: !!mis,
     staleTime: 30 * 60 * 1000, // 30 minutes
-    cacheTime: 2 * 60 * 60 * 1000, // 2 hours
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
   });
 
   // Fetch budget data
@@ -127,33 +153,33 @@ export default function ComprehensiveEditProjectPage() {
     queryFn: () => apiRequest(`/api/budget/${mis}`),
     enabled: !!mis,
     staleTime: 30 * 60 * 1000,
-    cacheTime: 2 * 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
   });
 
   // Fetch reference data for dropdowns
   const { data: kallikratisData } = useQuery({
     queryKey: ['/api/kallikratis'],
     staleTime: 30 * 60 * 1000,
-    cacheTime: 2 * 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
   });
 
   const { data: unitsData } = useQuery({
     queryKey: ['/api/public/units'],
     staleTime: 30 * 60 * 1000,
-    cacheTime: 2 * 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
   });
 
   const { data: eventTypesData } = useQuery({
     queryKey: ['/api/event-types'],
     staleTime: 30 * 60 * 1000,
-    cacheTime: 2 * 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
   });
 
   const { data: expenditureTypesData } = useQuery({
     queryKey: ['/api/expenditure-types'],
     queryFn: () => apiRequest('/api/expenditure-types'),
     staleTime: 30 * 60 * 1000,
-    cacheTime: 2 * 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000,
   });
 
   console.log("Edit Project Page - MIS Parameter:", mis);
@@ -187,27 +213,39 @@ export default function ComprehensiveEditProjectPage() {
       
       // Populate project details section
       form.setValue("project_details.mis", project.mis?.toString() || "");
-      form.setValue("project_details.project_title", project.title || "");
+      form.setValue("project_details.project_title", project.project_title || "");
       form.setValue("project_details.project_description", project.event_description || "");
       form.setValue("project_details.project_summary", project.project_title || "");
       
+      // Populate decisions section with existing data
+      if (project.kya && Array.isArray(project.kya) && project.kya.length > 0) {
+        form.setValue("decisions.0.protocol_number", project.kya[0] || "");
+      }
+      if (project.fek && Array.isArray(project.fek) && project.fek.length > 0) {
+        form.setValue("decisions.0.fek", project.fek[0] || "");
+      }
+      if (project.ada && Array.isArray(project.ada) && project.ada.length > 0) {
+        form.setValue("decisions.0.ada", project.ada[0] || "");
+      }
+      
       // Populate event details if available
-      if (project.event_type && Array.isArray(project.event_type) && project.event_type.length > 0) {
-        form.setValue("event_details.event_name", project.event_type[0] || "");
+      if (project.enhanced_event_type?.name) {
+        form.setValue("event_details.event_name", project.enhanced_event_type.name);
       }
       
       if (project.event_year && Array.isArray(project.event_year) && project.event_year.length > 0) {
         form.setValue("event_details.event_year", project.event_year[0] || "");
       }
 
-      // Populate implementing agency from existing data
-      if (project.implementing_agency && Array.isArray(project.implementing_agency) && project.implementing_agency.length > 0) {
-        form.setValue("event_details.locations.0.implementing_agency", project.implementing_agency[0] || "");
+      // Populate implementing agency from enhanced data
+      if (project.enhanced_unit?.name) {
+        form.setValue("event_details.locations.0.implementing_agency", project.enhanced_unit.name);
       }
 
-      // Set budget fields if available
-      if (budgetData) {
-        form.setValue("project_details.budget_na853", budgetData.budget_na853?.toString() || "");
+      // Set budget fields from project data
+      if (project.budget_na853) {
+        form.setValue("formulation_details.0.project_budget", project.budget_na853?.toString() || "");
+        form.setValue("formulation_details.0.sa", "ΝΑ853");
       }
       
       console.log("[Comprehensive Edit] Populating form with project data:", project.mis);

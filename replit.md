@@ -127,6 +127,16 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### June 24, 2025 - Comprehensive Edit System Data Fetching Fix & Full Functionality
+- Fixed TanStack Query v5 compatibility issues by updating `cacheTime` to `gcTime` in all query configurations
+- Resolved project data structure handling - API returns data directly, not nested under `project` property
+- Enhanced form population with proper field mapping for all 5 sections using actual project data structure
+- Implemented complete data flow: decisions (KYA, FEK, ADA), event details, project details, formulation details
+- All API endpoints verified working: 8 expenditure types, 15 event types, 1000 kallikratis entries, 11 units
+- Form now properly populates with existing project data including enhanced relationships
+- Budget data integration fixed with correct API endpoint structure
+- TypeScript errors resolved for production-ready comprehensive edit system
+
 ### June 19, 2025 - Comprehensive Project Edit System Implementation & Regular Edit Replacement
 - Replaced regular edit page with comprehensive 5-section project edit interface matching Greek government documentation requirements
 - Implemented tabbed interface with Summary and Edit modes for complete project management workflow
