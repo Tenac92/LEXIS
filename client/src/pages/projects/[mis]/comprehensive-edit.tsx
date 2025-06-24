@@ -229,68 +229,175 @@ export default function ComprehensiveEditProjectPage() {
 
       // Always populate all form fields with project data, regardless of dependencies
       console.log('Populating form sections...');
+      console.log('Project data structure:', Object.keys(project));
 
-      // Section 1: Decisions
-      if (project.kya && Array.isArray(project.kya) && project.kya.length > 0) {
-        console.log('Setting KYA values:', project.kya);
+      // Section 1: Decisions - Initialize with actual data
+      const decisionsToSet: any[] = [];
+      
+      // Create decision entries from available data
+      if (project.kya && Array.isArray(project.kya)) {
         project.kya.forEach((kya: string, index: number) => {
-          form.setValue(`decisions.${index}.protocol_number`, kya);
+          if (!decisionsToSet[index]) decisionsToSet[index] = {};
+          decisionsToSet[index].protocol_number = kya;
         });
       }
-      if (project.fek && Array.isArray(project.fek) && project.fek.length > 0) {
-        console.log('Setting FEK values:', project.fek);
+      
+      if (project.fek && Array.isArray(project.fek)) {
         project.fek.forEach((fek: string, index: number) => {
-          form.setValue(`decisions.${index}.fek`, fek);
+          if (!decisionsToSet[index]) decisionsToSet[index] = {};
+          decisionsToSet[index].fek = fek;
         });
       }
-      if (project.ada && Array.isArray(project.ada) && project.ada.length > 0) {
-        console.log('Setting ADA values:', project.ada);
+      
+      if (project.ada && Array.isArray(project.ada)) {
         project.ada.forEach((ada: string, index: number) => {
-          form.setValue(`decisions.${index}.ada`, ada);
+          if (!decisionsToSet[index]) decisionsToSet[index] = {};
+          decisionsToSet[index].ada = ada;
         });
       }
 
-      // Section 2: Event Details
+      // Set decisions with at least one decision row
+      if (decisionsToSet.length === 0) {
+        decisionsToSet.push({
+          protocol_number: "",
+          fek: "",
+          ada: "",
+          implementing_agency: "",
+          decision_budget: "",
+          expense_category: "",
+          decision_type: "Έγκριση",
+          is_included: true,
+          comments: ""
+        });
+      }
+
+      console.log('Setting decisions:', decisionsToSet);
+      form.setValue("decisions", decisionsToSet);
+
+      // Section 2: Event Details - Set both event name and year
+      const eventDetails: any = {
+        event_name: "",
+        event_year: ""
+      };
+
       if (eventTypesData && project.event_type_id) {
         const eventType = eventTypesData.find((et: any) => et.id === project.event_type_id);
         if (eventType) {
           console.log('Setting event type:', eventType.name);
-          form.setValue("event_details.event_name", eventType.name);
+          eventDetails.event_name = eventType.name;
         }
       }
+      
       if (project.event_year && Array.isArray(project.event_year) && project.event_year.length > 0) {
         console.log('Setting event year:', project.event_year[0]);
-        form.setValue("event_details.event_year", project.event_year[0]);
+        eventDetails.event_year = project.event_year[0];
       }
 
-      // Section 3: Project Details - Always populate these core fields
+      form.setValue("event_details", eventDetails);
+
+      // Section 3: Project Details - Set all project information
       console.log('Setting project details...');
-      form.setValue("project_details.mis", project.mis?.toString() || "");
-      form.setValue("project_details.project_title", project.project_title || "");
-      form.setValue("project_details.project_description", project.event_description || "");
-      form.setValue("project_details.na853", project.na853 || "");
-      form.setValue("project_details.na271", project.na271 || "");
-      form.setValue("project_details.e069", project.e069 || "");
+      const projectDetails = {
+        mis: project.mis?.toString() || "",
+        sa: project.na853 || project.na271 || project.e069 || "",
+        enumeration_code: "",
+        inclusion_year: project.event_year?.[0] || "",
+        project_title: project.project_title || "",
+        project_description: project.event_description || "",
+        summary_description: "",
+        expenses_executed: "",
+        project_status: "Συνεχιζόμενο",
+        na853: project.na853 || "",
+        na271: project.na271 || "",
+        e069: project.e069 || ""
+      };
 
-      // Section 4: Formulation Details
+      form.setValue("project_details", projectDetails);
+
+      // Section 4: Formulation Details - Set budget information
       console.log('Setting formulation details...');
-      let formDetailIndex = 0;
+      const formulationDetails: any[] = [];
+      
       if (project.budget_na853) {
-        form.setValue(`formulation_details.${formDetailIndex}.project_budget`, project.budget_na853.toString());
-        form.setValue(`formulation_details.${formDetailIndex}.sa`, "ΝΑ853");
-        formDetailIndex++;
+        formulationDetails.push({
+          sa: "ΝΑ853",
+          enumeration_code: project.na853 || "",
+          protocol_number: project.kya?.[0] || "",
+          ada: project.ada?.[0] || "",
+          decision_year: project.event_year?.[0] || "",
+          project_budget: project.budget_na853.toString(),
+          epa_version: "",
+          total_public_expense: project.budget_na853.toString(),
+          eligible_public_expense: project.budget_na853.toString(),
+          decision_status: "Ενεργή",
+          change_type: "Έγκριση",
+          connected_decisions: "",
+          comments: ""
+        });
       }
+      
       if (project.budget_na271) {
-        form.setValue(`formulation_details.${formDetailIndex}.project_budget`, project.budget_na271.toString());
-        form.setValue(`formulation_details.${formDetailIndex}.sa`, "ΝΑ271");
-        formDetailIndex++;
+        formulationDetails.push({
+          sa: "ΝΑ271",
+          enumeration_code: project.na271 || "",
+          protocol_number: project.kya?.[1] || project.kya?.[0] || "",
+          ada: project.ada?.[1] || project.ada?.[0] || "",
+          decision_year: project.event_year?.[0] || "",
+          project_budget: project.budget_na271.toString(),
+          epa_version: "",
+          total_public_expense: project.budget_na271.toString(),
+          eligible_public_expense: project.budget_na271.toString(),
+          decision_status: "Ενεργή",
+          change_type: "Έγκριση",
+          connected_decisions: "",
+          comments: ""
+        });
       }
+      
       if (project.budget_e069) {
-        form.setValue(`formulation_details.${formDetailIndex}.project_budget`, project.budget_e069.toString());
-        form.setValue(`formulation_details.${formDetailIndex}.sa`, "Ε069");
+        formulationDetails.push({
+          sa: "Ε069",
+          enumeration_code: project.e069 || "",
+          protocol_number: project.kya?.[2] || project.kya?.[0] || "",
+          ada: project.ada?.[2] || project.ada?.[0] || "",
+          decision_year: project.event_year?.[0] || "",
+          project_budget: project.budget_e069.toString(),
+          epa_version: "",
+          total_public_expense: project.budget_e069.toString(),
+          eligible_public_expense: project.budget_e069.toString(),
+          decision_status: "Ενεργή",
+          change_type: "Έγκριση",
+          connected_decisions: "",
+          comments: ""
+        });
       }
+
+      // Ensure at least one formulation detail
+      if (formulationDetails.length === 0) {
+        formulationDetails.push({
+          sa: "ΝΑ853",
+          enumeration_code: "",
+          protocol_number: "",
+          ada: "",
+          decision_year: "",
+          project_budget: "",
+          epa_version: "",
+          total_public_expense: "",
+          eligible_public_expense: "",
+          decision_status: "Ενεργή",
+          change_type: "Έγκριση",
+          connected_decisions: "",
+          comments: ""
+        });
+      }
+
+      form.setValue("formulation_details", formulationDetails);
+
+      // Section 5: Changes - Initialize empty but ready for input
+      form.setValue("changes", [{ description: "" }]);
 
       console.log('Form initialization complete');
+      console.log('Form values after initialization:', form.getValues());
     }
   }, [projectData, projectIndexData, kallikratisData, eventTypesData, form]);
 
