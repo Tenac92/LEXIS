@@ -731,169 +731,194 @@ export default function ComprehensiveEditNew() {
                   </table>
 
                   {/* Location details with 4-level cascading dropdowns and multi-select expenditure types */}
-                  <div className="mt-6 space-y-6">
+                  <div className="mt-8 space-y-8">
                     {form.watch("location_details").map((location, index) => (
-                      <Card key={index} className="p-6 border-2 border-gray-200 shadow-sm">
-                        <div className="flex items-center justify-between mb-6">
-                          <h4 className="text-lg font-semibold text-gray-800">Location Entry {index + 1}</h4>
-                          {form.watch("location_details").length > 1 && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => removeLocationDetail(index)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* 4-Level Cascading Dropdowns */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          {/* Περιφέρεια (Region) */}
-                          <div>
-                            <label className="block text-base font-medium mb-3">Region (Περιφέρεια)</label>
-                            <Select
-                              value={location.region}
-                              onValueChange={(value) => updateLocationField(index, 'region', value)}
-                            >
-                              <SelectTrigger className="h-11">
-                                <SelectValue placeholder="Select region..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getFilteredOptions('region', index).map((option, optIndex) => (
-                                  <SelectItem key={`region-${index}-${optIndex}`} value={option}>
-                                    {option}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                      <Card key={index} className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 shadow-lg rounded-xl overflow-hidden">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-lg font-bold flex items-center gap-2">
+                              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">
+                                {index + 1}
+                              </div>
+                              Location & Expenditure Configuration
+                            </h4>
+                            {form.watch("location_details").length > 1 && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeLocationDetail(index)}
+                                className="text-white border-white/50 hover:bg-white/10 hover:text-white"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
+                        </div>
+                        
+                        <div className="p-8 space-y-8">
+
+                          {/* 4-Level Cascading Geographic Hierarchy */}
+                          <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                            <h5 className="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
+                              🏛️ Geographic Hierarchy
+                            </h5>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Περιφέρεια (Region) */}
+                              <div className="space-y-2">
+                                <label className="block text-base font-semibold text-gray-700">🌍 Region (Περιφέρεια)</label>
+                                <Select
+                                  value={location.region}
+                                  onValueChange={(value) => updateLocationField(index, 'region', value)}
+                                >
+                                  <SelectTrigger className="h-12 bg-white border-2 border-gray-300 hover:border-blue-400 transition-colors">
+                                    <SelectValue placeholder="Select region..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {getFilteredOptions('region', index).map((option, optIndex) => (
+                                      <SelectItem key={`region-${index}-${optIndex}`} value={option}>
+                                        {option}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
 
                           {/* Περιφερειακή Ενότητα (Regional Unit) */}
-                          <div>
-                            <label className="block text-base font-medium mb-3">Regional Unit (Περιφερειακή Ενότητα)</label>
-                            <Select
-                              value={location.regional_unit}
-                              onValueChange={(value) => updateLocationField(index, 'regional_unit', value)}
-                              disabled={!location.region}
-                            >
-                              <SelectTrigger className="h-11">
-                                <SelectValue placeholder="Select regional unit..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__clear__" className="italic text-gray-500">
-                                  -- Clear Selection --
-                                </SelectItem>
-                                {getFilteredOptions('regional_unit', index).map((option, optIndex) => (
-                                  <SelectItem key={`regional-unit-${index}-${optIndex}`} value={option}>
-                                    {option}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                              <div className="space-y-2">
+                                <label className="block text-base font-semibold text-gray-700">🏛️ Regional Unit (Περιφερειακή Ενότητα)</label>
+                                <Select
+                                  value={location.regional_unit}
+                                  onValueChange={(value) => updateLocationField(index, 'regional_unit', value)}
+                                  disabled={!location.region}
+                                >
+                                  <SelectTrigger className="h-12 bg-white border-2 border-gray-300 hover:border-blue-400 transition-colors disabled:bg-gray-100">
+                                    <SelectValue placeholder="Select regional unit..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__clear__" className="italic text-gray-500">
+                                      -- Clear Selection --
+                                    </SelectItem>
+                                    {getFilteredOptions('regional_unit', index).map((option, optIndex) => (
+                                      <SelectItem key={`regional-unit-${index}-${optIndex}`} value={option}>
+                                        {option}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
 
                           {/* Δήμος (Municipality) */}
-                          <div>
-                            <label className="block text-base font-medium mb-3">Municipality (Δήμος)</label>
-                            <Select
-                              value={location.municipality}
-                              onValueChange={(value) => updateLocationField(index, 'municipality', value)}
-                              disabled={!location.regional_unit}
-                            >
-                              <SelectTrigger className="h-11">
-                                <SelectValue placeholder="Select municipality..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__clear__" className="italic text-gray-500">
-                                  -- Clear Selection --
-                                </SelectItem>
-                                {getFilteredOptions('municipality', index).map((option, optIndex) => (
-                                  <SelectItem key={`municipality-${index}-${optIndex}`} value={option}>
-                                    {option}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                              <div className="space-y-2">
+                                <label className="block text-base font-semibold text-gray-700">🏘️ Municipality (Δήμος)</label>
+                                <Select
+                                  value={location.municipality}
+                                  onValueChange={(value) => updateLocationField(index, 'municipality', value)}
+                                  disabled={!location.regional_unit}
+                                >
+                                  <SelectTrigger className="h-12 bg-white border-2 border-gray-300 hover:border-blue-400 transition-colors disabled:bg-gray-100">
+                                    <SelectValue placeholder="Select municipality..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__clear__" className="italic text-gray-500">
+                                      -- Clear Selection --
+                                    </SelectItem>
+                                    {getFilteredOptions('municipality', index).map((option, optIndex) => (
+                                      <SelectItem key={`municipality-${index}-${optIndex}`} value={option}>
+                                        {option}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
 
                           {/* Δημ. Ενότητα (Municipal Community) */}
-                          <div>
-                            <label className="block text-base font-medium mb-3">Municipal Community (Δημοτική Ενότητα)</label>
+                              <div className="space-y-2">
+                                <label className="block text-base font-semibold text-gray-700">🏡 Municipal Community (Δημοτική Ενότητα)</label>
+                                <Select
+                                  value={location.municipal_community}
+                                  onValueChange={(value) => updateLocationField(index, 'municipal_community', value)}
+                                  disabled={!location.municipality}
+                                >
+                                  <SelectTrigger className="h-12 bg-white border-2 border-gray-300 hover:border-blue-400 transition-colors disabled:bg-gray-100">
+                                    <SelectValue placeholder="Select municipal community..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__clear__" className="italic text-gray-500">
+                                      -- Clear Selection --
+                                    </SelectItem>
+                                    {getFilteredOptions('municipal_community', index).map((option, optIndex) => (
+                                      <SelectItem key={`municipal-community-${index}-${optIndex}`} value={option}>
+                                        {option}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Implementing Agency */}
+                          <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                            <label className="block text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
+                              🏢 Implementing Agency (Φορέας υλοποίησης)
+                            </label>
                             <Select
-                              value={location.municipal_community}
-                              onValueChange={(value) => updateLocationField(index, 'municipal_community', value)}
-                              disabled={!location.municipality}
+                              value={location.implementing_agency}
+                              onValueChange={(value) => updateLocationField(index, 'implementing_agency', value)}
                             >
-                              <SelectTrigger className="h-11">
-                                <SelectValue placeholder="Select municipal community..." />
+                              <SelectTrigger className="h-12 bg-white border-2 border-green-300 hover:border-green-400 transition-colors">
+                                <SelectValue placeholder="Select implementing agency..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="__clear__" className="italic text-gray-500">
-                                  -- Clear Selection --
-                                </SelectItem>
-                                {getFilteredOptions('municipal_community', index).map((option, optIndex) => (
-                                  <SelectItem key={`municipal-community-${index}-${optIndex}`} value={option}>
-                                    {option}
+                                {unitsData?.map((unit: any, unitIndex: number) => (
+                                  <SelectItem key={`unit-${index}-${unitIndex}`} value={unit.unit_name || unit.name}>
+                                    {unit.unit_name || unit.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                        </div>
 
-                        {/* Implementing Agency */}
-                        <div className="mb-6">
-                          <label className="block text-base font-medium mb-3">Implementing Agency (Φορέας υλοποίησης)</label>
-                          <Select
-                            value={location.implementing_agency}
-                            onValueChange={(value) => updateLocationField(index, 'implementing_agency', value)}
-                          >
-                            <SelectTrigger className="h-11">
-                              <SelectValue placeholder="Select implementing agency..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {unitsData?.map((unit: any, unitIndex: number) => (
-                                <SelectItem key={`unit-${index}-${unitIndex}`} value={unit.unit_name || unit.name}>
-                                  {unit.unit_name || unit.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Multi-Select Expenditure Types */}
-                        <div>
-                          <label className="block text-base font-medium mb-3">
-                            Expenditure Types (Τύπος Δαπάνης)
-                          </label>
-                          <div className="space-y-3">
-                            <div className="flex flex-wrap gap-2">
-                              {expenditureTypesData?.map((expType: any) => {
-                                const isSelected = location.expenditure_types?.includes(expType.expediture_types);
-                                return (
-                                  <button
-                                    key={`${index}-${expType.id}`}
-                                    type="button"
-                                    onClick={() => toggleExpenditureType(index, expType.expediture_types)}
-                                    className={`px-4 py-2 text-sm rounded-lg border transition-all duration-200 font-medium ${
-                                      isSelected
-                                        ? 'bg-blue-100 border-blue-300 text-blue-800 shadow-sm'
-                                        : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-gray-400'
-                                    }`}
-                                  >
-                                    {expType.expediture_types}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            {location.expenditure_types?.length > 0 && (
-                              <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                                Selected: {location.expenditure_types.length} expenditure type(s)
+                          {/* Multi-Select Expenditure Types */}
+                          <div className="bg-purple-50 p-6 rounded-xl border border-purple-200">
+                            <label className="block text-lg font-semibold text-purple-800 mb-4 flex items-center gap-2">
+                              💰 Expenditure Types (Τύπος Δαπάνης)
+                            </label>
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {expenditureTypesData?.map((expType: any) => {
+                                  const isSelected = location.expenditure_types?.includes(expType.expediture_types);
+                                  return (
+                                    <button
+                                      key={`${index}-${expType.id}`}
+                                      type="button"
+                                      onClick={() => toggleExpenditureType(index, expType.expediture_types)}
+                                      className={`px-4 py-3 text-sm rounded-xl border-2 transition-all duration-200 font-medium text-left ${
+                                        isSelected
+                                          ? 'bg-purple-100 border-purple-400 text-purple-800 shadow-md transform scale-105'
+                                          : 'bg-white border-gray-300 text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:shadow-sm'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {isSelected && <CheckCircle className="h-4 w-4 text-purple-600" />}
+                                        <span>{expType.expediture_types}</span>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
                               </div>
-                            )}
+                              {location.expenditure_types?.length > 0 && (
+                                <div className="bg-purple-100 border border-purple-300 p-4 rounded-lg">
+                                  <p className="text-purple-800 font-medium">
+                                    ✅ Selected: {location.expenditure_types.length} expenditure type(s)
+                                  </p>
+                                  <p className="text-sm text-purple-600 mt-1">
+                                    {location.expenditure_types.join(", ")}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </Card>
@@ -902,9 +927,9 @@ export default function ComprehensiveEditNew() {
                     <Button 
                       type="button" 
                       onClick={addLocationDetail} 
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3"
+                      className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Plus className="h-5 w-5 mr-2" />
                       Add New Location Entry
                     </Button>
                   </div>
