@@ -1172,6 +1172,12 @@ export default function ComprehensiveEditNew() {
                 <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b border-gray-200 pb-4">
                   Section 4: Στοιχεία κατάρτισης έργου
                 </h3>
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    <strong>Σημείωση:</strong> Τα ποσά εισάγονται σε ευρώ με δεκαδικά ψηφία (π.χ. 1234,56). 
+                    Η εφαρμογή χρησιμοποιεί το ελληνικό σύστημα νομισματικής μορφοποίησης.
+                  </p>
+                </div>
                 <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse border border-gray-300 bg-white rounded-lg overflow-hidden">
@@ -1277,7 +1283,19 @@ export default function ComprehensiveEditNew() {
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} type="number" className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
+                                      <Input 
+                                        {...field} 
+                                        type="number" 
+                                        step="0.01"
+                                        min="0"
+                                        className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm"
+                                        placeholder="0,00 €"
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          field.onChange(value ? parseFloat(value) : '');
+                                        }}
+                                        value={field.value || ''}
+                                      />
                                     </FormControl>
                                   </FormItem>
                                 )}
@@ -1303,7 +1321,19 @@ export default function ComprehensiveEditNew() {
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} type="number" className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
+                                      <Input 
+                                        {...field} 
+                                        type="number" 
+                                        step="0.01"
+                                        min="0"
+                                        className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm"
+                                        placeholder="0,00 €"
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          field.onChange(value ? parseFloat(value) : '');
+                                        }}
+                                        value={field.value || ''}
+                                      />
                                     </FormControl>
                                   </FormItem>
                                 )}
@@ -1316,7 +1346,19 @@ export default function ComprehensiveEditNew() {
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} type="number" className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
+                                      <Input 
+                                        {...field} 
+                                        type="number" 
+                                        step="0.01"
+                                        min="0"
+                                        className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm"
+                                        placeholder="0,00 €"
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          field.onChange(value ? parseFloat(value) : '');
+                                        }}
+                                        value={field.value || ''}
+                                      />
                                     </FormControl>
                                   </FormItem>
                                 )}
