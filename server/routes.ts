@@ -1364,6 +1364,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
 
+    // Project index endpoint for comprehensive edit
+    app.get('/api/projects/:mis/index', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const { mis } = req.params;
+        console.log(`[ProjectIndex] Fetching project index data for MIS: ${mis}`);
+
+        // First get the project ID from MIS
+        const { data: projectData, error: projectError } = await supabase
+          .from('Projects')
+          .select('id')
+          .eq('mis', parseInt(mis))
+          .single();
+
+        if (projectError || !projectData) {
+          console.error(`[ProjectIndex] Project not found for MIS: ${mis}`, projectError);
+          return res.status(404).json({ message: 'Project not found' });
+        }
+
+        // Get project index entries with all related data
+        const { data: indexData, error: indexError } = await supabase
+          .from('project_index')
+          .select(`
+            *,
+            event_types:event_types_id(id, name),
+            expediture_types:expediture_type_id(id, expediture_types),
+            Monada:monada_id(id, unit_name),
+            kallikratis:kallikratis_id(*)
+          `)
+          .eq('project_id', projectData.id);
+
+        if (indexError) {
+          console.error(`[ProjectIndex] Error fetching index data:`, indexError);
+          return res.status(500).json({ 
+            message: 'Failed to fetch project index data', 
+            error: indexError.message 
+          });
+        }
+
+        // Transform the data to match the expected structure
+        const transformedData = (indexData || []).map(entry => ({
+          project_id: entry.project_id,
+          event_type_id: entry.event_types_id,
+          event_type_name: entry.event_types?.name,
+          expenditure_type_id: entry.expediture_type_id,
+          expenditure_type_name: entry.expediture_types?.expediture_types,
+          unit_id: entry.monada_id,
+          unit_name: entry.Monada?.unit_name,
+          kallikratis_id: entry.kallikratis_id,
+          kallikratis: entry.kallikratis
+        }));
+
+        console.log(`[ProjectIndex] Found ${transformedData.length} index entries for project ${mis}`);
+        res.json(transformedData);
+      } catch (error) {
+        console.error('[ProjectIndex] Error fetching project index data:', error);
+        res.status(500).json({
+          message: 'Failed to fetch project index data',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    });
+
     // Project regions endpoint for document creation dialog
     app.get('/api/projects/:mis/regions', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
       try {
