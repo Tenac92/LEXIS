@@ -733,14 +733,11 @@ export default function ComprehensiveEditNew() {
                   {/* Location details with 4-level cascading dropdowns and multi-select expenditure types */}
                   <div className="mt-8 space-y-8">
                     {form.watch("location_details").map((location, index) => (
-                      <Card key={index} className="bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 shadow-lg rounded-xl overflow-hidden">
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4">
+                      <Card key={index} className="bg-white border border-gray-300 shadow-sm rounded-lg overflow-hidden">
+                        <div className="bg-gray-100 border-b border-gray-300 p-4">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-lg font-bold flex items-center gap-2">
-                              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">
-                                {index + 1}
-                              </div>
-                              Location & Expenditure Configuration
+                            <h4 className="text-lg font-semibold text-gray-800">
+                              Location Entry {index + 1}
                             </h4>
                             {form.watch("location_details").length > 1 && (
                               <Button
@@ -748,7 +745,7 @@ export default function ComprehensiveEditNew() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => removeLocationDetail(index)}
-                                className="text-white border-white/50 hover:bg-white/10 hover:text-white"
+                                className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -759,19 +756,19 @@ export default function ComprehensiveEditNew() {
                         <div className="p-8 space-y-8">
 
                           {/* 4-Level Cascading Geographic Hierarchy */}
-                          <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
-                            <h5 className="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
-                              🏛️ Geographic Hierarchy
+                          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                            <h5 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-300 pb-2">
+                              Geographic Hierarchy
                             </h5>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {/* Περιφέρεια (Region) */}
                               <div className="space-y-2">
-                                <label className="block text-base font-semibold text-gray-700">🌍 Region (Περιφέρεια)</label>
+                                <label className="block text-sm font-medium text-gray-700">Region (Περιφέρεια)</label>
                                 <Select
                                   value={location.region}
                                   onValueChange={(value) => updateLocationField(index, 'region', value)}
                                 >
-                                  <SelectTrigger className="h-12 bg-white border-2 border-gray-300 hover:border-blue-400 transition-colors">
+                                  <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors">
                                     <SelectValue placeholder="Select region..." />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -786,13 +783,13 @@ export default function ComprehensiveEditNew() {
 
                           {/* Περιφερειακή Ενότητα (Regional Unit) */}
                               <div className="space-y-2">
-                                <label className="block text-base font-semibold text-gray-700">🏛️ Regional Unit (Περιφερειακή Ενότητα)</label>
+                                <label className="block text-sm font-medium text-gray-700">Regional Unit (Περιφερειακή Ενότητα)</label>
                                 <Select
                                   value={location.regional_unit}
                                   onValueChange={(value) => updateLocationField(index, 'regional_unit', value)}
                                   disabled={!location.region}
                                 >
-                                  <SelectTrigger className="h-12 bg-white border-2 border-gray-300 hover:border-blue-400 transition-colors disabled:bg-gray-100">
+                                  <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors disabled:bg-gray-100">
                                     <SelectValue placeholder="Select regional unit..." />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -810,13 +807,13 @@ export default function ComprehensiveEditNew() {
 
                           {/* Δήμος (Municipality) */}
                               <div className="space-y-2">
-                                <label className="block text-base font-semibold text-gray-700">🏘️ Municipality (Δήμος)</label>
+                                <label className="block text-sm font-medium text-gray-700">Municipality (Δήμος)</label>
                                 <Select
                                   value={location.municipality}
                                   onValueChange={(value) => updateLocationField(index, 'municipality', value)}
                                   disabled={!location.regional_unit}
                                 >
-                                  <SelectTrigger className="h-12 bg-white border-2 border-gray-300 hover:border-blue-400 transition-colors disabled:bg-gray-100">
+                                  <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors disabled:bg-gray-100">
                                     <SelectValue placeholder="Select municipality..." />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -834,13 +831,13 @@ export default function ComprehensiveEditNew() {
 
                           {/* Δημ. Ενότητα (Municipal Community) */}
                               <div className="space-y-2">
-                                <label className="block text-base font-semibold text-gray-700">🏡 Municipal Community (Δημοτική Ενότητα)</label>
+                                <label className="block text-sm font-medium text-gray-700">Municipal Community (Δημοτική Ενότητα)</label>
                                 <Select
                                   value={location.municipal_community}
                                   onValueChange={(value) => updateLocationField(index, 'municipal_community', value)}
                                   disabled={!location.municipality}
                                 >
-                                  <SelectTrigger className="h-12 bg-white border-2 border-gray-300 hover:border-blue-400 transition-colors disabled:bg-gray-100">
+                                  <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors disabled:bg-gray-100">
                                     <SelectValue placeholder="Select municipal community..." />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -859,15 +856,15 @@ export default function ComprehensiveEditNew() {
                           </div>
 
                           {/* Implementing Agency */}
-                          <div className="bg-green-50 p-6 rounded-xl border border-green-200">
-                            <label className="block text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
-                              🏢 Implementing Agency (Φορέας υλοποίησης)
+                          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                            <label className="block text-sm font-medium text-gray-700 mb-3 border-b border-gray-300 pb-2">
+                              Implementing Agency (Φορέας υλοποίησης)
                             </label>
                             <Select
                               value={location.implementing_agency}
                               onValueChange={(value) => updateLocationField(index, 'implementing_agency', value)}
                             >
-                              <SelectTrigger className="h-12 bg-white border-2 border-green-300 hover:border-green-400 transition-colors">
+                              <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors">
                                 <SelectValue placeholder="Select implementing agency..." />
                               </SelectTrigger>
                               <SelectContent>
@@ -881,9 +878,9 @@ export default function ComprehensiveEditNew() {
                           </div>
 
                           {/* Multi-Select Expenditure Types */}
-                          <div className="bg-purple-50 p-6 rounded-xl border border-purple-200">
-                            <label className="block text-lg font-semibold text-purple-800 mb-4 flex items-center gap-2">
-                              💰 Expenditure Types (Τύπος Δαπάνης)
+                          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                            <label className="block text-sm font-medium text-gray-700 mb-3 border-b border-gray-300 pb-2">
+                              Expenditure Types (Τύπος Δαπάνης)
                             </label>
                             <div className="space-y-4">
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -894,14 +891,14 @@ export default function ComprehensiveEditNew() {
                                       key={`${index}-${expType.id}`}
                                       type="button"
                                       onClick={() => toggleExpenditureType(index, expType.expediture_types)}
-                                      className={`px-4 py-3 text-sm rounded-xl border-2 transition-all duration-200 font-medium text-left ${
+                                      className={`px-4 py-3 text-sm rounded-lg border transition-all duration-200 font-medium text-left ${
                                         isSelected
-                                          ? 'bg-purple-100 border-purple-400 text-purple-800 shadow-md transform scale-105'
-                                          : 'bg-white border-gray-300 text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:shadow-sm'
+                                          ? 'bg-blue-50 border-blue-300 text-blue-800 shadow-sm'
+                                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
                                       }`}
                                     >
                                       <div className="flex items-center gap-2">
-                                        {isSelected && <CheckCircle className="h-4 w-4 text-purple-600" />}
+                                        {isSelected && <CheckCircle className="h-4 w-4 text-blue-600" />}
                                         <span>{expType.expediture_types}</span>
                                       </div>
                                     </button>
@@ -909,11 +906,11 @@ export default function ComprehensiveEditNew() {
                                 })}
                               </div>
                               {location.expenditure_types?.length > 0 && (
-                                <div className="bg-purple-100 border border-purple-300 p-4 rounded-lg">
-                                  <p className="text-purple-800 font-medium">
-                                    ✅ Selected: {location.expenditure_types.length} expenditure type(s)
+                                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                                  <p className="text-blue-800 font-medium">
+                                    Selected: {location.expenditure_types.length} expenditure type(s)
                                   </p>
-                                  <p className="text-sm text-purple-600 mt-1">
+                                  <p className="text-sm text-blue-600 mt-1">
                                     {location.expenditure_types.join(", ")}
                                   </p>
                                 </div>
@@ -927,9 +924,9 @@ export default function ComprehensiveEditNew() {
                     <Button 
                       type="button" 
                       onClick={addLocationDetail} 
-                      className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg shadow-sm hover:shadow transition-all duration-200"
                     >
-                      <Plus className="h-5 w-5 mr-2" />
+                      <Plus className="h-4 w-4 mr-2" />
                       Add New Location Entry
                     </Button>
                   </div>
