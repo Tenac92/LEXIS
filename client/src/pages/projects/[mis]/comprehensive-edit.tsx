@@ -981,8 +981,7 @@ export default function ComprehensiveEditProjectPage() {
                       <table className="w-full border-collapse border border-gray-200 rounded-lg">
                         <thead>
                           <tr className="bg-blue-50">
-                            <th className="border border-gray-200 p-3 text-sm font-medium text-gray-700">Περιγραφή αλλαγής</th>
-                            <th className="border border-gray-200 p-3 text-sm font-medium text-gray-700">Ημερομηνία</th>
+                            <th className="border border-gray-200 p-3 text-sm font-medium text-gray-700">Περιγραφή αλλαγής/Παρατήρηση</th>
                             <th className="border border-gray-200 p-3 text-sm font-medium text-gray-700">Ενέργειες</th>
                           </tr>
                         </thead>
@@ -992,24 +991,11 @@ export default function ComprehensiveEditProjectPage() {
                               <td className="border border-gray-200 p-2">
                                 <FormField
                                   control={form.control}
-                                  name={`changes.${index}.change_description`}
+                                  name={`changes.${index}.description`}
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormControl>
-                                        <Textarea {...field} rows={2} />
-                                      </FormControl>
-                                    </FormItem>
-                                  )}
-                                />
-                              </td>
-                              <td className="border border-gray-200 p-2">
-                                <FormField
-                                  control={form.control}
-                                  name={`changes.${index}.change_date`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <Input {...field} type="date" />
+                                        <Textarea {...field} rows={2} className="w-full" placeholder="Περιγραφή αλλαγής/Παρατήρηση" />
                                       </FormControl>
                                     </FormItem>
                                   )}
