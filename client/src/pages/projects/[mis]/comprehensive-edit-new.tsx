@@ -941,125 +941,125 @@ export default function ComprehensiveEditNew() {
                 <CardContent className="p-6">
                   <table className="w-full border-collapse border border-gray-300">
                     <thead>
-                      <tr className="bg-blue-50">
-                        <th className="border border-gray-300 p-2 text-sm">MIS</th>
-                        <th className="border border-gray-300 p-2 text-sm">ΣΑ</th>
-                        <th className="border border-gray-300 p-2 text-sm">Κωδικός ενάριθμος</th>
-                        <th className="border border-gray-300 p-2 text-sm">Έτος ένταξης</th>
-                        <th className="border border-gray-300 p-2 text-sm">Τίτλος έργου (σύστημα)</th>
-                        <th className="border border-gray-300 p-2 text-sm">Περιγραφή έργου</th>
-                        <th className="border border-gray-300 p-2 text-sm">Συνοπτική περιγραφή έργου</th>
-                        <th className="border border-gray-300 p-2 text-sm">Δαπάνες που εκτελούνται από το έργο</th>
-                        <th className="border border-gray-300 p-2 text-sm">Κατάσταση έργου</th>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[100px]">MIS</th>
+                        <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[80px]">ΣΑ</th>
+                        <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[120px]">Κωδικός<br />ενάριθμος</th>
+                        <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[100px]">Έτος<br />ένταξης</th>
+                        <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[150px]">Τίτλος έργου<br />(σύστημα)</th>
+                        <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[150px]">Περιγραφή<br />έργου</th>
+                        <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[150px]">Συνοπτική<br />περιγραφή έργου</th>
+                        <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[180px]">Δαπάνες που<br />εκτελούνται από<br />το έργο</th>
+                        <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[120px]">Κατάσταση<br />έργου</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr>
-                        <td className="border border-gray-300 p-1">
+                      <tr className="hover:bg-gray-50">
+                        <td className="border border-gray-300 p-2">
                           <FormField
                             control={form.control}
                             name="project_details.mis"
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input {...field} className="border-0 p-1" />
+                                  <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </td>
-                        <td className="border border-gray-300 p-1">
+                        <td className="border border-gray-300 p-2">
                           <FormField
                             control={form.control}
                             name="project_details.sa"
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input {...field} className="border-0 p-1" />
+                                  <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </td>
-                        <td className="border border-gray-300 p-1">
+                        <td className="border border-gray-300 p-2">
                           <FormField
                             control={form.control}
                             name="project_details.enumeration_code"
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input {...field} className="border-0 p-1" />
+                                  <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </td>
-                        <td className="border border-gray-300 p-1">
+                        <td className="border border-gray-300 p-2">
                           <FormField
                             control={form.control}
                             name="project_details.inclusion_year"
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input {...field} className="border-0 p-1" />
+                                  <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </td>
-                        <td className="border border-gray-300 p-1">
+                        <td className="border border-gray-300 p-2">
                           <FormField
                             control={form.control}
                             name="project_details.project_title"
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input {...field} className="border-0 p-1" />
+                                  <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </td>
-                        <td className="border border-gray-300 p-1">
+                        <td className="border border-gray-300 p-2">
                           <FormField
                             control={form.control}
                             name="project_details.project_description"
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Textarea {...field} rows={2} className="border-0 p-1" />
+                                  <Textarea {...field} rows={2} className="bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm resize-none" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </td>
-                        <td className="border border-gray-300 p-1">
+                        <td className="border border-gray-300 p-2">
                           <FormField
                             control={form.control}
                             name="project_details.summary_description"
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Textarea {...field} rows={2} className="border-0 p-1" />
+                                  <Textarea {...field} rows={2} className="bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm resize-none" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </td>
-                        <td className="border border-gray-300 p-1">
+                        <td className="border border-gray-300 p-2">
                           <FormField
                             control={form.control}
                             name="project_details.expenses_executed"
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input {...field} className="border-0 p-1" />
+                                  <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </td>
-                        <td className="border border-gray-300 p-1">
+                        <td className="border border-gray-300 p-2">
                           <FormField
                             control={form.control}
                             name="project_details.project_status"
@@ -1067,7 +1067,7 @@ export default function ComprehensiveEditNew() {
                               <FormItem>
                                 <FormControl>
                                   <Select value={field.value} onValueChange={field.onChange}>
-                                    <SelectTrigger className="border-0 p-1">
+                                    <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors">
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1106,50 +1106,50 @@ export default function ComprehensiveEditNew() {
 
                   {hasPreviousEntries && (
                     <div className="mt-4">
-                      <table className="w-full border-collapse border border-gray-300">
+                      <table className="w-full border-collapse border border-gray-300 bg-white rounded-lg overflow-hidden">
                         <thead>
-                          <tr className="bg-blue-50">
-                            <th className="border border-gray-300 p-2">ΣΑ</th>
-                            <th className="border border-gray-300 p-2">Κωδικός Ενάριθμος</th>
-                            <th className="border border-gray-300 p-2">Ενέργειες</th>
+                          <tr className="bg-gray-100">
+                            <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">ΣΑ</th>
+                            <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Κωδικός<br />Ενάριθμος</th>
+                            <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Ενέργειες</th>
                           </tr>
                         </thead>
                         <tbody>
                           {form.watch("previous_entries").map((_, index) => (
-                            <tr key={index}>
-                              <td className="border border-gray-300 p-1">
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="border border-gray-300 p-2">
                                 <FormField
                                   control={form.control}
                                   name={`previous_entries.${index}.sa`}
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormControl>
-                                        <Input {...field} className="border-0 p-1" />
+                                        <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                       </FormControl>
                                     </FormItem>
                                   )}
                                 />
                               </td>
-                              <td className="border border-gray-300 p-1">
+                              <td className="border border-gray-300 p-2">
                                 <FormField
                                   control={form.control}
                                   name={`previous_entries.${index}.enumeration_code`}
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormControl>
-                                        <Input {...field} className="border-0 p-1" />
+                                        <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
                                       </FormControl>
                                     </FormItem>
                                   )}
                                 />
                               </td>
-                              <td className="border border-gray-300 p-1 text-center">
+                              <td className="border border-gray-300 p-2 text-center">
                                 <Button
                                   type="button"
                                   variant="outline"
                                   size="sm"
                                   onClick={() => removePreviousEntry(index)}
-                                  className="text-red-600 hover:text-red-700"
+                                  className="text-red-600 hover:text-red-700 border-red-300 hover:bg-red-50 h-10"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -1158,7 +1158,7 @@ export default function ComprehensiveEditNew() {
                           ))}
                         </tbody>
                       </table>
-                      <Button type="button" onClick={addPreviousEntry} className="mt-4 bg-green-600 hover:bg-green-700">
+                      <Button type="button" onClick={addPreviousEntry} className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-sm hover:shadow transition-all duration-200">
                         <Plus className="h-4 w-4 mr-2" />
                         Προσθήκη γραμμής
                       </Button>
@@ -1178,18 +1178,18 @@ export default function ComprehensiveEditNew() {
                       <thead>
                         <tr className="bg-gray-100">
                           <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">ΣΑ</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Κωδικός ενάριθμος</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Αρ. πρωτ. Απόφασης</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">ΑΔΑ</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Έτος Απόφασης</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Προϋπολογισμός έργου</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Έκδοση ΕΠΑ</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Συνολική δημόσια δαπάνη</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Επιλέξιμη δημόσια δαπάνη</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Κατάσταση Απόφασης</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Μεταβολή</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Αποφάσεις που συνδέονται</th>
-                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Σχόλια</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[120px]">Κωδικός<br />ενάριθμος</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[140px]">Αρ. πρωτ.<br />Απόφασης</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[100px]">ΑΔΑ</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[100px]">Έτος<br />Απόφασης</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[140px]">Προϋπολογισμός<br />έργου</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[100px]">Έκδοση<br />ΕΠΑ</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[140px]">Συνολική<br />δημόσια δαπάνη</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[140px]">Επιλέξιμη<br />δημόσια δαπάνη</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[120px]">Κατάσταση<br />Απόφασης</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[100px]">Μεταβολή</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[160px]">Αποφάσεις που<br />συνδέονται</th>
+                          <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700 min-w-[100px]">Σχόλια</th>
                           <th className="border border-gray-300 p-3 text-sm font-medium text-gray-700">Ενέργειες</th>
                         </tr>
                       </thead>
