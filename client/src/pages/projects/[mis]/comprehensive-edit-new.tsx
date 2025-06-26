@@ -518,19 +518,37 @@ export default function ComprehensiveEditNew() {
       // Transform location details to project_lines format for project_index table updates
       const transformedData = {
         ...data,
-        project_lines: data.location_details.map(location => ({
-          implementing_agency: location.implementing_agency,
-          event_type: data.event_details.event_name,
-          expenditure_types: location.expenditure_types,
-          region: {
-            perifereia: location.region,
-            perifereiaki_enotita: location.regional_unit,
-            dimos: location.municipality,
-            dimotiki_enotita: location.municipal_community,
-            kallikratis_id: null // Will be resolved on backend
+        project_lines: data.location_details.map(location => {
+          // Find the matching kallikratis entry for this location
+          let kallikratisId = null;
+          if (kallikratisData && location.region && location.regional_unit && location.municipality && location.municipal_community) {
+            const matchingEntry = kallikratisData.find(entry =>
+              entry.perifereia === location.region &&
+              entry.perifereiaki_enotita === location.regional_unit &&
+              `${entry.eidos_neou_ota} ${entry.onoma_neou_ota}`.trim() === location.municipality &&
+              entry.onoma_dimotikis_enotitas === location.municipal_community
+            );
+            kallikratisId = matchingEntry?.id || null;
           }
-        }))
+          
+          console.log('Resolving kallikratis ID for location:', location, 'found ID:', kallikratisId);
+          
+          return {
+            implementing_agency: location.implementing_agency,
+            event_type: data.event_details.event_name,
+            expenditure_types: location.expenditure_types,
+            region: {
+              perifereia: location.region,
+              perifereiaki_enotita: location.regional_unit,
+              dimos: location.municipality,
+              dimotiki_enotita: location.municipal_community,
+              kallikratis_id: kallikratisId
+            }
+          };
+        })
       };
+      
+      console.log('Submitting transformed data:', transformedData);
       
       return apiRequest(`/api/projects/${mis}`, {
         method: "PATCH",
