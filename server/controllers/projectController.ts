@@ -613,12 +613,13 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
             eventTypeId = eventType?.id || null;
           }
 
-          // Find implementing agency (Monada) ID - convert to integer
+          // Find implementing agency (Monada) ID - ensure it's integer
           if (line.implementing_agency) {
             const monada = monadaData.find(m => 
               m.id == line.implementing_agency || m.unit === line.implementing_agency || m.unit_name === line.implementing_agency
             );
             monadaId = monada ? parseInt(monada.id) : null;
+            console.log(`[Projects] Found monada_id: ${monadaId} for agency: ${line.implementing_agency}`);
           }
 
           // Find kallikratis ID from region hierarchy
