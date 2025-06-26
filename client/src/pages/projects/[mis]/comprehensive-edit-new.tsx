@@ -846,7 +846,7 @@ export default function ComprehensiveEditNew() {
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-gray-700">Region (Περιφέρεια)</label>
                                 <Select
-                                  value={location.region}
+                                  value={form.watch(`location_details.${index}.region`)}
                                   onValueChange={(value) => updateLocationField(index, 'region', value)}
                                 >
                                   <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors">
@@ -866,9 +866,9 @@ export default function ComprehensiveEditNew() {
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-gray-700">Regional Unit (Περιφερειακή Ενότητα)</label>
                                 <Select
-                                  value={location.regional_unit}
+                                  value={form.watch(`location_details.${index}.regional_unit`)}
                                   onValueChange={(value) => updateLocationField(index, 'regional_unit', value)}
-                                  disabled={!location.region}
+                                  disabled={!form.watch(`location_details.${index}.region`)}
                                 >
                                   <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors disabled:bg-gray-100">
                                     <SelectValue placeholder="Select regional unit..." />
@@ -890,9 +890,9 @@ export default function ComprehensiveEditNew() {
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-gray-700">Municipality (Δήμος)</label>
                                 <Select
-                                  value={location.municipality}
+                                  value={form.watch(`location_details.${index}.municipality`)}
                                   onValueChange={(value) => updateLocationField(index, 'municipality', value)}
-                                  disabled={!location.regional_unit}
+                                  disabled={!form.watch(`location_details.${index}.regional_unit`)}
                                 >
                                   <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors disabled:bg-gray-100">
                                     <SelectValue placeholder="Select municipality..." />
@@ -914,9 +914,9 @@ export default function ComprehensiveEditNew() {
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-gray-700">Municipal Community (Δημοτική Ενότητα)</label>
                                 <Select
-                                  value={location.municipal_community}
+                                  value={form.watch(`location_details.${index}.municipal_community`)}
                                   onValueChange={(value) => updateLocationField(index, 'municipal_community', value)}
-                                  disabled={!location.municipality}
+                                  disabled={!form.watch(`location_details.${index}.municipality`)}
                                 >
                                   <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors disabled:bg-gray-100">
                                     <SelectValue placeholder="Select municipal community..." />
@@ -942,7 +942,7 @@ export default function ComprehensiveEditNew() {
                               Implementing Agency (Φορέας υλοποίησης)
                             </label>
                             <Select
-                              value={location.implementing_agency}
+                              value={form.watch(`location_details.${index}.implementing_agency`)}
                               onValueChange={(value) => updateLocationField(index, 'implementing_agency', value)}
                             >
                               <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors">
@@ -966,7 +966,8 @@ export default function ComprehensiveEditNew() {
                             <div className="space-y-4">
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                 {expenditureTypesData?.map((expType: any) => {
-                                  const isSelected = location.expenditure_types?.includes(expType.expediture_types);
+                                  const currentExpenditureTypes = form.watch(`location_details.${index}.expenditure_types`) || [];
+                                  const isSelected = currentExpenditureTypes.includes(expType.expediture_types);
                                   return (
                                     <button
                                       key={`${index}-${expType.id}`}
