@@ -127,6 +127,18 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### June 26, 2025 - Location Entry Database Connection Implementation
+- Connected Location Entry fields in comprehensive edit to project_index table
+- Added project_index, event_types, expenditure_types, and kallikratis table definitions to shared schema
+- Implemented project index data fetching via `/api/projects/${mis}/index` endpoint
+- Enhanced form initialization to populate location details from existing project_index data
+- Added proper foreign key relationships for monada_id, kallikratis_id, event_types_id, expediture_type_id
+- Location details now group by kallikratis_id and monada_id to create proper location entries
+- Form submission transforms location details to project_lines format for database storage
+- Backend project_index update logic handles location data persistence automatically
+- Expenditure types properly mapped to location entries with multi-select capability
+- Geographic hierarchy (region, regional_unit, municipality, municipal_community) connected to kallikratis data
+
 ### June 24, 2025 - Complete Comprehensive Edit System Rebuild & Perfect Consolidation
 - Performed comprehensive database schema analysis to identify exact table structures and relationships
 - Fixed project index API endpoint with correct column references (event_types_id, expediture_type_id, monada_id, kallikratis_id)
