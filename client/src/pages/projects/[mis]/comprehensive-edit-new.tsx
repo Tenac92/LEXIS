@@ -342,7 +342,7 @@ export default function ComprehensiveEditNew() {
           municipality: "",
           regional_unit: "",
           region: "",
-          implementing_agency: "",
+          implementing_agency: defaultImplementingAgency,
           expenditure_types: []
         });
         console.log('No valid location details found, added empty entry');
@@ -352,15 +352,20 @@ export default function ComprehensiveEditNew() {
       console.log('Location details populated in form with', locationDetails.length, 'entries');
     } else {
       // If no project index data, ensure we have at least one empty location detail
-      console.log('No project index data available, initializing with empty location details');
+      console.log('No project index data available, initializing with default location details');
+      const defaultImplementingAgency = projectData?.implementing_agency?.[0] || 
+                                      (Array.isArray(projectData?.implementing_agency) ? projectData.implementing_agency[0] : projectData?.implementing_agency) || 
+                                      "";
+      
       form.setValue("location_details", [{
         municipal_community: "",
         municipality: "",
         regional_unit: "",
         region: "",
-        implementing_agency: "",
+        implementing_agency: defaultImplementingAgency,
         expenditure_types: []
       }]);
+      console.log('Default location entry created with implementing agency:', defaultImplementingAgency);
     }
   }, [projectIndexData, form]);
 
