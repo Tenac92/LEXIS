@@ -967,11 +967,15 @@ export default function ComprehensiveEditNew() {
                                 <SelectValue placeholder="Select implementing agency..." />
                               </SelectTrigger>
                               <SelectContent>
-                                {unitsData?.map((unit: any, unitIndex: number) => (
-                                  <SelectItem key={`unit-${index}-${unitIndex}`} value={unit.unit_name || unit.name}>
-                                    {unit.unit_name || unit.name}
-                                  </SelectItem>
-                                ))}
+                                {unitsData?.map((unit: any, unitIndex: number) => {
+                                  console.log('Unit data:', unit);
+                                  const unitValue = unit.unit_name || unit.name;
+                                  return (
+                                    <SelectItem key={`unit-${index}-${unitIndex}`} value={unitValue}>
+                                      {unitValue}
+                                    </SelectItem>
+                                  );
+                                })}
                               </SelectContent>
                             </Select>
                           </div>
