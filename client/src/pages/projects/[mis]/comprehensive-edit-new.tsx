@@ -331,11 +331,32 @@ export default function ComprehensiveEditNew() {
       
       console.log('Generated location details:', locationDetails);
       
-      // Only update if we have valid location details
-      if (locationDetails.length > 0) {
-        form.setValue("location_details", locationDetails);
-        console.log('Location details populated in form');
+      // Ensure we have at least one location detail entry
+      if (locationDetails.length === 0) {
+        locationDetails.push({
+          municipal_community: "",
+          municipality: "",
+          regional_unit: "",
+          region: "",
+          implementing_agency: "",
+          expenditure_types: []
+        });
+        console.log('No valid location details found, added empty entry');
       }
+      
+      form.setValue("location_details", locationDetails);
+      console.log('Location details populated in form with', locationDetails.length, 'entries');
+    } else {
+      // If no project index data, ensure we have at least one empty location detail
+      console.log('No project index data available, initializing with empty location details');
+      form.setValue("location_details", [{
+        municipal_community: "",
+        municipality: "",
+        regional_unit: "",
+        region: "",
+        implementing_agency: "",
+        expenditure_types: []
+      }]);
     }
   }, [projectIndexData, form]);
 
