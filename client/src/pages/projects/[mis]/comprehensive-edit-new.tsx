@@ -519,23 +519,11 @@ export default function ComprehensiveEditNew() {
       const transformedData = {
         ...data,
         project_lines: data.location_details.map(location => {
-          // Determine if this is a regional-level project (no specific municipality/community)
-          const isRegionalProject = location.region && location.regional_unit && 
-                                   (!location.municipality || !location.municipal_community);
-          
+          // Find matching kallikratis entry for this location
           let kallikratisId = null;
-          let kodikosPerifereiakisEnotitas = null;
           
           if (kallikratisData) {
-            if (isRegionalProject) {
-              // For regional projects, find by regional unit and get kodikos_perifereiakis_enotitas
-              const regionalEntry = kallikratisData.find(entry =>
-                entry.perifereia === location.region &&
-                entry.perifereiaki_enotita === location.regional_unit
-              );
-              kodikosPerifereiakisEnotitas = regionalEntry?.kodikos_perifereiakis_enotitas || null;
-              console.log('Regional project - using kodikos_perifereiakis_enotitas:', kodikosPerifereiakisEnotitas);
-            } else {
+            if (location.region && location.regional_unit && location.municipality && location.municipal_community) {
               // For municipal projects, find specific kallikratis entry
               const municipalEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region &&
@@ -544,7 +532,15 @@ export default function ComprehensiveEditNew() {
                 entry.onoma_dimotikis_enotitas === location.municipal_community
               );
               kallikratisId = municipalEntry?.id || null;
-              console.log('Municipal project - using kallikratis_id:', kallikratisId);
+              console.log('Municipal project - found kallikratis_id:', kallikratisId);
+            } else if (location.region && location.regional_unit) {
+              // For regional projects, find any entry for that regional unit
+              const regionalEntry = kallikratisData.find(entry =>
+                entry.perifereia === location.region &&
+                entry.perifereiaki_enotita === location.regional_unit
+              );
+              kallikratisId = regionalEntry?.id || null;
+              console.log('Regional project - using regional kallikratis_id:', kallikratisId);
             }
           }
           
@@ -552,14 +548,12 @@ export default function ComprehensiveEditNew() {
             implementing_agency: location.implementing_agency,
             event_type: data.event_details.event_name,
             expenditure_types: location.expenditure_types,
-            is_regional_project: isRegionalProject,
             region: {
               perifereia: location.region,
               perifereiaki_enotita: location.regional_unit,
               dimos: location.municipality,
               dimotiki_enotita: location.municipal_community,
-              kallikratis_id: kallikratisId,
-              kodikos_perifereiakis_enotitas: kodikosPerifereiakisEnotitas
+              kallikratis_id: kallikratisId
             }
           };
         })

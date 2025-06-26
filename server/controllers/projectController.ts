@@ -613,28 +613,22 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
             eventTypeId = eventType?.id || null;
           }
 
-          // Find implementing agency (Monada) ID
+          // Find implementing agency (Monada) ID - convert to integer
           if (line.implementing_agency) {
             const monada = monadaData.find(m => 
-              m.id === line.implementing_agency || m.unit === line.implementing_agency || m.unit_name === line.implementing_agency
+              m.id == line.implementing_agency || m.unit === line.implementing_agency || m.unit_name === line.implementing_agency
             );
-            monadaId = monada?.id || null;
+            monadaId = monada ? parseInt(monada.id) : null;
           }
 
-          // Handle both municipal and regional level projects
-          let kodikosPerifereiakisEnotitas = null;
+          // Find kallikratis ID from region hierarchy
           if (line.region) {
-            if (line.is_regional_project && line.region.kodikos_perifereiakis_enotitas) {
-              // For regional projects, use kodikos_perifereiakis_enotitas directly
-              kodikosPerifereiakisEnotitas = line.region.kodikos_perifereiakis_enotitas;
-              kallikratisId = null; // No specific kallikratis_id for regional projects
-              console.log(`[Projects] Regional project - using kodikos_perifereiakis_enotitas: ${kodikosPerifereiakisEnotitas}`);
-            } else if (line.region.kallikratis_id) {
-              // Use provided kallikratis_id for municipal projects
+            if (line.region.kallikratis_id) {
+              // Use provided kallikratis_id
               kallikratisId = line.region.kallikratis_id;
-              console.log(`[Projects] Municipal project - using kallikratis_id: ${kallikratisId}`);
+              console.log(`[Projects] Using provided kallikratis_id: ${kallikratisId}`);
             } else {
-              // Fallback: try to find kallikratis entry by matching region hierarchy
+              // Try to find kallikratis entry by matching region hierarchy
               const kallikratis = kallikratisData.find(k => 
                 k.perifereia === line.region.perifereia && 
                 k.perifereiaki_enotita === line.region.perifereiaki_enotita &&
@@ -642,7 +636,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                 k.onoma_dimotikis_enotitas === line.region.dimotiki_enotita
               );
               kallikratisId = kallikratis?.id || null;
-              console.log(`[Projects] Fallback lookup - found kallikratis_id: ${kallikratisId}`);
+              console.log(`[Projects] Lookup found kallikratis_id: ${kallikratisId}`);
             }
           }
 
@@ -661,9 +655,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                   event_types_id: eventTypeId,
                   expediture_type_id: expenditureTypeId,
                   monada_id: monadaId,
-                  kallikratis_id: kallikratisId,
-                  kodikos_perifereiakis_enotitas: kodikosPerifereiakisEnotitas,
-                  is_regional_project: line.is_regional_project || false
+                  kallikratis_id: kallikratisId
                 };
 
                 const { error: insertError } = await supabase

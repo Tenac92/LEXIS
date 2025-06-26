@@ -360,16 +360,14 @@ export const userPreferences = pgTable("user_preferences", {
  */
 export const projectIndex = pgTable("project_index", {
   project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  monada_id: text("monada_id").notNull().references(() => monada.id),
-  kallikratis_id: integer("kallikratis_id"), // Optional for regional projects
-  kodikos_perifereiakis_enotitas: bigint("kodikos_perifereiakis_enotitas", { mode: "number" }), // For regional-level projects
-  event_types_id: integer("event_types_id").notNull(),
+  monada_id: integer("monada_id").notNull().references(() => monada.id),
+  kallikratis_id: integer("kallikratis_id").notNull().references(() => kallikratis.id),
+  event_types_id: integer("event_types_id").notNull().references(() => eventTypes.id),
   expediture_type_id: integer("expediture_type_id").notNull(),
-  is_regional_project: boolean("is_regional_project").default(false), // Flag to indicate regional vs municipal
 }, (table) => ({
   pk: { 
     name: "project_monada_kallikratis_pkey",
-    columns: [table.project_id, table.monada_id, table.event_types_id, table.expediture_type_id]
+    columns: [table.project_id, table.monada_id, table.kallikratis_id, table.event_types_id, table.expediture_type_id]
   }
 }));
 
