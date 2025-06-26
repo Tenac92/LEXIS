@@ -142,6 +142,10 @@ This is a full-stack web application built for Greek government budget and docum
 - Form mutation now correctly maps geographic selections to kallikratis IDs preventing null constraint violations
 - Enhanced location details processing to handle multiple project_index entries per project
 - All Select components now have proper key attributes and form state binding for reactive updates
+- **Schema Enhancement**: Updated kallikratis table structure to support regional-level projects using kodikos_perifereiakis_enotitas
+- **Regional Project Support**: Implemented logic to handle both municipal-level and regional-level projects in project_index table
+- Form submission automatically detects regional vs municipal projects based on location hierarchy completeness
+- Regional projects use kodikos_perifereiakis_enotitas while municipal projects use kallikratis_id for proper data integrity
 
 ### June 24, 2025 - Complete Comprehensive Edit System Rebuild & Perfect Consolidation
 - Performed comprehensive database schema analysis to identify exact table structures and relationships

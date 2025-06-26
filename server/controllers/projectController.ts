@@ -621,16 +621,29 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
             monadaId = monada?.id || null;
           }
 
-          // Find kallikratis ID from region hierarchy
+          // Handle both municipal and regional level projects
+          let kodikosPerifereiakisEnotitas = null;
           if (line.region) {
-            const kallikratis = kallikratisData.find(k => 
-              k.id === line.region.kallikratis_id ||
-              (k.perifereia === line.region.perifereia && 
-               k.perifereiaki_enotita === line.region.perifereiaki_enotita &&
-               k.onoma_neou_ota === line.region.dimos &&
-               k.onoma_dimotikis_enotitas === line.region.dimotiki_enotita)
-            );
-            kallikratisId = kallikratis?.id || null;
+            if (line.is_regional_project && line.region.kodikos_perifereiakis_enotitas) {
+              // For regional projects, use kodikos_perifereiakis_enotitas directly
+              kodikosPerifereiakisEnotitas = line.region.kodikos_perifereiakis_enotitas;
+              kallikratisId = null; // No specific kallikratis_id for regional projects
+              console.log(`[Projects] Regional project - using kodikos_perifereiakis_enotitas: ${kodikosPerifereiakisEnotitas}`);
+            } else if (line.region.kallikratis_id) {
+              // Use provided kallikratis_id for municipal projects
+              kallikratisId = line.region.kallikratis_id;
+              console.log(`[Projects] Municipal project - using kallikratis_id: ${kallikratisId}`);
+            } else {
+              // Fallback: try to find kallikratis entry by matching region hierarchy
+              const kallikratis = kallikratisData.find(k => 
+                k.perifereia === line.region.perifereia && 
+                k.perifereiaki_enotita === line.region.perifereiaki_enotita &&
+                k.onoma_neou_ota === line.region.dimos &&
+                k.onoma_dimotikis_enotitas === line.region.dimotiki_enotita
+              );
+              kallikratisId = kallikratis?.id || null;
+              console.log(`[Projects] Fallback lookup - found kallikratis_id: ${kallikratisId}`);
+            }
           }
 
           // Find expenditure type IDs (multiple values)
@@ -648,7 +661,9 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                   event_types_id: eventTypeId,
                   expediture_type_id: expenditureTypeId,
                   monada_id: monadaId,
-                  kallikratis_id: kallikratisId
+                  kallikratis_id: kallikratisId,
+                  kodikos_perifereiakis_enotitas: kodikosPerifereiakisEnotitas,
+                  is_regional_project: line.is_regional_project || false
                 };
 
                 const { error: insertError } = await supabase
