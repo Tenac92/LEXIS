@@ -333,6 +333,10 @@ export default function ComprehensiveEditNew() {
       
       // Ensure we have at least one location detail entry
       if (locationDetails.length === 0) {
+        const defaultImplementingAgency = projectData?.implementing_agency?.[0] || 
+                                        (Array.isArray(projectData?.implementing_agency) ? projectData.implementing_agency[0] : projectData?.implementing_agency) || 
+                                        "";
+        
         locationDetails.push({
           municipal_community: "",
           municipality: "",
