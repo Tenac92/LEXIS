@@ -392,7 +392,12 @@ export default function ComprehensiveEditNew() {
 
   // Helper functions for cascading dropdowns
   const getFilteredOptions = (level: string, locationIndex: number) => {
-    if (!kallikratisData) return [];
+    if (!kallikratisData) {
+      console.log('No kallikratis data available');
+      return [];
+    }
+    
+    console.log('Kallikratis data sample:', kallikratisData.slice(0, 2));
     
     const currentLocation = form.watch("location_details")[locationIndex];
     if (!currentLocation) return [];
@@ -402,16 +407,20 @@ export default function ComprehensiveEditNew() {
     switch (level) {
       case 'region':
         // Get unique region values (Περιφέρεια)
-        return Array.from(new Set(filtered.map(item => item.perifereia)))
+        const regions = Array.from(new Set(filtered.map(item => item.perifereia)))
           .filter(Boolean)
           .sort();
+        console.log('Available regions:', regions);
+        return regions;
 
       case 'regional_unit':
         if (!currentLocation.region) return [];
         filtered = filtered.filter(item => item.perifereia === currentLocation.region);
-        return Array.from(new Set(filtered.map(item => item.perifereiaki_enotita)))
+        const regionalUnits = Array.from(new Set(filtered.map(item => item.perifereiaki_enotita)))
           .filter(Boolean)
           .sort();
+        console.log('Available regional units for', currentLocation.region, ':', regionalUnits);
+        return regionalUnits;
 
       case 'municipality':
         if (!currentLocation.regional_unit) return [];
@@ -419,9 +428,11 @@ export default function ComprehensiveEditNew() {
           item.perifereia === currentLocation.region &&
           item.perifereiaki_enotita === currentLocation.regional_unit
         );
-        return Array.from(new Set(filtered.map(item => `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim())))
+        const municipalities = Array.from(new Set(filtered.map(item => `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim())))
           .filter(Boolean)
           .sort();
+        console.log('Available municipalities:', municipalities);
+        return municipalities;
 
       case 'municipal_community':
         if (!currentLocation.municipality) return [];
@@ -430,9 +441,11 @@ export default function ComprehensiveEditNew() {
           item.perifereiaki_enotita === currentLocation.regional_unit &&
           `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim() === currentLocation.municipality
         );
-        return Array.from(new Set(filtered.map(item => `${item.eidos_koinotitas} ${item.onoma_dimotikis_enotitas}`.trim())))
+        const communities = Array.from(new Set(filtered.map(item => `${item.eidos_koinotitas} ${item.onoma_dimotikis_enotitas}`.trim())))
           .filter(Boolean)
           .sort();
+        console.log('Available municipal communities:', communities);
+        return communities;
 
       default:
         return [];
