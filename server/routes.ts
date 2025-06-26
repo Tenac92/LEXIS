@@ -1386,11 +1386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { data: indexData, error: indexError } = await supabase
           .from('project_index')
           .select(`
-            *,
-            event_types:event_types_id(id, name),
-            expediture_types:expediture_type_id(id, expediture_types, expediture_types_minor),
-            Monada:monada_id(id, unit, unit_name),
-            kallikratis:kallikratis_id(*)
+            *
           `)
           .eq('project_id', projectData.id);
 
@@ -1402,19 +1398,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
+        // Get reference data to resolve IDs to names
+        const [eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes] = await Promise.all([
+          supabase.from('event_types').select('id, name'),
+          supabase.from('expediture_types').select('id, expediture_types, expediture_types_minor'),
+          supabase.from('Monada').select('id, unit, unit_name'),
+          supabase.from('kallikratis').select('id, perifereia, perifereiaki_enotita, onoma_neou_ota, onoma_dimotikis_enotitas')
+        ]);
+
+        const eventTypes = eventTypesRes.data || [];
+        const expenditureTypes = expenditureTypesRes.data || [];
+        const monadaData = monadaRes.data || [];
+        const kallikratisData = kallikratisRes.data || [];
+
         // Transform the data to match the expected structure
-        const transformedData = (indexData || []).map(entry => ({
-          project_id: entry.project_id,
-          event_type_id: entry.event_types_id,
-          event_type_name: entry.event_types?.name,
-          expenditure_type_id: entry.expediture_type_id,
-          expenditure_type_name: entry.expediture_types?.expediture_types,
-          unit_id: entry.monada_id,
-          unit_name: entry.Monada?.unit,
-          unit_full_name: entry.Monada?.unit_name?.name,
-          kallikratis_id: entry.kallikratis_id,
-          kallikratis: entry.kallikratis
-        }));
+        const transformedData = (indexData || []).map(entry => {
+          const eventType = eventTypes.find(et => et.id === entry.event_types_id);
+          const expenditureType = expenditureTypes.find(et => et.id === entry.expediture_type_id);
+          const monada = monadaData.find(m => m.id === entry.monada_id);
+          const kallikratis = kallikratisData.find(k => k.id === entry.kallikratis_id);
+
+          return {
+            project_id: entry.project_id,
+            event_type_id: entry.event_types_id,
+            event_type_name: eventType?.name,
+            expenditure_type_id: entry.expediture_type_id,
+            expenditure_type_name: expenditureType?.expediture_types,
+            unit_id: entry.monada_id,
+            unit_name: monada?.unit || monada?.unit_name,
+            kallikratis_id: entry.kallikratis_id,
+            kallikratis: kallikratis
+          };
+        });
 
         console.log(`[ProjectIndex] Found ${transformedData.length} index entries for project ${mis}`);
         res.json(transformedData);

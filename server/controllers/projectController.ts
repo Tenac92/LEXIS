@@ -641,54 +641,66 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
             }
           }
 
-          // Find expenditure type IDs (multiple values)
-          if (line.expenditure_types && Array.isArray(line.expenditure_types)) {
-            for (const expType of line.expenditure_types) {
-              const expenditureType = expenditureTypes.find(et => 
-                et.id === expType || et.expediture_types === expType
-              );
-              expenditureTypeId = expenditureType?.id || null;
-              
-              // Create project_index entry for each expenditure type
-              if (expenditureTypeId) {
+          // Only create project_index entries if we have all required values
+          if (eventTypeId && monadaId && kallikratisId) {
+            // Find expenditure type IDs (multiple values)
+            if (line.expenditure_types && Array.isArray(line.expenditure_types) && line.expenditure_types.length > 0) {
+              for (const expType of line.expenditure_types) {
+                const expenditureType = expenditureTypes.find(et => 
+                  et.id === expType || et.expediture_types === expType
+                );
+                expenditureTypeId = expenditureType?.id || null;
+                
+                // Create project_index entry for each expenditure type
+                if (expenditureTypeId) {
+                  const indexEntry = {
+                    project_id: updatedProject.id,
+                    event_types_id: eventTypeId,
+                    expediture_type_id: expenditureTypeId,
+                    monada_id: monadaId,
+                    kallikratis_id: kallikratisId
+                  };
+
+                  console.log(`[Projects] Inserting project_index entry:`, indexEntry);
+                  const { error: insertError } = await supabase
+                    .from('project_index')
+                    .insert(indexEntry);
+
+                  if (insertError) {
+                    console.error(`[Projects] Error inserting project_index entry:`, insertError);
+                  } else {
+                    console.log(`[Projects] Successfully created project_index entry for expenditure type: ${expType}`);
+                  }
+                } else {
+                  console.warn(`[Projects] Could not find expenditure type ID for: ${expType}`);
+                }
+              }
+            } else {
+              // Use default expenditure type if none specified
+              const defaultExpenditureType = expenditureTypes.find(et => et.expediture_types === "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ") || expenditureTypes[0];
+              if (defaultExpenditureType) {
                 const indexEntry = {
                   project_id: updatedProject.id,
                   event_types_id: eventTypeId,
-                  expediture_type_id: expenditureTypeId,
+                  expediture_type_id: defaultExpenditureType.id,
                   monada_id: monadaId,
                   kallikratis_id: kallikratisId
                 };
 
+                console.log(`[Projects] Inserting default project_index entry:`, indexEntry);
                 const { error: insertError } = await supabase
                   .from('project_index')
                   .insert(indexEntry);
 
                 if (insertError) {
-                  console.error(`[Projects] Error inserting project_index entry:`, insertError);
+                  console.error(`[Projects] Error inserting default project_index entry:`, insertError);
                 } else {
-                  console.log(`[Projects] Created project_index entry:`, indexEntry);
+                  console.log(`[Projects] Successfully created default project_index entry`);
                 }
               }
             }
           } else {
-            // Single project_index entry if no expenditure types array
-            const indexEntry = {
-              project_id: updatedProject.id,
-              event_types_id: eventTypeId,
-              expediture_type_id: expenditureTypeId,
-              monada_id: monadaId,
-              kallikratis_id: kallikratisId
-            };
-
-            const { error: insertError } = await supabase
-              .from('project_index')
-              .insert(indexEntry);
-
-            if (insertError) {
-              console.error(`[Projects] Error inserting project_index entry:`, insertError);
-            } else {
-              console.log(`[Projects] Created project_index entry:`, indexEntry);
-            }
+            console.warn(`[Projects] Missing required values for project_index - eventTypeId: ${eventTypeId}, monadaId: ${monadaId}, kallikratisId: ${kallikratisId}`);
           }
         } catch (lineError) {
           console.error(`[Projects] Error processing project line:`, lineError);
