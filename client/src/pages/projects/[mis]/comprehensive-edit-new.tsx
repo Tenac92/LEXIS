@@ -790,16 +790,23 @@ export default function ComprehensiveEditNew() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Select value={field.value} onValueChange={field.onChange}>
+                                  <Select 
+                                    key={`event-type-${form.watch("event_details.event_name")}`}
+                                    value={form.watch("event_details.event_name") || ""} 
+                                    onValueChange={field.onChange}
+                                  >
                                     <SelectTrigger className="border-0">
                                       <SelectValue placeholder="Επιλέξτε συμβάν" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {eventTypesData?.map((eventType: any) => (
-                                        <SelectItem key={eventType.id} value={eventType.name}>
-                                          {eventType.name}
-                                        </SelectItem>
-                                      ))}
+                                      {eventTypesData?.map((eventType: any) => {
+                                        console.log('Event type data:', eventType);
+                                        return (
+                                          <SelectItem key={eventType.id} value={eventType.name}>
+                                            {eventType.name}
+                                          </SelectItem>
+                                        );
+                                      })}
                                     </SelectContent>
                                   </Select>
                                 </FormControl>
@@ -968,11 +975,11 @@ export default function ComprehensiveEditNew() {
                               </SelectTrigger>
                               <SelectContent>
                                 {unitsData?.map((unit: any, unitIndex: number) => {
-                                  console.log('Unit data:', unit);
-                                  const unitValue = unit.unit_name || unit.name;
+                                  const unitValue = unit.id; // Use the id field which contains the short unit code
+                                  const unitDisplay = unit.name; // Use name field for display
                                   return (
                                     <SelectItem key={`unit-${index}-${unitIndex}`} value={unitValue}>
-                                      {unitValue}
+                                      {unitDisplay}
                                     </SelectItem>
                                   );
                                 })}
