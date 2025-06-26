@@ -354,6 +354,58 @@ export const userPreferences = pgTable("user_preferences", {
 });
 
 /**
+ * Project Index Table
+ * Contains normalized project relationships with reference tables
+ */
+export const projectIndex = pgTable("project_index", {
+  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  monada_id: text("monada_id").notNull().references(() => monada.id),
+  kallikratis_id: integer("kallikratis_id").notNull(),
+  event_types_id: integer("event_types_id").notNull(),
+  expediture_type_id: integer("expediture_type_id").notNull(),
+}, (table) => ({
+  pk: { 
+    name: "project_monada_kallikratis_pkey",
+    columns: [table.project_id, table.monada_id, table.kallikratis_id, table.event_types_id, table.expediture_type_id]
+  }
+}));
+
+/**
+ * Event Types Table
+ * Reference table for event types
+ */
+export const eventTypes = pgTable("event_types", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+});
+
+/**
+ * Expenditure Types Table
+ * Reference table for expenditure types
+ */
+export const expenditureTypes = pgTable("expediture_types", {
+  id: serial("id").primaryKey(),
+  expediture_types: text("expediture_types").notNull(),
+  expediture_types_minor: text("expediture_types_minor"),
+});
+
+/**
+ * Kallikratis Table
+ * Reference table for Greek administrative divisions
+ */
+export const kallikratis = pgTable("kallikratis", {
+  id: serial("id").primaryKey(),
+  eidos_koinotitas: text("eidos_koinotitas"),
+  onoma_dimotikis_enotitas: text("onoma_dimotikis_enotitas"),
+  eidos_neou_ota: text("eidos_neou_ota"),
+  onoma_neou_ota: text("onoma_neou_ota"),
+  perifereiaki_enotita: text("perifereiaki_enotita"),
+  perifereia: text("perifereia"),
+  onoma_dimou_koinotitas: text("onoma_dimou_koinotitas"),
+  level: text("level"),
+});
+
+/**
  * Legacy Beneficiary Table (for backward compatibility during migration)
  */
 export const beneficiariesLegacy = pgTable("Beneficiary", {
@@ -477,6 +529,11 @@ export const insertBeneficiaryPaymentSchema = createInsertSchema(beneficiaryPaym
   installment: z.string().min(1, "Η δόση είναι υποχρεωτική"),
   amount: z.string().min(1, "Το ποσό είναι υποχρεωτικό"),
 });
+
+export const insertProjectIndexSchema = createInsertSchema(projectIndex);
+export const insertEventTypeSchema = createInsertSchema(eventTypes);
+export const insertExpenditureTypeSchema = createInsertSchema(expenditureTypes);
+export const insertKallikratisSchema = createInsertSchema(kallikratis);
 
 // Budget validation schema for validating budget changes
 export const budgetValidationSchema = z.object({

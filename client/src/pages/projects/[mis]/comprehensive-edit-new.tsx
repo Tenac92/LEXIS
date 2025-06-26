@@ -131,6 +131,11 @@ export default function ComprehensiveEditNew() {
     enabled: !!mis,
   });
 
+  const { data: projectIndexData } = useQuery({
+    queryKey: [`/api/projects/${mis}/index`],
+    enabled: !!mis,
+  });
+
   const { data: eventTypesData } = useQuery({
     queryKey: ["/api/event-types"],
   });
@@ -152,8 +157,9 @@ export default function ComprehensiveEditNew() {
 
   // Initialize form with project data
   useEffect(() => {
-    if (projectData) {
+    if (projectData && projectIndexData) {
       console.log('Initializing comprehensive form with project data:', projectData);
+      console.log('Project index data:', projectIndexData);
       const project = projectData;
 
       // Initialize all sections with actual data
@@ -185,6 +191,51 @@ export default function ComprehensiveEditNew() {
         event_name: project.enhanced_event_type?.name || "",
         event_year: project.event_year?.[0] || "",
       });
+
+      // Location details from project_index data
+      const locationDetails = [];
+      if (projectIndexData && Array.isArray(projectIndexData)) {
+        // Group by kallikratis_id and monada_id to create location entries
+        const locationGroups = new Map();
+        
+        projectIndexData.forEach(entry => {
+          const key = `${entry.kallikratis_id}_${entry.monada_id}`;
+          if (!locationGroups.has(key)) {
+            locationGroups.set(key, {
+              municipal_community: entry.kallikratis?.onoma_dimotikis_enotitas || "",
+              municipality: entry.kallikratis?.onoma_dimou_koinotitas || "",
+              regional_unit: entry.kallikratis?.perifereiaki_enotita || "",
+              region: entry.kallikratis?.perifereia || "",
+              implementing_agency: entry.monada_name || "",
+              expenditure_types: []
+            });
+          }
+          
+          // Add expenditure type to this location
+          const location = locationGroups.get(key);
+          if (entry.expenditure_type_name && !location.expenditure_types.includes(entry.expenditure_type_name)) {
+            location.expenditure_types.push(entry.expenditure_type_name);
+          }
+        });
+        
+        locationGroups.forEach(location => {
+          locationDetails.push(location);
+        });
+      }
+
+      // If no location details from project_index, create empty entry
+      if (locationDetails.length === 0) {
+        locationDetails.push({
+          municipal_community: "",
+          municipality: "",
+          regional_unit: "",
+          region: "",
+          implementing_agency: "",
+          expenditure_types: []
+        });
+      }
+
+      form.setValue("location_details", locationDetails);
 
       // Project details
       form.setValue("project_details", {
@@ -275,7 +326,7 @@ export default function ComprehensiveEditNew() {
 
       console.log('Form initialized with comprehensive data structure');
     }
-  }, [projectData, form]);
+  }, [projectData, projectIndexData, form]);
 
   // Array management functions
   const addDecision = () => {
@@ -418,14 +469,33 @@ export default function ComprehensiveEditNew() {
 
   // Form submission
   const mutation = useMutation({
-    mutationFn: (data: ComprehensiveFormData) => 
-      apiRequest(`/api/projects/${mis}`, {
+    mutationFn: (data: ComprehensiveFormData) => {
+      // Transform location details to project_lines format for project_index table updates
+      const transformedData = {
+        ...data,
+        project_lines: data.location_details.map(location => ({
+          implementing_agency: location.implementing_agency,
+          event_type: data.event_details.event_name,
+          expenditure_types: location.expenditure_types,
+          region: {
+            perifereia: location.region,
+            perifereiaki_enotita: location.regional_unit,
+            dimos: location.municipality,
+            dimotiki_enotita: location.municipal_community,
+            kallikratis_id: null // Will be resolved on backend
+          }
+        }))
+      };
+      
+      return apiRequest(`/api/projects/${mis}`, {
         method: "PATCH",
-        body: JSON.stringify(data),
-      }),
+        body: JSON.stringify(transformedData),
+      });
+    },
     onSuccess: () => {
       toast({ title: "Επιτυχία", description: "Τα στοιχεία του έργου ενημερώθηκαν επιτυχώς" });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/index`] });
       navigate(`/projects/${mis}`);
     },
     onError: () => {
