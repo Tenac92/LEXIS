@@ -27,6 +27,7 @@ import {
   customType,
   foreignKey,
   jsonb,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { number, z } from "zod";
@@ -360,13 +361,15 @@ export const userPreferences = pgTable("user_preferences", {
 export const projectIndex = pgTable("project_index", {
   project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   monada_id: text("monada_id").notNull().references(() => monada.id),
-  kallikratis_id: integer("kallikratis_id").notNull(),
+  kallikratis_id: integer("kallikratis_id"), // Optional for regional projects
+  kodikos_perifereiakis_enotitas: bigint("kodikos_perifereiakis_enotitas", { mode: "number" }), // For regional-level projects
   event_types_id: integer("event_types_id").notNull(),
   expediture_type_id: integer("expediture_type_id").notNull(),
+  is_regional_project: boolean("is_regional_project").default(false), // Flag to indicate regional vs municipal
 }, (table) => ({
   pk: { 
     name: "project_monada_kallikratis_pkey",
-    columns: [table.project_id, table.monada_id, table.kallikratis_id, table.event_types_id, table.expediture_type_id]
+    columns: [table.project_id, table.monada_id, table.event_types_id, table.expediture_type_id]
   }
 }));
 
@@ -392,17 +395,19 @@ export const expenditureTypes = pgTable("expediture_types", {
 /**
  * Kallikratis Table
  * Reference table for Greek administrative divisions
+ * Supports both municipal-level and regional-level projects
  */
 export const kallikratis = pgTable("kallikratis", {
   id: serial("id").primaryKey(),
-  eidos_koinotitas: text("eidos_koinotitas"),
+  kodikos_dimotikis_enotitas: bigint("kodikos_dimotikis_enotitas", { mode: "number" }).notNull(),
   onoma_dimotikis_enotitas: text("onoma_dimotikis_enotitas"),
+  kodikos_neou_ota: bigint("kodikos_neou_ota", { mode: "number" }),
   eidos_neou_ota: text("eidos_neou_ota"),
   onoma_neou_ota: text("onoma_neou_ota"),
+  kodikos_perifereiakis_enotitas: bigint("kodikos_perifereiakis_enotitas", { mode: "number" }),
   perifereiaki_enotita: text("perifereiaki_enotita"),
+  kodikos_perifereias: bigint("kodikos_perifereias", { mode: "number" }),
   perifereia: text("perifereia"),
-  onoma_dimou_koinotitas: text("onoma_dimou_koinotitas"),
-  level: text("level"),
 });
 
 /**
