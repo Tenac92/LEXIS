@@ -839,7 +839,7 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
       });
     }
 
-    // Get project data with enhanced information
+    // Get project data with enhanced information including project_history
     const [projectRes, eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
       supabase.from('Projects').select('*').eq('mis', mis).single(),
       supabase.from('event_types').select('*'),
@@ -848,6 +848,17 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
       supabase.from('kallikratis').select('*'),
       supabase.from('project_index').select('*')
     ]);
+
+    // Get project_history data separately after we have the project ID
+    let historyData = null;
+    if (projectRes.data) {
+      const { data: history } = await supabase
+        .from('project_history')
+        .select('*')
+        .eq('project_id', projectRes.data.id)
+        .single();
+      historyData = history;
+    }
 
     if (projectRes.error || !projectRes.data) {
       console.error(`[Projects] Project not found for MIS ${mis}`);
@@ -871,9 +882,30 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
     const monada = indexItem ? monadaData.find(m => m.id === indexItem.monada_id) : null;
     const kallikratis = indexItem ? kallikratisData.find(k => k.id === indexItem.kallikratis_id) : null;
 
-    // Return project with enhanced data
+    // Get decision data from project_history instead of duplicated columns
+    const decisions = historyData?.decisions || [];
+    const decisionData = decisions.length > 0 ? decisions[0] : {};
+
+    // Return project with enhanced data, structuring decision data from project_history
     const enhancedProject = {
-      ...project,
+      // Core project data (keeping only essential fields)
+      id: project.id,
+      mis: project.mis,
+      project_title: project.project_title,
+      event_description: project.event_description,
+      status: project.status,
+      created_at: project.created_at,
+      updated_at: project.updated_at,
+      // Budget and code fields (keeping for calculations)
+      budget_e069: project.budget_e069,
+      budget_na271: project.budget_na271,
+      budget_na853: project.budget_na853,
+      e069: project.e069,
+      na271: project.na271,
+      na853: project.na853,
+      event_year: project.event_year,
+      
+      // Enhanced relational data
       enhanced_event_type: eventType ? {
         id: eventType.id,
         name: eventType.name
@@ -890,7 +922,30 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
         id: kallikratis.id,
         name: kallikratis.perifereia || kallikratis.onoma_dimou_koinotitas,
         level: kallikratis.level || 'municipality'
-      } : null
+      } : null,
+      
+      // Decision data from project_history (replacing duplicated columns)
+      decisions: historyData?.decisions || [],
+      decision_data: {
+        kya: decisionData.protocol_number || project.kya,  // Fallback during transition
+        fek: decisionData.fek || project.fek,
+        ada: decisionData.ada || project.ada,
+        implementing_agency: decisionData.implementing_agency,
+        decision_budget: decisionData.decision_budget,
+        expenses_covered: decisionData.expenses_covered,
+        decision_type: decisionData.decision_type,
+        is_included: decisionData.is_included,
+        comments: decisionData.comments
+      },
+      
+      // Structured data from project_history
+      formulation: historyData?.formulation || [],
+      changes: historyData?.changes || [],
+      
+      // Backward compatibility - keep some original fields for components that still need them
+      kya: decisionData.protocol_number || project.kya,
+      fek: decisionData.fek || project.fek,
+      ada: decisionData.ada || project.ada
     };
 
     console.log(`[Projects] Found project with MIS: ${mis}`);
