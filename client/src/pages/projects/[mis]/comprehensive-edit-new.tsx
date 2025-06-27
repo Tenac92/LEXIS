@@ -542,14 +542,22 @@ export default function ComprehensiveEditNew() {
       // Transform location details to project_lines format for project_index table updates
       const transformedData = {
         ...data,
-        project_lines: data.location_details.map(location => {
+        project_lines: data.location_details.map((location, index) => {
           // Find matching kallikratis entry for this location
           let kallikratisId = null;
+          
+          console.log(`\n=== Processing location ${index + 1} ===`);
+          console.log('Location data:', location);
+          console.log('Region:', location.region);
+          console.log('Regional Unit:', location.regional_unit);
+          console.log('Municipality:', location.municipality);
+          console.log('Municipal Community:', location.municipal_community);
           
           if (kallikratisData) {
             // Determine geographic level automatically based on available location data
             if (location.region && location.regional_unit && location.municipality && location.municipal_community) {
               // Municipal level with community - most specific (6 digits)
+              console.log('Searching for Municipal Community level entry...');
               const municipalEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region &&
                 entry.perifereiaki_enotita === location.regional_unit &&
@@ -557,32 +565,37 @@ export default function ComprehensiveEditNew() {
                 entry.onoma_dimotikis_enotitas === location.municipal_community
               );
               kallikratisId = municipalEntry?.id || null;
-              console.log('Municipal level (with community) - kallikratis_id:', kallikratisId, 'geographic_code:', municipalEntry?.kodikos_dimotikis_enotitas);
+              console.log('Municipal level (with community) - kallikratis_id:', kallikratisId, 'found entry:', municipalEntry);
             } else if (location.region && location.regional_unit && location.municipality) {
               // Municipal level without community - use municipality code (6 digits)
+              console.log('Searching for Municipality level entry...');
               const municipalEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region &&
                 entry.perifereiaki_enotita === location.regional_unit &&
                 entry.onoma_neou_ota === location.municipality
               );
               kallikratisId = municipalEntry?.id || null;
-              console.log('Municipal level (municipality only) - kallikratis_id:', kallikratisId, 'geographic_code:', municipalEntry?.kodikos_dimotikis_enotitas);
+              console.log('Municipal level (municipality only) - kallikratis_id:', kallikratisId, 'found entry:', municipalEntry);
             } else if (location.region && location.regional_unit) {
               // Regional unit level - use regional unit code (3 digits)
+              console.log('Searching for Regional Unit level entry...');
               const regionalUnitEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region &&
                 entry.perifereiaki_enotita === location.regional_unit
               );
               kallikratisId = regionalUnitEntry?.id || null;
-              console.log('Regional unit level - kallikratis_id:', kallikratisId, 'geographic_code:', regionalUnitEntry?.kodikos_perifereiakis_enotitas);
+              console.log('Regional unit level - kallikratis_id:', kallikratisId, 'found entry:', regionalUnitEntry);
             } else if (location.region) {
               // Regional level - use region code (1 digit)
+              console.log('Searching for Regional level entry...');
               const regionalEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region
               );
               kallikratisId = regionalEntry?.id || null;
-              console.log('Regional level - kallikratis_id:', kallikratisId, 'geographic_code:', regionalEntry?.kodikos_perifereias);
+              console.log('Regional level - kallikratis_id:', kallikratisId, 'found entry:', regionalEntry);
             }
+          } else {
+            console.log('No kallikratis data available');
           }
           
           return {
