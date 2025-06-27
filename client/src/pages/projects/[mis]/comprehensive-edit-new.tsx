@@ -761,9 +761,9 @@ export default function ComprehensiveEditNew() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="edit" className="space-y-6">
+        <TabsContent value="edit" className="space-y-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
               
               {/* Section 1: Decisions */}
               <Card className="shadow-sm">
@@ -944,8 +944,8 @@ export default function ComprehensiveEditNew() {
                         ))}
                       </tbody>
                     </table>
-                    <Button type="button" onClick={addDecision} className="mt-4 bg-green-600 hover:bg-green-700">
-                      <Plus className="h-4 w-4 mr-2" />
+                    <Button type="button" onClick={addDecision} className="mt-3 bg-green-600 hover:bg-green-700 text-sm py-2">
+                      <Plus className="h-3 w-3 mr-2" />
                       Προσθήκη Απόφασης
                     </Button>
                   </div>
@@ -1892,22 +1892,22 @@ export default function ComprehensiveEditNew() {
               </Card>
 
               {/* Action buttons */}
-              <div className="flex gap-4 justify-end pt-6">
+              <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 bg-gray-50 -mx-4 px-4 py-3 rounded-b-lg">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => navigate(`/projects/${mis}`)}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 text-sm py-2 px-4"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3" />
                   Ακύρωση
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+                  className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2 text-sm py-2 px-4"
                   disabled={mutation.isPending}
                 >
-                  <Save className="h-4 w-4" />
+                  <Save className="h-3 w-3" />
                   {mutation.isPending ? "Αποθήκευση..." : "Αποθήκευση"}
                 </Button>
               </div>
