@@ -539,21 +539,43 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       budget_na271: updateData.budget_na271 !== undefined ? updateData.budget_na271 : existingProject.budget_na271,
       budget_na853: updateData.budget_na853 !== undefined ? updateData.budget_na853 : existingProject.budget_na853,
       
-      // Document fields - only update if provided
-      kya: updateData.kya || existingProject.kya,
-      fek: updateData.fek || existingProject.fek,
-      ada: updateData.ada || existingProject.ada,
-      ada_import_sana271: updateData.ada_import_sana271 || existingProject.ada_import_sana271,
-      ada_import_sana853: updateData.ada_import_sana853 || existingProject.ada_import_sana853,
-      budget_decision: updateData.budget_decision || existingProject.budget_decision,
-      funding_decision: updateData.funding_decision || existingProject.funding_decision,
-      allocation_decision: updateData.allocation_decision || existingProject.allocation_decision,
-      
       // Update timestamp
       updated_at: new Date().toISOString()
     };
 
     console.log(`[Projects] Fields to update for MIS ${mis}:`, fieldsToUpdate);
+
+    // Handle document data in project_history table if provided
+    let historyEntryCreated = false;
+    if (updateData.kya || updateData.fek || updateData.ada) {
+      console.log(`[Projects] Creating project_history entry for document data`);
+      
+      const historyEntry = {
+        project_id: existingProject.id,
+        change_type: 'update',
+        changed_by: req.user?.id || null,
+        change_description: 'Document fields updated via comprehensive edit form',
+        decision_data: JSON.stringify({
+          kya: updateData.kya,
+          fek: updateData.fek,
+          ada: updateData.ada,
+          protocol_number: updateData.kya,
+          updated_at: new Date().toISOString()
+        }),
+        created_at: new Date().toISOString()
+      };
+
+      const { error: historyError } = await supabase
+        .from('project_history')
+        .insert(historyEntry);
+
+      if (historyError) {
+        console.error(`[Projects] Error creating project_history entry:`, historyError);
+      } else {
+        console.log(`[Projects] Successfully created project_history entry`);
+        historyEntryCreated = true;
+      }
+    }
 
     // Perform the update
     const { data: updatedProject, error: updateError } = await supabase
@@ -894,7 +916,17 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     };
 
     console.log(`[Projects] Successfully updated project with MIS: ${mis}`);
-    res.json(enhancedProject);
+    
+    // Return enhanced project with update summary
+    res.json({
+      ...enhancedProject,
+      updateSummary: {
+        projectUpdated: true,
+        historyEntryCreated,
+        projectIndexEntriesUpdated: updateData.project_lines ? updateData.project_lines.length > 0 : false,
+        message: 'Project successfully updated with comprehensive form data'
+      }
+    });
   } catch (error) {
     console.error(`[Projects] Error updating project:`, error);
     res.status(500).json({ 
