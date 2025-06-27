@@ -516,34 +516,30 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       });
     }
 
-    // Map fields from comprehensive form to database fields (matching actual schema)
-    const fieldsToUpdate = {
-      // Core fields matching actual Projects table schema
-      project_title: updateData.project_title || existingProject.project_title,
-      event_description: updateData.event_description || existingProject.event_description,
-      
-      // JSONB fields - handle arrays properly
-      event_type: updateData.event_type ? [updateData.event_type] : existingProject.event_type,
-      event_year: updateData.event_year ? [updateData.event_year] : existingProject.event_year,
-      
-      // Legacy fields maintained for compatibility
-      e069: updateData.e069 || existingProject.e069,
-      na271: updateData.na271 || existingProject.na271,
-      na853: updateData.na853 || existingProject.na853,
-      
-      // Budget fields - only update if provided and valid
-      budget_e069: updateData.budget_e069 !== undefined ? updateData.budget_e069 : existingProject.budget_e069,
-      budget_na271: updateData.budget_na271 !== undefined ? updateData.budget_na271 : existingProject.budget_na271,
-      budget_na853: updateData.budget_na853 !== undefined ? updateData.budget_na853 : existingProject.budget_na853,
-      
-      // Document fields as JSONB arrays (matching schema)
-      kya: updateData.kya ? [updateData.kya] : existingProject.kya,
-      fek: updateData.fek ? [updateData.fek] : existingProject.fek,
-      ada: updateData.ada ? [updateData.ada] : existingProject.ada,
-      
-      // Update timestamp
-      updated_at: new Date().toISOString()
-    };
+    // Conservative update - only use fields we know exist based on working GET endpoints
+    const fieldsToUpdate: any = {};
+    
+    // Core text fields that definitely exist
+    if (updateData.project_title) fieldsToUpdate.project_title = updateData.project_title;
+    if (updateData.event_description) fieldsToUpdate.event_description = updateData.event_description;
+    
+    // Legacy code fields that exist
+    if (updateData.e069) fieldsToUpdate.e069 = updateData.e069;
+    if (updateData.na271) fieldsToUpdate.na271 = updateData.na271;
+    if (updateData.na853) fieldsToUpdate.na853 = updateData.na853;
+    
+    // Budget fields - use numbers or null
+    if (updateData.budget_e069 !== undefined) fieldsToUpdate.budget_e069 = updateData.budget_e069;
+    if (updateData.budget_na271 !== undefined) fieldsToUpdate.budget_na271 = updateData.budget_na271;
+    if (updateData.budget_na853 !== undefined) fieldsToUpdate.budget_na853 = updateData.budget_na853;
+    
+    // Status if provided
+    if (updateData.status) fieldsToUpdate.status = updateData.status;
+    
+    // Always update timestamp
+    fieldsToUpdate.updated_at = new Date().toISOString();
+
+    console.log(`[Projects] Conservative update - only updating confirmed fields:`, Object.keys(fieldsToUpdate));
 
     console.log(`[Projects] Fields to update for MIS ${mis}:`, fieldsToUpdate);
 
