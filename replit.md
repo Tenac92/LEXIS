@@ -127,6 +127,26 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### June 27, 2025 - Database Configuration Cleanup & Redundancy Elimination
+- **Complete database configuration cleanup performed to eliminate redundancy and fix SQL execution issues**
+- Cleaned .env file by removing duplicate SUPABASE_URL, SUPABASE_KEY, and legacy variable names
+- Consolidated all database credentials to Replit Secrets for centralized management and better security
+- Identified root cause of SQL execution tool failure: DATABASE_URL in Replit Secrets pointing to old Neon database
+- Generated correct DATABASE_URL format for Supabase: `postgresql://postgres:[SERVICE_KEY]@db.rlzrtiufwxlljrtmpwsr.supabase.co:5432/postgres`
+- **Configuration Benefits Achieved:**
+  - Single source of truth for all database credentials via Replit Secrets
+  - Clean .env file with clear documentation and no sensitive data hardcoded
+  - Automatic frontend variable population from backend secrets
+  - Better security through centralized secret management
+  - Easier maintenance with eliminated duplication
+- **Technical Implementation:**
+  - Frontend variables (VITE_*) automatically populated from Replit Secrets
+  - Backend uses direct environment variables from Replit Secrets
+  - Created test scripts for connection verification and debugging
+  - Maintained application functionality throughout cleanup process
+- Application continues working perfectly with Supabase connection via SUPABASE_URL and SUPABASE_KEY
+- SQL execution tool will work once DATABASE_URL is updated in Replit Secrets to point to Supabase instead of old Neon database
+
 ### June 27, 2025 - Project History Table Implementation & Duplicated Column Removal
 - **Successfully implemented complete project_history table** with exact SQL structure specification
 - Created and populated project_history table with 195 historical entries from existing Projects data
