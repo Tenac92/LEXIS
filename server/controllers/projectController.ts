@@ -658,7 +658,8 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                     event_types_id: eventTypeId,
                     expediture_type_id: expenditureTypeId,
                     monada_id: monadaId,
-                    kallikratis_id: kallikratisId
+                    kallikratis_id: kallikratisId,
+                    geographic_level: line.region?.geographic_level || 'municipality'
                   };
 
                   console.log(`[Projects] Inserting project_index entry:`, indexEntry);
@@ -684,7 +685,8 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                   event_types_id: eventTypeId,
                   expediture_type_id: defaultExpenditureType.id,
                   monada_id: monadaId,
-                  kallikratis_id: kallikratisId
+                  kallikratis_id: kallikratisId,
+                  geographic_level: line.region?.geographic_level || 'municipality'
                 };
 
                 console.log(`[Projects] Inserting default project_index entry:`, indexEntry);

@@ -573,7 +573,7 @@ export default function ComprehensiveEditNew() {
             const geographicLevel = location.geographic_level || "municipality";
             
             if (geographicLevel === "municipality" && location.region && location.regional_unit && location.municipality && location.municipal_community) {
-              // Municipal level - find specific kallikratis entry
+              // Municipal level - find specific kallikratis entry (most granular)
               const municipalEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region &&
                 entry.perifereiaki_enotita === location.regional_unit &&
@@ -581,31 +581,31 @@ export default function ComprehensiveEditNew() {
                 entry.onoma_dimotikis_enotitas === location.municipal_community
               );
               kallikratisId = municipalEntry?.id || null;
-              console.log('Municipal level project - found kallikratis_id:', kallikratisId);
+              console.log('Municipal level project (with community) - found kallikratis_id:', kallikratisId, 'kodikos_dimotikis_enotitas:', municipalEntry?.kodikos_dimotikis_enotitas);
             } else if (geographicLevel === "municipality" && location.region && location.regional_unit && location.municipality) {
-              // Municipal level without municipal community
+              // Municipal level without municipal community - find by municipality
               const municipalEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region &&
                 entry.perifereiaki_enotita === location.regional_unit &&
                 entry.onoma_neou_ota === location.municipality
               );
               kallikratisId = municipalEntry?.id || null;
-              console.log('Municipal level project (no community) - found kallikratis_id:', kallikratisId);
+              console.log('Municipal level project (municipality only) - found kallikratis_id:', kallikratisId, 'kodikos_neou_ota:', municipalEntry?.kodikos_neou_ota);
             } else if (geographicLevel === "regional_unit" && location.region && location.regional_unit) {
-              // Regional unit level - use special ID 1 or find representative entry
+              // Regional unit level - find any entry for that regional unit (use kodikos_perifereiakis_enotitas scope)
               const regionalUnitEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region &&
                 entry.perifereiaki_enotita === location.regional_unit
               );
-              kallikratisId = regionalUnitEntry?.id || 1; // Fallback to special ID 1
-              console.log('Regional unit level project - found kallikratis_id:', kallikratisId);
+              kallikratisId = regionalUnitEntry?.id || null;
+              console.log('Regional unit level project - found kallikratis_id:', kallikratisId, 'kodikos_perifereiakis_enotitas:', regionalUnitEntry?.kodikos_perifereiakis_enotitas);
             } else if (geographicLevel === "region" && location.region) {
-              // Regional level - use special ID 1001 or find representative entry  
+              // Regional level - find any entry for that region (use kodikos_perifereias scope)
               const regionalEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region
               );
-              kallikratisId = regionalEntry?.id || 1001; // Fallback to special ID 1001
-              console.log('Regional level project - found kallikratis_id:', kallikratisId);
+              kallikratisId = regionalEntry?.id || null;
+              console.log('Regional level project - found kallikratis_id:', kallikratisId, 'kodikos_perifereias:', regionalEntry?.kodikos_perifereias);
             }
           }
           
