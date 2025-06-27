@@ -1724,50 +1724,80 @@ export default function ComprehensiveEditNew() {
                                 control={form.control}
                                 name={`formulation_details.${index}.connected_decisions`}
                                 render={({ field }) => {
-                                  const decisions = form.watch("decisions") || [];
-                                  const availableDecisions = decisions
-                                    .filter(decision => decision.protocol_number || decision.fek || decision.ada)
-                                    .map((decision, idx) => ({
-                                      value: `${decision.protocol_number}-${decision.fek}-${decision.ada}`.replace(/^-+|-+$/g, '').replace(/-+/g, '-'),
-                                      label: `${decision.protocol_number ? `Πρωτ: ${decision.protocol_number}` : ''}${decision.fek ? ` ΦΕΚ: ${decision.fek}` : ''}${decision.ada ? ` ΑΔΑ: ${decision.ada}` : ''}`.trim(),
-                                      fullRef: decision
-                                    }))
-                                    .filter(item => item.label);
+                                  try {
+                                    const decisions = form.watch("decisions") || [];
+                                    const availableDecisions = decisions
+                                      .filter(decision => decision && (decision.protocol_number || decision.fek || decision.ada))
+                                      .map((decision, idx) => {
+                                        const valueString = `${decision.protocol_number || ''}-${decision.fek || ''}-${decision.ada || ''}`.replace(/^-+|-+$/g, '').replace(/-+/g, '-');
+                                        const labelString = [
+                                          decision.protocol_number ? `Πρωτ: ${decision.protocol_number}` : '',
+                                          decision.fek ? `ΦΕΚ: ${decision.fek}` : '',
+                                          decision.ada ? `ΑΔΑ: ${decision.ada}` : ''
+                                        ].filter(Boolean).join(' ');
+                                        
+                                        return {
+                                          value: valueString || `decision-${idx}`,
+                                          label: labelString || `Απόφαση ${idx + 1}`,
+                                          fullRef: decision
+                                        };
+                                      })
+                                      .filter(item => item.label);
 
-                                  return (
-                                    <FormItem>
-                                      <FormControl>
-                                        <div className="space-y-2">
-                                          <Select 
-                                            value={field.value || ''} 
-                                            onValueChange={(value) => {
-                                              const selectedDecision = availableDecisions.find(d => d.value === value);
-                                              if (selectedDecision) {
-                                                field.onChange(selectedDecision.label);
-                                              }
-                                            }}
-                                          >
-                                            <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm">
-                                              <SelectValue placeholder="Επιλέξτε σχετική απόφαση..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="">Καμία σύνδεση</SelectItem>
-                                              {availableDecisions.map((decision) => (
-                                                <SelectItem key={decision.value} value={decision.value}>
-                                                  {decision.label}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
+                                    return (
+                                      <FormItem>
+                                        <FormControl>
+                                          <div className="space-y-2">
+                                            {availableDecisions.length > 0 ? (
+                                              <Select 
+                                                value={field.value || ''} 
+                                                onValueChange={(value) => {
+                                                  if (value === '') {
+                                                    field.onChange('');
+                                                  } else {
+                                                    const selectedDecision = availableDecisions.find(d => d.value === value);
+                                                    if (selectedDecision) {
+                                                      field.onChange(selectedDecision.label);
+                                                    }
+                                                  }
+                                                }}
+                                              >
+                                                <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm">
+                                                  <SelectValue placeholder="Επιλέξτε σχετική απόφαση..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="">Καμία σύνδεση</SelectItem>
+                                                  {availableDecisions.map((decision) => (
+                                                    <SelectItem key={decision.value} value={decision.value}>
+                                                      {decision.label}
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            ) : null}
+                                            <Input 
+                                              {...field} 
+                                              className="h-8 bg-gray-50 border border-gray-200 text-xs" 
+                                              placeholder="Εισάγετε σχετικές αποφάσεις..."
+                                            />
+                                          </div>
+                                        </FormControl>
+                                      </FormItem>
+                                    );
+                                  } catch (error) {
+                                    console.error('Error in connected_decisions field:', error);
+                                    return (
+                                      <FormItem>
+                                        <FormControl>
                                           <Input 
                                             {...field} 
-                                            className="h-8 bg-gray-50 border border-gray-200 text-xs" 
-                                            placeholder="Ή εισάγετε χειροκίνητα..."
+                                            className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" 
+                                            placeholder="Εισάγετε σχετικές αποφάσεις..."
                                           />
-                                        </div>
-                                      </FormControl>
-                                    </FormItem>
-                                  );
+                                        </FormControl>
+                                      </FormItem>
+                                    );
+                                  }
                                 }}
                               />
                             </td>

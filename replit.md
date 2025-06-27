@@ -127,6 +127,23 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### June 27, 2025 - Connected Decisions System Implementation & SelectItem Error Fix
+- **Implemented dynamic decision connection system in comprehensive edit form**
+- Connected "Αποφάσεις που συνδέονται" field in "Στοιχεία κατάρτισης έργου" to Section 1 decisions
+- Added intelligent dropdown that populates from "Αποφάσεις που τεκμηριώνουν το έργο" with protocol numbers, FEK, and ADA
+- Enhanced data loading to support both project_history decision_data and legacy project fields
+- **Critical Fix: Resolved SelectItem component crash**
+  - Added comprehensive error handling around connected decisions field
+  - Implemented proper null/undefined checks for decision objects
+  - Added fallback values and conditional rendering to prevent component crashes
+  - Enhanced user experience with manual input option as backup
+- **Data Fetching Improvements:**
+  - Enhanced debug logging for all data sources (event types, units, expenditure types, kallikratis)
+  - Improved decision data initialization from both new project_history architecture and legacy fields
+  - Better error handling for missing or malformed data
+- Connected decisions feature now allows users to select which decisions from Section 1 relate to each formulation detail
+- Form remains stable and functional even with incomplete or missing decision data
+
 ### June 27, 2025 - Database Configuration Cleanup & Redundancy Elimination
 - **Complete database configuration cleanup performed to eliminate redundancy and fix SQL execution issues**
 - Cleaned .env file by removing duplicate SUPABASE_URL, SUPABASE_KEY, and legacy variable names
