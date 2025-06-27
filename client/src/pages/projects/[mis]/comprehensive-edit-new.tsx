@@ -523,7 +523,10 @@ export default function ComprehensiveEditNew() {
 
   // Form submission
   const mutation = useMutation({
-    mutationFn: (data: ComprehensiveFormData) => {
+    mutationFn: async (data: ComprehensiveFormData) => {
+      console.log('=== MUTATION FUNCTION DEBUG ===');
+      console.log('Original form data:', data);
+      
       // Transform location details to project_lines format for project_index table updates
       const transformedData = {
         ...data,
@@ -568,12 +571,20 @@ export default function ComprehensiveEditNew() {
         })
       };
       
-      console.log('Submitting transformed data:', transformedData);
+      console.log('Transformed data for API:', transformedData);
+      console.log('Making API request to:', `/api/projects/${mis}`);
       
-      return apiRequest(`/api/projects/${mis}`, {
-        method: "PATCH",
-        body: JSON.stringify(transformedData),
-      });
+      try {
+        const response = await apiRequest(`/api/projects/${mis}`, {
+          method: "PATCH",
+          body: JSON.stringify(transformedData),
+        });
+        console.log('API response received:', response);
+        return response;
+      } catch (error) {
+        console.error('API request failed:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({ title: "Επιτυχία", description: "Τα στοιχεία του έργου ενημερώθηκαν επιτυχώς" });
@@ -587,7 +598,19 @@ export default function ComprehensiveEditNew() {
   });
 
   const handleSubmit = (data: ComprehensiveFormData) => {
-    console.log('Submitting comprehensive form data:', data);
+    console.log('=== FORM SUBMISSION DEBUG ===');
+    console.log('Form data received:', data);
+    console.log('Form validation errors:', form.formState.errors);
+    console.log('Form is valid:', form.formState.isValid);
+    console.log('Mutation is pending:', mutation.isPending);
+    
+    if (!form.formState.isValid) {
+      console.error('Form validation failed:', form.formState.errors);
+      toast({ title: "Σφάλμα", description: "Παρακαλώ ελέγξτε τα πεδία της φόρμας", variant: "destructive" });
+      return;
+    }
+    
+    console.log('Triggering mutation...');
     mutation.mutate(data);
   };
 
