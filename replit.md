@@ -127,6 +127,24 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### June 27, 2025 - Comprehensive Edit Form Database Integration Fix
+- **Fixed complete project_index table data persistence issues**
+- Resolved expenditure type matching with improved parsing (ID vs string comparison)
+- Enhanced implementing agency matching to handle object-type unit_name structures
+- Added comprehensive kallikratis geographic lookup with multiple fallback strategies
+- **Complete data transformation pipeline between frontend form and backend database**
+- Frontend now sends properly mapped project data including core fields, budget data, and document fields
+- Backend processes both comprehensive form format and legacy formats for compatibility
+- **Relaxed validation requirements for project_index entries - only requires event_type_id**
+- Added extensive debugging throughout data matching and transformation process
+- **Fixed form data structure to properly save:**
+  - Core project information (title, description, status)
+  - Budget fields (E069, NA271, NA853)
+  - Document fields (KYA, FEK, ADA) from decisions
+  - Location details with geographic hierarchy
+  - Implementing agencies with partial matching
+  - Multiple expenditure types per location
+
 ### June 27, 2025 - Critical React Hooks Fix & Comprehensive Form Restoration
 - **CRITICAL FIX: Resolved "Rendered more hooks than during the previous render" error**
 - Restructured comprehensive edit component to follow React hooks rules by calling all hooks unconditionally

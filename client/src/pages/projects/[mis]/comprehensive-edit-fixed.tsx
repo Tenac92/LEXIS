@@ -163,40 +163,63 @@ export default function ComprehensiveEditFixed() {
     mutationFn: async (data: ComprehensiveFormData) => {
       console.log("Sending comprehensive form data:", data);
       
-      // Transform the data to match backend expectations
+      // Transform the data to match backend expectations with comprehensive mapping
       const transformedData = {
-        ...data,
-        project_details: {
-          ...data.project_details,
-          mis: mis, // Ensure MIS is set correctly
-        },
-        // Transform location_details to project_lines format for backend
-        project_lines: data.location_details.map((location) => {
+        // Core project fields for Projects table
+        project_title: data.project_details.project_title,
+        event_description: data.project_details.project_description,
+        event_type: data.event_details.event_name,
+        event_year: data.event_details.event_year,
+        status: data.project_details.project_status,
+        
+        // Budget fields
+        budget_e069: data.project_details.expenses_executed ? parseFloat(data.project_details.expenses_executed) : null,
+        budget_na271: data.project_details.expenses_executed ? parseFloat(data.project_details.expenses_executed) : null,
+        budget_na853: data.project_details.expenses_executed ? parseFloat(data.project_details.expenses_executed) : null,
+        
+        // Document fields from decisions
+        kya: data.decisions.length > 0 ? data.decisions[0].protocol_number : null,
+        fek: data.decisions.length > 0 ? data.decisions[0].fek : null,
+        ada: data.decisions.length > 0 ? data.decisions[0].ada : null,
+        
+        // Transform location_details to project_lines format for project_index table
+        project_lines: data.location_details && data.location_details.length > 0 ? data.location_details.map((location) => {
           // Find kallikratis_id for this location
           let kallikratisId = null;
           if (kallikratisData) {
-            const kallikratis = kallikratisData.find(k => 
+            // Try exact match first
+            let kallikratis = kallikratisData.find(k => 
               k.perifereia === location.region && 
               k.perifereiaki_enotita === location.regional_unit &&
               k.onoma_neou_ota === location.municipality &&
               k.onoma_dimotikis_enotitas === location.municipal_community
             );
+            
+            // If no exact match and no municipal community, try without it
+            if (!kallikratis && !location.municipal_community) {
+              kallikratis = kallikratisData.find(k => 
+                k.perifereia === location.region && 
+                k.perifereiaki_enotita === location.regional_unit &&
+                k.onoma_neou_ota === location.municipality
+              );
+            }
+            
             kallikratisId = kallikratis?.id || null;
           }
 
           return {
-            implementing_agency: location.implementing_agency,
-            event_type: data.event_details.event_name,
-            expenditure_types: location.expenditure_types,
+            implementing_agency: location.implementing_agency || '',
+            event_type: data.event_details.event_name || '',
+            expenditure_types: Array.isArray(location.expenditure_types) ? location.expenditure_types : [],
             region: {
-              perifereia: location.region,
-              perifereiaki_enotita: location.regional_unit,
-              dimos: location.municipality,
-              dimotiki_enotita: location.municipal_community,
+              perifereia: location.region || '',
+              perifereiaki_enotita: location.regional_unit || '',
+              dimos: location.municipality || '',
+              dimotiki_enotita: location.municipal_community || '',
               kallikratis_id: kallikratisId
             }
           };
-        })
+        }) : []
       };
 
       console.log("Transformed data for backend:", transformedData);

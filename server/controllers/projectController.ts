@@ -516,27 +516,30 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       });
     }
 
-    // Map fields from the SQL export to actual database fields
+    // Map fields from comprehensive form to database fields
     const fieldsToUpdate = {
-      // Core fields
-      title: updateData.title || existingProject.title,
+      // Core fields - handle both old and new format
+      project_title: updateData.project_title || updateData.title || existingProject.project_title,
+      event_description: updateData.event_description || existingProject.event_description,
+      event_type: updateData.event_type || existingProject.event_type,
+      event_year: updateData.event_year || existingProject.event_year,
+      status: updateData.status || existingProject.status,
+      
+      // Legacy fields maintained for compatibility
+      title: updateData.project_title || updateData.title || existingProject.title,
       e069: updateData.e069 || existingProject.e069,
       na271: updateData.na271 || existingProject.na271,
       na853: updateData.na853 || existingProject.na853,
-      event_description: updateData.event_description || existingProject.event_description,
-      project_title: updateData.project_title || existingProject.project_title,
-      event_type: updateData.event_type || existingProject.event_type,
-      event_year: updateData.event_year || existingProject.event_year,
       region: updateData.region || existingProject.region,
       implementing_agency: updateData.implementing_agency || existingProject.implementing_agency,
       expenditure_type: updateData.expenditure_type || existingProject.expenditure_type,
       
-      // Budget fields
-      budget_e069: updateData.budget_e069 || existingProject.budget_e069,
-      budget_na271: updateData.budget_na271 || existingProject.budget_na271,
-      budget_na853: updateData.budget_na853 || existingProject.budget_na853,
+      // Budget fields - only update if provided and valid
+      budget_e069: updateData.budget_e069 !== undefined ? updateData.budget_e069 : existingProject.budget_e069,
+      budget_na271: updateData.budget_na271 !== undefined ? updateData.budget_na271 : existingProject.budget_na271,
+      budget_na853: updateData.budget_na853 !== undefined ? updateData.budget_na853 : existingProject.budget_na853,
       
-      // Document fields
+      // Document fields - only update if provided
       kya: updateData.kya || existingProject.kya,
       fek: updateData.fek || existingProject.fek,
       ada: updateData.ada || existingProject.ada,
@@ -546,12 +549,11 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       funding_decision: updateData.funding_decision || existingProject.funding_decision,
       allocation_decision: updateData.allocation_decision || existingProject.allocation_decision,
       
-      // Status field
-      status: updateData.status || existingProject.status,
-      
-      // Update the updated_at timestamp
+      // Update timestamp
       updated_at: new Date().toISOString()
     };
+
+    console.log(`[Projects] Fields to update for MIS ${mis}:`, fieldsToUpdate);
 
     // Perform the update
     const { data: updatedProject, error: updateError } = await supabase
@@ -703,11 +705,18 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
             }
             // Find expenditure type IDs (multiple values)
             if (line.expenditure_types && Array.isArray(line.expenditure_types) && line.expenditure_types.length > 0) {
+              console.log(`[Projects] DEBUG: Processing expenditure types:`, line.expenditure_types);
+              console.log(`[Projects] DEBUG: Available expenditure types:`, expenditureTypes.map(et => ({ id: et.id, name: et.expediture_types })));
+              
               for (const expType of line.expenditure_types) {
                 const expenditureType = expenditureTypes.find(et => 
-                  et.id === expType || et.expediture_types === expType
+                  et.id == expType || 
+                  et.expediture_types === expType ||
+                  et.id === parseInt(expType)
                 );
                 expenditureTypeId = expenditureType?.id || null;
+                
+                console.log(`[Projects] DEBUG: Expenditure type "${expType}" -> ID: ${expenditureTypeId}`);
                 
                 // Create project_index entry for each expenditure type
                 if (expenditureTypeId) {
