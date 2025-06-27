@@ -310,7 +310,7 @@ export default function ComprehensiveEditNew() {
           
           locationGroups.set(key, {
             municipal_community: kallikratis.onoma_dimotikis_enotitas || "",
-            municipality: `${kallikratis.eidos_neou_ota || ""} ${kallikratis.onoma_neou_ota || ""}`.trim(),
+            municipality: kallikratis.onoma_neou_ota || "",
             regional_unit: kallikratis.perifereiaki_enotita || "",
             region: kallikratis.perifereia || "",
             implementing_agency: entry.unit_name || "",
@@ -458,7 +458,7 @@ export default function ComprehensiveEditNew() {
           item.perifereia === currentLocation.region &&
           item.perifereiaki_enotita === currentLocation.regional_unit
         );
-        const municipalities = Array.from(new Set(filtered.map(item => `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim())))
+        const municipalities = Array.from(new Set(filtered.map(item => item.onoma_neou_ota)))
           .filter(Boolean)
           .sort();
         console.log('Available municipalities:', municipalities);
@@ -469,7 +469,7 @@ export default function ComprehensiveEditNew() {
         filtered = filtered.filter(item => 
           item.perifereia === currentLocation.region &&
           item.perifereiaki_enotita === currentLocation.regional_unit &&
-          `${item.eidos_neou_ota} ${item.onoma_neou_ota}`.trim() === currentLocation.municipality
+          item.onoma_neou_ota === currentLocation.municipality
         );
         const communities = Array.from(new Set(filtered.map(item => `${item.eidos_koinotitas} ${item.onoma_dimotikis_enotitas}`.trim())))
           .filter(Boolean)
