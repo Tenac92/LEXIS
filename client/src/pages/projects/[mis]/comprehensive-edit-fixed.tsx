@@ -169,8 +169,38 @@ export default function ComprehensiveEditFixed() {
         project_details: {
           ...data.project_details,
           mis: mis, // Ensure MIS is set correctly
-        }
+        },
+        // Transform location_details to project_lines format for backend
+        project_lines: data.location_details.map((location) => {
+          // Find kallikratis_id for this location
+          let kallikratisId = null;
+          if (kallikratisData) {
+            const kallikratis = kallikratisData.find(k => 
+              k.perifereia === location.region && 
+              k.perifereiaki_enotita === location.regional_unit &&
+              k.onoma_neou_ota === location.municipality &&
+              k.onoma_dimotikis_enotitas === location.municipal_community
+            );
+            kallikratisId = kallikratis?.id || null;
+          }
+
+          return {
+            implementing_agency: location.implementing_agency,
+            event_type: data.event_details.event_name,
+            expenditure_types: location.expenditure_types,
+            region: {
+              perifereia: location.region,
+              perifereiaki_enotita: location.regional_unit,
+              dimos: location.municipality,
+              dimotiki_enotita: location.municipal_community,
+              kallikratis_id: kallikratisId
+            }
+          };
+        })
       };
+
+      console.log("Transformed data for backend:", transformedData);
+      console.log("Project lines:", transformedData.project_lines);
       
       // Use fetch directly to ensure proper formatting
       const response = await fetch(`/api/projects/${mis}`, {
