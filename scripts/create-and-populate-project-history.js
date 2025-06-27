@@ -34,12 +34,14 @@ async function createProjectHistoryTable() {
   console.log('Creating project_history table...');
   
   try {
-    const { data, error } = await supabase.rpc('exec', {
-      sql: `
-        -- Drop table if exists to recreate with exact structure
-        DROP TABLE IF EXISTS public.project_history CASCADE;
-        
-        -- Create project_history table with exact structure from user specification
+    // Drop table if exists to recreate with exact structure
+    const dropResult = await supabase.rpc('sql', {
+      query: 'DROP TABLE IF EXISTS public.project_history CASCADE;'
+    });
+    
+    // Create project_history table with exact structure from user specification
+    const createResult = await supabase.rpc('sql', {
+      query: `
         CREATE TABLE public.project_history (
           id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
           project_id integer NOT NULL,
@@ -61,13 +63,29 @@ async function createProjectHistoryTable() {
           CONSTRAINT project_history_project_id_fkey FOREIGN KEY (project_id) 
             REFERENCES "Projects" (id) ON DELETE CASCADE
         ) TABLESPACE pg_default;
-        
-        -- Create indexes for better performance
-        CREATE INDEX idx_project_history_project_id ON public.project_history(project_id);
-        CREATE INDEX idx_project_history_created_at ON public.project_history(created_at);
-        CREATE INDEX idx_project_history_event_name ON public.project_history(event_name);
-        CREATE INDEX idx_project_history_status ON public.project_history(project_status);
       `
+    });
+    
+    if (createResult.error) {
+      console.error('Error creating table:', createResult.error.message);
+      throw createResult.error;
+    }
+    
+    // Create indexes for better performance
+    await supabase.rpc('sql', {
+      query: 'CREATE INDEX idx_project_history_project_id ON public.project_history(project_id);'
+    });
+    
+    await supabase.rpc('sql', {
+      query: 'CREATE INDEX idx_project_history_created_at ON public.project_history(created_at);'
+    });
+    
+    await supabase.rpc('sql', {
+      query: 'CREATE INDEX idx_project_history_event_name ON public.project_history(event_name);'
+    });
+    
+    await supabase.rpc('sql', {
+      query: 'CREATE INDEX idx_project_history_status ON public.project_history(project_status);'
     });
 
     if (error) {
@@ -341,16 +359,13 @@ async function validateProjectHistory() {
   console.log('\nValidating project history table...');
   
   try {
-    // Check table structure
-    const { data: columns, error: structureError } = await supabase.rpc('exec', {
-      sql: `
-        SELECT column_name, data_type, is_nullable, column_default
-        FROM information_schema.columns 
-        WHERE table_name = 'project_history' 
-          AND table_schema = 'public'
-        ORDER BY ordinal_position;
-      `
-    });
+    // Check table structure using direct query
+    const { data: columns, error: structureError } = await supabase
+      .from('information_schema.columns')
+      .select('column_name, data_type, is_nullable, column_default')
+      .eq('table_name', 'project_history')
+      .eq('table_schema', 'public')
+      .order('ordinal_position');
 
     if (structureError) {
       console.error('Error checking table structure:', structureError.message);
@@ -361,29 +376,27 @@ async function validateProjectHistory() {
       });
     }
 
-    // Check data counts
-    const { data: countData, error: countError } = await supabase.rpc('exec', {
-      sql: `
-        SELECT 
-          COUNT(*) as total_history_entries,
-          COUNT(DISTINCT project_id) as unique_projects,
-          COUNT(*) FILTER (WHERE event_name IS NOT NULL) as entries_with_events,
-          COUNT(*) FILTER (WHERE expenditure_types IS NOT NULL) as entries_with_expenditures,
-          COUNT(*) FILTER (WHERE decisions IS NOT NULL) as entries_with_decisions
-        FROM public.project_history;
-      `
-    });
+    // Check data counts using aggregation
+    const { data: countData, error: countError } = await supabase
+      .from('project_history')
+      .select('project_id, event_name, expenditure_types, decisions');
 
     if (countError) {
       console.error('Error checking data counts:', countError.message);
     } else if (countData && countData.length > 0) {
-      const stats = countData[0];
+      // Calculate statistics manually
+      const totalEntries = countData.length;
+      const uniqueProjects = new Set(countData.map(item => item.project_id)).size;
+      const entriesWithEvents = countData.filter(item => item.event_name).length;
+      const entriesWithExpenditures = countData.filter(item => item.expenditure_types).length;
+      const entriesWithDecisions = countData.filter(item => item.decisions).length;
+      
       console.log('✓ Data validation:');
-      console.log(`  - Total history entries: ${stats.total_history_entries}`);
-      console.log(`  - Unique projects: ${stats.unique_projects}`);
-      console.log(`  - Entries with events: ${stats.entries_with_events}`);
-      console.log(`  - Entries with expenditure types: ${stats.entries_with_expenditures}`);
-      console.log(`  - Entries with decisions: ${stats.entries_with_decisions}`);
+      console.log(`  - Total history entries: ${totalEntries}`);
+      console.log(`  - Unique projects: ${uniqueProjects}`);
+      console.log(`  - Entries with events: ${entriesWithEvents}`);
+      console.log(`  - Entries with expenditure types: ${entriesWithExpenditures}`);
+      console.log(`  - Entries with decisions: ${entriesWithDecisions}`);
     }
 
     // Sample a few entries
