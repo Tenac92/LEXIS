@@ -389,6 +389,17 @@ export default function ComprehensiveEditFixed() {
         });
       }
 
+      // Debug form data before reset
+      console.log('Form data being passed to reset:', {
+        event_details: {
+          event_name: project.enhanced_event_type?.name || "",
+          event_year: project.event_year?.[0] || "",
+        },
+        first_decision: decisions[0],
+        first_formulation: formulation[0],
+        first_location: locationDetails[0]
+      });
+
       // Update form with initialized data
       form.reset({
         decisions,
