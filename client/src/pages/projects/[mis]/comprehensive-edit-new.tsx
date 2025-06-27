@@ -618,7 +618,8 @@ export default function ComprehensiveEditNew() {
               perifereiaki_enotita: location.regional_unit,
               dimos: location.municipality,
               dimotiki_enotita: location.municipal_community,
-              kallikratis_id: kallikratisId
+              kallikratis_id: kallikratisId,
+              geographic_level: location.geographic_level || "municipality"
             }
           };
         })
