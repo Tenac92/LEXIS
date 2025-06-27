@@ -56,6 +56,15 @@ const comprehensiveProjectSchema = z.object({
     implementing_agency: z.string().min(1, "Ο φορέας υλοποίησης είναι υποχρεωτικός"),
     expenditure_types: z.array(z.string()).min(1, "Απαιτείται τουλάχιστον ένας τύπος δαπάνης"),
     geographic_level: z.enum(["region", "regional_unit", "municipality"]).default("municipality"),
+  }).refine((data) => {
+    // Validate municipality is required for municipal level projects
+    if (data.geographic_level === "municipality") {
+      return data.municipality && data.municipality.length > 0;
+    }
+    return true;
+  }, {
+    message: "Ο δήμος είναι υποχρεωτικός για έργα δημοτικού επιπέδου",
+    path: ["municipality"]
   })).min(1, "Απαιτείται τουλάχιστον μία τοποθεσία"),
   
   // Section 3: Project details
@@ -561,8 +570,10 @@ export default function ComprehensiveEditNew() {
           let kallikratisId = null;
           
           if (kallikratisData) {
-            if (location.region && location.regional_unit && location.municipality && location.municipal_community) {
-              // For municipal projects, find specific kallikratis entry
+            const geographicLevel = location.geographic_level || "municipality";
+            
+            if (geographicLevel === "municipality" && location.region && location.regional_unit && location.municipality && location.municipal_community) {
+              // Municipal level - find specific kallikratis entry
               const municipalEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region &&
                 entry.perifereiaki_enotita === location.regional_unit &&
@@ -570,15 +581,31 @@ export default function ComprehensiveEditNew() {
                 entry.onoma_dimotikis_enotitas === location.municipal_community
               );
               kallikratisId = municipalEntry?.id || null;
-              console.log('Municipal project - found kallikratis_id:', kallikratisId);
-            } else if (location.region && location.regional_unit) {
-              // For regional projects, find any entry for that regional unit
-              const regionalEntry = kallikratisData.find(entry =>
+              console.log('Municipal level project - found kallikratis_id:', kallikratisId);
+            } else if (geographicLevel === "municipality" && location.region && location.regional_unit && location.municipality) {
+              // Municipal level without municipal community
+              const municipalEntry = kallikratisData.find(entry =>
+                entry.perifereia === location.region &&
+                entry.perifereiaki_enotita === location.regional_unit &&
+                entry.onoma_neou_ota === location.municipality
+              );
+              kallikratisId = municipalEntry?.id || null;
+              console.log('Municipal level project (no community) - found kallikratis_id:', kallikratisId);
+            } else if (geographicLevel === "regional_unit" && location.region && location.regional_unit) {
+              // Regional unit level - use special ID 1 or find representative entry
+              const regionalUnitEntry = kallikratisData.find(entry =>
                 entry.perifereia === location.region &&
                 entry.perifereiaki_enotita === location.regional_unit
               );
-              kallikratisId = regionalEntry?.id || null;
-              console.log('Regional project - using regional kallikratis_id:', kallikratisId);
+              kallikratisId = regionalUnitEntry?.id || 1; // Fallback to special ID 1
+              console.log('Regional unit level project - found kallikratis_id:', kallikratisId);
+            } else if (geographicLevel === "region" && location.region) {
+              // Regional level - use special ID 1001 or find representative entry  
+              const regionalEntry = kallikratisData.find(entry =>
+                entry.perifereia === location.region
+              );
+              kallikratisId = regionalEntry?.id || 1001; // Fallback to special ID 1001
+              console.log('Regional level project - found kallikratis_id:', kallikratisId);
             }
           }
           
@@ -1005,6 +1032,27 @@ export default function ComprehensiveEditNew() {
                         
                         <div className="p-8 space-y-8">
 
+                          {/* Geographic Level Selector */}
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Project Geographic Level</label>
+                            <Select
+                              value={form.watch(`location_details.${index}.geographic_level`) || "municipality"}
+                              onValueChange={(value) => updateLocationField(index, 'geographic_level', value)}
+                            >
+                              <SelectTrigger className="h-10 bg-white border border-gray-300">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="municipality">Municipal Level (Δημοτικό Επίπεδο)</SelectItem>
+                                <SelectItem value="regional_unit">Regional Unit Level (Περιφερειακή Ενότητα)</SelectItem>
+                                <SelectItem value="region">Regional Level (Περιφέρεια)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-gray-600 mt-1">
+                              Choose the geographic scope of this project
+                            </p>
+                          </div>
+
                           {/* 4-Level Cascading Geographic Hierarchy */}
                           <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                             <h5 className="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-300 pb-2">
@@ -1057,55 +1105,59 @@ export default function ComprehensiveEditNew() {
                                 </Select>
                               </div>
 
-                          {/* Δήμος (Municipality) */}
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-gray-700">Municipality (Δήμος)</label>
-                                <Select
-                                  key={`municipality-${index}-${form.watch(`location_details.${index}.municipality`)}`}
-                                  value={form.watch(`location_details.${index}.municipality`) || ""}
-                                  onValueChange={(value) => updateLocationField(index, 'municipality', value)}
-                                  disabled={!form.watch(`location_details.${index}.regional_unit`)}
-                                >
-                                  <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors disabled:bg-gray-100">
-                                    <SelectValue placeholder="Select municipality..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="__clear__" className="italic text-gray-500">
-                                      -- Clear Selection --
-                                    </SelectItem>
-                                    {getFilteredOptions('municipality', index).map((option, optIndex) => (
-                                      <SelectItem key={`municipality-${index}-${optIndex}`} value={option}>
-                                        {option}
+                          {/* Δήμος (Municipality) - Only for municipal level projects */}
+                              {form.watch(`location_details.${index}.geographic_level`) === "municipality" && (
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-gray-700">Municipality (Δήμος)</label>
+                                  <Select
+                                    key={`municipality-${index}-${form.watch(`location_details.${index}.municipality`)}`}
+                                    value={form.watch(`location_details.${index}.municipality`) || ""}
+                                    onValueChange={(value) => updateLocationField(index, 'municipality', value)}
+                                    disabled={!form.watch(`location_details.${index}.regional_unit`)}
+                                  >
+                                    <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors disabled:bg-gray-100">
+                                      <SelectValue placeholder="Select municipality..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__clear__" className="italic text-gray-500">
+                                        -- Clear Selection --
                                       </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                                      {getFilteredOptions('municipality', index).map((option, optIndex) => (
+                                        <SelectItem key={`municipality-${index}-${optIndex}`} value={option}>
+                                          {option}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
 
-                          {/* Δημ. Ενότητα (Municipal Community) */}
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-gray-700">Municipal Community (Δημοτική Ενότητα)</label>
-                                <Select
-                                  key={`municipal-community-${index}-${form.watch(`location_details.${index}.municipal_community`)}`}
-                                  value={form.watch(`location_details.${index}.municipal_community`) || ""}
-                                  onValueChange={(value) => updateLocationField(index, 'municipal_community', value)}
-                                  disabled={!form.watch(`location_details.${index}.municipality`)}
-                                >
-                                  <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors disabled:bg-gray-100">
-                                    <SelectValue placeholder="Select municipal community..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="__clear__" className="italic text-gray-500">
-                                      -- Clear Selection --
-                                    </SelectItem>
-                                    {getFilteredOptions('municipal_community', index).map((option, optIndex) => (
-                                      <SelectItem key={`municipal-community-${index}-${optIndex}`} value={option}>
-                                        {option}
+                          {/* Δημ. Ενότητα (Municipal Community) - Only for municipal level projects */}
+                              {form.watch(`location_details.${index}.geographic_level`) === "municipality" && (
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-gray-700">Municipal Community (Δημοτική Ενότητα)</label>
+                                  <Select
+                                    key={`municipal-community-${index}-${form.watch(`location_details.${index}.municipal_community`)}`}
+                                    value={form.watch(`location_details.${index}.municipal_community`) || ""}
+                                    onValueChange={(value) => updateLocationField(index, 'municipal_community', value)}
+                                    disabled={!form.watch(`location_details.${index}.municipality`)}
+                                  >
+                                    <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors disabled:bg-gray-100">
+                                      <SelectValue placeholder="Select municipal community..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__clear__" className="italic text-gray-500">
+                                        -- Clear Selection --
                                       </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                                      {getFilteredOptions('municipal_community', index).map((option, optIndex) => (
+                                        <SelectItem key={`municipal-community-${index}-${optIndex}`} value={option}>
+                                          {option}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
                             </div>
                           </div>
 
