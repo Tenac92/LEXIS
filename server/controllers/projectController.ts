@@ -653,7 +653,29 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                 
                 // Create project_index entry for each expenditure type
                 if (expenditureTypeId) {
-                  const indexEntry = {
+                  // Calculate geographic code based on level
+                  const geographicLevel = line.region?.geographic_level || 'municipality';
+                  let geographicCode = null;
+                  
+                  if (kallikratisData && kallikratisId) {
+                    const kallikratisEntry = kallikratisData.find(k => k.id === kallikratisId);
+                    if (kallikratisEntry) {
+                      switch (geographicLevel) {
+                        case 'municipality':
+                          geographicCode = kallikratisEntry.kodikos_dimotikis_enotitas;
+                          break;
+                        case 'regional_unit':
+                          geographicCode = kallikratisEntry.kodikos_perifereiakis_enotitas;
+                          break;
+                        case 'region':
+                          geographicCode = kallikratisEntry.kodikos_perifereias;
+                          break;
+                      }
+                      console.log(`[Projects] Geographic level: ${geographicLevel}, Code: ${geographicCode}`);
+                    }
+                  }
+                  
+                  const indexEntry: any = {
                     project_id: updatedProject.id,
                     event_types_id: eventTypeId,
                     expediture_type_id: expenditureTypeId,
@@ -661,10 +683,15 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                     kallikratis_id: kallikratisId
                   };
                   
-                  // Add geographic_level if available (for future schema support)
-                  if (line.region?.geographic_level) {
-                    console.log(`[Projects] Setting geographic_level: ${line.region.geographic_level}`);
-                    // Note: Will add to database once schema is updated
+                  // Add geographic columns if supported
+                  try {
+                    if (geographicLevel && geographicCode) {
+                      indexEntry.geographic_level = geographicLevel;
+                      indexEntry.geographic_code = geographicCode;
+                      console.log(`[Projects] Added geographic data: level=${geographicLevel}, code=${geographicCode}`);
+                    }
+                  } catch (err: any) {
+                    console.log(`[Projects] Geographic columns not yet supported: ${err.message}`);
                   }
 
                   console.log(`[Projects] Inserting project_index entry:`, indexEntry);
@@ -685,13 +712,45 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
               // Use default expenditure type if none specified
               const defaultExpenditureType = expenditureTypes.find(et => et.expediture_types === "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ") || expenditureTypes[0];
               if (defaultExpenditureType) {
-                const indexEntry = {
+                // Calculate geographic code for default entry
+                const geographicLevel = line.region?.geographic_level || 'municipality';
+                let geographicCode = null;
+                
+                if (kallikratisData && kallikratisId) {
+                  const kallikratisEntry = kallikratisData.find(k => k.id === kallikratisId);
+                  if (kallikratisEntry) {
+                    switch (geographicLevel) {
+                      case 'municipality':
+                        geographicCode = kallikratisEntry.kodikos_dimotikis_enotitas;
+                        break;
+                      case 'regional_unit':
+                        geographicCode = kallikratisEntry.kodikos_perifereiakis_enotitas;
+                        break;
+                      case 'region':
+                        geographicCode = kallikratisEntry.kodikos_perifereias;
+                        break;
+                    }
+                  }
+                }
+                
+                const indexEntry: any = {
                   project_id: updatedProject.id,
                   event_types_id: eventTypeId,
                   expediture_type_id: defaultExpenditureType.id,
                   monada_id: monadaId,
                   kallikratis_id: kallikratisId
                 };
+                
+                // Add geographic columns if supported
+                try {
+                  if (geographicLevel && geographicCode) {
+                    indexEntry.geographic_level = geographicLevel;
+                    indexEntry.geographic_code = geographicCode;
+                    console.log(`[Projects] Default entry added geographic data: level=${geographicLevel}, code=${geographicCode}`);
+                  }
+                } catch (err: any) {
+                  console.log(`[Projects] Default entry - Geographic columns not yet supported: ${err.message}`);
+                }
 
                 console.log(`[Projects] Inserting default project_index entry:`, indexEntry);
                 const { error: insertError } = await supabase

@@ -365,6 +365,7 @@ export const projectIndex = pgTable("project_index", {
   event_types_id: integer("event_types_id").notNull().references(() => eventTypes.id),
   expediture_type_id: integer("expediture_type_id").notNull(),
   geographic_level: text("geographic_level").notNull().default("municipality"), // municipality, regional_unit, region
+  geographic_code: bigint("geographic_code", { mode: "number" }), // Stores the appropriate code based on geographic level
 }, (table) => ({
   pk: { 
     name: "project_monada_kallikratis_pkey",
