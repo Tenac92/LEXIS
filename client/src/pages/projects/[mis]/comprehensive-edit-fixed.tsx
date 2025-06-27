@@ -277,7 +277,7 @@ export default function ComprehensiveEditFixed() {
       const locationDetails = [];
       
       if (projectIndexData && projectIndexData.length > 0) {
-        console.log('No project index data available, initializing with default location details');
+        console.log('Processing project index data for location details');
         
         // Group by kallikratis_id and monada_id to create location entries
         const grouped = projectIndexData.reduce((acc, entry) => {
@@ -341,10 +341,10 @@ export default function ComprehensiveEditFixed() {
             protocol_number: detail.protocol_number || project.decisions?.kya?.[0] || "",
             ada: detail.ada || project.decisions?.ada?.[0] || "",
             decision_year: detail.decision_year || project.event_year?.[0] || "",
-            project_budget: detail.project_budget || project.budget_e069.toString(),
+            project_budget: detail.project_budget || (project.budget_e069?.toString() || "0"),
             epa_version: detail.epa_version || "",
-            total_public_expense: detail.total_public_expense || project.budget_e069.toString(),
-            eligible_public_expense: detail.eligible_public_expense || project.budget_e069.toString(),
+            total_public_expense: detail.total_public_expense || (project.budget_e069?.toString() || "0"),
+            eligible_public_expense: detail.eligible_public_expense || (project.budget_e069?.toString() || "0"),
             decision_status: detail.decision_status || "Ενεργή" as const,
             change_type: detail.change_type || "Έγκριση" as const,
             connected_decisions: Array.isArray(detail.connected_decisions) ? detail.connected_decisions : [],
@@ -359,10 +359,10 @@ export default function ComprehensiveEditFixed() {
           protocol_number: project.decisions?.kya?.[0] || "",
           ada: project.decisions?.ada?.[0] || "",
           decision_year: project.event_year?.[0] || "",
-          project_budget: project.budget_e069.toString(),
+          project_budget: project.budget_e069?.toString() || "0",
           epa_version: "",
-          total_public_expense: project.budget_e069.toString(),
-          eligible_public_expense: project.budget_e069.toString(),
+          total_public_expense: project.budget_e069?.toString() || "0",
+          eligible_public_expense: project.budget_e069?.toString() || "0",
           decision_status: "Ενεργή" as const,
           change_type: "Έγκριση" as const,
           connected_decisions: [],
@@ -397,7 +397,9 @@ export default function ComprehensiveEditFixed() {
         },
         first_decision: decisions[0],
         first_formulation: formulation[0],
-        first_location: locationDetails[0]
+        first_location: locationDetails[0],
+        formulation_length: formulation.length,
+        location_length: locationDetails.length
       });
 
       // Update form with initialized data
@@ -416,7 +418,7 @@ export default function ComprehensiveEditFixed() {
           project_title: project.project_title || "",
           project_description: project.event_description || "",
           summary_description: project.project_title || "",
-          expenses_executed: project.budget_e069?.toString() || "",
+          expenses_executed: project.budget_e069?.toString() || "0",
           project_status: "Συμπληρωμένο" as const,
         },
         previous_entries: [],
