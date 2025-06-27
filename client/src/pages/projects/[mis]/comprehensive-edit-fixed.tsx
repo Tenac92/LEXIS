@@ -691,6 +691,209 @@ export default function ComprehensiveEditFixed() {
                 </CardContent>
               </Card>
 
+              {/* Section 2b: Geographical Location Management */}
+              <Card className="shadow-sm">
+                <CardHeader className="py-3 bg-gradient-to-r from-orange-50 to-amber-50 border-b border-gray-200">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    2β. Διαχείριση Τοποθεσιών & Φορέων
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="space-y-4">
+                    {form.watch("location_details").map((_, index) => (
+                      <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                        <div className="grid grid-cols-4 gap-3 mb-3">
+                          <FormField
+                            control={form.control}
+                            name={`location_details.${index}.region`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Περιφέρεια</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={(value) => {
+                                    field.onChange(value);
+                                    // Clear dependent fields when region changes
+                                    form.setValue(`location_details.${index}.regional_unit`, "");
+                                    form.setValue(`location_details.${index}.municipality`, "");
+                                    form.setValue(`location_details.${index}.municipal_community`, "");
+                                  }} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Επιλέξτε περιφέρεια" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Array.from(new Set(kallikratisData?.map(k => k.perifereia))).map((region) => (
+                                        <SelectItem key={region} value={region}>
+                                          {region}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`location_details.${index}.regional_unit`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Περιφερειακή Ενότητα</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={(value) => {
+                                    field.onChange(value);
+                                    // Clear dependent fields
+                                    form.setValue(`location_details.${index}.municipality`, "");
+                                    form.setValue(`location_details.${index}.municipal_community`, "");
+                                  }} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Επιλέξτε περιφερειακή ενότητα" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Array.from(new Set(
+                                        kallikratisData
+                                          ?.filter(k => k.perifereia === form.watch(`location_details.${index}.region`))
+                                          .map(k => k.perifereiaki_enotita)
+                                      )).map((unit) => (
+                                        <SelectItem key={unit} value={unit}>
+                                          {unit}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`location_details.${index}.municipality`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Δήμος</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={(value) => {
+                                    field.onChange(value);
+                                    form.setValue(`location_details.${index}.municipal_community`, "");
+                                  }} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Επιλέξτε δήμο" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {Array.from(new Set(
+                                        kallikratisData
+                                          ?.filter(k => 
+                                            k.perifereia === form.watch(`location_details.${index}.region`) &&
+                                            k.perifereiaki_enotita === form.watch(`location_details.${index}.regional_unit`)
+                                          )
+                                          .map(k => k.onoma_neou_ota)
+                                      )).map((municipality) => (
+                                        <SelectItem key={municipality} value={municipality}>
+                                          {municipality}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`location_details.${index}.implementing_agency`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Φορέας Υλοποίησης</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Επιλέξτε φορέα" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {unitsData?.map((unit) => (
+                                        <SelectItem key={unit.id} value={unit.name}>
+                                          {unit.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        {/* Expenditure Types Multi-Select */}
+                        <div className="mt-3">
+                          <FormLabel className="text-xs font-medium mb-2 block">Τύποι Δαπανών</FormLabel>
+                          <div className="grid grid-cols-4 gap-2">
+                            {expenditureTypesData?.map((expType) => (
+                              <div key={expType.id} className="flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  id={`exp-${index}-${expType.id}`}
+                                  checked={form.watch(`location_details.${index}.expenditure_types`)?.includes(expType.id.toString()) || false}
+                                  onChange={(e) => {
+                                    const current = form.getValues(`location_details.${index}.expenditure_types`) || [];
+                                    const expTypeId = expType.id.toString();
+                                    if (e.target.checked) {
+                                      form.setValue(`location_details.${index}.expenditure_types`, [...current, expTypeId]);
+                                    } else {
+                                      form.setValue(`location_details.${index}.expenditure_types`, current.filter(id => id !== expTypeId));
+                                    }
+                                  }}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <label htmlFor={`exp-${index}-${expType.id}`} className="text-xs text-gray-700 cursor-pointer">
+                                  {expType.expediture_types}
+                                </label>
+                                {form.watch(`location_details.${index}.expenditure_types`)?.includes(expType.id.toString()) && (
+                                  <CheckCircle className="h-3 w-3 text-green-500" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const currentLocations = form.getValues("location_details");
+                          form.setValue("location_details", [
+                            ...currentLocations,
+                            { municipal_community: "", municipality: "", regional_unit: "", region: "", implementing_agency: "", expenditure_types: [] }
+                          ]);
+                        }}
+                        className="text-sm"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Προσθήκη Τοποθεσίας
+                      </Button>
+                      {form.watch("location_details").length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const currentLocations = form.getValues("location_details");
+                            form.setValue("location_details", currentLocations.slice(0, -1));
+                          }}
+                          className="text-sm"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Αφαίρεση
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Section 3: Project Details */}
               <Card className="shadow-sm">
                 <CardHeader className="py-3 bg-gradient-to-r from-purple-50 to-violet-50 border-b border-gray-200">
@@ -752,6 +955,180 @@ export default function ComprehensiveEditFixed() {
                           </FormItem>
                         )}
                       />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Section 4: Formulation Details (Στοιχεία κατάρτισης έργου) */}
+              <Card className="shadow-sm">
+                <CardHeader className="py-3 bg-gradient-to-r from-red-50 to-pink-50 border-b border-gray-200">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    4. Στοιχεία κατάρτισης έργου
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="space-y-4">
+                    {form.watch("formulation_details").map((_, index) => (
+                      <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                        <div className="grid grid-cols-6 gap-3 mb-3">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.sa`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">ΣΑ</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="ΝΑ853">ΝΑ853</SelectItem>
+                                      <SelectItem value="ΝΑ271">ΝΑ271</SelectItem>
+                                      <SelectItem value="E069">E069</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.protocol_number`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Αρ. Πρωτοκόλλου</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Πρωτόκολλο" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.ada`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">ΑΔΑ</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="ΑΔΑ" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.decision_year`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Έτος</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Έτος" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.project_budget`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Προϋπολογισμός</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Ποσό €" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.decision_status`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Κατάσταση</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Ενεργή">Ενεργή</SelectItem>
+                                      <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        {/* Connected Decisions Field */}
+                        <div className="mt-3">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.connected_decisions`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Αποφάσεις που συνδέονται</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Επιλέξτε συνδεδεμένη απόφαση από την Ενότητα 1" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {form.watch("decisions").map((decision, decisionIndex) => {
+                                        if (!decision.protocol_number && !decision.fek && !decision.ada) return null;
+                                        const displayText = `${decision.protocol_number || 'Χωρίς ΚΥΑ'} | ${decision.fek || 'Χωρίς ΦΕΚ'} | ${decision.ada || 'Χωρίς ΑΔΑ'}`;
+                                        return (
+                                          <SelectItem key={decisionIndex} value={displayText}>
+                                            {displayText}
+                                          </SelectItem>
+                                        );
+                                      })}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const currentFormulation = form.getValues("formulation_details");
+                          form.setValue("formulation_details", [
+                            ...currentFormulation,
+                            { sa: "ΝΑ853" as const, enumeration_code: "", protocol_number: "", ada: "", decision_year: "", project_budget: "", epa_version: "", total_public_expense: "", eligible_public_expense: "", decision_status: "Ενεργή" as const, change_type: "Έγκριση" as const, connected_decisions: "", comments: "" }
+                          ]);
+                        }}
+                        className="text-sm"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Προσθήκη Στοιχείων
+                      </Button>
+                      {form.watch("formulation_details").length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const currentFormulation = form.getValues("formulation_details");
+                            form.setValue("formulation_details", currentFormulation.slice(0, -1));
+                          }}
+                          className="text-sm"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Αφαίρεση
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
