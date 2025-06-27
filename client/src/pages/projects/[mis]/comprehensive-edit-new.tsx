@@ -152,8 +152,15 @@ export default function ComprehensiveEditNew() {
     queryKey: ["/api/expenditure-types"],
   });
 
-  // Debug logging for expenditure types
+  // Debug logging for all data sources
+  console.log("Event types data:", eventTypesData);
+  console.log("Units data:", unitsData);
   console.log("Expenditure types data:", expenditureTypesData);
+  console.log("Kallikratis data available:", kallikratisData?.length || 0, "entries");
+  
+  if (!kallikratisData || kallikratisData.length === 0) {
+    console.log("No kallikratis data available");
+  }
 
   // Initialize form with project data
   useEffect(() => {
@@ -162,26 +169,47 @@ export default function ComprehensiveEditNew() {
       console.log('Project index data:', projectIndexData);
       const project = projectData;
 
-      // Initialize all sections with actual data
+      // Initialize decisions from project data and decision_data from project_history
       const decisions = [];
-      const maxDecisions = Math.max(
-        project.kya?.length || 0,
-        project.fek?.length || 0,
-        project.ada?.length || 0
-      );
-
-      for (let i = 0; i < Math.max(1, maxDecisions); i++) {
-        decisions.push({
-          protocol_number: project.kya?.[i] || "",
-          fek: project.fek?.[i] || "",
-          ada: project.ada?.[i] || "",
-          implementing_agency: "",
-          decision_budget: "",
-          expenses_covered: "",
-          decision_type: "Έγκριση" as const,
-          is_included: true,
-          comments: "",
+      
+      // Check if we have decision_data from project_history (new architecture)
+      if (project.decision_data && Array.isArray(project.decision_data) && project.decision_data.length > 0) {
+        console.log('Loading decisions from project_history decision_data:', project.decision_data);
+        project.decision_data.forEach((decision, i) => {
+          decisions.push({
+            protocol_number: decision.kya || "",
+            fek: decision.fek || "",
+            ada: decision.ada || "",
+            implementing_agency: decision.implementing_agency || "",
+            decision_budget: decision.budget_decision || "",
+            expenses_covered: decision.expenses_covered || "",
+            decision_type: decision.decision_type || "Έγκριση" as const,
+            is_included: decision.is_included !== undefined ? decision.is_included : true,
+            comments: decision.comments || "",
+          });
         });
+      } else {
+        // Fallback to legacy direct project fields
+        console.log('Loading decisions from legacy project fields');
+        const maxDecisions = Math.max(
+          project.kya?.length || 0,
+          project.fek?.length || 0,
+          project.ada?.length || 0
+        );
+
+        for (let i = 0; i < Math.max(1, maxDecisions); i++) {
+          decisions.push({
+            protocol_number: project.kya?.[i] || "",
+            fek: project.fek?.[i] || "",
+            ada: project.ada?.[i] || "",
+            implementing_agency: "",
+            decision_budget: "",
+            expenses_covered: "",
+            decision_type: "Έγκριση" as const,
+            is_included: true,
+            comments: "",
+          });
+        }
       }
 
       form.setValue("decisions", decisions);
@@ -1695,13 +1723,52 @@ export default function ComprehensiveEditNew() {
                               <FormField
                                 control={form.control}
                                 name={`formulation_details.${index}.connected_decisions`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input {...field} className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm" />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
+                                render={({ field }) => {
+                                  const decisions = form.watch("decisions") || [];
+                                  const availableDecisions = decisions
+                                    .filter(decision => decision.protocol_number || decision.fek || decision.ada)
+                                    .map((decision, idx) => ({
+                                      value: `${decision.protocol_number}-${decision.fek}-${decision.ada}`.replace(/^-+|-+$/g, '').replace(/-+/g, '-'),
+                                      label: `${decision.protocol_number ? `Πρωτ: ${decision.protocol_number}` : ''}${decision.fek ? ` ΦΕΚ: ${decision.fek}` : ''}${decision.ada ? ` ΑΔΑ: ${decision.ada}` : ''}`.trim(),
+                                      fullRef: decision
+                                    }))
+                                    .filter(item => item.label);
+
+                                  return (
+                                    <FormItem>
+                                      <FormControl>
+                                        <div className="space-y-2">
+                                          <Select 
+                                            value={field.value || ''} 
+                                            onValueChange={(value) => {
+                                              const selectedDecision = availableDecisions.find(d => d.value === value);
+                                              if (selectedDecision) {
+                                                field.onChange(selectedDecision.label);
+                                              }
+                                            }}
+                                          >
+                                            <SelectTrigger className="h-10 bg-white border border-gray-300 hover:border-gray-400 transition-colors text-sm">
+                                              <SelectValue placeholder="Επιλέξτε σχετική απόφαση..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="">Καμία σύνδεση</SelectItem>
+                                              {availableDecisions.map((decision) => (
+                                                <SelectItem key={decision.value} value={decision.value}>
+                                                  {decision.label}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                          <Input 
+                                            {...field} 
+                                            className="h-8 bg-gray-50 border border-gray-200 text-xs" 
+                                            placeholder="Ή εισάγετε χειροκίνητα..."
+                                          />
+                                        </div>
+                                      </FormControl>
+                                    </FormItem>
+                                  );
+                                }}
                               />
                             </td>
                             <td className="border border-gray-300 p-2">
