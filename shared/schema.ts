@@ -159,6 +159,30 @@ export const budgetHistory = pgTable("budget_history", {
 });
 
 /**
+ * Project History Table
+ * Tracks historical changes and versions of project data
+ * Stores comprehensive project state snapshots for audit trails
+ */
+export const projectHistory = pgTable("project_history", {
+  id: bigint("id", { mode: "bigint" }).generatedAlwaysAsIdentity().primaryKey(),
+  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  implementing_agency_location: text("implementing_agency_location"),
+  expenditure_types: jsonb("expenditure_types"),
+  decisions: jsonb("decisions"),
+  event_name: text("event_name"),
+  event_year: integer("event_year"),
+  enumeration_code: text("enumeration_code"),
+  inclusion_year: integer("inclusion_year"),
+  summary_description: text("summary_description"),
+  expenses_executed: decimal("expenses_executed", { precision: 12, scale: 2 }),
+  project_status: text("project_status"),
+  previous_entries: jsonb("previous_entries"),
+  formulation: jsonb("formulation"),
+  changes: jsonb("changes"),
+});
+
+/**
  * Budget Notifications Table
  * Stores budget-related notifications and alerts
  * Now references project by id instead of mis
@@ -515,6 +539,8 @@ export const extendedGeneratedDocumentSchema =
 
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory);
 
+export const insertProjectHistorySchema = createInsertSchema(projectHistory);
+
 export const insertBudgetNotificationSchema =
   createInsertSchema(budgetNotifications);
 
@@ -556,6 +582,7 @@ export type Project = typeof projects.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
 export type BudgetHistory = typeof budgetHistory.$inferSelect;
+export type ProjectHistory = typeof projectHistory.$inferSelect;
 export type BudgetNotification = typeof budgetNotifications.$inferSelect;
 export type AttachmentsRow = typeof attachmentsRows.$inferSelect;
 export type DocumentVersion = typeof documentVersions.$inferSelect;
@@ -580,6 +607,7 @@ export type InsertGeneratedDocument = z.infer<
   typeof insertGeneratedDocumentSchema
 >;
 export type InsertBudgetHistory = z.infer<typeof insertBudgetHistorySchema>;
+export type InsertProjectHistory = z.infer<typeof insertProjectHistorySchema>;
 export type InsertBudgetNotification = z.infer<
   typeof insertBudgetNotificationSchema
 >;
