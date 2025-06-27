@@ -162,14 +162,88 @@ export const budgetHistory = pgTable("budget_history", {
  * Project History Table
  * Tracks historical changes and versions of project data
  * Stores comprehensive project state snapshots for audit trails
+ * 
+ * UPDATED: Now handles ALL 42 fields from comprehensive edit form
  */
 export const projectHistory = pgTable("project_history", {
   id: bigint("id", { mode: "bigint" }).generatedAlwaysAsIdentity().primaryKey(),
   project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  
+  // Section 1: Complete Decisions Array (replaces simple decisions)
+  decision_details: jsonb("decision_details").$type<{
+    protocol_number: string;
+    fek: string;
+    ada: string;
+    implementing_agency: string;
+    decision_budget: string;
+    expenses_covered: string;
+    decision_type: "Έγκριση" | "Τροποποίηση" | "Παράταση";
+    is_included: boolean;
+    comments: string;
+  }[]>(),
+  
+  // Section 2: Event Details
+  event_details: jsonb("event_details").$type<{
+    event_name: string;
+    event_year: string;
+  }>(),
+  
+  // Section 2: Location Details Array (geographic hierarchy + agencies + expenditure types)
+  location_details: jsonb("location_details").$type<{
+    municipal_community: string;
+    municipality: string;
+    regional_unit: string;
+    region: string;
+    implementing_agency: string;
+    expenditure_types: string[];
+  }[]>(),
+  
+  // Section 3: Complete Project Details
+  project_details: jsonb("project_details").$type<{
+    mis: string;
+    sa: string;
+    enumeration_code: string;
+    inclusion_year: string;
+    project_title: string;
+    project_description: string;
+    summary_description: string;
+    expenses_executed: string;
+    project_status: "Συνεχιζόμενο" | "Ολοκληρωμένο" | "Απενταγμένο";
+  }>(),
+  
+  // Section 3: Previous Entries Array
+  previous_entries: jsonb("previous_entries").$type<{
+    sa: string;
+    enumeration_code: string;
+  }[]>(),
+  
+  // Section 4: Complete Formulation Details Array (12+ fields per entry)
+  formulation_details: jsonb("formulation_details").$type<{
+    sa: "ΝΑ853" | "ΝΑ271" | "Ε069";
+    enumeration_code: string;
+    protocol_number: string;
+    ada: string;
+    decision_year: string;
+    project_budget: string;
+    epa_version: string;
+    total_public_expense: string;
+    eligible_public_expense: string;
+    decision_status: "Ενεργή" | "Ανενεργή";
+    change_type: "Τροποποίηση" | "Παράταση" | "Έγκριση";
+    connected_decisions: string;
+    comments: string;
+  }[]>(),
+  
+  // Section 5: Changes Array (properly structured)
+  changes: jsonb("changes").$type<{
+    description: string;
+  }[]>(),
+  
+  // LEGACY FIELDS (for backward compatibility)
   implementing_agency_location: text("implementing_agency_location"),
   expenditure_types: jsonb("expenditure_types"),
-  decisions: jsonb("decisions"),
+  decisions: jsonb("decisions"), // Legacy format
   event_name: text("event_name"),
   event_year: integer("event_year"),
   enumeration_code: text("enumeration_code"),
@@ -177,9 +251,7 @@ export const projectHistory = pgTable("project_history", {
   summary_description: text("summary_description"),
   expenses_executed: decimal("expenses_executed", { precision: 12, scale: 2 }),
   project_status: text("project_status"),
-  previous_entries: jsonb("previous_entries"),
-  formulation: jsonb("formulation"),
-  changes: jsonb("changes"),
+  formulation: jsonb("formulation"), // Legacy format
 });
 
 /**
