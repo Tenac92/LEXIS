@@ -660,6 +660,12 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                     monada_id: monadaId,
                     kallikratis_id: kallikratisId
                   };
+                  
+                  // Add geographic_level if available (for future schema support)
+                  if (line.region?.geographic_level) {
+                    console.log(`[Projects] Setting geographic_level: ${line.region.geographic_level}`);
+                    // Note: Will add to database once schema is updated
+                  }
 
                   console.log(`[Projects] Inserting project_index entry:`, indexEntry);
                   const { error: insertError } = await supabase
