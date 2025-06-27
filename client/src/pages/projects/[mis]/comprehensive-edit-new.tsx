@@ -766,36 +766,36 @@ export default function ComprehensiveEditNew() {
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
               
               {/* Section 1: Decisions */}
-              <Card>
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
+              <Card className="shadow-sm">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 py-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <FileText className="h-4 w-4" />
                     1️⃣ Αποφάσεις που τεκμηριώνουν το έργο
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-300">
+                    <table className="w-full border-collapse border border-gray-200 text-sm">
                       <thead>
                         <tr className="bg-blue-50">
-                          <th className="border border-gray-300 p-2 text-sm">α.α.</th>
-                          <th className="border border-gray-300 p-2 text-sm">Αρ. πρωτ. Απόφασης</th>
-                          <th className="border border-gray-300 p-2 text-sm">ΦΕΚ</th>
-                          <th className="border border-gray-300 p-2 text-sm">ΑΔΑ</th>
-                          <th className="border border-gray-300 p-2 text-sm">Φορέας υλοποίησης</th>
-                          <th className="border border-gray-300 p-2 text-sm">Προϋπολογισμός Απόφασης</th>
-                          <th className="border border-gray-300 p-2 text-sm">Δαπάνες που αφορά</th>
-                          <th className="border border-gray-300 p-2 text-sm">Είδος Απόφασης</th>
-                          <th className="border border-gray-300 p-2 text-sm">Έχει συμπεριληφθεί</th>
-                          <th className="border border-gray-300 p-2 text-sm">Σχόλια</th>
-                          <th className="border border-gray-300 p-2 text-sm">Ενέργειες</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium">α.α.</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium">Αρ. πρωτ. Απόφασης</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium">ΦΕΚ</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium">ΑΔΑ</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium">Φορέας υλοποίησης</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium">Προϋπολογισμός Απόφασης</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium">Δαπάνες που αφορά</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium">Είδος Απόφασης</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium">Έχει συμπεριληφθεί</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium">Σχόλια</th>
+                          <th className="border border-gray-200 p-1.5 text-xs font-medium w-16">Ενέργειες</th>
                         </tr>
                       </thead>
                       <tbody>
                         {form.watch("decisions").map((_, index) => (
-                          <tr key={index}>
-                            <td className="border border-gray-300 p-1 text-center">{index + 1}</td>
-                            <td className="border border-gray-300 p-1">
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="border border-gray-200 p-1 text-center text-xs">{index + 1}</td>
+                            <td className="border border-gray-200 p-1">
                               <FormField
                                 control={form.control}
                                 name={`decisions.${index}.protocol_number`}
@@ -953,20 +953,20 @@ export default function ComprehensiveEditNew() {
               </Card>
 
               {/* Section 2: Event Details */}
-              <Card>
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
+              <Card className="shadow-sm">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 py-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Calendar className="h-4 w-4" />
                     2️⃣ Στοιχεία συμβάντος
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   {/* Basic event info */}
-                  <table className="w-full border-collapse border border-gray-300 mb-4">
+                  <table className="w-full border-collapse border border-gray-200 mb-3 text-sm">
                     <thead>
                       <tr className="bg-blue-50">
-                        <th className="border border-gray-300 p-2">Συμβάν</th>
-                        <th className="border border-gray-300 p-2">Έτος εκδήλωσης συμβάντος</th>
+                        <th className="border border-gray-200 p-2 text-xs font-medium">Συμβάν</th>
+                        <th className="border border-gray-200 p-2 text-xs font-medium">Έτος εκδήλωσης συμβάντος</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1246,11 +1246,14 @@ export default function ComprehensiveEditNew() {
               </Card>
 
               {/* Section 3: Project Details */}
-              <Card>
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100">
-                  <CardTitle>3️⃣ Στοιχεία έργου</CardTitle>
+              <Card className="shadow-sm">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-blue-100 py-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Building className="h-4 w-4" />
+                    3️⃣ Στοιχεία έργου
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-4">
                   <table className="w-full border-collapse border border-gray-300">
                     <thead>
                       <tr className="bg-gray-100">
