@@ -618,14 +618,19 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
             console.log(`[Projects] DEBUG: Looking for agency: "${line.implementing_agency}"`);
             console.log(`[Projects] DEBUG: Available agencies:`, monadaData.map(m => ({ id: m.id, unit: m.unit, unit_name: m.unit_name })));
             
-            const monada = monadaData.find(m => 
-              m.id == line.implementing_agency || 
-              m.unit === line.implementing_agency || 
-              m.unit_name === line.implementing_agency ||
-              // Try partial matching for long agency names
-              (m.unit_name && line.implementing_agency.includes(m.unit_name)) ||
-              (m.unit && line.implementing_agency.includes(m.unit))
-            );
+            const monada = monadaData.find(m => {
+              // Handle the case where unit_name might be an object with name property
+              const unitName = (typeof m.unit_name === 'object' && m.unit_name.name) ? m.unit_name.name : m.unit_name;
+              
+              return m.id == line.implementing_agency || 
+                     m.unit === line.implementing_agency || 
+                     unitName === line.implementing_agency ||
+                     // Try partial matching for long agency names
+                     (unitName && line.implementing_agency.includes(unitName)) ||
+                     (unitName && unitName.includes(line.implementing_agency)) ||
+                     (m.unit && line.implementing_agency.includes(m.unit)) ||
+                     (m.unit && m.unit.includes(line.implementing_agency));
+            });
             monadaId = monada ? parseInt(monada.id) : null;
             console.log(`[Projects] Found monada_id: ${monadaId} for agency: ${line.implementing_agency}`);
             if (!monada) {
@@ -635,28 +640,66 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
 
           // Find kallikratis ID from region hierarchy
           if (line.region) {
+            console.log(`[Projects] DEBUG: Looking for kallikratis with region:`, line.region);
+            
             if (line.region.kallikratis_id) {
               // Use provided kallikratis_id
               kallikratisId = line.region.kallikratis_id;
               console.log(`[Projects] Using provided kallikratis_id: ${kallikratisId}`);
             } else {
               // Try to find kallikratis entry by matching region hierarchy
-              const kallikratis = kallikratisData.find(k => 
+              console.log(`[Projects] DEBUG: Searching kallikratis with criteria:`, {
+                perifereia: line.region.perifereia,
+                perifereiaki_enotita: line.region.perifereiaki_enotita,
+                onoma_neou_ota: line.region.dimos,
+                onoma_dimotikis_enotitas: line.region.dimotiki_enotita
+              });
+              
+              // First try exact match
+              let kallikratis = kallikratisData.find(k => 
                 k.perifereia === line.region.perifereia && 
                 k.perifereiaki_enotita === line.region.perifereiaki_enotita &&
                 k.onoma_neou_ota === line.region.dimos &&
                 k.onoma_dimotikis_enotitas === line.region.dimotiki_enotita
               );
+              
+              // If no exact match and no municipal community specified, try matching without it
+              if (!kallikratis && !line.region.dimotiki_enotita) {
+                kallikratis = kallikratisData.find(k => 
+                  k.perifereia === line.region.perifereia && 
+                  k.perifereiaki_enotita === line.region.perifereiaki_enotita &&
+                  k.onoma_neou_ota === line.region.dimos
+                );
+                console.log(`[Projects] DEBUG: Trying municipal match without dimotiki_enotita`);
+              }
+              
+              // If still no match, try regional unit level
+              if (!kallikratis) {
+                kallikratis = kallikratisData.find(k => 
+                  k.perifereia === line.region.perifereia && 
+                  k.perifereiaki_enotita === line.region.perifereiaki_enotita
+                );
+                console.log(`[Projects] DEBUG: Trying regional unit level match`);
+              }
+              
               kallikratisId = kallikratis?.id || null;
               console.log(`[Projects] Lookup found kallikratis_id: ${kallikratisId}`);
+              if (kallikratis) {
+                console.log(`[Projects] DEBUG: Matched kallikratis:`, kallikratis);
+              } else {
+                console.log(`[Projects] WARNING: No kallikratis match found`);
+              }
             }
           }
 
-          // Create project_index entries if we have essential values (relaxed requirement)
-          if (eventTypeId && kallikratisId) {
+          // Create project_index entries if we have essential values (very relaxed requirement)
+          if (eventTypeId) {
             console.log(`[Projects] Creating project_index entry with eventTypeId: ${eventTypeId}, monadaId: ${monadaId}, kallikratisId: ${kallikratisId}`);
             if (!monadaId) {
               console.log(`[Projects] WARNING: Proceeding without monada_id - may need manual correction`);
+            }
+            if (!kallikratisId) {
+              console.log(`[Projects] WARNING: Proceeding without kallikratis_id - may need manual geographic assignment`);
             }
             // Find expenditure type IDs (multiple values)
             if (line.expenditure_types && Array.isArray(line.expenditure_types) && line.expenditure_types.length > 0) {
@@ -698,13 +741,15 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                   const indexEntry: any = {
                     project_id: updatedProject.id,
                     event_types_id: eventTypeId,
-                    expediture_type_id: expenditureTypeId,
-                    kallikratis_id: kallikratisId
+                    expediture_type_id: expenditureTypeId
                   };
                   
-                  // Only add monada_id if it's not null
+                  // Only add optional fields if they're not null
                   if (monadaId !== null) {
                     indexEntry.monada_id = monadaId;
+                  }
+                  if (kallikratisId !== null) {
+                    indexEntry.kallikratis_id = kallikratisId;
                   }
                   
                   // Add geographic code if available
@@ -757,13 +802,15 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                 const indexEntry: any = {
                   project_id: updatedProject.id,
                   event_types_id: eventTypeId,
-                  expediture_type_id: defaultExpenditureType.id,
-                  kallikratis_id: kallikratisId
+                  expediture_type_id: defaultExpenditureType.id
                 };
                 
-                // Only add monada_id if it's not null
+                // Only add optional fields if they're not null
                 if (monadaId !== null) {
                   indexEntry.monada_id = monadaId;
+                }
+                if (kallikratisId !== null) {
+                  indexEntry.kallikratis_id = kallikratisId;
                 }
                 
                 // Add geographic code if available
