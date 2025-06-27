@@ -127,7 +127,14 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### June 27, 2025 - Simplified Geographic Code System Implementation
+### June 27, 2025 - Project History Table Implementation & Geographic Code System
+- **Successfully implemented complete project_history table** with exact SQL structure specification
+- Created and populated project_history table with 195 historical entries from existing Projects data
+- Established comprehensive audit trail system for tracking project changes and decisions over time
+- Project history captures: decision documents (KYA, FEK, ADA), budget allocations, event tracking, project status evolution
+- Automated data transformation from Projects table JSONB fields to structured history format
+- Foreign key relationships properly established with CASCADE delete for data integrity
+- Performance indexes created for project_id, created_at, event_name, and project_status fields
 - Successfully connected comprehensive edit form to Supabase database with service key authentication
 - Implemented intelligent geographic level detection using only `geographic_code` field with automatic level determination:
   - **Municipal Community** (Δημοτική Ενότητα): Uses `kodikos_dimotikis_enotitas` when both municipality and municipal community are specified
