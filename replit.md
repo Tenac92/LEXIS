@@ -127,6 +127,19 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### June 27, 2025 - Geographic Level Storage Implementation & Advanced Kallikratis Code Management
+- Successfully connected comprehensive edit form to Supabase database with service key authentication
+- Implemented three-tier geographic level system: Municipal Level, Regional Unit Level, Regional Level
+- Added conditional form fields that hide municipality/municipal community for regional projects
+- Enhanced kallikratis lookup logic to use appropriate codes based on geographic scope:
+  - Municipal Level: Uses kodikos_dimotikis_enotitas (most granular)
+  - Regional Unit Level: Uses kodikos_perifereiakis_enotitas (regional unit scope)
+  - Regional Level: Uses kodikos_perifereias (region-wide scope)
+- Updated backend logic to calculate and store appropriate geographic codes for data retrieval at correct scope
+- Prepared schema changes for geographic_level and geographic_code columns in project_index table
+- Form validation now requires municipality only for municipal level projects, enabling flexible geographic scoping
+- Enhanced project_index update logic to store level-specific codes for optimized data filtering and retrieval
+
 ### June 26, 2025 - Location Entry Database Connection Implementation & Data Persistence Fix
 - Connected Location Entry fields in comprehensive edit to project_index table
 - Added project_index, event_types, expenditure_types, and kallikratis table definitions to shared schema
