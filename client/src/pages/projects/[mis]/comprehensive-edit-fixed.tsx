@@ -100,7 +100,7 @@ const comprehensiveProjectSchema = z.object({
     eligible_public_expense: z.string().default(""),
     decision_status: z.enum(["Ενεργή", "Ανενεργή"]).default("Ενεργή"),
     change_type: z.enum(["Τροποποίηση", "Παράταση", "Έγκριση"]).default("Έγκριση"),
-    connected_decisions: z.string().default(""),
+    connected_decisions: z.array(z.string()).default([]),
     comments: z.string().default(""),
   })).default([]),
   
@@ -128,7 +128,7 @@ export default function ComprehensiveEditFixed() {
       location_details: [{ municipal_community: "", municipality: "", regional_unit: "", region: "", implementing_agency: "", expenditure_types: [] }],
       project_details: { mis: "", sa: "", enumeration_code: "", inclusion_year: "", project_title: "", project_description: "", summary_description: "", expenses_executed: "", project_status: "Συμπληρωμένο" },
       previous_entries: [],
-      formulation_details: [{ sa: "ΝΑ853", enumeration_code: "", protocol_number: "", ada: "", decision_year: "", project_budget: "", epa_version: "", total_public_expense: "", eligible_public_expense: "", decision_status: "Ενεργή", change_type: "Έγκριση", connected_decisions: "", comments: "" }],
+      formulation_details: [{ sa: "ΝΑ853", enumeration_code: "", protocol_number: "", ada: "", decision_year: "", project_budget: "", epa_version: "", total_public_expense: "", eligible_public_expense: "", decision_status: "Ενεργή", change_type: "Έγκριση", connected_decisions: [], comments: "" }],
       changes: [{ description: "" }],
     },
   });
@@ -162,10 +162,31 @@ export default function ComprehensiveEditFixed() {
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
       console.log("Sending comprehensive form data:", data);
-      return await apiRequest(`/api/projects/${mis}`, {
+      
+      // Transform the data to match backend expectations
+      const transformedData = {
+        ...data,
+        project_details: {
+          ...data.project_details,
+          mis: mis, // Ensure MIS is set correctly
+        }
+      };
+      
+      // Use fetch directly to ensure proper formatting
+      const response = await fetch(`/api/projects/${mis}`, {
         method: "PATCH",
-        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(transformedData),
       });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      return await response.json();
     },
     onSuccess: () => {
       toast({
@@ -326,7 +347,7 @@ export default function ComprehensiveEditFixed() {
             eligible_public_expense: detail.eligible_public_expense || project.budget_e069.toString(),
             decision_status: detail.decision_status || "Ενεργή" as const,
             change_type: detail.change_type || "Έγκριση" as const,
-            connected_decisions: detail.connected_decisions || "",
+            connected_decisions: Array.isArray(detail.connected_decisions) ? detail.connected_decisions : [],
             comments: detail.comments || "",
           });
         });
@@ -344,7 +365,7 @@ export default function ComprehensiveEditFixed() {
           eligible_public_expense: project.budget_e069.toString(),
           decision_status: "Ενεργή" as const,
           change_type: "Έγκριση" as const,
-          connected_decisions: "",
+          connected_decisions: [],
           comments: "",
         });
       }
@@ -363,7 +384,7 @@ export default function ComprehensiveEditFixed() {
           eligible_public_expense: "",
           decision_status: "Ενεργή" as const,
           change_type: "Έγκριση" as const,
-          connected_decisions: "",
+          connected_decisions: [],
           comments: "",
         });
       }
