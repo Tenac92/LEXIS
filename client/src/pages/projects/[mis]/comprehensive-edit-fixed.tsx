@@ -1083,35 +1083,44 @@ export default function ComprehensiveEditFixed() {
                           />
                         </div>
                         
-                        {/* Connected Decisions Field */}
+                        {/* Connected Decisions Field - Multiple Selection */}
                         <div className="mt-3">
-                          <FormField
-                            control={form.control}
-                            name={`formulation_details.${index}.connected_decisions`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">Αποφάσεις που συνδέονται</FormLabel>
-                                <FormControl>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="text-sm">
-                                      <SelectValue placeholder="Επιλέξτε συνδεδεμένη απόφαση από την Ενότητα 1" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {form.watch("decisions").map((decision, decisionIndex) => {
-                                        if (!decision.protocol_number && !decision.fek && !decision.ada) return null;
-                                        const displayText = `${decision.protocol_number || 'Χωρίς ΚΥΑ'} | ${decision.fek || 'Χωρίς ΦΕΚ'} | ${decision.ada || 'Χωρίς ΑΔΑ'}`;
-                                        return (
-                                          <SelectItem key={decisionIndex} value={displayText}>
-                                            {displayText}
-                                          </SelectItem>
-                                        );
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                              </FormItem>
+                          <FormLabel className="text-xs font-medium mb-2 block">Αποφάσεις που συνδέονται</FormLabel>
+                          <div className="space-y-2 max-h-32 overflow-y-auto">
+                            {form.watch("decisions").map((decision, decisionIndex) => {
+                              if (!decision.protocol_number && !decision.fek && !decision.ada) return null;
+                              const displayText = `${decision.protocol_number || 'Χωρίς ΚΥΑ'} | ${decision.fek || 'Χωρίς ΦΕΚ'} | ${decision.ada || 'Χωρίς ΑΔΑ'}`;
+                              const decisionId = `${decisionIndex}-${decision.protocol_number}-${decision.fek}-${decision.ada}`;
+                              
+                              return (
+                                <div key={decisionIndex} className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`connected-${index}-${decisionIndex}`}
+                                    checked={form.watch(`formulation_details.${index}.connected_decisions`)?.includes(decisionId) || false}
+                                    onChange={(e) => {
+                                      const current = form.getValues(`formulation_details.${index}.connected_decisions`) || [];
+                                      if (e.target.checked) {
+                                        form.setValue(`formulation_details.${index}.connected_decisions`, [...current, decisionId]);
+                                      } else {
+                                        form.setValue(`formulation_details.${index}.connected_decisions`, current.filter(id => id !== decisionId));
+                                      }
+                                    }}
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <label htmlFor={`connected-${index}-${decisionIndex}`} className="text-xs text-gray-700 cursor-pointer">
+                                    {displayText}
+                                  </label>
+                                  {form.watch(`formulation_details.${index}.connected_decisions`)?.includes(decisionId) && (
+                                    <CheckCircle className="h-3 w-3 text-green-500" />
+                                  )}
+                                </div>
+                              );
+                            })}
+                            {form.watch("decisions").every(d => !d.protocol_number && !d.fek && !d.ada) && (
+                              <p className="text-xs text-gray-500">Δεν υπάρχουν διαθέσιμες αποφάσεις από την Ενότητα 1</p>
                             )}
-                          />
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1125,7 +1134,7 @@ export default function ComprehensiveEditFixed() {
                           const currentFormulation = form.getValues("formulation_details");
                           form.setValue("formulation_details", [
                             ...currentFormulation,
-                            { sa: "ΝΑ853" as const, enumeration_code: "", protocol_number: "", ada: "", decision_year: "", project_budget: "", epa_version: "", total_public_expense: "", eligible_public_expense: "", decision_status: "Ενεργή" as const, change_type: "Έγκριση" as const, connected_decisions: "", comments: "" }
+                            { sa: "ΝΑ853" as const, enumeration_code: "", protocol_number: "", ada: "", decision_year: "", project_budget: "", epa_version: "", total_public_expense: "", eligible_public_expense: "", decision_status: "Ενεργή" as const, change_type: "Έγκριση" as const, connected_decisions: [], comments: "" }
                           ]);
                         }}
                         className="text-sm"
