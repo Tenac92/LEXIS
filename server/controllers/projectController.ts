@@ -454,16 +454,27 @@ router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
       return res.json([]);
     }
     
-    // Return projects directly without strict validation to avoid schema issues
+    // Return projects with proper formatting (manually constructed to avoid type errors)
     const formattedProjects = projects.map(project => {
-      // Basic safety formatting without strict validation
       return {
-        ...project,
+        id: project.id,
         mis: project.mis?.toString() || '',
-        status: project.status || 'pending',
+        e069: project.e069 || '',
+        na271: project.na271 || '',
+        na853: project.na853 || '',
+        event_description: project.event_description || '',
+        project_title: project.project_title || '',
+        event_year: project.event_year || [],
+        budget_e069: project.budget_e069 || 0,
+        budget_na271: project.budget_na271 || 0,
         budget_na853: project.budget_na853 || 0,
-        implementing_agency: Array.isArray(project.implementing_agency) ? project.implementing_agency : [],
-        expenditure_type: Array.isArray(project.expenditure_type) ? project.expenditure_type : []
+        status: project.status || 'pending',
+        event_type_id: project.event_type_id || null,
+        created_at: project.created_at,
+        updated_at: project.updated_at,
+        // Fields that were removed but frontend expects
+        implementing_agency: [],
+        expenditure_type: []
       };
     });
     
@@ -516,7 +527,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       });
     }
 
-    // Conservative update - only use fields we know exist based on working GET endpoints
+    // Conservative update - only use fields we know exist based on actual database structure
     const fieldsToUpdate: any = {};
     
     // Core text fields that definitely exist
@@ -533,8 +544,11 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     if (updateData.budget_na271 !== undefined) fieldsToUpdate.budget_na271 = updateData.budget_na271;
     if (updateData.budget_na853 !== undefined) fieldsToUpdate.budget_na853 = updateData.budget_na853;
     
-    // Status if provided
+    // Status if provided (text field)
     if (updateData.status) fieldsToUpdate.status = updateData.status;
+    
+    // Event year as JSONB array (matches database structure)
+    if (updateData.event_year) fieldsToUpdate.event_year = [updateData.event_year];
     
     // Always update timestamp
     fieldsToUpdate.updated_at = new Date().toISOString();

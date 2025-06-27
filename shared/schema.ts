@@ -82,31 +82,20 @@ export const projectCatalog = pgTable("project_catalog", {
  */
 export const projects = pgTable("Projects", {
   id: serial("id").primaryKey(),
-  mis: integer("mis").unique(), // Legacy field, no longer primary identifier
+  mis: integer("mis").unique(),
   e069: text("e069"),
-  na271: text("na271"),
-  na853: text("na853").notNull().unique(), // Main project code users see
-  event_description: text("event_description").notNull().unique(), // Main description users see
+  na271: text("na271"), 
+  na853: text("na853").notNull().unique(),
+  event_description: text("event_description").notNull().unique(),
   project_title: text("project_title"),
-  event_type: jsonb("event_type").default([]),
   event_year: jsonb("event_year").default([]),
-  region: jsonb("region").default({}),
-  implementing_agency: jsonb("implementing_agency").default([]),
-  expenditure_type: jsonb("expenditure_type").default([]),
-  kya: jsonb("kya"),
-  fek: jsonb("fek"),
-  ada: jsonb("ada"),
-  ada_import_sana271: jsonb("ada_import_sana271"),
-  ada_import_sana853: jsonb("ada_import_sana853"),
-  budget_decision: jsonb("budget_decision"),
-  funding_decision: jsonb("funding_decision"),
-  allocation_decision: jsonb("allocation_decision"),
   budget_e069: decimal("budget_e069", { precision: 12, scale: 2 }),
   budget_na271: decimal("budget_na271", { precision: 12, scale: 2 }),
   budget_na853: decimal("budget_na853", { precision: 12, scale: 2 }),
   status: text("status"),
-  created_at: date("created_at"),
-  updated_at: date("updated_at"),
+  event_type_id: integer("event_type_id"),
+  created_at: timestamp("created_at"),
+  updated_at: timestamp("updated_at"),
 });
 
 /**

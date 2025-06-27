@@ -127,23 +127,23 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### June 27, 2025 - Comprehensive Edit Form Database Integration Fix
-- **Fixed complete project_index table data persistence issues**
-- Resolved expenditure type matching with improved parsing (ID vs string comparison)
-- Enhanced implementing agency matching to handle object-type unit_name structures
-- Added comprehensive kallikratis geographic lookup with multiple fallback strategies
-- **Complete data transformation pipeline between frontend form and backend database**
-- Frontend now sends properly mapped project data including core fields, budget data, and document fields
-- Backend processes both comprehensive form format and legacy formats for compatibility
-- **Relaxed validation requirements for project_index entries - only requires event_type_id**
-- Added extensive debugging throughout data matching and transformation process
-- **Fixed form data structure to properly save:**
-  - Core project information (title, description, status)
-  - Budget fields (E069, NA271, NA853)
-  - Document fields (KYA, FEK, ADA) from decisions
-  - Location details with geographic hierarchy
-  - Implementing agencies with partial matching
-  - Multiple expenditure types per location
+### June 27, 2025 - Complete Database Schema Alignment & Project Update Fix
+- **CRITICAL FIX: Resolved database schema cache mismatch between shared/schema.ts and actual Supabase database**
+- Discovered that document fields (ada, kya, fek, ada_import_sana271, ada_import_sana853) were removed from Projects table but still referenced in code
+- Used direct database introspection to identify actual Projects table structure: 15 fields including id, mis, e069, na271, na853, event_description, project_title, event_year, budget fields, status, event_type_id, timestamps
+- **Updated shared/schema.ts Projects table definition to match actual Supabase database:**
+  - Removed non-existent JSONB fields: event_type, region, implementing_agency, expenditure_type, kya, fek, ada, ada_import_sana271, ada_import_sana853, budget_decision, funding_decision, allocation_decision
+  - Kept actual fields: id, mis, e069, na271, na853, event_description, project_title, event_year (JSONB), budget fields, status, event_type_id, timestamps
+- **Fixed backend project update logic to only use confirmed database fields**
+- Conservative update approach: only updates fields that exist in actual database structure
+- Enhanced type safety by manually constructing response objects instead of object spreading
+- Proper JSONB array handling for event_year field matching database format
+- **Eliminated schema cache errors (PGRST204) by aligning code with actual database structure**
+- Fixed complete project_index table data persistence with proper foreign key relationships
+- Enhanced implementing agency matching and kallikratis geographic lookup with multiple fallback strategies
+- **Form now properly saves core project data:** title, description, status, budget fields, event year
+- Document fields (KYA, FEK, ADA) handled separately as they don't exist in Projects table anymore
+- Complete data transformation pipeline between comprehensive form and aligned database schema
 
 ### June 27, 2025 - Critical React Hooks Fix & Comprehensive Form Restoration
 - **CRITICAL FIX: Resolved "Rendered more hooks than during the previous render" error**
