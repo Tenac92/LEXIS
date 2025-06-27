@@ -55,6 +55,7 @@ const comprehensiveProjectSchema = z.object({
     region: z.string().min(1, "Η περιφέρεια είναι υποχρεωτική"),
     implementing_agency: z.string().min(1, "Ο φορέας υλοποίησης είναι υποχρεωτικός"),
     expenditure_types: z.array(z.string()).min(1, "Απαιτείται τουλάχιστον ένας τύπος δαπάνης"),
+    geographic_level: z.enum(["region", "regional_unit", "municipality"]).default("municipality"),
   })).min(1, "Απαιτείται τουλάχιστον μία τοποθεσία"),
   
   // Section 3: Project details
@@ -308,13 +309,28 @@ export default function ComprehensiveEditNew() {
           const kallikratis = entry.kallikratis || {};
           console.log('Processing kallikratis data:', kallikratis);
           
+          // Determine geographic level based on kallikratis_id and data completeness
+          let geographicLevel = "municipality"; // default
+          
+          if (entry.kallikratis_id === 1 || entry.kallikratis_id === 1001) {
+            // Special IDs for regional/regional unit level projects
+            if (!kallikratis.onoma_neou_ota || kallikratis.onoma_neou_ota === "") {
+              geographicLevel = "region"; // Region-wide project
+            } else {
+              geographicLevel = "regional_unit"; // Regional unit-wide project
+            }
+          } else if (!kallikratis.onoma_dimotikis_enotitas || kallikratis.onoma_dimotikis_enotitas === "") {
+            geographicLevel = "regional_unit"; // No municipal community = regional unit level
+          }
+          
           locationGroups.set(key, {
             municipal_community: kallikratis.onoma_dimotikis_enotitas || "",
             municipality: kallikratis.onoma_neou_ota || "",
             regional_unit: kallikratis.perifereiaki_enotita || "",
             region: kallikratis.perifereia || "",
             implementing_agency: entry.unit_name || "",
-            expenditure_types: []
+            expenditure_types: [],
+            geographic_level: geographicLevel
           });
         }
         
@@ -343,7 +359,8 @@ export default function ComprehensiveEditNew() {
           regional_unit: "",
           region: "",
           implementing_agency: defaultImplementingAgency,
-          expenditure_types: []
+          expenditure_types: [],
+          geographic_level: "municipality"
         });
         console.log('No valid location details found, added empty entry');
       }
@@ -363,7 +380,8 @@ export default function ComprehensiveEditNew() {
         regional_unit: "",
         region: "",
         implementing_agency: defaultImplementingAgency,
-        expenditure_types: []
+        expenditure_types: [],
+        geographic_level: "municipality"
       }]);
       console.log('Default location entry created with implementing agency:', defaultImplementingAgency);
     }
@@ -382,7 +400,15 @@ export default function ComprehensiveEditNew() {
 
   const addLocationDetail = () => {
     const current = form.getValues("location_details");
-    form.setValue("location_details", [...current, { municipal_community: "", municipality: "", regional_unit: "", region: "", implementing_agency: "", expenditure_types: [] }]);
+    form.setValue("location_details", [...current, { 
+      municipal_community: "", 
+      municipality: "", 
+      regional_unit: "", 
+      region: "", 
+      implementing_agency: "", 
+      expenditure_types: [],
+      geographic_level: "municipality"
+    }]);
   };
 
   const removeLocationDetail = (index: number) => {
