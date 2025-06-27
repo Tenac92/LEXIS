@@ -127,18 +127,18 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### June 27, 2025 - Geographic Level Storage Implementation & Advanced Kallikratis Code Management
+### June 27, 2025 - Simplified Geographic Code System Implementation
 - Successfully connected comprehensive edit form to Supabase database with service key authentication
-- Implemented three-tier geographic level system: Municipal Level, Regional Unit Level, Regional Level
-- Added conditional form fields that hide municipality/municipal community for regional projects
-- Enhanced kallikratis lookup logic to use appropriate codes based on geographic scope:
-  - Municipal Level: Uses kodikos_dimotikis_enotitas (most granular)
-  - Regional Unit Level: Uses kodikos_perifereiakis_enotitas (regional unit scope)
-  - Regional Level: Uses kodikos_perifereias (region-wide scope)
-- Updated backend logic to calculate and store appropriate geographic codes for data retrieval at correct scope
-- Prepared schema changes for geographic_level and geographic_code columns in project_index table
-- Form validation now requires municipality only for municipal level projects, enabling flexible geographic scoping
-- Enhanced project_index update logic to store level-specific codes for optimized data filtering and retrieval
+- Implemented intelligent geographic level detection using only `geographic_code` field with automatic level determination:
+  - **6 digits** (e.g., 900101): Municipal level using `kodikos_dimotikis_enotitas`
+  - **3 digits** (e.g., 101): Regional unit level using `kodikos_perifereiakis_enotitas`
+  - **1 digit** (e.g., 1): Regional level using `kodikos_perifereias`
+- Removed geographic level selector - system automatically determines level based on completed location fields
+- Enhanced kallikratis lookup logic to calculate appropriate codes based on available location data hierarchy
+- Updated backend logic to store correct geographic codes for optimal data retrieval at appropriate administrative levels
+- Form now supports flexible geographic entry: users fill location details to desired level (region → regional unit → municipality → community)
+- Database confirmed working with `geographic_code` column successfully storing level-specific administrative codes
+- Simplified user experience eliminates manual level selection while maintaining full geographic scope functionality
 
 ### June 26, 2025 - Location Entry Database Connection Implementation & Data Persistence Fix
 - Connected Location Entry fields in comprehensive edit to project_index table

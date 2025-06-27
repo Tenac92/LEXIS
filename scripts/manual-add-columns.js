@@ -13,14 +13,13 @@ async function testAndAddColumns() {
   try {
     console.log('Testing insertion with geographic columns...');
     
-    // Try to insert a test entry with the new columns
+    // Try to insert a test entry with the new column
     const testEntry = {
       project_id: 1,
       monada_id: 1,
       kallikratis_id: 1,
       event_types_id: 10,
       expediture_type_id: 1,
-      geographic_level: 'municipality',
       geographic_code: 900101
     };
     
