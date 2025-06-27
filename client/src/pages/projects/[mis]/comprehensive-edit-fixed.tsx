@@ -928,6 +928,18 @@ export default function ComprehensiveEditFixed() {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={form.control}
+                      name="project_details.project_description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Περιγραφή Έργου</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Εισάγετε την περιγραφή του έργου" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
                     <div className="col-span-2">
                       <FormField
                         control={form.control}
@@ -936,21 +948,7 @@ export default function ComprehensiveEditFixed() {
                           <FormItem>
                             <FormLabel>Τίτλος Έργου</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="Εισάγετε τον τίτλο του έργου" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <FormField
-                        control={form.control}
-                        name="project_details.project_description"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Περιγραφή Έργου</FormLabel>
-                            <FormControl>
-                              <Textarea {...field} placeholder="Εισάγετε την περιγραφή του έργου" rows={3} />
+                              <Textarea {...field} placeholder="Εισάγετε τον τίτλο του έργου" rows={3} />
                             </FormControl>
                           </FormItem>
                         )}
