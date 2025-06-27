@@ -127,6 +127,22 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### June 27, 2025 - Critical React Hooks Fix & Comprehensive Form Restoration
+- **CRITICAL FIX: Resolved "Rendered more hooks than during the previous render" error**
+- Restructured comprehensive edit component to follow React hooks rules by calling all hooks unconditionally
+- Created comprehensive-edit-fixed.tsx with proper component architecture preventing crashes
+- Restored complete 3-section comprehensive form functionality with all data fields
+- Enhanced data initialization from project_history architecture and legacy project fields
+- **Form Features Restored:**
+  - Section 1: Complete decisions documentation with dynamic add/remove functionality
+  - Section 2: Event details with proper dropdown selections
+  - Section 3: Full project details with title, description, and metadata
+  - Proper form validation and data persistence
+  - Compact, professional UI design with gradient headers and organized layouts
+- Form now loads successfully without crashes and displays all existing project data
+- Connected decisions feature between sections maintained
+- All Select components properly populated with real database data
+
 ### June 27, 2025 - Connected Decisions System Implementation & SelectItem Error Fix
 - **Implemented dynamic decision connection system in comprehensive edit form**
 - Connected "Αποφάσεις που συνδέονται" field in "Στοιχεία κατάρτισης έργου" to Section 1 decisions

@@ -189,9 +189,215 @@ export default function ComprehensiveEditFixed() {
   useEffect(() => {
     if (projectData) {
       console.log('Initializing form with project data:', projectData);
-      // Form initialization logic here
+      console.log('Project index data:', projectIndexData);
+      const project = projectData;
+
+      // Initialize decisions from project data and decision_data from project_history
+      const decisions = [];
+      
+      // Check if we have decision_data from project_history (new architecture)
+      if (project.decision_data && Array.isArray(project.decision_data) && project.decision_data.length > 0) {
+        console.log('Loading decisions from project_history decision_data:', project.decision_data);
+        project.decision_data.forEach((decision, i) => {
+          decisions.push({
+            protocol_number: decision.kya || "",
+            fek: decision.fek || "",
+            ada: decision.ada || "",
+            implementing_agency: decision.implementing_agency || "",
+            decision_budget: decision.budget_decision || "",
+            expenses_covered: decision.expenses_covered || "",
+            decision_type: decision.decision_type || "Έγκριση" as const,
+            is_included: decision.is_included !== undefined ? decision.is_included : true,
+            comments: decision.comments || "",
+          });
+        });
+      } else {
+        // Fallback to legacy fields if no project_history data exists
+        console.log('Loading decisions from legacy project fields');
+        
+        // Parse arrays from legacy fields
+        const kya = project.decisions?.kya || [];
+        const fek = project.decisions?.fek || [];
+        const ada = project.decisions?.ada || [];
+        
+        const maxLength = Math.max(kya.length, fek.length, ada.length, 1);
+        
+        for (let i = 0; i < maxLength; i++) {
+          decisions.push({
+            protocol_number: kya[i] || "",
+            fek: fek[i] || "",
+            ada: ada[i] || "",
+            implementing_agency: project.enhanced_unit?.name || "",
+            decision_budget: "",
+            expenses_covered: "",
+            decision_type: "Έγκριση" as const,
+            is_included: true,
+            comments: "",
+          });
+        }
+      }
+
+      // If no decisions exist, create default entry
+      if (decisions.length === 0) {
+        decisions.push({
+          protocol_number: "",
+          fek: "",
+          ada: "",
+          implementing_agency: project.enhanced_unit?.name || "",
+          decision_budget: "",
+          expenses_covered: "",
+          decision_type: "Έγκριση" as const,
+          is_included: true,
+          comments: "",
+        });
+      }
+
+      // Initialize location details from project_index data
+      const locationDetails = [];
+      
+      if (projectIndexData && projectIndexData.length > 0) {
+        console.log('No project index data available, initializing with default location details');
+        
+        // Group by kallikratis_id and monada_id to create location entries
+        const grouped = projectIndexData.reduce((acc, entry) => {
+          const key = `${entry.kallikratis_id}-${entry.monada_id}`;
+          if (!acc[key]) {
+            acc[key] = {
+              kallikratis_id: entry.kallikratis_id,
+              monada_id: entry.monada_id,
+              expenditure_types: []
+            };
+          }
+          if (entry.expediture_type_id) {
+            acc[key].expenditure_types.push(entry.expediture_type_id.toString());
+          }
+          return acc;
+        }, {});
+
+        Object.values(grouped).forEach((group: any) => {
+          // Find the kallikratis entry for this location
+          const kallikratisEntry = kallikratisData?.find(k => k.id === group.kallikratis_id);
+          const unit = unitsData?.find(u => u.id === group.monada_id);
+          
+          if (kallikratisEntry) {
+            locationDetails.push({
+              municipal_community: kallikratisEntry.onoma_dimotikis_enotitas || "",
+              municipality: kallikratisEntry.onoma_neou_ota || "",
+              regional_unit: kallikratisEntry.perifereiaki_enotita || "",
+              region: kallikratisEntry.perifereia || "",
+              implementing_agency: unit?.name || "",
+              expenditure_types: group.expenditure_types,
+            });
+          }
+        });
+      }
+
+      // If no location details exist, create default entry
+      if (locationDetails.length === 0) {
+        console.log('No project index data available, initializing with default location details');
+        const defaultImplementingAgency = project.enhanced_unit?.name || "";
+        console.log('Default location entry created with implementing agency:', defaultImplementingAgency);
+        
+        locationDetails.push({
+          municipal_community: project.enhanced_kallikratis?.onoma_dimotikis_enotitas || "",
+          municipality: project.enhanced_kallikratis?.onoma_neou_ota || "",
+          regional_unit: project.enhanced_kallikratis?.perifereiaki_enotita || "",
+          region: project.enhanced_kallikratis?.perifereia || "",
+          implementing_agency: defaultImplementingAgency,
+          expenditure_types: project.enhanced_expenditure_type?.id ? [project.enhanced_expenditure_type.id.toString()] : [],
+        });
+      }
+
+      // Initialize formulation details
+      const formulation = [];
+
+      // Check if project has existing formulation details structure
+      if (project.formulation_details && Array.isArray(project.formulation_details) && project.formulation_details.length > 0) {
+        project.formulation_details.forEach((detail) => {
+          formulation.push({
+            sa: detail.sa || "ΝΑ853" as const,
+            enumeration_code: detail.enumeration_code || "",
+            protocol_number: detail.protocol_number || project.decisions?.kya?.[0] || "",
+            ada: detail.ada || project.decisions?.ada?.[0] || "",
+            decision_year: detail.decision_year || project.event_year?.[0] || "",
+            project_budget: detail.project_budget || project.budget_e069.toString(),
+            epa_version: detail.epa_version || "",
+            total_public_expense: detail.total_public_expense || project.budget_e069.toString(),
+            eligible_public_expense: detail.eligible_public_expense || project.budget_e069.toString(),
+            decision_status: detail.decision_status || "Ενεργή" as const,
+            change_type: detail.change_type || "Έγκριση" as const,
+            connected_decisions: detail.connected_decisions || "",
+            comments: detail.comments || "",
+          });
+        });
+      } else {
+        // Create default formulation details from project data
+        formulation.push({
+          sa: "ΝΑ853" as const,
+          enumeration_code: "",
+          protocol_number: project.decisions?.kya?.[0] || "",
+          ada: project.decisions?.ada?.[0] || "",
+          decision_year: project.event_year?.[0] || "",
+          project_budget: project.budget_e069.toString(),
+          epa_version: "",
+          total_public_expense: project.budget_e069.toString(),
+          eligible_public_expense: project.budget_e069.toString(),
+          decision_status: "Ενεργή" as const,
+          change_type: "Έγκριση" as const,
+          connected_decisions: "",
+          comments: "",
+        });
+      }
+
+      // If no decisions exist, create default entry
+      if (formulation.length === 0) {
+        formulation.push({
+          sa: "ΝΑ853" as const,
+          enumeration_code: "",
+          protocol_number: "",
+          ada: "",
+          decision_year: "",
+          project_budget: "",
+          epa_version: "",
+          total_public_expense: "",
+          eligible_public_expense: "",
+          decision_status: "Ενεργή" as const,
+          change_type: "Έγκριση" as const,
+          connected_decisions: "",
+          comments: "",
+        });
+      }
+
+      // Update form with initialized data
+      form.reset({
+        decisions,
+        event_details: {
+          event_name: project.enhanced_event_type?.name || "",
+          event_year: project.event_year?.[0] || "",
+        },
+        location_details: locationDetails,
+        project_details: {
+          mis: project.mis?.toString() || "",
+          sa: "ΝΑ853",
+          enumeration_code: "",
+          inclusion_year: project.event_year?.[0] || "",
+          project_title: project.project_title || "",
+          project_description: project.event_description || "",
+          summary_description: project.project_title || "",
+          expenses_executed: project.budget_e069?.toString() || "",
+          project_status: "Συμπληρωμένο" as const,
+        },
+        previous_entries: [],
+        formulation_details: formulation,
+        changes: [{ description: "" }],
+      });
+
+      // Check if project has previous entries
+      if (project.previous_entries && project.previous_entries.length > 0) {
+        setHasPreviousEntries(true);
+      }
     }
-  }, [projectData, form]);
+  }, [projectData, projectIndexData, kallikratisData, unitsData, form]);
 
   // Computed values
   const isLoading = projectLoading;
@@ -279,27 +485,275 @@ export default function ComprehensiveEditFixed() {
         <TabsContent value="edit" className="space-y-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              {/* Simple form for testing */}
-              <Card>
-                <CardHeader className="py-3">
+              
+              {/* Section 1: Decisions that document the project */}
+              <Card className="shadow-sm">
+                <CardHeader className="py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
                   <CardTitle className="text-base flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    Βασικά Στοιχεία
+                    1. Αποφάσεις που τεκμηριώνουν το έργο
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <FormField
-                    control={form.control}
-                    name="project_details.project_title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Τίτλος Έργου</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Εισάγετε τον τίτλο του έργου" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  <div className="space-y-3">
+                    {form.watch("decisions").map((_, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.protocol_number`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Αρ. Πρωτοκόλλου</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="ΚΥΑ" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.fek`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">ΦΕΚ</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="ΦΕΚ" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.ada`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">ΑΔΑ</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="ΑΔΑ" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.implementing_agency`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Φορέας υλοποίησης</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Επιλέξτε φορέα" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {unitsData?.map((unit) => (
+                                        <SelectItem key={unit.id} value={unit.name}>
+                                          {unit.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.decision_budget`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Προϋπολογισμός</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Ποσό €" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.decision_type`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Τύπος Απόφασης</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Έγκριση">Έγκριση</SelectItem>
+                                      <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
+                                      <SelectItem value="Παράταση">Παράταση</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const currentDecisions = form.getValues("decisions");
+                          form.setValue("decisions", [
+                            ...currentDecisions,
+                            { protocol_number: "", fek: "", ada: "", implementing_agency: "", decision_budget: "", expenses_covered: "", decision_type: "Έγκριση" as const, is_included: true, comments: "" }
+                          ]);
+                        }}
+                        className="text-sm"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Προσθήκη Απόφασης
+                      </Button>
+                      {form.watch("decisions").length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const currentDecisions = form.getValues("decisions");
+                            form.setValue("decisions", currentDecisions.slice(0, -1));
+                          }}
+                          className="text-sm"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Αφαίρεση
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Section 2: Event Details */}
+              <Card className="shadow-sm">
+                <CardHeader className="py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-gray-200">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    2. Στοιχεία Συμβάντος
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="event_details.event_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Τύπος Συμβάντος</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Επιλέξτε τύπο συμβάντος" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {eventTypesData?.map((eventType) => (
+                                  <SelectItem key={eventType.id} value={eventType.name}>
+                                    {eventType.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="event_details.event_year"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Έτος Συμβάντος</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="π.χ. 2024" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Section 3: Project Details */}
+              <Card className="shadow-sm">
+                <CardHeader className="py-3 bg-gradient-to-r from-purple-50 to-violet-50 border-b border-gray-200">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    3. Στοιχεία Έργου
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="project_details.mis"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>MIS</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="MIS κωδικός" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="project_details.inclusion_year"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Έτος Ένταξης</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="π.χ. 2024" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <div className="col-span-2">
+                      <FormField
+                        control={form.control}
+                        name="project_details.project_title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Τίτλος Έργου</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Εισάγετε τον τίτλο του έργου" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <FormField
+                        control={form.control}
+                        name="project_details.project_description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Περιγραφή Έργου</FormLabel>
+                            <FormControl>
+                              <Textarea {...field} placeholder="Εισάγετε την περιγραφή του έργου" rows={3} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
