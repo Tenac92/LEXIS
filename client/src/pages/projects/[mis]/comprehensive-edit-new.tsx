@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle } from "lucide-react";
+import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -125,30 +125,30 @@ export default function ComprehensiveEditNew() {
     },
   });
 
-  // Data queries
-  const { data: projectData } = useQuery({
+  // Data queries with loading states
+  const { data: projectData, isLoading: projectLoading, error: projectError } = useQuery({
     queryKey: [`/api/projects/${mis}`],
     enabled: !!mis,
   });
 
-  const { data: projectIndexData } = useQuery({
+  const { data: projectIndexData, isLoading: indexLoading } = useQuery({
     queryKey: [`/api/projects/${mis}/index`],
     enabled: !!mis,
   });
 
-  const { data: eventTypesData } = useQuery({
+  const { data: eventTypesData, isLoading: eventTypesLoading } = useQuery({
     queryKey: ["/api/event-types"],
   });
 
-  const { data: unitsData } = useQuery({
+  const { data: unitsData, isLoading: unitsLoading } = useQuery({
     queryKey: ["/api/public/units"],
   });
 
-  const { data: kallikratisData } = useQuery<KallikratisEntry[]>({
+  const { data: kallikratisData, isLoading: kallikratisLoading } = useQuery<KallikratisEntry[]>({
     queryKey: ["/api/kallikratis"],
   });
 
-  const { data: expenditureTypesData } = useQuery({
+  const { data: expenditureTypesData, isLoading: expenditureLoading } = useQuery({
     queryKey: ["/api/expenditure-types"],
   });
 
@@ -160,6 +160,66 @@ export default function ComprehensiveEditNew() {
   
   if (!kallikratisData || kallikratisData.length === 0) {
     console.log("No kallikratis data available");
+  }
+
+  // Loading state - show immediately if any critical data is loading
+  const isLoading = projectLoading || kallikratisLoading || eventTypesLoading;
+  const isDataReady = projectData && eventTypesData;
+
+  // Error handling
+  if (projectError) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-red-600 mb-2">Σφάλμα φόρτωσης</h3>
+              <p className="text-gray-600 mb-4">Δεν ήταν δυνατή η φόρτωση των στοιχείων του έργου.</p>
+              <Button onClick={() => window.location.reload()} variant="outline">
+                Επανάληψη
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoading || !isDataReady) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-blue-600 mb-4">Φόρτωση στοιχείων έργου...</h3>
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex items-center justify-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${projectData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Στοιχεία έργου {projectData ? '✓' : '...'}</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${eventTypesData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Τύποι συμβάντων {eventTypesData ? '✓' : '...'}</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${kallikratisData?.length > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Γεωγραφικά στοιχεία {kallikratisData?.length > 0 ? '✓' : '...'}</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${unitsData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Φορείς {unitsData ? '✓' : '...'}</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${expenditureTypesData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Τύποι δαπανών {expenditureTypesData ? '✓' : '...'}</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // Initialize form with project data
