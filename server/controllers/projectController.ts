@@ -516,66 +516,36 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       });
     }
 
-    // Map fields from comprehensive form to database fields
+    // Map fields from comprehensive form to database fields (matching actual schema)
     const fieldsToUpdate = {
-      // Core fields - handle both old and new format
-      project_title: updateData.project_title || updateData.title || existingProject.project_title,
+      // Core fields matching actual Projects table schema
+      project_title: updateData.project_title || existingProject.project_title,
       event_description: updateData.event_description || existingProject.event_description,
-      event_type: updateData.event_type || existingProject.event_type,
-      event_year: updateData.event_year || existingProject.event_year,
-      status: updateData.status || existingProject.status,
+      
+      // JSONB fields - handle arrays properly
+      event_type: updateData.event_type ? [updateData.event_type] : existingProject.event_type,
+      event_year: updateData.event_year ? [updateData.event_year] : existingProject.event_year,
       
       // Legacy fields maintained for compatibility
-      title: updateData.project_title || updateData.title || existingProject.title,
       e069: updateData.e069 || existingProject.e069,
       na271: updateData.na271 || existingProject.na271,
       na853: updateData.na853 || existingProject.na853,
-      region: updateData.region || existingProject.region,
-      implementing_agency: updateData.implementing_agency || existingProject.implementing_agency,
-      expenditure_type: updateData.expenditure_type || existingProject.expenditure_type,
       
       // Budget fields - only update if provided and valid
       budget_e069: updateData.budget_e069 !== undefined ? updateData.budget_e069 : existingProject.budget_e069,
       budget_na271: updateData.budget_na271 !== undefined ? updateData.budget_na271 : existingProject.budget_na271,
       budget_na853: updateData.budget_na853 !== undefined ? updateData.budget_na853 : existingProject.budget_na853,
       
+      // Document fields as JSONB arrays (matching schema)
+      kya: updateData.kya ? [updateData.kya] : existingProject.kya,
+      fek: updateData.fek ? [updateData.fek] : existingProject.fek,
+      ada: updateData.ada ? [updateData.ada] : existingProject.ada,
+      
       // Update timestamp
       updated_at: new Date().toISOString()
     };
 
     console.log(`[Projects] Fields to update for MIS ${mis}:`, fieldsToUpdate);
-
-    // Handle document data in project_history table if provided
-    let historyEntryCreated = false;
-    if (updateData.kya || updateData.fek || updateData.ada) {
-      console.log(`[Projects] Creating project_history entry for document data`);
-      
-      const historyEntry = {
-        project_id: existingProject.id,
-        change_type: 'update',
-        changed_by: req.user?.id || null,
-        change_description: 'Document fields updated via comprehensive edit form',
-        decision_data: JSON.stringify({
-          kya: updateData.kya,
-          fek: updateData.fek,
-          ada: updateData.ada,
-          protocol_number: updateData.kya,
-          updated_at: new Date().toISOString()
-        }),
-        created_at: new Date().toISOString()
-      };
-
-      const { error: historyError } = await supabase
-        .from('project_history')
-        .insert(historyEntry);
-
-      if (historyError) {
-        console.error(`[Projects] Error creating project_history entry:`, historyError);
-      } else {
-        console.log(`[Projects] Successfully created project_history entry`);
-        historyEntryCreated = true;
-      }
-    }
 
     // Perform the update
     const { data: updatedProject, error: updateError } = await supabase
@@ -922,7 +892,6 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       ...enhancedProject,
       updateSummary: {
         projectUpdated: true,
-        historyEntryCreated,
         projectIndexEntriesUpdated: updateData.project_lines ? updateData.project_lines.length > 0 : false,
         message: 'Project successfully updated with comprehensive form data'
       }
