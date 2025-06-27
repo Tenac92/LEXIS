@@ -43,19 +43,19 @@ const comprehensiveProjectSchema = z.object({
   
   // Section 2: Event details
   event_details: z.object({
-    event_name: z.string().default(""),
-    event_year: z.string().default(""),
+    event_name: z.string().min(1, "Ο τύπος συμβάντος είναι υποχρεωτικός"),
+    event_year: z.string().min(1, "Το έτος συμβάντος είναι υποχρεωτικό"),
   }).default({ event_name: "", event_year: "" }),
   
   // Section 2 Location details with cascading dropdowns
   location_details: z.array(z.object({
     municipal_community: z.string().default(""),
     municipality: z.string().default(""),
-    regional_unit: z.string().default(""),
-    region: z.string().default(""),
-    implementing_agency: z.string().default(""),
-    expenditure_types: z.array(z.string()).default([]),
-  })).default([]),
+    regional_unit: z.string().min(1, "Η περιφερειακή ενότητα είναι υποχρεωτική"),
+    region: z.string().min(1, "Η περιφέρεια είναι υποχρεωτική"),
+    implementing_agency: z.string().min(1, "Ο φορέας υλοποίησης είναι υποχρεωτικός"),
+    expenditure_types: z.array(z.string()).min(1, "Απαιτείται τουλάχιστον ένας τύπος δαπάνης"),
+  })).min(1, "Απαιτείται τουλάχιστον μία τοποθεσία"),
   
   // Section 3: Project details
   project_details: z.object({
@@ -604,13 +604,43 @@ export default function ComprehensiveEditNew() {
     console.log('Form is valid:', form.formState.isValid);
     console.log('Mutation is pending:', mutation.isPending);
     
-    if (!form.formState.isValid) {
-      console.error('Form validation failed:', form.formState.errors);
-      toast({ title: "Σφάλμα", description: "Παρακαλώ ελέγξτε τα πεδία της φόρμας", variant: "destructive" });
+    // Check for specific validation errors and show detailed messages
+    const errors = form.formState.errors;
+    if (Object.keys(errors).length > 0) {
+      console.error('Form validation failed with errors:', errors);
+      
+      // Create detailed error message
+      let errorMessage = "Παρακαλώ συμπληρώστε τα υποχρεωτικά πεδία:\n";
+      
+      if (errors.event_details?.event_name) {
+        errorMessage += "• Τύπος Συμβάντος\n";
+      }
+      if (errors.event_details?.event_year) {
+        errorMessage += "• Έτος Συμβάντος\n";
+      }
+      if (errors.location_details) {
+        errorMessage += "• Στοιχεία Τοποθεσίας\n";
+      }
+      if (errors.project_details) {
+        errorMessage += "• Στοιχεία Έργου\n";
+      }
+      
+      toast({ 
+        title: "Απαιτούνται επιπλέον στοιχεία", 
+        description: errorMessage,
+        variant: "destructive" 
+      });
+      
+      // Scroll to first error field
+      const firstErrorElement = document.querySelector('[data-invalid="true"]');
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
       return;
     }
     
-    console.log('Triggering mutation...');
+    console.log('Form validation passed, triggering mutation...');
     mutation.mutate(data);
   };
 
@@ -869,7 +899,7 @@ export default function ComprehensiveEditNew() {
                           <FormField
                             control={form.control}
                             name="event_details.event_name"
-                            render={({ field }) => (
+                            render={({ field, fieldState }) => (
                               <FormItem>
                                 <FormControl>
                                   <Select 
@@ -877,7 +907,10 @@ export default function ComprehensiveEditNew() {
                                     value={form.watch("event_details.event_name") || ""} 
                                     onValueChange={field.onChange}
                                   >
-                                    <SelectTrigger className="border-0">
+                                    <SelectTrigger 
+                                      className={`border-0 ${fieldState.error ? "bg-red-50 text-red-700" : ""}`}
+                                      data-invalid={fieldState.error ? "true" : "false"}
+                                    >
                                       <SelectValue placeholder="Επιλέξτε συμβάν" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -900,11 +933,19 @@ export default function ComprehensiveEditNew() {
                           <FormField
                             control={form.control}
                             name="event_details.event_year"
-                            render={({ field }) => (
+                            render={({ field, fieldState }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input {...field} className="border-0" placeholder="π.χ. 2024" />
+                                  <Input 
+                                    {...field} 
+                                    className={`border-0 ${fieldState.error ? "bg-red-50 text-red-700" : ""}`}
+                                    placeholder="π.χ. 2024"
+                                    data-invalid={fieldState.error ? "true" : "false"}
+                                  />
                                 </FormControl>
+                                {fieldState.error && (
+                                  <p className="text-red-600 text-xs mt-1">{fieldState.error.message}</p>
+                                )}
                               </FormItem>
                             )}
                           />
