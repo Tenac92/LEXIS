@@ -554,42 +554,48 @@ export default function ComprehensiveEditNew() {
           console.log('Municipal Community:', location.municipal_community);
           
           if (kallikratisData) {
+            // Clean up location data - treat "__clear__" as empty
+            const cleanMunicipality = location.municipality === "__clear__" ? "" : location.municipality;
+            const cleanMunicipalCommunity = location.municipal_community === "__clear__" ? "" : location.municipal_community;
+            const cleanRegionalUnit = location.regional_unit === "__clear__" ? "" : location.regional_unit;
+            const cleanRegion = location.region === "__clear__" ? "" : location.region;
+            
             // Determine geographic level automatically based on available location data
-            if (location.region && location.regional_unit && location.municipality && location.municipal_community) {
+            if (cleanRegion && cleanRegionalUnit && cleanMunicipality && cleanMunicipalCommunity) {
               // Municipal level with community - most specific (6 digits)
               console.log('Searching for Municipal Community level entry...');
               const municipalEntry = kallikratisData.find(entry =>
-                entry.perifereia === location.region &&
-                entry.perifereiaki_enotita === location.regional_unit &&
-                entry.onoma_neou_ota === location.municipality &&
-                entry.onoma_dimotikis_enotitas === location.municipal_community
+                entry.perifereia === cleanRegion &&
+                entry.perifereiaki_enotita === cleanRegionalUnit &&
+                entry.onoma_neou_ota === cleanMunicipality &&
+                entry.onoma_dimotikis_enotitas === cleanMunicipalCommunity
               );
               kallikratisId = municipalEntry?.id || null;
               console.log('Municipal level (with community) - kallikratis_id:', kallikratisId, 'found entry:', municipalEntry);
-            } else if (location.region && location.regional_unit && location.municipality) {
+            } else if (cleanRegion && cleanRegionalUnit && cleanMunicipality) {
               // Municipal level without community - use municipality code (6 digits)
               console.log('Searching for Municipality level entry...');
               const municipalEntry = kallikratisData.find(entry =>
-                entry.perifereia === location.region &&
-                entry.perifereiaki_enotita === location.regional_unit &&
-                entry.onoma_neou_ota === location.municipality
+                entry.perifereia === cleanRegion &&
+                entry.perifereiaki_enotita === cleanRegionalUnit &&
+                entry.onoma_neou_ota === cleanMunicipality
               );
               kallikratisId = municipalEntry?.id || null;
               console.log('Municipal level (municipality only) - kallikratis_id:', kallikratisId, 'found entry:', municipalEntry);
-            } else if (location.region && location.regional_unit) {
+            } else if (cleanRegion && cleanRegionalUnit) {
               // Regional unit level - use regional unit code (3 digits)
               console.log('Searching for Regional Unit level entry...');
               const regionalUnitEntry = kallikratisData.find(entry =>
-                entry.perifereia === location.region &&
-                entry.perifereiaki_enotita === location.regional_unit
+                entry.perifereia === cleanRegion &&
+                entry.perifereiaki_enotita === cleanRegionalUnit
               );
               kallikratisId = regionalUnitEntry?.id || null;
               console.log('Regional unit level - kallikratis_id:', kallikratisId, 'found entry:', regionalUnitEntry);
-            } else if (location.region) {
+            } else if (cleanRegion) {
               // Regional level - use region code (1 digit)
               console.log('Searching for Regional level entry...');
               const regionalEntry = kallikratisData.find(entry =>
-                entry.perifereia === location.region
+                entry.perifereia === cleanRegion
               );
               kallikratisId = regionalEntry?.id || null;
               console.log('Regional level - kallikratis_id:', kallikratisId, 'found entry:', regionalEntry);
@@ -603,10 +609,10 @@ export default function ComprehensiveEditNew() {
             event_type: data.event_details.event_name,
             expenditure_types: location.expenditure_types,
             region: {
-              perifereia: location.region,
-              perifereiaki_enotita: location.regional_unit,
-              dimos: location.municipality,
-              dimotiki_enotita: location.municipal_community,
+              perifereia: cleanRegion,
+              perifereiaki_enotita: cleanRegionalUnit,
+              dimos: cleanMunicipality,
+              dimotiki_enotita: cleanMunicipalCommunity,
               kallikratis_id: kallikratisId
             }
           };
