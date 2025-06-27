@@ -76,9 +76,9 @@ async function testSingleProjectEndpoint() {
   const project = projectRes.data;
   const historyData = historyRes.data;
   
-  // Verify essential fields are present
-  const essentialFields = ['id', 'mis', 'project_title', 'status'];
-  const missingFields = essentialFields.filter(field => !project[field]);
+  // Verify essential fields are present (allow null values for status)
+  const essentialFields = ['id', 'mis', 'project_title'];
+  const missingFields = essentialFields.filter(field => project[field] == null);
   
   if (missingFields.length > 0) {
     throw new Error(`Missing essential fields: ${missingFields.join(', ')}`);
@@ -268,8 +268,8 @@ async function testApiResponseStructure() {
     changes: historyData?.changes || []
   };
   
-  // Verify response structure
-  const requiredResponseFields = ['id', 'mis', 'project_title', 'status', 'decision_data'];
+  // Verify response structure (allow null status since it's nullable in database)
+  const requiredResponseFields = ['id', 'mis', 'project_title', 'decision_data'];
   const missingResponseFields = requiredResponseFields.filter(field => apiResponse[field] == null);
   
   if (missingResponseFields.length > 0) {
