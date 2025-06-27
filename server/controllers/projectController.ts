@@ -661,19 +661,19 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                     if (kallikratisEntry && line.region) {
                       // Determine geographic level automatically and get appropriate code
                       if (line.region.dimos && line.region.dimotiki_enotita) {
-                        // Municipal level with community (6 digits)
+                        // Municipal Community level - use kodikos_dimotikis_enotitas
                         geographicCode = kallikratisEntry.kodikos_dimotikis_enotitas;
-                        console.log(`[Projects] Municipal level (with community), Code: ${geographicCode}`);
+                        console.log(`[Projects] Municipal Community level, Code: ${geographicCode}`);
                       } else if (line.region.dimos) {
-                        // Municipal level (6 digits)
-                        geographicCode = kallikratisEntry.kodikos_dimotikis_enotitas;
-                        console.log(`[Projects] Municipal level, Code: ${geographicCode}`);
+                        // Municipality level - use kodikos_neou_ota
+                        geographicCode = kallikratisEntry.kodikos_neou_ota;
+                        console.log(`[Projects] Municipality level, Code: ${geographicCode}`);
                       } else if (line.region.perifereiaki_enotita) {
-                        // Regional unit level (3 digits)
+                        // Regional unit level - use kodikos_perifereiakis_enotitas
                         geographicCode = kallikratisEntry.kodikos_perifereiakis_enotitas;
                         console.log(`[Projects] Regional unit level, Code: ${geographicCode}`);
                       } else if (line.region.perifereia) {
-                        // Regional level (1 digit)
+                        // Regional level - use kodikos_perifereias
                         geographicCode = kallikratisEntry.kodikos_perifereias;
                         console.log(`[Projects] Regional level, Code: ${geographicCode}`);
                       }
@@ -720,16 +720,16 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                   if (kallikratisEntry && line.region) {
                     // Determine geographic level automatically and get appropriate code
                     if (line.region.dimos && line.region.dimotiki_enotita) {
-                      // Municipal level with community (6 digits)
+                      // Municipal Community level - use kodikos_dimotikis_enotitas
                       geographicCode = kallikratisEntry.kodikos_dimotikis_enotitas;
                     } else if (line.region.dimos) {
-                      // Municipal level (6 digits)
-                      geographicCode = kallikratisEntry.kodikos_dimotikis_enotitas;
+                      // Municipality level - use kodikos_neou_ota
+                      geographicCode = kallikratisEntry.kodikos_neou_ota;
                     } else if (line.region.perifereiaki_enotita) {
-                      // Regional unit level (3 digits)
+                      // Regional unit level - use kodikos_perifereiakis_enotitas
                       geographicCode = kallikratisEntry.kodikos_perifereiakis_enotitas;
                     } else if (line.region.perifereia) {
-                      // Regional level (1 digit)
+                      // Regional level - use kodikos_perifereias
                       geographicCode = kallikratisEntry.kodikos_perifereias;
                     }
                   }

@@ -308,19 +308,7 @@ export default function ComprehensiveEditNew() {
           const kallikratis = entry.kallikratis || {};
           console.log('Processing kallikratis data:', kallikratis);
           
-          // Determine geographic level based on kallikratis_id and data completeness
-          let geographicLevel = "municipality"; // default
-          
-          if (entry.kallikratis_id === 1 || entry.kallikratis_id === 1001) {
-            // Special IDs for regional/regional unit level projects
-            if (!kallikratis.onoma_neou_ota || kallikratis.onoma_neou_ota === "") {
-              geographicLevel = "region"; // Region-wide project
-            } else {
-              geographicLevel = "regional_unit"; // Regional unit-wide project
-            }
-          } else if (!kallikratis.onoma_dimotikis_enotitas || kallikratis.onoma_dimotikis_enotitas === "") {
-            geographicLevel = "regional_unit"; // No municipal community = regional unit level
-          }
+          // Geographic level is now determined automatically based on available data
           
           locationGroups.set(key, {
             municipal_community: kallikratis.onoma_dimotikis_enotitas || "",
@@ -328,8 +316,7 @@ export default function ComprehensiveEditNew() {
             regional_unit: kallikratis.perifereiaki_enotita || "",
             region: kallikratis.perifereia || "",
             implementing_agency: entry.unit_name || "",
-            expenditure_types: [],
-            geographic_level: geographicLevel
+            expenditure_types: []
           });
         }
         

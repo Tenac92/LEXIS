@@ -130,9 +130,10 @@ This is a full-stack web application built for Greek government budget and docum
 ### June 27, 2025 - Simplified Geographic Code System Implementation
 - Successfully connected comprehensive edit form to Supabase database with service key authentication
 - Implemented intelligent geographic level detection using only `geographic_code` field with automatic level determination:
-  - **6 digits** (e.g., 900101): Municipal level using `kodikos_dimotikis_enotitas`
-  - **3 digits** (e.g., 101): Regional unit level using `kodikos_perifereiakis_enotitas`
-  - **1 digit** (e.g., 1): Regional level using `kodikos_perifereias`
+  - **Municipal Community** (Δημοτική Ενότητα): Uses `kodikos_dimotikis_enotitas` when both municipality and municipal community are specified
+  - **Municipality** (Δήμος): Uses `kodikos_neou_ota` when municipality specified without municipal community
+  - **Regional Unit** (Περιφερειακή Ενότητα): Uses `kodikos_perifereiakis_enotitas` when only region and regional unit specified
+  - **Region** (Περιφέρεια): Uses `kodikos_perifereias` when only region specified
 - Removed geographic level selector - system automatically determines level based on completed location fields
 - Enhanced kallikratis lookup logic to calculate appropriate codes based on available location data hierarchy
 - Updated backend logic to store correct geographic codes for optimal data retrieval at appropriate administrative levels
