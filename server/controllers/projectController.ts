@@ -615,11 +615,22 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
 
           // Find implementing agency (Monada) ID - ensure it's integer
           if (line.implementing_agency) {
+            console.log(`[Projects] DEBUG: Looking for agency: "${line.implementing_agency}"`);
+            console.log(`[Projects] DEBUG: Available agencies:`, monadaData.map(m => ({ id: m.id, unit: m.unit, unit_name: m.unit_name })));
+            
             const monada = monadaData.find(m => 
-              m.id == line.implementing_agency || m.unit === line.implementing_agency || m.unit_name === line.implementing_agency
+              m.id == line.implementing_agency || 
+              m.unit === line.implementing_agency || 
+              m.unit_name === line.implementing_agency ||
+              // Try partial matching for long agency names
+              (m.unit_name && line.implementing_agency.includes(m.unit_name)) ||
+              (m.unit && line.implementing_agency.includes(m.unit))
             );
             monadaId = monada ? parseInt(monada.id) : null;
             console.log(`[Projects] Found monada_id: ${monadaId} for agency: ${line.implementing_agency}`);
+            if (!monada) {
+              console.log(`[Projects] WARNING: No matching agency found for: "${line.implementing_agency}"`);
+            }
           }
 
           // Find kallikratis ID from region hierarchy
@@ -641,8 +652,12 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
             }
           }
 
-          // Only create project_index entries if we have all required values
-          if (eventTypeId && monadaId && kallikratisId) {
+          // Create project_index entries if we have essential values (relaxed requirement)
+          if (eventTypeId && kallikratisId) {
+            console.log(`[Projects] Creating project_index entry with eventTypeId: ${eventTypeId}, monadaId: ${monadaId}, kallikratisId: ${kallikratisId}`);
+            if (!monadaId) {
+              console.log(`[Projects] WARNING: Proceeding without monada_id - may need manual correction`);
+            }
             // Find expenditure type IDs (multiple values)
             if (line.expenditure_types && Array.isArray(line.expenditure_types) && line.expenditure_types.length > 0) {
               for (const expType of line.expenditure_types) {
@@ -684,9 +699,13 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                     project_id: updatedProject.id,
                     event_types_id: eventTypeId,
                     expediture_type_id: expenditureTypeId,
-                    monada_id: monadaId,
                     kallikratis_id: kallikratisId
                   };
+                  
+                  // Only add monada_id if it's not null
+                  if (monadaId !== null) {
+                    indexEntry.monada_id = monadaId;
+                  }
                   
                   // Add geographic code if available
                   if (geographicCode) {
@@ -739,9 +758,13 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                   project_id: updatedProject.id,
                   event_types_id: eventTypeId,
                   expediture_type_id: defaultExpenditureType.id,
-                  monada_id: monadaId,
                   kallikratis_id: kallikratisId
                 };
+                
+                // Only add monada_id if it's not null
+                if (monadaId !== null) {
+                  indexEntry.monada_id = monadaId;
+                }
                 
                 // Add geographic code if available
                 if (geographicCode) {
