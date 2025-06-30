@@ -1,0 +1,44 @@
+[vite] connecting...
+DOMException {stack: "Error: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.↵    at…"}
+
+[SessionInit] Using existing client session ID: session_1751257826361_sfzs083b
+ME endpoint response: 
+Object {authenticated: false, message: "No active session"}
+Login successful: 
+Object {message: "Login successful", user: {…}}
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+[StableWebSocket] Creating new connection
+[StableWebSocket] Connected successfully
+Current user: 
+Object {id: 49, name: "KONSTANTINOS KYRIAKOU", email: "kkiriakou92@gmail.com", role: "admin", units: Array(1)}
+Is admin: true
+Is manager: false
+Current user: 
+Object {id: 49, name: "KONSTANTINOS KYRIAKOU", email: "kkiriakou92@gmail.com", role: "admin", units: Array(1)}
+Is admin: true
+Is manager: false
+Current user: 
+Object {id: 49, name: "KONSTANTINOS KYRIAKOU", email: "kkiriakou92@gmail.com", role: "admin", units: Array(1)}
+Is admin: true
+Is manager: false
+Current user: 
+Object {id: 49, name: "KONSTANTINOS KYRIAKOU", email: "kkiriakou92@gmail.com", role: "admin", units: Array(1)}
+Is admin: true
+Is manager: false
+Current user: 
+Object {id: 49, name: "KONSTANTINOS KYRIAKOU", email: "kkiriakou92@gmail.com", role: "admin", units: Array(1)}
+Is admin: true
+Is manager: false
+Initializing form with project data: 
+Object {id: 7, mis: 5174694, project_title: "Δωρεάν κρατική αρωγή για την επισκευή ή ανακατασκευή κτιρίων και επιδότηση εν./συγκ. κατοίκων που…", event_description: "2021 πυρκαγιές Κορινθίας και Δυτικής Αττικής", status: "Συμπληρωμένο", …}
+Project index data: undefined
+Loading decisions from legacy project fields
+No project index data available, initializing with default location details
+Default location entry created with implementing agency: ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ
+Creating default formulation with budget data: 
+Object {budget_na853: 3154419.11, budget_na271: 3377914.58, budget_e069: 2021, na853: "2024ΝΑ85300052", na271: "2022ΝΑ27100027", …}
+Creating formulation entry for ΝΑ853:
+  - Code (να853): 2024ΝΑ85300052
+  - Budget (budget_να853): 3154419.11
+  - Type of budget: number
