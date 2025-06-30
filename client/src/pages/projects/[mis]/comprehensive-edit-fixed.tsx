@@ -442,22 +442,30 @@ export default function ComprehensiveEditFixed() {
         });
         
         const budgetMappings = [
-          { sa: "ΝΑ853" as const, budget: project.budget_na853 || project.na853 || 0 },
-          { sa: "ΝΑ271" as const, budget: project.budget_na271 || project.na271 || 0 },
-          { sa: "E069" as const, budget: project.budget_e069 || project.e069 || 0 }
+          { sa: "ΝΑ853" as const, field: project.na853 },
+          { sa: "ΝΑ271" as const, field: project.na271 },
+          { sa: "E069" as const, field: project.e069 }
         ];
 
+        // Only create formulation entries for ΣΑ types that have actual values in Projects table
         budgetMappings.forEach((mapping) => {
+          // Skip if the ΣΑ field is empty, null, undefined, "-", or any falsy value
+          if (!mapping.field || mapping.field === "-" || mapping.field === "Μη διαθέσιμο" || mapping.field.toString().trim() === "") {
+            console.log(`Skipping ${mapping.sa} - no value in Projects.${mapping.sa.toLowerCase()}:`, mapping.field);
+            return;
+          }
+
+          console.log(`Creating formulation entry for ${mapping.sa} with Projects.${mapping.sa.toLowerCase()}:`, mapping.field);
           formulation.push({
             sa: mapping.sa,
             enumeration_code: "",
             protocol_number: project.decision_data?.[0]?.kya || "",
             ada: project.decision_data?.[0]?.ada || "",
             decision_year: project.event_year?.[0] || "",
-            project_budget: mapping.budget.toString(),
+            project_budget: mapping.field.toString(),
             epa_version: "",
-            total_public_expense: mapping.budget.toString(),
-            eligible_public_expense: mapping.budget.toString(),
+            total_public_expense: mapping.field.toString(),
+            eligible_public_expense: mapping.field.toString(),
             decision_status: "Ενεργή" as const,
             change_type: "Έγκριση" as const,
             connected_decisions: [],
@@ -1106,15 +1114,15 @@ export default function ComprehensiveEditFixed() {
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div className="flex items-center justify-between p-2 bg-white border border-blue-200 rounded">
                         <span className="font-medium text-blue-600">ΝΑ853:</span>
-                        <span className="text-gray-700">{project?.na853 || project?.budget_na853 || "Μη διαθέσιμο"}</span>
+                        <span className="text-gray-700">{project?.na853 || "Μη διαθέσιμο"}</span>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-white border border-green-200 rounded">
                         <span className="font-medium text-green-600">ΝΑ271:</span>
-                        <span className="text-gray-700">{project?.na271 || project?.budget_na271 || "Μη διαθέσιμο"}</span>
+                        <span className="text-gray-700">{project?.na271 || "Μη διαθέσιμο"}</span>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-white border border-purple-200 rounded">
                         <span className="font-medium text-purple-600">E069:</span>
-                        <span className="text-gray-700">{project?.e069 || project?.budget_e069 || "Μη διαθέσιμο"}</span>
+                        <span className="text-gray-700">{project?.e069 || "Μη διαθέσιμο"}</span>
                       </div>
                     </div>
                     <p className="text-xs text-gray-600 mt-2">
@@ -1207,9 +1215,9 @@ export default function ComprehensiveEditFixed() {
                               const currentSA = form.watch(`formulation_details.${index}.sa`);
                               const getBudgetSource = (sa: string) => {
                                 switch(sa) {
-                                  case "ΝΑ853": return project?.na853 || project?.budget_na853 || "0";
-                                  case "ΝΑ271": return project?.na271 || project?.budget_na271 || "0";
-                                  case "E069": return project?.e069 || project?.budget_e069 || "0";
+                                  case "ΝΑ853": return project?.na853 || "0";
+                                  case "ΝΑ271": return project?.na271 || "0";
+                                  case "E069": return project?.e069 || "0";
                                   default: return "0";
                                 }
                               };
