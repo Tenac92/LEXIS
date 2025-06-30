@@ -331,6 +331,7 @@ export default function ComprehensiveEditFixed() {
       
       if (projectIndexData && projectIndexData.length > 0) {
         console.log('Processing project index data for location details');
+        console.log('Available units data:', unitsData?.map(u => ({ id: u.id, unit: u.unit, unit_name: u.unit_name })));
         
         // Group by kallikratis_id and monada_id to create location entries
         const grouped = projectIndexData.reduce((acc, entry) => {
@@ -353,15 +354,29 @@ export default function ComprehensiveEditFixed() {
           const kallikratisEntry = kallikratisData?.find(k => k.id === group.kallikratis_id);
           const unit = unitsData?.find(u => u.id === group.monada_id);
           
+          // Extract implementing agency name from unit structure
+          let implementingAgencyName = "";
+          if (unit) {
+            if (typeof unit.unit_name === 'object' && unit.unit_name.name) {
+              implementingAgencyName = unit.unit_name.name;
+            } else if (typeof unit.unit_name === 'string') {
+              implementingAgencyName = unit.unit_name;
+            } else if (unit.name) {
+              implementingAgencyName = unit.name;
+            }
+          }
+          
           if (kallikratisEntry) {
-            locationDetails.push({
+            const locationDetail = {
               municipal_community: kallikratisEntry.onoma_dimotikis_enotitas || "",
               municipality: kallikratisEntry.onoma_neou_ota || "",
               regional_unit: kallikratisEntry.perifereiaki_enotita || "",
               region: kallikratisEntry.perifereia || "",
-              implementing_agency: unit?.name || "",
+              implementing_agency: implementingAgencyName,
               expenditure_types: group.expenditure_types,
-            });
+            };
+            console.log('Adding location detail:', locationDetail);
+            locationDetails.push(locationDetail);
           }
         });
       }
