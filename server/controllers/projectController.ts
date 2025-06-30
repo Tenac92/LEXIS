@@ -556,6 +556,43 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     console.log(`[Projects] Conservative update - only updating confirmed fields:`, Object.keys(fieldsToUpdate));
 
     console.log(`[Projects] Fields to update for MIS ${mis}:`, fieldsToUpdate);
+    
+    // Handle connected decisions data from formulation details
+    if (updateData.formulation_details && Array.isArray(updateData.formulation_details)) {
+      console.log('[Projects] Processing connected decisions from formulation details:', updateData.formulation_details);
+      
+      // Save connected decisions data to project_history for audit trail
+      try {
+        const connectedDecisionsData = updateData.formulation_details.map(formulation => ({
+          sa: formulation.sa,
+          enumeration_code: formulation.enumeration_code,
+          protocol_number: formulation.protocol_number,
+          ada: formulation.ada,
+          decision_year: formulation.decision_year,
+          project_budget: formulation.project_budget,
+          connected_decisions: formulation.connected_decisions || [],
+          comments: formulation.comments
+        }));
+        
+        // Update or create project_history entry with formulation details and connected decisions
+        const { error: historyError } = await supabase
+          .from('project_history') 
+          .upsert({
+            project_id: existingProject.id,
+            decision_data: connectedDecisionsData,
+            created_by: req.user.id,
+            created_at: new Date().toISOString()
+          });
+          
+        if (historyError) {
+          console.error('[Projects] Error saving connected decisions to project_history:', historyError);
+        } else {
+          console.log('[Projects] Successfully saved connected decisions data to project_history');
+        }
+      } catch (historyErr) {
+        console.error('[Projects] Error processing connected decisions:', historyErr);
+      }
+    }
 
     // Perform the update
     const { data: updatedProject, error: updateError } = await supabase

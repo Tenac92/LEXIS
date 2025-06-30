@@ -172,15 +172,26 @@ export default function ComprehensiveEditFixed() {
         event_year: data.event_details.event_year,
         status: data.project_details.project_status,
         
-        // Budget fields
-        budget_e069: data.project_details.expenses_executed ? parseFloat(data.project_details.expenses_executed) : null,
-        budget_na271: data.project_details.expenses_executed ? parseFloat(data.project_details.expenses_executed) : null,
-        budget_na853: data.project_details.expenses_executed ? parseFloat(data.project_details.expenses_executed) : null,
+        // Budget fields connected to project codes
+        budget_e069: data.formulation_details.find(f => f.sa === "E069")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "E069")?.project_budget) : (projectData?.budget_e069 || null),
+        budget_na271: data.formulation_details.find(f => f.sa === "NA271")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "NA271")?.project_budget) : (projectData?.budget_na271 || null),
+        budget_na853: data.formulation_details.find(f => f.sa === "NA853")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "NA853")?.project_budget) : (projectData?.budget_na853 || null),
+        
+        // Also set the e069, na271, na853 code fields
+        e069: data.formulation_details.find(f => f.sa === "E069")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "E069")?.project_budget) : (projectData?.e069 || null),
+        na271: data.formulation_details.find(f => f.sa === "NA271")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "NA271")?.project_budget) : (projectData?.na271 || null),
+        na853: data.formulation_details.find(f => f.sa === "NA853")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "NA853")?.project_budget) : (projectData?.na853 || null),
         
         // Document fields from decisions
         kya: data.decisions.length > 0 ? data.decisions[0].protocol_number : null,
         fek: data.decisions.length > 0 ? data.decisions[0].fek : null,
         ada: data.decisions.length > 0 ? data.decisions[0].ada : null,
+        
+        // Formulation details with connected decisions data
+        formulation_details: data.formulation_details,
+        
+        // Decisions data for processing
+        decisions_data: data.decisions,
         
         // Transform location_details to project_lines format for project_index table
         project_lines: data.location_details && data.location_details.length > 0 ? data.location_details.map((location) => {
@@ -420,21 +431,38 @@ export default function ComprehensiveEditFixed() {
           });
         });
       } else {
-        // Create default formulation details from project data
-        formulation.push({
-          sa: "ΝΑ853" as const,
-          enumeration_code: "",
-          protocol_number: project.decisions?.kya?.[0] || "",
-          ada: project.decisions?.ada?.[0] || "",
-          decision_year: project.event_year?.[0] || "",
-          project_budget: project.budget_e069?.toString() || "0",
-          epa_version: "",
-          total_public_expense: project.budget_e069?.toString() || "0",
-          eligible_public_expense: project.budget_e069?.toString() || "0",
-          decision_status: "Ενεργή" as const,
-          change_type: "Έγκριση" as const,
-          connected_decisions: [],
-          comments: "",
+        // Create default formulation entries for each SA type with proper budget mapping
+        console.log('Creating default formulation with budget data:', {
+          budget_na853: project.budget_na853,
+          budget_na271: project.budget_na271, 
+          budget_e069: project.budget_e069,
+          na853: project.na853,
+          na271: project.na271,
+          e069: project.e069
+        });
+        
+        const budgetMappings = [
+          { sa: "ΝΑ853" as const, budget: project.budget_na853 || project.na853 || 0 },
+          { sa: "ΝΑ271" as const, budget: project.budget_na271 || project.na271 || 0 },
+          { sa: "E069" as const, budget: project.budget_e069 || project.e069 || 0 }
+        ];
+
+        budgetMappings.forEach((mapping) => {
+          formulation.push({
+            sa: mapping.sa,
+            enumeration_code: "",
+            protocol_number: project.decision_data?.[0]?.kya || "",
+            ada: project.decision_data?.[0]?.ada || "",
+            decision_year: project.event_year?.[0] || "",
+            project_budget: mapping.budget.toString(),
+            epa_version: "",
+            total_public_expense: mapping.budget.toString(),
+            eligible_public_expense: mapping.budget.toString(),
+            decision_status: "Ενεργή" as const,
+            change_type: "Έγκριση" as const,
+            connected_decisions: [],
+            comments: "",
+          });
         });
       }
 
