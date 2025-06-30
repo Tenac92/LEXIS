@@ -76,11 +76,10 @@ async function debugKallikratisFiltering() {
     console.log('\n3. Checking municipalities for ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ > ΦΘΙΩΤΙΔΑΣ...');
     const { data: municipalities, error: munError } = await supabase
       .from('kallikratis')
-      .select('DISTINCT onoma_neou_ota')
+      .select('onoma_neou_ota')
       .eq('perifereia', 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ')
       .eq('perifereiaki_enotita', 'ΦΘΙΩΤΙΔΑΣ')
-      .not('onoma_neou_ota', 'is', null)
-      .order('onoma_neou_ota');
+      .not('onoma_neou_ota', 'is', null);
     
     if (munError) {
       console.log('❌ Error fetching municipalities:', munError.message);

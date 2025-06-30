@@ -909,8 +909,13 @@ export default function ComprehensiveEditFixed() {
                                     <SelectContent>
                                       {Array.from(new Set(
                                         kallikratisData
-                                          ?.filter(k => k.perifereia === form.watch(`location_details.${index}.region`))
+                                          ?.filter(k => {
+                                            const currentRegion = form.watch(`location_details.${index}.region`);
+                                            console.log(`Filtering regional units for region: ${currentRegion}`);
+                                            return k.perifereia === currentRegion;
+                                          })
                                           .map(k => k.perifereiaki_enotita)
+                                          .filter(Boolean)
                                       )).map((unit) => (
                                         <SelectItem key={unit} value={unit}>
                                           {unit}
@@ -939,11 +944,17 @@ export default function ComprehensiveEditFixed() {
                                     <SelectContent>
                                       {Array.from(new Set(
                                         kallikratisData
-                                          ?.filter(k => 
-                                            k.perifereia === form.watch(`location_details.${index}.region`) &&
-                                            k.perifereiaki_enotita === form.watch(`location_details.${index}.regional_unit`)
-                                          )
+                                          ?.filter(k => {
+                                            const currentRegion = form.watch(`location_details.${index}.region`);
+                                            const currentRegionalUnit = form.watch(`location_details.${index}.regional_unit`);
+                                            console.log(`Filtering municipalities for region: ${currentRegion}, unit: ${currentRegionalUnit}`);
+                                            return k.perifereia === currentRegion &&
+                                                   k.perifereiaki_enotita === currentRegionalUnit &&
+                                                   k.onoma_neou_ota && 
+                                                   k.onoma_neou_ota.trim() !== '';
+                                          })
                                           .map(k => k.onoma_neou_ota)
+                                          .filter(Boolean)
                                       )).map((municipality) => (
                                         <SelectItem key={municipality} value={municipality}>
                                           {municipality}
