@@ -1203,19 +1203,29 @@ export default function ComprehensiveEditFixed() {
                               
                               return (
                                 <div key={decisionIndex} className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    id={`connected-${index}-${decisionIndex}`}
-                                    checked={form.watch(`formulation_details.${index}.connected_decisions`)?.includes(decisionId) || false}
-                                    onChange={(e) => {
-                                      const current = form.getValues(`formulation_details.${index}.connected_decisions`) || [];
-                                      if (e.target.checked) {
-                                        form.setValue(`formulation_details.${index}.connected_decisions`, [...current, decisionId]);
-                                      } else {
-                                        form.setValue(`formulation_details.${index}.connected_decisions`, current.filter(id => id !== decisionId));
-                                      }
-                                    }}
-                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  <FormField
+                                    control={form.control}
+                                    name={`formulation_details.${index}.connected_decisions`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormControl>
+                                          <input
+                                            type="checkbox"
+                                            id={`connected-${index}-${decisionIndex}`}
+                                            checked={field.value?.includes(decisionId) || false}
+                                            onChange={(e) => {
+                                              const current = field.value || [];
+                                              const newValue = e.target.checked 
+                                                ? [...current, decisionId]
+                                                : current.filter(id => id !== decisionId);
+                                              field.onChange(newValue);
+                                              console.log(`Connected decisions updated for formulation ${index}:`, newValue);
+                                            }}
+                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                          />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
                                   />
                                   <label htmlFor={`connected-${index}-${decisionIndex}`} className="text-xs text-gray-700 cursor-pointer">
                                     {displayText}

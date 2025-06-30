@@ -561,6 +561,15 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     if (updateData.formulation_details && Array.isArray(updateData.formulation_details)) {
       console.log('[Projects] Processing connected decisions from formulation details:', updateData.formulation_details);
       
+      // Log specific connected decisions data
+      updateData.formulation_details.forEach((formulation: any, index: number) => {
+        console.log(`[Projects] Formulation ${index + 1}:`, {
+          sa: formulation.sa,
+          connected_decisions: formulation.connected_decisions,
+          connected_decisions_length: formulation.connected_decisions?.length || 0
+        });
+      });
+      
       // Save connected decisions data to project_history for audit trail
       try {
         const connectedDecisionsData = updateData.formulation_details.map((formulation: any) => ({
