@@ -909,11 +909,7 @@ export default function ComprehensiveEditFixed() {
                                     <SelectContent>
                                       {Array.from(new Set(
                                         kallikratisData
-                                          ?.filter(k => {
-                                            const currentRegion = form.watch(`location_details.${index}.region`);
-                                            console.log(`Filtering regional units for region: ${currentRegion}`);
-                                            return k.perifereia === currentRegion;
-                                          })
+                                          ?.filter(k => k.perifereia === form.watch(`location_details.${index}.region`))
                                           .map(k => k.perifereiaki_enotita)
                                           .filter(Boolean)
                                       )).map((unit) => (
@@ -945,50 +941,16 @@ export default function ComprehensiveEditFixed() {
                                       {(() => {
                                         const currentRegion = form.watch(`location_details.${index}.region`);
                                         const currentRegionalUnit = form.watch(`location_details.${index}.regional_unit`);
-                                        console.log(`Filtering municipalities for region: ${currentRegion}, unit: ${currentRegionalUnit}`);
                                         
-                                        // Debug the kallikratis data structure
-                                        if (currentRegion === 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ' && currentRegionalUnit === 'ΦΘΙΩΤΙΔΑΣ') {
-                                          console.log('DEBUG: kallikratis data length:', kallikratisData?.length);
-                                          
-                                          // Check all entries for ΦΘΙΩΤΙΔΑΣ
-                                          const allFthiotidas = kallikratisData?.filter(k => 
-                                            k.perifereiaki_enotita === 'ΦΘΙΩΤΙΔΑΣ'
-                                          );
-                                          console.log('DEBUG: All ΦΘΙΩΤΙΔΑΣ entries found in React:', allFthiotidas?.length);
-                                          console.log('DEBUG: ΦΘΙΩΤΙΔΑΣ municipalities in React data:', allFthiotidas?.map(k => k.onoma_neou_ota));
-                                          
-                                          // Check all ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ entries
-                                          const allStereas = kallikratisData?.filter(k => 
-                                            k.perifereia === 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ'
-                                          );
-                                          console.log('DEBUG: Total ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ entries:', allStereas?.length);
-                                          
-                                          // Check for the missing municipalities
-                                          const expectedMunicipalities = ['ΑΜΦΙΚΛΕΙΑΣ - ΕΛΑΤΕΙΑΣ', 'ΔΟΜΟΚΟΥ', 'ΛΑΜΙΕΩΝ', 'ΛΟΚΡΩΝ', 'ΜΑΚΡΑΚΩΜΗΣ', 'ΜΩΛΟΥ - ΑΓΙΟΥ ΚΩΝΣΤΑΝΤΙΝΟΥ', 'ΣΤΥΛΙΔΟΣ'];
-                                          expectedMunicipalities.forEach(mun => {
-                                            const found = kallikratisData?.find(k => 
-                                              k.perifereia === 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ' && 
-                                              k.perifereiaki_enotita === 'ΦΘΙΩΤΙΔΑΣ' && 
-                                              k.onoma_neou_ota === mun
-                                            );
-                                            console.log(`DEBUG: Municipality ${mun} found in React data:`, !!found);
-                                          });
-                                        }
+
                                         
                                         const filteredMunicipalities = Array.from(new Set(
                                           kallikratisData
                                             ?.filter(k => {
-                                              const regionMatch = k.perifereia === currentRegion;
-                                              const unitMatch = k.perifereiaki_enotita === currentRegionalUnit;
-                                              const hasName = k.onoma_neou_ota && k.onoma_neou_ota.trim() !== '';
-                                              
-                                              // Extra debug for ΦΘΙΩΤΙΔΑΣ
-                                              if (currentRegion === 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ' && currentRegionalUnit === 'ΦΘΙΩΤΙΔΑΣ') {
-                                                console.log(`DEBUG: ${k.onoma_neou_ota || 'NULL'} - Region: ${regionMatch} (${k.perifereia}), Unit: ${unitMatch} (${k.perifereiaki_enotita}), HasName: ${hasName}`);
-                                              }
-                                              
-                                              return regionMatch && unitMatch && hasName;
+                                              return k.perifereia === currentRegion &&
+                                                     k.perifereiaki_enotita === currentRegionalUnit &&
+                                                     k.onoma_neou_ota && 
+                                                     k.onoma_neou_ota.trim() !== '';
                                             })
                                             .map(k => k.onoma_neou_ota)
                                             .filter(Boolean)
