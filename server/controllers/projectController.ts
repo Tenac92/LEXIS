@@ -579,8 +579,13 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
           ada: formulation.ada,
           decision_year: formulation.decision_year,
           project_budget: formulation.project_budget,
+          epa_version: formulation.epa_version || '',
+          total_public_expense: formulation.total_public_expense || '',
+          eligible_public_expense: formulation.eligible_public_expense || '',
+          decision_status: formulation.decision_status || 'Ενεργή',
+          change_type: formulation.change_type || 'Έγκριση',
           connected_decisions: formulation.connected_decisions || [],
-          comments: formulation.comments
+          comments: formulation.comments || ''
         }));
         
         // Update or create project_history entry with formulation details and connected decisions
@@ -588,8 +593,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
           .from('project_history') 
           .upsert({
             project_id: existingProject.id,
-            decision_data: connectedDecisionsData,
-            created_by: req.user.id,
+            formulation_details: connectedDecisionsData,
             created_at: new Date().toISOString()
           });
           

@@ -1100,7 +1100,8 @@ export default function ComprehensiveEditFixed() {
                   <div className="space-y-4">
                     {form.watch("formulation_details").map((_, index) => (
                       <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                        <div className="grid grid-cols-6 gap-3 mb-3">
+                        {/* First Row: ΣΑ, Κωδικός ενάριθμος, Αρ. πρωτ. Απόφασης, ΑΔΑ */}
+                        <div className="grid grid-cols-4 gap-3 mb-3">
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.sa`}
@@ -1124,10 +1125,22 @@ export default function ComprehensiveEditFixed() {
                           />
                           <FormField
                             control={form.control}
+                            name={`formulation_details.${index}.enumeration_code`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Κωδικός ενάριθμος</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Κωδικός" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
                             name={`formulation_details.${index}.protocol_number`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">Αρ. Πρωτοκόλλου</FormLabel>
+                                <FormLabel className="text-xs font-medium">Αρ. πρωτ. Απόφασης</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="Πρωτόκολλο" className="text-sm" />
                                 </FormControl>
@@ -1146,12 +1159,16 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
+                        </div>
+
+                        {/* Second Row: Έτος Απόφασης, Προϋπολογισμός έργου, Έκδοση ΕΠΑ, Συνολική δημόσια δαπάνη */}
+                        <div className="grid grid-cols-4 gap-3 mb-3">
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.decision_year`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">Έτος</FormLabel>
+                                <FormLabel className="text-xs font-medium">Έτος Απόφασης</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="Έτος" className="text-sm" />
                                 </FormControl>
@@ -1163,7 +1180,47 @@ export default function ComprehensiveEditFixed() {
                             name={`formulation_details.${index}.project_budget`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">Προϋπολογισμός</FormLabel>
+                                <FormLabel className="text-xs font-medium">Προϋπολογισμός έργου</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Ποσό €" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.epa_version`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Έκδοση ΕΠΑ</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Έκδοση" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.total_public_expense`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Συνολική δημόσια δαπάνη</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Ποσό €" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Third Row: Επιλέξιμη δημόσια δαπάνη, Κατάσταση Απόφασης, Μεταβολή */}
+                        <div className="grid grid-cols-3 gap-3 mb-3">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.eligible_public_expense`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Επιλέξιμη δημόσια δαπάνη</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="Ποσό €" className="text-sm" />
                                 </FormControl>
@@ -1175,7 +1232,7 @@ export default function ComprehensiveEditFixed() {
                             name={`formulation_details.${index}.decision_status`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">Κατάσταση</FormLabel>
+                                <FormLabel className="text-xs font-medium">Κατάσταση Απόφασης</FormLabel>
                                 <FormControl>
                                   <Select onValueChange={field.onChange} value={field.value}>
                                     <SelectTrigger className="text-sm">
@@ -1190,56 +1247,95 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.change_type`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Μεταβολή</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Έγκριση">Έγκριση</SelectItem>
+                                      <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
+                                      <SelectItem value="Παράταση">Παράταση</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
                         </div>
                         
-                        {/* Connected Decisions Field - Multiple Selection */}
-                        <div className="mt-3">
-                          <FormLabel className="text-xs font-medium mb-2 block">Αποφάσεις που συνδέονται</FormLabel>
-                          <div className="space-y-2 max-h-32 overflow-y-auto">
-                            {form.watch("decisions").map((decision, decisionIndex) => {
-                              if (!decision.protocol_number && !decision.fek && !decision.ada) return null;
-                              const displayText = `${decision.protocol_number || 'Χωρίς ΚΥΑ'} | ${decision.fek || 'Χωρίς ΦΕΚ'} | ${decision.ada || 'Χωρίς ΑΔΑ'}`;
-                              const decisionId = `${decisionIndex}-${decision.protocol_number}-${decision.fek}-${decision.ada}`;
-                              
-                              return (
-                                <div key={decisionIndex} className="flex items-center space-x-2">
-                                  <FormField
-                                    control={form.control}
-                                    name={`formulation_details.${index}.connected_decisions`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormControl>
-                                          <input
-                                            type="checkbox"
-                                            id={`connected-${index}-${decisionIndex}`}
-                                            checked={field.value?.includes(decisionId) || false}
-                                            onChange={(e) => {
-                                              const current = field.value || [];
-                                              const newValue = e.target.checked 
-                                                ? [...current, decisionId]
-                                                : current.filter(id => id !== decisionId);
-                                              field.onChange(newValue);
-                                              console.log(`Connected decisions updated for formulation ${index}:`, newValue);
-                                            }}
-                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                          />
-                                        </FormControl>
-                                      </FormItem>
+                        {/* Fourth Row: Αποφάσεις που συνδέονται, Σχόλια */}
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <FormLabel className="text-xs font-medium mb-2 block">Αποφάσεις που συνδέονται</FormLabel>
+                            <div className="space-y-2 max-h-24 overflow-y-auto border border-gray-300 rounded p-2 bg-white">
+                              {form.watch("decisions").map((decision, decisionIndex) => {
+                                if (!decision.protocol_number && !decision.fek && !decision.ada) return null;
+                                const displayText = `${decision.protocol_number || 'Χωρίς ΚΥΑ'} | ${decision.fek || 'Χωρίς ΦΕΚ'} | ${decision.ada || 'Χωρίς ΑΔΑ'}`;
+                                const decisionId = `${decisionIndex}-${decision.protocol_number}-${decision.fek}-${decision.ada}`;
+                                
+                                return (
+                                  <div key={decisionIndex} className="flex items-center space-x-2">
+                                    <FormField
+                                      control={form.control}
+                                      name={`formulation_details.${index}.connected_decisions`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormControl>
+                                            <input
+                                              type="checkbox"
+                                              id={`connected-${index}-${decisionIndex}`}
+                                              checked={field.value?.includes(decisionId) || false}
+                                              onChange={(e) => {
+                                                const current = field.value || [];
+                                                const newValue = e.target.checked 
+                                                  ? [...current, decisionId]
+                                                  : current.filter(id => id !== decisionId);
+                                                field.onChange(newValue);
+                                              }}
+                                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <label htmlFor={`connected-${index}-${decisionIndex}`} className="text-xs text-gray-700 cursor-pointer">
+                                      {displayText}
+                                    </label>
+                                    {form.watch(`formulation_details.${index}.connected_decisions`)?.includes(decisionId) && (
+                                      <CheckCircle className="h-3 w-3 text-green-500" />
                                     )}
-                                  />
-                                  <label htmlFor={`connected-${index}-${decisionIndex}`} className="text-xs text-gray-700 cursor-pointer">
-                                    {displayText}
-                                  </label>
-                                  {form.watch(`formulation_details.${index}.connected_decisions`)?.includes(decisionId) && (
-                                    <CheckCircle className="h-3 w-3 text-green-500" />
-                                  )}
-                                </div>
-                              );
-                            })}
-                            {form.watch("decisions").every(d => !d.protocol_number && !d.fek && !d.ada) && (
-                              <p className="text-xs text-gray-500">Δεν υπάρχουν διαθέσιμες αποφάσεις από την Ενότητα 1</p>
-                            )}
+                                  </div>
+                                );
+                              })}
+                              {form.watch("decisions").every(d => !d.protocol_number && !d.fek && !d.ada) && (
+                                <p className="text-xs text-gray-500">Δεν υπάρχουν διαθέσιμες αποφάσεις από την Ενότητα 1</p>
+                              )}
+                            </div>
                           </div>
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.comments`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">Σχόλια</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    {...field} 
+                                    placeholder="Σχόλια και παρατηρήσεις..." 
+                                    className="text-sm resize-none" 
+                                    rows={3}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
                         </div>
                       </div>
                     ))}
