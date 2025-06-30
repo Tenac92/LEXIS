@@ -477,14 +477,12 @@ export const expenditureTypes = pgTable("expediture_types", {
 });
 
 /**
- * Kallikratis Table
+ * Kallikratis Table - Simplified 8-column structure
  * Reference table for Greek administrative divisions
- * Supports both municipal-level and regional-level projects
+ * Updated schema to match simplified table structure
  */
 export const kallikratis = pgTable("kallikratis", {
-  id: serial("id").primaryKey(),
-  kodikos_dimotikis_enotitas: bigint("kodikos_dimotikis_enotitas", { mode: "number" }).notNull(),
-  onoma_dimotikis_enotitas: text("onoma_dimotikis_enotitas"),
+  id: bigint("id", { mode: "number" }),
   kodikos_neou_ota: bigint("kodikos_neou_ota", { mode: "number" }),
   eidos_neou_ota: text("eidos_neou_ota"),
   onoma_neou_ota: text("onoma_neou_ota"),

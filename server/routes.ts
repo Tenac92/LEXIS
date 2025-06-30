@@ -2218,7 +2218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { data: kallikratisData, error } = await supabase
           .from('kallikratis')
           .select('*')
-          .order('perifereia, perifereiaki_enotita, onoma_neou_ota, onoma_dimotikis_enotitas')
+          .order('perifereia, perifereiaki_enotita, onoma_neou_ota')
           .limit(2000); // Increase limit to fetch all 1034+ entries
         
         if (error) {

@@ -18,11 +18,12 @@ import { useToast } from "@/hooks/use-toast";
 // Interface for kallikratis data structure
 interface KallikratisEntry {
   id: number;
-  eidos_koinotitas: string;
-  onoma_dimotikis_enotitas: string;
+  kodikos_neou_ota: number;
   eidos_neou_ota: string;
   onoma_neou_ota: string;
+  kodikos_perifereiakis_enotitas: number;
   perifereiaki_enotita: string;
+  kodikos_perifereias: number;
   perifereia: string;
 }
 
@@ -198,22 +199,12 @@ export default function ComprehensiveEditFixed() {
           // Find kallikratis_id for this location
           let kallikratisId = null;
           if (kallikratisData) {
-            // Try exact match first
-            let kallikratis = kallikratisData.find(k => 
+            // Try match by region, regional unit, and municipality
+            const kallikratis = kallikratisData.find(k => 
               k.perifereia === location.region && 
               k.perifereiaki_enotita === location.regional_unit &&
-              k.onoma_neou_ota === location.municipality &&
-              k.onoma_dimotikis_enotitas === location.municipal_community
+              k.onoma_neou_ota === location.municipality
             );
-            
-            // If no exact match and no municipal community, try without it
-            if (!kallikratis && !location.municipal_community) {
-              kallikratis = kallikratisData.find(k => 
-                k.perifereia === location.region && 
-                k.perifereiaki_enotita === location.regional_unit &&
-                k.onoma_neou_ota === location.municipality
-              );
-            }
             
             kallikratisId = kallikratis?.id || null;
           }
@@ -379,7 +370,7 @@ export default function ComprehensiveEditFixed() {
           
           if (kallikratisEntry) {
             const locationDetail = {
-              municipal_community: kallikratisEntry.onoma_dimotikis_enotitas || "",
+              municipal_community: "", // Removed from simplified schema
               municipality: kallikratisEntry.onoma_neou_ota || "",
               regional_unit: kallikratisEntry.perifereiaki_enotita || "",
               region: kallikratisEntry.perifereia || "",
