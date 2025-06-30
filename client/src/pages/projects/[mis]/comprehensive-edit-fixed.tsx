@@ -950,13 +950,30 @@ export default function ComprehensiveEditFixed() {
                                         // Debug the kallikratis data structure
                                         if (currentRegion === 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ' && currentRegionalUnit === 'ΦΘΙΩΤΙΔΑΣ') {
                                           console.log('DEBUG: kallikratis data length:', kallikratisData?.length);
-                                          console.log('DEBUG: Sample kallikratis entries:', kallikratisData?.slice(0, 5));
                                           
                                           // Check all entries for ΦΘΙΩΤΙΔΑΣ
                                           const allFthiotidas = kallikratisData?.filter(k => 
                                             k.perifereiaki_enotita === 'ΦΘΙΩΤΙΔΑΣ'
                                           );
-                                          console.log('DEBUG: All ΦΘΙΩΤΙΔΑΣ entries:', allFthiotidas?.length, allFthiotidas);
+                                          console.log('DEBUG: All ΦΘΙΩΤΙΔΑΣ entries found in React:', allFthiotidas?.length);
+                                          console.log('DEBUG: ΦΘΙΩΤΙΔΑΣ municipalities in React data:', allFthiotidas?.map(k => k.onoma_neou_ota));
+                                          
+                                          // Check all ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ entries
+                                          const allStereas = kallikratisData?.filter(k => 
+                                            k.perifereia === 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ'
+                                          );
+                                          console.log('DEBUG: Total ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ entries:', allStereas?.length);
+                                          
+                                          // Check for the missing municipalities
+                                          const expectedMunicipalities = ['ΑΜΦΙΚΛΕΙΑΣ - ΕΛΑΤΕΙΑΣ', 'ΔΟΜΟΚΟΥ', 'ΛΑΜΙΕΩΝ', 'ΛΟΚΡΩΝ', 'ΜΑΚΡΑΚΩΜΗΣ', 'ΜΩΛΟΥ - ΑΓΙΟΥ ΚΩΝΣΤΑΝΤΙΝΟΥ', 'ΣΤΥΛΙΔΟΣ'];
+                                          expectedMunicipalities.forEach(mun => {
+                                            const found = kallikratisData?.find(k => 
+                                              k.perifereia === 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ' && 
+                                              k.perifereiaki_enotita === 'ΦΘΙΩΤΙΔΑΣ' && 
+                                              k.onoma_neou_ota === mun
+                                            );
+                                            console.log(`DEBUG: Municipality ${mun} found in React data:`, !!found);
+                                          });
                                         }
                                         
                                         const filteredMunicipalities = Array.from(new Set(
