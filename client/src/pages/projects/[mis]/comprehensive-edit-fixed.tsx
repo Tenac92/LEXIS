@@ -470,7 +470,11 @@ export default function ComprehensiveEditFixed() {
             return;
           }
 
-          console.log(`Creating formulation entry for ${mapping.sa} with code:`, mapping.code, "budget:", mapping.budget);
+          console.log(`Creating formulation entry for ${mapping.sa}:`);
+          console.log(`  - Code (${mapping.sa.toLowerCase()}):`, mapping.code);
+          console.log(`  - Budget (budget_${mapping.sa.toLowerCase()}):`, mapping.budget);
+          console.log(`  - Type of budget:`, typeof mapping.budget);
+          
           formulation.push({
             sa: mapping.sa,
             enumeration_code: mapping.code, // Put the ΣΑ code here (e.g., 2022ΝΑ27100027)
