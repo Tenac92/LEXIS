@@ -942,24 +942,31 @@ export default function ComprehensiveEditFixed() {
                                       <SelectValue placeholder="Επιλέξτε δήμο" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {Array.from(new Set(
-                                        kallikratisData
-                                          ?.filter(k => {
-                                            const currentRegion = form.watch(`location_details.${index}.region`);
-                                            const currentRegionalUnit = form.watch(`location_details.${index}.regional_unit`);
-                                            console.log(`Filtering municipalities for region: ${currentRegion}, unit: ${currentRegionalUnit}`);
-                                            return k.perifereia === currentRegion &&
-                                                   k.perifereiaki_enotita === currentRegionalUnit &&
-                                                   k.onoma_neou_ota && 
-                                                   k.onoma_neou_ota.trim() !== '';
-                                          })
-                                          .map(k => k.onoma_neou_ota)
-                                          .filter(Boolean)
-                                      )).map((municipality) => (
-                                        <SelectItem key={municipality} value={municipality}>
-                                          {municipality}
-                                        </SelectItem>
-                                      ))}
+                                      {(() => {
+                                        const currentRegion = form.watch(`location_details.${index}.region`);
+                                        const currentRegionalUnit = form.watch(`location_details.${index}.regional_unit`);
+                                        console.log(`Filtering municipalities for region: ${currentRegion}, unit: ${currentRegionalUnit}`);
+                                        
+                                        const filteredMunicipalities = Array.from(new Set(
+                                          kallikratisData
+                                            ?.filter(k => {
+                                              return k.perifereia === currentRegion &&
+                                                     k.perifereiaki_enotita === currentRegionalUnit &&
+                                                     k.onoma_neou_ota && 
+                                                     k.onoma_neou_ota.trim() !== '';
+                                            })
+                                            .map(k => k.onoma_neou_ota)
+                                            .filter(Boolean)
+                                        ));
+                                        
+                                        console.log(`Found ${filteredMunicipalities.length} municipalities:`, filteredMunicipalities);
+                                        
+                                        return filteredMunicipalities.map((municipality) => (
+                                          <SelectItem key={municipality} value={municipality}>
+                                            {municipality}
+                                          </SelectItem>
+                                        ));
+                                      })()}
                                     </SelectContent>
                                   </Select>
                                 </FormControl>
