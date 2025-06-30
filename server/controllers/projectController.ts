@@ -575,7 +575,9 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
 
     // Handle project_index table updates for proper foreign key relationships
     if (updateData.project_lines && Array.isArray(updateData.project_lines)) {
-      console.log(`[Projects] Updating project_index entries for project ID: ${updatedProject.id}`);
+      console.log(`[Projects] Starting project_index update for project ID: ${updatedProject.id}`);
+      console.log(`[Projects] Number of project_lines to process: ${updateData.project_lines.length}`);
+      console.log(`[Projects] Project lines data:`, JSON.stringify(updateData.project_lines, null, 2));
       
       // First, delete existing project_index entries for this project
       const { error: deleteError } = await supabase
@@ -585,6 +587,8 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
 
       if (deleteError) {
         console.error(`[Projects] Error deleting existing project_index entries:`, deleteError);
+      } else {
+        console.log(`[Projects] Successfully deleted existing project_index entries for project ${updatedProject.id}`);
       }
 
       // Insert new project_index entries from project_lines
@@ -696,8 +700,14 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
             }
           }
 
+          console.log(`[Projects] Processing line ${updateData.project_lines.indexOf(line) + 1}:`);
+          console.log(`[Projects] - Event Type ID: ${eventTypeId}`);
+          console.log(`[Projects] - Monada ID: ${monadaId}`);
+          console.log(`[Projects] - Kallikratis ID: ${kallikratisId}`);
+          
           // Create project_index entries if we have essential values (very relaxed requirement)
           if (eventTypeId) {
+            console.log(`[Projects] Creating project_index entries - event_type_id is valid: ${eventTypeId}`);
             console.log(`[Projects] Creating project_index entry with eventTypeId: ${eventTypeId}, monadaId: ${monadaId}, kallikratisId: ${kallikratisId}`);
             if (!monadaId) {
               console.log(`[Projects] WARNING: Proceeding without monada_id - may need manual correction`);
