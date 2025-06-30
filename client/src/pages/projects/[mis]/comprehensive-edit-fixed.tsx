@@ -1224,9 +1224,9 @@ export default function ComprehensiveEditFixed() {
                               const currentSA = form.watch(`formulation_details.${index}.sa`);
                               const getBudgetSource = (sa: string) => {
                                 switch(sa) {
-                                  case "ΝΑ853": return project?.na853 || "Κενό";
-                                  case "ΝΑ271": return project?.na271 || "Κενό";
-                                  case "E069": return project?.e069 || "Κενό";
+                                  case "ΝΑ853": return projectData?.na853 || "Κενό";
+                                  case "ΝΑ271": return projectData?.na271 || "Κενό";
+                                  case "E069": return projectData?.e069 || "Κενό";
                                   default: return "Κενό";
                                 }
                               };
