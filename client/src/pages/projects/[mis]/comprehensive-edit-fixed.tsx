@@ -1117,20 +1117,20 @@ export default function ComprehensiveEditFixed() {
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div className="flex items-center justify-between p-2 bg-white border border-blue-200 rounded">
                         <span className="font-medium text-blue-600">ΝΑ853:</span>
-                        <span className={`text-sm ${project?.na853 ? 'text-gray-700' : 'text-gray-400 italic'}`}>
-                          {project?.na853 || "Κενό"}
+                        <span className={`text-sm ${projectData?.na853 ? 'text-gray-700' : 'text-gray-400 italic'}`}>
+                          {projectData?.na853 || "Κενό"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-white border border-green-200 rounded">
                         <span className="font-medium text-green-600">ΝΑ271:</span>
-                        <span className={`text-sm ${project?.na271 ? 'text-gray-700' : 'text-gray-400 italic'}`}>
-                          {project?.na271 || "Κενό"}
+                        <span className={`text-sm ${projectData?.na271 ? 'text-gray-700' : 'text-gray-400 italic'}`}>
+                          {projectData?.na271 || "Κενό"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-white border border-purple-200 rounded">
                         <span className="font-medium text-purple-600">E069:</span>
-                        <span className={`text-sm ${project?.e069 ? 'text-gray-700' : 'text-gray-400 italic'}`}>
-                          {project?.e069 || "Κενό"}
+                        <span className={`text-sm ${projectData?.e069 ? 'text-gray-700' : 'text-gray-400 italic'}`}>
+                          {projectData?.e069 || "Κενό"}
                         </span>
                       </div>
                     </div>
