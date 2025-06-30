@@ -449,8 +449,11 @@ export default function ComprehensiveEditFixed() {
 
         // Only create formulation entries for ΣΑ types that have actual values in Projects table
         budgetMappings.forEach((mapping) => {
-          // Skip if the ΣΑ field is empty, null, undefined, "-", or any falsy value
-          if (!mapping.field || mapping.field === "-" || mapping.field === "Μη διαθέσιμο" || mapping.field.toString().trim() === "") {
+          // Skip if the ΣΑ field is null, undefined, empty string, "-", or any falsy value
+          if (mapping.field === null || mapping.field === undefined || 
+              mapping.field === "" || mapping.field === "-" || 
+              mapping.field === "Μη διαθέσιμο" || 
+              (typeof mapping.field === 'string' && mapping.field.trim() === "")) {
             console.log(`Skipping ${mapping.sa} - no value in Projects.${mapping.sa.toLowerCase()}:`, mapping.field);
             return;
           }
@@ -1114,19 +1117,25 @@ export default function ComprehensiveEditFixed() {
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div className="flex items-center justify-between p-2 bg-white border border-blue-200 rounded">
                         <span className="font-medium text-blue-600">ΝΑ853:</span>
-                        <span className="text-gray-700">{project?.na853 || "Μη διαθέσιμο"}</span>
+                        <span className={`text-sm ${project?.na853 ? 'text-gray-700' : 'text-gray-400 italic'}`}>
+                          {project?.na853 || "Κενό"}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-white border border-green-200 rounded">
                         <span className="font-medium text-green-600">ΝΑ271:</span>
-                        <span className="text-gray-700">{project?.na271 || "Μη διαθέσιμο"}</span>
+                        <span className={`text-sm ${project?.na271 ? 'text-gray-700' : 'text-gray-400 italic'}`}>
+                          {project?.na271 || "Κενό"}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between p-2 bg-white border border-purple-200 rounded">
                         <span className="font-medium text-purple-600">E069:</span>
-                        <span className="text-gray-700">{project?.e069 || "Μη διαθέσιμο"}</span>
+                        <span className={`text-sm ${project?.e069 ? 'text-gray-700' : 'text-gray-400 italic'}`}>
+                          {project?.e069 || "Κενό"}
+                        </span>
                       </div>
                     </div>
                     <p className="text-xs text-gray-600 mt-2">
-                      💡 Τα πεδία "Προϋπολογισμός έργου" συγχρονίζονται αυτόματα με τα αντίστοιχα πεδία της βάσης δεδομένων
+                      💡 Μόνο τα ΣΑ με τιμές δημιουργούν καταχωρήσεις στα στοιχεία κατάρτισης. Κενά πεδία (null) παραλείπονται αυτόματα.
                     </p>
                   </div>
 
@@ -1215,10 +1224,10 @@ export default function ComprehensiveEditFixed() {
                               const currentSA = form.watch(`formulation_details.${index}.sa`);
                               const getBudgetSource = (sa: string) => {
                                 switch(sa) {
-                                  case "ΝΑ853": return project?.na853 || "0";
-                                  case "ΝΑ271": return project?.na271 || "0";
-                                  case "E069": return project?.e069 || "0";
-                                  default: return "0";
+                                  case "ΝΑ853": return project?.na853 || "Κενό";
+                                  case "ΝΑ271": return project?.na271 || "Κενό";
+                                  case "E069": return project?.e069 || "Κενό";
+                                  default: return "Κενό";
                                 }
                               };
                               
