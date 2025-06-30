@@ -390,7 +390,7 @@ export default function ComprehensiveEditFixed() {
         console.log('Default location entry created with implementing agency:', defaultImplementingAgency);
         
         locationDetails.push({
-          municipal_community: project.enhanced_kallikratis?.onoma_dimotikis_enotitas || "",
+          municipal_community: "", // Removed from simplified schema
           municipality: project.enhanced_kallikratis?.onoma_neou_ota || "",
           regional_unit: project.enhanced_kallikratis?.perifereiaki_enotita || "",
           region: project.enhanced_kallikratis?.perifereia || "",
