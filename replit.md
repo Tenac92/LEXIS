@@ -127,6 +127,22 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### June 30, 2025 - Budget Field Mapping Fixes & Data Integrity Enhancement
+- **CRITICAL FIX: Resolved budget field corruption in comprehensive edit form**
+- Fixed incorrect mapping where ΣΑ codes were being saved as budget values
+- **Proper Field Mapping Implemented:**
+  - "Κωδικός ενάριθμος" now displays ΣΑ codes (e.g., 2022ΝΑ27100027) from enumeration_code field
+  - "Προϋπολογισμός έργου" now displays actual budget values from project_budget field
+  - Original ΣΑ code fields (na853, na271, e069) preserved during form submission
+  - Budget fields (budget_na853, budget_na271, budget_e069) updated only when form values change
+- **Form Data Integrity:**
+  - Fixed variable reference errors causing form crashes (project vs projectData)
+  - Added React import for proper component structure
+  - Enhanced null ΣΑ filtering to prevent empty formulation entries
+  - Proper budget overview display with visual indicators for null/empty fields
+- **Database Protection:** Form now preserves original ΣΑ codes while allowing budget updates
+- **User Experience:** Clear distinction between codes and budget values in form interface
+
 ### June 30, 2025 - Comprehensive Project Data Import System Implementation
 - **MAJOR ACHIEVEMENT: Successfully implemented complete CSV data import system for project tables**
 - Created comprehensive import scripts that process authentic Greek government project data from 223 real projects

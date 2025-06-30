@@ -172,15 +172,15 @@ export default function ComprehensiveEditFixed() {
         event_year: data.event_details.event_year,
         status: data.project_details.project_status,
         
-        // Budget fields connected to project codes
+        // Budget fields - use form values if changed, otherwise keep original
         budget_e069: data.formulation_details.find(f => f.sa === "E069")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "E069")?.project_budget) : (projectData?.budget_e069 || null),
         budget_na271: data.formulation_details.find(f => f.sa === "NA271")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "NA271")?.project_budget) : (projectData?.budget_na271 || null),
         budget_na853: data.formulation_details.find(f => f.sa === "NA853")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "NA853")?.project_budget) : (projectData?.budget_na853 || null),
         
-        // Also set the e069, na271, na853 code fields
-        e069: data.formulation_details.find(f => f.sa === "E069")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "E069")?.project_budget) : (projectData?.e069 || null),
-        na271: data.formulation_details.find(f => f.sa === "NA271")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "NA271")?.project_budget) : (projectData?.na271 || null),
-        na853: data.formulation_details.find(f => f.sa === "NA853")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "NA853")?.project_budget) : (projectData?.na853 || null),
+        // Keep original ΣΑ code fields unchanged (these should not be modified by form)
+        e069: projectData?.e069 || null,
+        na271: projectData?.na271 || null,
+        na853: projectData?.na853 || null,
         
         // Document fields from decisions
         kya: data.decisions.length > 0 ? data.decisions[0].protocol_number : null,
@@ -442,33 +442,45 @@ export default function ComprehensiveEditFixed() {
         });
         
         const budgetMappings = [
-          { sa: "ΝΑ853" as const, field: project.na853 },
-          { sa: "ΝΑ271" as const, field: project.na271 },
-          { sa: "E069" as const, field: project.e069 }
+          { 
+            sa: "ΝΑ853" as const, 
+            code: project.na853,
+            budget: project.budget_na853
+          },
+          { 
+            sa: "ΝΑ271" as const, 
+            code: project.na271,
+            budget: project.budget_na271
+          },
+          { 
+            sa: "E069" as const, 
+            code: project.e069,
+            budget: project.budget_e069
+          }
         ];
 
         // Only create formulation entries for ΣΑ types that have actual values in Projects table
         budgetMappings.forEach((mapping) => {
-          // Skip if the ΣΑ field is null, undefined, empty string, "-", or any falsy value
-          if (mapping.field === null || mapping.field === undefined || 
-              mapping.field === "" || mapping.field === "-" || 
-              mapping.field === "Μη διαθέσιμο" || 
-              (typeof mapping.field === 'string' && mapping.field.trim() === "")) {
-            console.log(`Skipping ${mapping.sa} - no value in Projects.${mapping.sa.toLowerCase()}:`, mapping.field);
+          // Skip if the ΣΑ code field is null, undefined, empty string, "-", or any falsy value
+          if (mapping.code === null || mapping.code === undefined || 
+              mapping.code === "" || mapping.code === "-" || 
+              mapping.code === "Μη διαθέσιμο" || 
+              (typeof mapping.code === 'string' && mapping.code.trim() === "")) {
+            console.log(`Skipping ${mapping.sa} - no code in Projects.${mapping.sa.toLowerCase()}:`, mapping.code);
             return;
           }
 
-          console.log(`Creating formulation entry for ${mapping.sa} with Projects.${mapping.sa.toLowerCase()}:`, mapping.field);
+          console.log(`Creating formulation entry for ${mapping.sa} with code:`, mapping.code, "budget:", mapping.budget);
           formulation.push({
             sa: mapping.sa,
-            enumeration_code: "",
+            enumeration_code: mapping.code, // Put the ΣΑ code here (e.g., 2022ΝΑ27100027)
             protocol_number: project.decision_data?.[0]?.kya || "",
             ada: project.decision_data?.[0]?.ada || "",
             decision_year: project.event_year?.[0] || "",
-            project_budget: mapping.field.toString(),
+            project_budget: mapping.budget?.toString() || "0", // Put the actual budget value here
             epa_version: "",
-            total_public_expense: mapping.field.toString(),
-            eligible_public_expense: mapping.field.toString(),
+            total_public_expense: mapping.budget?.toString() || "0",
+            eligible_public_expense: mapping.budget?.toString() || "0",
             decision_status: "Ενεργή" as const,
             change_type: "Έγκριση" as const,
             connected_decisions: [],
