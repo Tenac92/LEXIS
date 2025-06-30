@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building } from "lucide-react";
+import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -1097,6 +1097,31 @@ export default function ComprehensiveEditFixed() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
+                  {/* Budget Overview Summary */}
+                  <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4 text-blue-600" />
+                      Συνδεδεμένα Προϋπολογιστικά Στοιχεία (Projects Table)
+                    </h4>
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="flex items-center justify-between p-2 bg-white border border-blue-200 rounded">
+                        <span className="font-medium text-blue-600">ΝΑ853:</span>
+                        <span className="text-gray-700">{project?.na853 || project?.budget_na853 || "Μη διαθέσιμο"}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-white border border-green-200 rounded">
+                        <span className="font-medium text-green-600">ΝΑ271:</span>
+                        <span className="text-gray-700">{project?.na271 || project?.budget_na271 || "Μη διαθέσιμο"}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-white border border-purple-200 rounded">
+                        <span className="font-medium text-purple-600">E069:</span>
+                        <span className="text-gray-700">{project?.e069 || project?.budget_e069 || "Μη διαθέσιμο"}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-2">
+                      💡 Τα πεδία "Προϋπολογισμός έργου" συγχρονίζονται αυτόματα με τα αντίστοιχα πεδία της βάσης δεδομένων
+                    </p>
+                  </div>
+
                   <div className="space-y-4">
                     {form.watch("formulation_details").map((_, index) => (
                       <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
@@ -1178,14 +1203,58 @@ export default function ComprehensiveEditFixed() {
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.project_budget`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">Προϋπολογισμός έργου</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="Ποσό €" className="text-sm" />
-                                </FormControl>
-                              </FormItem>
-                            )}
+                            render={({ field }) => {
+                              const currentSA = form.watch(`formulation_details.${index}.sa`);
+                              const getBudgetSource = (sa: string) => {
+                                switch(sa) {
+                                  case "ΝΑ853": return project?.na853 || project?.budget_na853 || "0";
+                                  case "ΝΑ271": return project?.na271 || project?.budget_na271 || "0";
+                                  case "E069": return project?.e069 || project?.budget_e069 || "0";
+                                  default: return "0";
+                                }
+                              };
+                              
+                              // Auto-sync budget when SA type changes
+                              React.useEffect(() => {
+                                const budgetValue = getBudgetSource(currentSA);
+                                if (budgetValue !== "0" && budgetValue !== field.value) {
+                                  field.onChange(budgetValue);
+                                }
+                              }, [currentSA]);
+
+                              return (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Προϋπολογισμός έργου 
+                                    <span className="text-blue-600 ml-1">({currentSA})</span>
+                                  </FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <Input 
+                                        {...field} 
+                                        placeholder={`Από Projects.${currentSA.toLowerCase()}`}
+                                        className="text-sm pr-16" 
+                                      />
+                                      <Button 
+                                        type="button"
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="absolute right-1 top-0 h-full px-2 text-xs text-blue-600 hover:text-blue-800"
+                                        onClick={() => {
+                                          const budgetValue = getBudgetSource(currentSA);
+                                          field.onChange(budgetValue);
+                                        }}
+                                      >
+                                        <RefreshCw className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </FormControl>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    🔗 Συνδεδεμένο: Projects.{currentSA.toLowerCase()} = {getBudgetSource(currentSA)}
+                                  </div>
+                                </FormItem>
+                              );
+                            }}
                           />
                           <FormField
                             control={form.control}
@@ -1202,14 +1271,42 @@ export default function ComprehensiveEditFixed() {
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.total_public_expense`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">Συνολική δημόσια δαπάνη</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="Ποσό €" className="text-sm" />
-                                </FormControl>
-                              </FormItem>
-                            )}
+                            render={({ field }) => {
+                              const currentSA = form.watch(`formulation_details.${index}.sa`);
+                              const projectBudget = form.watch(`formulation_details.${index}.project_budget`);
+                              
+                              return (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Συνολική δημόσια δαπάνη
+                                    <span className="text-green-600 ml-1">({currentSA})</span>
+                                  </FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <Input 
+                                        {...field} 
+                                        placeholder="Συνολική δαπάνη €"
+                                        className="text-sm pr-16" 
+                                      />
+                                      <Button 
+                                        type="button"
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="absolute right-1 top-0 h-full px-2 text-xs text-green-600 hover:text-green-800"
+                                        onClick={() => {
+                                          field.onChange(projectBudget || "0");
+                                        }}
+                                      >
+                                        <RefreshCw className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </FormControl>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    🔗 Αυτόματο: Προϋπολογισμός έργου = {projectBudget || "0"}
+                                  </div>
+                                </FormItem>
+                              );
+                            }}
                           />
                         </div>
 
@@ -1218,14 +1315,42 @@ export default function ComprehensiveEditFixed() {
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.eligible_public_expense`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">Επιλέξιμη δημόσια δαπάνη</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="Ποσό €" className="text-sm" />
-                                </FormControl>
-                              </FormItem>
-                            )}
+                            render={({ field }) => {
+                              const currentSA = form.watch(`formulation_details.${index}.sa`);
+                              const totalPublicExpense = form.watch(`formulation_details.${index}.total_public_expense`);
+                              
+                              return (
+                                <FormItem>
+                                  <FormLabel className="text-xs font-medium">
+                                    Επιλέξιμη δημόσια δαπάνη
+                                    <span className="text-purple-600 ml-1">({currentSA})</span>
+                                  </FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <Input 
+                                        {...field} 
+                                        placeholder="Επιλέξιμη δαπάνη €"
+                                        className="text-sm pr-16" 
+                                      />
+                                      <Button 
+                                        type="button"
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="absolute right-1 top-0 h-full px-2 text-xs text-purple-600 hover:text-purple-800"
+                                        onClick={() => {
+                                          field.onChange(totalPublicExpense || "0");
+                                        }}
+                                      >
+                                        <RefreshCw className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </FormControl>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    🔗 Αυτόματο: Συνολική δημόσια δαπάνη = {totalPublicExpense || "0"}
+                                  </div>
+                                </FormItem>
+                              );
+                            }}
                           />
                           <FormField
                             control={form.control}
