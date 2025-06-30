@@ -563,7 +563,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       
       // Save connected decisions data to project_history for audit trail
       try {
-        const connectedDecisionsData = updateData.formulation_details.map(formulation => ({
+        const connectedDecisionsData = updateData.formulation_details.map((formulation: any) => ({
           sa: formulation.sa,
           enumeration_code: formulation.enumeration_code,
           protocol_number: formulation.protocol_number,
