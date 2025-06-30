@@ -2276,7 +2276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Query Monada table for units
         const { data: unitsData, error } = await supabase
           .from('Monada')
-          .select('unit, unit_name');
+          .select('id, unit, unit_name');
         
         if (error) {
           console.error('[Units] Error fetching units:', error);
@@ -2287,21 +2287,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Transform data to match client expectations
-        // Transform data to match client expectations
         const transformedUnits = (unitsData || []).map(unit => {
-          // Handle the case where unit_name might be an object or a string
-          let unitName = "";
-          if (typeof unit.unit_name === "object" && unit.unit_name !== null) {
-            // Extract name property if it's an object
-            unitName = unit.unit_name.name || "";
-          } else {
-            // Use directly if it's a string
-            unitName = unit.unit_name || "";
-          }
-          
           return {
-            id: unit.unit,
-            name: unitName
+            id: unit.id,
+            unit: unit.unit,
+            unit_name: unit.unit_name,
+            // Legacy field for backwards compatibility
+            name: typeof unit.unit_name === "object" ? unit.unit_name?.name || "" : unit.unit_name || ""
           };
         });
         

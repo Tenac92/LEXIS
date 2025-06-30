@@ -335,16 +335,16 @@ export default function ComprehensiveEditFixed() {
         
         // Group by kallikratis_id and monada_id to create location entries
         const grouped = projectIndexData.reduce((acc, entry) => {
-          const key = `${entry.kallikratis_id}-${entry.monada_id}`;
+          const key = `${entry.kallikratis_id}-${entry.unit_id}`;
           if (!acc[key]) {
             acc[key] = {
               kallikratis_id: entry.kallikratis_id,
-              monada_id: entry.monada_id,
+              unit_id: entry.unit_id,
               expenditure_types: []
             };
           }
-          if (entry.expediture_type_id) {
-            acc[key].expenditure_types.push(entry.expediture_type_id.toString());
+          if (entry.expenditure_type_id) {
+            acc[key].expenditure_types.push(entry.expenditure_type_id.toString());
           }
           return acc;
         }, {});
@@ -352,7 +352,7 @@ export default function ComprehensiveEditFixed() {
         Object.values(grouped).forEach((group: any) => {
           // Find the kallikratis entry for this location
           const kallikratisEntry = kallikratisData?.find(k => k.id === group.kallikratis_id);
-          const unit = unitsData?.find(u => u.id === group.monada_id);
+          const unit = unitsData?.find(u => u.id === group.unit_id);
           
           // Extract implementing agency name from unit structure
           let implementingAgencyName = "";
