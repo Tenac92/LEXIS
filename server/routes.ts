@@ -1497,6 +1497,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
 
+    // SQL Executor API endpoint for admin users
+    app.post('/api/sql/execute', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const user = req.user as User;
+        
+        // Only allow admin users to execute SQL
+        if (user.role !== 'admin') {
+          return res.status(403).json({
+            success: false,
+            error: 'SQL execution requires admin privileges'
+          });
+        }
+        
+        const { query } = req.body;
+        
+        if (!query || typeof query !== 'string') {
+          return res.status(400).json({
+            success: false,
+            error: 'Query parameter is required and must be a string'
+          });
+        }
+        
+        console.log(`[SQL] Admin user ${user.name} executing query: ${query.substring(0, 100)}...`);
+        
+        // Import and use the SQL executor
+        const { sqlExecutor } = await import('./sql-executor');
+        const result = await sqlExecutor.executeSQL(query);
+        
+        console.log(`[SQL] Query execution completed in ${result.executionTime}ms`);
+        
+        res.json(result);
+        
+      } catch (error) {
+        console.error('[SQL] Error executing query:', error);
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          queryType: 'unknown',
+          executionTime: 0
+        });
+      }
+    });
+
     // Use authentication for all other project routes
     app.use('/api/projects', authenticateSession, projectRouter);
     app.use('/api/catalog', authenticateSession, projectRouter);
