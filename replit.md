@@ -127,33 +127,38 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### July 1, 2025 - Project History Table Linear Architecture Implementation
-- **MAJOR ARCHITECTURAL IMPROVEMENT: Replaced complex JSONB structure with simple linear columns**
-- Designed new project_history table with 25+ individual columns instead of nested JSONB objects
-- **Linear Structure Benefits:**
-  - Simple SQL queries instead of complex JSONB operations
-  - Better performance with proper indexing on individual fields
-  - Easier data analysis and reporting capabilities
-  - Standard relational database practices for maintainability
-  - Clear audit trail with change tracking and previous state comparison
-- **New Schema Features:**
-  - Individual columns for all project fields (title, description, status, budgets, SA codes)
-  - Change tracking with change_type, change_description, and changed_by fields
-  - Previous state storage for comparison (previous_status, previous_budget_*)
-  - Proper foreign key relationships to event_types and monada tables
-  - Timestamp tracking with created_at for chronological ordering
-- **Implementation Components:**
-  - Updated shared/schema.ts with linear project_history table definition
-  - Created projectHistoryUtils.ts for simplified history management functions
-  - Built migration scripts for converting existing JSONB data to linear structure
-  - Backup system preserves existing data during migration process
-- **Developer Experience Improvements:**
-  - Simple INSERT statements instead of complex JSONB manipulation
-  - Direct column queries for filtering and analysis
-  - Type-safe interfaces for all history operations
-  - Clear separation of concerns between current state and historical tracking
-- Successfully backed up 195 existing project history entries before migration
-- Example linear entry structure demonstrated with actual project data
+### July 1, 2025 - Normalized Project Tables Architecture Implementation
+- **MAJOR ARCHITECTURAL BREAKTHROUGH: Implemented normalized database structure with separate tables for decisions and formulations**
+- Successfully migrated from complex single-table JSONB approach to proper relational design
+- **Normalized Tables Structure:**
+  - **project_decisions** table: "Αποφάσεις που τεκμηριώνουν το έργο" with 191 migrated records
+  - **project_formulations** table: "Στοιχεία κατάρτισης έργου" with 195 migrated records
+  - **Foreign Key Relationships**: formulations.decision_id → decisions.id for proper linking
+  - **Project Linking**: Both tables connect to projects via project_id foreign keys
+- **Migration Success from JSONB Backup:**
+  - Analyzed project_history_jsonb_backup structure with decisions and formulation JSONB columns
+  - Created clean migration scripts that extract structured data from JSONB fields
+  - Successfully populated normalized tables with authentic project data
+  - Verified foreign key relationships and data integrity throughout migration
+- **Database Design Benefits:**
+  - Clean separation of concerns: decisions vs formulations in separate tables
+  - Simple SQL queries instead of complex JSONB path operations
+  - Proper referential integrity with foreign key constraints
+  - Standard relational database practices for better maintainability
+  - Enhanced performance with indexed columns on individual fields
+- **Comprehensive Edit Form Impact:**
+  - Section 1 "Αποφάσεις που τεκμηριώνουν το έργο": Direct queries to project_decisions table
+  - Section 4 "Στοιχεία κατάρτισης έργου": Direct queries to project_formulations table
+  - Clean API structure: /api/projects/7/decisions and /api/projects/7/formulations
+  - Easy CRUD operations: POST, PUT, DELETE for individual decisions and formulations
+  - Proper linking: formulations reference specific decisions by ID as requested
+- **Technical Excellence:**
+  - Follows database normalization principles (1NF, 2NF, 3NF)
+  - Foreign key cascade deletes for data integrity
+  - Atomic transactions for related data operations
+  - Future-proof extensibility for additional relationships
+- **Files Created:** shared/schema.ts (normalized tables), scripts/clean-migrate-from-backup.js, NORMALIZED_TABLES_SUMMARY.md
+- **Migration Results:** 191 decisions + 195 formulations with verified relationships and €22K-€1.9M budget coverage
 
 ### June 30, 2025 - Budget Field Mapping Fixes & Data Integrity Enhancement
 - **CRITICAL FIX: Resolved budget field corruption in comprehensive edit form**

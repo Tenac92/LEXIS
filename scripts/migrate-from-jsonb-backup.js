@@ -86,32 +86,29 @@ function extractDecisions(backupData) {
       projectDecisionCounts[projectId] = 0;
     }
     
-    // Extract from JSONB decision_details array
-    if (entry.formulation_metadata?.decision_details?.length > 0) {
-      entry.formulation_metadata.decision_details.forEach(decisionDetail => {
-        projectDecisionCounts[projectId]++;
-        
-        const decision = {
-          project_id: projectId,
-          decision_sequence: projectDecisionCounts[projectId],
-          decision_type: decisionDetail.decision_type || 'Έγκριση',
-          protocol_number: decisionDetail.protocol_number || entry.protocol_number,
-          fek: decisionDetail.fek || entry.fek,
-          ada: decisionDetail.ada || entry.ada,
-          implementing_agency: decisionDetail.implementing_agency || 
-                              entry.implementing_agency_location || 'ΔΑΕΦΚ',
-          decision_budget: parseFloat(decisionDetail.decision_budget || entry.expenses_executed || 0),
-          expenses_covered: parseFloat(decisionDetail.expenses_covered || entry.expenses_executed || 0),
-          decision_date: entry.created_at.split('T')[0],
-          is_included: decisionDetail.is_included !== false,
-          is_active: true,
-          comments: decisionDetail.comments || entry.change_description || '',
-          created_at: entry.created_at,
-          updated_at: entry.created_at
-        };
-        
-        decisions.push(decision);
-      });
+    // Extract from JSONB decisions structure
+    if (entry.decisions && (entry.decisions.protocol_number || entry.decisions.fek || entry.decisions.ada)) {
+      projectDecisionCounts[projectId]++;
+      
+      const decision = {
+        project_id: projectId,
+        decision_sequence: projectDecisionCounts[projectId],
+        decision_type: entry.decisions.decision_type || 'Έγκριση',
+        protocol_number: entry.decisions.protocol_number,
+        fek: entry.decisions.fek,
+        ada: entry.decisions.ada,
+        implementing_agency: entry.implementing_agency_location || 'ΔΑΕΦΚ',
+        decision_budget: parseFloat(entry.expenses_executed || 0),
+        expenses_covered: parseFloat(entry.expenses_executed || 0),
+        decision_date: entry.created_at.split('T')[0],
+        is_included: true,
+        is_active: true,
+        comments: entry.decisions.budget_decision || entry.summary_description || '',
+        created_at: entry.created_at,
+        updated_at: entry.created_at
+      };
+      
+      decisions.push(decision);
     } else if (entry.protocol_number || entry.fek || entry.ada) {
       // Create decision from legacy fields
       projectDecisionCounts[projectId]++;
@@ -168,37 +165,35 @@ function extractFormulations(backupData, decisions) {
       projectFormulationCounts[projectId] = 0;
     }
     
-    // Extract from JSONB formulation_details array
-    if (entry.formulation_metadata?.formulation_details?.length > 0) {
-      entry.formulation_metadata.formulation_details.forEach(formulationDetail => {
-        projectFormulationCounts[projectId]++;
-        
-        // Try to link to a decision
-        const decisionKey = `${projectId}_1`; // Link to first decision for now
-        const decisionId = decisionLookup[decisionKey] || null;
-        
-        const formulation = {
-          project_id: projectId,
-          decision_id: decisionId,
-          formulation_sequence: projectFormulationCounts[projectId],
-          sa_type: formulationDetail.sa_type || 'ΝΑ853',
-          enumeration_code: formulationDetail.enumeration_code || '',
-          protocol_number: formulationDetail.protocol_number || entry.protocol_number,
-          decision_year: formulationDetail.decision_year || new Date(entry.created_at).getFullYear(),
-          project_budget: parseFloat(formulationDetail.project_budget || entry.expenses_executed || 0),
-          total_public_expense: parseFloat(formulationDetail.total_public_expense || entry.expenses_executed || 0),
-          eligible_public_expense: parseFloat(formulationDetail.eligible_public_expense || entry.expenses_executed || 0),
-          epa_version: formulationDetail.epa_version || '1.0',
-          decision_status: formulationDetail.decision_status || 'Ενεργή',
-          change_type: formulationDetail.change_type || entry.change_type || 'Έγκριση',
-          connected_decision_ids: formulationDetail.connected_decision_ids || [],
-          comments: formulationDetail.comments || '',
-          created_at: entry.created_at,
-          updated_at: entry.created_at
-        };
-        
-        formulations.push(formulation);
-      });
+    // Extract from JSONB formulation structure
+    if (entry.formulation) {
+      projectFormulationCounts[projectId]++;
+      
+      // Try to link to a decision
+      const decisionKey = `${projectId}_1`; // Link to first decision for now
+      const decisionId = decisionLookup[decisionKey] || null;
+      
+      const formulation = {
+        project_id: projectId,
+        decision_id: decisionId,
+        formulation_sequence: projectFormulationCounts[projectId],
+        sa_type: entry.formulation.na853_code ? 'ΝΑ853' : 'ΝΑ271',
+        enumeration_code: entry.enumeration_code || '',
+        protocol_number: entry.decisions?.protocol_number || '',
+        decision_year: entry.event_year || entry.formulation.event_year || new Date(entry.created_at).getFullYear(),
+        project_budget: parseFloat(entry.formulation.budget_na853 || entry.formulation.budget_na271 || entry.expenses_executed || 0),
+        total_public_expense: parseFloat(entry.expenses_executed || 0),
+        eligible_public_expense: parseFloat(entry.expenses_executed || 0),
+        epa_version: '1.0',
+        decision_status: entry.formulation.status === 'active' ? 'Ενεργή' : 'Αναστολή',
+        change_type: 'Έγκριση',
+        connected_decision_ids: [],
+        comments: entry.formulation.event_description || entry.summary_description || '',
+        created_at: entry.created_at,
+        updated_at: entry.created_at
+      };
+      
+      formulations.push(formulation);
     }
   });
   
