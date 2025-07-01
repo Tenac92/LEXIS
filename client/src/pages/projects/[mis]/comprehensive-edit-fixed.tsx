@@ -534,7 +534,7 @@ export default function ComprehensiveEditFixed() {
         setHasPreviousEntries(true);
       }
     }
-  }, [projectData, projectIndexData, kallikratisData, unitsData, form]);
+  }, [projectData, projectIndexData, kallikratisData, unitsData, decisionsData, formulationsData, form]);
 
   // Computed values
   const isLoading = projectLoading;
