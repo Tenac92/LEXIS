@@ -127,6 +127,34 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 1, 2025 - Project History Table Linear Architecture Implementation
+- **MAJOR ARCHITECTURAL IMPROVEMENT: Replaced complex JSONB structure with simple linear columns**
+- Designed new project_history table with 25+ individual columns instead of nested JSONB objects
+- **Linear Structure Benefits:**
+  - Simple SQL queries instead of complex JSONB operations
+  - Better performance with proper indexing on individual fields
+  - Easier data analysis and reporting capabilities
+  - Standard relational database practices for maintainability
+  - Clear audit trail with change tracking and previous state comparison
+- **New Schema Features:**
+  - Individual columns for all project fields (title, description, status, budgets, SA codes)
+  - Change tracking with change_type, change_description, and changed_by fields
+  - Previous state storage for comparison (previous_status, previous_budget_*)
+  - Proper foreign key relationships to event_types and monada tables
+  - Timestamp tracking with created_at for chronological ordering
+- **Implementation Components:**
+  - Updated shared/schema.ts with linear project_history table definition
+  - Created projectHistoryUtils.ts for simplified history management functions
+  - Built migration scripts for converting existing JSONB data to linear structure
+  - Backup system preserves existing data during migration process
+- **Developer Experience Improvements:**
+  - Simple INSERT statements instead of complex JSONB manipulation
+  - Direct column queries for filtering and analysis
+  - Type-safe interfaces for all history operations
+  - Clear separation of concerns between current state and historical tracking
+- Successfully backed up 195 existing project history entries before migration
+- Example linear entry structure demonstrated with actual project data
+
 ### June 30, 2025 - Budget Field Mapping Fixes & Data Integrity Enhancement
 - **CRITICAL FIX: Resolved budget field corruption in comprehensive edit form**
 - Fixed incorrect mapping where ΣΑ codes were being saved as budget values
