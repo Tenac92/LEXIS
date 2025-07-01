@@ -176,6 +176,7 @@ export default function ComprehensiveEditFixed() {
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
       console.log("Sending comprehensive form data:", data);
+      console.log("Formulation details:", data.formulation_details);
       
       // Transform the data to match backend expectations with comprehensive mapping
       const transformedData = {
@@ -187,9 +188,33 @@ export default function ComprehensiveEditFixed() {
         status: data.project_details.project_status,
         
         // Budget fields - use form values if changed, parse European format to numbers
-        budget_e069: data.formulation_details.find(f => f.sa === "E069")?.project_budget ? parseEuropeanNumber(data.formulation_details.find(f => f.sa === "E069")?.project_budget) : (projectData?.budget_e069 || null),
-        budget_na271: data.formulation_details.find(f => f.sa === "NA271")?.project_budget ? parseEuropeanNumber(data.formulation_details.find(f => f.sa === "NA271")?.project_budget) : (projectData?.budget_na271 || null),
-        budget_na853: data.formulation_details.find(f => f.sa === "NA853")?.project_budget ? parseEuropeanNumber(data.formulation_details.find(f => f.sa === "NA853")?.project_budget) : (projectData?.budget_na853 || null),
+        budget_e069: (() => {
+          const formEntry = data.formulation_details.find(f => f.sa === "E069");
+          if (formEntry?.project_budget) {
+            const parsed = parseEuropeanNumber(formEntry.project_budget);
+            console.log(`Budget E069: "${formEntry.project_budget}" -> ${parsed}`);
+            return parsed;
+          }
+          return projectData?.budget_e069 || null;
+        })(),
+        budget_na271: (() => {
+          const formEntry = data.formulation_details.find(f => f.sa === "NA271");
+          if (formEntry?.project_budget) {
+            const parsed = parseEuropeanNumber(formEntry.project_budget);
+            console.log(`Budget NA271: "${formEntry.project_budget}" -> ${parsed}`);
+            return parsed;
+          }
+          return projectData?.budget_na271 || null;
+        })(),
+        budget_na853: (() => {
+          const formEntry = data.formulation_details.find(f => f.sa === "NA853");
+          if (formEntry?.project_budget) {
+            const parsed = parseEuropeanNumber(formEntry.project_budget);
+            console.log(`Budget NA853: "${formEntry.project_budget}" -> ${parsed}`);
+            return parsed;
+          }
+          return projectData?.budget_na853 || null;
+        })(),
         
         // Keep original ΣΑ code fields unchanged (these should not be modified by form)
         e069: projectData?.e069 || null,
@@ -238,6 +263,11 @@ export default function ComprehensiveEditFixed() {
       };
 
       console.log("Transformed data for backend:", transformedData);
+      console.log("Budget values being sent:", {
+        budget_e069: transformedData.budget_e069,
+        budget_na271: transformedData.budget_na271, 
+        budget_na853: transformedData.budget_na853
+      });
       console.log("Project lines:", transformedData.project_lines);
       
       // Use fetch directly to ensure proper formatting

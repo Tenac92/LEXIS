@@ -540,9 +540,24 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     if (updateData.na853) fieldsToUpdate.na853 = updateData.na853;
     
     // Budget fields - use numbers or null
-    if (updateData.budget_e069 !== undefined) fieldsToUpdate.budget_e069 = updateData.budget_e069;
-    if (updateData.budget_na271 !== undefined) fieldsToUpdate.budget_na271 = updateData.budget_na271;
-    if (updateData.budget_na853 !== undefined) fieldsToUpdate.budget_na853 = updateData.budget_na853;
+    console.log('[Projects] Received budget values:', {
+      budget_e069: updateData.budget_e069,
+      budget_na271: updateData.budget_na271,
+      budget_na853: updateData.budget_na853
+    });
+    
+    if (updateData.budget_e069 !== undefined) {
+      fieldsToUpdate.budget_e069 = updateData.budget_e069;
+      console.log(`[Projects] Setting budget_e069 to: ${updateData.budget_e069} (type: ${typeof updateData.budget_e069})`);
+    }
+    if (updateData.budget_na271 !== undefined) {
+      fieldsToUpdate.budget_na271 = updateData.budget_na271;
+      console.log(`[Projects] Setting budget_na271 to: ${updateData.budget_na271} (type: ${typeof updateData.budget_na271})`);
+    }
+    if (updateData.budget_na853 !== undefined) {
+      fieldsToUpdate.budget_na853 = updateData.budget_na853;
+      console.log(`[Projects] Setting budget_na853 to: ${updateData.budget_na853} (type: ${typeof updateData.budget_na853})`);
+    }
     
     // Status if provided (text field)
     if (updateData.status) fieldsToUpdate.status = updateData.status;
