@@ -100,7 +100,7 @@ const comprehensiveProjectSchema = z.object({
     epa_version: z.string().default(""),
     total_public_expense: z.string().default(""),
     eligible_public_expense: z.string().default(""),
-    decision_status: z.enum(["Ενεργή", "Ανενεργή"]).default("Ενεργή"),
+    decision_status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
     change_type: z.enum(["Τροποποίηση", "Παράταση", "Έγκριση"]).default("Έγκριση"),
     connected_decisions: z.array(z.string()).default([]),
     comments: z.string().default(""),
@@ -1312,13 +1312,7 @@ export default function ComprehensiveEditFixed() {
                                 }
                               };
                               
-                              // Auto-sync budget when SA type changes
-                              React.useEffect(() => {
-                                const budgetValue = getBudgetSource(currentSA);
-                                if (budgetValue !== "0" && budgetValue !== field.value) {
-                                  field.onChange(budgetValue);
-                                }
-                              }, [currentSA]);
+                              // Auto-sync budget when SA type changes (removed problematic useEffect)
 
                               return (
                                 <FormItem>
@@ -1330,7 +1324,6 @@ export default function ComprehensiveEditFixed() {
                                     <div className="relative">
                                       <Input 
                                         {...field}
-                                        value={field.value ? formatNumberWhileTyping(field.value) : ""}
                                         onChange={(e) => {
                                           const formattedValue = formatNumberWhileTyping(e.target.value);
                                           field.onChange(formattedValue);

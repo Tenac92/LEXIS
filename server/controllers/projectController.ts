@@ -1301,8 +1301,8 @@ router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
           connected_decision_ids: Array.isArray(formulation.connected_decisions) ? formulation.connected_decisions : [],
           comments: formulation.comments || null,
           is_active: true,
-          created_by: req.user.id,
-          updated_by: req.user.id
+          created_by: req.user?.id || null,
+          updated_by: req.user?.id || null
         };
       });
 
