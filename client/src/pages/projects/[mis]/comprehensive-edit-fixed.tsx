@@ -637,7 +637,24 @@ export default function ComprehensiveEditFixed() {
   }
 
   const handleSubmit = (data: ComprehensiveFormData) => {
+    console.log("=== FORM SUBMISSION DEBUG ===");
     console.log("Form submitted with data:", data);
+    console.log("Form errors:", form.formState.errors);
+    console.log("Form validation state:", form.formState.isValid);
+    console.log("Mutation pending:", mutation.isPending);
+    console.log("Formulation details being submitted:", data.formulation_details);
+    
+    if (data.formulation_details) {
+      data.formulation_details.forEach((formulation, index) => {
+        console.log(`Formulation ${index + 1}:`, {
+          sa: formulation.sa,
+          project_budget: formulation.project_budget,
+          total_public_expense: formulation.total_public_expense,
+          eligible_public_expense: formulation.eligible_public_expense
+        });
+      });
+    }
+    
     mutation.mutate(data);
   };
 
