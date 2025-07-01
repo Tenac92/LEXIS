@@ -1235,10 +1235,10 @@ export default function ComprehensiveEditFixed() {
                               const currentSA = form.watch(`formulation_details.${index}.sa`);
                               const getBudgetSource = (sa: string) => {
                                 switch(sa) {
-                                  case "ΝΑ853": return projectData?.na853 || "Κενό";
-                                  case "ΝΑ271": return projectData?.na271 || "Κενό";
-                                  case "E069": return projectData?.e069 || "Κενό";
-                                  default: return "Κενό";
+                                  case "ΝΑ853": return projectData?.budget_na853?.toString() || "0";
+                                  case "ΝΑ271": return projectData?.budget_na271?.toString() || "0";
+                                  case "E069": return projectData?.budget_e069?.toString() || "0";
+                                  default: return "0";
                                 }
                               };
                               
@@ -1260,7 +1260,7 @@ export default function ComprehensiveEditFixed() {
                                     <div className="relative">
                                       <Input 
                                         {...field} 
-                                        placeholder={`Από Projects.${currentSA.toLowerCase()}`}
+                                        placeholder={`Από Projects.budget_${currentSA.toLowerCase()}`}
                                         className="text-sm pr-16" 
                                       />
                                       <Button 
@@ -1278,7 +1278,7 @@ export default function ComprehensiveEditFixed() {
                                     </div>
                                   </FormControl>
                                   <div className="text-xs text-gray-500 mt-1">
-                                    🔗 Συνδεδεμένο: Projects.{currentSA.toLowerCase()} = {getBudgetSource(currentSA)}
+                                    🔗 Συνδεδεμένο: Projects.budget_{currentSA.toLowerCase()} = €{getBudgetSource(currentSA)}
                                   </div>
                                 </FormItem>
                               );
