@@ -1,10 +1,10 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Building2, BriefcaseBusiness, Target, Euro, Hash } from "lucide-react";
-import { type Project } from "@shared/schema";
+import { type Project, type OptimizedProject } from "@shared/schema";
 
 interface ProjectDetailsDialogProps {
-  project: Project;
+  project: Project | OptimizedProject;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
