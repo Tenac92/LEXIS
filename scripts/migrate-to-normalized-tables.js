@@ -19,20 +19,20 @@ const supabase = createClient(
  * Analyze existing project history data
  */
 async function analyzeExistingData() {
-  console.log('Analyzing existing project history data...\n');
+  console.log('Analyzing existing project_history_jsonb_backup data...\n');
   
   try {
     const { data: historyData, error } = await supabase
-      .from('project_history')
+      .from('project_history_jsonb_backup')
       .select('*')
       .order('project_id, created_at');
       
     if (error) {
-      console.error('Error fetching project history:', error);
+      console.error('Error fetching project history backup:', error);
       return null;
     }
     
-    console.log(`Found ${historyData.length} project history entries`);
+    console.log(`Found ${historyData.length} project history backup entries`);
     
     // Group by project to understand the structure
     const projectGroups = {};
@@ -44,6 +44,7 @@ async function analyzeExistingData() {
     });
     
     console.log(`Data spans ${Object.keys(projectGroups).length} projects`);
+    console.log('\nAnalyzing JSONB backup structure:');
     
     // Analyze structure
     Object.keys(projectGroups).slice(0, 3).forEach(projectId => {
@@ -86,23 +87,19 @@ async function migrateToDecisionsTable(projectGroups) {
       let decisionSequence = 1;
       
       for (const entry of entries) {
-        // Skip entries without decision data
-        if (!entry.protocol_number && !entry.fek && !entry.ada) {
-          continue;
-        }
-        
-        const decision = {
-          project_id: parseInt(projectId),
-          decision_sequence: decisionSequence++,
-          decision_type: entry.formulation_metadata?.decision_details?.[0]?.decision_type || 
-                        (entry.change_type === 'MULTI_DECISION' ? 
-                         (entry.formulation_metadata?.decision_type === 'APPROVAL' ? 'Έγκριση' : 'Τροποποίηση') : 
-                         'Έγκριση'),
-          
-          // Document references
-          protocol_number: entry.protocol_number,
-          fek: entry.fek,
-          ada: entry.ada,
+        // Extract decisions from JSONB backup structure
+        if (entry.formulation_metadata?.decision_details?.length > 0) {
+          // Multiple decisions in JSONB structure
+          for (const decisionDetail of entry.formulation_metadata.decision_details) {
+            const decision = {
+              project_id: parseInt(projectId),
+              decision_sequence: decisionSequence++,
+              decision_type: decisionDetail.decision_type || 'Έγκριση',
+              
+              // Document references from JSONB
+              protocol_number: decisionDetail.protocol_number || entry.protocol_number,
+              fek: decisionDetail.fek || entry.fek,
+              ada: decisionDetail.ada || entry.ada,
           
           // Decision details
           implementing_agency: entry.implementing_agency_location || 
