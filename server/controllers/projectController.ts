@@ -1109,4 +1109,105 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
   }
 });
 
+// Get project decisions from normalized table
+router.get('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    
+    console.log(`[ProjectDecisions] Fetching decisions for project MIS: ${mis}`);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // First get the project to get the project_id
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id, mis')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      console.error(`[ProjectDecisions] Project not found for MIS: ${mis}`, projectError);
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Get decisions from normalized table
+    const { data: decisions, error: decisionsError } = await supabase
+      .from('project_decisions')
+      .select('*')
+      .eq('project_id', project.id)
+      .order('decision_sequence');
+
+    if (decisionsError) {
+      console.error(`[ProjectDecisions] Error fetching decisions:`, decisionsError);
+      return res.status(500).json({ message: "Failed to fetch decisions" });
+    }
+
+    console.log(`[ProjectDecisions] Found ${decisions?.length || 0} decisions for project ${mis}`);
+    res.json(decisions || []);
+  } catch (error) {
+    console.error(`[ProjectDecisions] Error:`, error);
+    res.status(500).json({ 
+      message: "Failed to fetch project decisions",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Get project formulations from normalized table
+router.get('/:mis/formulations', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    
+    console.log(`[ProjectFormulations] Fetching formulations for project MIS: ${mis}`);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // First get the project to get the project_id
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id, mis')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      console.error(`[ProjectFormulations] Project not found for MIS: ${mis}`, projectError);
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Get formulations from normalized table with linked decision data
+    const { data: formulations, error: formulationsError } = await supabase
+      .from('project_formulations')
+      .select(`
+        *,
+        project_decisions!inner(
+          id,
+          decision_type,
+          protocol_number,
+          fek,
+          ada
+        )
+      `)
+      .eq('project_id', project.id)
+      .order('formulation_sequence');
+
+    if (formulationsError) {
+      console.error(`[ProjectFormulations] Error fetching formulations:`, formulationsError);
+      return res.status(500).json({ message: "Failed to fetch formulations" });
+    }
+
+    console.log(`[ProjectFormulations] Found ${formulations?.length || 0} formulations for project ${mis}`);
+    res.json(formulations || []);
+  } catch (error) {
+    console.error(`[ProjectFormulations] Error:`, error);
+    res.status(500).json({ 
+      message: "Failed to fetch project formulations",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 export { router as projectsRouter };

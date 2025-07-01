@@ -160,6 +160,18 @@ export default function ComprehensiveEditFixed() {
     queryKey: ["/api/expenditure-types"],
   });
 
+  // Fetch decisions from normalized table
+  const { data: decisionsData } = useQuery({
+    queryKey: [`/api/projects/${mis}/decisions`],
+    enabled: !!mis,
+  });
+
+  // Fetch formulations from normalized table
+  const { data: formulationsData } = useQuery({
+    queryKey: [`/api/projects/${mis}/formulations`],
+    enabled: !!mis,
+  });
+
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
       console.log("Sending comprehensive form data:", data);
@@ -266,21 +278,22 @@ export default function ComprehensiveEditFixed() {
     if (projectData) {
       console.log('Initializing form with project data:', projectData);
       console.log('Project index data:', projectIndexData);
+      console.log('Decisions data from normalized table:', decisionsData);
+      console.log('Formulations data from normalized table:', formulationsData);
       const project = projectData;
 
-      // Initialize decisions from project data and decision_data from project_history
+      // Initialize decisions from normalized project_decisions table
       const decisions = [];
       
-      // Check if we have decision_data from project_history (new architecture)
-      if (project.decision_data && Array.isArray(project.decision_data) && project.decision_data.length > 0) {
-        console.log('Loading decisions from project_history decision_data:', project.decision_data);
-        project.decision_data.forEach((decision, i) => {
+      if (decisionsData && Array.isArray(decisionsData) && decisionsData.length > 0) {
+        console.log('Loading decisions from normalized project_decisions table:', decisionsData);
+        decisionsData.forEach((decision) => {
           decisions.push({
-            protocol_number: decision.kya || "",
+            protocol_number: decision.protocol_number || "",
             fek: decision.fek || "",
             ada: decision.ada || "",
             implementing_agency: decision.implementing_agency || "",
-            decision_budget: decision.budget_decision || "",
+            decision_budget: decision.decision_budget?.toString() || "",
             expenses_covered: decision.expenses_covered || "",
             decision_type: decision.decision_type || "Έγκριση" as const,
             is_included: decision.is_included !== undefined ? decision.is_included : true,
@@ -288,33 +301,8 @@ export default function ComprehensiveEditFixed() {
           });
         });
       } else {
-        // Fallback to legacy fields if no project_history data exists
-        console.log('Loading decisions from legacy project fields');
-        
-        // Parse arrays from legacy fields
-        const kya = project.decisions?.kya || [];
-        const fek = project.decisions?.fek || [];
-        const ada = project.decisions?.ada || [];
-        
-        const maxLength = Math.max(kya.length, fek.length, ada.length, 1);
-        
-        for (let i = 0; i < maxLength; i++) {
-          decisions.push({
-            protocol_number: kya[i] || "",
-            fek: fek[i] || "",
-            ada: ada[i] || "",
-            implementing_agency: project.enhanced_unit?.name || "",
-            decision_budget: "",
-            expenses_covered: "",
-            decision_type: "Έγκριση" as const,
-            is_included: true,
-            comments: "",
-          });
-        }
-      }
-
-      // If no decisions exist, create default entry
-      if (decisions.length === 0) {
+        // Create default entry if no decisions exist
+        console.log('No decisions found in normalized table, creating default entry');
         decisions.push({
           protocol_number: "",
           fek: "",
@@ -402,23 +390,24 @@ export default function ComprehensiveEditFixed() {
       // Initialize formulation details
       const formulation = [];
 
-      // Check if project has existing formulation details structure
-      if (project.formulation_details && Array.isArray(project.formulation_details) && project.formulation_details.length > 0) {
-        project.formulation_details.forEach((detail) => {
+      // Use normalized formulations data if available
+      if (formulationsData && Array.isArray(formulationsData) && formulationsData.length > 0) {
+        console.log('Loading formulations from normalized project_formulations table:', formulationsData);
+        formulationsData.forEach((formData) => {
           formulation.push({
-            sa: detail.sa || "ΝΑ853" as const,
-            enumeration_code: detail.enumeration_code || "",
-            protocol_number: detail.protocol_number || project.decisions?.kya?.[0] || "",
-            ada: detail.ada || project.decisions?.ada?.[0] || "",
-            decision_year: detail.decision_year || project.event_year?.[0] || "",
-            project_budget: detail.project_budget || (project.budget_e069?.toString() || "0"),
-            epa_version: detail.epa_version || "",
-            total_public_expense: detail.total_public_expense || (project.budget_e069?.toString() || "0"),
-            eligible_public_expense: detail.eligible_public_expense || (project.budget_e069?.toString() || "0"),
-            decision_status: detail.decision_status || "Ενεργή" as const,
-            change_type: detail.change_type || "Έγκριση" as const,
-            connected_decisions: Array.isArray(detail.connected_decisions) ? detail.connected_decisions : [],
-            comments: detail.comments || "",
+            sa: formData.sa_type || "ΝΑ853" as const,
+            enumeration_code: formData.enumeration_code || "",
+            protocol_number: formData.decision_protocol_number || "",
+            ada: formData.decision_ada || "",
+            decision_year: formData.decision_year?.toString() || "",
+            project_budget: formData.project_budget?.toString() || "0",
+            epa_version: formData.epa_version || "",
+            total_public_expense: formData.total_public_expense?.toString() || "0",
+            eligible_public_expense: formData.eligible_public_expense?.toString() || "0",
+            decision_status: formData.decision_status || "Ενεργή" as const,
+            change_type: formData.change_type || "Έγκριση" as const,
+            connected_decisions: Array.isArray(formData.connected_decisions) ? formData.connected_decisions : [],
+            comments: formData.comments || "",
           });
         });
       } else {
