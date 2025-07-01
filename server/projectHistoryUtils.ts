@@ -3,7 +3,12 @@
  * Helper functions for working with the simplified linear project_history table
  */
 
-import { supabase } from './supabaseClient.js';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_KEY!
+);
 
 export interface ProjectHistoryEntry {
   project_id: number;
@@ -255,7 +260,7 @@ export async function getProjectHistoryStats(projectId: number) {
     total_changes: data.length,
     create_date: data[data.length - 1]?.created_at,
     last_update: data[0]?.created_at,
-    change_types: data.reduce((acc, entry) => {
+    change_types: data.reduce((acc: Record<string, number>, entry: any) => {
       acc[entry.change_type] = (acc[entry.change_type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
