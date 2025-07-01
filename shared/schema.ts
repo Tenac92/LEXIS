@@ -148,99 +148,67 @@ export const budgetHistory = pgTable("budget_history", {
 });
 
 /**
- * Project History Table
+ * Project History Table - Simplified Linear Structure
  * Tracks historical changes and versions of project data
- * Stores comprehensive project state snapshots for audit trails
- * 
- * UPDATED: Now handles ALL 42 fields from comprehensive edit form
+ * Simple column-based approach instead of complex JSONB
  */
 export const projectHistory = pgTable("project_history", {
   id: bigint("id", { mode: "bigint" }).generatedAlwaysAsIdentity().primaryKey(),
   project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  change_type: text("change_type").notNull(), // "CREATE", "UPDATE", "STATUS_CHANGE"
+  change_description: text("change_description"),
+  changed_by: integer("changed_by"), // User ID who made the change
   
-  // Section 1: Complete Decisions Array (replaces simple decisions)
-  decision_details: jsonb("decision_details").$type<{
-    protocol_number: string;
-    fek: string;
-    ada: string;
-    implementing_agency: string;
-    decision_budget: string;
-    expenses_covered: string;
-    decision_type: "Έγκριση" | "Τροποποίηση" | "Παράταση";
-    is_included: boolean;
-    comments: string;
-  }[]>(),
+  // Core Project Fields (snapshot at time of change)
+  project_title: text("project_title"),
+  project_description: text("project_description"),
+  event_description: text("event_description"),
+  status: text("status"),
   
-  // Section 2: Event Details
-  event_details: jsonb("event_details").$type<{
-    event_name: string;
-    event_year: string;
-  }>(),
+  // Financial Data
+  budget_na853: decimal("budget_na853", { precision: 12, scale: 2 }),
+  budget_na271: decimal("budget_na271", { precision: 12, scale: 2 }),
+  budget_e069: decimal("budget_e069", { precision: 12, scale: 2 }),
   
-  // Section 2: Location Details Array (geographic hierarchy + agencies + expenditure types)
-  location_details: jsonb("location_details").$type<{
-    municipal_community: string;
-    municipality: string;
-    regional_unit: string;
-    region: string;
-    implementing_agency: string;
-    expenditure_types: string[];
-  }[]>(),
+  // SA Codes
+  na853: text("na853"),
+  na271: text("na271"),
+  e069: text("e069"),
   
-  // Section 3: Complete Project Details
-  project_details: jsonb("project_details").$type<{
-    mis: string;
-    sa: string;
-    enumeration_code: string;
-    inclusion_year: string;
-    project_title: string;
-    project_description: string;
-    summary_description: string;
-    expenses_executed: string;
-    project_status: "Συνεχιζόμενο" | "Ολοκληρωμένο" | "Απενταγμένο";
-  }>(),
+  // Event Information
+  event_type_id: integer("event_type_id").references(() => eventTypes.id),
+  event_year: text("event_year"), // JSON array as text for multiple years
   
-  // Section 3: Previous Entries Array
-  previous_entries: jsonb("previous_entries").$type<{
-    sa: string;
-    enumeration_code: string;
-  }[]>(),
+  // Document References (for decisions/documents that triggered this change)
+  protocol_number: text("protocol_number"),
+  fek: text("fek"),
+  ada: text("ada"),
   
-  // Section 4: Complete Formulation Details Array (12+ fields per entry)
-  formulation_details: jsonb("formulation_details").$type<{
-    sa: "ΝΑ853" | "ΝΑ271" | "Ε069";
-    enumeration_code: string;
-    protocol_number: string;
-    ada: string;
-    decision_year: string;
-    project_budget: string;
-    epa_version: string;
-    total_public_expense: string;
-    eligible_public_expense: string;
-    decision_status: "Ενεργή" | "Ανενεργή";
-    change_type: "Τροποποίηση" | "Παράταση" | "Έγκριση";
-    connected_decisions: string;
-    comments: string;
-  }[]>(),
+  // Location (simplified - main location only)
+  region: text("region"),
+  regional_unit: text("regional_unit"),
+  municipality: text("municipality"),
   
-  // Section 5: Changes Array (properly structured)
-  changes: jsonb("changes").$type<{
-    description: string;
-  }[]>(),
+  // Implementation
+  implementing_agency_id: integer("implementing_agency_id").references(() => monada.id),
+  implementing_agency_name: text("implementing_agency_name"),
   
-  // LEGACY FIELDS (for backward compatibility)
-  implementing_agency_location: text("implementing_agency_location"),
-  expenditure_types: jsonb("expenditure_types"),
-  decisions: jsonb("decisions"), // Legacy format
-  event_name: text("event_name"),
-  event_year: integer("event_year"),
-  enumeration_code: text("enumeration_code"),
-  inclusion_year: integer("inclusion_year"),
-  summary_description: text("summary_description"),
+  // Additional Fields
   expenses_executed: decimal("expenses_executed", { precision: 12, scale: 2 }),
   project_status: text("project_status"),
-  formulation: jsonb("formulation"), // Legacy format
+  enumeration_code: text("enumeration_code"),
+  inclusion_year: integer("inclusion_year"),
+  
+  // Summary and Comments
+  summary_description: text("summary_description"),
+  change_comments: text("change_comments"),
+  
+  // Previous state (for comparison)
+  previous_status: text("previous_status"),
+  previous_budget_na853: decimal("previous_budget_na853", { precision: 12, scale: 2 }),
+  previous_budget_na271: decimal("previous_budget_na271", { precision: 12, scale: 2 }),
+  previous_budget_e069: decimal("previous_budget_e069", { precision: 12, scale: 2 }),
 });
 
 /**
