@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping } from "@/lib/number-format";
 
 // Interface for kallikratis data structure
 interface KallikratisEntry {
@@ -185,10 +186,10 @@ export default function ComprehensiveEditFixed() {
         event_year: data.event_details.event_year,
         status: data.project_details.project_status,
         
-        // Budget fields - use form values if changed, otherwise keep original
-        budget_e069: data.formulation_details.find(f => f.sa === "E069")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "E069")?.project_budget) : (projectData?.budget_e069 || null),
-        budget_na271: data.formulation_details.find(f => f.sa === "NA271")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "NA271")?.project_budget) : (projectData?.budget_na271 || null),
-        budget_na853: data.formulation_details.find(f => f.sa === "NA853")?.project_budget ? parseFloat(data.formulation_details.find(f => f.sa === "NA853")?.project_budget) : (projectData?.budget_na853 || null),
+        // Budget fields - use form values if changed, parse European format to numbers
+        budget_e069: data.formulation_details.find(f => f.sa === "E069")?.project_budget ? parseEuropeanNumber(data.formulation_details.find(f => f.sa === "E069")?.project_budget) : (projectData?.budget_e069 || null),
+        budget_na271: data.formulation_details.find(f => f.sa === "NA271")?.project_budget ? parseEuropeanNumber(data.formulation_details.find(f => f.sa === "NA271")?.project_budget) : (projectData?.budget_na271 || null),
+        budget_na853: data.formulation_details.find(f => f.sa === "NA853")?.project_budget ? parseEuropeanNumber(data.formulation_details.find(f => f.sa === "NA853")?.project_budget) : (projectData?.budget_na853 || null),
         
         // Keep original ΣΑ code fields unchanged (these should not be modified by form)
         e069: projectData?.e069 || null,
@@ -400,10 +401,10 @@ export default function ComprehensiveEditFixed() {
             protocol_number: formData.decision_protocol_number || "",
             ada: formData.decision_ada || "",
             decision_year: formData.decision_year?.toString() || "",
-            project_budget: formData.project_budget?.toString() || "0",
+            project_budget: formData.project_budget ? formatEuropeanCurrency(formData.project_budget) : "0,00 €",
             epa_version: formData.epa_version || "",
-            total_public_expense: formData.total_public_expense?.toString() || "0",
-            eligible_public_expense: formData.eligible_public_expense?.toString() || "0",
+            total_public_expense: formData.total_public_expense ? formatEuropeanCurrency(formData.total_public_expense) : "0,00 €",
+            eligible_public_expense: formData.eligible_public_expense ? formatEuropeanCurrency(formData.eligible_public_expense) : "0,00 €",
             decision_status: formData.decision_status || "Ενεργή" as const,
             change_type: formData.change_type || "Έγκριση" as const,
             connected_decisions: Array.isArray(formData.connected_decisions) ? formData.connected_decisions : [],
@@ -461,10 +462,10 @@ export default function ComprehensiveEditFixed() {
             protocol_number: project.decision_data?.[0]?.kya || "",
             ada: project.decision_data?.[0]?.ada || "",
             decision_year: project.event_year?.[0] || "",
-            project_budget: mapping.budget?.toString() || "0", // Put the actual budget value here
+            project_budget: mapping.budget ? formatEuropeanCurrency(mapping.budget) : "0,00 €", // Put the actual budget value here
             epa_version: "",
-            total_public_expense: mapping.budget?.toString() || "0",
-            eligible_public_expense: mapping.budget?.toString() || "0",
+            total_public_expense: mapping.budget ? formatEuropeanCurrency(mapping.budget) : "0,00 €",
+            eligible_public_expense: mapping.budget ? formatEuropeanCurrency(mapping.budget) : "0,00 €",
             decision_status: "Ενεργή" as const,
             change_type: "Έγκριση" as const,
             connected_decisions: [],
@@ -1235,10 +1236,10 @@ export default function ComprehensiveEditFixed() {
                               const currentSA = form.watch(`formulation_details.${index}.sa`);
                               const getBudgetSource = (sa: string) => {
                                 switch(sa) {
-                                  case "ΝΑ853": return projectData?.budget_na853?.toString() || "0";
-                                  case "ΝΑ271": return projectData?.budget_na271?.toString() || "0";
-                                  case "E069": return projectData?.budget_e069?.toString() || "0";
-                                  default: return "0";
+                                  case "ΝΑ853": return formatEuropeanCurrency(projectData?.budget_na853 || 0);
+                                  case "ΝΑ271": return formatEuropeanCurrency(projectData?.budget_na271 || 0);
+                                  case "E069": return formatEuropeanCurrency(projectData?.budget_e069 || 0);
+                                  default: return formatEuropeanCurrency(0);
                                 }
                               };
                               
@@ -1259,7 +1260,12 @@ export default function ComprehensiveEditFixed() {
                                   <FormControl>
                                     <div className="relative">
                                       <Input 
-                                        {...field} 
+                                        {...field}
+                                        value={field.value ? formatNumberWhileTyping(field.value) : ""}
+                                        onChange={(e) => {
+                                          const formattedValue = formatNumberWhileTyping(e.target.value);
+                                          field.onChange(formattedValue);
+                                        }}
                                         placeholder={`Από Projects.budget_${currentSA.toLowerCase()}`}
                                         className="text-sm pr-16" 
                                       />
@@ -1278,7 +1284,7 @@ export default function ComprehensiveEditFixed() {
                                     </div>
                                   </FormControl>
                                   <div className="text-xs text-gray-500 mt-1">
-                                    🔗 Συνδεδεμένο: Projects.budget_{currentSA.toLowerCase()} = €{getBudgetSource(currentSA)}
+                                    🔗 Συνδεδεμένο: Projects.budget_{currentSA.toLowerCase()} = {getBudgetSource(currentSA)}
                                   </div>
                                 </FormItem>
                               );
