@@ -270,7 +270,7 @@ export default function ComprehensiveEditFixed() {
       });
       console.log("Project lines:", transformedData.project_lines);
       
-      // Use fetch directly to ensure proper formatting
+      // 1. Update main project table
       const response = await fetch(`/api/projects/${mis}`, {
         method: "PATCH",
         headers: {
@@ -284,7 +284,29 @@ export default function ComprehensiveEditFixed() {
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
-      return await response.json();
+      const projectResult = await response.json();
+      
+      // 2. Update formulations table with budget data
+      console.log("Updating formulations with budget data:", data.formulation_details);
+      
+      const formulationsResponse = await fetch(`/api/projects/${mis}/formulations`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ formulation_details: data.formulation_details }),
+      });
+      
+      if (!formulationsResponse.ok) {
+        const formulationsErrorText = await formulationsResponse.text();
+        console.warn(`Failed to update formulations: ${formulationsErrorText}`);
+        // Don't fail the entire operation if formulations update fails
+      } else {
+        const formulationsResult = await formulationsResponse.json();
+        console.log("Formulations updated successfully:", formulationsResult);
+      }
+      
+      return projectResult;
     },
     onSuccess: () => {
       toast({

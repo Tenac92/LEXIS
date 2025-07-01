@@ -1225,4 +1225,114 @@ router.get('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
   }
 });
 
+// Update project formulations (normalized table)
+router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    const { formulation_details } = req.body;
+    
+    console.log(`[ProjectFormulations] Updating formulations for project MIS: ${mis}`, formulation_details);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // First get the project to get the project_id
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id, mis')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      console.error(`[ProjectFormulations] Project not found for MIS: ${mis}`, projectError);
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Delete existing formulations for this project
+    const { error: deleteError } = await supabase
+      .from('project_formulations')
+      .delete()
+      .eq('project_id', project.id);
+
+    if (deleteError) {
+      console.error(`[ProjectFormulations] Error deleting existing formulations:`, deleteError);
+      return res.status(500).json({ message: "Failed to delete existing formulations" });
+    }
+
+    // Insert new formulations
+    if (formulation_details && Array.isArray(formulation_details) && formulation_details.length > 0) {
+      const formulationsToInsert = formulation_details.map((formulation: any, index: number) => {
+        // Parse European formatted budget values to numbers
+        const parseEuropeanBudget = (value: string | number) => {
+          if (!value) return 0;
+          if (typeof value === 'number') return value;
+          
+          const strValue = String(value).replace(/[^\d,.-]/g, ''); // Remove currency symbols
+          if (strValue.includes('.') && strValue.includes(',')) {
+            return parseFloat(strValue.replace(/\./g, '').replace(',', '.')) || 0;
+          }
+          if (strValue.includes(',')) {
+            return parseFloat(strValue.replace(',', '.')) || 0;
+          }
+          return parseFloat(strValue) || 0;
+        };
+
+        console.log(`[ProjectFormulations] Processing formulation ${index + 1}:`, {
+          sa: formulation.sa,
+          project_budget: formulation.project_budget,
+          parsed_budget: parseEuropeanBudget(formulation.project_budget)
+        });
+
+        return {
+          project_id: project.id,
+          formulation_sequence: index + 1,
+          sa_type: formulation.sa || 'ΝΑ853',
+          enumeration_code: formulation.enumeration_code || null,
+          protocol_number: formulation.protocol_number || null,
+          ada: formulation.ada || null,
+          decision_year: formulation.decision_year ? parseInt(formulation.decision_year) : null,
+          project_budget: parseEuropeanBudget(formulation.project_budget),
+          total_public_expense: parseEuropeanBudget(formulation.total_public_expense),
+          eligible_public_expense: parseEuropeanBudget(formulation.eligible_public_expense),
+          epa_version: formulation.epa_version || null,
+          decision_status: formulation.decision_status || 'Ενεργή',
+          change_type: formulation.change_type || 'Έγκριση',
+          connected_decision_ids: Array.isArray(formulation.connected_decisions) ? formulation.connected_decisions : [],
+          comments: formulation.comments || null,
+          is_active: true,
+          created_by: req.user.id,
+          updated_by: req.user.id
+        };
+      });
+
+      const { data: insertedFormulations, error: insertError } = await supabase
+        .from('project_formulations')
+        .insert(formulationsToInsert)
+        .select();
+
+      if (insertError) {
+        console.error(`[ProjectFormulations] Error inserting formulations:`, insertError);
+        return res.status(500).json({ message: "Failed to insert formulations" });
+      }
+
+      console.log(`[ProjectFormulations] Successfully inserted ${insertedFormulations.length} formulations for project ${mis}`);
+      res.json({ 
+        message: "Formulations updated successfully", 
+        formulations: insertedFormulations,
+        count: insertedFormulations.length 
+      });
+    } else {
+      console.log(`[ProjectFormulations] No formulations to insert for project ${mis}`);
+      res.json({ message: "No formulations to update", formulations: [], count: 0 });
+    }
+  } catch (error) {
+    console.error(`[ProjectFormulations] Error updating formulations:`, error);
+    res.status(500).json({ 
+      message: "Failed to update project formulations",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 export { router as projectsRouter };
