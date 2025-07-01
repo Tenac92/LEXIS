@@ -303,230 +303,168 @@ export function ProjectCard({ project, view = "grid", isAdmin }: ProjectCardProp
 
   return (
     <>
-      <div className="flip-card" onClick={handleCardClick}>
-        <div className={`flip-card-inner ${isFlipped ? 'rotate-y-180' : ''}`}>
-          {/* Front of card */}
-          <div className="flip-card-front">
-            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-500 to-green-600"></div>
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="space-y-2 flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 leading-tight line-clamp-2">
-                    {getProjectTitle(project)}
-                  </h3>
-                  <Badge variant="secondary" className={getStatusColor(project.status || '')}>
-                    {getStatusText(project.status || '')}
-                  </Badge>
-                </div>
-                <div className="flex gap-1">
+      <Card 
+        className="transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer group bg-white border-0 shadow-md"
+        onClick={() => setShowDetails(true)}
+      >
+        <CardContent className="p-0">
+          {/* Header with gradient */}
+          <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 text-white relative overflow-hidden">
+            <div className="absolute inset-0 bg-black/10"></div>
+            <div className="relative flex items-start justify-between">
+              <div className="flex-1 space-y-2">
+                <h3 className="text-lg font-bold leading-tight line-clamp-2">
+                  {getProjectTitle(project)}
+                </h3>
+                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                  {getStatusText(project.status || '')}
+                </Badge>
+              </div>
+              <div className="flex gap-1 ml-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDetails(true);
+                  }}
+                  className="h-8 w-8 p-0 hover:bg-white/20 text-white"
+                  title="Λεπτομέρειες"
+                >
+                  <Info className="w-4 h-4" />
+                </Button>
+                {isAdmin && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowDetails(true);
+                      setLocation(`/projects/${project.mis}/edit`);
                     }}
-                    className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                    title="Λεπτομέρειες"
+                    className="h-8 w-8 p-0 hover:bg-white/20 text-white"
+                    title="Επεξεργασία"
                   >
-                    <Info className="w-4 h-4" />
+                    <Edit className="w-4 h-4" />
                   </Button>
-                  {isAdmin && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLocation(`/projects/${project.mis}/edit`);
-                      }}
-                      className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                      title="Επεξεργασία"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                  )}
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* Budget Status */}
+            {budgetData && (
+              <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-green-800">Διαθέσιμος Προϋπολ.:</span>
+                  <span className="text-green-900 font-mono font-semibold">
+                    {formatCurrency(parseFloat(budgetData.available_budget?.toString() || '0'))}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-sm font-medium text-green-800">Τρέχον Τρίμηνο:</span>
+                  <span className="text-green-900 font-semibold">{budgetData.current_quarter?.toUpperCase()}</span>
                 </div>
               </div>
+            )}
+            
+            {/* Project Codes */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-2 bg-gray-50 rounded border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <Building className="w-4 h-4 text-gray-600" />
+                  <div>
+                    <span className="text-xs text-gray-600 block">Κωδικός MIS</span>
+                    <span className="font-mono text-sm font-semibold text-gray-900">{project.mis || "Δ/Υ"}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-2 bg-gray-50 rounded border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-gray-600" />
+                  <div>
+                    <span className="text-xs text-gray-600 block">ΝΑ853</span>
+                    <span className="font-mono text-sm font-semibold text-gray-900">{project.na853 || "Δ/Υ"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-              {/* Critical Information - Budget Status */}
-              {budgetData && (
-                <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-green-800">Διαθέσιμος Προϋπολ.:</span>
-                    <span className="text-green-900 font-mono">
-                      {formatCurrency(parseFloat(budgetData.available_budget?.toString() || '0'))}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center mt-1">
-                    <span className="text-sm font-medium text-green-800">Τρέχον Τρίμηνο:</span>
-                    <span className="text-green-900">{budgetData.current_quarter?.toUpperCase()}</span>
-                  </div>
+            {/* Additional Information */}
+            <div className="space-y-2">
+              {getRegionText(project) && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4 text-green-600" />
+                  <span className="truncate">{getRegionText(project)}</span>
                 </div>
               )}
               
-              <div className="grid grid-cols-2 gap-2 text-sm mb-6">
-                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                  <span className="text-xs text-gray-600">Κωδικός MIS</span>
-                  <span className="text-gray-900 font-mono">{project.mis || "Δ/Υ"}</span>
+              {project.budget_na853 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Coins className="w-4 h-4 text-blue-600" />
+                  <span>Προϋπολογισμός: <span className="font-semibold">{formatCurrency(Number(project.budget_na853))}</span></span>
                 </div>
-                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                  <span className="text-xs text-gray-600">Προϋπολογισμός ΣΑ853</span>
-                  <span className="text-gray-900 font-medium">{formatCurrency(Number(project.budget_na853))}</span>
-                </div>
-                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                  <span className="text-xs text-gray-600">Ημερομηνία</span>
-                  <span className="text-gray-900">{new Date(project.created_at || '').toLocaleDateString('el-GR')}</span>
-                </div>
-                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                  <span className="text-xs text-gray-600">Κατάσταση</span>
-                  <span className="text-gray-900">{getStatusText(project.status || '')}</span>
-                </div>
-              </div>
+              )}
               
-              <div className="flex items-center justify-center">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsFlipped(true);
-                  }}
-                  className="text-green-600 border-green-200 hover:bg-green-50"
-                >
-                  <Info className="w-4 h-4 mr-2" />
-                  Περισσότερα στοιχεία
-                </Button>
-              </div>
+              {project.implementing_agency && project.implementing_agency.length > 0 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Building2 className="w-4 h-4 text-purple-600" />
+                  <span className="truncate">
+                    {Array.isArray(project.implementing_agency) 
+                      ? project.implementing_agency.join(', ') 
+                      : project.implementing_agency
+                    }
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Back of card */}
-          <div className="flip-card-back bg-green-50">
-            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-500 to-green-600"></div>
-            <div className="p-6 h-full overflow-y-auto">
-              <div className="flex items-start justify-between mb-4">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-bold text-green-900">
-                    Λεπτομέρειες Έργου
-                  </h3>
-                  <p className="text-green-700 text-sm line-clamp-2">
-                    {project.title}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsFlipped(false)}
-                  className="h-8 w-8 p-0 hover:bg-green-100 hover:text-green-600 transition-colors"
-                  title="Επιστροφή"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </Button>
-              </div>
-              
-              <div className="space-y-4">
-                {/* Budget Details */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-green-700 font-medium">Προϋπολογισμός ΣΑ853:</span>
-                    <span className="text-green-900 font-mono">{formatCurrency(Number(project.budget_na853))}</span>
-                  </div>
-                  {project.budget_na271 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-green-700 font-medium">Προϋπολογισμός ΣΑ271:</span>
-                      <span className="text-green-900 font-mono">{formatCurrency(Number(project.budget_na271))}</span>
-                    </div>
-                  )}
-                  {project.budget_e069 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-green-700 font-medium">Προϋπολογισμός E069:</span>
-                      <span className="text-green-900 font-mono">{formatCurrency(Number(project.budget_e069))}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Expenditure Types */}
-                {project.expenditure_type && Array.isArray(project.expenditure_type) && project.expenditure_type.length > 0 && (
-                  <div className="pt-2 border-t border-green-200">
-                    <span className="text-green-700 font-medium text-sm">Τύποι Δαπάνης:</span>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {project.expenditure_type.map((type, index) => (
-                        <Badge key={index} variant="outline" className="text-xs bg-green-100 text-green-800">
-                          {type}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Implementing Agency */}
-                {project.implementing_agency && Array.isArray(project.implementing_agency) && project.implementing_agency.length > 0 && (
-                  <div className="pt-2 border-t border-green-200">
-                    <span className="text-green-700 font-medium text-sm">Φορέας Υλοποίησης:</span>
-                    <div className="mt-1">
-                      {project.implementing_agency.map((agency, index) => (
-                        <div key={index} className="text-green-900 text-sm">{agency}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Budget Indicators */}
-                {budgetData && (
-                  <div className="pt-4 border-t border-green-200">
-                    <h4 className="font-semibold text-green-800 text-sm mb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      Διαθέσιμος Προϋπολογισμός
-                    </h4>
-                    <CompactBudgetIndicator 
-                      budgetData={budgetData} 
-                      mis={String(project.mis) || ''}
-                    />
-                  </div>
-                )}
-
-                {/* Admin Actions */}
+          {/* Footer */}
+          <div className="px-4 pb-4">
+            <div className="flex items-center justify-between pt-3 border-t">
+              <span className="text-xs text-gray-500 flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : 'Δ/Υ'}
+              </span>
+              <div className="flex gap-1">
                 {isAdmin && (
-                  <div className="pt-4 border-t border-green-200">
-                    <div className="flex gap-2">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            variant="destructive" 
-                            size="sm"
-                            className="flex-1"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Διαγραφή
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Διαγραφή Έργου</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτό το έργο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteMutation.mutate()}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Διαγραφή
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                        title="Διαγραφή"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Διαγραφή Έργου</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το έργο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMutation.mutate()}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Διαγραφή
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
+        </CardContent>
+      </Card>
       <ProjectDetailsDialog 
         project={project}
         open={showDetails}
