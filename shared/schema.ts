@@ -17,6 +17,7 @@
 import {
   pgTable,
   serial,
+  bigserial,
   text,
   timestamp,
   boolean,
@@ -28,6 +29,7 @@ import {
   foreignKey,
   jsonb,
   bigint,
+  unique,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { number, z } from "zod";
@@ -494,6 +496,97 @@ export const beneficiariesLegacy = pgTable("Beneficiary", {
     columns: [table.project],
     foreignColumns: [projects.mis],
   }),
+}));
+
+/**
+ * Normalized Project Decisions Table - "Αποφάσεις που τεκμηριώνουν το έργο"
+ * Separate table for project decisions with proper foreign key relationships
+ */
+export const projectDecisions = pgTable("project_decisions", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  
+  // Decision identification
+  decision_sequence: integer("decision_sequence").notNull().default(1),
+  decision_type: text("decision_type").notNull().default("Έγκριση"), // Έγκριση, Τροποποίηση, Παράταση
+  
+  // Document references
+  protocol_number: text("protocol_number"),
+  fek: text("fek"),
+  ada: text("ada"),
+  
+  // Decision details
+  implementing_agency: text("implementing_agency"),
+  decision_budget: decimal("decision_budget", { precision: 12, scale: 2 }),
+  expenses_covered: decimal("expenses_covered", { precision: 12, scale: 2 }),
+  decision_date: date("decision_date"),
+  
+  // Status and metadata
+  is_included: boolean("is_included").default(true),
+  is_active: boolean("is_active").default(true),
+  comments: text("comments"),
+  
+  // Additional document references
+  budget_decision: text("budget_decision"),
+  funding_decision: text("funding_decision"),
+  allocation_decision: text("allocation_decision"),
+  
+  // Audit fields
+  created_by: integer("created_by"),
+  updated_by: integer("updated_by"),
+}, (table) => ({
+  // Ensure unique sequence per project
+  uniqueProjectSequence: unique().on(table.project_id, table.decision_sequence),
+}));
+
+/**
+ * Normalized Project Formulations Table - "Στοιχεία κατάρτισης έργου"
+ * Separate table for project formulations that can link to decisions
+ */
+export const projectFormulations = pgTable("project_formulations", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  decision_id: bigint("decision_id", { mode: "number" }).references(() => projectDecisions.id, { onDelete: "set null" }),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  
+  // Formulation identification
+  formulation_sequence: integer("formulation_sequence").notNull().default(1),
+  
+  // SA type and codes
+  sa_type: text("sa_type").notNull(), // CHECK constraint: ΝΑ853, ΝΑ271, E069
+  enumeration_code: text("enumeration_code"),
+  
+  // Decision references (can link to external decisions too)
+  protocol_number: text("protocol_number"),
+  ada: text("ada"),
+  decision_year: integer("decision_year"),
+  
+  // Financial data
+  project_budget: decimal("project_budget", { precision: 12, scale: 2 }).notNull().default("0"),
+  total_public_expense: decimal("total_public_expense", { precision: 12, scale: 2 }),
+  eligible_public_expense: decimal("eligible_public_expense", { precision: 12, scale: 2 }),
+  
+  // EPA and status
+  epa_version: text("epa_version"),
+  decision_status: text("decision_status").default("Ενεργή"),
+  change_type: text("change_type").default("Έγκριση"),
+  
+  // Connected decisions (can reference multiple decision IDs)
+  connected_decision_ids: integer("connected_decision_ids").array(),
+  
+  // Comments and metadata
+  comments: text("comments"),
+  is_active: boolean("is_active").default(true),
+  
+  // Audit fields
+  created_by: integer("created_by"),
+  updated_by: integer("updated_by"),
+}, (table) => ({
+  // Ensure unique sequence per project
+  uniqueProjectSequence: unique().on(table.project_id, table.formulation_sequence),
 }));
 
 // ==============================================================
