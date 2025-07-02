@@ -281,27 +281,45 @@ export default function ComprehensiveEditFixed() {
         };
         
         console.log("1. Updating core project data:", projectUpdateData);
-        const projectResponse = await apiRequest(`/api/projects/${mis}`, {
-          method: "PATCH",
-          body: JSON.stringify(projectUpdateData),
-        });
+        try {
+          const projectResponse = await apiRequest(`/api/projects/${mis}`, {
+            method: "PATCH",
+            body: JSON.stringify(projectUpdateData),
+          });
+          console.log("✓ Project update successful:", projectResponse);
+        } catch (error) {
+          console.error("✗ Project update failed:", error);
+          throw error;
+        }
         
         // 2. Update project decisions in normalized table
         if (data.decisions && data.decisions.length > 0) {
           console.log("2. Updating project decisions:", data.decisions);
-          await apiRequest(`/api/projects/${mis}/decisions`, {
-            method: "PUT",
-            body: JSON.stringify({ decisions_data: data.decisions }),
-          });
+          try {
+            const decisionsResponse = await apiRequest(`/api/projects/${mis}/decisions`, {
+              method: "PUT",
+              body: JSON.stringify({ decisions_data: data.decisions }),
+            });
+            console.log("✓ Decisions update successful:", decisionsResponse);
+          } catch (error) {
+            console.error("✗ Decisions update failed:", error);
+            throw error;
+          }
         }
         
         // 3. Update project formulations in normalized table
         if (data.formulation_details && data.formulation_details.length > 0) {
           console.log("3. Updating project formulations:", data.formulation_details);
-          await apiRequest(`/api/projects/${mis}/formulations`, {
-            method: "PUT",
-            body: JSON.stringify({ formulation_details: data.formulation_details }),
-          });
+          try {
+            const formulationsResponse = await apiRequest(`/api/projects/${mis}/formulations`, {
+              method: "PUT",
+              body: JSON.stringify({ formulation_details: data.formulation_details }),
+            });
+            console.log("✓ Formulations update successful:", formulationsResponse);
+          } catch (error) {
+            console.error("✗ Formulations update failed:", error);
+            throw error;
+          }
         }
         
         // 4. Update project index (location details) through project PATCH endpoint
@@ -538,10 +556,10 @@ export default function ComprehensiveEditFixed() {
               
               if (!locationDetailsMap.has(key)) {
                 locationDetailsMap.set(key, {
-                  municipal_community: kallikratis?.name_dimotikis_enotitas || "",
-                  municipality: kallikratis?.name_neou_ota || "",
-                  regional_unit: kallikratis?.name_perifereiakis_enotitas || "",
-                  region: kallikratis?.name_perifereia || "",
+                  municipal_community: kallikratis?.onoma_dimotikis_enotitas || "",
+                  municipality: kallikratis?.onoma_neou_ota || "",
+                  regional_unit: kallikratis?.perifereiaki_enotita || "",
+                  region: kallikratis?.perifereia || "",
                   implementing_agency: unit?.name || unit?.unit_name?.name || unit?.unit || "",
                   expenditure_types: [],
                 });
