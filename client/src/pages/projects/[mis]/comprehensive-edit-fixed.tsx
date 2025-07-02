@@ -1177,7 +1177,7 @@ export default function ComprehensiveEditFixed() {
                                       <SelectValue placeholder="Επιλέξτε περιφέρεια" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {[...new Set(typedKallikratisData?.map(k => k.name_perifereia) || [])].filter(Boolean).map((region, index) => (
+                                      {[...new Set(typedKallikratisData?.map(k => k.perifereia) || [])].filter(Boolean).map((region, index) => (
                                         <SelectItem key={`region-${index}-${region}`} value={region}>{region}</SelectItem>
                                       ))}
                                     </SelectContent>
@@ -1207,8 +1207,8 @@ export default function ComprehensiveEditFixed() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       {[...new Set(typedKallikratisData
-                                        ?.filter(k => k.name_perifereia === form.watch(`location_details.${index}.region`))
-                                        .map(k => k.name_perifereiakis_enotitas) || [])].filter(Boolean).map((unit, unitIndex) => (
+                                        ?.filter(k => k.perifereia === form.watch(`location_details.${index}.region`))
+                                        .map(k => k.perifereiaki_enotita) || [])].filter(Boolean).map((unit, unitIndex) => (
                                         <SelectItem key={`unit-${index}-${unitIndex}-${unit}`} value={unit}>{unit}</SelectItem>
                                       ))}
                                     </SelectContent>
@@ -1238,10 +1238,10 @@ export default function ComprehensiveEditFixed() {
                                     <SelectContent>
                                       {[...new Set(typedKallikratisData
                                         ?.filter(k => 
-                                          k.name_perifereia === form.watch(`location_details.${index}.region`) &&
-                                          k.name_perifereiakis_enotitas === form.watch(`location_details.${index}.regional_unit`)
+                                          k.perifereia === form.watch(`location_details.${index}.region`) &&
+                                          k.perifereiaki_enotita === form.watch(`location_details.${index}.regional_unit`)
                                         )
-                                        .map(k => k.name_neou_ota) || [])].filter(Boolean).map((municipality, muniIndex) => (
+                                        .map(k => k.onoma_neou_ota) || [])].filter(Boolean).map((municipality, muniIndex) => (
                                         <SelectItem key={`municipality-${index}-${muniIndex}-${municipality}`} value={municipality}>{municipality}</SelectItem>
                                       ))}
                                     </SelectContent>
