@@ -30,6 +30,7 @@ interface OptimizedProjectCardProps {
 
 export function OptimizedProjectCard({ project, view = "grid", isAdmin }: OptimizedProjectCardProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -305,171 +306,254 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
     );
   }
 
+  // Grid view with flip functionality
+  const handleCardClick = (e: React.MouseEvent) => {
+    setIsFlipped(!isFlipped);
+  };
+
   return (
-    <Card 
-      className="transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer group bg-white border-0 shadow-md"
-      onClick={() => setShowDetails(true)}
-    >
-      <CardContent className="p-0">
-        {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white relative overflow-hidden">
-          <div className="absolute inset-0 bg-black/10"></div>
-          <div className="relative flex items-start justify-between">
-            <div className="flex-1 space-y-2">
-              <h3 className="text-lg font-bold leading-tight line-clamp-2">
-                {getProjectTitle(project)}
-              </h3>
-              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
-                {getStatusText(project.status || '')}
-              </Badge>
+    <>
+      <div className="flip-card" onClick={handleCardClick}>
+        <div className={`flip-card-inner ${isFlipped ? "rotate-y-180" : ""}`}>
+          {/* Front of card */}
+          <div className="flip-card-front">
+            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-500 to-green-600"></div>
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="space-y-2 flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 leading-tight">
+                    {getProjectTitle(project)}
+                  </h3>
+                  <Badge variant="secondary" className={getStatusColor(project.status || '')}>
+                    {getStatusText(project.status || '')}
+                  </Badge>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDetails(true);
+                    }}
+                    className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 transition-colors"
+                    title="Λεπτομέρειες"
+                  >
+                    <Info className="w-4 h-4" />
+                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocation(`/projects/${project.mis}/edit`);
+                      }}
+                      className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                      title="Επεξεργασία"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {isAdmin && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          title="Διαγραφή"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Διαγραφή Έργου</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το έργο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteMutation.mutate()}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Διαγραφή
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+              </div>
+
+              {/* Project Codes - Critical Information */}
+              <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-green-800">Κωδικός MIS:</span>
+                  <span className="text-green-900 font-mono">{project.mis || "Δ/Υ"}</span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-sm font-medium text-green-800">ΝΑ853:</span>
+                  <span className="text-green-900 font-mono">{project.na853}</span>
+                </div>
+              </div>
+
+              {/* Budget Information */}
+              {budgetData && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-blue-800">Διαθέσιμος Προϋπολ.:</span>
+                    <span className="text-blue-900 font-mono font-semibold">
+                      {formatCurrency(parseFloat(budgetData.available_budget?.toString() || '0'))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <span className="text-sm font-medium text-blue-800">Τρέχον Τρίμηνο:</span>
+                    <span className="text-blue-900 font-semibold">{budgetData.current_quarter?.toUpperCase()}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Basic Information */}
+              <div className="space-y-2 mb-4">
+                {project.unit?.name && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Briefcase className="w-4 h-4" />
+                    <span className="truncate">{project.unit.name}</span>
+                  </div>
+                )}
+
+                {getRegionText(project) && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4" />
+                    <span className="truncate">{getRegionText(project)}</span>
+                  </div>
+                )}
+
+                {project.budget_na853 && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <DollarSign className="w-4 h-4" />
+                    <span>Προϋπολογισμός: <span className="font-semibold">{formatCurrency(Number(project.budget_na853))}</span></span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-center">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFlipped(true);
+                  }}
+                  className="text-green-600 border-green-200 hover:bg-green-50"
+                >
+                  <Info className="w-4 h-4 mr-2" />
+                  Δείτε λεπτομέρειες
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-1 ml-2">
-              {isAdmin && (
+          </div>
+
+          {/* Back of card */}
+          <div className="flip-card-back bg-green-50">
+            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-500 to-green-600"></div>
+            <div className="p-6 h-full overflow-y-auto">
+              <div className="flex items-start justify-between mb-4">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold text-green-900">Λεπτομέρειες Έργου</h3>
+                  <p className="text-green-700 text-sm">MIS: {project.mis}</p>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setLocation(`/projects/${project.mis}/edit`);
+                    setIsFlipped(false);
                   }}
-                  className="h-8 w-8 p-0 hover:bg-white/20 text-white"
-                  title="Επεξεργασία"
+                  className="h-8 w-8 p-0 hover:bg-green-100 text-green-600"
+                  title="Επιστροφή"
                 >
-                  <Edit className="w-4 h-4" />
+                  <TrendingUp className="w-4 h-4 rotate-180" />
                 </Button>
-              )}
+              </div>
+
+              {/* Detailed Information */}
+              <div className="space-y-4">
+                {project.event_type?.name && (
+                  <div className="p-3 bg-white rounded border">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Info className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">Τύπος Συμβάντος</span>
+                    </div>
+                    <span className="text-green-900">{project.event_type.name}</span>
+                  </div>
+                )}
+
+                {project.expenditure_type?.name && (
+                  <div className="p-3 bg-white rounded border">
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">Τύπος Δαπάνης</span>
+                    </div>
+                    <span className="text-green-900">{project.expenditure_type.name}</span>
+                  </div>
+                )}
+
+                {project.created_at && (
+                  <div className="p-3 bg-white rounded border">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">Ημερομηνία Δημιουργίας</span>
+                    </div>
+                    <span className="text-green-900">{new Date(project.created_at).toLocaleDateString('el-GR')}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2 mt-6">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDetails(true);
+                  }}
+                  className="flex-1"
+                >
+                  <Info className="h-4 w-4 mr-2" />
+                  Πλήρεις Λεπτομέρειες
+                </Button>
+                {isAdmin && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLocation(`/projects/${project.mis}/edit`);
+                    }}
+                    className="flex-1"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Επεξεργασία
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="p-4 space-y-4">
-          {/* Budget Status */}
-          {budgetData && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-blue-800">Διαθέσιμος Προϋπολ.:</span>
-                <span className="text-blue-900 font-mono font-semibold">
-                  {formatCurrency(parseFloat(budgetData.available_budget?.toString() || '0'))}
-                </span>
-              </div>
-              <div className="flex justify-between items-center mt-1">
-                <span className="text-sm font-medium text-blue-800">Τρέχον Τρίμηνο:</span>
-                <span className="text-blue-900 font-semibold">{budgetData.current_quarter?.toUpperCase()}</span>
-              </div>
-            </div>
-          )}
-          
-          {/* Project Codes */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="p-2 bg-gray-50 rounded border border-gray-200">
-              <div className="flex items-center gap-2">
-                <Building className="w-4 h-4 text-gray-600" />
-                <div>
-                  <span className="text-xs text-gray-600 block">Κωδικός MIS</span>
-                  <span className="font-mono text-sm font-semibold text-gray-900">{project.mis || "Δ/Υ"}</span>
-                </div>
-              </div>
-            </div>
-            <div className="p-2 bg-gray-50 rounded border border-gray-200">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-gray-600" />
-                <div>
-                  <span className="text-xs text-gray-600 block">ΝΑ853</span>
-                  <span className="font-mono text-sm font-semibold text-gray-900">{project.na853 || "Δ/Υ"}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Information */}
-          <div className="space-y-2">
-            {project.unit?.name && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Briefcase className="w-4 h-4 text-blue-600" />
-                <span className="truncate">{project.unit.name}</span>
-              </div>
-            )}
-
-            {getRegionText(project) && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4 text-green-600" />
-                <span className="truncate">{getRegionText(project)}</span>
-              </div>
-            )}
-
-            {project.event_type?.name && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Info className="w-4 h-4 text-purple-600" />
-                <span>Τύπος: {project.event_type.name}</span>
-              </div>
-            )}
-
-            {project.expenditure_type?.name && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <DollarSign className="w-4 h-4 text-orange-600" />
-                <span>Δαπάνη: {project.expenditure_type.name}</span>
-              </div>
-            )}
-
-            {project.budget_na853 && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Coins className="w-4 h-4 text-blue-600" />
-                <span>Προϋπολογισμός: <span className="font-semibold">{formatCurrency(Number(project.budget_na853))}</span></span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-4 pb-4">
-          <div className="flex items-center justify-between pt-3 border-t">
-            <span className="text-xs text-gray-500 flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              {project.created_at ? new Date(project.created_at).toLocaleDateString('el-GR') : 'Δ/Υ'}
-            </span>
-            <div className="flex gap-1">
-              {isAdmin && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600 transition-colors"
-                      title="Διαγραφή"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Διαγραφή Έργου</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το έργο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Ακύρωση</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => deleteMutation.mutate()}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        Διαγραφή
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-      
       <ProjectDetailsDialog 
         project={project}
         open={showDetails}
         onOpenChange={setShowDetails}
       />
-    </Card>
+    </>
   );
 }
