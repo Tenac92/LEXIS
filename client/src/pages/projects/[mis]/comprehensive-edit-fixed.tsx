@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building2, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping, formatEuropeanNumber } from "@/lib/number-format";
@@ -261,19 +261,19 @@ export default function ComprehensiveEditFixed() {
             return typedProjectData?.budget_e069 || null;
           })(),
           budget_na271: (() => {
-            const formEntry = data.formulation_details.find(f => f.sa === "NA271");
+            const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ271");
             if (formEntry?.project_budget) {
               const parsed = parseEuropeanNumber(formEntry.project_budget);
-              console.log(`Budget NA271: "${formEntry.project_budget}" -> ${parsed}`);
+              console.log(`Budget ΝΑ271: "${formEntry.project_budget}" -> ${parsed}`);
               return parsed;
             }
             return typedProjectData?.budget_na271 || null;
           })(),
           budget_na853: (() => {
-            const formEntry = data.formulation_details.find(f => f.sa === "NA853");
+            const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ853");
             if (formEntry?.project_budget) {
               const parsed = parseEuropeanNumber(formEntry.project_budget);
-              console.log(`Budget NA853: "${formEntry.project_budget}" -> ${parsed}`);
+              console.log(`Budget ΝΑ853: "${formEntry.project_budget}" -> ${parsed}`);
               return parsed;
             }
             return typedProjectData?.budget_na853 || null;
@@ -484,12 +484,12 @@ export default function ComprehensiveEditFixed() {
             <div className="space-y-4">
               <div className="flex flex-col space-y-3">
                 <div className="flex items-center justify-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${projectData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <span>Στοιχεία έργου {projectData ? '✓' : '...'}</span>
+                  <div className={`w-2 h-2 rounded-full ${typedProjectData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Στοιχεία έργου {typedProjectData ? '✓' : '...'}</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${unitsData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <span>Φορείς υλοποίησης {unitsData ? '✓' : '...'}</span>
+                  <div className={`w-2 h-2 rounded-full ${typedUnitsData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Φορείς υλοποίησης {typedUnitsData ? '✓' : '...'}</span>
                 </div>
               </div>
             </div>
@@ -511,8 +511,8 @@ export default function ComprehensiveEditFixed() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Διαχείριση Έργου: {projectData?.project_title}</h1>
-        <p className="text-gray-600">MIS: {projectData?.mis}</p>
+        <h1 className="text-2xl font-bold">Διαχείριση Έργου: {typedProjectData?.project_title}</h1>
+        <p className="text-gray-600">MIS: {typedProjectData?.mis}</p>
       </div>
 
       <Form {...form}>
@@ -591,7 +591,7 @@ export default function ComprehensiveEditFixed() {
                                       <SelectValue placeholder="Επιλέξτε φορέα" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {unitsData?.map((unit) => (
+                                      {typedUnitsData?.map((unit) => (
                                         <SelectItem key={unit.id} value={unit.name || unit.unit_name?.name || unit.unit || ""}>
                                           {unit.name || unit.unit_name?.name || unit.unit}
                                         </SelectItem>
@@ -650,7 +650,7 @@ export default function ComprehensiveEditFixed() {
                                 <SelectValue placeholder="Επιλέξτε τύπο συμβάντος" />
                               </SelectTrigger>
                               <SelectContent>
-                                {eventTypesData?.map((eventType) => (
+                                {typedEventTypesData?.map((eventType) => (
                                   <SelectItem key={eventType.id} value={eventType.name}>
                                     {eventType.name}
                                   </SelectItem>
