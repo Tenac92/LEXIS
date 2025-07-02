@@ -1234,6 +1234,103 @@ router.get('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
   }
 });
 
+// Update project decisions (normalized table)
+router.put('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    const { decisions_data } = req.body;
+    
+    console.log(`[ProjectDecisions] Updating decisions for project MIS: ${mis}`, decisions_data);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // First get the project to get the project_id
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id, mis')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      console.error(`[ProjectDecisions] Project not found for MIS: ${mis}`, projectError);
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Delete existing decisions for this project
+    const { error: deleteError } = await supabase
+      .from('project_decisions')
+      .delete()
+      .eq('project_id', project.id);
+
+    if (deleteError) {
+      console.error(`[ProjectDecisions] Error deleting existing decisions:`, deleteError);
+      return res.status(500).json({ message: "Failed to delete existing decisions" });
+    }
+
+    // Insert new decisions
+    if (decisions_data && Array.isArray(decisions_data) && decisions_data.length > 0) {
+      const decisionsToInsert = decisions_data.map((decision: any, index: number) => {
+        // Parse European formatted budget values to numbers
+        const parseEuropeanBudget = (value: string | number) => {
+          if (!value) return 0;
+          if (typeof value === 'number') return value;
+          
+          const strValue = String(value).replace(/[^\d,.-]/g, ''); // Remove currency symbols
+          return parseFloat(strValue.replace(',', '.')) || 0;
+        };
+
+        console.log(`[ProjectDecisions] Processing decision ${index + 1}:`, { 
+          protocol_number: decision.protocol_number,
+          decision_budget: decision.decision_budget,
+          parsed_budget: parseEuropeanBudget(decision.decision_budget)
+        });
+
+        return {
+          project_id: project.id,
+          decision_sequence: index + 1,
+          decision_type: decision.decision_type || 'Έγκριση',
+          protocol_number: decision.protocol_number || null,
+          fek: decision.fek || null,
+          ada: decision.ada || null,
+          implementing_agency: decision.implementing_agency || null,
+          decision_budget: parseEuropeanBudget(decision.decision_budget),
+          expenses_covered: parseEuropeanBudget(decision.expenses_covered),
+          decision_date: new Date().toISOString().split('T')[0], // Today's date as default
+          is_included: decision.is_included !== undefined ? decision.is_included : true,
+          is_active: true,
+          comments: decision.comments || null,
+          created_by: req.user.id,
+          updated_by: req.user.id
+        };
+      });
+
+      const { error: insertError } = await supabase
+        .from('project_decisions')
+        .insert(decisionsToInsert);
+
+      if (insertError) {
+        console.error(`[ProjectDecisions] Error inserting decisions:`, insertError);
+        return res.status(500).json({ message: "Failed to insert decisions" });
+      }
+
+      console.log(`[ProjectDecisions] Successfully inserted ${decisionsToInsert.length} decisions for project ${mis}`);
+    }
+
+    res.json({ 
+      message: "Decisions updated successfully",
+      decisions_count: decisions_data?.length || 0
+    });
+  } catch (error) {
+    console.error(`[ProjectDecisions] Error updating decisions:`, error);
+    res.status(500).json({ 
+      message: "Failed to update project decisions",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 // Update project formulations (normalized table)
 router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {

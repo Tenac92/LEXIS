@@ -327,7 +327,27 @@ export default function ComprehensiveEditFixed() {
       
       const projectResult = await response.json();
       
-      // 2. Update formulations table with budget data
+      // 2. Update decisions table with decision data
+      console.log("Updating decisions with decision data:", data.decisions);
+      
+      const decisionsResponse = await fetch(`/api/projects/${mis}/decisions`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ decisions_data: data.decisions }),
+      });
+      
+      if (!decisionsResponse.ok) {
+        const decisionsErrorText = await decisionsResponse.text();
+        console.warn(`Failed to update decisions: ${decisionsErrorText}`);
+        // Don't fail the entire operation if decisions update fails
+      } else {
+        const decisionsResult = await decisionsResponse.json();
+        console.log("Decisions updated successfully:", decisionsResult);
+      }
+
+      // 3. Update formulations table with budget data
       console.log("Updating formulations with budget data:", data.formulation_details);
       
       const formulationsResponse = await fetch(`/api/projects/${mis}/formulations`, {
