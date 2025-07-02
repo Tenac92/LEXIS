@@ -676,7 +676,13 @@ export default function ComprehensiveEditFixed() {
   }
 
   const handleSubmit = (data: ComprehensiveFormData) => {
-    console.log("Form submitted with data:", data);
+    console.log("=== FORM SUBMISSION DEBUG ===");
+    console.log("✓ handleSubmit called - form is valid");
+    console.log("Form data:", data);
+    console.log("Form errors:", form.formState.errors);
+    console.log("Form is valid:", form.formState.isValid);
+    console.log("Mutation pending:", mutation.isPending);
+    
     mutation.mutate(data);
   };
 
@@ -1436,6 +1442,14 @@ export default function ComprehensiveEditFixed() {
                 <Button
                   type="submit"
                   disabled={mutation.isPending}
+                  onClick={(e) => {
+                    console.log("=== SAVE BUTTON CLICKED ===");
+                    console.log("Button clicked, form will attempt to submit");
+                    console.log("Current form errors:", form.formState.errors);
+                    console.log("Form is valid:", form.formState.isValid);
+                    console.log("Form values:", form.getValues());
+                    // Don't prevent default - let the form submission handle it
+                  }}
                 >
                   {mutation.isPending ? "Αποθήκευση..." : "Αποθήκευση Αλλαγών"}
                 </Button>
