@@ -14,9 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping } from "@/lib/number-format";
+import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping, formatEuropeanNumber } from "@/lib/number-format";
 
-// Interface for kallikratis data structure
+// Interface definitions
 interface KallikratisEntry {
   id: number;
   kodikos_neou_ota: number;
@@ -26,6 +26,44 @@ interface KallikratisEntry {
   perifereiaki_enotita: string;
   kodikos_perifereias: number;
   perifereia: string;
+}
+
+interface UnitData {
+  id: number;
+  name?: string;
+  unit?: string;
+  unit_name?: {
+    name: string;
+    prop: string;
+  };
+}
+
+interface EventTypeData {
+  id: number;
+  name: string;
+}
+
+interface ExpenditureTypeData {
+  id: number;
+  name: string;
+}
+
+interface ProjectData {
+  id: number;
+  mis: string;
+  project_title?: string;
+  event_description?: string;
+  event_year?: string | number;
+  status?: string;
+  na853?: string;
+  na271?: string;
+  e069?: string;
+  budget_na853?: number;
+  budget_na271?: number;
+  budget_e069?: number;
+  enhanced_unit?: {
+    name: string;
+  };
 }
 
 // Form schema
@@ -179,7 +217,7 @@ export default function ComprehensiveEditFixed() {
     ],
   });
 
-  // Extract data from parallel queries
+  // Extract data from parallel queries with proper typing
   const [
     { data: projectData, isLoading: projectLoading, error: projectError },
     { data: projectIndexData },
@@ -190,6 +228,13 @@ export default function ComprehensiveEditFixed() {
     { data: kallikratisData, isLoading: kallikratisLoading },
     { data: expenditureTypesData, isLoading: expenditureTypesLoading },
   ] = queries;
+
+  // Type-safe data casting
+  const typedProjectData = projectData as ProjectData | undefined;
+  const typedUnitsData = unitsData as UnitData[] | undefined;
+  const typedKallikratisData = kallikratisData as KallikratisEntry[] | undefined;
+  const typedEventTypesData = eventTypesData as EventTypeData[] | undefined;
+  const typedExpenditureTypesData = expenditureTypesData as ExpenditureTypeData[] | undefined;
 
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
@@ -213,7 +258,7 @@ export default function ComprehensiveEditFixed() {
               console.log(`Budget E069: "${formEntry.project_budget}" -> ${parsed}`);
               return parsed;
             }
-            return projectData?.budget_e069 || null;
+            return typedProjectData?.budget_e069 || null;
           })(),
           budget_na271: (() => {
             const formEntry = data.formulation_details.find(f => f.sa === "NA271");
@@ -222,7 +267,7 @@ export default function ComprehensiveEditFixed() {
               console.log(`Budget NA271: "${formEntry.project_budget}" -> ${parsed}`);
               return parsed;
             }
-            return projectData?.budget_na271 || null;
+            return typedProjectData?.budget_na271 || null;
           })(),
           budget_na853: (() => {
             const formEntry = data.formulation_details.find(f => f.sa === "NA853");
@@ -231,7 +276,7 @@ export default function ComprehensiveEditFixed() {
               console.log(`Budget NA853: "${formEntry.project_budget}" -> ${parsed}`);
               return parsed;
             }
-            return projectData?.budget_na853 || null;
+            return typedProjectData?.budget_na853 || null;
           })(),
         };
         
@@ -274,8 +319,8 @@ export default function ComprehensiveEditFixed() {
             
             // Find kallikratis_id
             let kallikratisId = null;
-            if (kallikratisData && location.region) {
-              const kallikratis = kallikratisData.find(k => 
+            if (typedKallikratisData && location.region) {
+              const kallikratis = typedKallikratisData.find(k => 
                 k.perifereia === location.region && 
                 (!location.regional_unit || k.perifereiaki_enotita === location.regional_unit) &&
                 (!location.municipality || k.onoma_neou_ota === location.municipality)
@@ -287,8 +332,8 @@ export default function ComprehensiveEditFixed() {
             
             // Find implementing agency (monada_id)
             let monadaId = null;
-            if (unitsData && location.implementing_agency) {
-              const unit = unitsData.find(u => 
+            if (typedUnitsData && location.implementing_agency) {
+              const unit = typedUnitsData.find(u => 
                 u.name === location.implementing_agency || 
                 u.unit_name?.name === location.implementing_agency ||
                 u.unit === location.implementing_agency
@@ -301,13 +346,13 @@ export default function ComprehensiveEditFixed() {
             // Create entries for each expenditure type
             if (location.expenditure_types && location.expenditure_types.length > 0) {
               for (const expenditureType of location.expenditure_types) {
-                const expenditureTypeData = expenditureTypesData?.find(et => et.name === expenditureType);
+                const expenditureTypeData = typedExpenditureTypesData?.find(et => et.name === expenditureType);
                 if (expenditureTypeData) {
                   projectLines.push({
                     kallikratis_id: kallikratisId,
                     monada_id: monadaId,
                     expediture_type_id: expenditureTypeData.id,
-                    event_types_id: eventTypesData?.find(et => et.name === data.event_details.event_name)?.id || null,
+                    event_types_id: typedEventTypesData?.find(et => et.name === data.event_details.event_name)?.id || null,
                   });
                 }
               }
@@ -317,7 +362,7 @@ export default function ComprehensiveEditFixed() {
                 kallikratis_id: kallikratisId,
                 monada_id: monadaId,
                 expediture_type_id: null,
-                event_types_id: eventTypesData?.find(et => et.name === data.event_details.event_name)?.id || null,
+                event_types_id: typedEventTypesData?.find(et => et.name === data.event_details.event_name)?.id || null,
               });
             }
           }
@@ -365,14 +410,14 @@ export default function ComprehensiveEditFixed() {
 
   // Data initialization effect
   useEffect(() => {
-    if (projectData) {
-      console.log('Initializing form with project data:', projectData);
+    if (typedProjectData) {
+      console.log('Initializing form with project data:', typedProjectData);
       
       const decisions = [{
         protocol_number: "",
         fek: "",
         ada: "",
-        implementing_agency: projectData.enhanced_unit?.name || "",
+        implementing_agency: typedProjectData.enhanced_unit?.name || "",
         decision_budget: "",
         expenses_covered: "",
         decision_type: "Έγκριση" as const,
@@ -383,24 +428,24 @@ export default function ComprehensiveEditFixed() {
       form.reset({
         decisions: decisions,
         event_details: {
-          event_name: projectData.event_description || "",
-          event_year: projectData.event_year?.toString() || "",
+          event_name: typedProjectData.event_description || "",
+          event_year: typedProjectData.event_year?.toString() || "",
         },
         project_details: {
-          project_title: projectData.project_title || "",
-          project_description: projectData.event_description || "",
-          project_status: projectData.status || "Ενεργό",
+          project_title: typedProjectData.project_title || "",
+          project_description: typedProjectData.event_description || "",
+          project_status: typedProjectData.status || "Ενεργό",
         },
         formulation_details: [{
           sa: "ΝΑ853",
-          enumeration_code: projectData.na853 || "",
+          enumeration_code: typedProjectData.na853 || "",
           protocol_number: "",
           ada: "",
-          decision_year: projectData.event_year?.toString() || "",
-          project_budget: projectData.budget_na853 ? formatEuropeanNumber(projectData.budget_na853) : "",
+          decision_year: typedProjectData.event_year?.toString() || "",
+          project_budget: typedProjectData.budget_na853 ? formatEuropeanNumber(typedProjectData.budget_na853) : "",
           epa_version: "",
-          total_public_expense: projectData.budget_na853 ? formatEuropeanNumber(projectData.budget_na853) : "",
-          eligible_public_expense: projectData.budget_na853 ? formatEuropeanNumber(projectData.budget_na853) : "",
+          total_public_expense: typedProjectData.budget_na853 ? formatEuropeanNumber(typedProjectData.budget_na853) : "",
+          eligible_public_expense: typedProjectData.budget_na853 ? formatEuropeanNumber(typedProjectData.budget_na853) : "",
           decision_status: "Ενεργή",
           change_type: "Έγκριση",
           connected_decisions: [],
@@ -411,16 +456,16 @@ export default function ComprehensiveEditFixed() {
           municipality: "",
           regional_unit: "",
           region: "",
-          implementing_agency: projectData.enhanced_unit?.name || "",
+          implementing_agency: typedProjectData.enhanced_unit?.name || "",
           expenditure_types: [],
         }],
         changes: [],
       });
     }
-  }, [projectData, form]);
+  }, [typedProjectData, form]);
 
   const isLoading = projectLoading || eventTypesLoading || unitsLoading || kallikratisLoading || expenditureTypesLoading;
-  const isDataReady = projectData && eventTypesData && unitsData && kallikratisData && expenditureTypesData;
+  const isDataReady = typedProjectData && typedEventTypesData && typedUnitsData && typedKallikratisData && typedExpenditureTypesData;
 
   if (projectError) {
     return <div className="container mx-auto p-6">Σφάλμα κατά τη φόρτωση των δεδομένων</div>;
