@@ -317,17 +317,18 @@ export default function ComprehensiveEditFixed() {
               continue;
             }
             
-            // Find kallikratis_id - fix field name mappings
+            // Find kallikratis_id - using correct field names
             let kallikratisId = null;
             if (typedKallikratisData && location.region) {
               const kallikratis = typedKallikratisData.find(k => 
-                k.name_perifereia === location.region && 
-                (!location.regional_unit || k.name_perifereiakis_enotitas === location.regional_unit) &&
-                (!location.municipality || k.name_neou_ota === location.municipality)
+                k.perifereia === location.region && 
+                (!location.regional_unit || k.perifereiaki_enotita === location.regional_unit) &&
+                (!location.municipality || k.onoma_neou_ota === location.municipality)
               );
               if (kallikratis) {
                 kallikratisId = kallikratis.id;
               }
+              console.log("Kallikratis lookup:", { location, found: kallikratis, kallikratisId });
             }
             
             // Find implementing agency (monada_id)
@@ -616,6 +617,13 @@ export default function ComprehensiveEditFixed() {
     console.log("Form submitted with data:", data);
     mutation.mutate(data);
   };
+
+  // Debug all fetched data
+  console.log("DEBUG - Kallikratis data sample:", typedKallikratisData?.slice(0, 3));
+  console.log("DEBUG - Total kallikratis entries:", typedKallikratisData?.length);
+  console.log("DEBUG - Units data:", typedUnitsData?.slice(0, 2));
+  console.log("DEBUG - Event types data:", typedEventTypesData?.slice(0, 2));
+  console.log("DEBUG - Expenditure types data:", typedExpenditureTypesData?.slice(0, 2));
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">

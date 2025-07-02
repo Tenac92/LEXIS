@@ -135,7 +135,7 @@ This is a full-stack web application built for Greek government budget and docum
   - Decisions table with proper Greek government headers: α.α., Αρ. πρωτ. Απόφασης, ΦΕΚ, ΑΔΑ, Φορέας υλοποίησης, Προϋπολογισμός Απόφασης, Δαπάνες που αφορά, Είδος Απόφασης, Έχει συμπεριληφθεί, Σχόλια
   - 12-column grid layout with proper spacing and responsive design
   - Auto-numbering (α.α.) and structured input fields for all government requirements
-- **Enhanced Geographic Dropdowns:** Implemented cascading logic for Περιφέρεια → Περιφερειακή Ενότητα → Δήμος with proper kallikratis data filtering
+- **FIXED Geographic Dropdowns:** Corrected kallikratis field name mapping from incorrect `name_perifereia` to correct `perifereia`, `name_perifereiakis_enotitas` to `perifereiaki_enotita`, `name_neou_ota` to `onoma_neou_ota` for proper cascading Περιφέρεια → Περιφερειακή Ενότητα → Δήμος functionality
 - **Form Database Integration:**
   - Project decisions save to project_decisions table via PUT /api/projects/:mis/decisions
   - Project formulations save to project_formulations table via PUT /api/projects/:mis/formulations  
