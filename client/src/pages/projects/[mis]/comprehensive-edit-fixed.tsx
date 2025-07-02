@@ -698,31 +698,60 @@ export default function ComprehensiveEditFixed() {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="space-y-4">
+                    {/* Table Header */}
+                    <div className="grid grid-cols-12 gap-2 p-2 bg-gray-50 rounded-lg font-medium text-xs">
+                      <div className="col-span-1 text-center">α.α.</div>
+                      <div className="col-span-1 text-center">Αρ. πρωτ. Απόφασης</div>
+                      <div className="col-span-1 text-center">ΦΕΚ</div>
+                      <div className="col-span-1 text-center">ΑΔΑ</div>
+                      <div className="col-span-2 text-center">Φορέας υλοποίησης</div>
+                      <div className="col-span-1 text-center">Προϋπολογισμός Απόφασης</div>
+                      <div className="col-span-1 text-center">Δαπάνες που αφορά</div>
+                      <div className="col-span-1 text-center">Είδος Απόφασης</div>
+                      <div className="col-span-1 text-center">Έχει συμπεριληφθεί</div>
+                      <div className="col-span-2 text-center">Σχόλια</div>
+                    </div>
+
+                    {/* Table Rows */}
                     {form.watch("decisions").map((_, index) => (
-                      <div key={index} className="grid grid-cols-6 gap-3 p-3 border rounded-lg">
-                        <div className="col-span-2">
+                      <div key={index} className="grid grid-cols-12 gap-2 p-2 border rounded-lg">
+                        <div className="col-span-1 flex items-center justify-center">
+                          <span className="text-sm font-medium">{index + 1}</span>
+                        </div>
+                        <div className="col-span-1">
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.protocol_number`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">Αρ. Πρωτοκόλλου</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="Αριθμός πρωτοκόλλου" className="text-sm" />
+                                  <Input {...field} placeholder="Αρ. πρωτ." className="text-xs h-8" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-1">
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.fek`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">ΦΕΚ</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="ΦΕΚ" className="text-sm" />
+                                  <Input {...field} placeholder="ΦΕΚ" className="text-xs h-8" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.ada`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input {...field} placeholder="ΑΔΑ" className="text-xs h-8" />
                                 </FormControl>
                               </FormItem>
                             )}
@@ -731,28 +760,13 @@ export default function ComprehensiveEditFixed() {
                         <div className="col-span-2">
                           <FormField
                             control={form.control}
-                            name={`decisions.${index}.ada`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">ΑΔΑ</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="ΑΔΑ" className="text-sm" />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div className="col-span-3">
-                          <FormField
-                            control={form.control}
                             name={`decisions.${index}.implementing_agency`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">Φορέας Υλοποίησης</FormLabel>
                                 <FormControl>
                                   <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="text-sm">
-                                      <SelectValue placeholder="Επιλέξτε φορέα" />
+                                    <SelectTrigger className="text-xs h-8">
+                                      <SelectValue placeholder="Φορέας" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {typedUnitsData?.map((unit) => (
@@ -762,6 +776,87 @@ export default function ComprehensiveEditFixed() {
                                       ))}
                                     </SelectContent>
                                   </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.decision_budget`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input {...field} placeholder="Προϋπ." className="text-xs h-8" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.expenses_covered`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input {...field} placeholder="Δαπάνες" className="text-xs h-8" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.decision_type`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="text-xs h-8">
+                                      <SelectValue placeholder="Είδος" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Έγκριση">Έγκριση</SelectItem>
+                                      <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
+                                      <SelectItem value="Ανάκληση">Ανάκληση</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.is_included`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <div className="flex items-center justify-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={field.value}
+                                      onChange={(e) => field.onChange(e.target.checked)}
+                                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                    />
+                                  </div>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.comments`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input {...field} placeholder="Σχόλια" className="text-xs h-8" />
                                 </FormControl>
                               </FormItem>
                             )}
