@@ -407,28 +407,19 @@ export default function ComprehensiveEditFixed() {
               }
             }
             
-            // Create entries for each expenditure type
-            if (location.expenditure_types && location.expenditure_types.length > 0) {
-              for (const expenditureType of location.expenditure_types) {
-                const expenditureTypeData = typedExpenditureTypesData?.find(et => et.expediture_types === expenditureType);
-                if (expenditureTypeData) {
-                  projectLines.push({
-                    kallikratis_id: kallikratisId,
-                    monada_id: monadaId,
-                    expediture_type_id: expenditureTypeData.id,
-                    event_types_id: typedEventTypesData?.find(et => et.name === data.event_details.event_name)?.id || null,
-                  });
-                }
+            // Create single entry with all expenditure types for this location
+            projectLines.push({
+              implementing_agency: location.implementing_agency,
+              implementing_agency_id: monadaId,
+              expenditure_types: location.expenditure_types || [],
+              region: {
+                perifereia: location.region,
+                perifereiaki_enotita: location.regional_unit,
+                dimos: location.municipality,
+                dimotiki_enotita: location.municipal_community,
+                kallikratis_id: kallikratisId
               }
-            } else {
-              // Create entry without expenditure type
-              projectLines.push({
-                kallikratis_id: kallikratisId,
-                monada_id: monadaId,
-                expediture_type_id: null,
-                event_types_id: typedEventTypesData?.find(et => et.name === data.event_details.event_name)?.id || null,
-              });
-            }
+            });
           }
           
           if (projectLines.length > 0) {
