@@ -460,14 +460,15 @@ export default function ComprehensiveEditFixed() {
         description: "Όλα τα στοιχεία του έργου ενημερώθηκαν επιτυχώς" 
       });
       
-      // Invalidate all relevant queries
+      // Invalidate all relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/index`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/decisions`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/formulations`] });
       
-      // Navigate back to project page
-      navigate(`/projects/${mis}`);
+      // Stay on the edit page to show updated data
+      // Data will refresh automatically due to query invalidation
+      console.log("✅ Save successful - staying on edit page with refreshed data");
     },
     onError: (error) => {
       console.error("Form submission failed:", error);

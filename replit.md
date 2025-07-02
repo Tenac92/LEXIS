@@ -127,6 +127,16 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 2, 2025 - Critical Save Button Fix & Complete Form Submission Success
+- **BREAKTHROUGH: Comprehensive Edit Form Save Button Now Working Perfectly**
+- Fixed critical validation error: `connected_decisions` field was initialized as string instead of array, causing silent validation failures
+- **Root Cause Resolution:** Changed `connected_decisions: ""` to `connected_decisions: []` in all 3 formulation entries (NA853, NA271, E069)
+- **Form Submission Flow Fixed:** Removed automatic redirect to project details page, keeping users on edit form to see updated data
+- **Complete Success Chain:** Save button click → validation passes → data persists to database → form stays with updated data
+- **User Experience Enhancement:** Form now shows saved data immediately instead of appearing to "reset" due to navigation
+- **Database Integration Verified:** All data properly saves to project_decisions, project_formulations, and project_index tables
+- Form maintains all user changes and displays success confirmation with updated database values
+
 ### July 2, 2025 - Database Integration Success & Complete Form Enhancement
 - **COMPLETE DATABASE CONNECTION ESTABLISHED:** All decisions table fields now properly connected to project_decisions table
 - Fixed API field name mapping: form sends `decisions_data` matching backend expectation in PUT endpoint
