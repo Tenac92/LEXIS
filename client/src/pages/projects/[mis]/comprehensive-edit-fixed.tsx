@@ -595,10 +595,10 @@ export default function ComprehensiveEditFixed() {
             // Group by kallikratis and implementing agency
             projectIndexData.forEach(indexItem => {
               const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
-              const unit = typedUnitsData.find(u => u.id === indexItem.monada_id);
-              const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expediture_type_id);
+              const unit = typedUnitsData.find(u => u.id === indexItem.unit_id);
+              const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expenditure_type_id);
               
-              const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.monada_id || 'no-unit'}`;
+              const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.unit_id || 'no-unit'}`;
               
               if (!locationDetailsMap.has(key)) {
                 locationDetailsMap.set(key, {
