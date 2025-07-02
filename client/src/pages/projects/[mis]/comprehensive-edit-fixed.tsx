@@ -107,11 +107,11 @@ const comprehensiveProjectSchema = z.object({
     project_description: z.string().default(""),
     summary_description: z.string().default(""),
     expenses_executed: z.string().default(""),
-    project_status: z.enum(["Συμπληρωμένο", "Συνεχιζόμενο", "Ολοκληρωμένο"]).default("Συμπληρωμένο"),
+    project_status: z.string().default("Ενεργό"),
   }).default({ 
     mis: "", sa: "", enumeration_code: "", inclusion_year: "", 
     project_title: "", project_description: "", summary_description: "", 
-    expenses_executed: "", project_status: "Συμπληρωμένο" 
+    expenses_executed: "", project_status: "Ενεργό" 
   }),
   
   // Previous entries for section 3
@@ -124,7 +124,7 @@ const comprehensiveProjectSchema = z.object({
     project_description: z.string().default(""),
     summary_description: z.string().default(""),
     expenses_executed: z.string().default(""),
-    project_status: z.enum(["Συμπληρωμένο", "Συνεχιζόμενο", "Ολοκληρωμένο"]).default("Συμπληρωμένο"),
+    project_status: z.string().default("Ενεργό"),
   })).default([]),
   
   // Section 4: Project formulation details
