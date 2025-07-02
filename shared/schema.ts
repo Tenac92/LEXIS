@@ -421,10 +421,14 @@ export const projectIndex = pgTable("project_index", {
   expediture_type_id: integer("expediture_type_id").notNull(),
   geographic_code: bigint("geographic_code", { mode: "number" }), // Administrative level determined by digit count: 6=municipal, 3=regional_unit, 1=region
 }, (table) => ({
-  pk: { 
-    name: "project_monada_kallikratis_pkey",
-    columns: [table.project_id, table.monada_id, table.kallikratis_id, table.event_types_id, table.expediture_type_id]
-  }
+  // Create unique constraint instead of primary key to allow NULL values
+  unique_project_entry: unique("project_index_unique").on(
+    table.project_id, 
+    table.monada_id, 
+    table.kallikratis_id, 
+    table.event_types_id, 
+    table.expediture_type_id
+  )
 }));
 
 /**

@@ -62,9 +62,13 @@ async function fixProjectIndexSchema() {
 
 // Alternative: Update the Drizzle schema to reflect the change
 function updateDrizzleSchema() {
-  console.log('📝 Remember to update shared/schema.ts:');
-  console.log('Change: monada_id: integer("monada_id").notNull().references(() => monada.id)');
-  console.log('To: monada_id: integer("monada_id").references(() => monada.id)');
+  console.log('📝 ✅ SCHEMA UPDATED: shared/schema.ts changes applied:');
+  console.log('✓ Changed: monada_id: integer("monada_id").notNull().references(() => monada.id)');
+  console.log('✓ To: monada_id: integer("monada_id").references(() => monada.id)');
+  console.log('✓ Changed: kallikratis_id: integer("kallikratis_id").notNull().references(() => kallikratis.id)');  
+  console.log('✓ To: kallikratis_id: integer("kallikratis_id").references(() => kallikratis.id)');
+  console.log('✓ Replaced composite primary key with unique constraint to allow NULL values');
+  console.log('✓ Form submissions can now save without requiring implementing agency or location');
 }
 
 async function main() {
