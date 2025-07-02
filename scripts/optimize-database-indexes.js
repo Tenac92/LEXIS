@@ -5,7 +5,7 @@
  * to improve query performance for the comprehensive edit form.
  */
 
-const supabaseExecutor = require('../supabase-sql-executor.js');
+import * as supabaseExecutor from '../supabase-sql-executor.js';
 
 const indexQueries = [
   // Project-related indexes
