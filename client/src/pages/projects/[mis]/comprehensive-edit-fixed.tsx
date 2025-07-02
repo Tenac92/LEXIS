@@ -233,39 +233,74 @@ export default function ComprehensiveEditFixed() {
         decisions_data: data.decisions,
         
         // Transform location_details to project_lines format for project_index table
-        project_lines: data.location_details && data.location_details.length > 0 ? data.location_details.map((location, locationIndex) => {
-          console.log(`Processing location ${locationIndex + 1}:`, location);
-          
-          // Find kallikratis_id for this location
-          let kallikratisId = null;
-          if (kallikratisData) {
-            // Try match by region, regional unit, and municipality
-            const kallikratis = kallikratisData.find(k => 
-              k.perifereia === location.region && 
-              k.perifereiaki_enotita === location.regional_unit &&
-              k.onoma_neou_ota === location.municipality
-            );
+        // Only include locations that have valid geographic data to avoid constraint violations
+        project_lines: data.location_details && data.location_details.length > 0 ? data.location_details
+          .map((location, locationIndex) => {
+            console.log(`Processing location ${locationIndex + 1}:`, location);
             
-            kallikratisId = kallikratis?.id || null;
-            console.log(`Kallikratis lookup for ${location.region}/${location.regional_unit}/${location.municipality}: ID ${kallikratisId}`);
-          }
-
-          const projectLine = {
-            implementing_agency: location.implementing_agency || '',
-            event_type: data.event_details.event_name || '',
-            expenditure_types: Array.isArray(location.expenditure_types) ? location.expenditure_types : [],
-            region: {
-              perifereia: location.region || '',
-              perifereiaki_enotita: location.regional_unit || '',
-              dimos: location.municipality || '',
-              dimotiki_enotita: location.municipal_community || '',
-              kallikratis_id: kallikratisId
+            // Skip completely empty location entries
+            if (!location.region && !location.regional_unit && !location.municipality && !location.municipal_community) {
+              console.log(`Skipping empty location ${locationIndex + 1}`);
+              return null;
             }
-          };
-          
-          console.log(`Created project line ${locationIndex + 1}:`, projectLine);
-          return projectLine;
-        }) : []
+            
+            // Find kallikratis_id for this location
+            let kallikratisId = null;
+            if (kallikratisData && (location.region || location.regional_unit || location.municipality)) {
+              // Try multiple matching strategies
+              let kallikratis = null;
+              
+              // First try: exact match on all available fields
+              if (location.municipality && location.regional_unit && location.region) {
+                kallikratis = kallikratisData.find(k => 
+                  k.perifereia === location.region && 
+                  k.perifereiaki_enotita === location.regional_unit &&
+                  k.onoma_neou_ota === location.municipality
+                );
+              }
+              
+              // Second try: region and regional unit only
+              if (!kallikratis && location.regional_unit && location.region) {
+                kallikratis = kallikratisData.find(k => 
+                  k.perifereia === location.region && 
+                  k.perifereiaki_enotita === location.regional_unit
+                );
+              }
+              
+              // Third try: region only
+              if (!kallikratis && location.region) {
+                kallikratis = kallikratisData.find(k => 
+                  k.perifereia === location.region
+                );
+              }
+              
+              kallikratisId = kallikratis?.id || null;
+              console.log(`Kallikratis lookup for ${location.region}/${location.regional_unit}/${location.municipality}: ID ${kallikratisId}`);
+            }
+
+            // Only create project line if we have a valid kallikratis_id
+            if (!kallikratisId) {
+              console.log(`Skipping location ${locationIndex + 1} - no valid kallikratis_id found`);
+              return null;
+            }
+
+            const projectLine = {
+              implementing_agency: location.implementing_agency || '',
+              event_type: data.event_details.event_name || '',
+              expenditure_types: Array.isArray(location.expenditure_types) ? location.expenditure_types : [],
+              region: {
+                perifereia: location.region || '',
+                perifereiaki_enotita: location.regional_unit || '',
+                dimos: location.municipality || '',
+                dimotiki_enotita: location.municipal_community || '',
+                kallikratis_id: kallikratisId
+              }
+            };
+            
+            console.log(`Created project line ${locationIndex + 1}:`, projectLine);
+            return projectLine;
+          })
+          .filter(line => line !== null) : []
       };
 
       console.log("Transformed data for backend:", transformedData);
@@ -378,30 +413,47 @@ export default function ComprehensiveEditFixed() {
       // Initialize location details from project_index data
       const locationDetails = [];
       
-      if (projectIndexData && projectIndexData.length > 0) {
-        console.log('Processing project index data for location details');
-        console.log('Available units data:', unitsData?.map(u => ({ id: u.id, unit: u.unit, unit_name: u.unit_name })));
+      console.log('Project index data received:', projectIndexData);
+      console.log('Available units data:', unitsData?.map(u => ({ id: u.id, unit: u.unit, unit_name: u.unit_name })));
+      console.log('Available kallikratis data (first 3):', kallikratisData?.slice(0, 3));
+      
+      if (projectIndexData && Array.isArray(projectIndexData) && projectIndexData.length > 0) {
+        console.log('Processing project index data for location details:', projectIndexData.length, 'entries');
         
         // Group by kallikratis_id and monada_id to create location entries
         const grouped = projectIndexData.reduce((acc, entry) => {
-          const key = `${entry.kallikratis_id}-${entry.unit_id}`;
+          console.log('Processing project_index entry:', entry);
+          
+          // Use correct field names from project_index table
+          const kallikratisId = entry.kallikratis_id;
+          const monadaId = entry.monada_id;
+          const key = `${kallikratisId}-${monadaId}`;
+          
           if (!acc[key]) {
             acc[key] = {
-              kallikratis_id: entry.kallikratis_id,
-              unit_id: entry.unit_id,
+              kallikratis_id: kallikratisId,
+              monada_id: monadaId,
               expenditure_types: []
             };
           }
-          if (entry.expenditure_type_id) {
-            acc[key].expenditure_types.push(entry.expenditure_type_id.toString());
+          
+          // Add expenditure type if exists
+          if (entry.expediture_type_id) {
+            acc[key].expenditure_types.push(entry.expediture_type_id.toString());
           }
+          
           return acc;
         }, {});
+
+        console.log('Grouped location data:', grouped);
 
         Object.values(grouped).forEach((group: any) => {
           // Find the kallikratis entry for this location
           const kallikratisEntry = kallikratisData?.find(k => k.id === group.kallikratis_id);
-          const unit = unitsData?.find(u => u.id === group.unit_id);
+          const unit = unitsData?.find(u => u.id === group.monada_id);
+          
+          console.log('Looking up kallikratis ID:', group.kallikratis_id, 'Found:', kallikratisEntry);
+          console.log('Looking up unit ID:', group.monada_id, 'Found:', unit);
           
           // Extract implementing agency name from unit structure
           let implementingAgencyName = "";
@@ -417,7 +469,7 @@ export default function ComprehensiveEditFixed() {
           
           if (kallikratisEntry) {
             const locationDetail = {
-              municipal_community: "", // Removed from simplified schema
+              municipal_community: kallikratisEntry.onoma_dimotikis_enotitas || "",
               municipality: kallikratisEntry.onoma_neou_ota || "",
               regional_unit: kallikratisEntry.perifereiaki_enotita || "",
               region: kallikratisEntry.perifereia || "",
@@ -426,23 +478,53 @@ export default function ComprehensiveEditFixed() {
             };
             console.log('Adding location detail:', locationDetail);
             locationDetails.push(locationDetail);
+          } else {
+            console.warn('No kallikratis entry found for ID:', group.kallikratis_id);
           }
         });
       }
 
-      // If no location details exist, create default entry
+      // If no location details exist, create default entry with project data
       if (locationDetails.length === 0) {
-        console.log('No project index data available, initializing with default location details');
-        const defaultImplementingAgency = project.enhanced_unit?.name || "";
-        console.log('Default location entry created with implementing agency:', defaultImplementingAgency);
+        console.log('No project index data available, creating default location entry');
+        
+        // Try to get implementing agency from project data
+        let defaultImplementingAgency = "";
+        if (projectData?.enhanced_unit?.unit_name) {
+          if (typeof projectData.enhanced_unit.unit_name === 'object' && projectData.enhanced_unit.unit_name.name) {
+            defaultImplementingAgency = projectData.enhanced_unit.unit_name.name;
+          } else if (typeof projectData.enhanced_unit.unit_name === 'string') {
+            defaultImplementingAgency = projectData.enhanced_unit.unit_name;
+          }
+        }
+        
+        // Try to get location from project data
+        let defaultLocation = {
+          municipal_community: "",
+          municipality: "",
+          regional_unit: "",
+          region: "",
+        };
+        
+        if (projectData?.enhanced_kallikratis) {
+          defaultLocation = {
+            municipal_community: projectData.enhanced_kallikratis.onoma_dimotikis_enotitas || "",
+            municipality: projectData.enhanced_kallikratis.onoma_neou_ota || "",
+            regional_unit: projectData.enhanced_kallikratis.perifereiaki_enotita || "",
+            region: projectData.enhanced_kallikratis.perifereia || "",
+          };
+        }
+        
+        console.log('Default location entry:', {
+          ...defaultLocation,
+          implementing_agency: defaultImplementingAgency,
+          expenditure_types: []
+        });
         
         locationDetails.push({
-          municipal_community: "", // Removed from simplified schema
-          municipality: project.enhanced_kallikratis?.onoma_neou_ota || "",
-          regional_unit: project.enhanced_kallikratis?.perifereiaki_enotita || "",
-          region: project.enhanced_kallikratis?.perifereia || "",
+          ...defaultLocation,
           implementing_agency: defaultImplementingAgency,
-          expenditure_types: project.enhanced_expenditure_type?.id ? [project.enhanced_expenditure_type.id.toString()] : [],
+          expenditure_types: [],
         });
       }
 
