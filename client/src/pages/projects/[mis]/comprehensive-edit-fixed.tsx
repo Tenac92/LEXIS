@@ -159,10 +159,22 @@ export default function ComprehensiveEditFixed() {
         enabled: !!mis,
         staleTime: 5 * 60 * 1000,
       },
-      // Combined reference data in single call (much faster)
+      // Individual reference data endpoints (fallback for reliability)
       {
-        queryKey: ["/api/projects/reference-data"],
+        queryKey: ["/api/event-types"],
         staleTime: 30 * 60 * 1000, // 30 minutes cache for reference data
+      },
+      {
+        queryKey: ["/api/public/units"],
+        staleTime: 30 * 60 * 1000,
+      },
+      {
+        queryKey: ["/api/kallikratis"],
+        staleTime: 30 * 60 * 1000,
+      },
+      {
+        queryKey: ["/api/expenditure-types"],
+        staleTime: 30 * 60 * 1000,
       },
     ],
   });
@@ -173,14 +185,11 @@ export default function ComprehensiveEditFixed() {
     { data: projectIndexData },
     { data: decisionsData },
     { data: formulationsData },
-    { data: referenceData, isLoading: referenceLoading },
+    { data: eventTypesData, isLoading: eventTypesLoading },
+    { data: unitsData, isLoading: unitsLoading },
+    { data: kallikratisData, isLoading: kallikratisLoading },
+    { data: expenditureTypesData, isLoading: expenditureTypesLoading },
   ] = queries;
-
-  // Extract reference data from combined response
-  const eventTypesData = referenceData?.event_types;
-  const unitsData = referenceData?.units;
-  const kallikratisData = referenceData?.kallikratis;
-  const expenditureTypesData = referenceData?.expenditure_types;
 
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
@@ -444,7 +453,8 @@ export default function ComprehensiveEditFixed() {
       const locationDetails = [];
       
       console.log('Project index data received:', projectIndexData);
-      console.log('Available units data:', unitsData?.map(u => ({ id: u.id, unit: u.unit, unit_name: u.unit_name })));
+      console.log('Available units data:', unitsData);
+      console.log('Units data length:', unitsData?.length);
       console.log('Available kallikratis data (first 3):', kallikratisData?.slice(0, 3));
       
       if (projectIndexData && Array.isArray(projectIndexData) && projectIndexData.length > 0) {
@@ -711,8 +721,8 @@ export default function ComprehensiveEditFixed() {
   }, [projectData, projectIndexData, kallikratisData, unitsData, decisionsData, formulationsData, form]);
 
   // Computed values
-  const isLoading = projectLoading || referenceLoading;
-  const isDataReady = projectData && referenceData;
+  const isLoading = projectLoading || eventTypesLoading || unitsLoading || kallikratisLoading || expenditureTypesLoading;
+  const isDataReady = projectData && eventTypesData && unitsData && kallikratisData && expenditureTypesData;
 
   // CONDITIONAL RENDERING AFTER ALL HOOKS
   if (projectError) {
@@ -746,8 +756,12 @@ export default function ComprehensiveEditFixed() {
                   <span>Στοιχεία έργου {projectData ? '✓' : '...'}</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${referenceData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <span>Δεδομένα αναφοράς {referenceData ? '✓' : '...'}</span>
+                  <div className={`w-2 h-2 rounded-full ${unitsData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Φορείς υλοποίησης {unitsData ? '✓' : '...'}</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${eventTypesData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Τύποι συμβάντων {eventTypesData ? '✓' : '...'}</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
                   <div className={`w-2 h-2 rounded-full ${projectIndexData !== undefined ? 'bg-green-500' : 'bg-gray-300'}`}></div>
