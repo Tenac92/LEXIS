@@ -1,0 +1,52 @@
+Warning: A component is changing an uncontrolled input to be controlled. This is likely caused by the value changing from undefined to a defined value, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://reactjs.org/link/controlled-components
+    at input
+    at _c (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/input.tsx:20:11)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=ea23ecab:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=ea23ecab:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/form.tsx:127:9
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/form.tsx:71:6
+    at Controller (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=ea23ecab:313:35)
+    at FormField (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/form.tsx:32:6)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/card.tsx:106:12)
+    at div
+    at _c (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=ea23ecab:41:13
+    at Presence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AZCBCMZO.js?v=ea23ecab:24:11)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=ea23ecab:175:13
+    at _c5 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/tabs.tsx:68:12)
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=ea23ecab:41:13
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LSQNWB54.js?v=ea23ecab:38:15)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=ea23ecab:53:7
+    at form
+    at FormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=ea23ecab:102:11)
+    at div
+    at ComprehensiveEditFixed (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis]/comprehensive-edit-fixed.tsx:119:19)
+    at Route (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=ea23ecab:191:16)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=ea23ecab:247:17)
+    at div
+    at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=ea23ecab:6536:40)
+    at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=ea23ecab:7742:24)
+    at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=ea23ecab:7800:26)
+    at PageTransition (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/page-transition.tsx:42:34)
+    at Router
+    at DocumentFormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/contexts/document-form-context.tsx:63:40)
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:139:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=ea23ecab:2848:3)
+    at App
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 
+(2) [{…}, {…}]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]

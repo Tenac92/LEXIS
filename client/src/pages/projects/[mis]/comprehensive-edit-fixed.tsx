@@ -626,7 +626,9 @@ export default function ComprehensiveEditFixed() {
               }
             });
             
-            return Array.from(locationDetailsMap.values());
+            const finalLocationDetails = Array.from(locationDetailsMap.values());
+            console.log("DEBUG - Final location details being set:", finalLocationDetails);
+            return finalLocationDetails;
           }
           
           // Default location detail if no project index data
