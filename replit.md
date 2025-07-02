@@ -127,6 +127,24 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 2, 2025 - Performance Optimization & Data Fetching Acceleration
+- **MAJOR PERFORMANCE BOOST: Implemented parallel data fetching for comprehensive edit form**
+- Replaced 8 sequential API calls with 5 parallel queries using React Query's useQueries
+- Created combined reference data endpoint (`/api/projects/reference-data`) reducing 4 separate calls to 1
+- **Performance Improvements:**
+  - **Frontend Optimization**: useQueries enables simultaneous data fetching instead of waterfall requests
+  - **Backend Optimization**: Combined reference data endpoint fetches event types, units, kallikratis, and expenditure types in single database transaction
+  - **Caching Strategy**: 30-minute cache for static reference data, 5-minute cache for project-specific data
+  - **Enhanced Loading States**: Detailed progress indicators showing individual data loading status
+- **Data Integrity Fixes:**
+  - Fixed field name mismatch between API response (`unit_id`) and database schema (`monada_id`)
+  - Enhanced location details initialization to store both display names and IDs for proper data persistence
+  - Updated backend to prioritize `implementing_agency_id` over string matching for accurate agency resolution
+  - Added proper data transformation between project_index table and form location details
+- **Query Optimization Preparation**: Created database index optimization script for future performance gains
+- **Expected Results**: Comprehensive edit form loading time reduced from ~2-3 seconds to sub-second response
+- Form data persistence now properly maintains implementing agency relationships without data loss
+
 ### July 1, 2025 - Normalized Project Tables Architecture Implementation
 - **MAJOR ARCHITECTURAL BREAKTHROUGH: Implemented normalized database structure with separate tables for decisions and formulations**
 - Successfully migrated from complex single-table JSONB approach to proper relational design

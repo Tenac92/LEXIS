@@ -1003,6 +1003,37 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
   }
 });
 
+// Combined reference data endpoint for faster loading - must be before /:mis route
+router.get('/reference-data', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  console.log(`[ReferenceData] Fetching combined reference data`);
+  
+  try {
+    const [eventTypesResult, unitsResult, kallikratisResult, expenditureTypesResult] = await Promise.all([
+      supabase.from('event_types').select('*').order('id'),
+      supabase.from('Monada').select('*').order('id'),
+      supabase.from('kallikratis').select('*').order('id'),
+      supabase.from('expediture_types').select('*').order('id')
+    ]);
+
+    const referenceData = {
+      event_types: eventTypesResult.data || [],
+      units: unitsResult.data || [],
+      kallikratis: kallikratisResult.data || [],
+      expenditure_types: expenditureTypesResult.data || []
+    };
+
+    console.log(`[ReferenceData] Successfully fetched combined reference data: ${referenceData.event_types.length} event types, ${referenceData.units.length} units, ${referenceData.kallikratis.length} kallikratis entries, ${referenceData.expenditure_types.length} expenditure types`);
+    
+    res.json(referenceData);
+  } catch (error) {
+    console.error(`[ReferenceData] Error fetching reference data:`, error);
+    res.status(500).json({ 
+      message: "Failed to fetch reference data",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 // Get single project by MIS with enhanced data
 router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -1455,37 +1486,6 @@ router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
     console.error(`[ProjectFormulations] Error updating formulations:`, error);
     res.status(500).json({ 
       message: "Failed to update project formulations",
-      error: error instanceof Error ? error.message : "Unknown error"
-    });
-  }
-});
-
-// Combined reference data endpoint for faster loading
-router.get('/reference-data', async (req, res) => {
-  console.log(`[ReferenceData] Fetching combined reference data`);
-  
-  try {
-    const [eventTypesResult, unitsResult, kallikratisResult, expenditureTypesResult] = await Promise.all([
-      supabase.from('event_types').select('*').order('id'),
-      supabase.from('Monada').select('*').order('id'),
-      supabase.from('kallikratis').select('*').order('id'),
-      supabase.from('expediture_types').select('*').order('id')
-    ]);
-
-    const referenceData = {
-      event_types: eventTypesResult.data || [],
-      units: unitsResult.data || [],
-      kallikratis: kallikratisResult.data || [],
-      expenditure_types: expenditureTypesResult.data || []
-    };
-
-    console.log(`[ReferenceData] Successfully fetched combined reference data: ${referenceData.event_types.length} event types, ${referenceData.units.length} units, ${referenceData.kallikratis.length} kallikratis entries, ${referenceData.expenditure_types.length} expenditure types`);
-    
-    res.json(referenceData);
-  } catch (error) {
-    console.error(`[ReferenceData] Error fetching reference data:`, error);
-    res.status(500).json({ 
-      message: "Failed to fetch reference data",
       error: error instanceof Error ? error.message : "Unknown error"
     });
   }
