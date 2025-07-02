@@ -523,7 +523,7 @@ export default function ComprehensiveEditFixed() {
             epa_version: formulation.epa_version || "",
             expenses: formulation.expenses || "",
             changes: formulation.changes || "",
-            connected_decisions: formulation.connected_decisions || "",
+            connected_decisions: formulation.connected_decisions || [],
             comments: formulation.comments || "",
             project_budget: formulation.project_budget || "",
           }))
