@@ -581,10 +581,6 @@ export default function ComprehensiveEditFixed() {
       form.setValue("location_details", (() => {
           // Populate location details from project index data
           if (projectIndexData && projectIndexData.length > 0) {
-            console.log("DEBUG - About to process project index data:", projectIndexData);
-            console.log("DEBUG - Available kallikratis data count:", typedKallikratisData.length);
-            console.log("DEBUG - Looking for kallikratis IDs:", projectIndexData.map(item => item.kallikratis_id));
-            
             const locationDetailsMap = new Map();
             
             // Group by kallikratis and implementing agency
@@ -592,15 +588,6 @@ export default function ComprehensiveEditFixed() {
               const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
               const unit = typedUnitsData.find(u => u.id === indexItem.unit_id);
               const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expenditure_type_id);
-              
-              console.log("DEBUG - Processing project index item:", {
-                kallikratis_id: indexItem.kallikratis_id,
-                unit_id: indexItem.unit_id,
-                expenditure_type_id: indexItem.expenditure_type_id,
-                found_kallikratis: kallikratis,
-                found_unit: unit,
-                found_expenditure_type: expenditureType
-              });
               
               const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.unit_id || 'no-unit'}`;
               
@@ -613,7 +600,6 @@ export default function ComprehensiveEditFixed() {
                   implementing_agency: unit?.name || unit?.unit_name?.name || unit?.unit || "",
                   expenditure_types: [],
                 };
-                console.log("DEBUG - Created location detail:", locationDetail);
                 locationDetailsMap.set(key, locationDetail);
               }
               
@@ -626,9 +612,7 @@ export default function ComprehensiveEditFixed() {
               }
             });
             
-            const finalLocationDetails = Array.from(locationDetailsMap.values());
-            console.log("DEBUG - Final location details being set:", finalLocationDetails);
-            return finalLocationDetails;
+            return Array.from(locationDetailsMap.values());
           }
           
           // Default location detail if no project index data
