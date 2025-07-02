@@ -3,7 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -135,43 +135,52 @@ export default function ComprehensiveEditFixed() {
     },
   });
 
-  const { data: projectData, isLoading: projectLoading, error: projectError } = useQuery({
-    queryKey: [`/api/projects/${mis}`],
-    enabled: !!mis,
+  // Use optimized parallel fetching - project data + combined reference data
+  const queries = useQueries({
+    queries: [
+      // Project-specific data (dependent on MIS)
+      {
+        queryKey: [`/api/projects/${mis}`],
+        enabled: !!mis,
+        staleTime: 5 * 60 * 1000, // 5 minutes cache
+      },
+      {
+        queryKey: [`/api/projects/${mis}/index`],
+        enabled: !!mis,
+        staleTime: 5 * 60 * 1000,
+      },
+      {
+        queryKey: [`/api/projects/${mis}/decisions`],
+        enabled: !!mis,
+        staleTime: 5 * 60 * 1000,
+      },
+      {
+        queryKey: [`/api/projects/${mis}/formulations`],
+        enabled: !!mis,
+        staleTime: 5 * 60 * 1000,
+      },
+      // Combined reference data in single call (much faster)
+      {
+        queryKey: ["/api/projects/reference-data"],
+        staleTime: 30 * 60 * 1000, // 30 minutes cache for reference data
+      },
+    ],
   });
 
-  const { data: projectIndexData } = useQuery({
-    queryKey: [`/api/projects/${mis}/index`],
-    enabled: !!mis,
-  });
+  // Extract data from parallel queries
+  const [
+    { data: projectData, isLoading: projectLoading, error: projectError },
+    { data: projectIndexData },
+    { data: decisionsData },
+    { data: formulationsData },
+    { data: referenceData, isLoading: referenceLoading },
+  ] = queries;
 
-  const { data: eventTypesData } = useQuery({
-    queryKey: ["/api/event-types"],
-  });
-
-  const { data: unitsData } = useQuery({
-    queryKey: ["/api/public/units"],
-  });
-
-  const { data: kallikratisData } = useQuery<KallikratisEntry[]>({
-    queryKey: ["/api/kallikratis"],
-  });
-
-  const { data: expenditureTypesData } = useQuery({
-    queryKey: ["/api/expenditure-types"],
-  });
-
-  // Fetch decisions from normalized table
-  const { data: decisionsData } = useQuery({
-    queryKey: [`/api/projects/${mis}/decisions`],
-    enabled: !!mis,
-  });
-
-  // Fetch formulations from normalized table
-  const { data: formulationsData } = useQuery({
-    queryKey: [`/api/projects/${mis}/formulations`],
-    enabled: !!mis,
-  });
+  // Extract reference data from combined response
+  const eventTypesData = referenceData?.event_types;
+  const unitsData = referenceData?.units;
+  const kallikratisData = referenceData?.kallikratis;
+  const expenditureTypesData = referenceData?.expenditure_types;
 
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
@@ -702,8 +711,8 @@ export default function ComprehensiveEditFixed() {
   }, [projectData, projectIndexData, kallikratisData, unitsData, decisionsData, formulationsData, form]);
 
   // Computed values
-  const isLoading = projectLoading;
-  const isDataReady = projectData && eventTypesData;
+  const isLoading = projectLoading || referenceLoading;
+  const isDataReady = projectData && referenceData;
 
   // CONDITIONAL RENDERING AFTER ALL HOOKS
   if (projectError) {
@@ -737,8 +746,12 @@ export default function ComprehensiveEditFixed() {
                   <span>Στοιχεία έργου {projectData ? '✓' : '...'}</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${eventTypesData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <span>Τύποι συμβάντων {eventTypesData ? '✓' : '...'}</span>
+                  <div className={`w-2 h-2 rounded-full ${referenceData ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Δεδομένα αναφοράς {referenceData ? '✓' : '...'}</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${projectIndexData !== undefined ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                  <span>Στοιχεία τοποθεσίας {projectIndexData !== undefined ? '✓' : '...'}</span>
                 </div>
               </div>
             </div>
