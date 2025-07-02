@@ -589,17 +589,28 @@ export default function ComprehensiveEditFixed() {
               const unit = typedUnitsData.find(u => u.id === indexItem.unit_id);
               const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expenditure_type_id);
               
+              console.log("DEBUG - Processing project index item:", {
+                kallikratis_id: indexItem.kallikratis_id,
+                unit_id: indexItem.unit_id,
+                expenditure_type_id: indexItem.expenditure_type_id,
+                found_kallikratis: kallikratis,
+                found_unit: unit,
+                found_expenditure_type: expenditureType
+              });
+              
               const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.unit_id || 'no-unit'}`;
               
               if (!locationDetailsMap.has(key)) {
-                locationDetailsMap.set(key, {
+                const locationDetail = {
                   municipal_community: kallikratis?.onoma_dimotikis_enotitas || "",
                   municipality: kallikratis?.onoma_neou_ota || "",
                   regional_unit: kallikratis?.perifereiaki_enotita || "",
                   region: kallikratis?.perifereia || "",
                   implementing_agency: unit?.name || unit?.unit_name?.name || unit?.unit || "",
                   expenditure_types: [],
-                });
+                };
+                console.log("DEBUG - Created location detail:", locationDetail);
+                locationDetailsMap.set(key, locationDetail);
               }
               
               // Add expenditure type if it exists
