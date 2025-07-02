@@ -37,7 +37,7 @@ const comprehensiveProjectSchema = z.object({
     ada: z.string().default(""),
     implementing_agency: z.string().default(""),
     decision_budget: z.string().default(""),
-    expenses_covered: z.string().default(""),
+    expenses_covered: z.union([z.string(), z.number()]).transform(val => String(val)).default(""),
     decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Παράταση"]).default("Έγκριση"),
     is_included: z.boolean().default(true),
     comments: z.string().default(""),
