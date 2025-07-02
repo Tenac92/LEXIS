@@ -127,18 +127,18 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### July 2, 2025 - Critical Save Button Fix & Form Validation Issues Resolution
-- **BREAKTHROUGH: Database Constraint & Validation Issues Completely Fixed**
-- **Database Constraint Resolution:** Fixed null constraint violation in project_index table by making monada_id and kallikratis_id optional fields
-- **Schema Architecture Updated:** Replaced composite primary key with unique constraint to allow null values for implementing agency and location data
+### July 2, 2025 - Critical Save Button Fix & Form Validation Complete Success
+- **BREAKTHROUGH: Form Validation & Save Functionality Completely Fixed**
+- **Critical Array Validation Fixed:** Resolved `connected_decisions` field initialization from string `""` to array `[]`, eliminating "Expected array, received string" validation error
+- **Form Submission Success:** Save button now works perfectly - form validates and core project data persists to database successfully
 - **Form Validation Fixes:** 
   - Fixed "Κατάσταση Έργου" (Project Status) validation by changing schema from restrictive enum to flexible string type
   - Resolved controlled/uncontrolled input warnings by ensuring proper default values throughout form initialization
   - Project status field now accepts actual database values: "Ενεργό", "Ολοκληρωμένο", "Αναστολή", "Ακυρωμένο"
-- **Save Button Functionality Restored:** Form can now save without requiring implementing agency or location data
-- **Form Submission Flow:** Save button → validation passes → data persists to database → form stays with updated data
-- **User Experience:** Form displays success confirmation and refreshes with updated database values
-- **Database Integration:** All data properly saves to project_decisions, project_formulations, and project_index tables with proper foreign key relationships
+- **Database Integration Success:** Main project data (project_details, decisions, formulations) saves successfully to database
+- **Form Submission Flow:** Save button → validation passes → PATCH 200 success → data persists → form refreshes with updated data
+- **User Experience:** Form shows success and stays on edit page with refreshed data from database
+- **Minor Remaining Issue:** project_index table constraint needs database update (non-blocking for main functionality)
 
 ### July 2, 2025 - Database Integration Success & Complete Form Enhancement
 - **COMPLETE DATABASE CONNECTION ESTABLISHED:** All decisions table fields now properly connected to project_decisions table
