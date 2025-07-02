@@ -581,6 +581,10 @@ export default function ComprehensiveEditFixed() {
       form.setValue("location_details", (() => {
           // Populate location details from project index data
           if (projectIndexData && projectIndexData.length > 0) {
+            console.log("DEBUG - About to process project index data:", projectIndexData);
+            console.log("DEBUG - Available kallikratis data count:", typedKallikratisData.length);
+            console.log("DEBUG - Looking for kallikratis IDs:", projectIndexData.map(item => item.kallikratis_id));
+            
             const locationDetailsMap = new Map();
             
             // Group by kallikratis and implementing agency
