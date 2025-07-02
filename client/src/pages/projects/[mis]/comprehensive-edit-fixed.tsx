@@ -446,20 +446,21 @@ export default function ComprehensiveEditFixed() {
           
           // Use correct field names from project_index table
           const kallikratisId = entry.kallikratis_id;
-          const monadaId = entry.monada_id;
-          const key = `${kallikratisId}-${monadaId}`;
+          // Handle field name inconsistency: API returns unit_id but schema expects monada_id
+          const unitId = entry.unit_id || entry.monada_id;
+          const key = `${kallikratisId}-${unitId}`;
           
           if (!acc[key]) {
             acc[key] = {
               kallikratis_id: kallikratisId,
-              monada_id: monadaId,
+              unit_id: unitId,
               expenditure_types: []
             };
           }
           
           // Add expenditure type if exists
-          if (entry.expediture_type_id) {
-            acc[key].expenditure_types.push(entry.expediture_type_id.toString());
+          if (entry.expenditure_type_id) {
+            acc[key].expenditure_types.push(entry.expenditure_type_id.toString());
           }
           
           return acc;
@@ -470,10 +471,10 @@ export default function ComprehensiveEditFixed() {
         Object.values(grouped).forEach((group: any) => {
           // Find the kallikratis entry for this location
           const kallikratisEntry = kallikratisData?.find(k => k.id === group.kallikratis_id);
-          const unit = unitsData?.find(u => u.id === group.monada_id);
+          const unit = unitsData?.find(u => u.id === group.unit_id);
           
           console.log('Looking up kallikratis ID:', group.kallikratis_id, 'Found:', kallikratisEntry);
-          console.log('Looking up unit ID:', group.monada_id, 'Found:', unit);
+          console.log('Looking up unit ID:', group.unit_id, 'Found:', unit);
           
           // Extract implementing agency name from unit structure
           let implementingAgencyName = "";
