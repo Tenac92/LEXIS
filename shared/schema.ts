@@ -415,8 +415,8 @@ export const userPreferences = pgTable("user_preferences", {
  */
 export const projectIndex = pgTable("project_index", {
   project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  monada_id: integer("monada_id").notNull().references(() => monada.id),
-  kallikratis_id: integer("kallikratis_id").notNull().references(() => kallikratis.id),
+  monada_id: integer("monada_id").references(() => monada.id),
+  kallikratis_id: integer("kallikratis_id").references(() => kallikratis.id),
   event_types_id: integer("event_types_id").notNull().references(() => eventTypes.id),
   expediture_type_id: integer("expediture_type_id").notNull(),
   geographic_code: bigint("geographic_code", { mode: "number" }), // Administrative level determined by digit count: 6=municipal, 3=regional_unit, 1=region

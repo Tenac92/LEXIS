@@ -931,7 +931,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
               }
             }
           } else {
-            console.warn(`[Projects] Missing required values for project_index - eventTypeId: ${eventTypeId}, monadaId: ${monadaId}, kallikratisId: ${kallikratisId}`);
+            console.warn(`[Projects] Missing required values for project_index - eventTypeId: ${eventTypeId} (monadaId and kallikratisId are optional)`);
           }
         } catch (lineError) {
           console.error(`[Projects] Error processing project line:`, lineError);
