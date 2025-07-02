@@ -687,7 +687,11 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
           }
 
           // Find implementing agency (Monada) ID - ensure it's integer
-          if (line.implementing_agency) {
+          if (line.implementing_agency_id) {
+            // Use the provided ID directly
+            monadaId = parseInt(line.implementing_agency_id);
+            console.log(`[Projects] Using provided implementing_agency_id: ${monadaId}`);
+          } else if (line.implementing_agency) {
             console.log(`[Projects] DEBUG: Looking for agency: "${line.implementing_agency}"`);
             console.log(`[Projects] DEBUG: Available agencies:`, monadaData.map(m => ({ id: m.id, unit: m.unit, unit_name: m.unit_name })));
             

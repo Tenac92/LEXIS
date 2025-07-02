@@ -286,6 +286,7 @@ export default function ComprehensiveEditFixed() {
 
             const projectLine = {
               implementing_agency: location.implementing_agency || '',
+              implementing_agency_id: location.implementing_agency_id || null, // Use stored ID
               event_type: data.event_details.event_name || '',
               expenditure_types: Array.isArray(location.expenditure_types) ? location.expenditure_types : [],
               region: {
@@ -293,7 +294,7 @@ export default function ComprehensiveEditFixed() {
                 perifereiaki_enotita: location.regional_unit || '',
                 dimos: location.municipality || '',
                 dimotiki_enotita: location.municipal_community || '',
-                kallikratis_id: kallikratisId
+                kallikratis_id: location.kallikratis_id || kallikratisId // Use stored ID first, fallback to resolved
               }
             };
             
@@ -495,6 +496,8 @@ export default function ComprehensiveEditFixed() {
               regional_unit: kallikratisEntry.perifereiaki_enotita || "",
               region: kallikratisEntry.perifereia || "",
               implementing_agency: implementingAgencyName,
+              implementing_agency_id: group.unit_id, // Store the unit ID for saving
+              kallikratis_id: group.kallikratis_id, // Store the kallikratis ID for saving
               expenditure_types: group.expenditure_types,
             };
             console.log('Adding location detail:', locationDetail);
