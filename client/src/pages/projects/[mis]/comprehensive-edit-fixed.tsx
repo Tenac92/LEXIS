@@ -304,7 +304,7 @@ export default function ComprehensiveEditFixed() {
           });
         }
         
-        // 4. Update project index (location details)
+        // 4. Update project index (location details) through project PATCH endpoint
         if (data.location_details && data.location_details.length > 0) {
           console.log("4. Processing location details:", data.location_details);
           
@@ -317,13 +317,13 @@ export default function ComprehensiveEditFixed() {
               continue;
             }
             
-            // Find kallikratis_id
+            // Find kallikratis_id - fix field name mappings
             let kallikratisId = null;
             if (typedKallikratisData && location.region) {
               const kallikratis = typedKallikratisData.find(k => 
-                k.perifereia === location.region && 
-                (!location.regional_unit || k.perifereiaki_enotita === location.regional_unit) &&
-                (!location.municipality || k.onoma_neou_ota === location.municipality)
+                k.name_perifereia === location.region && 
+                (!location.regional_unit || k.name_perifereiakis_enotitas === location.regional_unit) &&
+                (!location.municipality || k.name_neou_ota === location.municipality)
               );
               if (kallikratis) {
                 kallikratisId = kallikratis.id;
@@ -346,7 +346,7 @@ export default function ComprehensiveEditFixed() {
             // Create entries for each expenditure type
             if (location.expenditure_types && location.expenditure_types.length > 0) {
               for (const expenditureType of location.expenditure_types) {
-                const expenditureTypeData = typedExpenditureTypesData?.find(et => et.name === expenditureType);
+                const expenditureTypeData = typedExpenditureTypesData?.find(et => et.expediture_types === expenditureType);
                 if (expenditureTypeData) {
                   projectLines.push({
                     kallikratis_id: kallikratisId,
@@ -369,11 +369,18 @@ export default function ComprehensiveEditFixed() {
           
           if (projectLines.length > 0) {
             console.log("Updating project index with lines:", projectLines);
-            await apiRequest(`/api/projects/${mis}/index`, {
-              method: "PUT",
-              body: JSON.stringify({ project_lines: projectLines }),
-            });
+            // Include project_lines in the main project update
+            projectUpdateData.project_lines = projectLines;
           }
+        }
+        
+        // Update the project again with project_lines if they exist
+        if (projectUpdateData.project_lines) {
+          console.log("Updating project with location details via PATCH");
+          await apiRequest(`/api/projects/${mis}`, {
+            method: "PATCH",
+            body: JSON.stringify({ project_lines: projectUpdateData.project_lines }),
+          });
         }
         
         return { success: true };
@@ -973,8 +980,8 @@ export default function ComprehensiveEditFixed() {
                                       <SelectValue placeholder="Επιλέξτε περιφέρεια" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {[...new Set(typedKallikratisData?.map(k => k.name_perifereia) || [])].map((region) => (
-                                        <SelectItem key={region} value={region}>{region}</SelectItem>
+                                      {[...new Set(typedKallikratisData?.map(k => k.name_perifereia) || [])].filter(Boolean).map((region, index) => (
+                                        <SelectItem key={`region-${index}-${region}`} value={region}>{region}</SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
@@ -1004,8 +1011,8 @@ export default function ComprehensiveEditFixed() {
                                     <SelectContent>
                                       {[...new Set(typedKallikratisData
                                         ?.filter(k => k.name_perifereia === form.watch(`location_details.${index}.region`))
-                                        .map(k => k.name_perifereiakis_enotitas) || [])].map((unit) => (
-                                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                                        .map(k => k.name_perifereiakis_enotitas) || [])].filter(Boolean).map((unit, unitIndex) => (
+                                        <SelectItem key={`unit-${index}-${unitIndex}-${unit}`} value={unit}>{unit}</SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
@@ -1037,8 +1044,8 @@ export default function ComprehensiveEditFixed() {
                                           k.name_perifereia === form.watch(`location_details.${index}.region`) &&
                                           k.name_perifereiakis_enotitas === form.watch(`location_details.${index}.regional_unit`)
                                         )
-                                        .map(k => k.name_neou_ota) || [])].map((municipality) => (
-                                        <SelectItem key={municipality} value={municipality}>{municipality}</SelectItem>
+                                        .map(k => k.name_neou_ota) || [])].filter(Boolean).map((municipality, muniIndex) => (
+                                        <SelectItem key={`municipality-${index}-${muniIndex}-${municipality}`} value={municipality}>{municipality}</SelectItem>
                                       ))}
                                     </SelectContent>
                                   </Select>
