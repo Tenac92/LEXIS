@@ -732,7 +732,14 @@ export default function ComprehensiveEditFixed() {
 
         <TabsContent value="edit" className="space-y-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <form 
+              onSubmit={(e) => {
+                console.log("Form onSubmit triggered");
+                e.preventDefault();
+                form.handleSubmit(handleSubmit)(e);
+              }} 
+              className="space-y-4"
+            >
               
               {/* Section 1: Decisions that document the project */}
               <Card className="shadow-sm">
@@ -1640,20 +1647,41 @@ export default function ComprehensiveEditFixed() {
               </Card>
 
               {/* Action buttons */}
-              <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 bg-gray-50 -mx-4 px-4 py-3 rounded-b-lg">
+              <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 bg-gray-50 -mx-4 px-4 py-3 rounded-b-lg sticky bottom-0 z-50">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate(`/projects/${mis}`)}
-                  className="flex items-center gap-2 text-sm py-2 px-4"
+                  onClick={(e) => {
+                    console.log("Cancel button clicked");
+                    e.preventDefault();
+                    navigate(`/projects/${mis}`);
+                  }}
+                  className="flex items-center gap-2 text-sm py-2 px-4 min-h-[40px] cursor-pointer"
                 >
                   <X className="h-3 w-3" />
                   Ακύρωση
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2 text-sm py-2 px-4"
+                  onClick={(e) => {
+                    console.log("Save button clicked - type: submit");
+                    console.log("Form state:", form.formState);
+                    console.log("Is form valid:", form.formState.isValid);
+                    console.log("Form errors:", form.formState.errors);
+                    
+                    // Backup: If form submission fails, trigger manually
+                    setTimeout(() => {
+                      console.log("Backup: Triggering form submission manually");
+                      const formData = form.getValues();
+                      console.log("Manual form data:", formData);
+                      handleSubmit(formData);
+                    }, 100);
+                    
+                    // Don't prevent default - let form submission handle it first
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 flex items-center gap-2 text-sm py-2 px-4 min-h-[40px] cursor-pointer relative z-10 pointer-events-auto"
                   disabled={mutation.isPending}
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <Save className="h-3 w-3" />
                   {mutation.isPending ? "Αποθήκευση..." : "Αποθήκευση"}
