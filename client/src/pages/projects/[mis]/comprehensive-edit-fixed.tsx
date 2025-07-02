@@ -45,8 +45,8 @@ const comprehensiveProjectSchema = z.object({
   
   // Section 2: Event details
   event_details: z.object({
-    event_name: z.string().min(1, "Ο τύπος συμβάντος είναι υποχρεωτικός"),
-    event_year: z.string().min(1, "Το έτος συμβάντος είναι υποχρεωτικό"),
+    event_name: z.string().default(""),
+    event_year: z.string().default(""),
   }).default({ event_name: "", event_year: "" }),
   
   // Section 2 Location details with cascading dropdowns
@@ -233,7 +233,9 @@ export default function ComprehensiveEditFixed() {
         decisions_data: data.decisions,
         
         // Transform location_details to project_lines format for project_index table
-        project_lines: data.location_details && data.location_details.length > 0 ? data.location_details.map((location) => {
+        project_lines: data.location_details && data.location_details.length > 0 ? data.location_details.map((location, locationIndex) => {
+          console.log(`Processing location ${locationIndex + 1}:`, location);
+          
           // Find kallikratis_id for this location
           let kallikratisId = null;
           if (kallikratisData) {
@@ -245,9 +247,10 @@ export default function ComprehensiveEditFixed() {
             );
             
             kallikratisId = kallikratis?.id || null;
+            console.log(`Kallikratis lookup for ${location.region}/${location.regional_unit}/${location.municipality}: ID ${kallikratisId}`);
           }
 
-          return {
+          const projectLine = {
             implementing_agency: location.implementing_agency || '',
             event_type: data.event_details.event_name || '',
             expenditure_types: Array.isArray(location.expenditure_types) ? location.expenditure_types : [],
@@ -259,6 +262,9 @@ export default function ComprehensiveEditFixed() {
               kallikratis_id: kallikratisId
             }
           };
+          
+          console.log(`Created project line ${locationIndex + 1}:`, projectLine);
+          return projectLine;
         }) : []
       };
 

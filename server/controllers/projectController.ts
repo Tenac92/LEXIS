@@ -771,6 +771,15 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
           console.log(`[Projects] - Kallikratis ID: ${kallikratisId}`);
           
           // Create project_index entries if we have essential values (very relaxed requirement)
+          // Use default event type if none provided to ensure location data is saved
+          if (!eventTypeId) {
+            // Use first available event type as fallback
+            if (eventTypes && eventTypes.length > 0) {
+              eventTypeId = eventTypes[0].id;
+              console.log(`[Projects] No event type provided, using fallback event type ID: ${eventTypeId}`);
+            }
+          }
+          
           if (eventTypeId) {
             console.log(`[Projects] Creating project_index entries - event_type_id is valid: ${eventTypeId}`);
             console.log(`[Projects] Creating project_index entry with eventTypeId: ${eventTypeId}, monadaId: ${monadaId}, kallikratisId: ${kallikratisId}`);
