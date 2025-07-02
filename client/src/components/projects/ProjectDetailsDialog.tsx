@@ -128,26 +128,26 @@ export function ProjectDetailsDialog({ project, open, onOpenChange }: ProjectDet
 
   // Fetch budget data from budget_na853_split table
   const { data: budgetData, isLoading: budgetLoading } = useQuery({
-    queryKey: ['/api/budget', projectMis],
+    queryKey: [`/api/budget/${projectMis}`],
     enabled: !!projectMis && open,
   });
 
   // Fetch project index data 
   const { data: projectIndexData, isLoading: indexLoading } = useQuery({
-    queryKey: ['/api/projects', projectMis, 'index'],
+    queryKey: [`/api/projects/${projectMis}/index`],
     enabled: !!projectMis && open,
   });
 
   // Fetch project decisions data
   const { data: decisionsData, isLoading: decisionsLoading } = useQuery({
-    queryKey: ['/api/projects', projectId, 'decisions'],
-    enabled: !!projectId && open,
+    queryKey: [`/api/projects/${projectMis}/decisions`],
+    enabled: !!projectMis && open,
   });
 
   // Fetch project formulations data  
   const { data: formulationsData, isLoading: formulationsLoading } = useQuery({
-    queryKey: ['/api/projects', projectId, 'formulations'],
-    enabled: !!projectId && open,
+    queryKey: [`/api/projects/${projectMis}/formulations`],
+    enabled: !!projectMis && open,
   });
 
   // Helper to safely get values
