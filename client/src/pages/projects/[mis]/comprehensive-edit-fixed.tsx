@@ -291,7 +291,7 @@ export default function ComprehensiveEditFixed() {
           console.log("2. Updating project decisions:", data.decisions);
           await apiRequest(`/api/projects/${mis}/decisions`, {
             method: "PUT",
-            body: JSON.stringify(data.decisions),
+            body: JSON.stringify({ decisions_data: data.decisions }),
           });
         }
         
@@ -300,7 +300,7 @@ export default function ComprehensiveEditFixed() {
           console.log("3. Updating project formulations:", data.formulation_details);
           await apiRequest(`/api/projects/${mis}/formulations`, {
             method: "PUT",
-            body: JSON.stringify(data.formulation_details),
+            body: JSON.stringify({ formulation_details: data.formulation_details }),
           });
         }
         
