@@ -1298,7 +1298,22 @@ router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
           epa_version: formulation.epa_version || null,
           decision_status: formulation.decision_status || 'Ενεργή',
           change_type: formulation.change_type || 'Έγκριση',
-          connected_decision_ids: Array.isArray(formulation.connected_decisions) ? formulation.connected_decisions : [],
+          connected_decision_ids: Array.isArray(formulation.connected_decisions) 
+            ? formulation.connected_decisions
+                .map((decision: string) => {
+                  // Extract decision ID from format "0--4588/Β/2021-" 
+                  if (typeof decision === 'string') {
+                    const parts = decision.split('--');
+                    if (parts.length > 0) {
+                      const idPart = parts[0];
+                      const parsedId = parseInt(idPart);
+                      return !isNaN(parsedId) ? parsedId : null;
+                    }
+                  }
+                  return typeof decision === 'number' ? decision : null;
+                })
+                .filter((id: number | null) => id !== null)
+            : [],
           comments: formulation.comments || null,
           is_active: true,
           created_by: req.user?.id || null,
