@@ -417,59 +417,161 @@ export default function ComprehensiveEditFixed() {
 
   // Data initialization effect
   useEffect(() => {
-    if (typedProjectData) {
+    if (typedProjectData && typedKallikratisData && typedUnitsData && typedExpenditureTypesData) {
       console.log('Initializing form with project data:', typedProjectData);
+      console.log('Project index data:', projectIndexData);
       
-      const decisions = [{
-        protocol_number: "",
-        fek: "",
-        ada: "",
-        implementing_agency: typedProjectData.enhanced_unit?.name || "",
-        decision_budget: "",
-        expenses_covered: "",
-        decision_type: "Έγκριση" as const,
-        is_included: true,
-        comments: "",
-      }];
+      // Populate decisions from database or create default
+      const decisions = decisionsData && decisionsData.length > 0 
+        ? decisionsData.map(decision => ({
+            protocol_number: decision.protocol_number || "",
+            fek: decision.fek || "",
+            ada: decision.ada || "",
+            implementing_agency: decision.implementing_agency || typedProjectData.enhanced_unit?.name || "",
+            decision_budget: decision.decision_budget || "",
+            expenses_covered: decision.expenses_covered || "",
+            decision_type: decision.decision_type || "Έγκριση" as const,
+            is_included: decision.is_included ?? true,
+            comments: decision.comments || "",
+          }))
+        : [{
+            protocol_number: "",
+            fek: "",
+            ada: "",
+            implementing_agency: typedProjectData.enhanced_unit?.name || "",
+            decision_budget: "",
+            expenses_covered: "",
+            decision_type: "Έγκριση" as const,
+            is_included: true,
+            comments: "",
+          }];
+      
+      // Populate formulation details from database or create default from project data
+      const formulations = formulationsData && formulationsData.length > 0
+        ? formulationsData.map(formulation => ({
+            sa: formulation.sa || "ΝΑ853" as const,
+            enumeration_code: formulation.enumeration_code || "",
+            protocol_number: formulation.protocol_number || "",
+            ada_reference: formulation.ada_reference || "",
+            status: formulation.status || "Συμπληρωμένο" as const,
+            year: formulation.year || "",
+            epa_version: formulation.epa_version || "",
+            expenses: formulation.expenses || "",
+            changes: formulation.changes || "",
+            connected_decisions: formulation.connected_decisions || "",
+            comments: formulation.comments || "",
+            project_budget: formulation.project_budget || "",
+          }))
+        : [
+            // NA853 entry
+            {
+              sa: "ΝΑ853" as const,
+              enumeration_code: typedProjectData.na853 || "",
+              protocol_number: "",
+              ada_reference: "",
+              status: "Συμπληρωμένο" as const,
+              year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+              epa_version: "",
+              expenses: "",
+              changes: "",
+              connected_decisions: "",
+              comments: "",
+              project_budget: typedProjectData.budget_na853 ? formatEuropeanNumber(typedProjectData.budget_na853) : "",
+            },
+            // NA271 entry if exists
+            ...(typedProjectData.na271 ? [{
+              sa: "ΝΑ271" as const,
+              enumeration_code: typedProjectData.na271,
+              protocol_number: "",
+              ada_reference: "",
+              status: "Συμπληρωμένο" as const,
+              year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+              epa_version: "",
+              expenses: "",
+              changes: "",
+              connected_decisions: "",
+              comments: "",
+              project_budget: typedProjectData.budget_na271 ? formatEuropeanNumber(typedProjectData.budget_na271) : "",
+            }] : []),
+            // E069 entry if exists
+            ...(typedProjectData.e069 ? [{
+              sa: "E069" as const,
+              enumeration_code: typedProjectData.e069,
+              protocol_number: "",
+              ada_reference: "",
+              status: "Συμπληρωμένο" as const,
+              year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+              epa_version: "",
+              expenses: "",
+              changes: "",
+              connected_decisions: "",
+              comments: "",
+              project_budget: typedProjectData.budget_e069 ? formatEuropeanNumber(typedProjectData.budget_e069) : "",
+            }] : [])
+          ];
 
       form.reset({
         decisions: decisions,
         event_details: {
-          event_name: typedProjectData.event_description || "",
-          event_year: typedProjectData.event_year?.toString() || "",
+          event_name: typedProjectData.enhanced_event_type?.name || "",
+          event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
         },
         project_details: {
           project_title: typedProjectData.project_title || "",
           project_description: typedProjectData.event_description || "",
           project_status: typedProjectData.status || "Ενεργό",
         },
-        formulation_details: [{
-          sa: "ΝΑ853",
-          enumeration_code: typedProjectData.na853 || "",
-          protocol_number: "",
-          ada: "",
-          decision_year: typedProjectData.event_year?.toString() || "",
-          project_budget: typedProjectData.budget_na853 ? formatEuropeanNumber(typedProjectData.budget_na853) : "",
-          epa_version: "",
-          total_public_expense: typedProjectData.budget_na853 ? formatEuropeanNumber(typedProjectData.budget_na853) : "",
-          eligible_public_expense: typedProjectData.budget_na853 ? formatEuropeanNumber(typedProjectData.budget_na853) : "",
-          decision_status: "Ενεργή",
-          change_type: "Έγκριση",
-          connected_decisions: [],
-          comments: "",
-        }],
-        location_details: [{
-          municipal_community: "",
-          municipality: "",
-          regional_unit: "",
-          region: "",
-          implementing_agency: typedProjectData.enhanced_unit?.name || "",
-          expenditure_types: [],
-        }],
+        formulation_details: formulations,
+        location_details: (() => {
+          // Populate location details from project index data
+          if (projectIndexData && projectIndexData.length > 0) {
+            const locationDetailsMap = new Map();
+            
+            // Group by kallikratis and implementing agency
+            projectIndexData.forEach(indexItem => {
+              const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
+              const unit = typedUnitsData.find(u => u.id === indexItem.monada_id);
+              const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expediture_type_id);
+              
+              const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.monada_id || 'no-unit'}`;
+              
+              if (!locationDetailsMap.has(key)) {
+                locationDetailsMap.set(key, {
+                  municipal_community: kallikratis?.name_dimotikis_enotitas || "",
+                  municipality: kallikratis?.name_neou_ota || "",
+                  regional_unit: kallikratis?.name_perifereiakis_enotitas || "",
+                  region: kallikratis?.name_perifereia || "",
+                  implementing_agency: unit?.name || unit?.unit_name?.name || unit?.unit || "",
+                  expenditure_types: [],
+                });
+              }
+              
+              // Add expenditure type if it exists
+              if (expenditureType && expenditureType.expediture_types) {
+                const locationDetail = locationDetailsMap.get(key);
+                if (!locationDetail.expenditure_types.includes(expenditureType.expediture_types)) {
+                  locationDetail.expenditure_types.push(expenditureType.expediture_types);
+                }
+              }
+            });
+            
+            return Array.from(locationDetailsMap.values());
+          }
+          
+          // Default location detail if no project index data
+          return [{
+            municipal_community: "",
+            municipality: "",
+            regional_unit: "",
+            region: "",
+            implementing_agency: typedProjectData.enhanced_unit?.name || "",
+            expenditure_types: [],
+          }];
+        })(),
         changes: [],
       });
     }
-  }, [typedProjectData, form]);
+  }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, form]);
 
   const isLoading = projectLoading || eventTypesLoading || unitsLoading || kallikratisLoading || expenditureTypesLoading;
   const isDataReady = typedProjectData && typedEventTypesData && typedUnitsData && typedKallikratisData && typedExpenditureTypesData;
