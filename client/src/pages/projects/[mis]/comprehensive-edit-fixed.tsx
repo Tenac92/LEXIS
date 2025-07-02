@@ -1447,8 +1447,17 @@ export default function ComprehensiveEditFixed() {
                     console.log("Button clicked, form will attempt to submit");
                     console.log("Current form errors:", form.formState.errors);
                     console.log("Form is valid:", form.formState.isValid);
-                    console.log("Form values:", form.getValues());
-                    // Don't prevent default - let the form submission handle it
+                    console.log("Form dirty fields:", form.formState.dirtyFields);
+                    console.log("Is submitting:", form.formState.isSubmitting);
+                    console.log("Form mutation pending:", mutation.isPending);
+                    
+                    // Force trigger validation
+                    form.trigger().then((isValid) => {
+                      console.log("Manual validation result:", isValid);
+                      if (!isValid) {
+                        console.log("Validation failed, errors:", form.formState.errors);
+                      }
+                    });
                   }}
                 >
                   {mutation.isPending ? "Αποθήκευση..." : "Αποθήκευση Αλλαγών"}
