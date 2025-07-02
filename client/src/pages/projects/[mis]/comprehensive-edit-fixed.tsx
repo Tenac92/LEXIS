@@ -193,150 +193,177 @@ export default function ComprehensiveEditFixed() {
 
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
-      console.log("Sending comprehensive form data:", data);
-      console.log("Formulation details:", data.formulation_details);
+      console.log("=== COMPREHENSIVE FORM SUBMISSION ===");
+      console.log("Form data:", data);
       
-      // Transform the data to match backend expectations with comprehensive mapping
-      const transformedData = {
-        // Core project fields for Projects table
-        project_title: data.project_details.project_title,
-        event_description: data.project_details.project_description,
-        event_type: data.event_details.event_name,
-        event_year: data.event_details.event_year,
-        status: data.project_details.project_status,
+      try {
+        // 1. Update core project data
+        const projectUpdateData = {
+          project_title: data.project_details.project_title,
+          event_description: data.project_details.project_description,
+          event_type: data.event_details.event_name,
+          event_year: data.event_details.event_year,
+          status: data.project_details.project_status,
+          
+          // Budget fields - parse European format to numbers
+          budget_e069: (() => {
+            const formEntry = data.formulation_details.find(f => f.sa === "E069");
+            if (formEntry?.project_budget) {
+              const parsed = parseEuropeanNumber(formEntry.project_budget);
+              console.log(`Budget E069: "${formEntry.project_budget}" -> ${parsed}`);
+              return parsed;
+            }
+            return projectData?.budget_e069 || null;
+          })(),
+          budget_na271: (() => {
+            const formEntry = data.formulation_details.find(f => f.sa === "NA271");
+            if (formEntry?.project_budget) {
+              const parsed = parseEuropeanNumber(formEntry.project_budget);
+              console.log(`Budget NA271: "${formEntry.project_budget}" -> ${parsed}`);
+              return parsed;
+            }
+            return projectData?.budget_na271 || null;
+          })(),
+          budget_na853: (() => {
+            const formEntry = data.formulation_details.find(f => f.sa === "NA853");
+            if (formEntry?.project_budget) {
+              const parsed = parseEuropeanNumber(formEntry.project_budget);
+              console.log(`Budget NA853: "${formEntry.project_budget}" -> ${parsed}`);
+              return parsed;
+            }
+            return projectData?.budget_na853 || null;
+          })(),
+        };
         
-        // Budget fields - use form values if changed, parse European format to numbers
-        budget_e069: (() => {
-          const formEntry = data.formulation_details.find(f => f.sa === "E069");
-          if (formEntry?.project_budget) {
-            const parsed = parseEuropeanNumber(formEntry.project_budget);
-            console.log(`Budget E069: "${formEntry.project_budget}" -> ${parsed}`);
-            return parsed;
-          }
-          return projectData?.budget_e069 || null;
-        })(),
-        budget_na271: (() => {
-          const formEntry = data.formulation_details.find(f => f.sa === "NA271");
-          if (formEntry?.project_budget) {
-            const parsed = parseEuropeanNumber(formEntry.project_budget);
-            console.log(`Budget NA271: "${formEntry.project_budget}" -> ${parsed}`);
-            return parsed;
-          }
-          return projectData?.budget_na271 || null;
-        })(),
-        budget_na853: (() => {
-          const formEntry = data.formulation_details.find(f => f.sa === "NA853");
-          if (formEntry?.project_budget) {
-            const parsed = parseEuropeanNumber(formEntry.project_budget);
-            console.log(`Budget NA853: "${formEntry.project_budget}" -> ${parsed}`);
-            return parsed;
-          }
-          return projectData?.budget_na853 || null;
-        })(),
+        console.log("1. Updating core project data:", projectUpdateData);
+        const projectResponse = await apiRequest(`/api/projects/${mis}`, {
+          method: "PATCH",
+          body: JSON.stringify(projectUpdateData),
+        });
         
-        // Keep original ΣΑ code fields unchanged (these should not be modified by form)
-        e069: projectData?.e069 || null,
-        na271: projectData?.na271 || null,
-        na853: projectData?.na853 || null,
+        // 2. Update project decisions in normalized table
+        if (data.decisions && data.decisions.length > 0) {
+          console.log("2. Updating project decisions:", data.decisions);
+          await apiRequest(`/api/projects/${mis}/decisions`, {
+            method: "PUT",
+            body: JSON.stringify(data.decisions),
+          });
+        }
         
-        // Document fields from decisions
-        kya: data.decisions.length > 0 ? data.decisions[0].protocol_number : null,
-        fek: data.decisions.length > 0 ? data.decisions[0].fek : null,
-        ada: data.decisions.length > 0 ? data.decisions[0].ada : null,
+        // 3. Update project formulations in normalized table
+        if (data.formulation_details && data.formulation_details.length > 0) {
+          console.log("3. Updating project formulations:", data.formulation_details);
+          await apiRequest(`/api/projects/${mis}/formulations`, {
+            method: "PUT",
+            body: JSON.stringify(data.formulation_details),
+          });
+        }
         
-        // Formulation details with connected decisions data
-        formulation_details: data.formulation_details,
-        
-        // Decisions data for processing
-        decisions_data: data.decisions,
-        
-        // Transform location_details to project_lines format for project_index table
-        // Only include locations that have valid geographic data to avoid constraint violations
-        project_lines: data.location_details && data.location_details.length > 0 ? data.location_details
-          .map((location, locationIndex) => {
-            console.log(`Processing location ${locationIndex + 1}:`, location);
-            
-            // Skip completely empty location entries
-            if (!location.region && !location.regional_unit && !location.municipality && !location.municipal_community) {
-              console.log(`Skipping empty location ${locationIndex + 1}`);
-              return null;
+        // 4. Update project index (location details)
+        if (data.location_details && data.location_details.length > 0) {
+          console.log("4. Processing location details:", data.location_details);
+          
+          // Transform location details to project_index format
+          const projectLines = [];
+          
+          for (const location of data.location_details) {
+            // Skip empty locations
+            if (!location.region && !location.regional_unit && !location.municipality && !location.implementing_agency) {
+              continue;
             }
             
-            // Find kallikratis_id for this location
+            // Find kallikratis_id
             let kallikratisId = null;
-            if (kallikratisData && (location.region || location.regional_unit || location.municipality)) {
-              // Try multiple matching strategies
-              let kallikratis = null;
-              
-              // First try: exact match on all available fields
-              if (location.municipality && location.regional_unit && location.region) {
-                kallikratis = kallikratisData.find(k => 
-                  k.perifereia === location.region && 
-                  k.perifereiaki_enotita === location.regional_unit &&
-                  k.onoma_neou_ota === location.municipality
-                );
+            if (kallikratisData && location.region) {
+              const kallikratis = kallikratisData.find(k => 
+                k.perifereia === location.region && 
+                (!location.regional_unit || k.perifereiaki_enotita === location.regional_unit) &&
+                (!location.municipality || k.onoma_neou_ota === location.municipality)
+              );
+              if (kallikratis) {
+                kallikratisId = kallikratis.id;
               }
-              
-              // Second try: region and regional unit only
-              if (!kallikratis && location.regional_unit && location.region) {
-                kallikratis = kallikratisData.find(k => 
-                  k.perifereia === location.region && 
-                  k.perifereiaki_enotita === location.regional_unit
-                );
-              }
-              
-              // Third try: region only
-              if (!kallikratis && location.region) {
-                kallikratis = kallikratisData.find(k => 
-                  k.perifereia === location.region
-                );
-              }
-              
-              kallikratisId = kallikratis?.id || null;
-              console.log(`Kallikratis lookup for ${location.region}/${location.regional_unit}/${location.municipality}: ID ${kallikratisId}`);
             }
-
-            // Only create project line if we have a valid kallikratis_id
-            if (!kallikratisId) {
-              console.log(`Skipping location ${locationIndex + 1} - no valid kallikratis_id found`);
-              return null;
-            }
-
-            const projectLine = {
-              implementing_agency: location.implementing_agency || '',
-              implementing_agency_id: location.implementing_agency_id || null, // Use stored ID
-              event_type: data.event_details.event_name || '',
-              expenditure_types: Array.isArray(location.expenditure_types) ? location.expenditure_types : [],
-              region: {
-                perifereia: location.region || '',
-                perifereiaki_enotita: location.regional_unit || '',
-                dimos: location.municipality || '',
-                dimotiki_enotita: location.municipal_community || '',
-                kallikratis_id: location.kallikratis_id || kallikratisId // Use stored ID first, fallback to resolved
-              }
-            };
             
-            console.log(`Created project line ${locationIndex + 1}:`, projectLine);
-            return projectLine;
-          })
-          .filter(line => line !== null) : []
-      };
-
-      console.log("Transformed data for backend:", transformedData);
-      console.log("Budget values being sent:", {
-        budget_e069: transformedData.budget_e069,
-        budget_na271: transformedData.budget_na271, 
-        budget_na853: transformedData.budget_na853
+            // Find implementing agency (monada_id)
+            let monadaId = null;
+            if (unitsData && location.implementing_agency) {
+              const unit = unitsData.find(u => 
+                u.name === location.implementing_agency || 
+                u.unit_name?.name === location.implementing_agency ||
+                u.unit === location.implementing_agency
+              );
+              if (unit) {
+                monadaId = unit.id;
+              }
+            }
+            
+            // Create entries for each expenditure type
+            if (location.expenditure_types && location.expenditure_types.length > 0) {
+              for (const expenditureType of location.expenditure_types) {
+                const expenditureTypeData = expenditureTypesData?.find(et => et.name === expenditureType);
+                if (expenditureTypeData) {
+                  projectLines.push({
+                    kallikratis_id: kallikratisId,
+                    monada_id: monadaId,
+                    expediture_type_id: expenditureTypeData.id,
+                    event_types_id: eventTypesData?.find(et => et.name === data.event_details.event_name)?.id || null,
+                  });
+                }
+              }
+            } else {
+              // Create entry without expenditure type
+              projectLines.push({
+                kallikratis_id: kallikratisId,
+                monada_id: monadaId,
+                expediture_type_id: null,
+                event_types_id: eventTypesData?.find(et => et.name === data.event_details.event_name)?.id || null,
+              });
+            }
+          }
+          
+          if (projectLines.length > 0) {
+            console.log("Updating project index with lines:", projectLines);
+            await apiRequest(`/api/projects/${mis}/index`, {
+              method: "PUT",
+              body: JSON.stringify({ project_lines: projectLines }),
+            });
+          }
+        }
+        
+        return { success: true };
+        
+      } catch (error) {
+        console.error("Comprehensive form submission error:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Επιτυχία", 
+        description: "Όλα τα στοιχεία του έργου ενημερώθηκαν επιτυχώς" 
       });
-      console.log("Project lines:", transformedData.project_lines);
       
-      // 1. Update main project table
-      const response = await fetch(`/api/projects/${mis}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(transformedData),
+      // Invalidate all relevant queries
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/index`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/decisions`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/formulations`] });
+      
+      // Navigate back to project page
+      navigate(`/projects/${mis}`);
+    },
+    onError: (error) => {
+      console.error("Form submission failed:", error);
+      toast({ 
+        title: "Σφάλμα", 
+        description: "Παρουσιάστηκε σφάλμα κατά την ενημέρωση. Παρακαλώ προσπαθήστε ξανά.", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+
       });
       
       if (!response.ok) {
