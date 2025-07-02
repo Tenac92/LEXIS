@@ -318,97 +318,131 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
               </div>
             ) : (
               <>
-                {/* Βασικά στοιχεία - Project Index Data */}
+                {/* Βασικά στοιχεία - Specific Fields as Requested */}
                 <TabsContent value="basic" className="space-y-6">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <Building2 className="h-5 w-5 text-green-600" />
                       <h3 className="text-lg font-semibold text-green-800">Βασικά Στοιχεία Έργου</h3>
                       <Badge variant="secondary" className="ml-auto text-xs">
-                        project_index ({indexEntries.length})
+                        Projects table
                       </Badge>
                     </div>
                     
-                    {indexError ? (
-                      <ErrorDisplay error={indexError} title="Σφάλμα φόρτωσης βασικών στοιχείων" />
-                    ) : indexEntries.length > 0 ? (
-                      <div className="space-y-4">
-                        {indexEntries.map((entry, index) => (
-                          <div key={`${entry.project_id}-${entry.monada_id}-${index}`} className="bg-white rounded-lg p-4 border border-green-100 shadow-sm">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-3">
-                                <div>
-                                  <span className="font-medium text-gray-700 block">Υπηρεσία:</span>
-                                  <p className="text-gray-900">{extractUnitName(entry.monada?.unit_name)}</p>
-                                  <p className="text-sm text-gray-600">Κωδικός: {safeText(entry.monada?.unit)}</p>
+                    <div className="bg-white rounded-lg p-6 border border-green-100 shadow-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">Συμβάν:</span>
+                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
+                              {safeText(projectData?.event_description)}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">Έτος εκδήλωσης:</span>
+                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
+                              {Array.isArray(projectData?.event_year) 
+                                ? projectData.event_year.join(', ') 
+                                : safeText(projectData?.event_year)}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">Περιοχή (Περιφέρεια):</span>
+                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
+                              {indexEntries.length > 0 && indexEntries[0]?.kallikratis?.perifereia 
+                                ? indexEntries[0].kallikratis.perifereia 
+                                : 'Δεν υπάρχει'}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">MIS:</span>
+                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm font-mono">
+                              {safeText(projectData?.mis)}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">ΣΑ:</span>
+                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
+                              ΝΑ853
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">Κωδ. Ενάριθμος na853:</span>
+                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm font-mono">
+                              {safeText(projectData?.na853)}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">Έτος ένταξης:</span>
+                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
+                              {Array.isArray(projectData?.event_year) && projectData.event_year.length > 0
+                                ? projectData.event_year[0] 
+                                : safeText(projectData?.event_year)}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">Τίτλος έργου:</span>
+                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
+                              {safeText(projectData?.project_title)}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">Συνοπτική περιγραφή:</span>
+                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
+                              {safeText(projectData?.event_description)}
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">Δαπάνες έργου:</span>
+                            <div className="space-y-2">
+                              {projectData?.budget_na853 && (
+                                <div className="bg-green-50 p-2 rounded text-sm">
+                                  <span className="font-medium">ΝΑ853: </span>
+                                  <span className="font-bold text-green-800">{formatCurrency(projectData.budget_na853)}</span>
                                 </div>
-                                <div>
-                                  <span className="font-medium text-gray-700 block">Email Υπηρεσίας:</span>
-                                  <p className="text-gray-900">{safeText(entry.monada?.email)}</p>
+                              )}
+                              {projectData?.budget_na271 && (
+                                <div className="bg-green-50 p-2 rounded text-sm">
+                                  <span className="font-medium">ΝΑ271: </span>
+                                  <span className="font-bold text-green-800">{formatCurrency(projectData.budget_na271)}</span>
                                 </div>
-                                <div>
-                                  <span className="font-medium text-gray-700 block">Τύπος Γεγονότος:</span>
-                                  <Badge className="bg-blue-100 text-blue-800">
-                                    {safeText(entry.event_types?.name)}
-                                  </Badge>
+                              )}
+                              {projectData?.budget_e069 && (
+                                <div className="bg-green-50 p-2 rounded text-sm">
+                                  <span className="font-medium">E069: </span>
+                                  <span className="font-bold text-green-800">{formatCurrency(projectData.budget_e069)}</span>
                                 </div>
-                              </div>
-                              <div className="space-y-3">
-                                <div>
-                                  <span className="font-medium text-gray-700 block">Τύπος Δαπάνης:</span>
-                                  <p className="text-gray-900">{safeText(entry.expediture_types?.expediture_types)}</p>
-                                  {entry.expediture_types?.expediture_types_minor && (
-                                    <p className="text-sm text-gray-600">{entry.expediture_types.expediture_types_minor}</p>
-                                  )}
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-700 block">Γεωγραφική Περιοχή:</span>
-                                  <div className="space-y-1">
-                                    {entry.kallikratis?.perifereia && (
-                                      <div className="flex items-center gap-2">
-                                        <MapPin className="h-3 w-3 text-blue-500" />
-                                        <span className="text-sm">Περιφέρεια: {entry.kallikratis.perifereia}</span>
-                                      </div>
-                                    )}
-                                    {entry.kallikratis?.perifereiaki_enotita && (
-                                      <div className="flex items-center gap-2 ml-5">
-                                        <span className="text-sm">Π.Ε.: {entry.kallikratis.perifereiaki_enotita}</span>
-                                      </div>
-                                    )}
-                                    {entry.kallikratis?.onoma_neou_ota && (
-                                      <div className="flex items-center gap-2 ml-5">
-                                        <span className="text-sm">Δήμος: {entry.kallikratis.onoma_neou_ota}</span>
-                                      </div>
-                                    )}
-                                    {entry.geographic_code && (
-                                      <p className="text-xs text-gray-500 ml-5">Κωδικός: {entry.geographic_code}</p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
+                              )}
+                              {!projectData?.budget_na853 && !projectData?.budget_na271 && !projectData?.budget_e069 && (
+                                <p className="text-gray-500 bg-gray-50 p-2 rounded text-sm">
+                                  Δεν υπάρχουν διαθέσιμα στοιχεία δαπανών
+                                </p>
+                              )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-white rounded-lg p-8 border border-green-100 text-center">
-                        <Building2 className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-600 mb-4">Δεν υπάρχουν στοιχεία στον πίνακα project_index</p>
-                        <div className="text-left bg-gray-50 p-4 rounded-lg">
-                          <h4 className="font-medium mb-2">Διαθέσιμα στοιχεία από Projects:</h4>
-                          <div className="grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                              <span className="font-medium">Περιγραφή:</span>
-                              <p>{safeText(projectData?.event_description)}</p>
-                            </div>
-                            <div>
-                              <span className="font-medium">Κατάσταση:</span>
-                              <p>{safeText(projectData?.status)}</p>
+                          
+                          <div>
+                            <span className="font-medium text-green-700 block mb-1">Κατάσταση έργου:</span>
+                            <div className="bg-green-50 p-2 rounded">
+                              <Badge variant="outline" className="text-green-700 border-green-300">
+                                {safeText(projectData?.status)}
+                              </Badge>
                             </div>
                           </div>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </TabsContent>
 
