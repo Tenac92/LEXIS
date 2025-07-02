@@ -1222,7 +1222,9 @@ export default function ComprehensiveEditFixed() {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="space-y-4">
-                    {form.watch("location_details").map((_, index) => (
+                    {form.watch("location_details").map((location, index) => {
+                      console.log("Location detail being rendered:", location);
+                      return (
                       <div key={index} className="p-4 border rounded-lg space-y-4">
                         <div className="grid grid-cols-4 gap-4">
                           <FormField
@@ -1398,7 +1400,8 @@ export default function ComprehensiveEditFixed() {
                           </Button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                     
                     <div className="flex gap-2">
                       <Button
