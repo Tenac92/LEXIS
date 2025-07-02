@@ -162,13 +162,58 @@ export default function ComprehensiveEditFixed() {
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
     resolver: zodResolver(comprehensiveProjectSchema),
+    mode: "onChange",
     defaultValues: {
-      decisions: [{ protocol_number: "", fek: "", ada: "", implementing_agency: "", decision_budget: "", expenses_covered: "", decision_type: "Έγκριση", is_included: true, comments: "" }],
-      event_details: { event_name: "", event_year: "" },
-      location_details: [{ municipal_community: "", municipality: "", regional_unit: "", region: "", implementing_agency: "", expenditure_types: [] }],
-      project_details: { mis: "", sa: "", enumeration_code: "", inclusion_year: "", project_title: "", project_description: "", summary_description: "", expenses_executed: "", project_status: "Συμπληρωμένο" },
+      decisions: [{ 
+        protocol_number: "", 
+        fek: "", 
+        ada: "", 
+        implementing_agency: "", 
+        decision_budget: "", 
+        expenses_covered: "", 
+        decision_type: "Έγκριση", 
+        is_included: true, 
+        comments: "" 
+      }],
+      event_details: { 
+        event_name: "", 
+        event_year: "" 
+      },
+      location_details: [{ 
+        municipal_community: "", 
+        municipality: "", 
+        regional_unit: "", 
+        region: "", 
+        implementing_agency: "", 
+        expenditure_types: [] 
+      }],
+      project_details: { 
+        mis: "", 
+        sa: "", 
+        enumeration_code: "", 
+        inclusion_year: "", 
+        project_title: "", 
+        project_description: "", 
+        summary_description: "", 
+        expenses_executed: "", 
+        project_status: "Συμπληρωμένο" 
+      },
       previous_entries: [],
-      formulation_details: [{ sa: "ΝΑ853", enumeration_code: "", protocol_number: "", ada: "", decision_year: "", project_budget: "", epa_version: "", total_public_expense: "", eligible_public_expense: "", decision_status: "Ενεργή", change_type: "Έγκριση", connected_decisions: [], comments: "" }],
+      formulation_details: [{ 
+        sa: "ΝΑ853", 
+        enumeration_code: "", 
+        protocol_number: "", 
+        ada: "", 
+        decision_year: "", 
+        project_budget: "", 
+        epa_version: "", 
+        total_public_expense: "", 
+        eligible_public_expense: "", 
+        decision_status: "Ενεργή", 
+        change_type: "Έγκριση", 
+        connected_decisions: [], 
+        comments: "" 
+      }],
       changes: [{ description: "" }],
     },
   });
@@ -529,19 +574,19 @@ export default function ComprehensiveEditFixed() {
             }] : [])
           ];
 
-      form.reset({
-        decisions: decisions,
-        event_details: {
-          event_name: typedProjectData.enhanced_event_type?.name || "",
-          event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
-        },
-        project_details: {
-          project_title: typedProjectData.project_title || "",
-          project_description: typedProjectData.event_description || "",
-          project_status: typedProjectData.status || "Ενεργό",
-        },
-        formulation_details: formulations,
-        location_details: (() => {
+      // Use setValue instead of reset to maintain controlled components
+      form.setValue("decisions", decisions);
+      form.setValue("event_details", {
+        event_name: typedProjectData.enhanced_event_type?.name || "",
+        event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+      });
+      form.setValue("project_details", {
+        project_title: typedProjectData.project_title || "",
+        project_description: typedProjectData.event_description || "",
+        project_status: typedProjectData.status || "Ενεργό",
+      });
+      form.setValue("formulation_details", formulations);
+      form.setValue("location_details", (() => {
           // Populate location details from project index data
           if (projectIndexData && projectIndexData.length > 0) {
             const locationDetailsMap = new Map();
@@ -586,9 +631,8 @@ export default function ComprehensiveEditFixed() {
             implementing_agency: typedProjectData.enhanced_unit?.name || "",
             expenditure_types: [],
           }];
-        })(),
-        changes: [],
-      });
+        })());
+      form.setValue("changes", []);
     }
   }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, form]);
 
