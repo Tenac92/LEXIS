@@ -53,10 +53,10 @@ const comprehensiveProjectSchema = z.object({
   location_details: z.array(z.object({
     municipal_community: z.string().default(""),
     municipality: z.string().default(""),
-    regional_unit: z.string().min(1, "Η περιφερειακή ενότητα είναι υποχρεωτική"),
-    region: z.string().min(1, "Η περιφέρεια είναι υποχρεωτική"),
-    implementing_agency: z.string().min(1, "Ο φορέας υλοποίησης είναι υποχρεωτικός"),
-    expenditure_types: z.array(z.string()).min(1, "Απαιτείται τουλάχιστον ένας τύπος δαπάνης"),
+    regional_unit: z.string().default(""),
+    region: z.string().default(""),
+    implementing_agency: z.string().default(""),
+    expenditure_types: z.array(z.string()).default([]),
   })).default([]),
   
   // Section 3: Project details
@@ -644,6 +644,46 @@ export default function ComprehensiveEditFixed() {
     console.log("Mutation pending:", mutation.isPending);
     console.log("Formulation details being submitted:", data.formulation_details);
     
+    // Check for validation errors and provide user feedback
+    const errors = form.formState.errors;
+    if (Object.keys(errors).length > 0) {
+      console.error("Form validation failed with errors:", errors);
+      
+      // Build detailed error message
+      let errorMessage = "Παρακαλώ διορθώστε τα παρακάτω προβλήματα:\n";
+      
+      if (errors.event_details?.event_name) {
+        errorMessage += "• Τύπος Συμβάντος είναι υποχρεωτικός\n";
+      }
+      if (errors.event_details?.event_year) {
+        errorMessage += "• Έτος Συμβάντος είναι υποχρεωτικό\n";
+      }
+      if (errors.location_details) {
+        errorMessage += "• Στοιχεία Τοποθεσίας χρειάζονται συμπλήρωση\n";
+      }
+      if (errors.project_details) {
+        errorMessage += "• Στοιχεία Έργου χρειάζονται συμπλήρωση\n";
+      }
+      if (errors.formulation_details) {
+        errorMessage += "• Στοιχεία Κατάρτισης χρειάζονται συμπλήρωση\n";
+      }
+      
+      toast({
+        title: "Σφάλμα επικύρωσης",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      
+      // Scroll to first error field
+      const firstErrorElement = document.querySelector('[data-invalid="true"]') || 
+                                document.querySelector('.text-destructive');
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
+      return;
+    }
+    
     if (data.formulation_details) {
       data.formulation_details.forEach((formulation, index) => {
         console.log(`Formulation ${index + 1}:`, {
@@ -655,6 +695,7 @@ export default function ComprehensiveEditFixed() {
       });
     }
     
+    console.log("Form validation passed - submitting...");
     mutation.mutate(data);
   };
 
