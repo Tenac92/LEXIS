@@ -407,10 +407,21 @@ export default function ComprehensiveEditFixed() {
               }
             }
             
+            // Find event type ID
+            let eventTypeId = null;
+            if (typedEventTypesData && location.event_type) {
+              const eventType = typedEventTypesData.find(et => et.name === location.event_type);
+              if (eventType) {
+                eventTypeId = eventType.id;
+              }
+            }
+            
             // Create single entry with all expenditure types for this location
             projectLines.push({
               implementing_agency: location.implementing_agency,
               implementing_agency_id: monadaId,
+              event_type: location.event_type,
+              event_type_id: eventTypeId,
               expenditure_types: location.expenditure_types || [],
               region: {
                 perifereia: location.region,
@@ -598,6 +609,7 @@ export default function ComprehensiveEditFixed() {
                   regional_unit: kallikratis?.perifereiaki_enotita || "",
                   region: kallikratis?.perifereia || "",
                   implementing_agency: unit?.name || unit?.unit_name?.name || unit?.unit || "",
+                  event_type: typedProjectData.enhanced_event_type?.name || "",
                   expenditure_types: [],
                 };
                 locationDetailsMap.set(key, locationDetail);
@@ -622,6 +634,7 @@ export default function ComprehensiveEditFixed() {
             regional_unit: "",
             region: "",
             implementing_agency: typedProjectData.enhanced_unit?.name || "",
+            event_type: "",
             expenditure_types: [],
           }];
         })());
@@ -965,30 +978,7 @@ export default function ComprehensiveEditFixed() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="event_details.event_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Τύπος Συμβάντος</FormLabel>
-                          <FormControl>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Επιλέξτε τύπο συμβάντος" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {typedEventTypesData?.map((eventType) => (
-                                  <SelectItem key={eventType.id} value={eventType.name}>
-                                    {eventType.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                  <div className="grid grid-cols-1 gap-4">
                     <FormField
                       control={form.control}
                       name="event_details.event_year"
@@ -1242,7 +1232,7 @@ export default function ComprehensiveEditFixed() {
                                       form.setValue(`location_details.${index}.municipality`, "");
                                       form.setValue(`location_details.${index}.municipal_community`, "");
                                     }} 
-                                    value={field.value}
+                                    value={field.value || ""}
                                   >
                                     <SelectTrigger className="text-sm">
                                       <SelectValue placeholder="Επιλέξτε περιφέρεια" />
@@ -1270,7 +1260,7 @@ export default function ComprehensiveEditFixed() {
                                       form.setValue(`location_details.${index}.municipality`, "");
                                       form.setValue(`location_details.${index}.municipal_community`, "");
                                     }} 
-                                    value={field.value}
+                                    value={field.value || ""}
                                     disabled={!form.watch(`location_details.${index}.region`)}
                                   >
                                     <SelectTrigger className="text-sm">
@@ -1300,7 +1290,7 @@ export default function ComprehensiveEditFixed() {
                                       field.onChange(value);
                                       form.setValue(`location_details.${index}.municipal_community`, "");
                                     }} 
-                                    value={field.value}
+                                    value={field.value || ""}
                                     disabled={!form.watch(`location_details.${index}.regional_unit`)}
                                   >
                                     <SelectTrigger className="text-sm">
@@ -1321,6 +1311,35 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`location_details.${index}.event_type`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium">Τύπος Συμβάντος</FormLabel>
+                                <FormControl>
+                                  <Select 
+                                    onValueChange={field.onChange} 
+                                    value={field.value || ""}
+                                  >
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Επιλέξτε τύπο συμβάντος" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {typedEventTypesData?.map((eventType) => (
+                                        <SelectItem key={eventType.id} value={eventType.name}>
+                                          {eventType.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
                           <FormField
                             control={form.control}
                             name={`location_details.${index}.implementing_agency`}
@@ -1328,14 +1347,17 @@ export default function ComprehensiveEditFixed() {
                               <FormItem>
                                 <FormLabel className="text-sm font-medium">Φορέας Υλοποίησης</FormLabel>
                                 <FormControl>
-                                  <Select onValueChange={field.onChange} value={field.value}>
+                                  <Select 
+                                    onValueChange={field.onChange} 
+                                    value={field.value || ""}
+                                  >
                                     <SelectTrigger className="text-sm">
                                       <SelectValue placeholder="Επιλέξτε φορέα" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {typedUnitsData?.map((unit) => (
-                                        <SelectItem key={unit.id} value={unit.name || unit.unit_name?.name || unit.unit || ""}>
-                                          {unit.name || unit.unit_name?.name || unit.unit}
+                                        <SelectItem key={unit.id} value={unit.name}>
+                                          {unit.name}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -1412,7 +1434,7 @@ export default function ComprehensiveEditFixed() {
                           const currentLocations = form.getValues("location_details");
                           form.setValue("location_details", [
                             ...currentLocations,
-                            { region: "", regional_unit: "", municipality: "", municipal_community: "", implementing_agency: "", expenditure_types: [] }
+                            { region: "", regional_unit: "", municipality: "", municipal_community: "", implementing_agency: "", event_type: "", expenditure_types: [] }
                           ]);
                         }}
                         className="text-sm"
