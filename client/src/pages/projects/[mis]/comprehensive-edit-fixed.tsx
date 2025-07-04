@@ -703,7 +703,7 @@ export default function ComprehensiveEditFixed() {
         })());
       form.setValue("changes", []);
     }
-  }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, form]);
+  }, [typedProjectData, projectIndexData, decisionsData, formulationsData, form]);
 
   const isLoading = projectLoading || eventTypesLoading || unitsLoading || kallikratisLoading || expenditureTypesLoading;
   const isDataReady = typedProjectData && typedEventTypesData && typedUnitsData && typedKallikratisData && typedExpenditureTypesData;
@@ -1426,8 +1426,7 @@ export default function ComprehensiveEditFixed() {
                                 <FormItem>
                                   <FormLabel className="text-sm font-medium">Περιφέρεια</FormLabel>
                                   <FormControl>
-                                    <Select 
-                                      key={`region-${index}-${field.value || 'empty'}`}
+                                    <Select
                                       onValueChange={(value) => {
                                         field.onChange(value);
                                         
@@ -1450,7 +1449,7 @@ export default function ComprehensiveEditFixed() {
                                           const regions = [...new Set(typedKallikratisData?.map(k => k.perifereia) || [])].filter(Boolean);
                                           console.log(`Region options for field value "${field.value}":`, regions.includes(field.value), regions);
                                           return regions.map((region, regionIndex) => (
-                                            <SelectItem key={`region-${index}-${regionIndex}-${region}`} value={region}>{region}</SelectItem>
+                                            <SelectItem key={region} value={region}>{region}</SelectItem>
                                           ));
                                         })()}
                                       </SelectContent>
@@ -1495,7 +1494,7 @@ export default function ComprehensiveEditFixed() {
                                           .map(k => k.perifereiaki_enotita) || [])].filter(Boolean);
                                         console.log(`Regional Unit options for region "${currentRegion}", field value "${field.value}":`, regionalUnits.includes(field.value), regionalUnits);
                                         return regionalUnits.map((unit, unitIndex) => (
-                                          <SelectItem key={`unit-${index}-${unitIndex}-${unit}`} value={unit}>{unit}</SelectItem>
+                                          <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                                         ));
                                       })()}
                                     </SelectContent>
@@ -1536,7 +1535,7 @@ export default function ComprehensiveEditFixed() {
                                             .map(k => k.onoma_neou_ota) || [])].filter(Boolean);
                                           console.log(`Municipality options for region "${currentRegion}", regional unit "${currentRegionalUnit}", field value "${field.value}":`, municipalities.includes(field.value), municipalities);
                                           return municipalities.map((municipality, muniIndex) => (
-                                            <SelectItem key={`municipality-${index}-${muniIndex}-${municipality}`} value={municipality}>{municipality}</SelectItem>
+                                            <SelectItem key={municipality} value={municipality}>{municipality}</SelectItem>
                                           ));
                                         })()}
                                       </SelectContent>
