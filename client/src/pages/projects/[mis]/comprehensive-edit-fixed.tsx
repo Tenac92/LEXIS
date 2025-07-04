@@ -165,6 +165,7 @@ export default function ComprehensiveEditFixed() {
   const queryClient = useQueryClient();
   const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
   const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(new Set());
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
 
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
@@ -498,7 +499,7 @@ export default function ComprehensiveEditFixed() {
 
   // Data initialization effect
   useEffect(() => {
-    if (typedProjectData && typedKallikratisData && typedUnitsData && typedExpenditureTypesData) {
+    if (typedProjectData && typedKallikratisData && typedUnitsData && typedExpenditureTypesData && !isFormInitialized) {
       console.log('Initializing form with project data:', typedProjectData);
       console.log('Project index data:', projectIndexData);
       
@@ -702,8 +703,9 @@ export default function ComprehensiveEditFixed() {
           }];
         })());
       form.setValue("changes", []);
+      setIsFormInitialized(true);
     }
-  }, [typedProjectData, projectIndexData, decisionsData, formulationsData, form]);
+  }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, isFormInitialized, form]);
 
   const isLoading = projectLoading || eventTypesLoading || unitsLoading || kallikratisLoading || expenditureTypesLoading;
   const isDataReady = typedProjectData && typedEventTypesData && typedUnitsData && typedKallikratisData && typedExpenditureTypesData;
