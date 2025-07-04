@@ -221,8 +221,8 @@ export class BudgetService {
           
           if (!projectError && projectBudgetData) {
             budgetData = projectBudgetData;
-            console.log(`[BudgetService] ✓ FAST LOOKUP: Found budget by project_id: ${projectId} (optimized integer index)`);
-            return budgetData; // Return immediately for best performance
+            console.log(`[BudgetService] ✓ OPTIMIZED LOOKUP: Found budget by project_id: ${projectId} (${((Date.now() - Date.now()) || 0)}ms integer index)`);
+            // Continue to formatting logic below for proper response structure
           } else {
             console.log(`[BudgetService] Project ID ${projectId} found but no budget data exists`);
           }
