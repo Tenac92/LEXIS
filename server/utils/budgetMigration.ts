@@ -26,7 +26,7 @@ export class BudgetMigration {
     try {
       // Try to add the column - this will fail silently if it already exists
       const { error } = await supabase.rpc('exec_sql', {
-        sql: 'ALTER TABLE budget_na853_split ADD COLUMN IF NOT EXISTS project_id integer;'
+        sql: 'ALTER TABLE project_budget ADD COLUMN IF NOT EXISTS project_id integer;'
       });
 
       if (error && !error.message?.includes('already exists')) {
@@ -49,7 +49,7 @@ export class BudgetMigration {
 
       // Get all budget records
       const { data: budgetRecords, error: budgetError } = await supabase
-        .from('budget_na853_split')
+        .from('project_budget')
         .select('id, mis, na853, project_id')
         .limit(1000);
 
@@ -106,7 +106,7 @@ export class BudgetMigration {
         if (projectId) {
           try {
             const { error: updateError } = await supabase
-              .from('budget_na853_split')
+              .from('project_budget')
               .update({ project_id: projectId })
               .eq('id', budgetRecord.id);
 
@@ -166,7 +166,7 @@ export class BudgetMigration {
   static async verifyMigration(): Promise<void> {
     try {
       const { data: stats, error } = await supabase
-        .from('budget_na853_split')
+        .from('project_budget')
         .select('id, project_id')
         .limit(1000);
 

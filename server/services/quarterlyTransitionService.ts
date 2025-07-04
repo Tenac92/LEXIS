@@ -86,7 +86,7 @@ export async function processQuarterlyTransitions(): Promise<QuarterTransitionRe
     // Find projects that need quarterly transition
     const projectsNeedingTransition = await executeSQL(`
       SELECT mis, na853, user_view, q1, q2, q3, q4, last_quarter_check
-      FROM budget_na853_split 
+      FROM project_budget 
       WHERE last_quarter_check != $1
     `, [currentQuarter]);
 
@@ -158,7 +158,7 @@ async function processProjectTransition(
   const quarterField = currentQuarter;
   
   await executeSQL(`
-    UPDATE budget_na853_split 
+    UPDATE project_budget 
     SET ${quarterField} = $1,
         last_quarter_check = $2,
         updated_at = CURRENT_TIMESTAMP
@@ -200,7 +200,7 @@ function getPreviousQuarter(currentQuarter: string): string {
  */
 async function updateProjectSumField(mis: number): Promise<void> {
   const projectData = await executeSQL(`
-    SELECT * FROM budget_na853_split WHERE mis = $1
+    SELECT * FROM project_budget WHERE mis = $1
   `, [mis]);
   
   if (projectData.rows && projectData.rows.length > 0) {
@@ -223,7 +223,7 @@ async function updateProjectSumField(mis: number): Promise<void> {
     };
     
     await executeSQL(`
-      UPDATE budget_na853_split 
+      UPDATE project_budget 
       SET sum = $1 
       WHERE mis = $2
     `, [JSON.stringify(sumData), mis]);

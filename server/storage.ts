@@ -1,4 +1,4 @@
-import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project, type BudgetNA853Split, type InsertBudgetHistory, type Employee, type InsertEmployee, type Beneficiary, type InsertBeneficiary, type BeneficiaryPayment, type InsertBeneficiaryPayment } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project, type ProjectBudget, type InsertBudgetHistory, type Employee, type InsertEmployee, type Beneficiary, type InsertBeneficiary, type BeneficiaryPayment, type InsertBeneficiaryPayment } from "@shared/schema";
 import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
 import session from 'express-session';
@@ -8,7 +8,7 @@ export interface IStorage {
   sessionStore: session.Store;
   getProjectsByUnit(unit: string): Promise<Project[]>;
   getProjectExpenditureTypes(projectId: string): Promise<string[]>;
-  getBudgetData(mis: string): Promise<BudgetNA853Split | null>;
+  getBudgetData(mis: string): Promise<ProjectBudget | null>;
   createBudgetHistoryEntry(entry: InsertBudgetHistory): Promise<void>;
   getBudgetHistory(
     mis?: string, 
@@ -148,7 +148,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getBudgetData(mis: string): Promise<BudgetNA853Split | null> {
+  async getBudgetData(mis: string): Promise<ProjectBudget | null> {
     try {
       console.log(`[Storage] Fetching budget data for MIS: ${mis}`);
       
@@ -167,7 +167,7 @@ export class DatabaseStorage implements IStorage {
           
         if (!naError && naData) {
           console.log(`[Storage] Found budget data by NA853 code: ${mis}`);
-          return naData as BudgetNA853Split;
+          return naData as ProjectBudget;
         }
       }
       
@@ -203,14 +203,14 @@ export class DatabaseStorage implements IStorage {
             return null;
           }
           
-          return retryResult.data as BudgetNA853Split;
+          return retryResult.data as ProjectBudget;
         }
         
         console.log(`[Storage] Could not find project for MIS or NA853: ${mis}`);
         return null;
       }
       
-      return data as BudgetNA853Split;
+      return data as ProjectBudget;
     } catch (error) {
       console.error('[Storage] Error fetching budget data:', error);
       return null;

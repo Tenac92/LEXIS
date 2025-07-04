@@ -101,33 +101,27 @@ export const projects = pgTable("Projects", {
 });
 
 /**
- * Budget NA853 Split Table
- * Stores budget allocation data for NA853 budget code
- * Now references project by id instead of mis
+ * Project Budget Table
+ * Stores budget allocation data for projects
+ * Updated schema with enhanced precision and foreign key relationships
  */
-export const budgetNA853Split = pgTable("budget_na853_split", {
+export const projectBudget = pgTable("project_budget", {
   id: serial("id").primaryKey(),
-  project_id: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
-  mis: integer("mis").unique(), // Legacy field for migration compatibility
-  na853: text("na853").notNull(),
-  ethsia_pistosi: decimal("ethsia_pistosi", {
-    precision: 12,
-    scale: 2,
-  }).default("0"),
-  q1: decimal("q1", { precision: 12, scale: 2 }).default("0"),
-  q2: decimal("q2", { precision: 12, scale: 2 }).default("0"),
-  q3: decimal("q3", { precision: 12, scale: 2 }).default("0"),
-  q4: decimal("q4", { precision: 12, scale: 2 }).default("0"),
-  katanomes_etous: decimal("katanomes_etous", {
-    precision: 12,
-    scale: 2,
-  }).default("0"),
-  user_view: decimal("user_view", { precision: 12, scale: 2 }).default("0"),
-  proip: decimal("proip", { precision: 12, scale: 2 }).default("0"),
+  na853: text("na853").notNull().unique(),
+  mis: integer("mis").unique().notNull(),
+  proip: decimal("proip", { precision: 15, scale: 2 }).default("0"),
+  ethsia_pistosi: decimal("ethsia_pistosi", { precision: 15, scale: 2 }).default("0"),
+  q1: decimal("q1", { precision: 15, scale: 2 }).default("0"),
+  q2: decimal("q2", { precision: 15, scale: 2 }).default("0"),
+  q3: decimal("q3", { precision: 15, scale: 2 }).default("0"),
+  q4: decimal("q4", { precision: 15, scale: 2 }).default("0"),
+  katanomes_etous: decimal("katanomes_etous", { precision: 15, scale: 2 }).default("0"),
+  user_view: decimal("user_view", { precision: 15, scale: 2 }).default("0"),
   created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at"),
+  updated_at: timestamp("updated_at").defaultNow(),
+  last_quarter_check: text("last_quarter_check").default("q1"),
   sum: jsonb("sum"),
-  last_quarter_check: text("last_quarter_check"),
+  project_id: integer("project_id").references(() => projects.id),
 });
 
 /**
@@ -684,6 +678,8 @@ export const insertBeneficiaryPaymentSchema = createInsertSchema(beneficiaryPaym
   amount: z.string().min(1, "Το ποσό είναι υποχρεωτικό"),
 });
 
+export const insertProjectBudgetSchema = createInsertSchema(projectBudget);
+
 export const insertProjectIndexSchema = createInsertSchema(projectIndex);
 export const insertEventTypeSchema = createInsertSchema(eventTypes);
 export const insertExpenditureTypeSchema = createInsertSchema(expenditureTypes);
@@ -704,7 +700,7 @@ export const budgetValidationSchema = z.object({
 export type User = typeof users.$inferSelect;
 export type Project = typeof projects.$inferSelect;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
-export type BudgetNA853Split = typeof budgetNA853Split.$inferSelect;
+export type ProjectBudget = typeof projectBudget.$inferSelect;
 export type BudgetHistory = typeof budgetHistory.$inferSelect;
 export type ProjectHistory = typeof projectHistory.$inferSelect;
 export type BudgetNotification = typeof budgetNotifications.$inferSelect;
@@ -738,6 +734,7 @@ export type InsertBudgetNotification = z.infer<
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertBeneficiary = z.infer<typeof insertBeneficiarySchema>;
 export type InsertBeneficiaryPayment = z.infer<typeof insertBeneficiaryPaymentSchema>;
+export type InsertProjectBudget = z.infer<typeof insertProjectBudgetSchema>;
 export type Recipient = z.infer<typeof recipientSchema>;
 
 // ==============================================================
@@ -868,7 +865,7 @@ export const versionMetadataSchema = z.object({
 export type Database = {
   users: typeof users.$inferSelect;
   generatedDocuments: typeof generatedDocuments.$inferSelect;
-  budgetNA853Split: typeof budgetNA853Split.$inferSelect;
+  projectBudget: typeof projectBudget.$inferSelect;
   budgetHistory: typeof budgetHistory.$inferSelect;
   budgetNotifications: typeof budgetNotifications.$inferSelect;
   attachmentsRows: typeof attachmentsRows.$inferSelect;

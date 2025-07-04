@@ -193,7 +193,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
 
     // Fetch all budget splits
     const { data: budgetSplits, error: budgetError } = await supabase
-      .from('budget_na853_split')
+      .from('project_budget')
       .select('*')
       .order('created_at', { ascending: false });
 

@@ -336,7 +336,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
         if (projectId) {
           // If we have a project_id, look up by project_id
           const { data, error } = await supabase
-            .from('budget_na853_split')
+            .from('project_budget')
             .select('*')
             .eq('project_id', projectId)
             .single();
@@ -345,7 +345,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
         } else {
           // If no project_id, look up by mis and na853
           const { data, error } = await supabase
-            .from('budget_na853_split')
+            .from('project_budget')
             .select('*')
             .eq('mis', parseInt(mis))
             .eq('na853', na853)
@@ -385,7 +385,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           }
 
           const { error: insertError } = await supabase
-            .from('budget_na853_split')
+            .from('project_budget')
             .insert(insertData);
 
           if (insertError) {
@@ -470,7 +470,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           
           // Prepare the update with the sum field to store budget indicators
           let updateQuery = supabase
-            .from('budget_na853_split')
+            .from('project_budget')
             .update({
               ethsia_pistosi: newEthsiaPistosi,
               q1: newQ1,
