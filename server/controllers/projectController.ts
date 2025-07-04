@@ -1272,6 +1272,80 @@ router.get('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
   }
 });
 
+// Get project index data with all relationships
+router.get('/:mis/index', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    
+    console.log(`[ProjectIndex] Fetching project index data for MIS: ${mis}`);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // First get the project to get the project_id
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id, mis')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      console.error(`[ProjectIndex] Project not found for MIS: ${mis}`, projectError);
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Get project index data with all related entities
+    const { data: indexData, error: indexError } = await supabase
+      .from('project_index')
+      .select(`
+        *,
+        monada:Monada!inner(
+          id,
+          unit,
+          unit_name,
+          email,
+          manager,
+          address
+        ),
+        kallikratis(
+          id,
+          kodikos_neou_ota,
+          eidos_neou_ota,
+          onoma_neou_ota,
+          kodikos_perifereiakis_enotitas,
+          perifereiaki_enotita,
+          kodikos_perifereias,
+          perifereia
+        ),
+        event_types(
+          id,
+          name
+        ),
+        expediture_types(
+          id,
+          expediture_types,
+          expediture_types_minor
+        )
+      `)
+      .eq('project_id', project.id);
+
+    if (indexError) {
+      console.error(`[ProjectIndex] Error fetching index data:`, indexError);
+      return res.status(500).json({ message: "Failed to fetch project index data" });
+    }
+
+    console.log(`[ProjectIndex] Found ${indexData?.length || 0} index entries for project ${mis}`);
+    res.json(indexData || []);
+  } catch (error) {
+    console.error(`[ProjectIndex] Error:`, error);
+    res.status(500).json({ 
+      message: "Failed to fetch project index data",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 // Update project decisions (normalized table)
 router.put('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
