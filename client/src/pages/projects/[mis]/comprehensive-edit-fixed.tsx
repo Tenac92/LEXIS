@@ -1299,15 +1299,18 @@ export default function ComprehensiveEditFixed() {
                                       key={`region-${index}-${field.value || 'empty'}`}
                                       onValueChange={(value) => {
                                         field.onChange(value);
-                                        // Only reset dependent fields if user is actively changing selection
-                                        const currentRegionalUnit = form.getValues(`location_details.${index}.regional_unit`);
-                                        const currentMunicipality = form.getValues(`location_details.${index}.municipality`);
-                                        
-                                        // Check if current regional unit belongs to the new region
-                                        const validRegionalUnits = typedKallikratisData?.filter(k => k.perifereia === value).map(k => k.perifereiaki_enotita) || [];
-                                        if (!validRegionalUnits.includes(currentRegionalUnit)) {
-                                          form.setValue(`location_details.${index}.regional_unit`, "");
-                                          form.setValue(`location_details.${index}.municipality`, "");
+                                        // Only reset dependent fields if this is a user-initiated change
+                                        // Skip cascade resets during initial form population
+                                        if (form.formState.isDirty) {
+                                          const currentRegionalUnit = form.getValues(`location_details.${index}.regional_unit`);
+                                          const currentMunicipality = form.getValues(`location_details.${index}.municipality`);
+                                          
+                                          // Check if current regional unit belongs to the new region
+                                          const validRegionalUnits = typedKallikratisData?.filter(k => k.perifereia === value).map(k => k.perifereiaki_enotita) || [];
+                                          if (!validRegionalUnits.includes(currentRegionalUnit)) {
+                                            form.setValue(`location_details.${index}.regional_unit`, "");
+                                            form.setValue(`location_details.${index}.municipality`, "");
+                                          }
                                         }
                                       }} 
                                       value={field.value || ""}
@@ -1343,16 +1346,19 @@ export default function ComprehensiveEditFixed() {
                                     <Select 
                                       onValueChange={(value) => {
                                         field.onChange(value);
-                                        // Only reset municipality if it doesn't belong to the new regional unit
-                                        const currentMunicipality = form.getValues(`location_details.${index}.municipality`);
-                                        const currentRegion = form.getValues(`location_details.${index}.region`);
-                                        
-                                        const validMunicipalities = typedKallikratisData?.filter(k => 
-                                          k.perifereia === currentRegion && k.perifereiaki_enotita === value
-                                        ).map(k => k.onoma_neou_ota) || [];
-                                        
-                                        if (!validMunicipalities.includes(currentMunicipality)) {
-                                          form.setValue(`location_details.${index}.municipality`, "");
+                                        // Only reset municipality if this is a user-initiated change
+                                        // Skip cascade resets during initial form population
+                                        if (form.formState.isDirty) {
+                                          const currentMunicipality = form.getValues(`location_details.${index}.municipality`);
+                                          const currentRegion = form.getValues(`location_details.${index}.region`);
+                                          
+                                          const validMunicipalities = typedKallikratisData?.filter(k => 
+                                            k.perifereia === currentRegion && k.perifereiaki_enotita === value
+                                          ).map(k => k.onoma_neou_ota) || [];
+                                          
+                                          if (!validMunicipalities.includes(currentMunicipality)) {
+                                            form.setValue(`location_details.${index}.municipality`, "");
+                                          }
                                         }
                                       }} 
                                       value={field.value || ""}
