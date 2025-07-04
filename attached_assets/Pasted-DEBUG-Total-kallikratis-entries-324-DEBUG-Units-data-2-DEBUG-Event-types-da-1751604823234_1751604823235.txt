@@ -1,0 +1,95 @@
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 
+(2) [{…}, {…}]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Location detail being rendered: 
+Object {municipal_community: "", municipality: "", regional_unit: "", region: "", implementing_agency: "", …}
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 
+(2) [{…}, {…}]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Location detail being rendered: 
+Object {municipal_community: "", municipality: "", regional_unit: "", region: "", implementing_agency: "", …}
+Initializing form with project data: 
+Object {id: 2, mis: 5174076, project_title: "Δωρεάν κρατική αρωγή για την αποκατάσταση των ζήμιών σε κτίρια από την πλημμύρα της 26/01/2021 σε…", event_description: "2021 πλημμύρα Αγρίνιο", status: "Ενεργό", …}
+Project index data: 
+(3) [{…}, {…}, {…}]
+DEBUG - Processing project index item: 
+Object {project_id: 2, event_type_id: 3, event_type_name: "ΑΝΕΜΟΣΤΡΟΒΙΛΟΣ", expenditure_type_id: 3, expenditure_type_name: "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", …}
+DEBUG - Found kallikratis for ID 123: 
+Object {id: 123, kodikos_neou_ota: 9123, eidos_neou_ota: "ΔΗΜΟΣ", onoma_neou_ota: "ΑΓΡΙΝΙΟΥ", kodikos_perifereiakis_enotitas: 701, …}
+DEBUG - Processing project index item: 
+Object {project_id: 2, event_type_id: 3, event_type_name: "ΑΝΕΜΟΣΤΡΟΒΙΛΟΣ", expenditure_type_id: 4, expenditure_type_name: "ΔΚΑ ΕΠΙΣΚΕΥΗ", …}
+DEBUG - Found kallikratis for ID 123: 
+Object {id: 123, kodikos_neou_ota: 9123, eidos_neou_ota: "ΔΗΜΟΣ", onoma_neou_ota: "ΑΓΡΙΝΙΟΥ", kodikos_perifereiakis_enotitas: 701, …}
+DEBUG - Processing project index item: 
+Object {project_id: 2, event_type_id: 3, event_type_name: "ΑΝΕΜΟΣΤΡΟΒΙΛΟΣ", expenditure_type_id: 1, expenditure_type_name: "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", …}
+DEBUG - Found kallikratis for ID 123: 
+Object {id: 123, kodikos_neou_ota: 9123, eidos_neou_ota: "ΔΗΜΟΣ", onoma_neou_ota: "ΑΓΡΙΝΙΟΥ", kodikos_perifereiakis_enotitas: 701, …}
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 
+(2) [{…}, {…}]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Location detail being rendered: 
+Object {municipal_community: "", municipality: "", regional_unit: "", region: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", implementing_agency: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ", …}
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 
+(2) [{…}, {…}]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Location detail being rendered: 
+Object {municipal_community: "", municipality: "", regional_unit: "", region: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", implementing_agency: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ", …}
+[StableWebSocket] Creating new connection
+[StableWebSocket] Connected successfully
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 
+(2) [{…}, {…}]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Location detail being rendered: 
+Object {municipal_community: "", municipality: "", regional_unit: "ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ", region: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", implementing_agency: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ", …}
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 
+(2) [{…}, {…}]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Location detail being rendered: 
+Object {municipal_community: "", municipality: "", regional_unit: "ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ", region: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", implementing_agency: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ", …}
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 
+(2) [{…}, {…}]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Location detail being rendered: 
+Object {municipal_community: "", municipality: "ΑΓΡΙΝΙΟΥ", regional_unit: "ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ", region: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", implementing_agency: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ", …}
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]

@@ -89,11 +89,11 @@ const comprehensiveProjectSchema = z.object({
   
   // Section 2 Location details with cascading dropdowns
   location_details: z.array(z.object({
-    municipal_community: z.string().default(""),
     municipality: z.string().default(""),
     regional_unit: z.string().default(""),
     region: z.string().default(""),
     implementing_agency: z.string().default(""),
+    event_type: z.string().default(""),
     expenditure_types: z.array(z.string()).default([]),
   })).default([]),
   
@@ -180,11 +180,11 @@ export default function ComprehensiveEditFixed() {
         event_year: "" 
       },
       location_details: [{ 
-        municipal_community: "", 
         municipality: "", 
         regional_unit: "", 
         region: "", 
         implementing_agency: "", 
+        event_type: "", 
         expenditure_types: [] 
       }],
       project_details: { 
@@ -427,7 +427,6 @@ export default function ComprehensiveEditFixed() {
                 perifereia: location.region,
                 perifereiaki_enotita: location.regional_unit,
                 dimos: location.municipality,
-                dimotiki_enotita: location.municipal_community,
                 kallikratis_id: kallikratisId
               }
             });
@@ -603,13 +602,15 @@ export default function ComprehensiveEditFixed() {
               const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.unit_id || 'no-unit'}`;
               
               if (!locationDetailsMap.has(key)) {
+                // Get event type from project index data
+                const eventType = typedEventTypesData.find(et => et.id === indexItem.event_type_id);
+                
                 const locationDetail = {
-                  municipal_community: kallikratis?.onoma_dimotikis_enotitas || "",
                   municipality: kallikratis?.onoma_neou_ota || "",
                   regional_unit: kallikratis?.perifereiaki_enotita || "",
                   region: kallikratis?.perifereia || "",
                   implementing_agency: unit?.name || unit?.unit_name?.name || unit?.unit || "",
-                  event_type: typedProjectData.enhanced_event_type?.name || "",
+                  event_type: eventType?.name || "",
                   expenditure_types: [],
                 };
                 locationDetailsMap.set(key, locationDetail);
@@ -629,7 +630,6 @@ export default function ComprehensiveEditFixed() {
           
           // Default location detail if no project index data
           return [{
-            municipal_community: "",
             municipality: "",
             regional_unit: "",
             region: "",
@@ -1230,7 +1230,6 @@ export default function ComprehensiveEditFixed() {
                                       // Reset dependent fields when region changes
                                       form.setValue(`location_details.${index}.regional_unit`, "");
                                       form.setValue(`location_details.${index}.municipality`, "");
-                                      form.setValue(`location_details.${index}.municipal_community`, "");
                                     }} 
                                     value={field.value || ""}
                                   >
@@ -1258,7 +1257,6 @@ export default function ComprehensiveEditFixed() {
                                     onValueChange={(value) => {
                                       field.onChange(value);
                                       form.setValue(`location_details.${index}.municipality`, "");
-                                      form.setValue(`location_details.${index}.municipal_community`, "");
                                     }} 
                                     value={field.value || ""}
                                     disabled={!form.watch(`location_details.${index}.region`)}
@@ -1288,7 +1286,7 @@ export default function ComprehensiveEditFixed() {
                                   <Select 
                                     onValueChange={(value) => {
                                       field.onChange(value);
-                                      form.setValue(`location_details.${index}.municipal_community`, "");
+
                                     }} 
                                     value={field.value || ""}
                                     disabled={!form.watch(`location_details.${index}.regional_unit`)}
@@ -1434,7 +1432,7 @@ export default function ComprehensiveEditFixed() {
                           const currentLocations = form.getValues("location_details");
                           form.setValue("location_details", [
                             ...currentLocations,
-                            { region: "", regional_unit: "", municipality: "", municipal_community: "", implementing_agency: "", event_type: "", expenditure_types: [] }
+                            { region: "", regional_unit: "", municipality: "", implementing_agency: "", event_type: "", expenditure_types: [] }
                           ]);
                         }}
                         className="text-sm"
