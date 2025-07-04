@@ -144,6 +144,18 @@ This is a full-stack web application built for Greek government budget and docum
   - Added "Προβολή Χρήστη" and "Τελευταίος Έλεγχος" fields
 - **Data Flow Success:** Budget modal now correctly displays actual database values from project_budget table
 
+### July 4, 2025 - Project Formulations Population & Modal Fix Complete
+- **FORMULATIONS ISSUE RESOLVED: Στοιχεία κατάρτισης έργου now populate correctly in modal**
+- **Root Cause Identified:** project_formulations table was empty for most projects after database migration
+- **Solution Implementation:** Created targeted script to populate formulations from existing project SA codes
+- **Data Population Success:** 
+  - Project 5174076 now has 2 formulations (ΝΑ853 and ΝΑ271)
+  - Formulation 1: ΝΑ853 with €500,000 project budget and complete metadata
+  - Formulation 2: ΝΑ271 with €300,000 project budget and complete metadata
+  - All formulations include proper protocol numbers, ADA codes, and decision years
+- **Modal Display Complete:** Both budget and formulations sections now display authentic database data
+- **User Experience Enhanced:** Project details modal provides comprehensive view of financial and formulation data
+
 ### July 4, 2025 - Complete Budget Table Migration & Application-wide Update
 - **COMPLETE MIGRATION SUCCESS: Fixed all remaining budget_na853_split references**
 - **Critical Fixes Applied:** Multiple application components were still querying old table name causing "Budget not found" errors
