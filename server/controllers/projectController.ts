@@ -810,10 +810,11 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                 
                 // Create project_index entry for each expenditure type
                 if (expenditureTypeId) {
-                  // Calculate geographic code based on available location data
-                  let geographicCode = null;
+                  // Use geographic code from frontend if provided, otherwise calculate it
+                  let geographicCode = line.region?.geographic_code || null;
                   
-                  if (kallikratisData && kallikratisId) {
+                  if (!geographicCode && kallikratisData && kallikratisId) {
+                    // Fallback: calculate geographic code if not provided
                     const kallikratisEntry = kallikratisData.find(k => k.id === kallikratisId);
                     if (kallikratisEntry && line.region) {
                       // Determine geographic level automatically and get appropriate code
@@ -835,6 +836,8 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                         console.log(`[Projects] Regional level, Code: ${geographicCode}`);
                       }
                     }
+                  } else if (geographicCode) {
+                    console.log(`[Projects] Using geographic_code from frontend: ${geographicCode}`);
                   }
                   
                   const indexEntry: any = {

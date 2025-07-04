@@ -15,6 +15,7 @@ import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building2, Refr
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping, formatEuropeanNumber } from "@/lib/number-format";
+import { getGeographicInfo, formatGeographicDisplay, getGeographicCodeForSave } from "@shared/utils/geographic-utils";
 
 // Interface definitions
 interface KallikratisEntry {
@@ -382,18 +383,23 @@ export default function ComprehensiveEditFixed() {
               continue;
             }
             
-            // Find kallikratis_id - using correct field names
+            // Find kallikratis_id and geographic_code
             let kallikratisId = null;
+            let geographicCode = null;
+            
             if (typedKallikratisData && location.region) {
               const kallikratis = typedKallikratisData.find(k => 
                 k.perifereia === location.region && 
                 (!location.regional_unit || k.perifereiaki_enotita === location.regional_unit) &&
                 (!location.municipality || k.onoma_neou_ota === location.municipality)
               );
+              
               if (kallikratis) {
                 kallikratisId = kallikratis.id;
+                // Calculate geographic code based on what data is selected
+                geographicCode = getGeographicCodeForSave(location, kallikratis);
               }
-              console.log("Kallikratis lookup:", { location, found: kallikratis, kallikratisId });
+              console.log("Kallikratis lookup:", { location, found: kallikratis, kallikratisId, geographicCode });
             }
             
             // Find implementing agency (monada_id)
@@ -429,7 +435,8 @@ export default function ComprehensiveEditFixed() {
                 perifereia: location.region,
                 perifereiaki_enotita: location.regional_unit,
                 dimos: location.municipality,
-                kallikratis_id: kallikratisId
+                kallikratis_id: kallikratisId,
+                geographic_code: geographicCode
               }
             });
           }
@@ -607,9 +614,9 @@ export default function ComprehensiveEditFixed() {
                 // Get event type from project index data  
                 const eventType = typedEventTypesData.find(et => et.id === indexItem.event_type_id);
                 
-                // Implement geographic_code level detection logic
-                const geographicCode = indexItem.geographic_code || kallikratis?.kodikos_neou_ota;
-                const geographicLevel = geographicCode ? geographicCode.toString().length : 4;
+                // Use geographic code logic to determine what to display
+                const geographicCode = indexItem.geographic_code;
+                const geoInfo = getGeographicInfo(geographicCode);
                 
                 let locationDetail = {
                   municipality: "",
@@ -618,15 +625,26 @@ export default function ComprehensiveEditFixed() {
                   implementing_agency: unit?.name || unit?.unit_name?.name || unit?.unit || "",
                   event_type: eventType?.name || "",
                   expenditure_types: [],
-                  geographic_level: geographicLevel,
                   geographic_code: geographicCode
                 };
                 
-                // Always populate all geographic fields to avoid controlled/uncontrolled warnings
-                // The conditional rendering will handle which fields to show
-                locationDetail.municipality = kallikratis?.onoma_neou_ota || "";
-                locationDetail.regional_unit = kallikratis?.perifereiaki_enotita || "";
-                locationDetail.region = kallikratis?.perifereia || "";
+                // Populate fields based on geographic level
+                if (geoInfo && kallikratis) {
+                  locationDetail.region = kallikratis.perifereia || "";
+                  
+                  if (geoInfo.level === 'municipality' || geoInfo.level === 'regional_unit') {
+                    locationDetail.regional_unit = kallikratis.perifereiaki_enotita || "";
+                  }
+                  
+                  if (geoInfo.level === 'municipality') {
+                    locationDetail.municipality = kallikratis.onoma_neou_ota || "";
+                  }
+                } else {
+                  // Fallback: populate all fields to avoid controlled/uncontrolled warnings
+                  locationDetail.municipality = kallikratis?.onoma_neou_ota || "";
+                  locationDetail.regional_unit = kallikratis?.perifereiaki_enotita || "";
+                  locationDetail.region = kallikratis?.perifereia || "";
+                }
                 locationDetailsMap.set(key, locationDetail);
               }
               
@@ -1236,11 +1254,11 @@ export default function ComprehensiveEditFixed() {
                 <CardContent className="p-4">
                   <div className="space-y-4">
                     {form.watch("location_details").map((location, index) => {
-                      // Get geographic level for this location
-                      const geographicLevel = location.geographic_level || 4;
-                      const shouldShowRegion = geographicLevel >= 2;
-                      const shouldShowRegionalUnit = geographicLevel >= 3;
-                      const shouldShowMunicipality = geographicLevel >= 4;
+                      // Get geographic level from geographic code
+                      const geoInfo = getGeographicInfo(location.geographic_code);
+                      const shouldShowRegion = true; // Always show region
+                      const shouldShowRegionalUnit = !geoInfo || geoInfo.level === 'municipality' || geoInfo.level === 'regional_unit';
+                      const shouldShowMunicipality = !geoInfo || geoInfo.level === 'municipality';
                       
                       return (
                       <div key={index} className="p-4 border rounded-lg space-y-4">

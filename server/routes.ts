@@ -1427,7 +1427,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             unit_id: entry.monada_id,
             unit_name: monada?.unit || monada?.unit_name,
             kallikratis_id: entry.kallikratis_id,
-            kallikratis: kallikratis
+            kallikratis: kallikratis,
+            geographic_code: entry.geographic_code
           };
         });
 
