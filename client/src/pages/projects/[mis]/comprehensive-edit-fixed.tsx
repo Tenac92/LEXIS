@@ -1351,7 +1351,7 @@ export default function ComprehensiveEditFixed() {
                                         }
                                       }} 
                                       value={field.value || ""}
-                                    disabled={!form.watch(`location_details.${index}.region`)}
+                                      disabled={!form.watch(`location_details.${index}.region`) && !field.value}
                                   >
                                     <SelectTrigger className="text-sm">
                                       <SelectValue placeholder="Επιλέξτε περιφερειακή ενότητα" />
@@ -1382,7 +1382,7 @@ export default function ComprehensiveEditFixed() {
                                         field.onChange(value);
                                       }} 
                                       value={field.value || ""}
-                                      disabled={!form.watch(`location_details.${index}.regional_unit`)}
+                                      disabled={!form.watch(`location_details.${index}.regional_unit`) && !field.value}
                                     >
                                       <SelectTrigger className="text-sm">
                                         <SelectValue placeholder="Επιλέξτε δήμο" />
