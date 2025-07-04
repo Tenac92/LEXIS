@@ -161,7 +161,7 @@ export default function ComprehensiveEditFixed() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(new Set());
 
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
@@ -189,7 +189,9 @@ export default function ComprehensiveEditFixed() {
         region: "", 
         implementing_agency: "", 
         event_type: "", 
-        expenditure_types: [] 
+        expenditure_types: [],
+        geographic_level: undefined,
+        geographic_code: undefined
       }],
       project_details: { 
         mis: "", 
@@ -683,6 +685,8 @@ export default function ComprehensiveEditFixed() {
               implementing_agency: typedProjectData.enhanced_unit?.name || "",
               event_type: "",
               expenditure_types: [],
+              geographic_level: undefined,
+              geographic_code: undefined
             }];
           }
           
@@ -694,15 +698,11 @@ export default function ComprehensiveEditFixed() {
             implementing_agency: typedProjectData.enhanced_unit?.name || "",
             event_type: "",
             expenditure_types: [],
+            geographic_level: undefined,
+            geographic_code: undefined
           }];
         })());
       form.setValue("changes", []);
-      
-      // Set initial load flag to false after a short delay to ensure form is fully populated
-      setTimeout(() => {
-        setIsInitialLoad(false);
-        console.log("Initial form load complete - cascading enabled");
-      }, 100);
     }
   }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, form]);
 
@@ -1305,10 +1305,11 @@ export default function ComprehensiveEditFixed() {
                                     <Select 
                                       key={`region-${index}-${field.value || 'empty'}`}
                                       onValueChange={(value) => {
+                                        const fieldKey = `location_details.${index}.region`;
                                         field.onChange(value);
-                                        // Only reset dependent fields if this is a user-initiated change
-                                        // Skip cascade resets during initial form population
-                                        if (!isInitialLoad) {
+                                        
+                                        // Only reset dependent fields if user has interacted with this field
+                                        if (userInteractedFields.has(fieldKey)) {
                                           const currentRegionalUnit = form.getValues(`location_details.${index}.regional_unit`);
                                           const currentMunicipality = form.getValues(`location_details.${index}.municipality`);
                                           
@@ -1318,6 +1319,9 @@ export default function ComprehensiveEditFixed() {
                                             form.setValue(`location_details.${index}.regional_unit`, "");
                                             form.setValue(`location_details.${index}.municipality`, "");
                                           }
+                                        } else {
+                                          // Mark this field as interacted for future changes
+                                          setUserInteractedFields(prev => new Set(prev).add(fieldKey));
                                         }
                                       }} 
                                       value={field.value || ""}
@@ -1352,10 +1356,11 @@ export default function ComprehensiveEditFixed() {
                                   <FormControl>
                                     <Select 
                                       onValueChange={(value) => {
+                                        const fieldKey = `location_details.${index}.regional_unit`;
                                         field.onChange(value);
-                                        // Only reset municipality if this is a user-initiated change
-                                        // Skip cascade resets during initial form population
-                                        if (!isInitialLoad) {
+                                        
+                                        // Only reset municipality if user has interacted with this field
+                                        if (userInteractedFields.has(fieldKey)) {
                                           const currentMunicipality = form.getValues(`location_details.${index}.municipality`);
                                           const currentRegion = form.getValues(`location_details.${index}.region`);
                                           
@@ -1366,6 +1371,9 @@ export default function ComprehensiveEditFixed() {
                                           if (!validMunicipalities.includes(currentMunicipality)) {
                                             form.setValue(`location_details.${index}.municipality`, "");
                                           }
+                                        } else {
+                                          // Mark this field as interacted for future changes
+                                          setUserInteractedFields(prev => new Set(prev).add(fieldKey));
                                         }
                                       }} 
                                       value={field.value || ""}
