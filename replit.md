@@ -127,6 +127,23 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 4, 2025 - Budget Modal Display Fix & Data Structure Alignment
+- **CRITICAL FRONTEND FIX: Budget data now displays correctly in project details modal**
+- **Root Cause Identified:** API response structure mismatch between backend and frontend
+  - Backend returns: `{status: 'success', data: {...budgetData}}`
+  - Frontend expected: Direct budget data object
+  - Fixed data extraction logic to handle nested API response structure
+- **Interface Alignment:** Updated BudgetData interface to match actual project_budget table schema
+  - Changed from old fields: total_amount, q1_amount, budget_year, status
+  - Updated to actual fields: ethsia_pistosi, katanomes_etous, q1, q2, q3, q4, user_view, last_quarter_check
+  - Aligned with database schema: proip, ethsia_pistosi, katanomes_etous, user_view fields
+- **UI Field Mapping:** Updated budget display to show correct Greek government terminology
+  - "Εθσια Πίστωση" instead of "Συνολικό Ποσό"
+  - "Κατανομές Έτους" instead of "Έτος Προϋπολογισμού"
+  - Quarterly fields now use q1, q2, q3, q4 from database
+  - Added "Προβολή Χρήστη" and "Τελευταίος Έλεγχος" fields
+- **Data Flow Success:** Budget modal now correctly displays actual database values from project_budget table
+
 ### July 4, 2025 - Complete Budget Table Migration & Application-wide Update
 - **COMPLETE MIGRATION SUCCESS: Fixed all remaining budget_na853_split references**
 - **Critical Fixes Applied:** Multiple application components were still querying old table name causing "Budget not found" errors
@@ -135,13 +152,6 @@ This is a full-stack web application built for Greek government budget and docum
   - Fixed ProjectDetailsDialog.tsx - updated UI references to display correct table name
   - Fixed AdminBudgetUploadPage.tsx - updated documentation text for admin interface
 - **Application-wide Consistency:** All 8 remaining files updated to reference project_budget table
-- **Complete Table Migration Path:**
-  - Database: budget_na853_split → project_budget (195 records migrated)
-  - Schema: Updated with ProjectBudget and InsertProjectBudget types
-  - Services: budgetService.ts, schedulerService.ts, budgetNotificationService.ts all updated
-  - Controllers: budgetController.ts, dashboard.ts, documentsController.ts all updated
-  - Routes: All budget-related routes now query project_budget table
-  - UI Components: All frontend references updated to show correct table name
 - **Performance Benefits Maintained:** Integer-based project_id foreign key continues to provide ~145ms query performance
 
 ### July 4, 2025 - Project Budget Table Optimization & Integer Index Enhancement

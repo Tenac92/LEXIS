@@ -20,15 +20,24 @@ interface BudgetData {
   project_id?: number;
   mis?: number;
   na853?: string;
-  total_amount?: string | number;
-  q1_amount?: string | number;
-  q2_amount?: string | number;
-  q3_amount?: string | number;
-  q4_amount?: string | number;
-  budget_year?: number;
-  status?: string;
+  proip?: string | number;
+  ethsia_pistosi?: string | number;
+  q1?: string | number;
+  q2?: string | number;
+  q3?: string | number;
+  q4?: string | number;
+  katanomes_etous?: string | number;
+  user_view?: string | number;
   created_at?: string;
   updated_at?: string;
+  last_quarter_check?: string;
+  sum?: any;
+  // Calculated fields from API
+  current_quarter?: string;
+  current_quarter_value?: string | number;
+  available_budget?: string | number;
+  quarter_available?: string | number;
+  yearly_available?: string | number;
 }
 
 interface ProjectIndexEntry {
@@ -168,11 +177,18 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   // Enhanced data extraction with comprehensive validation
   const budgetInfo = React.useMemo(() => {
     if (!budgetData) return null;
-    // Handle both single object and array responses
-    if (Array.isArray(budgetData)) {
-      return budgetData[0] as BudgetData || null;
+    
+    // Handle API response structure: {status: 'success', data: {...}}
+    let actualBudgetData = budgetData;
+    if (budgetData && typeof budgetData === 'object' && 'data' in budgetData) {
+      actualBudgetData = budgetData.data;
     }
-    return budgetData as BudgetData;
+    
+    // Handle both single object and array responses
+    if (Array.isArray(actualBudgetData)) {
+      return actualBudgetData[0] as BudgetData || null;
+    }
+    return actualBudgetData as BudgetData || null;
   }, [budgetData]);
 
   const indexEntries = React.useMemo(() => {
@@ -463,13 +479,13 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                       <div className="bg-white rounded-lg p-4 border border-blue-100 shadow-sm">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                           <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                            <span className="font-medium text-blue-700 block mb-2">Συνολικό Ποσό:</span>
-                            <p className="text-2xl font-bold text-blue-900">{formatCurrency(budgetInfo.total_amount)}</p>
+                            <span className="font-medium text-blue-700 block mb-2">Εθσια Πίστωση:</span>
+                            <p className="text-2xl font-bold text-blue-900">{formatCurrency(budgetInfo.ethsia_pistosi)}</p>
                           </div>
-                          <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-                            <span className="font-medium text-gray-700 block mb-2">Έτος Προϋπολογισμού:</span>
-                            <p className="text-xl font-semibold text-gray-900">{safeText(budgetInfo.budget_year)}</p>
-                            <p className="text-sm text-gray-600">ΝΑ853: {safeText(budgetInfo.na853)}</p>
+                          <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                            <span className="font-medium text-green-700 block mb-2">Κατανομές Έτους:</span>
+                            <p className="text-xl font-semibold text-green-900">{formatCurrency(budgetInfo.katanomes_etous)}</p>
+                            <p className="text-sm text-green-600">ΝΑ853: {safeText(budgetInfo.na853)}</p>
                           </div>
                         </div>
                         
@@ -483,30 +499,34 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
                               <span className="font-medium text-green-700 block mb-1">Α' Τρίμηνο</span>
-                              <p className="text-lg font-bold text-green-900">{formatCurrency(budgetInfo.q1_amount)}</p>
+                              <p className="text-lg font-bold text-green-900">{formatCurrency(budgetInfo.q1)}</p>
                             </div>
                             <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                               <span className="font-medium text-blue-700 block mb-1">Β' Τρίμηνο</span>
-                              <p className="text-lg font-bold text-blue-900">{formatCurrency(budgetInfo.q2_amount)}</p>
+                              <p className="text-lg font-bold text-blue-900">{formatCurrency(budgetInfo.q2)}</p>
                             </div>
                             <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
                               <span className="font-medium text-orange-700 block mb-1">Γ' Τρίμηνο</span>
-                              <p className="text-lg font-bold text-orange-900">{formatCurrency(budgetInfo.q3_amount)}</p>
+                              <p className="text-lg font-bold text-orange-900">{formatCurrency(budgetInfo.q3)}</p>
                             </div>
                             <div className="p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
                               <span className="font-medium text-red-700 block mb-1">Δ' Τρίμηνο</span>
-                              <p className="text-lg font-bold text-red-900">{formatCurrency(budgetInfo.q4_amount)}</p>
+                              <p className="text-lg font-bold text-red-900">{formatCurrency(budgetInfo.q4)}</p>
                             </div>
                           </div>
                         </div>
                         
                         <div className="mt-6 flex items-center justify-between">
-                          {budgetInfo.status && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div>
-                              <span className="font-medium text-gray-700">Κατάσταση: </span>
-                              <Badge variant="secondary">{safeText(budgetInfo.status)}</Badge>
+                              <span className="font-medium text-gray-700">Προβολή Χρήστη: </span>
+                              <span className="text-gray-900">{formatCurrency(budgetInfo.user_view)}</span>
                             </div>
-                          )}
+                            <div>
+                              <span className="font-medium text-gray-700">Τελευταίος Έλεγχος: </span>
+                              <Badge variant="secondary">{safeText(budgetInfo.last_quarter_check)}</Badge>
+                            </div>
+                          </div>
                           <div className="text-sm text-gray-500">
                             {budgetInfo.created_at && (
                               <span>Δημιουργήθηκε: {formatDate(budgetInfo.created_at)}</span>
