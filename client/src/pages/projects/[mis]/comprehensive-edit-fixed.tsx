@@ -46,7 +46,10 @@ interface EventTypeData {
 
 interface ExpenditureTypeData {
   id: number;
-  name: string;
+  expediture_types?: string;
+  expenditure_types?: string;
+  expediture_types_minor?: string;
+  name?: string;
 }
 
 interface ProjectData {
@@ -530,15 +533,16 @@ export default function ComprehensiveEditFixed() {
             sa: formulation.sa || "ΝΑ853" as const,
             enumeration_code: formulation.enumeration_code || "",
             protocol_number: formulation.protocol_number || "",
-            ada_reference: formulation.ada_reference || "",
-            status: formulation.status || "Συμπληρωμένο" as const,
-            year: formulation.year || "",
-            epa_version: formulation.epa_version || "",
-            expenses: formulation.expenses || "",
-            changes: formulation.changes || "",
-            connected_decisions: formulation.connected_decisions || [],
-            comments: formulation.comments || "",
+            ada: formulation.ada || formulation.ada_reference || "",
+            decision_year: formulation.decision_year || formulation.year || "",
             project_budget: formulation.project_budget || "",
+            epa_version: formulation.epa_version || "",
+            total_public_expense: formulation.total_public_expense || "",
+            eligible_public_expense: formulation.eligible_public_expense || "",
+            decision_status: formulation.decision_status || formulation.status || "Ενεργή" as const,
+            change_type: formulation.change_type || "Έγκριση" as const,
+            connected_decisions: Array.isArray(formulation.connected_decisions) ? formulation.connected_decisions : [],
+            comments: formulation.comments || "",
           }))
         : [
             // NA853 entry
@@ -546,45 +550,48 @@ export default function ComprehensiveEditFixed() {
               sa: "ΝΑ853" as const,
               enumeration_code: typedProjectData.na853 || "",
               protocol_number: "",
-              ada_reference: "",
-              status: "Συμπληρωμένο" as const,
-              year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+              ada: "",
+              decision_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+              project_budget: typedProjectData.budget_na853 ? formatEuropeanNumber(typedProjectData.budget_na853) : "",
               epa_version: "",
-              expenses: "",
-              changes: "",
+              total_public_expense: "",
+              eligible_public_expense: "",
+              decision_status: "Ενεργή" as const,
+              change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
-              project_budget: typedProjectData.budget_na853 ? formatEuropeanNumber(typedProjectData.budget_na853) : "",
             },
             // NA271 entry if exists
             ...(typedProjectData.na271 ? [{
               sa: "ΝΑ271" as const,
               enumeration_code: typedProjectData.na271,
               protocol_number: "",
-              ada_reference: "",
-              status: "Συμπληρωμένο" as const,
-              year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+              ada: "",
+              decision_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+              project_budget: typedProjectData.budget_na271 ? formatEuropeanNumber(typedProjectData.budget_na271) : "",
               epa_version: "",
-              expenses: "",
-              changes: "",
+              total_public_expense: "",
+              eligible_public_expense: "",
+              decision_status: "Ενεργή" as const,
+              change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
-              project_budget: typedProjectData.budget_na271 ? formatEuropeanNumber(typedProjectData.budget_na271) : "",
             }] : []),
             // E069 entry if exists
             ...(typedProjectData.e069 ? [{
               sa: "E069" as const,
               enumeration_code: typedProjectData.e069,
               protocol_number: "",
-              ada_reference: "",
-              status: "Συμπληρωμένο" as const,
-              year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+              ada: "",
+              decision_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+              project_budget: typedProjectData.budget_e069 ? formatEuropeanNumber(typedProjectData.budget_e069) : "",
               epa_version: "",
-              expenses: "",
-              changes: "",
+              total_public_expense: "",
+              eligible_public_expense: "",
+              decision_status: "Ενεργή" as const,
+              change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
-              project_budget: typedProjectData.budget_e069 ? formatEuropeanNumber(typedProjectData.budget_e069) : "",
             }] : [])
           ];
 
@@ -595,8 +602,14 @@ export default function ComprehensiveEditFixed() {
         event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
       });
       form.setValue("project_details", {
+        mis: typedProjectData.mis || "",
+        sa: "",
+        enumeration_code: "",
+        inclusion_year: "",
         project_title: typedProjectData.project_title || "",
         project_description: typedProjectData.event_description || "",
+        summary_description: "",
+        expenses_executed: "",
         project_status: typedProjectData.status || "Ενεργό",
       });
       form.setValue("formulation_details", formulations);
