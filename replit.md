@@ -185,6 +185,14 @@ This is a full-stack web application built for Greek government budget and docum
   - Properly handles protocol_number, fek, and ada fields stored as JSONB arrays
 - **User Experience:** Modal now scrolls smoothly and displays all decision/formulation data in readable format
 
+### July 4, 2025 - Project Formulations API Fix for Empty Results
+- **CRITICAL FIX: Changed formulations query from inner join to left join for decision data**
+- **Root Cause:** The API endpoint was using `project_decisions!inner` which required formulations to have a non-null decision_id
+- **Solution:** Changed to `project_decisions` (left join) to include formulations with null decision_id values
+- **Impact:** Formulations now properly display in the modal even when not linked to a decision
+- **Query Update:** `project_formulations.select('*, project_decisions(...)')` allows optional decision relationships
+- **Result:** "Στοιχεία κατάρτισης έργου" section now properly shows project formulations data
+
 ### July 4, 2025 - Complete Budget Table Migration & Application-wide Update
 - **COMPLETE MIGRATION SUCCESS: Fixed all remaining budget_na853_split references**
 - **Critical Fixes Applied:** Multiple application components were still querying old table name causing "Budget not found" errors

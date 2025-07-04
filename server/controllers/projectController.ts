@@ -1240,12 +1240,12 @@ router.get('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
       return res.status(404).json({ message: "Project not found" });
     }
 
-    // Get formulations from normalized table with linked decision data
+    // Get formulations from normalized table with optional linked decision data
     const { data: formulations, error: formulationsError } = await supabase
       .from('project_formulations')
       .select(`
         *,
-        project_decisions!inner(
+        project_decisions(
           id,
           decision_type,
           protocol_number,
