@@ -198,7 +198,7 @@ router.get('/supabase', asyncHandler(async (req: Request, res: Response) => {
       // Test 4: Budget data access
       try {
         const { data, error } = await supabase
-          .from('budget_na853_split')
+          .from('project_budget')
           .select('id', { count: 'exact', head: true });
         
         if (error) throw error;

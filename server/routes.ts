@@ -1071,21 +1071,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // If not found in Projects, try budget_na853_split table
+        // If not found in Projects, try project_budget table
         const { data: budgetData, error: budgetError } = await supabase
-          .from('budget_na853_split')
+          .from('project_budget')
           .select('mis, na853')
           .eq('mis', mis)
           .maybeSingle();
         
         if (budgetError) {
-          console.error(`[Projects] Error in budget_na853_split lookup: ${budgetError.message}`);
+          console.error(`[Projects] Error in project_budget lookup: ${budgetError.message}`);
         } else if (budgetData) {
-          // We found data in budget_na853_split table
+          // We found data in project_budget table
           console.log(`[Projects] Found NA853 in budget table: ${budgetData.na853}`);
           
           return res.status(200).json({
-            source: 'budget_na853_split',
+            source: 'project_budget',
             mis: mis,
             na853: budgetData.na853 || ''
           });
@@ -1572,7 +1572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[Budget] Attempting NA853 lookup for: ${identifier}`);
           try {
             const { data: na853BudgetData, error: na853Error } = await supabase
-              .from('budget_na853_split')
+              .from('project_budget')
               .select('*')
               .eq('na853', identifier)
               .single();
@@ -1611,7 +1611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Now try to find budget using the project's MIS
               if (projectData.mis) {
                 const { data: misBudgetData, error: misError } = await supabase
-                  .from('budget_na853_split')
+                  .from('project_budget')
                   .select('*')
                   .eq('mis', projectData.mis)
                   .single();
@@ -1625,7 +1625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // If still no budget data, try by NA853
               if (!budgetData && projectData.na853) {
                 const { data: projectNa853BudgetData, error: projectNa853Error } = await supabase
-                  .from('budget_na853_split')
+                  .from('project_budget')
                   .select('*')
                   .eq('na853', projectData.na853)
                   .single();
@@ -1646,7 +1646,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[Budget] Attempting direct MIS lookup for: ${identifier}`);
           try {
             const { data: misBudgetData, error: misError } = await supabase
-              .from('budget_na853_split')
+              .from('project_budget')
               .select('*')
               .eq('mis', Number(identifier))
               .single();

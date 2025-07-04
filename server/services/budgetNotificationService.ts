@@ -70,7 +70,7 @@ export async function validateBudgetAllocation(
     // Get budget data using project_id if available
     if (projectId) {
       const { data: projectBudgetData, error: budgetError } = await supabase
-        .from('budget_na853_split')
+        .from('project_budget')
         .select('*')
         .eq('project_id', projectId)
         .single();
@@ -84,7 +84,7 @@ export async function validateBudgetAllocation(
     // Fallback: try direct MIS lookup if no budget data found
     if (!budgetData && isNumericString) {
       const { data: misBudgetData, error: misError } = await supabase
-        .from('budget_na853_split')
+        .from('project_budget')
         .select('*')
         .eq('mis', parseInt(String(projectIdentifier)))
         .single();

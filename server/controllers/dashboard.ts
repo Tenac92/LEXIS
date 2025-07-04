@@ -34,7 +34,7 @@ export async function getDashboardStats(req: Request, res: Response) {
 
     // Get budget data with optimized query
     const { data: budgetData, error: budgetError } = await supabase
-      .from('budget_na853_split')
+      .from('project_budget')
       .select('user_view, proip, katanomes_etous')
       .order('created_at', { ascending: false });
 

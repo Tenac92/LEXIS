@@ -130,7 +130,7 @@ export async function getBudgetByMis(req: Request, res: Response) {
           
           // Get budget with the numeric MIS
           const { data: budgetData, error: budgetError } = await supabase
-            .from('budget_na853_split')
+            .from('project_budget')
             .select('*')
             .eq('mis', projectData.mis)
             .single();
@@ -163,7 +163,7 @@ export async function getBudgetByMis(req: Request, res: Response) {
       try {
         const numericMis = parseInt(decodedMis);
         const { data: budgetData, error: budgetError } = await supabase
-          .from('budget_na853_split')
+          .from('project_budget')
           .select('*')
           .eq('mis', numericMis)
           .single();
@@ -194,9 +194,9 @@ export async function getBudgetByMis(req: Request, res: Response) {
       
       try {
         const { data: budgetData, error: budgetError } = await supabase
-          .from('budget_na853_split')
+          .from('project_budget')
           .select('*')
-          .eq('na853_code', decodedMis)
+          .eq('na853', decodedMis)
           .single();
         
         if (budgetError) {

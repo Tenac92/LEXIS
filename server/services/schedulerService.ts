@@ -81,7 +81,7 @@ export async function processQuarterTransition(wss: WebSocketServer, isVerificat
     
     // First, check which budgets need updating (where last_quarter_check is not equal to current quarter)
     const { data: budgetsToUpdate, error: queryError } = await supabase
-      .from('budget_na853_split')
+      .from('project_budget')
       .select('id, mis, na853, last_quarter_check, q1, q2, q3, q4, user_view, sum');
     
     if (queryError) {
@@ -182,7 +182,7 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
     
     // Update the budget record
     const { error: updateError } = await supabase
-      .from('budget_na853_split')
+      .from('project_budget')
       .update({
         last_quarter_check: newQuarterKey,
         current_quarter: newQuarterKey,

@@ -146,7 +146,7 @@ export default function AdminBudgetUploadPage() {
         <h1 className="text-3xl font-bold mb-6">Budget Data Upload</h1>
         <p className="text-muted-foreground mb-8">
           Upload Excel files to update budget data for projects. This tool processes Excel files and 
-          synchronizes the data with the budget_na853_split table in the database.
+          synchronizes the data with the project_budget table in the database.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">

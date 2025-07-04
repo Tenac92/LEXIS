@@ -453,7 +453,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                       <Euro className="h-5 w-5 text-blue-600" />
                       <h3 className="text-lg font-semibold text-blue-800">Οικονομικά Στοιχεία</h3>
                       <Badge variant="secondary" className="ml-auto text-xs">
-                        budget_na853_split
+                        project_budget
                       </Badge>
                     </div>
                     
@@ -517,7 +517,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                     ) : (
                       <div className="bg-white rounded-lg p-8 border border-blue-100 text-center">
                         <Euro className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-600 mb-4">Δεν υπάρχουν στοιχεία στον πίνακα budget_na853_split</p>
+                        <p className="text-gray-600 mb-4">Δεν υπάρχουν στοιχεία στον πίνακα project_budget</p>
                         <div className="text-left bg-gray-50 p-4 rounded-lg">
                           <h4 className="font-medium mb-2">Διαθέσιμα στοιχεία από Projects:</h4>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

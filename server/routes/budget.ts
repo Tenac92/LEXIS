@@ -218,7 +218,7 @@ router.get('/records', authenticateSession, async (req: AuthenticatedRequest, re
     console.log('[Budget] Fetching available MIS and NA853 combinations');
 
     const { data, error } = await supabase
-      .from('budget_na853_split')
+      .from('project_budget')
       .select('mis, na853')
       .order('created_at', { ascending: false });
 
@@ -328,7 +328,7 @@ router.get('/history', authenticateSession, async (req: AuthenticatedRequest, re
 
 router.put('/bulk-update', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    console.log('[Budget] Starting bulk update for budget_na853_split');
+    console.log('[Budget] Starting bulk update for project_budget');
 
     // Check authentication
     if (!req.user?.id) {
@@ -366,7 +366,7 @@ router.put('/bulk-update', authenticateSession, async (req: AuthenticatedRequest
 
         // Get current budget data before updating
         const { data: currentBudget, error: fetchError } = await supabase
-          .from('budget_na853_split')
+          .from('project_budget')
           .select('*')
           .eq('mis', mis)
           .eq('na853', na853)
@@ -387,7 +387,7 @@ router.put('/bulk-update', authenticateSession, async (req: AuthenticatedRequest
         
         // Update the budget split record directly
         const { error: updateError } = await supabase
-          .from('budget_na853_split')
+          .from('project_budget')
           .update({
             ethsia_pistosi: data.ethsia_pistosi,
             q1: data.q1,
