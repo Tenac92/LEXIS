@@ -645,37 +645,23 @@ export default function ComprehensiveEditFixed() {
                   } : null
                 });
                 
+                // Always populate all geographic fields from kallikratis data to fix dropdown issues
                 let locationDetail = {
-                  municipality: "",
-                  regional_unit: "", 
-                  region: "",
+                  municipality: kallikratis?.onoma_neou_ota || "",
+                  regional_unit: kallikratis?.perifereiaki_enotita || "", 
+                  region: kallikratis?.perifereia || "",
                   implementing_agency: unit?.name || unit?.unit_name?.name || unit?.unit || "",
                   event_type: eventType?.name || "",
                   expenditure_types: [],
                   geographic_code: geographicCode
                 };
                 
-                // Populate fields based on geographic level
-                if (geoInfo && kallikratis) {
-                  locationDetail.region = kallikratis.perifereia || "";
-                  console.log(`Setting region: ${locationDetail.region}`);
-                  
-                  if (geoInfo.level === 'municipality' || geoInfo.level === 'regional_unit') {
-                    locationDetail.regional_unit = kallikratis.perifereiaki_enotita || "";
-                    console.log(`Setting regional_unit: ${locationDetail.regional_unit}`);
-                  }
-                  
-                  if (geoInfo.level === 'municipality') {
-                    locationDetail.municipality = kallikratis.onoma_neou_ota || "";
-                    console.log(`Setting municipality: ${locationDetail.municipality}`);
-                  }
-                } else {
-                  console.log(`Using fallback population - geoInfo:`, geoInfo, `kallikratis:`, !!kallikratis);
-                  // Fallback: populate all fields to avoid controlled/uncontrolled warnings
-                  locationDetail.municipality = kallikratis?.onoma_neou_ota || "";
-                  locationDetail.regional_unit = kallikratis?.perifereiaki_enotita || "";
-                  locationDetail.region = kallikratis?.perifereia || "";
-                }
+                console.log(`Setting location fields:`, {
+                  municipality: locationDetail.municipality,
+                  regional_unit: locationDetail.regional_unit,
+                  region: locationDetail.region,
+                  kallikratisId: indexItem.kallikratis_id
+                });
                 
                 console.log(`Final locationDetail:`, locationDetail);
                 locationDetailsMap.set(key, locationDetail);
@@ -1143,14 +1129,32 @@ export default function ComprehensiveEditFixed() {
                 <CardContent className="p-4">
                   <div className="space-y-4">
                     {form.watch("formulation_details").map((_, index) => (
-                      <div key={index} className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-2 p-3 border rounded-lg text-sm">
-                        <div>
+                      <div key={index} className="p-3 border rounded-lg space-y-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">Στοιχεία κατάρτισης #{index + 1}</span>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 px-2"
+                            onClick={() => {
+                              const currentFormulations = form.getValues("formulation_details");
+                              const updatedFormulations = currentFormulations.filter((_, i) => i !== index);
+                              form.setValue("formulation_details", updatedFormulations);
+                            }}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Αφαίρεση
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-3">
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.sa`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">ΣΑ</FormLabel>
+                                <FormLabel className="text-xs">ΣΑ</FormLabel>
                                 <FormControl>
                                   <Select onValueChange={field.onChange} value={field.value}>
                                     <SelectTrigger className="text-xs">
@@ -1166,22 +1170,33 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
-                        </div>
-                        <div>
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.enumeration_code`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">Κωδικός ενάριθμος</FormLabel>
+                                <FormLabel className="text-xs">Κωδικός ενάριθμος</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="Κωδικός" className="text-xs" />
+                                  <Input {...field} placeholder="Κωδικός" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.protocol_number`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Αρ. Πρωτοκόλλου</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Πρωτόκολλο" className="text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </div>
-                        <div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.project_budget`}
