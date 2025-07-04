@@ -859,26 +859,27 @@ export default function ComprehensiveEditFixed() {
                 <CardContent className="p-4">
                   <div className="space-y-4">
                     {/* Table Header */}
-                    <div className="grid grid-cols-12 gap-2 p-2 bg-gray-50 rounded-lg font-medium text-xs">
-                      <div className="col-span-1 text-center">α.α.</div>
-                      <div className="col-span-1 text-center">Αρ. πρωτ. Απόφασης</div>
-                      <div className="col-span-1 text-center">ΦΕΚ</div>
-                      <div className="col-span-1 text-center">ΑΔΑ</div>
-                      <div className="col-span-2 text-center">Φορέας υλοποίησης</div>
-                      <div className="col-span-1 text-center">Προϋπολογισμός Απόφασης</div>
-                      <div className="col-span-1 text-center">Δαπάνες που αφορά</div>
-                      <div className="col-span-1 text-center">Είδος Απόφασης</div>
-                      <div className="col-span-1 text-center">Έχει συμπεριληφθεί</div>
-                      <div className="col-span-2 text-center">Σχόλια</div>
+                    <div className="grid grid-cols-[auto_1fr_1fr_1fr_2fr_1fr_1fr_1fr_1fr_2fr_auto] gap-2 p-2 bg-gray-50 rounded-lg font-medium text-xs">
+                      <div className="text-center">α.α.</div>
+                      <div className="text-center">Αρ. πρωτ. Απόφασης</div>
+                      <div className="text-center">ΦΕΚ</div>
+                      <div className="text-center">ΑΔΑ</div>
+                      <div className="text-center">Φορέας υλοποίησης</div>
+                      <div className="text-center">Προϋπολογισμός Απόφασης</div>
+                      <div className="text-center">Δαπάνες που αφορά</div>
+                      <div className="text-center">Είδος Απόφασης</div>
+                      <div className="text-center">Έχει συμπεριληφθεί</div>
+                      <div className="text-center">Σχόλια</div>
+                      <div className="text-center">Ενέργεια</div>
                     </div>
 
                     {/* Table Rows */}
                     {form.watch("decisions").map((_, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-2 p-2 border rounded-lg">
-                        <div className="col-span-1 flex items-center justify-center">
+                      <div key={index} className="grid grid-cols-[auto_1fr_1fr_1fr_2fr_1fr_1fr_1fr_1fr_2fr_auto] gap-2 p-2 border rounded-lg">
+                        <div className="flex items-center justify-center">
                           <span className="text-sm font-medium">{index + 1}</span>
                         </div>
-                        <div className="col-span-1">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.protocol_number`}
@@ -891,7 +892,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-1">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.fek`}
@@ -904,7 +905,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-1">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.ada`}
@@ -917,7 +918,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.implementing_agency`}
@@ -941,7 +942,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-1">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.decision_budget`}
@@ -954,7 +955,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-1">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.expenses_covered`}
@@ -967,7 +968,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-1">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.decision_type`}
@@ -989,7 +990,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-1">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.is_included`}
@@ -1009,7 +1010,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.comments`}
@@ -1021,6 +1022,21 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              const currentDecisions = form.getValues("decisions");
+                              const updatedDecisions = currentDecisions.filter((_, i) => i !== index);
+                              form.setValue("decisions", updatedDecisions);
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -1144,8 +1160,8 @@ export default function ComprehensiveEditFixed() {
                 <CardContent className="p-4">
                   <div className="space-y-4">
                     {form.watch("formulation_details").map((_, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-2 p-3 border rounded-lg text-sm">
-                        <div className="col-span-2">
+                      <div key={index} className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-2 p-3 border rounded-lg text-sm">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.sa`}
@@ -1168,7 +1184,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.enumeration_code`}
@@ -1182,7 +1198,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.project_budget`}
@@ -1204,7 +1220,7 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div>
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.protocol_number`}
@@ -1218,10 +1234,10 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div>
                           <FormField
                             control={form.control}
-                            name={`formulation_details.${index}.ada_reference`}
+                            name={`formulation_details.${index}.ada`}
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-xs font-medium">ΑΔΑ</FormLabel>
@@ -1232,10 +1248,10 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div>
                           <FormField
                             control={form.control}
-                            name={`formulation_details.${index}.status`}
+                            name={`formulation_details.${index}.decision_status`}
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-xs font-medium">Κατάσταση</FormLabel>
@@ -1245,15 +1261,30 @@ export default function ComprehensiveEditFixed() {
                                       <SelectValue placeholder="Κατάσταση" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="Συμπληρωμένο">Συμπληρωμένο</SelectItem>
-                                      <SelectItem value="Συνεχιζόμενο">Συνεχιζόμενο</SelectItem>
-                                      <SelectItem value="Ολοκληρωμένο">Ολοκληρωμένο</SelectItem>
+                                      <SelectItem value="Ενεργή">Ενεργή</SelectItem>
+                                      <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
+                                      <SelectItem value="Αναστολή">Αναστολή</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </FormControl>
                               </FormItem>
                             )}
                           />
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => {
+                              const currentFormulations = form.getValues("formulation_details");
+                              const updatedFormulations = currentFormulations.filter((_, i) => i !== index);
+                              form.setValue("formulation_details", updatedFormulations);
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -1267,7 +1298,21 @@ export default function ComprehensiveEditFixed() {
                           const currentFormulations = form.getValues("formulation_details");
                           form.setValue("formulation_details", [
                             ...currentFormulations,
-                            { sa: "ΝΑ853" as const, enumeration_code: "", project_budget: "", protocol_number: "", ada_reference: "", status: "Συμπληρωμένο" as const, year: "", epa_version: "", expenses: "", changes: "", connected_decisions: "", comments: "" }
+                            { 
+                              sa: "ΝΑ853" as const, 
+                              enumeration_code: "", 
+                              protocol_number: "", 
+                              ada: "", 
+                              decision_year: "", 
+                              project_budget: "", 
+                              epa_version: "", 
+                              total_public_expense: "", 
+                              eligible_public_expense: "", 
+                              decision_status: "Ενεργή" as const, 
+                              change_type: "Έγκριση" as const, 
+                              connected_decisions: [], 
+                              comments: "" 
+                            }
                           ]);
                         }}
                         className="text-sm"

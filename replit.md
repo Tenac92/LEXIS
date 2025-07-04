@@ -127,6 +127,18 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 3, 2025 - Remove Buttons Implementation for Comprehensive Edit Form
+- **Successfully added remove buttons to sections 1 and 4** as requested by user
+- **Section 1 "Αποφάσεις που τεκμηριώνουν το έργο":** Added red X button for each decision row allowing deletion
+- **Section 4 "Στοιχεία κατάρτισης έργου":** Added remove button for each formulation detail entry
+- **Grid Structure Updates:**
+  - Converted from col-span classes to custom grid layouts for better alignment
+  - Decisions section: `grid-cols-[auto_1fr_1fr_1fr_2fr_1fr_1fr_1fr_1fr_2fr_auto]` for proper column spacing
+  - Formulation details: `grid-cols-[2fr_2fr_1fr_1fr_1fr_auto]` for optimal field layout
+- **Functionality:** Remove buttons correctly filter out array elements and update form state
+- **UI Enhancement:** Destructive variant buttons with consistent sizing (h-8 w-8 p-0) for clean appearance
+- Fixed field mapping for formulation details to match actual database schema (decision_status instead of status)
+
 ### July 2, 2025 - Municipality Display Issue Resolution & Complete Data Flow Success
 - **COMPLETE SUCCESS: Municipality data retrieval and persistence fully working**
 - **Root Cause Identified:** Municipality data ("ΑΓΡΙΝΙΟΥ") correctly retrieved from kallikratis table (ID 123) and set in form, but controlled/uncontrolled component warning affecting UI display
