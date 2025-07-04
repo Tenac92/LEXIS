@@ -618,6 +618,17 @@ export default function ComprehensiveEditFixed() {
                 const geographicCode = indexItem.geographic_code;
                 const geoInfo = getGeographicInfo(geographicCode);
                 
+                console.log(`DEBUG Geographic Code Analysis:`, {
+                  geographicCode,
+                  geoInfo,
+                  kallikratisFound: !!kallikratis,
+                  kallikratisData: kallikratis ? {
+                    region: kallikratis.perifereia,
+                    regionalUnit: kallikratis.perifereiaki_enotita,
+                    municipality: kallikratis.onoma_neou_ota
+                  } : null
+                });
+                
                 let locationDetail = {
                   municipality: "",
                   regional_unit: "", 
@@ -631,20 +642,26 @@ export default function ComprehensiveEditFixed() {
                 // Populate fields based on geographic level
                 if (geoInfo && kallikratis) {
                   locationDetail.region = kallikratis.perifereia || "";
+                  console.log(`Setting region: ${locationDetail.region}`);
                   
                   if (geoInfo.level === 'municipality' || geoInfo.level === 'regional_unit') {
                     locationDetail.regional_unit = kallikratis.perifereiaki_enotita || "";
+                    console.log(`Setting regional_unit: ${locationDetail.regional_unit}`);
                   }
                   
                   if (geoInfo.level === 'municipality') {
                     locationDetail.municipality = kallikratis.onoma_neou_ota || "";
+                    console.log(`Setting municipality: ${locationDetail.municipality}`);
                   }
                 } else {
+                  console.log(`Using fallback population - geoInfo:`, geoInfo, `kallikratis:`, !!kallikratis);
                   // Fallback: populate all fields to avoid controlled/uncontrolled warnings
                   locationDetail.municipality = kallikratis?.onoma_neou_ota || "";
                   locationDetail.regional_unit = kallikratis?.perifereiaki_enotita || "";
                   locationDetail.region = kallikratis?.perifereia || "";
                 }
+                
+                console.log(`Final locationDetail:`, locationDetail);
                 locationDetailsMap.set(key, locationDetail);
               }
               
