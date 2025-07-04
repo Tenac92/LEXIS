@@ -602,7 +602,7 @@ export default function ComprehensiveEditFixed() {
         event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
       });
       form.setValue("project_details", {
-        mis: typedProjectData.mis || "",
+        mis: String(typedProjectData.mis || ""),
         sa: "",
         enumeration_code: "",
         inclusion_year: "",
@@ -858,76 +858,77 @@ export default function ComprehensiveEditFixed() {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="space-y-4">
-                    {/* Table Header */}
-                    <div className="grid grid-cols-[auto_1fr_1fr_1fr_2fr_1fr_1fr_1fr_1fr_2fr_auto] gap-2 p-2 bg-gray-50 rounded-lg font-medium text-xs">
-                      <div className="text-center">α.α.</div>
-                      <div className="text-center">Αρ. πρωτ. Απόφασης</div>
-                      <div className="text-center">ΦΕΚ</div>
-                      <div className="text-center">ΑΔΑ</div>
-                      <div className="text-center">Φορέας υλοποίησης</div>
-                      <div className="text-center">Προϋπολογισμός Απόφασης</div>
-                      <div className="text-center">Δαπάνες που αφορά</div>
-                      <div className="text-center">Είδος Απόφασης</div>
-                      <div className="text-center">Έχει συμπεριληφθεί</div>
-                      <div className="text-center">Σχόλια</div>
-                      <div className="text-center">Ενέργεια</div>
-                    </div>
-
-                    {/* Table Rows */}
+                    {/* Decisions List */}
                     {form.watch("decisions").map((_, index) => (
-                      <div key={index} className="grid grid-cols-[auto_1fr_1fr_1fr_2fr_1fr_1fr_1fr_1fr_2fr_auto] gap-2 p-2 border rounded-lg">
-                        <div className="flex items-center justify-center">
-                          <span className="text-sm font-medium">{index + 1}</span>
+                      <div key={index} className="p-3 border rounded-lg space-y-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium">Απόφαση #{index + 1}</span>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 px-2"
+                            onClick={() => {
+                              const currentDecisions = form.getValues("decisions");
+                              const updatedDecisions = currentDecisions.filter((_, i) => i !== index);
+                              form.setValue("decisions", updatedDecisions);
+                            }}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Αφαίρεση
+                          </Button>
                         </div>
-                        <div>
+                        
+                        <div className="grid grid-cols-3 gap-3">
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.protocol_number`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">Αρ. πρωτ. Απόφασης</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="Αρ. πρωτ." className="text-xs h-8" />
+                                  <Input {...field} className="text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
-                        </div>
-                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.fek`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">ΦΕΚ</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="ΦΕΚ" className="text-xs h-8" />
+                                  <Input {...field} className="text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
-                        </div>
-                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.ada`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">ΑΔΑ</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="ΑΔΑ" className="text-xs h-8" />
+                                  <Input {...field} className="text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </div>
-                        <div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.implementing_agency`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">Φορέας υλοποίησης</FormLabel>
                                 <FormControl>
                                   <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="text-xs h-8">
-                                      <SelectValue placeholder="Φορέας" />
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Επιλέξτε φορέα" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {typedUnitsData?.map((unit) => (
@@ -941,43 +942,43 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
-                        </div>
-                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.decision_budget`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">Προϋπολογισμός Απόφασης</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="Προϋπ." className="text-xs h-8" />
+                                  <Input {...field} className="text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </div>
-                        <div>
+                        
+                        <div className="grid grid-cols-3 gap-3">
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.expenses_covered`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">Δαπάνες που αφορά</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="Δαπάνες" className="text-xs h-8" />
+                                  <Input {...field} className="text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
-                        </div>
-                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.decision_type`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">Είδος Απόφασης</FormLabel>
                                 <FormControl>
                                   <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="text-xs h-8">
-                                      <SelectValue placeholder="Είδος" />
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Επιλέξτε είδος" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="Έγκριση">Έγκριση</SelectItem>
@@ -989,55 +990,37 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
-                        </div>
-                        <div>
-                          <FormField
-                            control={form.control}
-                            name={`decisions.${index}.is_included`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <div className="flex items-center justify-center">
-                                    <input
-                                      type="checkbox"
-                                      checked={field.value}
-                                      onChange={(e) => field.onChange(e.target.checked)}
-                                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                                    />
-                                  </div>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.comments`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">Σχόλια</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="Σχόλια" className="text-xs h-8" />
+                                  <Input {...field} className="text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </div>
-                        <div className="flex items-center justify-center">
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => {
-                              const currentDecisions = form.getValues("decisions");
-                              const updatedDecisions = currentDecisions.filter((_, i) => i !== index);
-                              form.setValue("decisions", updatedDecisions);
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        
+                        <FormField
+                          control={form.control}
+                          name={`decisions.${index}.is_included`}
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2">
+                              <FormControl>
+                                <input
+                                  type="checkbox"
+                                  checked={field.value}
+                                  onChange={(e) => field.onChange(e.target.checked)}
+                                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal">Έχει συμπεριληφθεί</FormLabel>
+                            </FormItem>
+                          )}
+                        />
                       </div>
                     ))}
                     
