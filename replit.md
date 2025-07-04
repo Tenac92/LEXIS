@@ -172,6 +172,19 @@ This is a full-stack web application built for Greek government budget and docum
 - **Data Integrity:** Script checks for existing data to prevent duplicates during import
 - **Real Government Data:** Modal now displays authentic KYA/FEK/ADA values instead of placeholder data
 
+### July 4, 2025 - Modal Scrollability Fix & JSONB Data Display Enhancement
+- **FIXED MODAL SCROLLABILITY: Updated DialogContent to use flex layout with proper overflow handling**
+- **DialogContent Updates:** Changed from `overflow-hidden` to `flex flex-col` for proper content flow
+- **ScrollArea Enhancement:** Removed fixed height constraint, allowing natural scrolling within modal bounds
+- **Header Optimization:** Made DialogHeader `flex-shrink-0` to keep title visible during scroll
+- **Tabs Layout:** Updated Tabs component with `flex flex-col` for proper content expansion
+- **JSONB Data Display Fix:** Enhanced `safeText` function to properly handle array fields from database
+  - Arrays with single values display as plain text (e.g., ["value"] → "value")
+  - Arrays with multiple values display as comma-separated list (e.g., ["val1", "val2"] → "val1, val2")
+  - Empty arrays display as "Δεν υπάρχει"
+  - Properly handles protocol_number, fek, and ada fields stored as JSONB arrays
+- **User Experience:** Modal now scrolls smoothly and displays all decision/formulation data in readable format
+
 ### July 4, 2025 - Complete Budget Table Migration & Application-wide Update
 - **COMPLETE MIGRATION SUCCESS: Fixed all remaining budget_na853_split references**
 - **Critical Fixes Applied:** Multiple application components were still querying old table name causing "Budget not found" errors

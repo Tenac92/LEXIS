@@ -227,7 +227,14 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   const safeText = React.useCallback((value: any): string => {
     if (value === null || value === undefined || value === '') return 'Δεν υπάρχει';
     if (typeof value === 'object') {
-      // Handle JSONB fields
+      // Handle JSONB array fields
+      if (Array.isArray(value)) {
+        // For array fields like protocol_number, fek, ada
+        if (value.length === 0) return 'Δεν υπάρχει';
+        if (value.length === 1) return String(value[0]);
+        return value.join(', ');
+      }
+      // Handle other objects
       if (typeof value === 'object' && value.toString) {
         return value.toString();
       }
@@ -280,8 +287,8 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-bold text-gray-800">
             Λεπτομέρειες Έργου: {safeText(projectData?.project_title)}
           </DialogTitle>
@@ -306,7 +313,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="basic" className="flex-1 overflow-hidden">
+        <Tabs defaultValue="basic" className="flex-1 overflow-hidden flex flex-col">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="basic" className="flex items-center gap-2 text-xs">
               <Building2 className="h-4 w-4" />
@@ -326,7 +333,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
             </TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1 mt-4 max-h-[calc(90vh-200px)]">
+          <ScrollArea className="flex-1 mt-4 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
