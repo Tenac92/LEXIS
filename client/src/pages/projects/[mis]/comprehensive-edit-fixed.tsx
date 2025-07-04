@@ -1420,8 +1420,8 @@ export default function ComprehensiveEditFixed() {
                       // Get geographic level from geographic code
                       const geoInfo = getGeographicInfo(location.geographic_code);
                       const shouldShowRegion = true; // Always show region
-                      const shouldShowRegionalUnit = !geoInfo || geoInfo.level === 'municipality' || geoInfo.level === 'regional_unit';
-                      const shouldShowMunicipality = !geoInfo || geoInfo.level === 'municipality';
+                      const shouldShowRegionalUnit = isInitializingRef.current || !geoInfo || geoInfo.level === 'municipality' || geoInfo.level === 'regional_unit';
+                      const shouldShowMunicipality = isInitializingRef.current || !geoInfo || geoInfo.level === 'municipality';
                       
                       return (
                       <div key={index} className="p-4 border rounded-lg space-y-4">
@@ -1462,6 +1462,7 @@ export default function ComprehensiveEditFixed() {
                                         setUserInteractedFields(prev => new Set(prev).add(fieldKey));
                                       }} 
                                       value={field.value || ""}
+                                      key={`region-${index}-${field.value}`}
                                     >
                                       <SelectTrigger className="text-sm">
                                         <SelectValue placeholder="Επιλέξτε περιφέρεια" />
@@ -1507,7 +1508,8 @@ export default function ComprehensiveEditFixed() {
                                         setUserInteractedFields(prev => new Set(prev).add(fieldKey));
                                       }} 
                                       value={field.value || ""}
-                                      disabled={!form.watch(`location_details.${index}.region`)}
+                                      disabled={!form.watch(`location_details.${index}.region`) && !isInitializingRef.current}
+                                      key={`regional-unit-${index}-${field.value}`}
                                   >
                                     <SelectTrigger className="text-sm">
                                       <SelectValue placeholder="Επιλέξτε περιφερειακή ενότητα" />
@@ -1519,6 +1521,7 @@ export default function ComprehensiveEditFixed() {
                                           ?.filter(k => k.perifereia === currentRegion)
                                           .map(k => k.perifereiaki_enotita) || [])].filter(Boolean);
                                         console.log(`Regional Unit options for region "${currentRegion}", field value "${field.value}":`, regionalUnits.includes(field.value), regionalUnits);
+                                        console.log(`Regional Unit field disabled: ${!form.watch(`location_details.${index}.region`) && !isInitializingRef.current}, initializing: ${isInitializingRef.current}`);
                                         return regionalUnits.map((unit, unitIndex) => (
                                           <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                                         ));
@@ -1543,7 +1546,8 @@ export default function ComprehensiveEditFixed() {
                                         field.onChange(value);
                                       }} 
                                       value={field.value || ""}
-                                      disabled={!form.watch(`location_details.${index}.regional_unit`)}
+                                      disabled={!form.watch(`location_details.${index}.regional_unit`) && !isInitializingRef.current}
+                                      key={`municipality-${index}-${field.value}`}
                                     >
                                       <SelectTrigger className="text-sm">
                                         <SelectValue placeholder="Επιλέξτε δήμο" />
@@ -1559,6 +1563,7 @@ export default function ComprehensiveEditFixed() {
                                             )
                                             .map(k => k.onoma_neou_ota) || [])].filter(Boolean);
                                           console.log(`Municipality options for region "${currentRegion}", regional unit "${currentRegionalUnit}", field value "${field.value}":`, municipalities.includes(field.value), municipalities);
+                                          console.log(`Municipality field disabled: ${!form.watch(`location_details.${index}.regional_unit`) && !isInitializingRef.current}, initializing: ${isInitializingRef.current}`);
                                           return municipalities.map((municipality, muniIndex) => (
                                             <SelectItem key={municipality} value={municipality}>{municipality}</SelectItem>
                                           ));
