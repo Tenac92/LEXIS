@@ -156,6 +156,22 @@ This is a full-stack web application built for Greek government budget and docum
 - **Modal Display Complete:** Both budget and formulations sections now display authentic database data
 - **User Experience Enhanced:** Project details modal provides comprehensive view of financial and formulation data
 
+### July 4, 2025 - CSV Import Script for Complete Project Data Population
+- **COMPREHENSIVE DATA IMPORT: Created script to populate project_decisions and project_formulations from CSV**
+- **Import Script Features:** Reads project data CSV and creates decisions/formulations with authentic government data
+- **Decisions Import Success:** 
+  - Creates 3 decisions per project: Main approval decision + 2 import decisions from NA271/NA853
+  - Uses real KYA, FEK, and ADA values from CSV columns
+  - Properly handles budget values and implementing agencies
+  - Project 5174076 now has complete decision documentation
+- **Formulations Import Logic:** 
+  - Creates formulations for each SA code (NA853, NA271, E069) present in project
+  - Links formulations to main decision via decision_id foreign key
+  - Calculates public expense values based on budget percentages
+  - Includes real protocol numbers and ADA references
+- **Data Integrity:** Script checks for existing data to prevent duplicates during import
+- **Real Government Data:** Modal now displays authentic KYA/FEK/ADA values instead of placeholder data
+
 ### July 4, 2025 - Complete Budget Table Migration & Application-wide Update
 - **COMPLETE MIGRATION SUCCESS: Fixed all remaining budget_na853_split references**
 - **Critical Fixes Applied:** Multiple application components were still querying old table name causing "Budget not found" errors
