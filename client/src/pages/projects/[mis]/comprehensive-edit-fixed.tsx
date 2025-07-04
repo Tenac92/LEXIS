@@ -495,7 +495,7 @@ export default function ComprehensiveEditFixed() {
             fek: decision.fek || "",
             ada: decision.ada || "",
             implementing_agency: decision.implementing_agency || typedProjectData.enhanced_unit?.name || "",
-            decision_budget: decision.decision_budget || "",
+            decision_budget: decision.decision_budget ? String(decision.decision_budget) : "",
             expenses_covered: decision.expenses_covered || "",
             decision_type: decision.decision_type || "Έγκριση" as const,
             is_included: decision.is_included ?? true,
@@ -596,9 +596,7 @@ export default function ComprehensiveEditFixed() {
             
             // Group by kallikratis and implementing agency
             projectIndexData.forEach(indexItem => {
-              console.log(`DEBUG - Processing project index item:`, indexItem);
               const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
-              console.log(`DEBUG - Found kallikratis for ID ${indexItem.kallikratis_id}:`, kallikratis);
               const unit = typedUnitsData.find(u => u.id === indexItem.unit_id);
               const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expenditure_type_id);
               
