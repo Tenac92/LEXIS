@@ -717,7 +717,8 @@ export default function ComprehensiveEditFixed() {
   // Debug all fetched data
   console.log("DEBUG - Kallikratis data sample:", typedKallikratisData?.slice(0, 3));
   console.log("DEBUG - Total kallikratis entries:", typedKallikratisData?.length);
-  console.log("DEBUG - Units data:", typedUnitsData?.slice(0, 2));
+  console.log("DEBUG - Units data:", typedUnitsData?.length, "units total");
+  console.log("DEBUG - All units:", typedUnitsData?.map(u => `${u.id}: ${u.unit}`));
   console.log("DEBUG - Event types data:", typedEventTypesData?.slice(0, 2));
   console.log("DEBUG - Expenditure types data:", typedExpenditureTypesData?.slice(0, 2));
 
