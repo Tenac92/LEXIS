@@ -210,7 +210,7 @@ export class BudgetService {
       let budgetData: any = null;
       let error: any = null;
 
-      // Strategy 1: If we have a resolved project, try project_id lookup first
+      // Strategy 1: OPTIMIZED - Use project_id for fastest lookup (integer index)
       if (projectId) {
         try {
           const { data: projectBudgetData, error: projectError } = await supabase
@@ -221,10 +221,13 @@ export class BudgetService {
           
           if (!projectError && projectBudgetData) {
             budgetData = projectBudgetData;
-            console.log(`[BudgetService] Found budget by project_id: ${projectId}`);
+            console.log(`[BudgetService] ✓ FAST LOOKUP: Found budget by project_id: ${projectId} (optimized integer index)`);
+            return budgetData; // Return immediately for best performance
+          } else {
+            console.log(`[BudgetService] Project ID ${projectId} found but no budget data exists`);
           }
         } catch (projectLookupError) {
-          console.log(`[BudgetService] Project ID lookup failed: ${projectLookupError}`);
+          console.log(`[BudgetService] Project ID lookup error: ${projectLookupError}`);
         }
       }
 
