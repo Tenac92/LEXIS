@@ -1363,11 +1363,16 @@ export default function ComprehensiveEditFixed() {
                                       <SelectValue placeholder="Επιλέξτε περιφερειακή ενότητα" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {[...new Set(typedKallikratisData
-                                        ?.filter(k => k.perifereia === form.watch(`location_details.${index}.region`))
-                                        .map(k => k.perifereiaki_enotita) || [])].filter(Boolean).map((unit, unitIndex) => (
-                                        <SelectItem key={`unit-${index}-${unitIndex}-${unit}`} value={unit}>{unit}</SelectItem>
-                                      ))}
+                                      {(() => {
+                                        const currentRegion = form.watch(`location_details.${index}.region`);
+                                        const regionalUnits = [...new Set(typedKallikratisData
+                                          ?.filter(k => k.perifereia === currentRegion)
+                                          .map(k => k.perifereiaki_enotita) || [])].filter(Boolean);
+                                        console.log(`Regional Unit options for region "${currentRegion}", field value "${field.value}":`, regionalUnits.includes(field.value), regionalUnits);
+                                        return regionalUnits.map((unit, unitIndex) => (
+                                          <SelectItem key={`unit-${index}-${unitIndex}-${unit}`} value={unit}>{unit}</SelectItem>
+                                        ));
+                                      })()}
                                     </SelectContent>
                                   </Select>
                                 </FormControl>
@@ -1395,14 +1400,20 @@ export default function ComprehensiveEditFixed() {
                                         <SelectValue placeholder="Επιλέξτε δήμο" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        {[...new Set(typedKallikratisData
-                                          ?.filter(k => 
-                                            k.perifereia === form.watch(`location_details.${index}.region`) &&
-                                            k.perifereiaki_enotita === form.watch(`location_details.${index}.regional_unit`)
-                                          )
-                                          .map(k => k.onoma_neou_ota) || [])].filter(Boolean).map((municipality, muniIndex) => (
-                                          <SelectItem key={`municipality-${index}-${muniIndex}-${municipality}`} value={municipality}>{municipality}</SelectItem>
-                                        ))}
+                                        {(() => {
+                                          const currentRegion = form.watch(`location_details.${index}.region`);
+                                          const currentRegionalUnit = form.watch(`location_details.${index}.regional_unit`);
+                                          const municipalities = [...new Set(typedKallikratisData
+                                            ?.filter(k => 
+                                              k.perifereia === currentRegion &&
+                                              k.perifereiaki_enotita === currentRegionalUnit
+                                            )
+                                            .map(k => k.onoma_neou_ota) || [])].filter(Boolean);
+                                          console.log(`Municipality options for region "${currentRegion}", regional unit "${currentRegionalUnit}", field value "${field.value}":`, municipalities.includes(field.value), municipalities);
+                                          return municipalities.map((municipality, muniIndex) => (
+                                            <SelectItem key={`municipality-${index}-${muniIndex}-${municipality}`} value={municipality}>{municipality}</SelectItem>
+                                          ));
+                                        })()}
                                       </SelectContent>
                                     </Select>
                                   </FormControl>
