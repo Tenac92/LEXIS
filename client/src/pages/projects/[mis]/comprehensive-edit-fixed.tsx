@@ -1285,11 +1285,18 @@ export default function ComprehensiveEditFixed() {
                             <FormField
                               control={form.control}
                               name={`location_details.${index}.region`}
-                              render={({ field }) => (
+                              render={({ field }) => {
+                                console.log(`Region field debug - Index ${index}:`, {
+                                  fieldValue: field.value,
+                                  formValue: form.getValues(`location_details.${index}.region`),
+                                  locationDetail: location
+                                });
+                                return (
                                 <FormItem>
                                   <FormLabel className="text-sm font-medium">Περιφέρεια</FormLabel>
                                   <FormControl>
                                     <Select 
+                                      key={`region-${index}-${field.value || 'empty'}`}
                                       onValueChange={(value) => {
                                         field.onChange(value);
                                         // Only reset dependent fields if user is actively changing selection
@@ -1316,7 +1323,8 @@ export default function ComprehensiveEditFixed() {
                                     </Select>
                                   </FormControl>
                                 </FormItem>
-                              )}
+                              );
+                              }}
                             />
                           )}
                           {shouldShowRegionalUnit && (
