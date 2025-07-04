@@ -1202,12 +1202,12 @@ export default function ComprehensiveEditFixed() {
                             name={`formulation_details.${index}.project_budget`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">Προϋπολογισμός έργου</FormLabel>
+                                <FormLabel className="text-xs">Προϋπολογισμός έργου</FormLabel>
                                 <FormControl>
                                   <Input 
                                     {...field} 
                                     placeholder="0,00 €" 
-                                    className="text-xs"
+                                    className="text-sm"
                                     onChange={(e) => {
                                       const formatted = formatNumberWhileTyping(e.target.value);
                                       field.onChange(formatted);
@@ -1217,45 +1217,30 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
-                        </div>
-                        <div>
-                          <FormField
-                            control={form.control}
-                            name={`formulation_details.${index}.protocol_number`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs font-medium">Αρ. Πρωτοκόλλου</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="Πρωτόκολλο" className="text-xs" />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div>
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.ada`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">ΑΔΑ</FormLabel>
+                                <FormLabel className="text-xs">ΑΔΑ</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="ΑΔΑ" className="text-xs" />
+                                  <Input {...field} placeholder="ΑΔΑ" className="text-sm" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         </div>
-                        <div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.decision_status`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-medium">Κατάσταση</FormLabel>
+                                <FormLabel className="text-xs">Κατάσταση</FormLabel>
                                 <FormControl>
                                   <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="text-xs">
+                                    <SelectTrigger className="text-sm">
                                       <SelectValue placeholder="Κατάσταση" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1268,21 +1253,104 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.change_type`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Είδος Αλλαγής</FormLabel>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Είδος" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Έγκριση">Έγκριση</SelectItem>
+                                      <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
+                                      <SelectItem value="Ακύρωση">Ακύρωση</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
                         </div>
-                        <div className="flex items-center justify-center">
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => {
-                              const currentFormulations = form.getValues("formulation_details");
-                              const updatedFormulations = currentFormulations.filter((_, i) => i !== index);
-                              form.setValue("formulation_details", updatedFormulations);
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                        
+                        <div className="col-span-full">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.connected_decisions`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Αποφάσεις που συνδέονται</FormLabel>
+                                <FormControl>
+                                  <Select 
+                                    onValueChange={(value) => {
+                                      const currentArray = Array.isArray(field.value) ? field.value : [];
+                                      if (!currentArray.includes(value)) {
+                                        field.onChange([...currentArray, value]);
+                                      }
+                                    }} 
+                                    value=""
+                                  >
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Επιλέξτε απόφαση" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {form.watch("decisions").map((decision, decisionIndex) => (
+                                        <SelectItem key={decisionIndex} value={`${decisionIndex}`}>
+                                          {decision.protocol_number || `Απόφαση ${decisionIndex + 1}`}
+                                          {decision.fek && ` - ΦΕΚ: ${decision.fek}`}
+                                          {decision.ada && ` - ΑΔΑ: ${decision.ada}`}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                                <div className="mt-2">
+                                  {Array.isArray(field.value) && field.value.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {field.value.map((decisionIndex, i) => {
+                                        const decisionData = form.watch("decisions")[parseInt(decisionIndex)];
+                                        return (
+                                          <div key={i} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                                            <span>
+                                              {decisionData?.protocol_number || `Απόφαση ${parseInt(decisionIndex) + 1}`}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const newArray = field.value.filter((_, index) => index !== i);
+                                                field.onChange(newArray);
+                                              }}
+                                              className="text-blue-600 hover:text-blue-800"
+                                            >
+                                              <X className="h-3 w-3" />
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="col-span-full">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.comments`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Σχόλια</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Σχόλια" className="text-sm" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
                         </div>
                       </div>
                     ))}
@@ -1361,24 +1429,15 @@ export default function ComprehensiveEditFixed() {
                                     <Select 
                                       key={`region-${index}-${field.value || 'empty'}`}
                                       onValueChange={(value) => {
-                                        const fieldKey = `location_details.${index}.region`;
                                         field.onChange(value);
                                         
-                                        // Only reset dependent fields if user has interacted with this field
-                                        if (userInteractedFields.has(fieldKey)) {
-                                          const currentRegionalUnit = form.getValues(`location_details.${index}.regional_unit`);
-                                          const currentMunicipality = form.getValues(`location_details.${index}.municipality`);
-                                          
-                                          // Check if current regional unit belongs to the new region
-                                          const validRegionalUnits = typedKallikratisData?.filter(k => k.perifereia === value).map(k => k.perifereiaki_enotita) || [];
-                                          if (!validRegionalUnits.includes(currentRegionalUnit)) {
-                                            form.setValue(`location_details.${index}.regional_unit`, "");
-                                            form.setValue(`location_details.${index}.municipality`, "");
-                                          }
-                                        } else {
-                                          // Mark this field as interacted for future changes
-                                          setUserInteractedFields(prev => new Set(prev).add(fieldKey));
-                                        }
+                                        // Mark this field as interacted for future changes
+                                        const fieldKey = `location_details.${index}.region`;
+                                        setUserInteractedFields(prev => new Set(prev).add(fieldKey));
+                                        
+                                        // Reset dependent fields when region changes (user interaction)
+                                        form.setValue(`location_details.${index}.regional_unit`, "");
+                                        form.setValue(`location_details.${index}.municipality`, "");
                                       }} 
                                       value={field.value || ""}
                                       defaultValue={field.value || ""}
@@ -1412,25 +1471,14 @@ export default function ComprehensiveEditFixed() {
                                   <FormControl>
                                     <Select 
                                       onValueChange={(value) => {
-                                        const fieldKey = `location_details.${index}.regional_unit`;
                                         field.onChange(value);
                                         
-                                        // Only reset municipality if user has interacted with this field
-                                        if (userInteractedFields.has(fieldKey)) {
-                                          const currentMunicipality = form.getValues(`location_details.${index}.municipality`);
-                                          const currentRegion = form.getValues(`location_details.${index}.region`);
-                                          
-                                          const validMunicipalities = typedKallikratisData?.filter(k => 
-                                            k.perifereia === currentRegion && k.perifereiaki_enotita === value
-                                          ).map(k => k.onoma_neou_ota) || [];
-                                          
-                                          if (!validMunicipalities.includes(currentMunicipality)) {
-                                            form.setValue(`location_details.${index}.municipality`, "");
-                                          }
-                                        } else {
-                                          // Mark this field as interacted for future changes
-                                          setUserInteractedFields(prev => new Set(prev).add(fieldKey));
-                                        }
+                                        // Mark this field as interacted for future changes
+                                        const fieldKey = `location_details.${index}.regional_unit`;
+                                        setUserInteractedFields(prev => new Set(prev).add(fieldKey));
+                                        
+                                        // Reset municipality when regional unit changes (user interaction)
+                                        form.setValue(`location_details.${index}.municipality`, "");
                                       }} 
                                       value={field.value || ""}
                                       defaultValue={field.value || ""}

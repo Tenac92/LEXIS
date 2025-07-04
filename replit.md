@@ -127,6 +127,25 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 4, 2025 - Complete UI Fix & Connected Decisions Implementation
+- **COMPLETE SUCCESS: Fixed all UI issues in comprehensive edit form**
+- **Connected Decisions Functionality Added:** Section 4 now includes "Αποφάσεις που συνδέονται" dropdown that connects to Section 1 decisions
+  - Multi-select functionality with visual tags showing selected decisions
+  - Protocol numbers, FEK, and ADA information displayed in dropdown options
+  - Remove functionality for individual connected decisions with X buttons
+  - Dynamic updates when Section 1 decisions are modified
+- **Location Dropdown Fix:** Resolved geographic hierarchy display issues
+  - Fixed region, regional unit, and municipality dropdowns to properly show values: ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ → ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ → ΑΓΡΙΝΙΟΥ
+  - Simplified field interaction logic to prevent premature resetting during form initialization
+  - Maintained cascading dropdown functionality for user interactions
+- **Section 4 Layout Enhancement:**
+  - Converted to card-based layout with proper remove buttons for each formulation entry
+  - Added all missing fields: change type, comments, budget, ADA, decision status
+  - Improved grid structure with 3-column layouts for better field organization
+  - Professional styling with consistent spacing and visual feedback
+- **Form State Management:** Fixed controlled/uncontrolled component warnings by simplifying user interaction tracking
+- **Database Integration:** All connected decisions functionality properly saves to normalized project_formulations table
+
 ### July 3, 2025 - Remove Buttons Implementation for Comprehensive Edit Form
 - **Successfully added remove buttons to sections 1 and 4** as requested by user
 - **Section 1 "Αποφάσεις που τεκμηριώνουν το έργο":** Added red X button for each decision row allowing deletion
