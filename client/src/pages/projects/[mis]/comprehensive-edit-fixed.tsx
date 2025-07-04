@@ -161,6 +161,7 @@ export default function ComprehensiveEditFixed() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
@@ -696,6 +697,12 @@ export default function ComprehensiveEditFixed() {
           }];
         })());
       form.setValue("changes", []);
+      
+      // Set initial load flag to false after a short delay to ensure form is fully populated
+      setTimeout(() => {
+        setIsInitialLoad(false);
+        console.log("Initial form load complete - cascading enabled");
+      }, 100);
     }
   }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, form]);
 
@@ -1301,7 +1308,7 @@ export default function ComprehensiveEditFixed() {
                                         field.onChange(value);
                                         // Only reset dependent fields if this is a user-initiated change
                                         // Skip cascade resets during initial form population
-                                        if (form.formState.isDirty) {
+                                        if (!isInitialLoad) {
                                           const currentRegionalUnit = form.getValues(`location_details.${index}.regional_unit`);
                                           const currentMunicipality = form.getValues(`location_details.${index}.municipality`);
                                           
@@ -1348,7 +1355,7 @@ export default function ComprehensiveEditFixed() {
                                         field.onChange(value);
                                         // Only reset municipality if this is a user-initiated change
                                         // Skip cascade resets during initial form population
-                                        if (form.formState.isDirty) {
+                                        if (!isInitialLoad) {
                                           const currentMunicipality = form.getValues(`location_details.${index}.municipality`);
                                           const currentRegion = form.getValues(`location_details.${index}.region`);
                                           
