@@ -1311,14 +1311,19 @@ export default function ComprehensiveEditFixed() {
                                         }
                                       }} 
                                       value={field.value || ""}
+                                      defaultValue={field.value || ""}
                                     >
                                       <SelectTrigger className="text-sm">
                                         <SelectValue placeholder="Επιλέξτε περιφέρεια" />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        {[...new Set(typedKallikratisData?.map(k => k.perifereia) || [])].filter(Boolean).map((region, regionIndex) => (
-                                          <SelectItem key={`region-${index}-${regionIndex}-${region}`} value={region}>{region}</SelectItem>
-                                        ))}
+                                        {(() => {
+                                          const regions = [...new Set(typedKallikratisData?.map(k => k.perifereia) || [])].filter(Boolean);
+                                          console.log(`Region options for field value "${field.value}":`, regions.includes(field.value), regions);
+                                          return regions.map((region, regionIndex) => (
+                                            <SelectItem key={`region-${index}-${regionIndex}-${region}`} value={region}>{region}</SelectItem>
+                                          ));
+                                        })()}
                                       </SelectContent>
                                     </Select>
                                   </FormControl>
@@ -1351,6 +1356,7 @@ export default function ComprehensiveEditFixed() {
                                         }
                                       }} 
                                       value={field.value || ""}
+                                      defaultValue={field.value || ""}
                                       disabled={!form.watch(`location_details.${index}.region`) && !field.value}
                                   >
                                     <SelectTrigger className="text-sm">
@@ -1382,6 +1388,7 @@ export default function ComprehensiveEditFixed() {
                                         field.onChange(value);
                                       }} 
                                       value={field.value || ""}
+                                      defaultValue={field.value || ""}
                                       disabled={!form.watch(`location_details.${index}.regional_unit`) && !field.value}
                                     >
                                       <SelectTrigger className="text-sm">
