@@ -595,15 +595,19 @@ export default function ComprehensiveEditFixed() {
             
             // Group by kallikratis and implementing agency
             projectIndexData.forEach(indexItem => {
+              console.log(`Processing project index item:`, indexItem);
               const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
-              const unit = typedUnitsData.find(u => u.id === indexItem.unit_id);
-              const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expenditure_type_id);
+              const unit = typedUnitsData.find(u => u.id === indexItem.monada_id);
+              const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expediture_type_id);
+              console.log(`Found kallikratis:`, kallikratis);
+              console.log(`Found unit:`, unit);
+              console.log(`Found expenditure type:`, expenditureType);
               
-              const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.unit_id || 'no-unit'}`;
+              const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.monada_id || 'no-unit'}`;
               
               if (!locationDetailsMap.has(key)) {
-                // Get event type from project index data
-                const eventType = typedEventTypesData.find(et => et.id === indexItem.event_type_id);
+                // Get event type from project index data  
+                const eventType = typedEventTypesData.find(et => et.id === indexItem.event_types_id);
                 
                 const locationDetail = {
                   municipality: kallikratis?.onoma_neou_ota || "",
